@@ -1,0 +1,74 @@
+{
+  "id": "board-topic-post-core",
+  "name": "board-topic-post-core",
+  "title": "Board topic post core",
+  "description": "Implement boards, topics, posts, tags, composer API and pages.",
+  "status": "planning",
+  "dev_type": "fullstack",
+  "scope": "board-topic-post-core",
+  "package": null,
+  "priority": "P0",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-14",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [
+    {
+      "name": "Add content models",
+      "status": "pending"
+    },
+    {
+      "name": "Implement topic/post services",
+      "status": "pending"
+    },
+    {
+      "name": "Build board/topic pages",
+      "status": "pending"
+    },
+    {
+      "name": "Test end-to-end flow",
+      "status": "pending"
+    }
+  ],
+  "children": [],
+  "parent": "05-14-parallellines-mvp",
+  "relatedFiles": [
+    "apps/api/app/models/",
+    "apps/api/app/services/",
+    "apps/web/src/features/topics/"
+  ],
+  "notes": "",
+  "meta": {}
+}

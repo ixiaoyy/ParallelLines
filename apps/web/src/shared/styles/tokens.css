@@ -1,0 +1,18 @@
+:root {
+  --bg-app: #f8f9fa;
+  --bg-surface: #ffffff;
+  --bg-subtle: #eef2f7;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --accent-geek: #10b981;
+  --title: #111827;
+  --text: #4b5563;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --code-bg: #1e1e1e;
+  --code-text: #d4d4d4;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --radius-card: 16px;
+  --shadow-card: 0 12px 30px rgba(17, 24, 39, 0.08);
+}

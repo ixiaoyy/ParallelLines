@@ -1,0 +1,79 @@
+{
+  "id": "parallellines-mvp",
+  "name": "parallellines-mvp",
+  "title": "ParallelLines MVP project blueprint",
+  "description": "Discourse-inspired forum platform using Vue 3 and FastAPI; parent task for implementation epics.",
+  "status": "in_progress",
+  "dev_type": "fullstack",
+  "scope": "parallellines-mvp",
+  "package": null,
+  "priority": "P0",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-14",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [
+    {
+      "name": "Review design docs",
+      "status": "completed"
+    },
+    {
+      "name": "Execute child tasks by dependency order",
+      "status": "pending"
+    },
+    {
+      "name": "Track milestone acceptance",
+      "status": "pending"
+    }
+  ],
+  "children": [
+    "05-14-architecture-domain-baseline",
+    "05-14-backend-fastapi-foundation",
+    "05-14-frontend-vue-design-system",
+    "05-14-board-topic-post-core",
+    "05-14-interactions-notifications",
+    "05-14-search-feed-hot-ranking",
+    "05-14-moderation-admin-safety",
+    "05-14-quality-deployment-observability"
+  ],
+  "parent": null,
+  "relatedFiles": [
+    ".trellis/spec/product/discourse-inspired-parallellines-design.md",
+    ".trellis/spec/product/trellis-task-plan.md",
+    ".trellis/spec/"
+  ],
+  "notes": "Parent blueprint task for the Discourse-inspired ParallelLines forum MVP.",
+  "meta": {}
+}

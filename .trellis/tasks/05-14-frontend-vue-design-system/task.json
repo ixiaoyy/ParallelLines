@@ -1,0 +1,73 @@
+{
+  "id": "frontend-vue-design-system",
+  "name": "frontend-vue-design-system",
+  "title": "Frontend Vue design system",
+  "description": "Create Vue 3 app shell, routing, state/query layer, and forum design tokens from the requested palette.",
+  "status": "completed",
+  "dev_type": "frontend",
+  "scope": "frontend-foundation",
+  "package": null,
+  "priority": "P0",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-14",
+  "completedAt": "2026-05-14",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [
+    {
+      "name": "Create Vue app shell",
+      "status": "completed"
+    },
+    {
+      "name": "Add design tokens",
+      "status": "completed"
+    },
+    {
+      "name": "Build reusable components",
+      "status": "completed"
+    },
+    {
+      "name": "Add fixture home page",
+      "status": "completed"
+    }
+  ],
+  "children": [],
+  "parent": "05-14-parallellines-mvp",
+  "relatedFiles": [
+    "apps/web/",
+    ".trellis/spec/frontend/"
+  ],
+  "notes": "",
+  "meta": {}
+}

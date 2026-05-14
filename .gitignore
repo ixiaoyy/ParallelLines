@@ -1,0 +1,14 @@
+docs/
+node_modules/
+apps/*/node_modules/
+apps/api/.venv/
+.env
+*.log
+apps/web/dist/
+.pytest_cache/
+.ruff_cache/
+*.tsbuildinfo
+
+# Python bytecode
+__pycache__/
+*.py[cod]

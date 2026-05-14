@@ -1,0 +1,12 @@
+{
+  "name": "parallellines",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.1.1",
+  "scripts": {
+    "dev:web": "pnpm --dir apps/web dev",
+    "build:web": "pnpm --dir apps/web build",
+    "typecheck:web": "pnpm --dir apps/web typecheck",
+    "lint:web": "pnpm --dir apps/web lint"
+  }
+}
