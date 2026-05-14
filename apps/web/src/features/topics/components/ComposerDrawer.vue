@@ -6,12 +6,13 @@ import UiCard from "@/shared/ui/Card.vue";
 <template>
   <UiCard class="composer">
     <div>
-      <strong>快速草稿</strong>
-      <p>Markdown + 服务端净化预览将在核心内容任务中接入。</p>
+      <strong>发一条新主题</strong>
+      <p>把现象、环境和你试过的方法写清楚，在线的人更容易接上。</p>
     </div>
-    <textarea placeholder="写下你的问题、经验或提案…" rows="4" />
-    <div class="composer-preview markdown-body">
-      <pre><code>const 主题 = await 创建主题({ 版块, 标题, 正文Markdown })</code></pre>
+    <textarea placeholder="例如：升级后登录会跳回首页，只有 Edge 复现…" rows="4" />
+    <div class="composer-preview">
+      <span>草稿预览</span>
+      <p>环境：Windows 11 / Edge 126 / 单点登录开启</p>
     </div>
     <footer>
       <UiButton tone="ghost">保存草稿</UiButton>
@@ -33,6 +34,8 @@ strong {
 
 p {
   margin: 0.2rem 0 0;
+  color: var(--text);
+  line-height: 1.55;
 }
 
 textarea {
@@ -54,5 +57,26 @@ footer {
   display: flex;
   justify-content: flex-end;
   gap: 0.6rem;
+}
+
+.composer-preview {
+  display: grid;
+  gap: 0.3rem;
+  border: 1px dashed var(--border);
+  border-radius: 1rem;
+  padding: 0.75rem 0.9rem;
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.composer-preview span {
+  color: var(--primary);
+  font-size: 0.76rem;
+  font-weight: 860;
+}
+
+.composer-preview p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.86rem;
 }
 </style>

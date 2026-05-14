@@ -38,11 +38,11 @@ import UiButton from "@/shared/ui/Button.vue";
         <NotificationBell :count="3">
           <BellOutlined />
         </NotificationBell>
-        <UiButton tone="primary">
+        <UiButton tone="primary" aria-label="发布主题">
           <template #icon>
             <PlusOutlined />
           </template>
-          发布主题
+          <span class="publish-label">发布主题</span>
         </UiButton>
       </div>
     </header>

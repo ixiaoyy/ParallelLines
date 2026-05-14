@@ -53,6 +53,7 @@
   font-weight: 830;
   line-height: 1.35;
   letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
   text-decoration: none;
 }
 
@@ -70,6 +71,7 @@
   margin: 0.42rem 0 0;
   color: var(--text);
   line-height: 1.62;
+  overflow-wrap: anywhere;
 }
 
 .topic-meta-line {
@@ -165,6 +167,12 @@
   .topic-row {
     grid-template-columns: 1fr;
     gap: 0.8rem;
+    min-width: 0;
+  }
+
+  .topic-title,
+  .topic-excerpt {
+    word-break: break-all;
   }
 
   .posters,

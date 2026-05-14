@@ -21,17 +21,17 @@ export interface SidebarLink {
 }
 
 export const discoveryTabs: DiscoveryTab[] = [
-  { key: "latest", label: "最新", description: "按最后活跃时间排列" },
-  { key: "top", label: "热榜", description: "社区近期高质量讨论" },
-  { key: "categories", label: "版块", description: "按版块语义聚合" },
-  { key: "hot", label: "热门", description: "回复、浏览与收藏加权" },
-  { key: "votes", label: "投票", description: "产品反馈与投票主题" },
+  { key: "latest", label: "最新", description: "刚被回复过的主题" },
+  { key: "top", label: "优质", description: "最近被反复收藏的答案" },
+  { key: "categories", label: "版块", description: "按问题归属聚合" },
+  { key: "hot", label: "热门", description: "回复、浏览与收藏都在上涨" },
+  { key: "votes", label: "投票", description: "正在等待社区表态" },
 ];
 
 export const homeMetrics: HomeMetric[] = [
-  { label: "今日主题", value: "128", trend: "+18%" },
-  { label: "在线成员", value: "2.4k", trend: "追踪中" },
-  { label: "已解决", value: "86", trend: "本周" },
+  { label: "今日新帖", value: "128", trend: "+18%" },
+  { label: "正在编辑", value: "37", trend: "实时" },
+  { label: "本周已解决", value: "86", trend: "已标记" },
 ];
 
 export const boards: BoardSummary[] = [
@@ -95,14 +95,14 @@ export const boards: BoardSummary[] = [
 export const topics: TopicCardVM[] = [
   {
     id: "t-1",
-    slug: "new-to-parallellines-start-here",
-    title: "第一次来到平行线？从这里开始",
+    slug: "v01-topic-detail-notification-merge",
+    title: "v0.1 发布：主题详情页和通知流今晚合并",
     boardName: "公告与发布",
     boardColor: "var(--primary)",
     authorName: "平行线小助手",
     posterNames: ["平行线小助手", "Lina", "Moss", "Kai"],
-    tags: ["版规", "新手指南"],
-    excerpt: "欢迎来到平行线：这里会集中解释版块、主题、楼层、通知级别，以及如何写出高质量提问。",
+    tags: ["发布", "通知"],
+    excerpt: "今晚会短暂冻结发布主题入口，已有草稿不受影响。通知未读数会在迁移后重新计算。",
     replyCount: 5,
     viewCount: 115032,
     likeCount: 429,
@@ -114,14 +114,14 @@ export const topics: TopicCardVM[] = [
   },
   {
     id: "t-2",
-    slug: "fastapi-vue-forum-boundaries",
-    title: "Vue 3 + FastAPI 的论坛项目，主题与楼层边界应该怎么切？",
+    slug: "fastapi-background-job-queue",
+    title: "FastAPI 长任务：先上队列还是 Celery？",
     boardName: "开发与 API",
     boardColor: "var(--warning)",
     authorName: "Lina",
     posterNames: ["Lina", "Sam", "Moss", "Chen", "Echo"],
-    tags: ["fastapi", "领域模型", "discourse"],
-    excerpt: "把 Discourse 的主题/帖子拆法落到中文论坛语境：主题是聚合根，第一楼也是帖子。",
+    tags: ["fastapi", "队列", "架构"],
+    excerpt: "导入任务超过 30 秒后用户一直等在页面上，想先拆成轻量队列，不确定会不会把失败重试搞复杂。",
     replyCount: 42,
     viewCount: 8300,
     likeCount: 92,
@@ -135,13 +135,13 @@ export const topics: TopicCardVM[] = [
   {
     id: "t-3",
     slug: "calm-tech-forum-design",
-    title: "浅灰背景和深色代码块能不能降低论坛阅读疲劳？",
+    title: "深色代码块太刺眼，有更稳的配色吗？",
     boardName: "插件与主题",
     boardColor: "var(--primary-hover)",
     authorName: "Moss",
     posterNames: ["Moss", "Ada", "Yun"],
     tags: ["设计系统", "无障碍", "css"],
-    excerpt: "尝试用浅灰画布承载长期阅读，用科技蓝标记行动，用极客绿表达状态和成功反馈。",
+    excerpt: "白天模式下代码块对比太强，想保留语法高亮，同时减少长贴阅读时的视觉跳变。",
     replyCount: 18,
     viewCount: 2900,
     likeCount: 61,
@@ -207,9 +207,9 @@ export const topics: TopicCardVM[] = [
 ];
 
 export const sidebarLinks: SidebarLink[] = [
-  { title: "如何写一个可复现的缺陷主题", meta: "排障指南 · 6 分钟阅读" },
-  { title: "版块通知级别：关注 / 追踪 / 普通", meta: "社区规则 · 4 分钟阅读" },
-  { title: "Markdown 与代码块的安全渲染边界", meta: "开发指南 · 8 分钟阅读" },
+  { title: "登录回跳首页只在 Edge 复现，已有 4 人确认", meta: "支持与排障 · 18 分钟前" },
+  { title: "主题被合并后收藏还应该保留原入口吗？", meta: "社区运营 · 32 分钟前" },
+  { title: "OpenAPI client 生成后枚举命名不稳定", meta: "开发与 API · 1 小时前" },
 ];
 
 export const tagCloud = [

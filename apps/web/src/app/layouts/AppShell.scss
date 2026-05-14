@@ -1,5 +1,6 @@
 .app-shell {
   min-height: 100vh;
+  overflow-x: clip;
   background:
     radial-gradient(circle at 10% 8%, rgba(59, 130, 246, 0.11), transparent 28rem),
     radial-gradient(circle at 90% 3%, rgba(16, 185, 129, 0.12), transparent 24rem),
@@ -92,5 +93,47 @@
   .nav-links,
   .search-box {
     display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    gap: 0.6rem;
+    padding: 0.8rem 0.9rem;
+  }
+
+  .brand {
+    min-width: 0;
+  }
+
+  .brand-mark {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .brand strong {
+    font-size: 0.95rem;
+  }
+
+  .brand small {
+    display: none;
+  }
+
+  .topbar-actions {
+    gap: 0.45rem;
+    padding-right: 0.35rem;
+  }
+
+  .topbar-actions :deep(.ui-button) {
+    display: none !important;
+  }
+
+  .publish-label {
+    display: none;
+  }
+
+  .shell-main {
+    width: min(1440px, calc(100% - 1.1rem));
+    padding-top: 1rem;
   }
 }

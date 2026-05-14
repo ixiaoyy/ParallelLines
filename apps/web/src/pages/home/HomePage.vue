@@ -12,8 +12,7 @@ import {
   topics,
   type DiscoveryTab,
 } from "@/pages/home/fixtures";
-import { compactNumber } from "@/shared/lib/format";
-import UiBadge from "@/shared/ui/Badge.vue";
+import { compactNumber, relativeTime } from "@/shared/lib/format";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
@@ -45,6 +44,8 @@ const visibleTopics = computed(() => {
   return sorted;
 });
 
+const liveTopics = computed(() => topics.slice(0, 3));
+
 function setActiveTab(tabKey: DiscoveryTab["key"]) {
   activeTab.value = tabKey;
 }
@@ -52,133 +53,201 @@ function setActiveTab(tabKey: DiscoveryTab["key"]) {
 
 <template>
   <div id="top" class="meta-home">
-    <section class="meta-hero" aria-labelledby="home-title">
-      <div class="hero-copy">
-        <UiBadge tone="blue">参考 Discourse Meta 的中文社区</UiBadge>
-        <h1 id="home-title">中文技术讨论现场。</h1>
-        <p>
-          借鉴 Discourse Meta 的首页信息架构：清晰的发现导航、紧凑的主题列表、分类色条、
-          参与者头像、回复/浏览/活动列，以及面向社区治理的常驻入口。
-        </p>
+    <div class="home-workspace">
+      <aside class="forum-sidebar" aria-label="社区导航">
+        <nav class="primary-menu" aria-label="个人导航">
+          <a class="menu-link active" href="#top">
+            <span class="menu-icon menu-icon--stack" aria-hidden="true"></span>
+            话题
+            <i aria-hidden="true"></i>
+          </a>
+          <a class="menu-link" href="#mine">
+            <span class="menu-icon menu-icon--user" aria-hidden="true"></span>
+            我的帖子
+          </a>
+          <a class="menu-link" href="#messages">
+            <span class="menu-icon menu-icon--inbox" aria-hidden="true"></span>
+            我的消息
+          </a>
+          <a class="menu-link" href="#activity">
+            <span class="menu-icon menu-icon--calendar" aria-hidden="true"></span>
+            近期活动
+          </a>
+          <a class="menu-link menu-link--muted" href="#more">
+            <span class="menu-icon menu-icon--more" aria-hidden="true"></span>
+            更多
+          </a>
+        </nav>
 
-        <div class="hero-actions">
-          <UiButton tone="primary">发起主题</UiButton>
-          <a class="hero-link" href="#guidelines">阅读社区指南</a>
-        </div>
-      </div>
-
-      <UiCard class="hero-console">
-        <div class="console-toolbar" aria-hidden="true">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <pre><code>GET /api/v1/topics?sort={{ activeTab }}
-Accept: application/json
-
-{
-  "layout": "topic-list",
-  "columns": ["topic", "posters", "replies", "views", "activity"]
-}</code></pre>
-      </UiCard>
-    </section>
-
-    <section class="metric-strip" aria-label="社区实时指标">
-      <div v-for="metric in homeMetrics" :key="metric.label" class="metric-item">
-        <span>{{ metric.label }}</span>
-        <strong>{{ metric.value }}</strong>
-        <em>{{ metric.trend }}</em>
-      </div>
-    </section>
-
-    <div class="discovery-layout">
-      <aside id="boards" class="category-column" aria-labelledby="categories-title">
-        <div class="section-kicker">版块</div>
-        <h2 id="categories-title">分类版块</h2>
-        <p class="section-note">像 Discourse Category 一样，每个版块都有色彩、说明与治理边界。</p>
-
-        <div class="category-list">
-          <article
+        <section id="boards" class="taxonomy-section" aria-labelledby="category-nav-title">
+          <h2 id="category-nav-title">
+            <span aria-hidden="true">⌄</span>
+            类别
+          </h2>
+          <a
             v-for="board in boards"
             :key="board.id"
-            class="category-row"
+            class="taxonomy-link"
+            :href="`#${board.slug}`"
             :style="{ '--category-color': board.color }"
           >
-            <span class="category-swatch" aria-hidden="true"></span>
-            <div>
-              <h3>{{ board.name }}</h3>
-              <p>{{ board.description }}</p>
-              <span>{{ compactNumber(board.followerCount) }} 人关注</span>
+            <span class="taxonomy-glyph" aria-hidden="true"></span>
+            <span>{{ board.name }}</span>
+            <em>{{ compactNumber(board.topicCount) }}</em>
+          </a>
+          <a class="taxonomy-link taxonomy-link--all" href="#boards">
+            <span class="taxonomy-glyph taxonomy-glyph--list" aria-hidden="true"></span>
+            <span>所有类别</span>
+          </a>
+        </section>
+
+        <section id="tags" class="taxonomy-section" aria-labelledby="tag-nav-title">
+          <h2 id="tag-nav-title">
+            <span aria-hidden="true">⌄</span>
+            标签
+          </h2>
+          <a v-for="tag in tagCloud.slice(0, 7)" :key="tag" class="taxonomy-link tag-nav-link" href="#tags">
+            <span class="tag-glyph" aria-hidden="true">#</span>
+            <span>{{ tag }}</span>
+            <i v-if="['fastapi', '单点登录', '投票'].includes(tag)" aria-hidden="true"></i>
+          </a>
+          <a class="taxonomy-link taxonomy-link--all" href="#tags">
+            <span class="taxonomy-glyph taxonomy-glyph--list" aria-hidden="true"></span>
+            <span>所有标签</span>
+          </a>
+        </section>
+
+        <section class="taxonomy-section" aria-labelledby="channel-nav-title">
+          <h2 id="channel-nav-title">
+            <span aria-hidden="true">⌄</span>
+            频道
+          </h2>
+          <a class="channel-link" href="#chat">聊天</a>
+          <a class="channel-link" href="#qa">快问快答</a>
+        </section>
+      </aside>
+
+      <div class="home-main">
+        <section class="meta-hero" aria-labelledby="home-title">
+          <div class="hero-copy">
+            <div class="live-pill" aria-label="社区实时状态">
+              <span aria-hidden="true"></span>
+              2.4k 人在线 · 刚刚有新回复
             </div>
-            <strong>{{ compactNumber(board.topicCount) }}</strong>
-          </article>
+
+            <h1 id="home-title">今天的坑，一起填。</h1>
+            <p>
+              新问题、复盘和提案都进主题流。贴日志，沉淀结论。
+            </p>
+
+            <div class="hero-actions">
+              <UiButton tone="primary">发起主题</UiButton>
+              <a class="hero-link" href="#solved">看已解决</a>
+            </div>
+          </div>
+
+          <UiCard class="hero-live-card" aria-label="正在发生的讨论">
+            <header>
+              <span>正在发生</span>
+              <strong>活跃主题</strong>
+            </header>
+
+            <ul class="live-topic-list">
+              <li v-for="topic in liveTopics" :key="topic.id">
+                <a :href="`/t/${topic.slug}/${topic.id}`">{{ topic.title }}</a>
+                <p>
+                  <span class="live-board" :style="{ '--category-color': topic.boardColor }">
+                    <span aria-hidden="true"></span>
+                    {{ topic.boardName }}
+                  </span>
+                  <span>{{ compactNumber(topic.replyCount) }} 回复</span>
+                  <span>{{ relativeTime(topic.lastPostedAt) }}</span>
+                </p>
+              </li>
+            </ul>
+
+            <footer>
+              <span>值班版主</span>
+              <strong>6 人在线</strong>
+            </footer>
+          </UiCard>
+        </section>
+
+        <section id="solved" class="metric-strip" aria-label="社区实时指标">
+          <div v-for="metric in homeMetrics" :key="metric.label" class="metric-item">
+            <span>{{ metric.label }}</span>
+            <strong>{{ metric.value }}</strong>
+            <em>{{ metric.trend }}</em>
+          </div>
+        </section>
+
+        <div class="discovery-layout">
+          <main class="timeline-column" aria-label="主题发现流">
+            <div class="discovery-controls">
+              <div class="discovery-tabs" role="tablist" aria-label="主题筛选">
+                <button
+                  v-for="tab in discoveryTabs"
+                  :id="`tab-${tab.key}`"
+                  :key="tab.key"
+                  type="button"
+                  role="tab"
+                  :aria-selected="activeTab === tab.key"
+                  :class="{ active: activeTab === tab.key }"
+                  @click="setActiveTab(tab.key)"
+                >
+                  {{ tab.label }}
+                </button>
+              </div>
+
+              <div class="control-summary">
+                <span>{{ activeDescription }}</span>
+                <UiButton tone="subtle">全部类别</UiButton>
+              </div>
+            </div>
+
+            <TopicList :topics="visibleTopics" />
+          </main>
+
+          <aside id="hot" class="meta-sidebar" aria-label="侧边栏">
+            <ComposerDrawer />
+
+            <UiCard class="sidebar-card">
+              <div class="sidebar-heading">
+                <span>今日热议</span>
+                <h3>还在升温</h3>
+              </div>
+              <ul class="link-list">
+                <li v-for="link in sidebarLinks" :key="link.title">
+                  <a href="#hot">{{ link.title }}</a>
+                  <span>{{ link.meta }}</span>
+                </li>
+              </ul>
+            </UiCard>
+
+            <UiCard id="votes" class="sidebar-card">
+              <div class="sidebar-heading">
+                <span>热门标签</span>
+                <h3>热门标签</h3>
+              </div>
+              <div class="tag-cloud">
+                <a v-for="tag in tagCloud" :key="tag" href="#tags">{{ tag }}</a>
+              </div>
+            </UiCard>
+
+            <UiCard id="guidelines" class="sidebar-card guidelines-card">
+              <div class="sidebar-heading">
+                <span>版务提醒</span>
+                <h3>今天的处理</h3>
+              </div>
+              <ol>
+                <li>支持区 12 个重复主题已合并到排障索引。</li>
+                <li>3 个已复现缺陷进入本周修复看板。</li>
+                <li>插件区的主题投票将在今晚 22:00 截止。</li>
+              </ol>
+            </UiCard>
+          </aside>
         </div>
-      </aside>
-
-      <main class="timeline-column" aria-label="主题发现流">
-        <div class="discovery-controls">
-          <div class="discovery-tabs" role="tablist" aria-label="主题筛选">
-            <button
-              v-for="tab in discoveryTabs"
-              :id="`tab-${tab.key}`"
-              :key="tab.key"
-              type="button"
-              role="tab"
-              :aria-selected="activeTab === tab.key"
-              :class="{ active: activeTab === tab.key }"
-              @click="setActiveTab(tab.key)"
-            >
-              {{ tab.label }}
-            </button>
-          </div>
-
-          <div class="control-summary">
-            <span>{{ activeDescription }}</span>
-            <UiButton tone="subtle">全部版块</UiButton>
-          </div>
-        </div>
-
-        <TopicList :topics="visibleTopics" />
-      </main>
-
-      <aside id="hot" class="meta-sidebar" aria-label="侧边栏">
-        <ComposerDrawer />
-
-        <UiCard class="sidebar-card">
-          <div class="sidebar-heading">
-            <span>推荐入口</span>
-            <h3>置顶入口</h3>
-          </div>
-          <ul class="link-list">
-            <li v-for="link in sidebarLinks" :key="link.title">
-              <a href="#guidelines">{{ link.title }}</a>
-              <span>{{ link.meta }}</span>
-            </li>
-          </ul>
-        </UiCard>
-
-        <UiCard id="votes" class="sidebar-card">
-          <div class="sidebar-heading">
-            <span>热门标签</span>
-            <h3>热门标签</h3>
-          </div>
-          <div class="tag-cloud">
-            <a v-for="tag in tagCloud" :key="tag" href="#">{{ tag }}</a>
-          </div>
-        </UiCard>
-
-        <UiCard id="guidelines" class="sidebar-card guidelines-card">
-          <div class="sidebar-heading">
-            <span>社区规范</span>
-            <h3>发帖前检查</h3>
-          </div>
-          <ol>
-            <li>标题描述具体问题，不要只写“求助”。</li>
-            <li>贴出版本、日志、复现步骤和期望结果。</li>
-            <li>代码块使用 Markdown，长日志折叠。</li>
-          </ol>
-        </UiCard>
-      </aside>
+      </div>
     </div>
   </div>
 </template>
