@@ -294,6 +294,11 @@
   margin-top: 1.2rem;
 }
 
+.button-link {
+  display: inline-flex;
+  text-decoration: none;
+}
+
 .hero-link {
   color: var(--primary);
   font-weight: 820;

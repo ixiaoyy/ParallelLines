@@ -84,21 +84,21 @@ function setActiveTab(tabKey: DiscoveryTab["key"]) {
             <span aria-hidden="true">⌄</span>
             类别
           </h2>
-          <a
+          <RouterLink
             v-for="board in boards"
             :key="board.id"
             class="taxonomy-link"
-            :href="`#${board.slug}`"
+            :to="{ name: 'board-detail', params: { slug: board.slug } }"
             :style="{ '--category-color': board.color }"
           >
             <span class="taxonomy-glyph" aria-hidden="true"></span>
             <span>{{ board.name }}</span>
             <em>{{ compactNumber(board.topicCount) }}</em>
-          </a>
-          <a class="taxonomy-link taxonomy-link--all" href="#boards">
+          </RouterLink>
+          <RouterLink class="taxonomy-link taxonomy-link--all" to="/boards">
             <span class="taxonomy-glyph taxonomy-glyph--list" aria-hidden="true"></span>
             <span>所有类别</span>
-          </a>
+          </RouterLink>
         </section>
 
         <section id="tags" class="taxonomy-section" aria-labelledby="tag-nav-title">
@@ -141,7 +141,9 @@ function setActiveTab(tabKey: DiscoveryTab["key"]) {
             </p>
 
             <div class="hero-actions">
-              <UiButton tone="primary">发起主题</UiButton>
+              <RouterLink class="button-link" to="/boards">
+                <UiButton tone="primary">发起主题</UiButton>
+              </RouterLink>
               <a class="hero-link" href="#solved">看已解决</a>
             </div>
           </div>
@@ -154,7 +156,7 @@ function setActiveTab(tabKey: DiscoveryTab["key"]) {
 
             <ul class="live-topic-list">
               <li v-for="topic in liveTopics" :key="topic.id">
-                <a :href="`/t/${topic.slug}/${topic.id}`">{{ topic.title }}</a>
+                <RouterLink :to="`/t/${topic.slug}/${topic.id}`">{{ topic.title }}</RouterLink>
                 <p>
                   <span class="live-board" :style="{ '--category-color': topic.boardColor }">
                     <span aria-hidden="true"></span>

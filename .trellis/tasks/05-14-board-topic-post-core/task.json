@@ -3,7 +3,7 @@
   "name": "board-topic-post-core",
   "title": "Board topic post core",
   "description": "Implement boards, topics, posts, tags, composer API and pages.",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "fullstack",
   "scope": "board-topic-post-core",
   "package": null,
@@ -47,28 +47,39 @@
   "subtasks": [
     {
       "name": "Add content models",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Implement topic/post services",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Build board/topic pages",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Test end-to-end flow",
+      "status": "completed"
+    },
+    {
+      "name": "Wire frontend pages to backend API",
       "status": "pending"
     }
   ],
   "children": [],
   "parent": "05-14-parallellines-mvp",
   "relatedFiles": [
+    "apps/api/alembic/versions/0002_create_forum_core.py",
+    "apps/api/app/api/v1/boards.py",
+    "apps/api/app/api/v1/topics.py",
     "apps/api/app/models/",
+    "apps/api/app/models/forum.py",
+    "apps/api/app/schemas/forum.py",
     "apps/api/app/services/",
+    "apps/api/app/services/forum.py",
+    "apps/api/tests/test_forum_core.py",
     "apps/web/src/features/topics/"
   ],
-  "notes": "",
+  "notes": "Backend forum core API is implemented with boards/topics/posts models, migration, service transactions, markdown escaping, and API/service tests. Frontend pages still need to be wired from fixtures to these endpoints.",
   "meta": {}
 }

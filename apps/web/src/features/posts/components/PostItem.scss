@@ -1,0 +1,81 @@
+.post-item {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.post-author {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 0.35rem;
+  color: var(--title);
+}
+
+.post-author span,
+time {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.post-body {
+  min-width: 0;
+}
+
+.post-body :deep(.markdown-body) {
+  color: var(--text);
+  line-height: 1.78;
+}
+
+.post-body :deep(.markdown-body p) {
+  margin: 0 0 0.8rem;
+}
+
+.post-body :deep(.markdown-body p:last-child) {
+  margin-bottom: 0;
+}
+
+.post-body :deep(.markdown-body pre) {
+  position: relative;
+  margin: 1rem 0;
+}
+
+.post-body :deep(.markdown-body pre)::before {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  color: rgba(212, 212, 212, 0.6);
+  font-size: 0.72rem;
+  font-weight: 760;
+  content: "CODE";
+}
+
+.deleted {
+  opacity: 0.72;
+}
+
+.deleted-copy {
+  border-radius: 0.85rem;
+  padding: 1rem;
+  color: var(--muted);
+  background: var(--bg-subtle);
+}
+
+footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 680px) {
+  .post-item {
+    grid-template-columns: 1fr;
+  }
+
+  .post-author {
+    grid-template-columns: auto auto 1fr;
+    justify-items: start;
+  }
+}

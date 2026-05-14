@@ -1,0 +1,162 @@
+import pytest
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from app.api.v1.dependencies import get_session
+from app.db.base import Base
+from app.main import create_app
+from app.models.forum import Board, Post, Topic, TopicRead
+from app.models.user import User
+from app.schemas.forum import BoardCreateRequest, PostCreateRequest, TopicCreateRequest
+from app.services.forum import ForumService
+
+
+async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    return async_sessionmaker(engine, expire_on_commit=False), engine
+
+
+@pytest.mark.asyncio
+async def test_forum_api_happy_path() -> None:
+    session_factory, engine = await create_test_session()
+
+    async def override_session():
+        async with session_factory() as session:
+            yield session
+
+    app = create_app()
+    app.dependency_overrides[get_session] = override_session
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        register = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "lina",
+                "email": "lina@example.com",
+                "password": "strong-pass-123",
+            },
+        )
+        assert register.status_code == 201
+        headers = {"Authorization": f"Bearer {register.json()['data']['access_token']}"}
+
+        board = await client.post(
+            "/api/v1/boards",
+            headers=headers,
+            json={
+                "slug": "support",
+                "name": "支持与排障",
+                "description": "安装、升级、报错定位，以及可复现问题的协作排查。",
+                "color": "#10B981",
+            },
+        )
+        assert board.status_code == 201
+        assert board.json()["data"]["topic_count"] == 0
+        assert board.json()["data"]["follower_count"] == 1
+
+        topic = await client.post(
+            "/api/v1/boards/support/topics",
+            headers=headers,
+            json={
+                "title": "FastAPI 长任务：先上队列还是 Celery？",
+                "raw_md": """环境：Windows 11
+
+```python
+print('<script>')
+```""",
+                "tags": ["fastapi", "队列"],
+            },
+        )
+        assert topic.status_code == 201
+        topic_data = topic.json()["data"]
+        assert topic_data["board_slug"] == "support"
+        assert topic_data["reply_count"] == 0
+        assert topic_data["tags"] == ["fastapi", "队列"]
+
+        posts = await client.get(f"/api/v1/topics/{topic_data['id']}/posts")
+        assert posts.status_code == 200
+        post_data = posts.json()["data"][0]
+        assert post_data["post_number"] == 1
+        assert "&lt;script&gt;" in post_data["cooked_html"]
+        assert "<script>" not in post_data["cooked_html"]
+
+        reply = await client.post(
+            f"/api/v1/topics/{topic_data['id']}/posts",
+            headers=headers,
+            json={"raw_md": "我也复现了，后台 worker 重启后状态会卡住。"},
+        )
+        assert reply.status_code == 201
+        assert reply.json()["data"]["post_number"] == 2
+
+        topic_after_reply = await client.get(f"/api/v1/topics/{topic_data['id']}")
+        assert topic_after_reply.status_code == 200
+        assert topic_after_reply.json()["data"]["reply_count"] == 1
+
+        board_detail = await client.get("/api/v1/boards/support")
+        assert board_detail.status_code == 200
+        board_data = board_detail.json()["data"]
+        assert board_data["topic_count"] == 1
+        assert board_data["post_count"] == 2
+        assert board_data["latest_topics"][0]["id"] == topic_data["id"]
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_forum_service_updates_counters_and_read_state() -> None:
+    session_factory, engine = await create_test_session()
+
+    async with session_factory() as session:
+        user = User(username="moss", email="moss@example.com", hashed_password="hashed")
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+        service = ForumService(session)
+        board = await service.create_board(
+            BoardCreateRequest(
+                slug="dev",
+                name="开发与 API",
+                description="FastAPI、Vue、OpenAPI、权限模型与扩展开发讨论。",
+                color="#F59E0B",
+            ),
+            user,
+        )
+        topic = await service.create_topic(
+            board.slug,
+            TopicCreateRequest(
+                title="OpenAPI client 生成后枚举命名不稳定",
+                raw_md="生成后的枚举每次顺序都不同，需要固定排序。",
+                tags=["openapi", "api"],
+            ),
+            user,
+        )
+        reply = await service.reply_to_topic(
+            topic.id,
+            PostCreateRequest(raw_md="可以在 schema 输出前统一排序。"),
+            user,
+        )
+
+        saved_board = await session.get(Board, board.id)
+        saved_topic = await session.get(Topic, topic.id)
+        read_state = await session.scalar(
+            select(TopicRead).where(TopicRead.topic_id == topic.id, TopicRead.user_id == user.id)
+        )
+        post_count = await session.scalar(
+            select(func.count(Post.id)).where(Post.topic_id == topic.id)
+        )
+
+        assert saved_board is not None
+        assert saved_board.topic_count == 1
+        assert saved_board.post_count == 2
+        assert saved_topic is not None
+        assert saved_topic.reply_count == 1
+        assert saved_topic.last_posted_at is not None
+        assert reply.post_number == 2
+        assert post_count == 2
+        assert read_state is not None
+        assert read_state.last_read_post_number == 2
+
+    await engine.dispose()

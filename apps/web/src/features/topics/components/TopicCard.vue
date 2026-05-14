@@ -25,7 +25,7 @@ const topicUrl = computed(() => `/t/${props.topic.slug}/${props.topic.id}`);
         <UiBadge v-if="topic.featured" tone="green">精华</UiBadge>
         <UiBadge v-if="topic.unreadCount" tone="blue">{{ topic.unreadCount }} 新</UiBadge>
         <LockOutlined v-if="topic.status === 'closed'" class="topic-status-icon" aria-label="已关闭" />
-        <a class="topic-title" :href="topicUrl">{{ topic.title }}</a>
+        <RouterLink class="topic-title" :to="topicUrl">{{ topic.title }}</RouterLink>
       </div>
 
       <p class="topic-excerpt">{{ topic.excerpt }}</p>

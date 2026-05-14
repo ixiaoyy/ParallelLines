@@ -1,0 +1,110 @@
+.composer {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.composer-heading {
+  display: grid;
+  gap: 0.25rem;
+}
+
+strong {
+  color: var(--title);
+}
+
+p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.composer-field,
+.composer-context {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.composer-field span,
+.composer-context span,
+.composer-preview span {
+  color: var(--primary);
+  font-size: 0.76rem;
+  font-weight: 860;
+}
+
+.composer-context {
+  border: 1px solid rgba(59, 130, 246, 0.14);
+  border-radius: 0.9rem;
+  padding: 0.72rem 0.8rem;
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.composer-context strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  color: var(--title);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+input {
+  padding: 0.72rem 0.85rem;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 7rem;
+  padding: 0.9rem;
+}
+
+input:focus,
+textarea:focus {
+  outline: 3px solid rgba(59, 130, 246, 0.15);
+  border-color: var(--primary);
+}
+
+footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.composer-preview {
+  display: grid;
+  gap: 0.3rem;
+  border: 1px dashed var(--border);
+  border-radius: 1rem;
+  padding: 0.75rem 0.9rem;
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.composer-preview p {
+  color: var(--text);
+  font-size: 0.86rem;
+  white-space: pre-wrap;
+}
+
+.composer--reply {
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, 0.08), transparent 42%),
+    rgba(255, 255, 255, 0.88);
+}
+
+.composer--compact textarea {
+  min-height: 5rem;
+}
+
+@media (max-width: 560px) {
+  footer {
+    justify-content: flex-start;
+  }
+}

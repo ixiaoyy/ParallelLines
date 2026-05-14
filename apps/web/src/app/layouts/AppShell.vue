@@ -18,10 +18,10 @@ import UiButton from "@/shared/ui/Button.vue";
 
       <nav class="nav-links" aria-label="主导航">
         <RouterLink to="/">最新</RouterLink>
-        <a href="#top">热榜</a>
-        <a href="#boards">版块</a>
-        <a href="#hot">热门</a>
-        <a href="#votes">投票</a>
+        <RouterLink :to="{ name: 'home', hash: '#hot' }">热榜</RouterLink>
+        <RouterLink to="/boards">版块</RouterLink>
+        <RouterLink :to="{ name: 'home', hash: '#solved' }">优质</RouterLink>
+        <RouterLink :to="{ name: 'home', hash: '#votes' }">投票</RouterLink>
       </nav>
 
       <a-input
@@ -38,12 +38,14 @@ import UiButton from "@/shared/ui/Button.vue";
         <NotificationBell :count="3">
           <BellOutlined />
         </NotificationBell>
-        <UiButton tone="primary" aria-label="发布主题">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          <span class="publish-label">发布主题</span>
-        </UiButton>
+        <RouterLink class="publish-link" to="/boards" aria-label="发布主题，先选择版块">
+          <UiButton tone="primary">
+            <template #icon>
+              <PlusOutlined />
+            </template>
+            <span class="publish-label">发布主题</span>
+          </UiButton>
+        </RouterLink>
       </div>
     </header>
 

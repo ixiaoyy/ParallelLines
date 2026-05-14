@@ -46,3 +46,13 @@ class ConflictError(AppError):
 class RateLimitError(AppError):
     def __init__(self, code: str = "rate_limited", message: str = "Too many requests") -> None:
         super().__init__(code, message, status_code=429)
+
+
+class ValidationError(AppError):
+    def __init__(
+        self,
+        code: str = "validation_error",
+        message: str = "Validation failed",
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(code, message, status_code=422, details=details)

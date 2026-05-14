@@ -4,6 +4,7 @@ export interface TopicCardVM {
   id: string;
   slug: string;
   title: string;
+  boardSlug: string;
   boardName: string;
   boardColor: string;
   authorName: string;

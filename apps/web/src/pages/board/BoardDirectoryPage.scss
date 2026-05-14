@@ -1,0 +1,338 @@
+.board-directory-page {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.boards-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(18rem, 0.9fr);
+  gap: 1rem;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1.45rem;
+  padding: clamp(1.2rem, 3vw, 2rem);
+  background:
+    radial-gradient(circle at 7% 0%, rgba(59, 130, 246, 0.18), transparent 24rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(238, 242, 247, 0.78));
+  box-shadow: var(--shadow-card);
+}
+
+.boards-hero__copy {
+  display: grid;
+  align-content: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.boards-hero h1,
+.boards-hero p {
+  margin: 0;
+}
+
+.boards-hero h1 {
+  max-width: 48rem;
+  color: var(--title);
+  font-size: clamp(2rem, 4vw, 4.2rem);
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+}
+
+.boards-hero p {
+  max-width: 50rem;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.boards-hero__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-content: end;
+}
+
+.boards-hero__stats div {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  border: 1px solid rgba(229, 231, 235, 0.9);
+  border-radius: 1.1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.boards-hero__stats span,
+.panel-kicker {
+  color: var(--accent-geek);
+  font-size: 0.72rem;
+  font-weight: 920;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.boards-hero__stats strong {
+  color: var(--title);
+  font-size: clamp(1.45rem, 2.5vw, 2.1rem);
+}
+
+.board-directory-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+  gap: 1rem;
+  align-items: start;
+}
+
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.board-tile {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  padding: 1rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--board-color) 10%, transparent), transparent 42%),
+    rgba(255, 255, 255, 0.88);
+  box-shadow: 0 12px 26px rgba(17, 24, 39, 0.06);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+
+.board-tile:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--board-color) 38%, var(--border));
+  box-shadow: 0 18px 34px rgba(17, 24, 39, 0.1);
+}
+
+.board-tile__main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.85rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.board-mark {
+  display: grid;
+  width: 3.35rem;
+  height: 3.35rem;
+  place-items: center;
+  border-radius: 1.05rem;
+  color: white;
+  font-size: 1.35rem;
+  font-weight: 950;
+  background: linear-gradient(135deg, var(--board-color), var(--accent-geek));
+  box-shadow: 0 16px 28px color-mix(in srgb, var(--board-color) 25%, transparent);
+}
+
+.board-copy {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.board-kicker {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 820;
+}
+
+.board-copy strong {
+  color: var(--title);
+  font-size: 1.26rem;
+  letter-spacing: -0.025em;
+}
+
+.board-copy em {
+  color: var(--text);
+  font-style: normal;
+  line-height: 1.62;
+}
+
+.board-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.board-stats div {
+  border-radius: 0.9rem;
+  padding: 0.65rem;
+  background: rgba(248, 249, 250, 0.74);
+}
+
+.board-stats dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.board-stats dd {
+  margin: 0.12rem 0 0;
+  color: var(--title);
+  font-weight: 880;
+}
+
+.board-topic-preview {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.board-topic-preview a {
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+  border-radius: 0.8rem;
+  padding: 0.62rem 0.7rem;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+}
+
+.board-topic-preview a:hover,
+.board-topic-preview a:focus-visible {
+  color: var(--primary);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.board-topic-preview span {
+  overflow: hidden;
+  color: var(--title);
+  font-weight: 820;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-topic-preview small,
+.empty-preview {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.board-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.open-board-link {
+  color: var(--primary);
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.open-board-link:hover,
+.open-board-link:focus-visible {
+  color: var(--primary-hover);
+}
+
+.board-directory-sidebar {
+  position: sticky;
+  top: 5.25rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.sidebar-panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.sidebar-panel h2 {
+  margin: 0;
+  color: var(--title);
+  font-size: 1.05rem;
+}
+
+.sidebar-panel ul,
+.sidebar-panel ol {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.sidebar-panel li {
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.sidebar-panel a {
+  color: var(--title);
+  font-weight: 820;
+  text-decoration: none;
+}
+
+.sidebar-panel a:hover,
+.sidebar-panel a:focus-visible {
+  color: var(--primary);
+}
+
+.sidebar-panel small {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--muted);
+}
+
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag-cloud a {
+  border-radius: 999px;
+  padding: 0.38rem 0.62rem;
+  color: var(--primary);
+  background: rgba(59, 130, 246, 0.1);
+  font-size: 0.8rem;
+  font-weight: 780;
+  text-decoration: none;
+}
+
+.tag-cloud a:hover,
+.tag-cloud a:focus-visible {
+  color: var(--bg-surface);
+  background: var(--primary);
+}
+
+@media (max-width: 1180px) {
+  .boards-hero,
+  .board-directory-layout,
+  .board-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .board-directory-sidebar {
+    position: static;
+  }
+}
+
+@media (max-width: 680px) {
+  .boards-hero__stats,
+  .board-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .boards-hero {
+    border-radius: 1.15rem;
+    padding: 1rem;
+  }
+
+  .board-tile {
+    border-radius: 1.05rem;
+    padding: 0.85rem;
+  }
+}
