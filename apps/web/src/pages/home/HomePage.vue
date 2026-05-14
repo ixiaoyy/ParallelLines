@@ -1,196 +1,186 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
-import BoardCard from "@/features/boards/components/BoardCard.vue";
-import PostItem from "@/features/posts/components/PostItem.vue";
 import ComposerDrawer from "@/features/topics/components/ComposerDrawer.vue";
 import TopicList from "@/features/topics/components/TopicList.vue";
-import { boards, highlightedPost, topics } from "@/pages/home/fixtures";
+import {
+  boards,
+  discoveryTabs,
+  homeMetrics,
+  sidebarLinks,
+  tagCloud,
+  topics,
+  type DiscoveryTab,
+} from "@/pages/home/fixtures";
+import { compactNumber } from "@/shared/lib/format";
 import UiBadge from "@/shared/ui/Badge.vue";
+import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
-import UiTabs from "@/shared/ui/Tabs.vue";
 
-const activeTab = ref("latest");
+const activeTab = ref<DiscoveryTab["key"]>("latest");
 
-const tabs = [
-  { key: "latest", label: "最新" },
-  { key: "hot", label: "热门" },
-  { key: "following", label: "关注" },
-  { key: "top", label: "精华" },
-];
+const activeDescription = computed(
+  () => discoveryTabs.find((tab) => tab.key === activeTab.value)?.description ?? "",
+);
+
+const visibleTopics = computed(() => {
+  const sorted = [...topics];
+
+  if (activeTab.value === "top") {
+    return sorted.sort((left, right) => right.likeCount + right.replyCount - (left.likeCount + left.replyCount));
+  }
+
+  if (activeTab.value === "hot") {
+    return sorted.sort((left, right) => right.hotScore - left.hotScore);
+  }
+
+  if (activeTab.value === "votes") {
+    return sorted.sort((left, right) => right.likeCount - left.likeCount);
+  }
+
+  if (activeTab.value === "categories") {
+    return sorted.sort((left, right) => left.boardName.localeCompare(right.boardName));
+  }
+
+  return sorted;
+});
+
+function setActiveTab(tabKey: DiscoveryTab["key"]) {
+  activeTab.value = tabKey;
+}
 </script>
 
 <template>
-  <div class="home-grid">
-    <aside class="left-rail" id="boards">
-      <div class="rail-heading">
-        <span>Boards</span>
-        <strong>活跃版块</strong>
-      </div>
-      <BoardCard
-        v-for="board in boards"
-        :key="board.id"
-        :board="board"
-        @toggle-follow="() => undefined"
-      />
-    </aside>
-
-    <section class="feed">
-      <div class="hero">
-        <UiBadge tone="green">MVP Framework</UiBadge>
-        <h1>ParallelLines：让技术讨论沿着清晰的平行线生长。</h1>
+  <div id="top" class="meta-home">
+    <section class="meta-hero" aria-labelledby="home-title">
+      <div class="hero-copy">
+        <UiBadge tone="blue">Discourse Meta inspired</UiBadge>
+        <h1 id="home-title">Learn about and discuss ParallelLines.</h1>
         <p>
-          主题流、版块治理、实时通知与深色代码块已经有了可落地的骨架。
-          下一步接入真实 API 与持久化模型。
+          借鉴 Discourse Meta 的首页信息架构：清晰的发现导航、紧凑的主题列表、分类色条、
+          参与者头像、回复/浏览/活动列，以及面向社区治理的常驻入口。
         </p>
+
+        <div class="hero-actions">
+          <UiButton tone="primary">发起主题</UiButton>
+          <a class="hero-link" href="#guidelines">阅读社区指南</a>
+        </div>
       </div>
 
-      <div class="feed-toolbar">
-        <UiTabs v-model="activeTab" :tabs="tabs" />
-      </div>
+      <UiCard class="hero-console">
+        <div class="console-toolbar" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <pre><code>GET /api/v1/topics?sort={{ activeTab }}
+Accept: application/json
 
-      <TopicList :topics="topics" />
-
-      <section class="post-preview">
-        <h2>楼层预览</h2>
-        <PostItem :post="highlightedPost" />
-      </section>
+{
+  "layout": "topic-list",
+  "columns": ["topic", "posters", "replies", "views", "activity"]
+}</code></pre>
+      </UiCard>
     </section>
 
-    <aside class="right-rail">
-      <ComposerDrawer />
-      <UiCard class="rules-card">
-        <h3>社区规则</h3>
-        <ol>
-          <li>讨论问题时给出上下文与已尝试方案。</li>
-          <li>代码块默认深色展示，保持可复制。</li>
-          <li>举报与审核保留审计日志。</li>
-        </ol>
-      </UiCard>
-    </aside>
+    <section class="metric-strip" aria-label="社区实时指标">
+      <div v-for="metric in homeMetrics" :key="metric.label" class="metric-item">
+        <span>{{ metric.label }}</span>
+        <strong>{{ metric.value }}</strong>
+        <em>{{ metric.trend }}</em>
+      </div>
+    </section>
+
+    <div class="discovery-layout">
+      <aside id="boards" class="category-column" aria-labelledby="categories-title">
+        <div class="section-kicker">Categories</div>
+        <h2 id="categories-title">分类版块</h2>
+        <p class="section-note">像 Discourse Category 一样，每个版块都有色彩、说明与治理边界。</p>
+
+        <div class="category-list">
+          <article
+            v-for="board in boards"
+            :key="board.id"
+            class="category-row"
+            :style="{ '--category-color': board.color }"
+          >
+            <span class="category-swatch" aria-hidden="true"></span>
+            <div>
+              <h3>{{ board.name }}</h3>
+              <p>{{ board.description }}</p>
+              <span>{{ compactNumber(board.followerCount) }} 人关注</span>
+            </div>
+            <strong>{{ compactNumber(board.topicCount) }}</strong>
+          </article>
+        </div>
+      </aside>
+
+      <main class="timeline-column" aria-label="主题发现流">
+        <div class="discovery-controls">
+          <div class="discovery-tabs" role="tablist" aria-label="主题筛选">
+            <button
+              v-for="tab in discoveryTabs"
+              :id="`tab-${tab.key}`"
+              :key="tab.key"
+              type="button"
+              role="tab"
+              :aria-selected="activeTab === tab.key"
+              :class="{ active: activeTab === tab.key }"
+              @click="setActiveTab(tab.key)"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+
+          <div class="control-summary">
+            <span>{{ activeDescription }}</span>
+            <UiButton tone="subtle">全部版块</UiButton>
+          </div>
+        </div>
+
+        <TopicList :topics="visibleTopics" />
+      </main>
+
+      <aside id="hot" class="meta-sidebar" aria-label="侧边栏">
+        <ComposerDrawer />
+
+        <UiCard class="sidebar-card">
+          <div class="sidebar-heading">
+            <span>Staff picks</span>
+            <h3>置顶入口</h3>
+          </div>
+          <ul class="link-list">
+            <li v-for="link in sidebarLinks" :key="link.title">
+              <a href="#guidelines">{{ link.title }}</a>
+              <span>{{ link.meta }}</span>
+            </li>
+          </ul>
+        </UiCard>
+
+        <UiCard id="votes" class="sidebar-card">
+          <div class="sidebar-heading">
+            <span>Top tags</span>
+            <h3>热门标签</h3>
+          </div>
+          <div class="tag-cloud">
+            <a v-for="tag in tagCloud" :key="tag" href="#">{{ tag }}</a>
+          </div>
+        </UiCard>
+
+        <UiCard id="guidelines" class="sidebar-card guidelines-card">
+          <div class="sidebar-heading">
+            <span>Guidelines</span>
+            <h3>发帖前检查</h3>
+          </div>
+          <ol>
+            <li>标题描述具体问题，不要只写“求助”。</li>
+            <li>贴出版本、日志、复现步骤和期望结果。</li>
+            <li>代码块使用 Markdown，长日志折叠。</li>
+          </ol>
+        </UiCard>
+      </aside>
+    </div>
   </div>
 </template>
 
-<style scoped>
-.home-grid {
-  display: grid;
-  grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr) minmax(17rem, 23rem);
-  gap: 1rem;
-  align-items: start;
-}
-
-.left-rail,
-.right-rail,
-.feed {
-  display: grid;
-  gap: 1rem;
-}
-
-.rail-heading {
-  padding: 0.4rem 0.35rem;
-}
-
-.rail-heading span {
-  color: var(--accent-geek);
-  font-size: 0.78rem;
-  font-weight: 850;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.rail-heading strong {
-  display: block;
-  margin-top: 0.15rem;
-  color: var(--title);
-  font-size: 1.1rem;
-}
-
-.hero {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(229, 231, 235, 0.95);
-  border-radius: 1.5rem;
-  padding: clamp(1.4rem, 4vw, 2.6rem);
-  background:
-    linear-gradient(135deg, rgba(59, 130, 246, 0.13), transparent 44%),
-    linear-gradient(315deg, rgba(16, 185, 129, 0.14), transparent 40%),
-    rgba(255, 255, 255, 0.88);
-  box-shadow: var(--shadow-card);
-}
-
-.hero::after {
-  position: absolute;
-  right: -5rem;
-  bottom: -5rem;
-  width: 14rem;
-  height: 14rem;
-  border: 1px solid rgba(59, 130, 246, 0.18);
-  border-radius: 999px;
-  content: "";
-}
-
-h1 {
-  max-width: 44rem;
-  margin: 0.75rem 0;
-  color: var(--title);
-  font-size: clamp(2rem, 5vw, 4.5rem);
-  line-height: 0.98;
-  letter-spacing: -0.075em;
-}
-
-.hero p {
-  max-width: 43rem;
-  margin: 0;
-  font-size: 1.05rem;
-  line-height: 1.8;
-}
-
-.feed-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.post-preview {
-  display: grid;
-  gap: 0.8rem;
-}
-
-.post-preview h2,
-.rules-card h3 {
-  margin: 0;
-  color: var(--title);
-}
-
-.rules-card {
-  padding: 1rem;
-}
-
-.rules-card ol {
-  margin: 0.75rem 0 0;
-  padding-left: 1.2rem;
-  line-height: 1.7;
-}
-
-@media (max-width: 1180px) {
-  .home-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(17rem, 23rem);
-  }
-
-  .left-rail {
-    grid-column: 1 / -1;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .rail-heading {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 880px) {
-  .home-grid,
-  .left-rail {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
+<style scoped lang="scss" src="./HomePage.scss"></style>

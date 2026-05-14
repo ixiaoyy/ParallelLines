@@ -27,7 +27,7 @@ apps/web/
       api/                  # generated client wrapper and query keys
       ui/                   # design-system primitives
       lib/                  # pure utilities
-      styles/               # tokens, reset, global styles
+      styles/               # SCSS tokens, reset, global styles
       assets/
 ```
 
@@ -37,6 +37,7 @@ apps/web/
 - Low-level visual primitives belong in `shared/ui` and must not import feature code.
 - API calls go through `shared/api` wrappers and query composables.
 - Keep feature modules independently understandable: `api.ts`, `queries.ts`, `components/`, `model.ts` when needed.
+- Co-locate non-trivial component/page styles as `ComponentName.scss` beside `ComponentName.vue`, then import with `<style scoped lang="scss" src="./ComponentName.scss"></style>`.
 
 ## Anti-patterns
 

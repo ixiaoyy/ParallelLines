@@ -17,8 +17,8 @@ import { createApp } from "vue";
 
 import App from "@/app/App.vue";
 import { router } from "@/app/router";
-import "@/shared/styles/base.css";
-import "@/shared/styles/tokens.css";
+import "@/shared/styles/base.scss";
+import "@/shared/styles/tokens.scss";
 
 createApp(App)
   .use(createPinia())

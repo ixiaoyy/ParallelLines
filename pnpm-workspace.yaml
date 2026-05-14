@@ -1,6 +1,7 @@
 packages:
   - "apps/web"
 allowBuilds:
+  '@parcel/watcher': false
   core-js: true
   esbuild: true
   vue-demi: true

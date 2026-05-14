@@ -6,14 +6,23 @@ defineProps<{ topics: TopicCardVM[] }>();
 </script>
 
 <template>
-  <div class="topic-list">
-    <TopicCard v-for="topic in topics" :key="topic.id" :topic="topic" />
-  </div>
+  <section class="topic-list-shell" aria-labelledby="topic-list-heading">
+    <header class="topic-list-header">
+      <h2 id="topic-list-heading">主题</h2>
+      <span>参与者</span>
+      <span>回复</span>
+      <span class="views-heading">浏览</span>
+      <span>活动</span>
+    </header>
+
+    <div class="topic-list">
+      <TopicCard v-for="topic in topics" :key="topic.id" :topic="topic" />
+    </div>
+
+    <footer class="topic-list-footer">
+      <button type="button">加载更多主题</button>
+    </footer>
+  </section>
 </template>
 
-<style scoped>
-.topic-list {
-  display: grid;
-  gap: 0.9rem;
-}
-</style>
+<style scoped lang="scss" src="./TopicList.scss"></style>

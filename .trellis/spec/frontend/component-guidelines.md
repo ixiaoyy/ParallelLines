@@ -9,11 +9,24 @@
 - Prefer slots for layout composition.
 - Use Ant Design Vue as the default UI framework. Project components in `shared/ui` should wrap Ant Design Vue primitives when customization is needed.
 
+## Style Organization
+
+- Use SCSS (`.scss`, not indented `.sass`) as the project stylesheet syntax.
+- Global reset/token files live in `shared/styles/*.scss` and are imported from `src/main.ts`.
+- Route pages and non-trivial feature components must keep style in a co-located file:
+
+```vue
+<style scoped lang="scss" src="./HomePage.scss"></style>
+```
+
+- Keep only tiny primitive styles inline in `shared/ui` when the style block is short and tightly coupled to the wrapper.
+- Use SCSS nesting sparingly; keep selectors shallow enough to preserve Vue scoped-style readability.
+
 ## Design Tokens
 
-Use CSS variables from `shared/styles/tokens.css`:
+Use CSS variables from `shared/styles/tokens.scss`:
 
-```css
+```scss
 --bg-app: #F8F9FA;
 --primary: #3B82F6;
 --accent-geek: #10B981;
@@ -39,5 +52,7 @@ Use CSS variables from `shared/styles/tokens.css`:
 ## Anti-patterns
 
 - No inline hex colors outside token definitions.
+- No large page-level `<style>` blocks inside `.vue`; extract to co-located `.scss`.
+- No new plain `.css` files unless they are third-party vendor imports that cannot be converted.
 - No component making hidden API mutations on mount.
 - Do not rebuild complex Ant Design Vue primitives from scratch unless product needs require it.
