@@ -3,25 +3,25 @@ import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import TopicList from "@/features/topics/components/TopicList.vue";
-import {
-  boards,
-  getBoardBySlug,
-  getTopicsByBoardSlug,
-  readRouteParam,
-  tagCloud,
-} from "@/shared/api/mockForum";
-import { compactNumber, relativeTime } from "@/shared/lib/format";
-import UiBadge from "@/shared/ui/Badge.vue";
-import UiButton from "@/shared/ui/Button.vue";
+import { getBoardBySlug, getTopicsByBoardSlug, readRouteParam } from "@/shared/api/mockForum";
+import { compactNumber } from "@/shared/lib/format";
 import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
 type BoardSort = "latest" | "hot" | "top";
+type TopicStatusFilter = "all" | "solved" | "unanswered" | "official";
 
 const sortTabs: Array<{ key: BoardSort; label: string; helper: string }> = [
-  { key: "latest", label: "最新", helper: "按最后回复时间排序" },
-  { key: "hot", label: "热门", helper: "按热度分排序" },
-  { key: "top", label: "优质", helper: "按赞同和回复排序" },
+  { key: "latest", label: "最新", helper: "按最后回复时间" },
+  { key: "hot", label: "热门", helper: "按热度与讨论" },
+  { key: "top", label: "高信号", helper: "按赞同与回复" },
+];
+
+const statusFilters: Array<{ key: TopicStatusFilter; label: string }> = [
+  { key: "all", label: "全部" },
+  { key: "solved", label: "已解决" },
+  { key: "unanswered", label: "未回复" },
+  { key: "official", label: "官方回复" },
 ];
 
 const route = useRoute();
@@ -30,24 +30,41 @@ const router = useRouter();
 const slug = computed(() => readRouteParam(route.params.slug));
 const board = computed(() => getBoardBySlug(slug.value));
 
+const searchQuery = computed<string>({
+  get() {
+    return readRouteParam(route.query.q as string | string[] | undefined);
+  },
+  set(value) {
+    updateQuery({ q: value.trim() || undefined });
+  },
+});
+
 const activeSort = computed<BoardSort>({
   get() {
     const querySort = readRouteParam(route.query.sort as string | string[] | undefined);
     return sortTabs.some((tab) => tab.key === querySort) ? (querySort as BoardSort) : "latest";
   },
   set(value) {
-    void router.replace({ name: "board-detail", params: { slug: slug.value }, query: { ...route.query, sort: value } });
+    updateQuery({ sort: value === "latest" ? undefined : value });
+  },
+});
+
+const activeStatus = computed<TopicStatusFilter>({
+  get() {
+    const queryStatus = readRouteParam(route.query.status as string | string[] | undefined);
+    return statusFilters.some((filter) => filter.key === queryStatus) ? (queryStatus as TopicStatusFilter) : "all";
+  },
+  set(value) {
+    updateQuery({ status: value === "all" ? undefined : value });
   },
 });
 
 const activeTab = computed(() => sortTabs.find((tab) => tab.key === activeSort.value) ?? sortTabs[0]);
 
-const boardTopics = computed(() => {
-  if (!board.value) {
-    return [];
-  }
+const allBoardTopics = computed(() => (board.value ? getTopicsByBoardSlug(board.value.slug) : []));
 
-  const list = [...getTopicsByBoardSlug(board.value.slug)];
+const sortedBoardTopics = computed(() => {
+  const list = [...allBoardTopics.value];
 
   if (activeSort.value === "hot") {
     return list.sort((left, right) => right.hotScore - left.hotScore);
@@ -60,77 +77,134 @@ const boardTopics = computed(() => {
   return list.sort((left, right) => Date.parse(right.lastPostedAt) - Date.parse(left.lastPostedAt));
 });
 
-const neighboringBoards = computed(() => boards.filter((item) => item.slug !== slug.value).slice(0, 3));
-const pinnedTopic = computed(() => boardTopics.value.find((topic) => topic.pinned || topic.featured) ?? boardTopics.value[0]);
+const boardTopics = computed(() => {
+  const keyword = searchQuery.value.trim().toLocaleLowerCase();
+
+  return sortedBoardTopics.value.filter((topic) => {
+    const matchesKeyword = keyword
+      ? `${topic.title} ${topic.excerpt} ${topic.tags.join(" ")}`.toLocaleLowerCase().includes(keyword)
+      : true;
+    const matchesStatus =
+      activeStatus.value === "all" ||
+      (activeStatus.value === "solved" && topic.solved) ||
+      (activeStatus.value === "unanswered" && topic.replyCount === 0) ||
+      (activeStatus.value === "official" && topic.officialReply);
+
+    return matchesKeyword && matchesStatus;
+  });
+});
+
+const solutionStats = computed(() => {
+  const topicsInBoard = allBoardTopics.value;
+
+  return [
+    { label: "已解决", value: compactNumber(topicsInBoard.filter((topic) => topic.solved).length), helper: "可直接比对" },
+    { label: "未回复", value: compactNumber(topicsInBoard.filter((topic) => topic.replyCount === 0).length), helper: "等待首答" },
+    { label: "官方回复", value: compactNumber(topicsInBoard.filter((topic) => topic.officialReply).length), helper: "团队已介入" },
+    { label: "平均响应", value: "12 分钟", helper: "示例数据" },
+  ];
+});
+
+const searchPlaceholder = computed(() => {
+  if (slug.value === "support") {
+    return "搜索错误码、日志、OIDC、升级失败……";
+  }
+
+  return "搜索主题、标签、API 名称或问题现象";
+});
+
+function boardMark(name: string) {
+  return name.includes("与") ? name.split("与")[0] : name;
+}
+
+function updateQuery(patch: Record<string, string | undefined>) {
+  const query = { ...route.query };
+
+  Object.entries(patch).forEach(([key, value]) => {
+    if (value) {
+      query[key] = value;
+      return;
+    }
+
+    delete query[key];
+  });
+
+  void router.replace({ name: "board-detail", params: { slug: slug.value }, query });
+}
 </script>
 
 <template>
   <div class="board-page">
     <template v-if="board">
       <section class="board-hero" :style="{ '--board-color': board.color }" aria-labelledby="board-title">
-        <div class="board-hero__mark" aria-hidden="true">{{ board.name.slice(0, 1) }}</div>
-        <div class="board-hero__copy">
-          <div class="board-breadcrumb">
-            <RouterLink to="/boards">全部版块</RouterLink>
-            <span>/</span>
-            <span>{{ board.name }}</span>
-          </div>
-          <h1 id="board-title">{{ board.name }}</h1>
-          <p>{{ board.description }}</p>
-          <div class="board-hero__actions">
-            <UiButton tone="primary">发起主题</UiButton>
-            <UiButton :tone="board.isFollowing ? 'subtle' : 'success'">
-              {{ board.isFollowing ? "正在追踪" : "关注版块" }}
-            </UiButton>
+        <div class="board-hero__header">
+          <span class="board-hero__mark" aria-hidden="true">{{ boardMark(board.name) }}</span>
+          <div class="board-hero__copy">
+            <div class="board-breadcrumb">
+              <RouterLink to="/boards">全部版块</RouterLink>
+              <span>/</span>
+              <span>{{ board.name }}</span>
+            </div>
+            <h1 id="board-title">{{ board.name }}</h1>
+            <p>{{ board.description }}</p>
           </div>
         </div>
-        <dl class="board-hero__stats">
-          <div>
-            <dt>主题</dt>
-            <dd>{{ compactNumber(board.topicCount) }}</dd>
-          </div>
-          <div>
-            <dt>帖子</dt>
-            <dd>{{ compactNumber(board.postCount) }}</dd>
-          </div>
-          <div>
-            <dt>关注</dt>
-            <dd>{{ compactNumber(board.followerCount) }}</dd>
+
+        <label class="board-local-search" for="board-local-search">
+          <span>在 {{ board.name }} 中搜索</span>
+          <input
+            id="board-local-search"
+            v-model="searchQuery"
+            type="search"
+            :placeholder="searchPlaceholder"
+            autocomplete="off"
+          />
+        </label>
+
+        <dl class="board-hero__signals" aria-label="解答信号">
+          <div v-for="signal in solutionStats" :key="signal.label">
+            <dt>{{ signal.label }}</dt>
+            <dd>{{ signal.value }}</dd>
+            <span>{{ signal.helper }}</span>
           </div>
         </dl>
       </section>
 
       <div class="board-layout">
         <main class="board-main" aria-label="版块主题列表">
-          <UiCard v-if="pinnedTopic" class="board-highlight">
-            <span class="panel-kicker">版块焦点</span>
-            <RouterLink :to="`/t/${pinnedTopic.slug}/${pinnedTopic.id}`">{{ pinnedTopic.title }}</RouterLink>
-            <p>{{ pinnedTopic.excerpt }}</p>
-            <footer>
-              <span>{{ compactNumber(pinnedTopic.replyCount) }} 回复</span>
-              <span>{{ relativeTime(pinnedTopic.lastPostedAt) }}</span>
-            </footer>
-          </UiCard>
+          <section class="board-toolbar" aria-label="主题筛选">
+            <div class="board-tabs" aria-label="排序方式">
+              <button
+                v-for="tab in sortTabs"
+                :key="tab.key"
+                type="button"
+                :class="{ active: activeSort === tab.key }"
+                @click="activeSort = tab.key"
+              >
+                <strong>{{ tab.label }}</strong>
+                <span>{{ tab.helper }}</span>
+              </button>
+            </div>
 
-          <section class="board-tabs" aria-label="主题筛选">
-            <button
-              v-for="tab in sortTabs"
-              :key="tab.key"
-              type="button"
-              :class="{ active: activeSort === tab.key }"
-              @click="activeSort = tab.key"
-            >
-              <strong>{{ tab.label }}</strong>
-              <span>{{ tab.helper }}</span>
-            </button>
+            <div class="status-filters" aria-label="解答状态">
+              <button
+                v-for="filter in statusFilters"
+                :key="filter.key"
+                type="button"
+                :class="{ active: activeStatus === filter.key }"
+                @click="activeStatus = filter.key"
+              >
+                {{ filter.label }}
+              </button>
+            </div>
           </section>
 
           <div class="board-feed-heading">
-            <div>
-              <UiBadge tone="blue">{{ activeTab.label }}</UiBadge>
-              <h2>{{ board.name }}主题</h2>
-            </div>
-            <span>{{ activeTab.helper }} · {{ boardTopics.length }} 条示例</span>
+            <h2>{{ board.name }}主题</h2>
+            <span>
+              {{ activeTab.label }} · {{ activeTab.helper }} · {{ boardTopics.length }} / {{ allBoardTopics.length }} 条
+              {{ searchQuery ? `· 搜索 “${searchQuery}”` : "" }}
+            </span>
           </div>
 
           <TopicList :topics="boardTopics" />
@@ -138,48 +212,14 @@ const pinnedTopic = computed(() => boardTopics.value.find((topic) => topic.pinne
 
         <aside class="board-sidebar" aria-label="版块信息">
           <UiCard class="sidebar-panel rules-panel">
-            <span class="panel-kicker">版块说明</span>
-            <h2>发帖规则</h2>
+            <span class="panel-kicker">提问前自检</span>
+            <h2>先让答案更快出现</h2>
             <ol>
-              <li>排障主题需要包含环境、日志和复现路径。</li>
-              <li>提案主题请说明影响范围和备选方案。</li>
-              <li>重复主题会被合并，原链接会保留跳转。</li>
+              <li>先搜错误码、接口名、日志片段。</li>
+              <li>优先阅读“已解决”和“官方回复”。</li>
+              <li>仍未命中时，发布新问题并附环境、复现步骤、期望结果。</li>
             </ol>
-          </UiCard>
-
-          <UiCard class="sidebar-panel">
-            <span class="panel-kicker">值班版主</span>
-            <h2>今天在线</h2>
-            <div class="moderator-list">
-              <span>林</span>
-              <span>墨</span>
-              <span>凯</span>
-              <strong>响应中 · 12 分钟内</strong>
-            </div>
-          </UiCard>
-
-          <UiCard class="sidebar-panel">
-            <span class="panel-kicker">相关标签</span>
-            <h2>常见线索</h2>
-            <div class="tag-cloud">
-              <a v-for="tag in tagCloud.slice(0, 6)" :key="tag" href="#tags">#{{ tag }}</a>
-            </div>
-          </UiCard>
-
-          <UiCard class="sidebar-panel">
-            <span class="panel-kicker">相邻版块</span>
-            <h2>继续探索</h2>
-            <RouterLink
-              v-for="neighbor in neighboringBoards"
-              :key="neighbor.id"
-              class="neighbor-link"
-              :to="{ name: 'board-detail', params: { slug: neighbor.slug } }"
-              :style="{ '--neighbor-color': neighbor.color }"
-            >
-              <span aria-hidden="true"></span>
-              <strong>{{ neighbor.name }}</strong>
-              <small>{{ compactNumber(neighbor.topicCount) }} 主题</small>
-            </RouterLink>
+            <RouterLink class="ask-link" to="/new-topic">发布新问题</RouterLink>
           </UiCard>
         </aside>
       </div>

@@ -9,17 +9,21 @@ defineProps<{ topics: TopicCardVM[] }>();
   <section class="topic-list-shell" aria-labelledby="topic-list-heading">
     <header class="topic-list-header">
       <h2 id="topic-list-heading">主题</h2>
-      <span>参与者</span>
+      <span>状态</span>
       <span>回复</span>
-      <span class="views-heading">浏览</span>
       <span>活动</span>
     </header>
 
-    <div class="topic-list">
+    <div v-if="topics.length" class="topic-list">
       <TopicCard v-for="topic in topics" :key="topic.id" :topic="topic" />
     </div>
 
-    <footer class="topic-list-footer">
+    <div v-else class="topic-list-empty">
+      <strong>没有符合条件的主题</strong>
+      <span>清除筛选或换一个错误码、API 名称再试。</span>
+    </div>
+
+    <footer v-if="topics.length" class="topic-list-footer">
       <button type="button">加载更多主题</button>
     </footer>
   </section>

@@ -19,6 +19,7 @@ export interface TopicCardVM {
   pinned?: boolean;
   featured?: boolean;
   solved?: boolean;
+  officialReply?: boolean;
   unreadCount?: number;
   status: TopicStatus;
 }

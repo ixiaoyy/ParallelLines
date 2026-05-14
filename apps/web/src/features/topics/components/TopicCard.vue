@@ -4,17 +4,36 @@ import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
-import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiBadge from "@/shared/ui/Badge.vue";
 
 const props = defineProps<{ topic: TopicCardVM }>();
 
-const visiblePosters = computed(() => props.topic.posterNames.slice(0, 4));
-const hiddenPosterCount = computed(() =>
-  Math.max(props.topic.posterNames.length - visiblePosters.value.length, 0),
-);
-
 const topicUrl = computed(() => `/t/${props.topic.slug}/${props.topic.id}`);
+
+const answerState = computed(() => {
+  if (props.topic.status === "closed") {
+    return { tone: "closed", label: "已关闭", helper: "只读归档" };
+  }
+
+  if (props.topic.solved) {
+    return { tone: "solved", label: "已解决", helper: "优先参考" };
+  }
+
+  if (props.topic.officialReply) {
+    return { tone: "official", label: "官方回复", helper: "团队已介入" };
+  }
+
+  if (props.topic.replyCount === 0) {
+    return { tone: "unanswered", label: "未回复", helper: "等待首答" };
+  }
+
+  if (props.topic.featured) {
+    return { tone: "featured", label: "精华", helper: "高信号" };
+  }
+
+  return { tone: "open", label: "讨论中", helper: "继续跟进" };
+});
+
 </script>
 
 <template>
@@ -22,7 +41,7 @@ const topicUrl = computed(() => `/t/${props.topic.slug}/${props.topic.id}`);
     <div class="topic-main">
       <div class="topic-title-line">
         <UiBadge v-if="topic.pinned" tone="amber">置顶</UiBadge>
-        <UiBadge v-if="topic.featured" tone="green">精华</UiBadge>
+        <UiBadge v-if="topic.featured && !topic.solved" tone="green">精华</UiBadge>
         <UiBadge v-if="topic.unreadCount" tone="blue">{{ topic.unreadCount }} 新</UiBadge>
         <LockOutlined v-if="topic.status === 'closed'" class="topic-status-icon" aria-label="已关闭" />
         <RouterLink class="topic-title" :to="topicUrl">{{ topic.title }}</RouterLink>
@@ -37,33 +56,20 @@ const topicUrl = computed(() => `/t/${props.topic.slug}/${props.topic.id}`);
         </span>
 
         <span v-for="tag in topic.tags" :key="tag" class="topic-tag">#{{ tag }}</span>
-
-        <span v-if="topic.solved" class="solved-chip">
-          <CheckCircleOutlined />
-          已解决
-        </span>
+        <span>{{ compactNumber(topic.viewCount) }} 浏览</span>
       </div>
     </div>
 
-    <div class="posters" aria-label="参与者">
-      <UiAvatar
-        v-for="poster in visiblePosters"
-        :key="poster"
-        :name="poster"
-        size="sm"
-        :title="poster"
-      />
-      <span v-if="hiddenPosterCount" class="posters-more">+{{ hiddenPosterCount }}</span>
+    <div class="answer-state" :class="`answer-state--${answerState.tone}`">
+      <CheckCircleOutlined v-if="answerState.tone === 'solved'" />
+      <LockOutlined v-else-if="answerState.tone === 'closed'" />
+      <strong>{{ answerState.label }}</strong>
+      <small>{{ answerState.helper }}</small>
     </div>
 
     <div class="topic-stat">
       <strong>{{ compactNumber(topic.replyCount) }}</strong>
       <span>回复</span>
-    </div>
-
-    <div class="topic-stat topic-stat--views">
-      <strong>{{ compactNumber(topic.viewCount) }}</strong>
-      <span>浏览</span>
     </div>
 
     <div class="topic-activity">

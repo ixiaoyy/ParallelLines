@@ -1,0 +1,6 @@
+{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
+{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Verify component, accessibility and SCSS conventions"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Verify CX, responsiveness, contrast and zh-CN copy"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Verify no duplicated list/filter patterns"}
+{"file": ".trellis/spec/product/discourse-inspired-parallellines-design.md", "reason": "Verify redesign still matches product blueprint"}
