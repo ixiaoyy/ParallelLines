@@ -56,27 +56,27 @@ function setActiveTab(tabKey: DiscoveryTab["key"]) {
     <div class="home-workspace">
       <aside class="forum-sidebar" aria-label="社区导航">
         <nav class="primary-menu" aria-label="个人导航">
-          <a class="menu-link active" href="#top">
+          <RouterLink class="menu-link active" :to="{ name: 'home', hash: '#top' }">
             <span class="menu-icon menu-icon--stack" aria-hidden="true"></span>
             话题
             <i aria-hidden="true"></i>
-          </a>
-          <a class="menu-link" href="#mine">
+          </RouterLink>
+          <RouterLink class="menu-link" :to="{ name: 'new-topic', hash: '#drafts' }">
             <span class="menu-icon menu-icon--user" aria-hidden="true"></span>
             我的帖子
-          </a>
-          <a class="menu-link" href="#messages">
+          </RouterLink>
+          <RouterLink class="menu-link" :to="{ name: 'home', hash: '#messages' }">
             <span class="menu-icon menu-icon--inbox" aria-hidden="true"></span>
             我的消息
-          </a>
-          <a class="menu-link" href="#activity">
+          </RouterLink>
+          <RouterLink class="menu-link" :to="{ name: 'home', hash: '#activity' }">
             <span class="menu-icon menu-icon--calendar" aria-hidden="true"></span>
             近期活动
-          </a>
-          <a class="menu-link menu-link--muted" href="#more">
+          </RouterLink>
+          <RouterLink class="menu-link menu-link--muted" :to="{ name: 'board-directory' }">
             <span class="menu-icon menu-icon--more" aria-hidden="true"></span>
             更多
-          </a>
+          </RouterLink>
         </nav>
 
         <section id="boards" class="taxonomy-section" aria-labelledby="category-nav-title">
@@ -122,8 +122,8 @@ function setActiveTab(tabKey: DiscoveryTab["key"]) {
             <span aria-hidden="true">⌄</span>
             频道
           </h2>
-          <a class="channel-link" href="#chat">聊天</a>
-          <a class="channel-link" href="#qa">快问快答</a>
+          <RouterLink class="channel-link" :to="{ name: 'board-detail', params: { slug: 'community' } }">聊天</RouterLink>
+          <RouterLink class="channel-link" :to="{ name: 'board-detail', params: { slug: 'support' } }">快问快答</RouterLink>
         </section>
       </aside>
 
@@ -141,14 +141,14 @@ function setActiveTab(tabKey: DiscoveryTab["key"]) {
             </p>
 
             <div class="hero-actions">
-              <RouterLink class="button-link" to="/boards">
+              <RouterLink class="button-link" :to="{ name: 'new-topic' }">
                 <UiButton tone="primary">发起主题</UiButton>
               </RouterLink>
               <a class="hero-link" href="#solved">看已解决</a>
             </div>
           </div>
 
-          <UiCard class="hero-live-card" aria-label="正在发生的讨论">
+          <UiCard id="activity" class="hero-live-card" aria-label="正在发生的讨论">
             <header>
               <span>正在发生</span>
               <strong>活跃主题</strong>
@@ -213,7 +213,7 @@ function setActiveTab(tabKey: DiscoveryTab["key"]) {
           <aside id="hot" class="meta-sidebar" aria-label="侧边栏">
             <ComposerDrawer />
 
-            <UiCard class="sidebar-card">
+            <UiCard id="messages" class="sidebar-card">
               <div class="sidebar-heading">
                 <span>今日热议</span>
                 <h3>还在升温</h3>

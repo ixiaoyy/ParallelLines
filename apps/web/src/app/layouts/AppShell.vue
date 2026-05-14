@@ -38,7 +38,7 @@ import UiButton from "@/shared/ui/Button.vue";
         <NotificationBell :count="3">
           <BellOutlined />
         </NotificationBell>
-        <RouterLink class="publish-link" to="/boards" aria-label="发布主题，先选择版块">
+        <RouterLink class="publish-link" :to="{ name: 'new-topic' }" aria-label="发布主题">
           <UiButton tone="primary">
             <template #icon>
               <PlusOutlined />

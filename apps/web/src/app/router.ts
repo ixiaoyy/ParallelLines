@@ -26,6 +26,11 @@ export const router = createRouter({
       component: () => import("@/pages/board/BoardPage.vue"),
     },
     {
+      path: "/new-topic",
+      name: "new-topic",
+      component: () => import("@/pages/topic/NewTopicPage.vue"),
+    },
+    {
       path: "/t/:slug/:id",
       name: "topic-detail",
       component: () => import("@/pages/topic/TopicDetailPage.vue"),

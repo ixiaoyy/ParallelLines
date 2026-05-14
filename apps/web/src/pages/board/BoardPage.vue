@@ -219,7 +219,7 @@ function updateQuery(patch: Record<string, string | undefined>) {
               <li>优先阅读“已解决”和“官方回复”。</li>
               <li>仍未命中时，发布新问题并附环境、复现步骤、期望结果。</li>
             </ol>
-            <RouterLink class="ask-link" to="/new-topic">发布新问题</RouterLink>
+            <RouterLink class="ask-link" :to="{ name: 'new-topic', query: { board: slug } }">发布新问题</RouterLink>
           </UiCard>
         </aside>
       </div>
