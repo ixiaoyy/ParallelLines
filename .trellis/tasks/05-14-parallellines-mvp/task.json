@@ -1,7 +1,7 @@
 {
   "id": "parallellines-mvp",
   "name": "parallellines-mvp",
-  "title": "ParallelLines MVP project blueprint",
+  "title": "平行线 MVP project blueprint",
   "description": "Discourse-inspired forum platform using Vue 3 and FastAPI; parent task for implementation epics.",
   "status": "in_progress",
   "dev_type": "fullstack",
@@ -74,6 +74,6 @@
     ".trellis/spec/product/trellis-task-plan.md",
     ".trellis/spec/"
   ],
-  "notes": "Parent blueprint task for the Discourse-inspired ParallelLines forum MVP.",
+  "notes": "Parent blueprint task for the Discourse-inspired 平行线 forum MVP.",
   "meta": {}
 }

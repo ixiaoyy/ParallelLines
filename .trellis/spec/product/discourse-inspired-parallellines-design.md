@@ -1,4 +1,4 @@
-# ParallelLines 论坛项目设计（Vue 3 + FastAPI）
+# 平行线论坛项目设计（Vue 3 + FastAPI）
 
 > 目标：参考 Discourse Meta 的信息架构与 `D:\work\discourse` 开源源码，把“论坛/版块/主题/楼层”的中文社区体验，设计成可用 Trellis 拆解推进的现代全栈项目。
 
@@ -27,7 +27,7 @@
 
 ## 2. 产品定位
 
-**ParallelLines**：面向开发者、技术社区或兴趣圈子的“主题式论坛”。它保留中文论坛的低门槛发帖、关注版块、楼层回复、热帖榜；吸收 Discourse 的分类清晰、主题流、通知级别、社区治理和可扩展 API。
+**平行线**：面向开发者、技术社区或兴趣圈子的“主题式论坛”（代码仓库和内部包名沿用 ParallelLines/parallellines）。它保留中文论坛的低门槛发帖、关注版块、楼层回复、热帖榜；吸收 Discourse 的分类清晰、主题流、通知级别、社区治理和可扩展 API。
 
 ### 核心用户
 
@@ -165,6 +165,12 @@ D:\work\ParallelLines\
 
 **Calm Tech Forum / 冷静技术社区**：浅灰画布减少白光，蓝色作为默认行动色，极客绿作为成功和在线状态，帖子正文以清晰排版为主，代码块模拟编辑器深色预览。
 
+### 语言与内容约定
+
+- 平行线默认面向中文技术社区，产品 UI、导航、状态、空状态、示例主题和种子内容统一使用简体中文。
+- 英文仅保留在品牌名、协议/API/代码标识符、包名、命令、错误码，以及 FastAPI、OpenAPI、Vue、Markdown 等通用技术名词中。
+- 借鉴 Discourse Meta 的信息架构，不复制其英文文案；中文内容应体现“版块、主题、楼层、关注、追踪、投票、举报”等中文论坛语境。
+
 ### 色彩 Token
 
 ```css
@@ -198,7 +204,7 @@ D:\work\ParallelLines\
 
 ### 核心组件
 
-UI 基础采用 Ant Design Vue，并通过 `ConfigProvider` 注入 ParallelLines 色彩 token；业务组件在 Ant Design Vue 之上做轻量封装。
+UI 基础采用 Ant Design Vue，并通过 `ConfigProvider` 注入平行线色彩 token；业务组件在 Ant Design Vue 之上做轻量封装。
 
 | 组件 | 说明 |
 |---|---|

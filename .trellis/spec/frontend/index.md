@@ -1,6 +1,6 @@
 # Frontend Development Guidelines
 
-> Frontend stack for ParallelLines: Vue 3, Vite, TypeScript, Ant Design Vue, Vue Router, Pinia, TanStack Query for Vue, generated OpenAPI client, SCSS, and CSS variables/design tokens.
+> Frontend stack for 平行线（internal package/project name: ParallelLines）: Vue 3, Vite, TypeScript, Ant Design Vue, Vue Router, Pinia, TanStack Query for Vue, generated OpenAPI client, SCSS, and CSS variables/design tokens.
 
 ## Overview
 

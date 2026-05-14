@@ -11,7 +11,7 @@ import UiCard from "@/shared/ui/Card.vue";
     </div>
     <textarea placeholder="写下你的问题、经验或提案…" rows="4" />
     <div class="composer-preview markdown-body">
-      <pre><code>const topic = await createTopic({ board, title, rawMd })</code></pre>
+      <pre><code>const 主题 = await 创建主题({ 版块, 标题, 正文Markdown })</code></pre>
     </div>
     <footer>
       <UiButton tone="ghost">保存草稿</UiButton>

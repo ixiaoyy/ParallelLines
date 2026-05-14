@@ -14,6 +14,8 @@
 - Forms must show validation errors close to fields.
 - New topic/reply flows must protect unsaved drafts.
 - Long topic pages must avoid rendering thousands of posts at once.
+- User-facing product copy defaults to Simplified Chinese (`zh-CN`). English is allowed only for product names, API identifiers, code examples, package names, and widely used technical terms such as FastAPI/OpenAPI/Vue.
+- Navigation, empty states, badges, helper text, fixture topics, and seed community content must read like a Chinese technical forum rather than an English site with partial translation.
 
 ## Visual Quality Bar
 

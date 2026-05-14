@@ -1,8 +1,8 @@
-# PRD: ParallelLines MVP Project Blueprint
+# PRD: 平行线 MVP Project Blueprint
 
 ## Goal
 
-Build a Discourse-inspired forum product using Vue 3 and FastAPI. The product must support boards, topics, posts/replies, tags, search, follows, notifications, and basic moderation, with the requested calm tech color palette.
+Build 平行线, a Discourse-inspired forum product using Vue 3 and FastAPI. The product must support boards, topics, posts/replies, tags, search, follows, notifications, and basic moderation, with the requested calm tech color palette.
 
 ## Reference Inputs
 

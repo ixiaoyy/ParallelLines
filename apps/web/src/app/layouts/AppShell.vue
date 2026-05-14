@@ -8,26 +8,26 @@ import UiButton from "@/shared/ui/Button.vue";
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <RouterLink class="brand" to="/" aria-label="ParallelLines home">
-        <span class="brand-mark">PL</span>
+      <RouterLink class="brand" to="/" aria-label="平行线首页">
+        <span class="brand-mark">平</span>
         <span>
-          <strong>ParallelLines</strong>
-          <small>calm technical forum</small>
+          <strong>平行线</strong>
+          <small>冷静的技术社区</small>
         </span>
       </RouterLink>
 
       <nav class="nav-links" aria-label="主导航">
         <RouterLink to="/">最新</RouterLink>
-        <a href="#top">Top</a>
-        <a href="#boards">Categories</a>
+        <a href="#top">热榜</a>
+        <a href="#boards">版块</a>
         <a href="#hot">热门</a>
-        <a href="#votes">Votes</a>
+        <a href="#votes">投票</a>
       </nav>
 
       <a-input
         class="search-box"
         placeholder="搜索主题、标签、作者"
-        aria-label="搜索 ParallelLines"
+        aria-label="搜索平行线"
       >
         <template #prefix>
           <SearchOutlined />

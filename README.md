@@ -1,6 +1,6 @@
-# ParallelLines
+# 平行线
 
-Discourse-inspired forum project design for a Vue 3 + FastAPI implementation.
+面向中文技术社区的 Discourse-inspired 论坛项目，采用 Vue 3 + FastAPI 实现。代码仓库和包名暂沿用 `ParallelLines/parallellines`。
 
 ## Design Artifacts
 

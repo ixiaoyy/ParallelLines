@@ -10,8 +10,8 @@ import UiSkeleton from "@/shared/ui/Skeleton.vue";
 <template>
   <div class="design-page">
     <header>
-      <UiBadge tone="blue">Design Tokens</UiBadge>
-      <h1>ParallelLines UI 基线</h1>
+      <UiBadge tone="blue">设计令牌</UiBadge>
+      <h1>平行线 UI 基线</h1>
       <p>用于前三个任务的设计系统验收页：按钮、卡片、徽章、头像、空状态、代码块。</p>
     </header>
 
@@ -26,7 +26,7 @@ import UiSkeleton from "@/shared/ui/Skeleton.vue";
 
     <div class="grid">
       <UiCard class="panel">
-        <h2>Actions</h2>
+        <h2>操作按钮</h2>
         <div class="inline">
           <UiButton>主操作</UiButton>
           <UiButton tone="success">成功状态</UiButton>
@@ -36,22 +36,22 @@ import UiSkeleton from "@/shared/ui/Skeleton.vue";
       </UiCard>
 
       <UiCard class="panel">
-        <h2>Identity</h2>
+        <h2>身份与状态</h2>
         <div class="inline">
           <UiAvatar name="Lina" size="lg" />
-          <UiBadge tone="green">Watching</UiBadge>
-          <UiBadge tone="amber">Pinned</UiBadge>
-          <UiBadge>Muted</UiBadge>
+          <UiBadge tone="green">关注中</UiBadge>
+          <UiBadge tone="amber">已置顶</UiBadge>
+          <UiBadge>已静音</UiBadge>
         </div>
       </UiCard>
 
       <UiCard class="panel markdown-body">
-        <h2>Code block</h2>
+        <h2>代码块</h2>
         <pre><code>uv run uvicorn app.main:app --reload</code></pre>
       </UiCard>
 
       <UiCard class="panel">
-        <h2>Loading / Empty</h2>
+        <h2>加载与空状态</h2>
         <UiSkeleton />
         <UiEmptyState title="没有更多主题" description="关注更多版块后，这里会出现新的讨论线索。" />
       </UiCard>

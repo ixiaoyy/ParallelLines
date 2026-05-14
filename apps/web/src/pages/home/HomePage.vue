@@ -54,8 +54,8 @@ function setActiveTab(tabKey: DiscoveryTab["key"]) {
   <div id="top" class="meta-home">
     <section class="meta-hero" aria-labelledby="home-title">
       <div class="hero-copy">
-        <UiBadge tone="blue">Discourse Meta inspired</UiBadge>
-        <h1 id="home-title">Learn about and discuss ParallelLines.</h1>
+        <UiBadge tone="blue">参考 Discourse Meta 的中文社区</UiBadge>
+        <h1 id="home-title">中文技术讨论现场。</h1>
         <p>
           借鉴 Discourse Meta 的首页信息架构：清晰的发现导航、紧凑的主题列表、分类色条、
           参与者头像、回复/浏览/活动列，以及面向社区治理的常驻入口。
@@ -93,7 +93,7 @@ Accept: application/json
 
     <div class="discovery-layout">
       <aside id="boards" class="category-column" aria-labelledby="categories-title">
-        <div class="section-kicker">Categories</div>
+        <div class="section-kicker">版块</div>
         <h2 id="categories-title">分类版块</h2>
         <p class="section-note">像 Discourse Category 一样，每个版块都有色彩、说明与治理边界。</p>
 
@@ -146,7 +146,7 @@ Accept: application/json
 
         <UiCard class="sidebar-card">
           <div class="sidebar-heading">
-            <span>Staff picks</span>
+            <span>推荐入口</span>
             <h3>置顶入口</h3>
           </div>
           <ul class="link-list">
@@ -159,7 +159,7 @@ Accept: application/json
 
         <UiCard id="votes" class="sidebar-card">
           <div class="sidebar-heading">
-            <span>Top tags</span>
+            <span>热门标签</span>
             <h3>热门标签</h3>
           </div>
           <div class="tag-cloud">
@@ -169,7 +169,7 @@ Accept: application/json
 
         <UiCard id="guidelines" class="sidebar-card guidelines-card">
           <div class="sidebar-heading">
-            <span>Guidelines</span>
+            <span>社区规范</span>
             <h3>发帖前检查</h3>
           </div>
           <ol>

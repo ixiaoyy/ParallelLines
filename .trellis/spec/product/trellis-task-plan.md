@@ -6,7 +6,7 @@
 
 ```mermaid
 flowchart TD
-    P0["05-14-parallellines-mvp<br/>ParallelLines MVP project blueprint"]
+    P0["05-14-parallellines-mvp<br/>平行线 MVP project blueprint"]
     P0 --> A["05-14-architecture-domain-baseline"]
     P0 --> B["05-14-backend-fastapi-foundation"]
     P0 --> C["05-14-frontend-vue-design-system"]
