@@ -3,13 +3,16 @@ import { BellOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons-vu
 
 import NotificationBell from "@/features/notifications/components/NotificationBell.vue";
 import UiButton from "@/shared/ui/Button.vue";
+
+import logoUrl from "./logo.png";
 </script>
 
 <template>
   <div class="app-shell">
     <header class="topbar">
       <RouterLink class="brand" to="/" aria-label="平行线首页">
-        <span class="brand-mark">平</span>
+        <!-- 原文字品牌：<span class="brand-mark">平</span> -->
+        <img class="brand-logo" :src="logoUrl" alt="" width="41" height="41" />
         <span>
           <strong>平行线</strong>
           <small>冷静的技术社区</small>

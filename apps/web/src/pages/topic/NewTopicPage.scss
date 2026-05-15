@@ -198,6 +198,7 @@
 
 .intent-picker {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0.5rem 0;
 }
 
 .board-picker button,
@@ -331,6 +332,7 @@ textarea:focus {
   gap: 0.75rem;
   border: 1px solid var(--border);
   border-radius: 1rem;
+  margin: 0.5rem 0;
   padding: 1rem;
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--board-color) 10%, transparent), transparent 40%),

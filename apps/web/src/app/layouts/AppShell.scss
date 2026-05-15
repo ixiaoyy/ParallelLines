@@ -42,6 +42,17 @@
   box-shadow: 0 14px 28px rgba(59, 130, 246, 0.24);
 }
 
+/* 与 .brand-mark 同档尺寸，用于 logo 图替代「平」字块 */
+.brand-logo {
+  display: block;
+  width: 2.55rem;
+  height: 2.55rem;
+  border-radius: 0.9rem;
+  object-fit: cover;
+  object-position: -2.05rem;
+  box-shadow: 0 14px 28px rgba(59, 130, 246, 0.24);
+}
+
 .brand small {
   display: block;
   color: var(--muted);

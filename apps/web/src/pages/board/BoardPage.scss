@@ -82,7 +82,7 @@
 .board-local-search {
   display: grid;
   grid-column: 1;
-  gap: 0.24rem;
+  gap: 0.44rem;
 }
 
 .board-local-search span {
@@ -125,7 +125,7 @@
 
 .board-hero__signals div {
   display: grid;
-  gap: 0.08rem;
+  gap: 0.1rem;
   border: 1px solid rgba(229, 231, 235, 0.9);
   border-radius: 0.88rem;
   padding: 0.48rem 0.56rem;
@@ -161,7 +161,7 @@
 .board-main,
 .board-sidebar {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.85rem;
   min-width: 0;
 }
 
@@ -200,9 +200,9 @@
 
 .board-tabs button {
   display: grid;
-  gap: 0.05rem;
+  gap: 0.15rem;
   min-width: 6.7rem;
-  padding: 0.45rem 0.72rem;
+  padding: 0.55rem 0.82rem;
   text-align: left;
 }
 
@@ -284,6 +284,7 @@
 .sidebar-panel ol {
   display: grid;
   gap: 0.48rem;
+  margin-bottom: 0.55rem;
   padding-left: 1.1rem;
   color: var(--text);
   line-height: 1.6;
