@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+import { useBoards } from "@/features/boards/queries";
 import ComposerDrawer from "@/features/topics/components/ComposerDrawer.vue";
 import TopicList from "@/features/topics/components/TopicList.vue";
+import type { TopicSort } from "@/features/topics/model";
+import { useTopicFeed } from "@/features/topics/queries";
 import {
-  boards,
   discoveryTabs,
   homeMetrics,
   sidebarLinks,
   tagCloud,
-  topics,
   type DiscoveryTab,
 } from "@/pages/home/fixtures";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
@@ -17,13 +18,21 @@ import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 const activeTab = ref<DiscoveryTab["key"]>("latest");
+const feedSort = computed<TopicSort>(() =>
+  activeTab.value === "hot" ? "hot" : activeTab.value === "top" ? "top" : "latest",
+);
+const boardsQuery = useBoards();
+const topicsQuery = useTopicFeed(feedSort);
 
 const activeDescription = computed(
   () => discoveryTabs.find((tab) => tab.key === activeTab.value)?.description ?? "",
 );
 
+const boardSummaries = computed(() => boardsQuery.data.value ?? []);
+const feedTopics = computed(() => topicsQuery.data.value ?? []);
+
 const visibleTopics = computed(() => {
-  const sorted = [...topics];
+  const sorted = [...feedTopics.value];
 
   if (activeTab.value === "top") {
     return sorted.sort((left, right) => right.likeCount + right.replyCount - (left.likeCount + left.replyCount));
@@ -44,7 +53,7 @@ const visibleTopics = computed(() => {
   return sorted;
 });
 
-const liveTopics = computed(() => topics.slice(0, 3));
+const liveTopics = computed(() => feedTopics.value.slice(0, 3));
 
 function setActiveTab(tabKey: DiscoveryTab["key"]) {
   activeTab.value = tabKey;
@@ -85,7 +94,7 @@ function setActiveTab(tabKey: DiscoveryTab["key"]) {
             类别
           </h2>
           <RouterLink
-            v-for="board in boards"
+            v-for="board in boardSummaries"
             :key="board.id"
             class="taxonomy-link"
             :to="{ name: 'board-detail', params: { slug: board.slug } }"

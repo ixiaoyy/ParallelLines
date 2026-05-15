@@ -7,6 +7,10 @@
     "dev:web": "pnpm --dir apps/web dev",
     "build:web": "pnpm --dir apps/web build",
     "typecheck:web": "pnpm --dir apps/web typecheck",
-    "lint:web": "pnpm --dir apps/web lint"
+    "lint:web": "pnpm --dir apps/web lint",
+    "lint:api": "uv --directory apps/api run ruff check app tests",
+    "test:api": "uv --directory apps/api run pytest -q",
+    "ci:web": "pnpm --dir apps/web lint && pnpm --dir apps/web typecheck && pnpm --dir apps/web build",
+    "test:smoke": "pnpm --dir apps/web test:smoke"
   }
 }

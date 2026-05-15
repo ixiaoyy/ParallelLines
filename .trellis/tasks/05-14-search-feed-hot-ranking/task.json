@@ -3,7 +3,7 @@
   "name": "search-feed-hot-ranking",
   "title": "Search feed and hot ranking",
   "description": "Implement full-text search, latest/top/hot feeds, ranking jobs, and topic list filters.",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "fullstack",
   "scope": "search-feed-hot-ranking",
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,19 +47,19 @@
   "subtasks": [
     {
       "name": "Add feed queries",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Add search",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Add hot score job",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Build search/hot UI",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "children": [],
@@ -67,8 +67,17 @@
   "relatedFiles": [
     "apps/api/app/repositories/",
     "apps/api/app/workers/",
-    "apps/web/src/pages/search/"
+    "apps/web/src/pages/search/",
+    "apps/api/app/api/v1/search.py",
+    "apps/api/app/services/forum.py",
+    "apps/api/app/workers/hot_ranking.py",
+    "apps/api/tests/test_search_feed.py",
+    "apps/web/src/pages/search/SearchPage.vue",
+    "apps/web/src/pages/search/SearchPage.scss",
+    "apps/web/src/features/topics/api.ts",
+    "apps/web/src/features/topics/queries.ts",
+    ".trellis/spec/backend/search-feed-hot-ranking.md"
   ],
-  "notes": "",
+  "notes": "Implemented public search/feed slice: /topics and board topic feeds now accept q/tag/author/cursor filters, /search provides title + post-body search, hot score recompute worker is idempotent, tests cover search/tag/cursor/hot recompute, and frontend /search plus topbar search route use the same TopicResponse-to-TopicCardVM mapping with fixture fallback.",
   "meta": {}
 }

@@ -2,15 +2,15 @@
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 
-import type { TopicCardVM } from "@/entities/topic/model";
+import { setTopicBookmark } from "@/features/interactions/api";
+import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
+import { useCreateFlag } from "@/features/moderation/queries";
 import PostItem from "@/features/posts/components/PostItem.vue";
+import { useCreatePost, useTopicPosts } from "@/features/posts/queries";
 import ComposerDrawer from "@/features/topics/components/ComposerDrawer.vue";
-import {
-  getBoardBySlug,
-  getPostsByTopicId,
-  getRelatedTopics,
-  getTopicByRoute,
-} from "@/shared/api/mockForum";
+import { useRelatedTopics, useTopicDetail } from "@/features/topics/queries";
+import { hasAccessToken } from "@/shared/api/client";
+import { getBoardBySlug, readRouteParam } from "@/shared/api/mockForum";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiBadge from "@/shared/ui/Badge.vue";
@@ -20,10 +20,30 @@ import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
 const route = useRoute();
 
-const topic = computed(() => getTopicByRoute(route.params.id, route.params.slug));
+const topicId = computed(() => readRouteParam(route.params.id));
+const topicQuery = useTopicDetail(topicId);
+const postsQuery = useTopicPosts(topicId);
+const createPost = useCreatePost(topicId);
+const topic = computed(() => topicQuery.data.value);
 const board = computed(() => (topic.value ? getBoardBySlug(topic.value.boardSlug) : undefined));
-const posts = computed(() => (topic.value ? getPostsByTopicId(topic.value.id) : []));
-const relatedTopics = computed<TopicCardVM[]>(() => (topic.value ? getRelatedTopics(topic.value) : []));
+const posts = computed(() => postsQuery.data.value ?? []);
+const relatedTopics = useRelatedTopics(topic);
+const flagTopicMutation = useCreateFlag();
+const canFlagTopic = computed(() => Boolean(topic.value?.id) && hasAccessToken());
+const flagTopicPending = computed(() => flagTopicMutation.isPending.value);
+const {
+  active: bookmarked,
+  count: bookmarkCount,
+  pending: bookmarkPending,
+  toggle: toggleBookmark,
+} = useOptimisticToggle({
+  active: () => Boolean(topic.value?.id) && false,
+  count: () => (topic.value ? 0 : 0),
+  enabled: hasAccessToken,
+  commit: (active) => setTopicBookmark(topic.value?.id ?? "", active),
+  readActive: (response) => response.active,
+  readCount: (response) => response.count,
+});
 
 const topicStats = computed(() => {
   if (!topic.value) {
@@ -37,6 +57,23 @@ const topicStats = computed(() => {
     { label: "热度", value: String(topic.value.hotScore) },
   ];
 });
+
+function handleReply(rawMd: string) {
+  createPost.mutate({ raw_md: rawMd });
+}
+
+function flagTopic() {
+  if (!topic.value || !canFlagTopic.value) {
+    return;
+  }
+
+  flagTopicMutation.mutate({
+    target_type: "topic",
+    target_id: topic.value.id,
+    reason: "other",
+    detail: "用户从主题工具栏发起举报。",
+  });
+}
 </script>
 
 <template>
@@ -88,7 +125,17 @@ const topicStats = computed(() => {
             </div>
             <div class="toolbar-actions">
               <UiButton tone="ghost">只看楼主</UiButton>
+              <UiButton
+                :tone="bookmarked ? 'success' : 'subtle'"
+                :aria-pressed="bookmarked"
+                :disabled="bookmarkPending"
+                @click="toggleBookmark"
+              >
+                {{ bookmarked ? "已收藏" : "收藏主题" }}
+                <span v-if="bookmarkCount">· {{ bookmarkCount }}</span>
+              </UiButton>
               <UiButton tone="subtle">复制链接</UiButton>
+              <UiButton tone="ghost" :disabled="flagTopicPending || !canFlagTopic" @click="flagTopic">举报主题</UiButton>
             </div>
           </UiCard>
 
@@ -98,7 +145,13 @@ const topicStats = computed(() => {
             </div>
           </div>
 
-          <ComposerDrawer mode="reply" :topic-title="topic.title" :board-name="topic.boardName" />
+          <ComposerDrawer
+            mode="reply"
+            :topic-title="topic.title"
+            :board-name="topic.boardName"
+            :submitting="createPost.isPending.value"
+            @submit="handleReply"
+          />
         </main>
 
         <aside class="topic-sidebar" aria-label="主题侧边栏">

@@ -1,18 +1,110 @@
 <script setup lang="ts">
-defineProps<{ count: number }>();
+import { BellOutlined, CheckCircleOutlined, InboxOutlined } from "@ant-design/icons-vue";
+import { computed, ref } from "vue";
+
+import { toNotificationItem } from "@/features/notifications/model";
+import {
+  useMarkNotificationsRead,
+  useNotificationList,
+  useNotificationsStream,
+} from "@/features/notifications/queries";
+
+const open = ref(false);
+const notificationsQuery = useNotificationList();
+const markRead = useMarkNotificationsRead();
+useNotificationsStream();
+
+const unreadCount = computed(() => notificationsQuery.data.value?.unread_count ?? 0);
+const notifications = computed(() =>
+  (notificationsQuery.data.value?.notifications ?? []).map(toNotificationItem),
+);
+const hasNotifications = computed(() => notifications.value.length > 0);
+const streamStateLabel = computed(() => (notificationsQuery.isFetching.value ? "同步中" : "实时"));
+const markReadPending = computed(() => markRead.isPending.value);
+
+function togglePanel() {
+  open.value = !open.value;
+}
+
+function closePanel() {
+  open.value = false;
+}
+
+function markAllRead() {
+  markRead.mutate(undefined);
+}
+
+function markOneRead(id: string) {
+  markRead.mutate([id]);
+}
 </script>
 
 <template>
-  <a-badge :count="count" :number-style="{ backgroundColor: '#10B981' }">
-    <a-button class="bell" shape="circle" :aria-label="`通知，${count} 条未读`">
-      <slot />
-    </a-button>
-  </a-badge>
+  <div class="notification-bell" @keydown.esc="closePanel">
+    <a-badge :count="unreadCount" :number-style="{ backgroundColor: 'var(--accent-geek)' }">
+      <button
+        class="notification-trigger"
+        type="button"
+        :aria-label="`通知，${unreadCount} 条未读`"
+        :aria-expanded="open"
+        aria-haspopup="dialog"
+        @click="togglePanel"
+      >
+        <BellOutlined />
+      </button>
+    </a-badge>
+
+    <section v-if="open" class="notification-panel" role="dialog" aria-label="通知中心">
+      <header class="notification-panel__header">
+        <div>
+          <span class="panel-kicker">{{ streamStateLabel }}</span>
+          <h2>通知中心</h2>
+        </div>
+        <button
+          type="button"
+          class="mark-all"
+          :disabled="unreadCount === 0 || markReadPending"
+          @click="markAllRead"
+        >
+          <CheckCircleOutlined />
+          全部已读
+        </button>
+      </header>
+
+      <div v-if="hasNotifications" class="notification-list" aria-live="polite">
+        <article
+          v-for="item in notifications"
+          :key="item.id"
+          class="notification-card"
+          :class="[`notification-card--${item.tone}`, { unread: item.unread }]"
+        >
+          <RouterLink class="notification-link" :to="item.targetUrl" @click="closePanel">
+            <span class="notification-dot" aria-hidden="true"></span>
+            <span class="notification-copy">
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.description }}</span>
+              <small>{{ item.relativeCreatedAt }}</small>
+            </span>
+          </RouterLink>
+          <button
+            v-if="item.unread"
+            type="button"
+            class="mark-one"
+            :aria-label="`将通知 ${item.title} 标记为已读`"
+            @click="markOneRead(item.id)"
+          >
+            已读
+          </button>
+        </article>
+      </div>
+
+      <div v-else class="notification-empty">
+        <InboxOutlined />
+        <strong>暂时没有新通知</strong>
+        <span>回复、提及和关注版块动态会在这里出现。</span>
+      </div>
+    </section>
+  </div>
 </template>
 
-<style scoped>
-.bell {
-  color: var(--primary) !important;
-  background: white !important;
-}
-</style>
+<style scoped lang="scss" src="./NotificationBell.scss"></style>

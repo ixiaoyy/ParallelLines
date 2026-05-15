@@ -12,3 +12,9 @@ apps/web/dist/
 # Python bytecode
 __pycache__/
 *.py[cod]
+
+# Playwright and local smoke artifacts
+apps/web/test-results/
+apps/web/playwright-report/
+apps/api/smoke-local.db
+apps/api/*.db

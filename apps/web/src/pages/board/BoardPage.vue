@@ -2,9 +2,15 @@
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import { useBoardDetail } from "@/features/boards/queries";
+import { setBoardFollow } from "@/features/interactions/api";
+import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
 import TopicList from "@/features/topics/components/TopicList.vue";
-import { getBoardBySlug, getTopicsByBoardSlug, readRouteParam } from "@/shared/api/mockForum";
+import { useBoardTopics } from "@/features/topics/queries";
+import { hasAccessToken } from "@/shared/api/client";
+import { readRouteParam } from "@/shared/api/mockForum";
 import { compactNumber } from "@/shared/lib/format";
+import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
@@ -28,7 +34,21 @@ const route = useRoute();
 const router = useRouter();
 
 const slug = computed(() => readRouteParam(route.params.slug));
-const board = computed(() => getBoardBySlug(slug.value));
+const boardQuery = useBoardDetail(slug);
+const board = computed(() => boardQuery.data.value);
+const {
+  active: followingBoard,
+  count: followerCount,
+  pending: followPending,
+  toggle: toggleBoardFollow,
+} = useOptimisticToggle({
+  active: () => board.value?.isFollowing ?? false,
+  count: () => board.value?.followerCount ?? 0,
+  enabled: hasAccessToken,
+  commit: (active) => setBoardFollow(slug.value, active),
+  readActive: (response) => response.following,
+  readCount: (response) => response.follower_count,
+});
 
 const searchQuery = computed<string>({
   get() {
@@ -61,7 +81,7 @@ const activeStatus = computed<TopicStatusFilter>({
 
 const activeTab = computed(() => sortTabs.find((tab) => tab.key === activeSort.value) ?? sortTabs[0]);
 
-const allBoardTopics = computed(() => (board.value ? getTopicsByBoardSlug(board.value.slug) : []));
+const allBoardTopics = computed(() => topicsQuery.data.value ?? board.value?.latestTopics ?? []);
 
 const sortedBoardTopics = computed(() => {
   const list = [...allBoardTopics.value];
@@ -101,9 +121,11 @@ const solutionStats = computed(() => {
     { label: "已解决", value: compactNumber(topicsInBoard.filter((topic) => topic.solved).length), helper: "可直接比对" },
     { label: "未回复", value: compactNumber(topicsInBoard.filter((topic) => topic.replyCount === 0).length), helper: "等待首答" },
     { label: "官方回复", value: compactNumber(topicsInBoard.filter((topic) => topic.officialReply).length), helper: "团队已介入" },
-    { label: "平均响应", value: "12 分钟", helper: "示例数据" },
+    { label: "关注者", value: compactNumber(followerCount.value), helper: followingBoard.value ? "正在接收通知" : "可一键关注" },
   ];
 });
+
+const topicsQuery = useBoardTopics(slug, activeSort);
 
 const searchPlaceholder = computed(() => {
   if (slug.value === "support") {
@@ -160,6 +182,18 @@ function updateQuery(patch: Record<string, string | undefined>) {
             autocomplete="off"
           />
         </label>
+
+        <div class="board-follow-strip">
+          <span>{{ followingBoard ? "新主题会进入通知中心。" : "关注后，新主题会进入通知中心。" }}</span>
+          <UiButton
+            :tone="followingBoard ? 'success' : 'primary'"
+            :aria-pressed="followingBoard"
+            :disabled="followPending"
+            @click="toggleBoardFollow"
+          >
+            {{ followingBoard ? "已关注版块" : "关注版块" }}
+          </UiButton>
+        </div>
 
         <dl class="board-hero__signals" aria-label="解答信号">
           <div v-for="signal in solutionStats" :key="signal.label">

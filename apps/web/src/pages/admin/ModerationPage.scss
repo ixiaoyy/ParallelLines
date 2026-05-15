@@ -1,0 +1,251 @@
+.moderation-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.moderation-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 1.35rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(239, 68, 68, 0.12), transparent 20rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(238, 242, 247, 0.82));
+  box-shadow: var(--shadow-card);
+}
+
+.moderation-hero h1,
+.moderation-hero p,
+.section-toolbar h2,
+.user-tool h2,
+.audit-panel h2,
+.audit-panel p {
+  margin: 0;
+}
+
+.moderation-hero h1 {
+  color: var(--title);
+  font-size: clamp(1.8rem, 4vw, 3.3rem);
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+}
+
+.moderation-hero p {
+  max-width: 48rem;
+  margin-top: 0.45rem;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.hero-link {
+  flex: none;
+  border-radius: 999px;
+  padding: 0.52rem 0.82rem;
+  color: var(--bg-surface);
+  background: var(--title);
+  font-weight: 820;
+  text-decoration: none;
+}
+
+.panel-kicker {
+  color: var(--danger);
+  font-size: 0.72rem;
+  font-weight: 920;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.moderation-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+  gap: 1rem;
+  align-items: start;
+}
+
+.queue-column,
+.side-column {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.side-column {
+  position: sticky;
+  top: 5.25rem;
+}
+
+.section-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.section-toolbar h2,
+.user-tool h2,
+.audit-panel h2 {
+  color: var(--title);
+  font-size: 1.12rem;
+}
+
+.section-toolbar label,
+.user-tool label {
+  display: grid;
+  gap: 0.28rem;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 780;
+}
+
+.section-toolbar select,
+.user-tool select,
+.user-tool input,
+.user-tool textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.82rem;
+  padding: 0.62rem 0.72rem;
+  color: var(--title);
+  background: var(--bg-surface);
+  font: inherit;
+  outline: none;
+}
+
+.flag-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.flag-card,
+.user-tool,
+.audit-panel,
+.moderation-empty {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+}
+
+.flag-card {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-card);
+}
+
+.flag-card header,
+.flag-card footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.flag-card h3,
+.flag-card p,
+.flag-card dl {
+  margin: 0;
+}
+
+.flag-card h3 {
+  color: var(--title);
+  font-size: 1.08rem;
+}
+
+.flag-card a {
+  color: var(--primary);
+  font-weight: 820;
+  text-decoration: none;
+}
+
+.flag-meta {
+  color: var(--danger);
+  font-size: 0.78rem;
+  font-weight: 820;
+}
+
+.flag-card p {
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.flag-card dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.flag-card dl div {
+  border-radius: 0.8rem;
+  padding: 0.55rem 0.62rem;
+  background: var(--bg-subtle);
+}
+
+.flag-card dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 780;
+}
+
+.flag-card dd {
+  margin: 0.12rem 0 0;
+  color: var(--title);
+  font-weight: 840;
+}
+
+.user-tool textarea {
+  resize: vertical;
+}
+
+.audit-panel ol {
+  display: grid;
+  gap: 0.58rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.audit-panel li {
+  display: grid;
+  gap: 0.12rem;
+  border-radius: 0.8rem;
+  padding: 0.6rem 0.7rem;
+  background: var(--bg-subtle);
+}
+
+.audit-panel strong {
+  color: var(--title);
+}
+
+.audit-panel span,
+.audit-panel p,
+.moderation-empty span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.moderation-empty strong {
+  color: var(--title);
+}
+
+@media (max-width: 1040px) {
+  .moderation-layout,
+  .flag-card dl {
+    grid-template-columns: 1fr;
+  }
+
+  .side-column {
+    position: static;
+  }
+}
+
+@media (max-width: 680px) {
+  .moderation-hero,
+  .section-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

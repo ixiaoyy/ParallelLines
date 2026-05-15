@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 import type { BoardSummary } from "@/entities/board/model";
-import { boards, readRouteParam } from "@/shared/api/mockForum";
+import { useBoards } from "@/features/boards/queries";
+import { useCreateTopic } from "@/features/topics/queries";
+import { readRouteParam } from "@/shared/api/mockForum";
 import { compactNumber } from "@/shared/lib/format";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
@@ -24,6 +26,9 @@ interface NewTopicDraft {
 const DRAFT_STORAGE_KEY = "parallellines:new-topic-draft";
 
 const route = useRoute();
+const router = useRouter();
+const boardsQuery = useBoards();
+const createTopic = useCreateTopic();
 
 const sectionLinks = [
   { id: "board", label: "选择版块", helper: "先找对问题区" },
@@ -55,8 +60,12 @@ const title = ref(defaultDraft.title);
 const body = ref(defaultDraft.body);
 const tags = ref(defaultDraft.tags);
 const publishState = ref<PublishState>("idle");
+const publishError = ref("");
 
-const selectedBoard = computed(() => boards.find((board) => board.slug === selectedBoardSlug.value) ?? boards[0]);
+const boardOptions = computed(() => boardsQuery.data.value ?? []);
+const selectedBoard = computed(
+  () => boardOptions.value.find((board) => board.slug === selectedBoardSlug.value) ?? boardOptions.value[0],
+);
 
 const parsedTags = computed(() =>
   tags.value
@@ -93,7 +102,6 @@ const previewBody = computed(() =>
 
 onMounted(() => {
   const savedDraft = readSavedDraft();
-  const queryBoard = readRouteParam(route.query.board as string | string[] | undefined);
 
   if (savedDraft) {
     selectedBoardSlug.value = savedDraft.boardSlug;
@@ -102,11 +110,23 @@ onMounted(() => {
     body.value = savedDraft.body;
     tags.value = savedDraft.tags;
   }
-
-  if (boards.some((board) => board.slug === queryBoard)) {
-    selectedBoardSlug.value = queryBoard;
-  }
 });
+
+watch(
+  boardOptions,
+  (options) => {
+    const queryBoard = readRouteParam(route.query.board as string | string[] | undefined);
+    if (options.some((board) => board.slug === queryBoard)) {
+      selectedBoardSlug.value = queryBoard;
+      return;
+    }
+
+    if (options.length && !options.some((board) => board.slug === selectedBoardSlug.value)) {
+      selectedBoardSlug.value = options[0].slug;
+    }
+  },
+  { immediate: true },
+);
 
 watch([selectedBoardSlug, selectedIntent, title, body, tags], () => {
   saveDraft();
@@ -125,13 +145,29 @@ function handleSaveDraft() {
   publishState.value = "saved";
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   if (!canPublish.value) {
     return;
   }
 
   saveDraft();
-  publishState.value = "submitted";
+  publishError.value = "";
+
+  try {
+    const topic = await createTopic.mutateAsync({
+      boardSlug: selectedBoardSlug.value,
+      payload: {
+        title: title.value.trim(),
+        raw_md: body.value.trim(),
+        tags: parsedTags.value,
+      },
+    });
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    await router.push({ name: "topic-detail", params: { slug: topic.slug, id: topic.id } });
+  } catch {
+    publishState.value = "submitted";
+    publishError.value = "当前未登录或后端不可用，已保留为发布预览；登录后可再次提交。";
+  }
 }
 
 function saveDraft() {
@@ -242,7 +278,7 @@ function isTopicIntent(value: unknown): value is TopicIntent {
 
           <div class="board-picker" role="list" aria-label="选择版块">
             <button
-              v-for="board in boards"
+              v-for="board in boardOptions"
               :key="board.id"
               type="button"
               :class="{ active: selectedBoardSlug === board.slug }"
@@ -353,7 +389,7 @@ function isTopicIntent(value: unknown): value is TopicIntent {
           </ul>
 
           <div v-if="publishState === 'submitted'" class="submit-result" role="status">
-            示例环境已生成发布预览；接入后端 API 后这里会跳转到新主题详情页。
+            {{ publishError || "已生成发布预览；后端提交成功后会跳转到新主题详情页。" }}
           </div>
         </UiCard>
 
@@ -364,7 +400,9 @@ function isTopicIntent(value: unknown): value is TopicIntent {
           </div>
           <div class="draft-actions">
             <UiButton type="button" tone="ghost" @click="handleSaveDraft">保存草稿</UiButton>
-            <UiButton type="submit" tone="primary" :disabled="!canPublish">发布主题</UiButton>
+            <UiButton type="submit" tone="primary" :disabled="!canPublish || createTopic.isPending.value">
+              {{ createTopic.isPending.value ? "发布中…" : "发布主题" }}
+            </UiButton>
           </div>
         </UiCard>
       </form>

@@ -31,6 +31,16 @@ export const router = createRouter({
       component: () => import("@/pages/topic/NewTopicPage.vue"),
     },
     {
+      path: "/search",
+      name: "search",
+      component: () => import("@/pages/search/SearchPage.vue"),
+    },
+    {
+      path: "/admin/moderation",
+      name: "admin-moderation",
+      component: () => import("@/pages/admin/ModerationPage.vue"),
+    },
+    {
       path: "/t/:slug/:id",
       name: "topic-detail",
       component: () => import("@/pages/topic/TopicDetailPage.vue"),

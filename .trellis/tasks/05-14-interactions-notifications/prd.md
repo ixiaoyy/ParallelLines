@@ -20,3 +20,13 @@ Add community feedback loops: likes, bookmarks, board/topic follows, read state,
 - User can mark notifications as read.
 - Realtime stream updates unread count without full page refresh.
 - Read state shows which topics have unread replies.
+
+## Progress
+
+- [x] Backend persistence for likes, topic bookmarks, and notifications.
+- [x] Board follow/unfollow API with notification level.
+- [x] Notification records for replies, mentions, post likes, and watched board new topics.
+- [x] Notification list and mark-read APIs.
+- [x] Backend tests for idempotent interactions and notification read flow.
+- [x] Realtime notification stream.
+- [x] Frontend optimistic interaction state and notification center.

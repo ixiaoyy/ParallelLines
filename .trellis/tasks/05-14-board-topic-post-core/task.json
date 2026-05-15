@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -63,7 +63,7 @@
     },
     {
       "name": "Wire frontend pages to backend API",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "children": [
@@ -80,8 +80,15 @@
     "apps/api/app/services/",
     "apps/api/app/services/forum.py",
     "apps/api/tests/test_forum_core.py",
-    "apps/web/src/features/topics/"
+    "apps/web/src/features/topics/",
+    "apps/web/src/features/boards/api.ts",
+    "apps/web/src/features/boards/queries.ts",
+    "apps/web/src/features/topics/api.ts",
+    "apps/web/src/features/topics/queries.ts",
+    "apps/web/src/features/posts/api.ts",
+    "apps/web/src/features/posts/queries.ts",
+    ".trellis/spec/frontend/forum-api-wiring.md"
   ],
-  "notes": "Backend forum core API is implemented with boards/topics/posts models, migration, service transactions, markdown escaping, and API/service tests. Frontend pages still need to be wired from fixtures to these endpoints.",
+  "notes": "Backend forum core remains implemented. Frontend board directory, home feed, board detail, topic detail, new-topic, and reply composer are now wired to FastAPI board/topic/post APIs via TanStack Query with DTO-to-VM mapping, fixture fallback for empty/unavailable backend, and authenticated create-topic/reply mutations that preserve drafts on failure.",
   "meta": {}
 }

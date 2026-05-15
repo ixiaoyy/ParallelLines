@@ -3,7 +3,7 @@
   "name": "moderation-admin-safety",
   "title": "Moderation admin and safety",
   "description": "Implement reports, soft delete, audit logs, board moderators, admin workflows, and anti-spam safety rules.",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "fullstack",
   "scope": "moderation-admin-safety",
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,27 +47,35 @@
   "subtasks": [
     {
       "name": "Add flag flow",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Add moderation permissions",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Add audit logs",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Build moderation panel",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "children": [],
   "parent": "05-14-parallellines-mvp",
   "relatedFiles": [
+    "apps/api/alembic/versions/0004_create_moderation.py",
+    "apps/api/app/models/moderation.py",
+    "apps/api/app/schemas/moderation.py",
+    "apps/api/app/services/moderation.py",
     "apps/api/app/api/v1/moderation.py",
-    "apps/web/src/features/moderation/"
+    "apps/api/tests/test_moderation.py",
+    "apps/web/src/features/moderation/",
+    "apps/web/src/pages/admin/ModerationPage.vue",
+    ".trellis/spec/backend/moderation-admin-safety.md",
+    ".trellis/spec/frontend/moderation-admin-safety.md"
   ],
-  "notes": "",
+  "notes": "Implementation complete and verified; awaiting human review/commit before task archival/session recording.",
   "meta": {}
 }

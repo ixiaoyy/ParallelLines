@@ -2,12 +2,15 @@
 import { computed, ref } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
-import { boards, getTopicsByBoardSlug, topics } from "@/shared/api/mockForum";
+import { useBoards } from "@/features/boards/queries";
+import { useTopicFeed } from "@/features/topics/queries";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 const searchQuery = ref("");
+const boardsQuery = useBoards();
+const topicsQuery = useTopicFeed("latest");
 
 const intentShortcuts = [
   {
@@ -32,30 +35,35 @@ const intentShortcuts = [
   },
 ];
 
-const boardItems = computed(() =>
-  [...boards].sort((left, right) => right.topicCount + right.postCount - (left.topicCount + left.postCount)),
-);
+const boardItems = computed(() => {
+  const boards = boardsQuery.data.value ?? [];
+  return [...boards].sort((left, right) => right.topicCount + right.postCount - (left.topicCount + left.postCount));
+});
+
+const topicItems = computed(() => topicsQuery.data.value ?? []);
 
 const directorySignals = computed(() => [
   {
     label: "待首答",
-    value: compactNumber(topics.filter((topic) => topic.status === "open" && topic.replyCount === 0).length),
+    value: compactNumber(topicItems.value.filter((topic) => topic.status === "open" && topic.replyCount === 0).length),
     helper: "需要被接住的问题",
   },
   {
     label: "已解决",
-    value: compactNumber(topics.filter((topic) => topic.solved).length),
+    value: compactNumber(topicItems.value.filter((topic) => topic.solved).length),
     helper: "可直接复用的案例",
   },
   {
     label: "官方/精华",
-    value: compactNumber(topics.filter((topic) => topic.officialReply || topic.featured || topic.pinned).length),
+    value: compactNumber(
+      topicItems.value.filter((topic) => topic.officialReply || topic.featured || topic.pinned).length,
+    ),
     helper: "高可信入口",
   },
 ]);
 
 const featuredTopics = computed(() =>
-  topics
+  topicItems.value
     .filter((topic) => topic.solved || topic.officialReply || topic.featured || topic.pinned)
     .slice(0, 4),
 );
@@ -68,7 +76,7 @@ const filteredBoards = computed(() => {
   }
 
   return boardItems.value.filter((board) => {
-    const previewText = getTopicsByBoardSlug(board.slug)
+    const previewText = getTopicsByBoardSlugLocal(board.slug)
       .map((topic) => `${topic.title} ${topic.excerpt} ${topic.tags.join(" ")}`)
       .join(" ");
     return normalizeSearch(`${board.name} ${board.description} ${board.slug} ${previewText}`).includes(keyword);
@@ -80,7 +88,7 @@ function normalizeSearch(value: string) {
 }
 
 function previewTopics(board: BoardSummary) {
-  return getTopicsByBoardSlug(board.slug)
+  return getTopicsByBoardSlugLocal(board.slug)
     .filter((topic) => topic.solved || topic.officialReply || topic.replyCount === 0 || topic.featured || topic.pinned)
     .slice(0, 2);
 }
@@ -110,13 +118,17 @@ function boardIntent(board: BoardSummary) {
 }
 
 function boardSignals(board: BoardSummary) {
-  const boardTopics = getTopicsByBoardSlug(board.slug);
+  const boardTopics = getTopicsByBoardSlugLocal(board.slug);
 
   return [
     { label: "可查主题", value: compactNumber(board.topicCount) },
     { label: "已解决", value: compactNumber(boardTopics.filter((topic) => topic.solved).length) },
     { label: "未回复", value: compactNumber(boardTopics.filter((topic) => topic.replyCount === 0).length) },
   ];
+}
+
+function getTopicsByBoardSlugLocal(slug: string) {
+  return topicItems.value.filter((topic) => topic.boardSlug === slug);
 }
 </script>
 

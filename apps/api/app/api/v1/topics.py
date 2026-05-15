@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Query, status
@@ -14,11 +15,30 @@ router = APIRouter(prefix="/topics", tags=["topics"])
 async def list_topics(
     session: SessionDep,
     board: str | None = None,
+    q: str | None = None,
+    tag: str | None = None,
+    author: str | None = None,
     sort: TopicSort = "latest",
+    cursor: datetime | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> ApiResponse[list[TopicResponse]]:
-    topics = await ForumService(session).list_topics(board_slug=board, sort=sort, limit=limit)
-    return ApiResponse(data=[TopicResponse.from_model(topic) for topic in topics])
+    topics = await ForumService(session).list_topics(
+        board_slug=board,
+        sort=sort,
+        limit=limit,
+        query=q,
+        tag=tag,
+        author=author,
+        cursor=cursor,
+    )
+    return ApiResponse(
+        data=[TopicResponse.from_model(topic) for topic in topics],
+        meta={
+            "next_cursor": topics[-1].last_posted_at.isoformat()
+            if len(topics) == limit
+            else None
+        },
+    )
 
 
 @router.get("/{topic_id}", response_model=ApiResponse[TopicResponse])

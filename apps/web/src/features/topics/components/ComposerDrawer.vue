@@ -10,14 +10,17 @@ const props = withDefaults(
     boardName?: string;
     topicTitle?: string;
     compact?: boolean;
+    submitting?: boolean;
   }>(),
   {
     mode: "topic",
     boardName: "支持与排障",
     topicTitle: "",
     compact: false,
+    submitting: false,
   },
 );
+const emit = defineEmits<{ submit: [rawMd: string] }>();
 
 const draft = ref("");
 const title = ref("");
@@ -38,6 +41,18 @@ const placeholder = computed(() =>
 const previewText = computed(() =>
   draft.value.trim() || (isReplyMode.value ? "回复预览会显示在这里。" : "环境：Windows 11 / Edge 126 / 单点登录开启"),
 );
+
+const canSubmit = computed(() => draft.value.trim().length > 0 && !props.submitting);
+
+function handleSubmit() {
+  const rawMd = draft.value.trim();
+  if (!rawMd || props.submitting) {
+    return;
+  }
+
+  emit("submit", rawMd);
+  draft.value = "";
+}
 </script>
 
 <template>
@@ -71,7 +86,9 @@ const previewText = computed(() =>
 
     <footer>
       <UiButton tone="ghost">保存草稿</UiButton>
-      <UiButton tone="primary">{{ isReplyMode ? "发布回复" : "创建主题" }}</UiButton>
+      <UiButton tone="primary" :disabled="!canSubmit" @click="handleSubmit">
+        {{ submitting ? "发布中…" : isReplyMode ? "发布回复" : "创建主题" }}
+      </UiButton>
     </footer>
   </UiCard>
 </template>

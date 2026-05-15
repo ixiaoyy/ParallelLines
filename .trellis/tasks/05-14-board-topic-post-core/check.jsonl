@@ -8,3 +8,4 @@
 {"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Verify migrations, indexes and counter cache rules"}
 {"file": ".trellis/spec/backend/error-handling.md", "reason": "Verify error response conventions"}
 {"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Verify ruff, pytest and migration checks"}
+{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "Verify DTO-to-VM and query composable wiring"}

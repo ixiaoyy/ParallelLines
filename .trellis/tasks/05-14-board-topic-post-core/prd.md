@@ -25,3 +25,10 @@ Deliver the first full user content loop: browse boards, create a topic, read it
 - Topic detail shows first post and replies with stable floor numbers.
 - Markdown code blocks use dark code block styling.
 - Tests cover service transaction and at least one end-to-end happy path.
+
+## Progress
+
+- [x] Backend models, services, migrations, and API routes for boards/topics/posts.
+- [x] Frontend board directory, board detail, topic detail, new-topic, and reply UI.
+- [x] Frontend pages wired to backend read APIs with fixture fallback for early setup.
+- [x] New topic and reply flows wired to authenticated backend mutations while preserving drafts on failure.

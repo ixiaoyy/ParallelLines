@@ -3,7 +3,7 @@
   "name": "quality-deployment-observability",
   "title": "Quality deployment observability",
   "description": "Add test coverage, CI, Docker Compose, deployment profiles, metrics, logging, and release checklist.",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "fullstack",
   "scope": "quality-deployment-observability",
   "package": null,
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,28 +47,44 @@
   "subtasks": [
     {
       "name": "Add Docker Compose",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Add CI",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Add smoke tests",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "name": "Document operations",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "children": [],
   "parent": "05-14-parallellines-mvp",
   "relatedFiles": [
     "docker-compose.yml",
-    ".github/workflows/",
-    "README.md"
+    ".dockerignore",
+    ".github/workflows/ci.yml",
+    "README.md",
+    "package.json",
+    "pnpm-lock.yaml",
+    "apps/api/Dockerfile",
+    "apps/api/.dockerignore",
+    "apps/api/.env.example",
+    "apps/api/app/main.py",
+    "apps/api/app/core/config.py",
+    "apps/api/app/seed.py",
+    "apps/api/app/workers/hot_ranking.py",
+    "apps/web/Dockerfile",
+    "apps/web/package.json",
+    "apps/web/playwright.config.ts",
+    "apps/web/tests/smoke/mvp.spec.ts",
+    ".trellis/spec/backend/deployment-observability.md",
+    ".trellis/spec/frontend/smoke-tests.md"
   ],
-  "notes": "",
+  "notes": "Implementation complete and verified locally, including Playwright smoke against temporary SQLite API and Vite web server.",
   "meta": {}
 }
