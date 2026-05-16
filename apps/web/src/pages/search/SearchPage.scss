@@ -3,6 +3,12 @@
   gap: 1rem;
 }
 
+.search-error {
+  padding: 1rem;
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.08);
+}
+
 .search-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(18rem, 32rem);

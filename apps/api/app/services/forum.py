@@ -9,12 +9,18 @@ from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.exceptions import ConflictError, NotFoundError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
 from app.db.base import new_uuid, utcnow
 from app.models.forum import Board, BoardMember, Post, Tag, Topic, TopicRead
 from app.models.interaction import Notification
 from app.models.user import User
-from app.schemas.forum import BoardCreateRequest, PostCreateRequest, TopicCreateRequest, TopicSort
+from app.schemas.forum import (
+    BoardCreateRequest,
+    PostCreateRequest,
+    PostUpdateRequest,
+    TopicCreateRequest,
+    TopicSort,
+)
 
 SLUG_SEPARATOR_PATTERN = re.compile(r"[^a-z0-9]+")
 TAG_SEPARATOR_PATTERN = re.compile(r"[^a-z0-9一-鿿_.-]+")
@@ -195,6 +201,61 @@ class ForumService:
         result = await self.session.scalars(statement.distinct().limit(limit))
         return list(result)
 
+    async def get_user_by_username(self, username: str) -> User:
+        user = await self.session.scalar(select(User).where(User.username == username))
+        if not user:
+            raise NotFoundError("user_not_found", "User not found")
+        return user
+
+    async def list_tags(self, *, limit: int = 30) -> list[Tag]:
+        result = await self.session.scalars(
+            select(Tag)
+            .where(Tag.topic_count > 0)
+            .order_by(desc(Tag.topic_count), Tag.name)
+            .limit(limit)
+        )
+        return list(result)
+
+    async def get_user_content_counts(self, username: str) -> tuple[User, int, int]:
+        user = await self.get_user_by_username(username)
+        topic_count = (
+            await self.session.scalar(
+                select(func.count(Topic.id)).where(
+                    Topic.user_id == user.id,
+                    Topic.deleted_at.is_(None),
+                )
+            )
+            or 0
+        )
+        post_count = (
+            await self.session.scalar(
+                select(func.count(Post.id))
+                .join(Post.topic)
+                .where(
+                    Post.user_id == user.id,
+                    Post.deleted_at.is_(None),
+                    Topic.deleted_at.is_(None),
+                )
+            )
+            or 0
+        )
+        return user, topic_count, post_count
+
+    async def list_user_topics(self, username: str, *, limit: int = 30) -> list[Topic]:
+        user = await self.get_user_by_username(username)
+        result = await self.session.scalars(
+            select(Topic)
+            .options(
+                selectinload(Topic.board),
+                selectinload(Topic.author),
+                selectinload(Topic.tags),
+            )
+            .where(Topic.user_id == user.id, Topic.deleted_at.is_(None))
+            .order_by(desc(Topic.last_posted_at))
+            .limit(limit)
+        )
+        return list(result)
+
     async def create_topic(
         self,
         board_slug: str,
@@ -305,6 +366,49 @@ class ForumService:
         await self.session.commit()
         return await self._get_post(post.id)
 
+    async def update_post(
+        self,
+        post_id: str,
+        payload: PostUpdateRequest,
+        current_user: User,
+    ) -> Post:
+        post = await self.session.scalar(
+            select(Post)
+            .options(
+                selectinload(Post.author),
+                selectinload(Post.topic).selectinload(Topic.board),
+            )
+            .where(Post.id == post_id)
+        )
+        if not post or post.deleted_at is not None or post.topic.deleted_at is not None:
+            raise NotFoundError("post_not_found", "Post not found")
+
+        if not await self._can_edit_post(post, current_user):
+            raise PermissionDeniedError("permission_denied", "Permission denied")
+
+        stripped = payload.raw_md.strip()
+        post.raw_md = stripped
+        post.cooked_html = self._render_required_markdown(stripped)
+        post.updated_at = utcnow()
+        await self.session.commit()
+        return await self._get_post(post.id)
+
+    async def _can_edit_post(self, post: Post, current_user: User) -> bool:
+        if post.user_id == current_user.id:
+            return True
+        if current_user.role in {"admin", "moderator"}:
+            return True
+        member = await self.session.scalar(
+            select(BoardMember).where(
+                BoardMember.board_id == post.topic.board_id,
+                BoardMember.user_id == current_user.id,
+                BoardMember.role.in_(("owner", "moderator")),
+            )
+        )
+        if member:
+            return True
+        return post.topic.board.owner_id == current_user.id
+
     async def _get_post(self, post_id: str) -> Post:
         post = await self.session.scalar(
             select(Post).options(selectinload(Post.author)).where(Post.id == post_id)
@@ -334,7 +438,9 @@ class ForumService:
         tags: list[Tag] = []
         for name in normalized_names:
             slug = slugify(name, fallback_prefix="tag")[:64]
-            tag = await self.session.scalar(select(Tag).where(Tag.slug == slug))
+            tag = await self.session.scalar(
+                select(Tag).where(or_(Tag.slug == slug, Tag.name == name))
+            )
             if not tag:
                 tag = Tag(name=name, slug=slug, topic_count=0)
                 self.session.add(tag)

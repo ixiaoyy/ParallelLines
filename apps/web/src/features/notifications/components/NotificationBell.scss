@@ -230,6 +230,11 @@
   font-size: 1.5rem;
 }
 
+.notification-empty--error :deep(.anticon),
+.notification-empty--error strong {
+  color: #b91c1c;
+}
+
 .notification-empty strong {
   color: var(--title);
 }

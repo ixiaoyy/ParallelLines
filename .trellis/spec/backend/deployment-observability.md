@@ -14,7 +14,7 @@ Runtime services:
 | Service | Command / Port | Contract |
 |---|---|---|
 | `api` | `uvicorn app.main:app --host 0.0.0.0 --port 8000` | Runs migrations/seed in Compose before serving |
-| `web` | `pnpm --dir apps/web preview --host 0.0.0.0 --port 5173` | Static Vite preview built with `VITE_API_BASE_URL` |
+| `web` | `pnpm --dir apps/web preview --host 0.0.0.0 --port 5174` | Static Vite preview built with `VITE_API_BASE_URL` |
 | `worker` | `python -m app.workers.hot_ranking` | Recomputes topic hot scores every `HOT_RANK_INTERVAL_SECONDS` |
 | `db` | `postgres:16-alpine` | PostgreSQL source of truth |
 | `redis` | `redis:7-alpine` | Cache/coordination dependency |

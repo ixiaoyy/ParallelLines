@@ -3,6 +3,12 @@
   gap: 1rem;
 }
 
+.form-error {
+  margin: 0;
+  color: #b91c1c;
+  font-weight: 760;
+}
+
 .new-topic-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(18rem, 30rem);

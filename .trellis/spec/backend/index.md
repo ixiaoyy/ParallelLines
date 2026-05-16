@@ -16,6 +16,7 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 | [Interactions and Notifications](./interactions-notifications.md) | Likes, bookmarks, follows, notification fan-out contracts | Filled |
 | [Search, Feed, and Hot Ranking](./search-feed-hot-ranking.md) | Search filters, public feeds, cursor meta, hot score recompute | Filled |
 | [Moderation Admin and Safety](./moderation-admin-safety.md) | Flags, moderation queue, soft hide/restore, user status, audit logs | Filled |
+| [User Content Operations](./user-content-operations.md) | Public user profiles, authored topics, and post edit permissions | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Filled |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | Filled |
 | [Deployment and Observability](./deployment-observability.md) | Docker Compose, CI, seed data, metrics, workers, smoke-test contracts | Filled |
@@ -30,4 +31,5 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 6. Read `moderation-admin-safety.md` before changing flags, audit logs, moderator permissions, or hidden content visibility.
 7. Read `deployment-observability.md` before changing Docker, CI, seed data, metrics, or worker startup.
 8. Read `quality-guidelines.md` before opening a PR.
-9. For cross-layer features, read `../guides/cross-layer-thinking-guide.md`.
+9. Read `user-content-operations.md` before changing public user profile, authored topic, or post edit endpoints.
+10. For cross-layer features, read `../guides/cross-layer-thinking-guide.md`.

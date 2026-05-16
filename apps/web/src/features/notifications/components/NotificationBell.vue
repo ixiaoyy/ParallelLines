@@ -71,7 +71,13 @@ function markOneRead(id: string) {
         </button>
       </header>
 
-      <div v-if="hasNotifications" class="notification-list" aria-live="polite">
+      <div v-if="notificationsQuery.isError.value" class="notification-empty notification-empty--error" role="alert">
+        <InboxOutlined />
+        <strong>通知暂时不可用</strong>
+        <span>请稍后重试。</span>
+      </div>
+
+      <div v-else-if="hasNotifications" class="notification-list" aria-live="polite">
         <article
           v-for="item in notifications"
           :key="item.id"

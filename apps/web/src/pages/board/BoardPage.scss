@@ -3,6 +3,17 @@
   gap: 0.65rem;
 }
 
+.board-state {
+  padding: 1rem;
+  color: var(--text);
+  font-weight: 760;
+}
+
+.board-state--error {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.08);
+}
+
 .board-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 21rem);

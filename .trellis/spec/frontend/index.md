@@ -19,6 +19,8 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F8F9F
 | [Moderation Admin and Safety](./moderation-admin-safety.md) | Report actions, moderation queue UI, audit console, user status admin form | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Filled |
 | [Smoke Tests](./smoke-tests.md) | Playwright MVP smoke flow and environment contract | Filled |
+| [Post Actions](./post-actions.md) | Topic detail and post action button behavior | Filled |
+| [Auth and User Session](./auth-user-session.md) | Login/register UI, verified session state, profile DTOs, and draft persistence | Filled |
 | [Type Safety](./type-safety.md) | Type patterns, validation | Filled |
 
 ## Mandatory Pre-Development Checklist
@@ -31,4 +33,6 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F8F9F
 6. Read `notifications-interactions.md` before changing notification UI, SSE, likes, bookmarks, or follows.
 7. Read `moderation-admin-safety.md` before changing report actions or the moderation console.
 8. Read `smoke-tests.md` before changing Playwright smoke flows.
-9. For cross-layer API work, read `../guides/cross-layer-thinking-guide.md`.
+9. Read `post-actions.md` before changing topic detail or post action buttons.
+10. Read `auth-user-session.md` before changing auth UI, current-user state, profile pages, or authenticated drafts.
+11. For cross-layer API work, read `../guides/cross-layer-thinking-guide.md`.

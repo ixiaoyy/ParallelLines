@@ -5,8 +5,8 @@ import { useRoute, useRouter } from "vue-router";
 import type { BoardSummary } from "@/entities/board/model";
 import { useBoards } from "@/features/boards/queries";
 import { useCreateTopic } from "@/features/topics/queries";
-import { readRouteParam } from "@/shared/api/mockForum";
 import { compactNumber } from "@/shared/lib/format";
+import { readRouteParam } from "@/shared/router/params";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -166,7 +166,7 @@ async function handleSubmit() {
     await router.push({ name: "topic-detail", params: { slug: topic.slug, id: topic.id } });
   } catch {
     publishState.value = "submitted";
-    publishError.value = "当前未登录或后端不可用，已保留为发布预览；登录后可再次提交。";
+    publishError.value = "当前未登录或服务暂时不可用，已保留为发布预览；登录后可再次提交。";
   }
 }
 
@@ -238,8 +238,8 @@ function isTopicIntent(value: unknown): value is TopicIntent {
     <section class="new-topic-hero" aria-labelledby="new-topic-title">
       <div>
         <UiBadge tone="blue">发布主题</UiBadge>
-        <h1 id="new-topic-title">把问题写成能被接住的主题。</h1>
-        <p>这不是“随便发一条动态”的页面。先选问题场景，再补齐标题、日志、复现路径和标签。</p>
+        <h1 id="new-topic-title">发布一个清晰可复用的主题。</h1>
+        <p>先选择合适版块，再补齐标题、日志、复现路径和标签，方便后来者继续检索和补充。</p>
       </div>
       <dl aria-label="发帖状态">
         <div>
@@ -272,7 +272,7 @@ function isTopicIntent(value: unknown): value is TopicIntent {
             <span>01</span>
             <div>
               <h2>先选择问题归属</h2>
-              <p>游客和答题者都会先看版块，别让问题走错队列。</p>
+              <p>版块决定主题被谁看到，也决定后续如何归档。</p>
             </div>
           </div>
 
@@ -291,6 +291,12 @@ function isTopicIntent(value: unknown): value is TopicIntent {
               <em>{{ compactNumber(board.topicCount) }} 主题</em>
             </button>
           </div>
+          <p v-if="boardsQuery.isError.value" class="form-error" role="alert">
+            版块列表暂时不可用，发布已暂停；请稍后重试。
+          </p>
+          <p v-else-if="!boardOptions.length" class="form-error" role="status">
+            还没有可发布的版块，请先创建版块。
+          </p>
         </UiCard>
 
         <UiCard id="title" class="form-panel">
@@ -389,7 +395,7 @@ function isTopicIntent(value: unknown): value is TopicIntent {
           </ul>
 
           <div v-if="publishState === 'submitted'" class="submit-result" role="status">
-            {{ publishError || "已生成发布预览；后端提交成功后会跳转到新主题详情页。" }}
+            {{ publishError || "已生成发布预览；发布成功后会跳转到新主题详情页。" }}
           </div>
         </UiCard>
 

@@ -15,6 +15,6 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 RUN pnpm --dir apps/web build
 
-EXPOSE 5173
+EXPOSE 5174
 
-CMD ["pnpm", "--dir", "apps/web", "preview", "--host", "0.0.0.0", "--port", "5173"]
+CMD ["pnpm", "--dir", "apps/web", "preview", "--host", "0.0.0.0", "--port", "5174"]

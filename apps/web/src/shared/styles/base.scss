@@ -6,8 +6,9 @@ html {
   color: var(--text);
   background: var(--bg-app);
   font-family:
-    "LXGW WenKai Screen", "Noto Serif SC", ui-serif, Georgia, "Times New Roman", serif;
-  text-rendering: geometricPrecision;
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
@@ -28,17 +29,17 @@ pre {
 .markdown-body pre {
   overflow: auto;
   padding: 1rem;
-  border-radius: 14px;
+  border-radius: 6px;
   color: var(--code-text);
   background: var(--code-bg);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .markdown-body code {
-  border-radius: 0.45rem;
+  border-radius: 0.25rem;
   padding: 0.12rem 0.35rem;
-  color: #2563eb;
-  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary-hover);
+  background: var(--bg-selected);
 }
 
 .markdown-body pre code {

@@ -4,8 +4,8 @@
 
 ### 1. Scope / Trigger
 
-- Trigger: changing latest/top/hot feeds, board-scoped topic lists, search filters, cursor pagination, or hot score recomputation.
-- Applies to `ForumService.list_topics`, `app/api/v1/topics.py`, `app/api/v1/boards.py`, `app/api/v1/search.py`, and `app/workers/hot_ranking.py`.
+- Trigger: changing latest/top/hot feeds, board-scoped topic lists, search filters, tag cloud data, cursor pagination, or hot score recomputation.
+- Applies to `ForumService.list_topics`, `ForumService.list_tags`, `app/api/v1/topics.py`, `app/api/v1/boards.py`, `app/api/v1/search.py`, `app/api/v1/tags.py`, and `app/workers/hot_ranking.py`.
 
 ### 2. Signatures
 
@@ -16,10 +16,12 @@ API routes:
 | `GET` | `/api/v1/topics?sort=&q=&board=&tag=&author=&cursor=&limit=` | no | Public topic feed and filtered topic list |
 | `GET` | `/api/v1/boards/{slug}/topics?sort=&q=&tag=&author=&cursor=&limit=` | no | Board-scoped feed/search |
 | `GET` | `/api/v1/search?q=&board=&tag=&author=&sort=&cursor=&limit=` | no | Search public topics by title and post raw Markdown |
+| `GET` | `/api/v1/tags?limit=` | no | Public tag cloud ordered by actual topic usage |
 
 Service/worker:
 
 - `ForumService.list_topics(board_slug=None, sort="latest", limit=30, query=None, tag=None, author=None, cursor=None) -> list[Topic]`
+- `ForumService.list_tags(limit=30) -> list[Tag]`
 - `recompute_hot_scores(session: AsyncSession) -> int`
 
 ### 3. Contracts
@@ -33,6 +35,7 @@ Service/worker:
   - `latest`: `last_posted_at desc`
   - `hot`: `hot_score desc`, then `last_posted_at desc`
   - `top`: `like_count desc`, then `reply_count desc`
+- `/tags` returns `ApiResponse[list[TagResponse]]` and must include only tags with `topic_count > 0`, ordered by `topic_count desc`, then `name`.
 - Hot score recompute is idempotent and uses `calculate_hot_score(reply_count, like_count, view_count)`.
 
 ### 4. Validation & Error Matrix
@@ -44,10 +47,13 @@ Service/worker:
 | Wildcards in search query (`%`, `_`, `\`) | Escaped before `ilike`; never treated as raw pattern control |
 | Cursor beyond available data | Empty `data`, `next_cursor: null` |
 | Deleted topic | Excluded from feeds/search/hot recompute |
+| Tag with no topics | Excluded from `/tags` |
+| Invalid tag limit (`0` or `>100`) | FastAPI validation error in project error envelope |
 
 ### 5. Good/Base/Bad Cases
 
 - Good: `GET /search?q=callback` finds a topic whose first post contains `callback` even when title does not.
+- Good: `GET /tags?limit=5` returns real `TagResponse` rows sorted by `topic_count`, for home tag cloud.
 - Base: `GET /topics?tag=csv&sort=latest` returns only topics with normalized CSV tag.
 - Bad: router builds SQL directly or interpolates query text into SQL strings.
 
@@ -55,6 +61,7 @@ Service/worker:
 
 - API test for search by post body.
 - API test for tag filter and cursor meta.
+- API test for `GET /tags` returning persisted tag names and `topic_count`.
 - Feed ordering test for latest/hot/top when counters differ.
 - Worker test proving `recompute_hot_scores` updates all non-deleted topics and is safe to rerun.
 

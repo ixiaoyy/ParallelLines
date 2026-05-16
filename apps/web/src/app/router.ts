@@ -21,6 +21,16 @@ export const router = createRouter({
       component: () => import("@/pages/board/BoardDirectoryPage.vue"),
     },
     {
+      path: "/auth",
+      name: "auth",
+      component: () => import("@/pages/auth/AuthPage.vue"),
+    },
+    {
+      path: "/u/:username",
+      name: "user-profile",
+      component: () => import("@/pages/user/UserProfilePage.vue"),
+    },
+    {
       path: "/b/:slug",
       name: "board-detail",
       component: () => import("@/pages/board/BoardPage.vue"),

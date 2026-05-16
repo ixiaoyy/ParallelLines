@@ -18,7 +18,7 @@ docker compose up --build
 
 Services:
 
-- Web: <http://localhost:5173>
+- Web: <http://localhost:5174>
 - API: <http://localhost:8000>
 - API health: <http://localhost:8000/healthz>
 - API metrics: <http://localhost:8000/metrics>
@@ -79,7 +79,7 @@ Playwright smoke tests cover register → login → create board/topic → reply
 
 ```powershell
 # Terminal 1: start API + web, or use docker compose up
-$env:PLAYWRIGHT_BASE_URL="http://127.0.0.1:5173"
+$env:PLAYWRIGHT_BASE_URL="http://127.0.0.1:5174"
 $env:PLAYWRIGHT_API_BASE_URL="http://127.0.0.1:8000/api/v1"
 pnpm --dir apps/web exec playwright install chromium
 pnpm --dir apps/web test:smoke

@@ -79,3 +79,43 @@ footer {
     justify-items: start;
   }
 }
+
+.edit-field {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.edit-field span,
+.post-status {
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 820;
+}
+
+.edit-field textarea {
+  width: 100%;
+  min-height: 9rem;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 0.85rem;
+  color: var(--title);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.edit-field textarea:focus {
+  outline: 3px solid rgba(59, 130, 246, 0.15);
+  border-color: var(--primary);
+}
+
+.edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.post-status {
+  margin: 0.65rem 0 0;
+}

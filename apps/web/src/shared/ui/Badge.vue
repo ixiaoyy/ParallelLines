@@ -12,25 +12,25 @@ withDefaults(defineProps<{ tone?: "blue" | "green" | "gray" | "amber" }>(), { to
 .badge {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
-  padding: 0.24rem 0.58rem;
-  font-size: 0.78rem;
-  font-weight: 760;
+  border-radius: 0.2rem;
+  padding: 0.12rem 0.38rem;
+  font-size: 0.74rem;
+  font-weight: 600;
 }
 
 .badge--blue {
-  color: #1d4ed8;
-  background: rgba(59, 130, 246, 0.12);
+  color: var(--primary-hover);
+  background: var(--bg-selected);
 }
 
 .badge--green {
-  color: #047857;
-  background: rgba(16, 185, 129, 0.14);
+  color: var(--accent-geek);
+  background: var(--bg-hover);
 }
 
 .badge--amber {
-  color: #b45309;
-  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+  background: var(--pinned-bg);
 }
 
 .badge--gray {

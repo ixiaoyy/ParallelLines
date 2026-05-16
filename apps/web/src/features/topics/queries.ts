@@ -5,12 +5,6 @@ import type { MaybeRefOrGetter } from "vue";
 import type { TopicCardVM } from "@/entities/topic/model";
 import { hasAccessToken } from "@/shared/api/client";
 import { queryKeys } from "@/shared/api/queryKeys";
-import {
-  getRelatedTopics,
-  getTopicById,
-  getTopicsByBoardSlug,
-  topics as mockTopics,
-} from "@/shared/api/mockForum";
 
 import { createTopic, fetchBoardTopics, fetchTopic, fetchTopics, searchTopics } from "./api";
 import type { TopicSearchParams } from "./api";
@@ -22,12 +16,7 @@ export function useTopicFeed(sort: MaybeRefOrGetter<TopicSort> = "latest") {
     queryKey: computed(() => queryKeys.topics(`feed:${toValue(sort)}`)),
     queryFn: async () => {
       const topicSort = toValue(sort);
-      try {
-        const topics = await fetchTopics(topicSort);
-        return topics.length ? topics.map(toTopicCard) : sortTopicCards(mockTopics, topicSort);
-      } catch {
-        return sortTopicCards(mockTopics, topicSort);
-      }
+      return (await fetchTopics(topicSort)).map(toTopicCard);
     },
     staleTime: 20_000,
   });
@@ -42,12 +31,7 @@ export function useBoardTopics(
     queryFn: async () => {
       const slug = toValue(boardSlug);
       const topicSort = toValue(sort);
-      try {
-        const topics = await fetchBoardTopics(slug, topicSort);
-        return topics.length ? topics.map(toTopicCard) : sortTopicCards(getTopicsByBoardSlug(slug), topicSort);
-      } catch {
-        return sortTopicCards(getTopicsByBoardSlug(slug), topicSort);
-      }
+      return (await fetchBoardTopics(slug, topicSort)).map(toTopicCard);
     },
     enabled: computed(() => Boolean(toValue(boardSlug))),
     staleTime: 20_000,
@@ -57,14 +41,7 @@ export function useBoardTopics(
 export function useTopicDetail(topicId: MaybeRefOrGetter<string>) {
   return useQuery({
     queryKey: computed(() => queryKeys.topic(toValue(topicId))),
-    queryFn: async () => {
-      const id = toValue(topicId);
-      try {
-        return toTopicCard(await fetchTopic(id));
-      } catch {
-        return getTopicById(id) ?? null;
-      }
-    },
+    queryFn: async () => toTopicCard(await fetchTopic(toValue(topicId))),
     enabled: computed(() => Boolean(toValue(topicId))),
     staleTime: 20_000,
   });
@@ -84,12 +61,7 @@ export function useTopicSearch(params: MaybeRefOrGetter<TopicSearchParams>) {
         return [];
       }
 
-      try {
-        const topics = await searchTopics(value);
-        return topics.map(toTopicCard);
-      } catch {
-        return searchMockTopics(value);
-      }
+      return (await searchTopics(value)).map(toTopicCard);
     },
     enabled: computed(() => Boolean(toValue(params).q.trim())),
     staleTime: 20_000,
@@ -97,14 +69,28 @@ export function useTopicSearch(params: MaybeRefOrGetter<TopicSearchParams>) {
 }
 
 export function useRelatedTopics(topic: MaybeRefOrGetter<TopicCardVM | null | undefined>) {
-  return computed(() => {
-    const current = toValue(topic);
-    if (!current) {
-      return [];
-    }
+  const relatedQuery = useQuery({
+    queryKey: computed(() => {
+      const current = toValue(topic);
+      return queryKeys.topics(`related:${current?.boardSlug ?? ""}:${current?.id ?? ""}`);
+    }),
+    queryFn: async () => {
+      const current = toValue(topic);
+      if (!current) {
+        return [];
+      }
 
-    return getRelatedTopics(current);
+      const topics = await fetchBoardTopics(current.boardSlug, "latest", 4);
+      return topics
+        .map(toTopicCard)
+        .filter((candidate) => candidate.id !== current.id)
+        .slice(0, 3);
+    },
+    enabled: computed(() => Boolean(toValue(topic)?.boardSlug)),
+    staleTime: 30_000,
   });
+
+  return computed(() => relatedQuery.data.value ?? []);
 }
 
 export function useCreateTopic() {
@@ -126,34 +112,4 @@ export function useCreateTopic() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
     },
   });
-}
-
-function sortTopicCards(topics: TopicCardVM[], sort: TopicSort): TopicCardVM[] {
-  const sorted = [...topics];
-
-  if (sort === "hot") {
-    return sorted.sort((left, right) => right.hotScore - left.hotScore);
-  }
-
-  if (sort === "top") {
-    return sorted.sort((left, right) => right.likeCount + right.replyCount - (left.likeCount + left.replyCount));
-  }
-
-  return sorted.sort((left, right) => Date.parse(right.lastPostedAt) - Date.parse(left.lastPostedAt));
-}
-
-function searchMockTopics(params: TopicSearchParams): TopicCardVM[] {
-  const keyword = params.q.trim().toLocaleLowerCase();
-  const filtered = mockTopics.filter((topic) => {
-    const matchesKeyword = `${topic.title} ${topic.excerpt} ${topic.tags.join(" ")}`
-      .toLocaleLowerCase()
-      .includes(keyword);
-    const matchesBoard = params.board ? topic.boardSlug === params.board : true;
-    const matchesTag = params.tag ? topic.tags.includes(params.tag) : true;
-    const matchesAuthor = params.author ? topic.authorName === params.author : true;
-
-    return matchesKeyword && matchesBoard && matchesTag && matchesAuthor;
-  });
-
-  return sortTopicCards(filtered, params.sort ?? "latest");
 }

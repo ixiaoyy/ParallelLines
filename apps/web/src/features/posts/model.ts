@@ -21,12 +21,20 @@ export interface CreatePostRequest {
   parent_post_id?: string | null;
 }
 
+export interface UpdatePostRequest {
+  raw_md: string;
+}
+
 export function toPostItem(post: PostResponse): PostItemVM {
   return {
     id: post.id,
+    topicId: post.topic_id,
+    userId: post.user_id,
     floor: post.post_number,
     authorName: post.author_name,
     createdAt: post.created_at,
+    updatedAt: post.updated_at,
+    rawMd: post.raw_md,
     cookedHtml: post.cooked_html,
     likeCount: post.like_count,
     replyCount: post.reply_count,

@@ -158,6 +158,12 @@
   align-items: start;
 }
 
+.directory-api-error {
+  padding: 1rem;
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.08);
+}
+
 .board-results {
   display: grid;
   gap: 0.85rem;

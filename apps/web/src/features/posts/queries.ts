@@ -4,23 +4,17 @@ import type { MaybeRefOrGetter } from "vue";
 
 import { hasAccessToken } from "@/shared/api/client";
 import { queryKeys } from "@/shared/api/queryKeys";
-import { getPostsByTopicId } from "@/shared/api/mockForum";
 
-import { createPost, fetchPosts } from "./api";
+import { createPost, fetchPosts, updatePost } from "./api";
 import { toPostItem } from "./model";
-import type { CreatePostRequest, PostResponse } from "./model";
+import type { CreatePostRequest, PostResponse, UpdatePostRequest } from "./model";
 
 export function useTopicPosts(topicId: MaybeRefOrGetter<string>) {
   return useQuery({
     queryKey: computed(() => queryKeys.posts(toValue(topicId))),
     queryFn: async () => {
       const id = toValue(topicId);
-      try {
-        const posts = await fetchPosts(id);
-        return posts.map(toPostItem);
-      } catch {
-        return getPostsByTopicId(id);
-      }
+      return (await fetchPosts(id)).map(toPostItem);
     },
     enabled: computed(() => Boolean(toValue(topicId))),
     staleTime: 20_000,
@@ -38,6 +32,26 @@ export function useCreatePost(topicId: MaybeRefOrGetter<string>) {
       }
 
       return createPost(id, payload);
+    },
+    onSuccess: () => {
+      const id = toValue(topicId);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.posts(id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.topic(id) });
+    },
+  });
+}
+
+
+export function useUpdatePost(topicId: MaybeRefOrGetter<string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<PostResponse, Error, { postId: string; payload: UpdatePostRequest }>({
+    mutationFn: ({ postId, payload }) => {
+      if (!postId || !hasAccessToken()) {
+        throw new Error("authentication_required");
+      }
+
+      return updatePost(postId, payload);
     },
     onSuccess: () => {
       const id = toValue(topicId);

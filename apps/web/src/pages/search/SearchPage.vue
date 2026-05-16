@@ -5,7 +5,7 @@ import { useRoute, useRouter } from "vue-router";
 import TopicList from "@/features/topics/components/TopicList.vue";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicSearch } from "@/features/topics/queries";
-import { readRouteParam } from "@/shared/api/mockForum";
+import { readRouteParam } from "@/shared/router/params";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
@@ -55,8 +55,8 @@ const sortTabs: Array<{ key: TopicSort; label: string }> = [
     <section class="search-hero" aria-labelledby="search-title">
       <div>
         <UiBadge tone="blue">搜索</UiBadge>
-        <h1 id="search-title">按错误码、API 名称或正文线索查主题。</h1>
-        <p>搜索会覆盖主题标题和楼层正文；你也可以在 URL 里叠加 board、tag、author 过滤。</p>
+        <h1 id="search-title">按错误码、接口名或正文线索查主题。</h1>
+        <p>搜索会覆盖主题标题和楼层正文；也可以叠加版块、标签和作者过滤。</p>
       </div>
 
       <label class="search-input" for="search-page-input">
@@ -65,7 +65,7 @@ const sortTabs: Array<{ key: TopicSort; label: string }> = [
           id="search-page-input"
           v-model="q"
           type="search"
-          placeholder="例如：OIDC state mismatch、API timeout、Markdown"
+          placeholder="例如：OIDC state mismatch、请求超时、Markdown"
           autocomplete="off"
         />
       </label>
@@ -89,7 +89,10 @@ const sortTabs: Array<{ key: TopicSort; label: string }> = [
       </div>
     </UiCard>
 
-    <TopicList v-if="q" :topics="topics" />
+    <UiCard v-if="q && searchQuery.isError.value" class="search-error" role="alert">
+      搜索暂时不可用，请稍后重试。
+    </UiCard>
+    <TopicList v-else-if="q" :topics="topics" />
 
     <UiCard v-else class="search-empty">
       <h2>先输入一个具体线索</h2>

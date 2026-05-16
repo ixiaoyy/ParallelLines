@@ -55,6 +55,10 @@ class PostCreateRequest(BaseModel):
     parent_post_id: str | None = None
 
 
+class PostUpdateRequest(BaseModel):
+    raw_md: str = Field(min_length=1, max_length=20_000)
+
+
 class TopicResponse(BaseModel):
     id: str
     slug: str

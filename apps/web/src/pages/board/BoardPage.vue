@@ -8,8 +8,8 @@ import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle
 import TopicList from "@/features/topics/components/TopicList.vue";
 import { useBoardTopics } from "@/features/topics/queries";
 import { hasAccessToken } from "@/shared/api/client";
-import { readRouteParam } from "@/shared/api/mockForum";
 import { compactNumber } from "@/shared/lib/format";
+import { readRouteParam } from "@/shared/router/params";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
@@ -80,6 +80,7 @@ const activeStatus = computed<TopicStatusFilter>({
 });
 
 const activeTab = computed(() => sortTabs.find((tab) => tab.key === activeSort.value) ?? sortTabs[0]);
+const topicsQuery = useBoardTopics(slug, activeSort);
 
 const allBoardTopics = computed(() => topicsQuery.data.value ?? board.value?.latestTopics ?? []);
 
@@ -125,14 +126,12 @@ const solutionStats = computed(() => {
   ];
 });
 
-const topicsQuery = useBoardTopics(slug, activeSort);
-
 const searchPlaceholder = computed(() => {
   if (slug.value === "support") {
     return "搜索错误码、日志、OIDC、升级失败……";
   }
 
-  return "搜索主题、标签、API 名称或问题现象";
+  return "搜索主题、标签、接口名或问题现象";
 });
 
 function boardMark(name: string) {
@@ -157,7 +156,19 @@ function updateQuery(patch: Record<string, string | undefined>) {
 
 <template>
   <div class="board-page">
-    <template v-if="board">
+    <UiCard v-if="boardQuery.isLoading.value" class="board-state" role="status">
+      正在加载版块…
+    </UiCard>
+
+    <UiEmptyState
+      v-else-if="boardQuery.isError.value"
+      title="无法加载这个版块"
+      description="这个版块暂时无法访问，请稍后重试或返回版块目录。"
+    >
+      <RouterLink class="empty-link" to="/boards">返回版块目录</RouterLink>
+    </UiEmptyState>
+
+    <template v-else-if="board">
       <section class="board-hero" :style="{ '--board-color': board.color }" aria-labelledby="board-title">
         <div class="board-hero__header">
           <span class="board-hero__mark" aria-hidden="true">{{ boardMark(board.name) }}</span>
@@ -241,6 +252,9 @@ function updateQuery(patch: Record<string, string | undefined>) {
             </span>
           </div>
 
+          <UiCard v-if="topicsQuery.isError.value" class="board-state board-state--error" role="alert">
+            主题列表暂时加载失败，请稍后刷新。
+          </UiCard>
           <TopicList :topics="boardTopics" />
         </main>
 

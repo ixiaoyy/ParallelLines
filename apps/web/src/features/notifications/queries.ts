@@ -5,7 +5,6 @@ import { createApiHeaders, getApiUrl, hasAccessToken } from "@/shared/api/client
 import { queryKeys } from "@/shared/api/queryKeys";
 
 import { fetchNotifications, markNotificationsRead } from "./api";
-import { createMockNotificationList } from "./mockNotifications";
 import {
   markNotificationListRead,
   mergeNotificationLists,
@@ -18,14 +17,10 @@ export function useNotificationList() {
     queryKey: queryKeys.notifications,
     queryFn: async () => {
       if (!hasAccessToken()) {
-        return createMockNotificationList();
+        return createEmptyNotificationList();
       }
 
-      try {
-        return await fetchNotifications();
-      } catch {
-        return createMockNotificationList();
-      }
+      return fetchNotifications();
     },
     staleTime: 15_000,
   });
@@ -42,11 +37,9 @@ export function useMarkNotificationsRead() {
   >({
     mutationFn: async (ids) => {
       if (!hasAccessToken()) {
-        const previous = queryClient.getQueryData<NotificationListResponse>(queryKeys.notifications);
-        const next = markNotificationListRead(previous, ids);
         return {
-          updated_count: previousUnread(previous) - previousUnread(next),
-          unread_count: next?.unread_count ?? 0,
+          updated_count: 0,
+          unread_count: 0,
         };
       }
 
@@ -125,10 +118,8 @@ async function readNotificationStream(
       buffer = frames.pop() ?? "";
       frames.forEach((frame) => consumeFrame(frame, onSnapshot));
     }
-  } catch (error) {
-    if (!signal.aborted) {
-      console.warn("notifications stream closed", error);
-    }
+  } catch {
+    // Stream failures are reflected by the polling query; do not show fake notifications.
   }
 }
 
@@ -154,6 +145,9 @@ function consumeFrame(frame: string, onSnapshot: (snapshot: NotificationListResp
   }
 }
 
-function previousUnread(value: NotificationListResponse | undefined): number {
-  return value?.unread_count ?? 0;
+function createEmptyNotificationList(): NotificationListResponse {
+  return {
+    notifications: [],
+    unread_count: 0,
+  };
 }

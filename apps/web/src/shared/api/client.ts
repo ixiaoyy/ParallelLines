@@ -34,6 +34,26 @@ export function hasAccessToken(): boolean {
   return Boolean(getAccessToken());
 }
 
+export function setAuthTokens(accessToken: string, refreshToken: string): void {
+  try {
+    window.localStorage.setItem("parallellines.access_token", accessToken);
+    window.localStorage.setItem("parallellines.refresh_token", refreshToken);
+  } catch {
+    // Ignore storage failures; callers will still see API errors if auth cannot persist.
+  }
+}
+
+export function clearAuthTokens(): void {
+  try {
+    window.localStorage.removeItem("parallellines.access_token");
+    window.localStorage.removeItem("parallellines.refresh_token");
+    window.localStorage.removeItem("access_token");
+    window.localStorage.removeItem("refresh_token");
+  } catch {
+    // Ignore storage failures during logout.
+  }
+}
+
 export function createApiHeaders(init?: HeadersInit): Headers {
   const headers = new Headers(init);
   headers.set("Accept", "application/json");
