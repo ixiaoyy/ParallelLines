@@ -1,17 +1,17 @@
 {
-  "id": "architecture-domain-baseline",
-  "name": "architecture-domain-baseline",
-  "title": "Architecture and domain baseline",
-  "description": "Define product scope, domain model, API conventions, and implementation guardrails.",
+  "id": "frontend-vue-design-system",
+  "name": "frontend-vue-design-system",
+  "title": "Frontend Vue design system",
+  "description": "Create Vue 3 app shell, routing, state/query layer, and forum design tokens from the requested palette.",
   "status": "completed",
-  "dev_type": "docs",
-  "scope": "architecture",
+  "dev_type": "frontend",
+  "scope": "frontend-foundation",
   "package": null,
   "priority": "P0",
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-14",
-  "completedAt": "2026-05-14",
+  "completedAt": "2026-05-16",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
@@ -46,23 +46,27 @@
   "pr_url": null,
   "subtasks": [
     {
-      "name": "Finalize domain vocabulary",
+      "name": "Create Vue app shell",
       "status": "completed"
     },
     {
-      "name": "Finalize API conventions",
+      "name": "Add design tokens",
       "status": "completed"
     },
     {
-      "name": "Finalize permission matrix",
+      "name": "Build reusable components",
+      "status": "completed"
+    },
+    {
+      "name": "Add fixture home page",
       "status": "completed"
     }
   ],
   "children": [],
   "parent": "05-14-parallellines-mvp",
   "relatedFiles": [
-    ".trellis/spec/product/discourse-inspired-parallellines-design.md",
-    ".trellis/spec/guides/"
+    "apps/web/",
+    ".trellis/spec/frontend/"
   ],
   "notes": "",
   "meta": {}

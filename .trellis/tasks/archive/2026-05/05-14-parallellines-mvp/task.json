@@ -3,7 +3,7 @@
   "name": "parallellines-mvp",
   "title": "平行线 MVP project blueprint",
   "description": "Discourse-inspired forum platform using Vue 3 and FastAPI; parent task for implementation epics.",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": "fullstack",
   "scope": "parallellines-mvp",
   "package": null,
@@ -11,7 +11,7 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-14",
-  "completedAt": null,
+  "completedAt": "2026-05-16",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
@@ -58,16 +58,7 @@
       "status": "pending"
     }
   ],
-  "children": [
-    "05-14-architecture-domain-baseline",
-    "05-14-backend-fastapi-foundation",
-    "05-14-frontend-vue-design-system",
-    "05-14-board-topic-post-core",
-    "05-14-interactions-notifications",
-    "05-14-search-feed-hot-ranking",
-    "05-14-moderation-admin-safety",
-    "05-14-quality-deployment-observability"
-  ],
+  "children": [],
   "parent": null,
   "relatedFiles": [
     ".trellis/spec/product/discourse-inspired-parallellines-design.md",

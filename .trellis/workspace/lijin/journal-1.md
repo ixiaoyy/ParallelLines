@@ -4,3 +4,71 @@
 > Started: 2026-05-14
 
 ---
+
+
+## Session 1: Complete ParallelLines MVP epics
+
+**Date**: 2026-05-16
+**Task**: Complete ParallelLines MVP epics
+**Branch**: `main`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Completed and recorded the ParallelLines forum MVP implementation in commit `ada974a`.
+
+## Completed Epics
+
+| Task | Result |
+|---|---|
+| Architecture/domain baseline | Project structure, Trellis specs, and implementation plan established. |
+| Backend FastAPI foundation | Auth, DB, Alembic, API response/error shape, logging, tests. |
+| Frontend Vue design system | Vue 3/Vite/Ant Design Vue shell, routes, shared UI primitives, responsive styling. |
+| Board/topic/post core | Boards, topics, posts, tags, reply flow, frontend API wiring, DTO-to-VM query composables. |
+| Frontend CX polish | Search-first board/topic discovery, compact board/detail pages, problem-solving copy, status-density improvements. |
+| Interactions/notifications | Likes, bookmarks, board follows, notification list, read state, SSE stream, optimistic frontend toggles. |
+| Search/feed/hot ranking | Search endpoint, feed filters, cursor metadata, deterministic hot score recompute worker, frontend search page. |
+| Moderation/admin/safety | Flags, moderation queue, board/global permissions, soft hide/restore, user status updates, audit logs, admin console. |
+| Quality/deployment/observability | Docker Compose stack, API/web Dockerfiles, CI, seed data, metrics endpoint, hot-rank worker loop, Playwright smoke test, operations docs. |
+
+## Verification
+
+- `uv run ruff check app tests` / local `.venv` ruff passed.
+- `pytest -q` passed with 9 tests.
+- `pnpm --dir apps/web lint` passed.
+- `pnpm --dir apps/web typecheck` passed.
+- `pnpm --dir apps/web build` passed; only Vite chunk-size warning.
+- `docker compose config` passed.
+- `pnpm --dir apps/web test:smoke` passed locally against temporary SQLite API and Vite web server.
+- `git diff --check` passed; only CRLF warnings.
+
+## Notes for Future Sessions
+
+- Working tree was clean after `ada974a feat: expand forum mvp features` before Trellis archival.
+- All MVP child tasks were archived under `.trellis/tasks/archive/2026-05/`.
+- Demo local accounts seeded by `python -m app.seed`: `demo_admin`, `demo_moderator`, `demo_member`; local-only password is documented in README.
+- Smoke tests currently bootstrap auth/board via API, then exercise frontend create-topic/reply UI.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ada974a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
