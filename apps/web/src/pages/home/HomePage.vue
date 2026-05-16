@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
 
 import { useBoards } from "@/features/boards/queries";
 import { useTags } from "@/features/tags/queries";
@@ -7,10 +8,14 @@ import TopicList from "@/features/topics/components/TopicList.vue";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicFeed } from "@/features/topics/queries";
 import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
-import { compactNumber } from "@/shared/lib/format";
+import { compactNumber, relativeTime } from "@/shared/lib/format";
+import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
+import UiCard from "@/shared/ui/Card.vue";
 
 const activeTab = ref<DiscoveryTab["key"]>("latest");
+const heroSearch = ref("");
+const router = useRouter();
 const feedSort = computed<TopicSort>(() =>
   activeTab.value === "hot" ? "hot" : activeTab.value === "top" ? "top" : "latest",
 );
@@ -25,6 +30,32 @@ const activeDescription = computed(
 const boardSummaries = computed(() => boardsQuery.data.value ?? []);
 const feedTopics = computed(() => topicsQuery.data.value ?? []);
 const tagCloud = computed(() => (tagsQuery.data.value ?? []).map((tag) => tag.name).slice(0, 12));
+const heroBoards = computed(() => boardSummaries.value.slice(0, 3));
+const hotTopics = computed(() =>
+  [...feedTopics.value].sort((left, right) => right.hotScore - left.hotScore).slice(0, 5),
+);
+const unansweredTopics = computed(() =>
+  feedTopics.value.filter((topic) => topic.replyCount === 0).slice(0, 4),
+);
+const communitySignals = computed(() => [
+  {
+    label: "公开主题",
+    value: compactNumber(feedTopics.value.length),
+    helper: "真实 API 主题流",
+  },
+  {
+    label: "等待首答",
+    value: compactNumber(feedTopics.value.filter((topic) => topic.replyCount === 0).length),
+    helper: "最值得游客切入",
+  },
+  {
+    label: "高信号",
+    value: compactNumber(
+      feedTopics.value.filter((topic) => topic.solved || topic.officialReply || topic.featured || topic.pinned).length,
+    ),
+    helper: "可直接复用",
+  },
+]);
 
 const visibleTopics = computed(() => {
   const sorted = [...feedTopics.value];
@@ -51,10 +82,59 @@ const visibleTopics = computed(() => {
 function setActiveTab(tabKey: DiscoveryTab["key"]) {
   activeTab.value = tabKey;
 }
+
+function submitHeroSearch() {
+  const q = heroSearch.value.trim();
+  if (!q) {
+    return;
+  }
+
+  void router.push({ name: "search", query: { q } });
+}
 </script>
 
 <template>
   <div id="top" class="meta-home">
+    <section class="visitor-hero" aria-labelledby="visitor-hero-title">
+      <div class="hero-copy">
+        <UiBadge tone="blue">游客入口</UiBadge>
+        <h1 id="visitor-hero-title">先找到线索，再加入讨论。</h1>
+        <p>
+          平行线把问题、复现、答案和后续活动放在同一条线上；你可以先浏览公开主题，确认价值后再登录发帖。
+        </p>
+
+        <form class="hero-search" role="search" aria-label="游客搜索" @submit.prevent="submitHeroSearch">
+          <input
+            v-model="heroSearch"
+            type="search"
+            placeholder="搜索错误码、模块名、日志关键字，例如 OIDC / CSV / notification_cursor"
+          />
+          <UiButton type="submit" tone="primary" :disabled="!heroSearch.trim()">搜索线索</UiButton>
+        </form>
+
+        <div class="hero-board-strip" aria-label="高频版块">
+          <RouterLink
+            v-for="board in heroBoards"
+            :key="board.id"
+            :to="{ name: 'board-detail', params: { slug: board.slug } }"
+            :style="{ '--board-color': board.color }"
+          >
+            <span aria-hidden="true"></span>
+            <strong>{{ board.name }}</strong>
+            <small>{{ compactNumber(board.topicCount) }} 个主题</small>
+          </RouterLink>
+        </div>
+      </div>
+
+      <div class="hero-signal-grid" aria-label="社区实时信号">
+        <div v-for="signal in communitySignals" :key="signal.label">
+          <span>{{ signal.label }}</span>
+          <strong>{{ signal.value }}</strong>
+          <small>{{ signal.helper }}</small>
+        </div>
+      </div>
+    </section>
+
     <div class="home-workspace">
       <aside class="forum-sidebar" aria-label="社区导航">
         <nav class="primary-menu" aria-label="个人导航">
@@ -169,7 +249,54 @@ function setActiveTab(tabKey: DiscoveryTab["key"]) {
         </div>
         <TopicList v-else :topics="visibleTopics" />
       </main>
+
+      <aside class="home-insight-rail" aria-label="游客参考">
+        <UiCard class="insight-card">
+          <span class="panel-kicker">先看这里</span>
+          <h2>游客别被首页晃瞎：先挑可行动问题</h2>
+          <ol>
+            <li>优先看「未回复」：这里最需要补充复现和日志。</li>
+            <li>再看「高信号」：已解决/官方回复能直接复用。</li>
+            <li>最后再发帖：标题写症状，正文写环境、步骤、日志。</li>
+          </ol>
+        </UiCard>
+
+        <UiCard class="insight-card">
+          <span class="panel-kicker">热度雷达</span>
+          <h2>正在升温</h2>
+          <ul class="compact-topic-list">
+            <li v-for="topic in hotTopics" :key="topic.id">
+              <RouterLink :to="`/t/${topic.slug}/${topic.id}`">{{ topic.title }}</RouterLink>
+              <small>{{ topic.boardName }} · {{ relativeTime(topic.lastPostedAt) }}</small>
+            </li>
+          </ul>
+        </UiCard>
+
+        <UiCard class="insight-card">
+          <span class="panel-kicker">可插手</span>
+          <h2>等待首答</h2>
+          <ul class="compact-topic-list">
+            <li v-for="topic in unansweredTopics" :key="topic.id">
+              <RouterLink :to="`/t/${topic.slug}/${topic.id}`">{{ topic.title }}</RouterLink>
+              <small>{{ topic.boardName }} · {{ topic.tags.map((tag) => `#${tag}`).join(" ") }}</small>
+            </li>
+          </ul>
+        </UiCard>
+      </aside>
     </div>
+
+    <section class="visitor-trust-band" aria-labelledby="visitor-trust-title">
+      <div>
+        <span class="panel-kicker">投产体验检查</span>
+        <h2 id="visitor-trust-title">不是摆拍首页：这里直接暴露真实问题、真实状态和真实入口。</h2>
+      </div>
+      <ul>
+        <li>公开浏览不强迫登录</li>
+        <li>标签、版块、搜索互相打通</li>
+        <li>发布前有模板和草稿保护</li>
+      </ul>
+      <RouterLink :to="{ name: 'board-directory' }">从版块开始 →</RouterLink>
+    </section>
   </div>
 </template>
 

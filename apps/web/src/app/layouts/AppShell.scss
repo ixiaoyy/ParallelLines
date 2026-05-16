@@ -1,7 +1,10 @@
 .app-shell {
   min-height: 100vh;
   overflow-x: clip;
-  background: var(--bg-app);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(var(--primary-rgb), 0.08), transparent 26rem),
+    radial-gradient(circle at 86% 4%, rgba(var(--accent-geek-rgb), 0.06), transparent 20rem),
+    linear-gradient(180deg, var(--bg-app), var(--bg-subtle));
 }
 
 .topbar {
@@ -15,7 +18,9 @@
   min-height: 3.35rem;
   padding: 0.45rem clamp(1rem, 2.5vw, 2rem);
   border-bottom: 1px solid var(--border);
-  background: var(--bg-surface);
+  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  box-shadow: 0 8px 28px rgba(31, 41, 55, 0.05);
+  backdrop-filter: blur(18px);
 }
 
 .brand {
@@ -31,11 +36,12 @@
   width: 2rem;
   height: 2rem;
   place-items: center;
-  border-radius: 0.25rem;
+  border-radius: 0.55rem;
   color: #fff;
   font-weight: 700;
   letter-spacing: -0.04em;
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary), var(--accent-geek));
+  box-shadow: 0 10px 24px rgba(var(--primary-rgb), 0.24);
 }
 
 .brand strong {
@@ -59,7 +65,7 @@
 }
 
 .nav-links a {
-  border-radius: 0.25rem;
+  border-radius: var(--radius-pill);
   padding: 0.46rem 0.55rem;
   color: var(--text);
   text-decoration: none;
@@ -76,12 +82,13 @@
 }
 
 .nav-links a.is-active {
-  box-shadow: inset 0 -3px 0 var(--primary);
+  color: var(--primary-hover);
+  box-shadow: inset 0 0 0 1px rgba(var(--primary-rgb), 0.15);
 }
 
 .search-box {
   width: 100%;
-  border-radius: 0.25rem;
+  border-radius: var(--radius-pill);
   background: var(--bg-surface);
 }
 
@@ -94,7 +101,7 @@
 .user-link,
 .logout-button {
   border: 0;
-  border-radius: 0.25rem;
+  border-radius: var(--radius-pill);
   padding: 0.45rem 0.58rem;
   color: var(--text);
   background: transparent;
@@ -184,7 +191,7 @@
 }
 
 .shell-main {
-  width: min(1180px, calc(100% - 2rem));
+  width: min(1280px, calc(100% - 2rem));
   margin: 0 auto;
   padding: 1rem 0 4rem;
 }

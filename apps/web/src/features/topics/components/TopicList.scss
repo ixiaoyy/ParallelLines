@@ -1,7 +1,9 @@
 .topic-list-shell {
   overflow: hidden;
-  border-top: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
   background: var(--bg-surface);
+  box-shadow: var(--shadow-card);
 }
 
 .topic-list-header {
@@ -12,7 +14,7 @@
   padding: 0.62rem 0.5rem;
   border-bottom: 3px solid var(--border-strong);
   color: var(--muted);
-  background: var(--bg-surface);
+  background: linear-gradient(180deg, var(--bg-surface), var(--bg-subtle));
   font-size: 0.78rem;
   font-weight: 600;
 }
