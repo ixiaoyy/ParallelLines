@@ -4,7 +4,7 @@
 
 ## Overview
 
-The frontend is a responsive forum interface with a calm tech aesthetic: `#F8F9FA` app background, `#3B82F6` primary actions, `#10B981` geek accent, `#111827` titles, `#4B5563` body text, and `#1E1E1E` code blocks.
+The frontend is a responsive forum interface with a calm tech aesthetic: `#F5F9FB` app background, `#005AA8` primary actions, `#08C7D8` cyan accent, `#172633` titles, `#314A5C` body text, and `#1E1E1E` code blocks.
 
 ## Guidelines Index
 
@@ -36,3 +36,4 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F8F9F
 9. Read `post-actions.md` before changing topic detail or post action buttons.
 10. Read `auth-user-session.md` before changing auth UI, current-user state, profile pages, or authenticated drafts.
 11. For cross-layer API work, read `../guides/cross-layer-thinking-guide.md`.
+

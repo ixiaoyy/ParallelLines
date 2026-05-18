@@ -1,21 +1,20 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { useRouter } from "vue-router";
+import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
 import { useBoards } from "@/features/boards/queries";
 import { useTags } from "@/features/tags/queries";
-import TopicList from "@/features/topics/components/TopicList.vue";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicFeed } from "@/features/topics/queries";
 import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
-import UiBadge from "@/shared/ui/Badge.vue";
-import UiButton from "@/shared/ui/Button.vue";
-import UiCard from "@/shared/ui/Card.vue";
+import ParallelLinesMark from "@/shared/ui/ParallelLinesMark.vue";
 
 const activeTab = ref<DiscoveryTab["key"]>("latest");
 const heroSearch = ref("");
 const router = useRouter();
+const route = useRoute();
+
 const feedSort = computed<TopicSort>(() =>
   activeTab.value === "hot" ? "hot" : activeTab.value === "top" ? "top" : "latest",
 );
@@ -23,39 +22,36 @@ const boardsQuery = useBoards();
 const topicsQuery = useTopicFeed(feedSort);
 const tagsQuery = useTags(30);
 
-const activeDescription = computed(
-  () => discoveryTabs.find((tab) => tab.key === activeTab.value)?.description ?? "",
-);
-
 const boardSummaries = computed(() => boardsQuery.data.value ?? []);
 const feedTopics = computed(() => topicsQuery.data.value ?? []);
-const tagCloud = computed(() => (tagsQuery.data.value ?? []).map((tag) => tag.name).slice(0, 12));
-const heroBoards = computed(() => boardSummaries.value.slice(0, 3));
-const hotTopics = computed(() =>
-  [...feedTopics.value].sort((left, right) => right.hotScore - left.hotScore).slice(0, 5),
-);
-const unansweredTopics = computed(() =>
-  feedTopics.value.filter((topic) => topic.replyCount === 0).slice(0, 4),
-);
+const topBoards = computed(() => boardSummaries.value.slice(0, 4));
+const railBoards = computed(() => boardSummaries.value.slice(0, 8));
+const heroBoards = computed(() => boardSummaries.value.slice(0, 4));
+const topTags = computed(() => (tagsQuery.data.value ?? []).slice(0, 10));
+
 const communitySignals = computed(() => [
   {
-    label: "公开主题",
+    label: "本月新讨论",
     value: compactNumber(feedTopics.value.length),
-    helper: "真实 API 主题流",
+    helper: "来自真实 API",
   },
   {
     label: "等待首答",
     value: compactNumber(feedTopics.value.filter((topic) => topic.replyCount === 0).length),
-    helper: "最值得游客切入",
+    helper: "最值得切入",
   },
   {
-    label: "高信号",
+    label: "精选信号",
     value: compactNumber(
       feedTopics.value.filter((topic) => topic.solved || topic.officialReply || topic.featured || topic.pinned).length,
     ),
     helper: "可直接复用",
   },
 ]);
+
+const hotTopics = computed(() =>
+  [...feedTopics.value].sort((left, right) => right.hotScore - left.hotScore).slice(0, 4),
+);
 
 const visibleTopics = computed(() => {
   const sorted = [...feedTopics.value];
@@ -79,6 +75,26 @@ const visibleTopics = computed(() => {
   return sorted;
 });
 
+watch(
+  () => route.hash,
+  (hash) => {
+    if (hash === "#hot") {
+      activeTab.value = "hot";
+      return;
+    }
+
+    if (hash === "#votes") {
+      activeTab.value = "votes";
+      return;
+    }
+
+    if (hash === "#solved") {
+      activeTab.value = "top";
+    }
+  },
+  { immediate: true },
+);
+
 function setActiveTab(tabKey: DiscoveryTab["key"]) {
   activeTab.value = tabKey;
 }
@@ -94,209 +110,273 @@ function submitHeroSearch() {
 </script>
 
 <template>
-  <div id="top" class="meta-home">
-    <section class="visitor-hero" aria-labelledby="visitor-hero-title">
-      <div class="hero-copy">
-        <UiBadge tone="blue">游客入口</UiBadge>
-        <h1 id="visitor-hero-title">先找到线索，再加入讨论。</h1>
-        <p>
-          平行线把问题、复现、答案和后续活动放在同一条线上；你可以先浏览公开主题，确认价值后再登录发帖。
-        </p>
+  <div id="top" class="forum-home">
+    <div class="home-grid">
+      <aside class="left-rail" aria-label="论坛导航">
+        <RouterLink class="rail-action" :to="{ name: 'new-topic' }">新建主题</RouterLink>
 
-        <form class="hero-search" role="search" aria-label="游客搜索" @submit.prevent="submitHeroSearch">
-          <input
-            v-model="heroSearch"
-            type="search"
-            placeholder="搜索错误码、模块名、日志关键字，例如 OIDC / CSV / notification_cursor"
-          />
-          <UiButton type="submit" tone="primary" :disabled="!heroSearch.trim()">搜索线索</UiButton>
-        </form>
-
-        <div class="hero-board-strip" aria-label="高频版块">
-          <RouterLink
-            v-for="board in heroBoards"
-            :key="board.id"
-            :to="{ name: 'board-detail', params: { slug: board.slug } }"
-            :style="{ '--board-color': board.color }"
-          >
-            <span aria-hidden="true"></span>
-            <strong>{{ board.name }}</strong>
-            <small>{{ compactNumber(board.topicCount) }} 个主题</small>
-          </RouterLink>
-        </div>
-      </div>
-
-      <div class="hero-signal-grid" aria-label="社区实时信号">
-        <div v-for="signal in communitySignals" :key="signal.label">
-          <span>{{ signal.label }}</span>
-          <strong>{{ signal.value }}</strong>
-          <small>{{ signal.helper }}</small>
-        </div>
-      </div>
-    </section>
-
-    <div class="home-workspace">
-      <aside class="forum-sidebar" aria-label="社区导航">
-        <nav class="primary-menu" aria-label="个人导航">
-          <RouterLink class="menu-link active" :to="{ name: 'home', hash: '#top' }">
-            <span class="menu-icon menu-icon--stack" aria-hidden="true"></span>
-            <span class="menu-text">最新主题</span>
+        <nav class="rail-section rail-section--primary" aria-label="首页导航">
+          <RouterLink class="rail-link rail-link--active" to="/">
+            <span aria-hidden="true">⌂</span>
+            <strong>主页</strong>
             <i aria-hidden="true"></i>
           </RouterLink>
-          <RouterLink class="menu-link" :to="{ name: 'new-topic', hash: '#drafts' }">
-            <span class="menu-icon menu-icon--user" aria-hidden="true"></span>
-            <span class="menu-text">我的帖子</span>
+          <RouterLink class="rail-link" :to="{ name: 'home', hash: '#hot' }">
+            <span aria-hidden="true">◆</span>
+            <strong>话题</strong>
           </RouterLink>
-          <RouterLink class="menu-link" :to="{ name: 'home', hash: '#messages' }">
-            <span class="menu-icon menu-icon--inbox" aria-hidden="true"></span>
-            <span class="menu-text">我的消息</span>
+          <RouterLink class="rail-link" :to="{ name: 'home', hash: '#solved' }">
+            <span aria-hidden="true">◎</span>
+            <strong>高信号</strong>
           </RouterLink>
-          <RouterLink class="menu-link" :to="{ name: 'home', hash: '#activity' }">
-            <span class="menu-icon menu-icon--calendar" aria-hidden="true"></span>
-            <span class="menu-text">近期活动</span>
-          </RouterLink>
-          <RouterLink class="menu-link menu-link--muted" :to="{ name: 'board-directory' }">
-            <span class="menu-icon menu-icon--more" aria-hidden="true"></span>
-            <span class="menu-text">更多</span>
+          <RouterLink class="rail-link" :to="{ name: 'board-directory' }">
+            <span aria-hidden="true">⋯</span>
+            <strong>更多</strong>
           </RouterLink>
         </nav>
 
-        <section id="boards" class="sidebar-section" aria-labelledby="category-nav-title">
-          <h2 id="category-nav-title">版块</h2>
-          <p v-if="boardsQuery.isLoading.value" class="sidebar-state" role="status">正在加载版块…</p>
-          <p v-else-if="boardsQuery.isError.value" class="sidebar-state sidebar-state--error" role="alert">
-            版块暂时不可用
-          </p>
-          <RouterLink
-            v-for="board in boardSummaries"
-            :key="board.id"
-            class="sidebar-link board-link"
-            :to="{ name: 'board-detail', params: { slug: board.slug } }"
-            :style="{ '--category-color': board.color }"
-          >
-            <span class="category-square" aria-hidden="true"></span>
-            <span class="sidebar-link-copy">
-              <strong>{{ board.name }}</strong>
-              <small>{{ board.description }}</small>
-            </span>
-            <em>{{ compactNumber(board.topicCount) }}</em>
-          </RouterLink>
-          <p v-if="!boardsQuery.isLoading.value && !boardsQuery.isError.value && !boardSummaries.length" class="sidebar-state">
-            暂无版块
-          </p>
-          <RouterLink v-if="!boardsQuery.isError.value" class="sidebar-link sidebar-link--small" to="/boards">
-            <span class="menu-icon menu-icon--stack" aria-hidden="true"></span>
-            <span class="menu-text">所有版块</span>
-          </RouterLink>
+        <section class="rail-section" aria-labelledby="rail-boards-title">
+          <h2 id="rail-boards-title">版块</h2>
+          <p v-if="boardsQuery.isLoading.value" class="rail-state">正在加载版块…</p>
+          <p v-else-if="boardsQuery.isError.value" class="rail-state rail-state--error">版块暂时不可用</p>
+          <template v-else>
+            <RouterLink
+              v-for="board in railBoards"
+              :key="board.id"
+              class="rail-board"
+              :to="{ name: 'board-detail', params: { slug: board.slug } }"
+              :style="{ '--board-color': board.color }"
+            >
+              <span class="rail-board-mark" aria-hidden="true"></span>
+              <span class="rail-board-copy">
+                <strong>{{ board.name }}</strong>
+                <small>{{ board.description }}</small>
+              </span>
+              <em>{{ compactNumber(board.topicCount) }}</em>
+            </RouterLink>
+          </template>
         </section>
 
-        <section id="tags" class="sidebar-section" aria-labelledby="tag-nav-title">
-          <h2 id="tag-nav-title">标签</h2>
-          <p v-if="tagsQuery.isLoading.value" class="sidebar-state" role="status">正在加载标签…</p>
-          <p v-else-if="tagsQuery.isError.value" class="sidebar-state sidebar-state--error" role="alert">
-            标签暂时不可用
-          </p>
-          <RouterLink
-            v-for="tag in tagCloud.slice(0, 8)"
-            :key="tag"
-            class="tag-link"
-            :to="{ name: 'search', query: { q: tag, tag } }"
-          >
-            #{{ tag }}
-          </RouterLink>
-          <p v-if="!tagsQuery.isLoading.value && !tagsQuery.isError.value && !tagCloud.length" class="sidebar-state">
-            暂无标签
-          </p>
+        <section class="rail-section rail-section--tags" aria-labelledby="rail-tags-title">
+          <h2 id="rail-tags-title">标签</h2>
+          <p v-if="tagsQuery.isLoading.value" class="rail-state">正在加载标签…</p>
+          <p v-else-if="tagsQuery.isError.value" class="rail-state rail-state--error">标签暂时不可用</p>
+          <template v-else>
+            <RouterLink
+              v-for="tag in topTags.slice(0, 6)"
+              :key="tag.id"
+              class="rail-tag"
+              :to="{ name: 'search', query: { q: tag.name, tag: tag.name } }"
+            >
+              #{{ tag.name }}
+            </RouterLink>
+          </template>
         </section>
       </aside>
 
-      <main class="home-main" aria-label="主题发现流">
-        <section class="discourse-page-heading" aria-labelledby="home-title">
+      <main class="main-column" aria-label="平行线首页内容">
+        <section class="hero" aria-labelledby="home-hero-title">
+          <div class="hero-grid">
+            <div class="hero-copy">
+              <span class="eyebrow">技术讨论 · 经验分享 · 项目共创</span>
+              <h1 id="home-hero-title">让不同方向的思考，在<span>平行线</span>上汇合。</h1>
+              <p>
+                一个轻盈、安静、信息密度适中的技术论坛。首页优先呈现最新讨论、热门话题和清晰分类，让成员快速找到可参与的内容。
+              </p>
+              <form class="hero-search" role="search" aria-label="搜索平行线主题" @submit.prevent="submitHeroSearch">
+                <span aria-hidden="true">⌕</span>
+                <input v-model="heroSearch" type="search" placeholder="搜索主题、标签、成员" />
+                <button type="submit" :disabled="!heroSearch.trim()">搜索</button>
+              </form>
+              <div class="hero-cta">
+                <RouterLink class="btn btn-primary" :to="{ name: 'new-topic' }">开始讨论</RouterLink>
+                <RouterLink class="btn btn-secondary" :to="{ name: 'board-directory' }">浏览分类</RouterLink>
+              </div>
+            </div>
+
+            <div class="signal-card" aria-label="社区实时信号">
+              <div class="signal-lines" aria-hidden="true">
+                <span style="--w: 76%"></span>
+                <span style="--w: 88%"></span>
+                <span style="--w: 94%"></span>
+                <span style="--w: 86%"></span>
+                <span style="--w: 72%"></span>
+              </div>
+              <div class="signal-node"><ParallelLinesMark /></div>
+              <div class="signal-caption">
+                <div v-for="signal in communitySignals" :key="signal.label">
+                  <strong>{{ signal.value }}</strong>
+                  <span>{{ signal.label }}</span>
+                  <small>{{ signal.helper }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-head" aria-labelledby="category-title">
           <div>
-            <h1 id="home-title">最新主题</h1>
-            <p>让讨论沿着线索生长。</p>
+            <h2 id="category-title">推荐分类</h2>
+            <p>用少量、明确的入口降低浏览压力。</p>
           </div>
-          <RouterLink class="button-link" :to="{ name: 'new-topic' }">
-            <UiButton tone="primary">发起主题</UiButton>
-          </RouterLink>
+          <RouterLink class="btn btn-secondary" :to="{ name: 'board-directory' }">查看全部分类</RouterLink>
         </section>
 
-        <section class="discourse-toolbar" aria-label="主题筛选">
-          <div class="discovery-tabs" role="tablist" aria-label="主题筛选">
-            <button
-              v-for="tab in discoveryTabs"
-              :id="`tab-${tab.key}`"
-              :key="tab.key"
-              type="button"
-              role="tab"
-              :aria-selected="activeTab === tab.key"
-              :class="{ active: activeTab === tab.key }"
-              @click="setActiveTab(tab.key)"
+        <section class="category-grid" aria-label="推荐分类">
+          <p v-if="boardsQuery.isLoading.value" class="panel-state" role="status">正在加载分类…</p>
+          <p v-else-if="boardsQuery.isError.value" class="panel-state panel-state--error" role="alert">分类暂时不可用</p>
+          <template v-else>
+            <RouterLink
+              v-for="board in topBoards"
+              :key="board.id"
+              class="category"
+              :to="{ name: 'board-detail', params: { slug: board.slug } }"
+              :style="{ '--board-color': board.color }"
             >
-              {{ tab.label }}
-            </button>
-          </div>
+              <h3>{{ board.name }}</h3>
+              <p>{{ board.description }}</p>
+              <div class="category-meta">
+                <span>{{ compactNumber(board.topicCount) }} 个主题</span>
+                <span>{{ compactNumber(board.postCount) }} 个帖子</span>
+              </div>
+            </RouterLink>
+          </template>
+        </section>
 
-          <div class="control-summary">
-            <span>{{ activeDescription }}</span>
-            <span>{{ compactNumber(visibleTopics.length) }} 个主题</span>
-            <RouterLink :to="{ name: 'board-directory' }">全部版块</RouterLink>
+        <section class="section-head section-head--feed" aria-labelledby="feed-title">
+          <div>
+            <h2 id="feed-title">最新讨论</h2>
+            <p>列表保持克制：主题、摘要、标签、回复、浏览、动态。</p>
           </div>
         </section>
 
-        <div v-if="topicsQuery.isError.value" class="home-state home-state--error" role="alert">
-          暂时无法加载主题，请稍后刷新。
-        </div>
-        <TopicList v-else :topics="visibleTopics" />
+        <section class="feed" aria-label="主题列表">
+          <div class="tabs">
+            <div class="tab-list" role="tablist" aria-label="主题筛选">
+              <button
+                v-for="tab in discoveryTabs"
+                :key="tab.key"
+                type="button"
+                role="tab"
+                :aria-selected="activeTab === tab.key"
+                :class="['tab', { active: activeTab === tab.key }]"
+                @click="setActiveTab(tab.key)"
+              >
+                {{ tab.label }}
+              </button>
+            </div>
+            <RouterLink class="filter-link" :to="{ name: 'board-directory' }">筛选分类</RouterLink>
+          </div>
+
+          <div class="feed-header" aria-hidden="true">
+            <span>主题</span>
+            <span>回复</span>
+            <span>浏览</span>
+            <span>活动</span>
+          </div>
+
+          <p v-if="topicsQuery.isLoading.value" class="panel-state" role="status">正在加载主题…</p>
+          <p v-else-if="topicsQuery.isError.value" class="panel-state panel-state--error" role="alert">
+            暂时无法加载主题，请稍后刷新。
+          </p>
+          <p v-else-if="!visibleTopics.length" class="panel-state">暂无主题。</p>
+          <template v-else>
+            <article v-for="topic in visibleTopics" :key="topic.id" class="topic-row">
+              <div class="topic-main">
+                <div class="avatar-stack" aria-hidden="true">
+                  <span>{{ topic.authorName.slice(0, 1).toUpperCase() }}</span>
+                  <span>{{ topic.boardName.slice(0, 1) }}</span>
+                </div>
+                <div class="topic-copy">
+                  <div class="topic-title-line">
+                    <RouterLink class="topic-title" :to="`/t/${topic.slug}/${topic.id}`">{{ topic.title }}</RouterLink>
+                    <span v-if="topic.pinned" class="topic-status">置顶</span>
+                    <span v-if="topic.featured" class="topic-status topic-status--signal">精选</span>
+                    <span v-if="topic.solved" class="topic-status topic-status--solved">已解决</span>
+                  </div>
+                  <p>{{ topic.excerpt }}</p>
+                  <div class="topic-tags">
+                    <RouterLink
+                      class="board-chip"
+                      :to="{ name: 'board-detail', params: { slug: topic.boardSlug } }"
+                      :style="{ '--board-color': topic.boardColor }"
+                    >
+                      {{ topic.boardName }}
+                    </RouterLink>
+                    <RouterLink
+                      v-for="tag in topic.tags.slice(0, 3)"
+                      :key="tag"
+                      :to="{ name: 'search', query: { q: tag, tag } }"
+                    >
+                      #{{ tag }}
+                    </RouterLink>
+                  </div>
+                </div>
+              </div>
+              <div class="metric">{{ compactNumber(topic.replyCount) }}<span>回复</span></div>
+              <div class="metric">{{ compactNumber(topic.viewCount) }}<span>浏览</span></div>
+              <div class="activity">{{ relativeTime(topic.lastPostedAt) }}</div>
+            </article>
+          </template>
+        </section>
       </main>
 
-      <aside class="home-insight-rail" aria-label="游客参考">
-        <UiCard class="insight-card">
-          <span class="panel-kicker">先看这里</span>
-          <h2>游客别被首页晃瞎：先挑可行动问题</h2>
-          <ol>
-            <li>优先看「未回复」：这里最需要补充复现和日志。</li>
-            <li>再看「高信号」：已解决/官方回复能直接复用。</li>
-            <li>最后再发帖：标题写症状，正文写环境、步骤、日志。</li>
-          </ol>
-        </UiCard>
+      <aside class="sidebar" aria-label="社区侧栏">
+        <section class="sidebar-card">
+          <h3>本周热议</h3>
+          <p v-if="topicsQuery.isLoading.value" class="sidebar-state">正在加载热议…</p>
+          <p v-else-if="topicsQuery.isError.value" class="sidebar-state sidebar-state--error">热议暂时不可用</p>
+          <template v-else>
+            <div v-for="(topic, index) in hotTopics" :key="topic.id" class="hot-item">
+              <span class="rank">{{ index + 1 }}</span>
+              <div>
+                <RouterLink :to="`/t/${topic.slug}/${topic.id}`">{{ topic.title }}</RouterLink>
+                <span>{{ compactNumber(topic.replyCount) }} 回复 · {{ topic.boardName }}</span>
+              </div>
+            </div>
+          </template>
+        </section>
 
-        <UiCard class="insight-card">
-          <span class="panel-kicker">热度雷达</span>
-          <h2>正在升温</h2>
-          <ul class="compact-topic-list">
-            <li v-for="topic in hotTopics" :key="topic.id">
-              <RouterLink :to="`/t/${topic.slug}/${topic.id}`">{{ topic.title }}</RouterLink>
-              <small>{{ topic.boardName }} · {{ relativeTime(topic.lastPostedAt) }}</small>
-            </li>
-          </ul>
-        </UiCard>
+        <section class="sidebar-card">
+          <h3>社区索引</h3>
+          <p v-if="tagsQuery.isLoading.value" class="sidebar-state">正在加载标签…</p>
+          <p v-else-if="tagsQuery.isError.value" class="sidebar-state sidebar-state--error">标签暂时不可用</p>
+          <div v-else class="tag-cloud">
+            <RouterLink
+              v-for="tag in topTags"
+              :key="tag.id"
+              :to="{ name: 'search', query: { q: tag.name, tag: tag.name } }"
+            >
+              #{{ tag.name }}
+            </RouterLink>
+          </div>
+          <div class="stats">
+            <div v-for="signal in communitySignals" :key="signal.label" class="stat">
+              <strong>{{ signal.value }}</strong>
+              <span>{{ signal.label }}</span>
+            </div>
+          </div>
+        </section>
 
-        <UiCard class="insight-card">
-          <span class="panel-kicker">可插手</span>
-          <h2>等待首答</h2>
-          <ul class="compact-topic-list">
-            <li v-for="topic in unansweredTopics" :key="topic.id">
-              <RouterLink :to="`/t/${topic.slug}/${topic.id}`">{{ topic.title }}</RouterLink>
-              <small>{{ topic.boardName }} · {{ topic.tags.map((tag) => `#${tag}`).join(" ") }}</small>
-            </li>
-          </ul>
-        </UiCard>
+        <section class="sidebar-card sidebar-card--boards">
+          <h3>快速进入</h3>
+          <p v-if="boardsQuery.isLoading.value" class="sidebar-state">正在加载版块…</p>
+          <p v-else-if="boardsQuery.isError.value" class="sidebar-state sidebar-state--error">版块暂时不可用</p>
+          <template v-else>
+            <RouterLink
+              v-for="board in heroBoards"
+              :key="board.id"
+              :to="{ name: 'board-detail', params: { slug: board.slug } }"
+              :style="{ '--board-color': board.color }"
+            >
+              <span></span>
+              <strong>{{ board.name }}</strong>
+              <small>{{ compactNumber(board.topicCount) }} 个主题</small>
+            </RouterLink>
+          </template>
+        </section>
       </aside>
     </div>
-
-    <section class="visitor-trust-band" aria-labelledby="visitor-trust-title">
-      <div>
-        <span class="panel-kicker">投产体验检查</span>
-        <h2 id="visitor-trust-title">不是摆拍首页：这里直接暴露真实问题、真实状态和真实入口。</h2>
-      </div>
-      <ul>
-        <li>公开浏览不强迫登录</li>
-        <li>标签、版块、搜索互相打通</li>
-        <li>发布前有模板和草稿保护</li>
-      </ul>
-      <RouterLink :to="{ name: 'board-directory' }">从版块开始 →</RouterLink>
-    </section>
   </div>
 </template>
 

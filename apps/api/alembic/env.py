@@ -48,6 +48,9 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata)
+    # Alembic's default version_num is VARCHAR(32). Our descriptive revision IDs
+    # are longer, and MySQL enforces the length strictly.
+    context.get_context()._version.c.version_num.type.length = 128
     with context.begin_transaction():
         context.run_migrations()
 

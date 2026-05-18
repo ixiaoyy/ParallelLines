@@ -89,7 +89,9 @@ function isNavItemActive(item: NavItem) {
   <div class="app-shell">
     <header class="topbar">
       <RouterLink class="brand" to="/" aria-label="平行线首页">
-        <span class="brand-mark">平</span>
+        <span class="brand-mark">
+          <img class="brand-logo" src="/logo.png" alt="" aria-hidden="true" />
+        </span>
         <span>
           <strong>平行线</strong>
           <small>让答案可追溯</small>
@@ -185,3 +187,4 @@ function isNavItemActive(item: NavItem) {
 </template>
 
 <style scoped lang="scss" src="./AppShell.scss"></style>
+
