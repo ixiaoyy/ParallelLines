@@ -3,6 +3,17 @@
   gap: 1rem;
 }
 
+.topic-state {
+  padding: 1rem;
+  color: var(--text);
+  font-weight: 760;
+}
+
+.topic-state--error {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.08);
+}
+
 .topic-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(14rem, 22rem);
@@ -157,6 +168,21 @@
 .topic-toolbar {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+}
+
+.toolbar-status {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 820;
+}
+
+.reply-status {
+  margin: 0;
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 820;
 }
 
 .panel-kicker {

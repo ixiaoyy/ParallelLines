@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -10,14 +10,21 @@ const props = withDefaults(
     boardName?: string;
     topicTitle?: string;
     compact?: boolean;
+    submitting?: boolean;
+    resetToken?: number;
+    draftStorageKey?: string;
   }>(),
   {
     mode: "topic",
     boardName: "支持与排障",
     topicTitle: "",
     compact: false,
+    submitting: false,
+    resetToken: 0,
+    draftStorageKey: "",
   },
 );
+const emit = defineEmits<{ submit: [rawMd: string] }>();
 
 const draft = ref("");
 const title = ref("");
@@ -38,6 +45,83 @@ const placeholder = computed(() =>
 const previewText = computed(() =>
   draft.value.trim() || (isReplyMode.value ? "回复预览会显示在这里。" : "环境：Windows 11 / Edge 126 / 单点登录开启"),
 );
+
+const canSubmit = computed(() => draft.value.trim().length > 0 && !props.submitting);
+
+onMounted(() => {
+  restoreDraft();
+});
+
+watch(
+  () => props.resetToken,
+  () => {
+    draft.value = "";
+    clearSavedDraft();
+  },
+);
+
+watch(
+  () => props.draftStorageKey,
+  () => {
+    restoreDraft();
+  },
+);
+
+watch(draft, (value) => {
+  saveDraft(value);
+});
+
+function handleSubmit() {
+  const rawMd = draft.value.trim();
+  if (!rawMd || props.submitting) {
+    return;
+  }
+
+  emit("submit", rawMd);
+}
+
+function restoreDraft() {
+  if (!props.draftStorageKey) {
+    return;
+  }
+
+  try {
+    const savedDraft = window.localStorage.getItem(props.draftStorageKey);
+    if (savedDraft) {
+      draft.value = savedDraft;
+    }
+  } catch {
+    // Ignore storage failures; the in-memory draft remains usable.
+  }
+}
+
+function saveDraft(value: string) {
+  if (!props.draftStorageKey) {
+    return;
+  }
+
+  try {
+    if (value.trim()) {
+      window.localStorage.setItem(props.draftStorageKey, value);
+    } else {
+      window.localStorage.removeItem(props.draftStorageKey);
+    }
+  } catch {
+    // Ignore storage failures; callers still keep the current in-memory draft.
+  }
+}
+
+function clearSavedDraft() {
+  if (!props.draftStorageKey) {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(props.draftStorageKey);
+  } catch {
+    // Ignore storage failures during successful submit cleanup.
+  }
+}
 </script>
 
 <template>
@@ -57,7 +141,7 @@ const previewText = computed(() =>
       <strong>{{ isReplyMode ? topicTitle : boardName }}</strong>
     </div>
 
-    <textarea v-model="draft" :placeholder="placeholder" rows="4" />
+    <textarea v-model="draft" :aria-label="isReplyMode ? '回复正文' : '正文'" :placeholder="placeholder" rows="4" />
 
     <label v-if="!isReplyMode" class="composer-field composer-field--tags">
       <span>标签</span>
@@ -71,7 +155,9 @@ const previewText = computed(() =>
 
     <footer>
       <UiButton tone="ghost">保存草稿</UiButton>
-      <UiButton tone="primary">{{ isReplyMode ? "发布回复" : "创建主题" }}</UiButton>
+      <UiButton tone="primary" :disabled="!canSubmit" @click="handleSubmit">
+        {{ submitting ? "发布中…" : isReplyMode ? "发布回复" : "创建主题" }}
+      </UiButton>
     </footer>
   </UiCard>
 </template>

@@ -21,6 +21,16 @@ export const router = createRouter({
       component: () => import("@/pages/board/BoardDirectoryPage.vue"),
     },
     {
+      path: "/auth",
+      name: "auth",
+      component: () => import("@/pages/auth/AuthPage.vue"),
+    },
+    {
+      path: "/u/:username",
+      name: "user-profile",
+      component: () => import("@/pages/user/UserProfilePage.vue"),
+    },
+    {
       path: "/b/:slug",
       name: "board-detail",
       component: () => import("@/pages/board/BoardPage.vue"),
@@ -29,6 +39,16 @@ export const router = createRouter({
       path: "/new-topic",
       name: "new-topic",
       component: () => import("@/pages/topic/NewTopicPage.vue"),
+    },
+    {
+      path: "/search",
+      name: "search",
+      component: () => import("@/pages/search/SearchPage.vue"),
+    },
+    {
+      path: "/admin/moderation",
+      name: "admin-moderation",
+      component: () => import("@/pages/admin/ModerationPage.vue"),
     },
     {
       path: "/t/:slug/:id",

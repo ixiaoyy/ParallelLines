@@ -4,6 +4,7 @@ Revision ID: 0001_create_users
 Revises:
 Create Date: 2026-05-14
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa

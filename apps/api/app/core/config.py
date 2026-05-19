@@ -14,9 +14,11 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/parallellines"
     redis_url: str = "redis://localhost:6379/0"
+    slow_request_ms: int = 500
+    hot_rank_interval_seconds: int = 300
 
     cors_origins: list[str] = Field(
-        default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
+        default_factory=lambda: ["http://localhost:5174", "http://127.0.0.1:5174"]
     )
 
     jwt_secret_key: str = "change-me-in-production-with-at-least-32-bytes"

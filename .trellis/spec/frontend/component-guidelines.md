@@ -27,11 +27,11 @@
 Use CSS variables from `shared/styles/tokens.scss`:
 
 ```scss
---bg-app: #F8F9FA;
---primary: #3B82F6;
---accent-geek: #10B981;
---title: #111827;
---text: #4B5563;
+--bg-app: #F5F9FB;
+--primary: #005AA8;
+--accent-geek: #08C7D8;
+--title: #172633;
+--text: #314A5C;
 --code-bg: #1E1E1E;
 ```
 
@@ -42,6 +42,30 @@ Use CSS variables from `shared/styles/tokens.scss`:
 - `ComposerDrawer` must support title/category/tags for new topics and compact reply mode for posts.
 - `MarkdownRenderer` should receive sanitized/cooked HTML from the API, not render unsafe raw HTML in the client.
 
+
+## Homepage Visual and Layout Contract
+
+**What**: The home/discovery page follows the checked-in reference `parallel-lines-forum-design.html` for palette and surface treatment: blue/cyan gradients, light blue-white page atmosphere, translucent white panels, rounded pill topbar, and calm forum density. Do not introduce purple background layers for this page.
+
+**Layout**: Desktop home uses a Discourse/Horizon-style variable-width grid:
+
+```scss
+.home-grid {
+  grid-template-columns: minmax(13.5rem, 17em) minmax(0, 1fr) minmax(18rem, 19.75rem);
+}
+```
+
+- Left rail: navigation, board shortcuts, and tags; sticky on desktop.
+- Main column: hero, recommended categories, and topic feed.
+- Right rail: hot topics, community index, and quick board links.
+- At medium widths, the right rail moves below the main column; at small widths the whole page becomes one column.
+
+**Contracts**:
+- `HomePage.vue` owns semantic layout and real API-backed state; it must not render fixture topics/boards/tags in production paths.
+- `HomePage.scss` owns page-specific responsive composition and must use tokens from `shared/styles/tokens.scss` for fixed colors.
+- `AppShell.scss` owns the pill topbar and global blue/cyan background atmosphere.
+
+**Tests Required**: After changing this layout, run `pnpm --dir apps/web lint`, `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web build`, then perform a browser visual check on `/` for desktop and narrow widths.
 ## Accessibility
 
 - Interactive elements must be buttons or links, not clickable divs.
@@ -56,3 +80,4 @@ Use CSS variables from `shared/styles/tokens.scss`:
 - No new plain `.css` files unless they are third-party vendor imports that cannot be converted.
 - No component making hidden API mutations on mount.
 - Do not rebuild complex Ant Design Vue primitives from scratch unless product needs require it.
+

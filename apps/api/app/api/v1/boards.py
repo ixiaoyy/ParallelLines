@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Query, status
@@ -12,7 +13,9 @@ from app.schemas.forum import (
     TopicResponse,
     TopicSort,
 )
+from app.schemas.interactions import BoardFollowRequest, BoardFollowResponse
 from app.services.forum import ForumService
+from app.services.interactions import InteractionService
 
 router = APIRouter(prefix="/boards", tags=["boards"])
 
@@ -43,15 +46,59 @@ async def get_board(slug: str, session: SessionDep) -> ApiResponse[BoardDetailRe
     return ApiResponse(data=BoardDetailResponse.from_board_and_topics(board, latest_topics))
 
 
+@router.put("/{slug}/follow", response_model=ApiResponse[BoardFollowResponse])
+async def follow_board(
+    slug: str,
+    payload: BoardFollowRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[BoardFollowResponse]:
+    state = await InteractionService(session).follow_board(
+        slug,
+        current_user,
+        notification_level=payload.notification_level,
+    )
+    return ApiResponse(data=state)
+
+
+@router.delete("/{slug}/follow", response_model=ApiResponse[BoardFollowResponse])
+async def unfollow_board(
+    slug: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[BoardFollowResponse]:
+    state = await InteractionService(session).unfollow_board(slug, current_user)
+    return ApiResponse(data=state)
+
+
 @router.get("/{slug}/topics", response_model=ApiResponse[list[TopicResponse]])
 async def list_board_topics(
     slug: str,
     session: SessionDep,
+    q: str | None = None,
+    tag: str | None = None,
+    author: str | None = None,
     sort: TopicSort = "latest",
+    cursor: datetime | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> ApiResponse[list[TopicResponse]]:
-    topics = await ForumService(session).list_topics(board_slug=slug, sort=sort, limit=limit)
-    return ApiResponse(data=[TopicResponse.from_model(topic) for topic in topics])
+    topics = await ForumService(session).list_topics(
+        board_slug=slug,
+        sort=sort,
+        limit=limit,
+        query=q,
+        tag=tag,
+        author=author,
+        cursor=cursor,
+    )
+    return ApiResponse(
+        data=[TopicResponse.from_model(topic) for topic in topics],
+        meta={
+            "next_cursor": topics[-1].last_posted_at.isoformat()
+            if len(topics) == limit
+            else None
+        },
+    )
 
 
 @router.post(

@@ -1,0 +1,88 @@
+# Frontend Notifications and Interactions Contract
+
+## Scenario: Realtime notifications with optimistic community actions
+
+### 1. Scope / Trigger
+
+- Trigger: changing notification bell/center, SSE stream handling, optimistic post likes, topic bookmarks, board follows, or notification read state.
+- Applies to `apps/web/src/features/notifications/`, `apps/web/src/features/interactions/`, `PostItem`, board pages, topic pages, and shared API wrappers.
+
+### 2. Signatures
+
+Frontend APIs/composables:
+
+| Function / Composable | Purpose |
+|---|---|
+| `fetchNotifications(): Promise<NotificationListResponse>` | Load current notification center state |
+| `markNotificationsRead(ids?: string[]): Promise<NotificationReadResponse>` | Mark selected notifications, or all when omitted |
+| `useNotificationList()` | TanStack Query server-state wrapper with local mock fallback |
+| `useMarkNotificationsRead()` | Optimistic read-state mutation |
+| `useNotificationsStream()` | Fetch-based SSE reader with `AbortController` cleanup |
+| `useOptimisticToggle<TResponse>()` | Shared optimistic toggle helper for likes/bookmarks/follows |
+
+Backend endpoints consumed:
+
+- `GET /api/v1/notifications?limit=20`
+- `PUT /api/v1/notifications/read`
+- `GET /api/v1/notifications/stream?poll_seconds=5&limit=5`
+- `PUT|DELETE /api/v1/posts/{post_id}/like`
+- `PUT|DELETE /api/v1/topics/{topic_id}/bookmark`
+- `PUT|DELETE /api/v1/boards/{slug}/follow`
+
+### 3. Contracts
+
+- Keep notification server state in TanStack Query under `queryKeys.notifications`; do not mirror the list in Pinia.
+- `NotificationBell` owns panel open/close UI and delegates data loading/mutation to notification composables.
+- SSE is parsed through runtime validation (`parseNotificationStreamPayload`) before updating query cache.
+- Optimistic interactions must update local UI immediately, then reconcile with API response when `hasAccessToken()` is true.
+- Without an access token, frontend uses local mock state so the static prototype remains interactive.
+- Notification links require `topic_slug` + `topic_id` when available; fall back to `board_slug`, then `/`.
+
+### 4. Validation & Error Matrix
+
+| Case | Expected behavior |
+|---|---|
+| Missing access token | Show mock notifications and keep optimistic toggles local |
+| Notification fetch fails | Fall back to mock list; do not crash the app shell |
+| Malformed SSE frame | Ignore the frame; wait for the next valid `notifications` event |
+| Stream unmount/navigation | Abort the fetch stream via `AbortController` |
+| Optimistic API failure | Revert the toggled active/count values |
+
+### 5. Good/Base/Bad Cases
+
+- Good: notification stream emits `{ unread_count, notifications }`; query cache merges new unread items before older cached items.
+- Base: user opens the bell, sees unread count/list, marks all as read, and count drops immediately.
+- Bad: component parses JSON directly from SSE and writes unvalidated payloads into UI state.
+
+### 6. Tests Required
+
+- `pnpm --dir apps/web typecheck` must pass for notification DTOs, composables, and template bindings.
+- `pnpm --dir apps/web lint` must pass with no warnings.
+- `pnpm --dir apps/web build` must complete; chunk size warnings are acceptable unless they fail the build.
+- Manual smoke: open the bell, mark one/all read, toggle a post like, board follow, and topic bookmark.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```ts
+const source = new EventSource("/api/v1/notifications/stream");
+source.onmessage = (event) => {
+  queryClient.setQueryData(queryKeys.notifications, JSON.parse(event.data));
+};
+```
+
+#### Correct
+
+```ts
+const response = await fetch(getApiUrl("/notifications/stream?poll_seconds=5&limit=5"), {
+  headers: createApiHeaders(),
+  signal,
+});
+const parsed = parseNotificationStreamPayload(JSON.parse(data) as unknown);
+if (parsed) {
+  queryClient.setQueryData(queryKeys.notifications, (current) =>
+    mergeNotificationLists(current, parsed),
+  );
+}
+```

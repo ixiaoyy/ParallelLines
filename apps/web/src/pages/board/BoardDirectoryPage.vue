@@ -2,60 +2,52 @@
 import { computed, ref } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
-import { boards, getTopicsByBoardSlug, topics } from "@/shared/api/mockForum";
+import { useBoards } from "@/features/boards/queries";
+import { useTopicFeed } from "@/features/topics/queries";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 const searchQuery = ref("");
+const boardsQuery = useBoards();
+const topicsQuery = useTopicFeed("latest");
 
-const intentShortcuts = [
-  {
-    label: "排查报错",
-    hint: "安装、OIDC、500 Error",
-    to: { name: "board-detail", params: { slug: "support" } },
-  },
-  {
-    label: "查 API 方案",
-    hint: "FastAPI、OpenAPI、权限",
-    to: { name: "board-detail", params: { slug: "dev" } },
-  },
-  {
-    label: "找插件/主题",
-    hint: "编辑器、Markdown、样式",
-    to: { name: "board-detail", params: { slug: "plugins" } },
-  },
-  {
-    label: "看版本公告",
-    hint: "发布、维护、迁移通知",
-    to: { name: "board-detail", params: { slug: "announcements" } },
-  },
-];
+const boardItems = computed(() => {
+  const boards = boardsQuery.data.value ?? [];
+  return [...boards].sort((left, right) => right.topicCount + right.postCount - (left.topicCount + left.postCount));
+});
 
-const boardItems = computed(() =>
-  [...boards].sort((left, right) => right.topicCount + right.postCount - (left.topicCount + left.postCount)),
+const topicItems = computed(() => topicsQuery.data.value ?? []);
+const intentShortcuts = computed(() =>
+  boardItems.value.slice(0, 4).map((board) => ({
+    label: board.name,
+    hint: board.description,
+    to: { name: "board-detail", params: { slug: board.slug } },
+  })),
 );
 
 const directorySignals = computed(() => [
   {
     label: "待首答",
-    value: compactNumber(topics.filter((topic) => topic.status === "open" && topic.replyCount === 0).length),
-    helper: "需要被接住的问题",
+    value: compactNumber(topicItems.value.filter((topic) => topic.status === "open" && topic.replyCount === 0).length),
+    helper: "等待首个回复",
   },
   {
     label: "已解决",
-    value: compactNumber(topics.filter((topic) => topic.solved).length),
+    value: compactNumber(topicItems.value.filter((topic) => topic.solved).length),
     helper: "可直接复用的案例",
   },
   {
     label: "官方/精华",
-    value: compactNumber(topics.filter((topic) => topic.officialReply || topic.featured || topic.pinned).length),
+    value: compactNumber(
+      topicItems.value.filter((topic) => topic.officialReply || topic.featured || topic.pinned).length,
+    ),
     helper: "高可信入口",
   },
 ]);
 
 const featuredTopics = computed(() =>
-  topics
+  topicItems.value
     .filter((topic) => topic.solved || topic.officialReply || topic.featured || topic.pinned)
     .slice(0, 4),
 );
@@ -68,7 +60,7 @@ const filteredBoards = computed(() => {
   }
 
   return boardItems.value.filter((board) => {
-    const previewText = getTopicsByBoardSlug(board.slug)
+    const previewText = getTopicsByBoardSlugLocal(board.slug)
       .map((topic) => `${topic.title} ${topic.excerpt} ${topic.tags.join(" ")}`)
       .join(" ");
     return normalizeSearch(`${board.name} ${board.description} ${board.slug} ${previewText}`).includes(keyword);
@@ -80,7 +72,7 @@ function normalizeSearch(value: string) {
 }
 
 function previewTopics(board: BoardSummary) {
-  return getTopicsByBoardSlug(board.slug)
+  return getTopicsByBoardSlugLocal(board.slug)
     .filter((topic) => topic.solved || topic.officialReply || topic.replyCount === 0 || topic.featured || topic.pinned)
     .slice(0, 2);
 }
@@ -101,7 +93,7 @@ function boardIntent(board: BoardSummary) {
   const labels: Record<string, string> = {
     announcements: "版本通知 / 维护窗口",
     support: "报错定位 / 可复现排查",
-    dev: "API 设计 / 架构方案",
+    dev: "接口设计 / 架构方案",
     plugins: "主题组件 / 编辑器体验",
     community: "规则共识 / 运营反馈",
   };
@@ -110,7 +102,7 @@ function boardIntent(board: BoardSummary) {
 }
 
 function boardSignals(board: BoardSummary) {
-  const boardTopics = getTopicsByBoardSlug(board.slug);
+  const boardTopics = getTopicsByBoardSlugLocal(board.slug);
 
   return [
     { label: "可查主题", value: compactNumber(board.topicCount) },
@@ -118,16 +110,20 @@ function boardSignals(board: BoardSummary) {
     { label: "未回复", value: compactNumber(boardTopics.filter((topic) => topic.replyCount === 0).length) },
   ];
 }
+
+function getTopicsByBoardSlugLocal(slug: string) {
+  return topicItems.value.filter((topic) => topic.boardSlug === slug);
+}
 </script>
 
 <template>
   <div class="board-directory-page">
     <section class="boards-hero" aria-labelledby="boards-title">
       <div class="boards-hero__copy">
-        <UiBadge tone="blue">游客入口</UiBadge>
+        <UiBadge tone="blue">浏览入口</UiBadge>
         <h1 id="boards-title">先搜索问题，再选择版块。</h1>
         <p>
-          输入错误码、API 名称、日志关键词或问题现象；如果还不确定归属，再用下面的意图入口进入对应问题区。
+          输入错误码、接口名、日志关键词或问题现象；如果还不确定归属，再用下面的意图入口进入对应问题区。
         </p>
 
         <label class="board-search" for="board-directory-search">
@@ -136,7 +132,7 @@ function boardSignals(board: BoardSummary) {
             id="board-directory-search"
             v-model="searchQuery"
             type="search"
-            placeholder="例如：500 Error、API Timeout、OIDC、Markdown"
+            placeholder="例如：500 Error、请求超时、OIDC、Markdown"
             autocomplete="off"
           />
         </label>
@@ -160,6 +156,10 @@ function boardSignals(board: BoardSummary) {
 
     <div class="board-directory-layout">
       <main class="board-results" aria-label="版块列表">
+        <UiCard v-if="boardsQuery.isError.value || topicsQuery.isError.value" class="directory-api-error" role="alert">
+          部分内容暂时加载失败，请稍后刷新。
+        </UiCard>
+
         <div class="board-results__heading">
           <div>
             <UiBadge tone="green">{{ searchQuery ? "搜索结果" : "推荐路径" }}</UiBadge>
@@ -203,11 +203,11 @@ function boardSignals(board: BoardSummary) {
                   {{ relativeTime(topic.lastPostedAt) }}
                 </small>
               </RouterLink>
-              <span v-if="previewTopics(board).length === 0" class="empty-preview">暂无高信号示例，进入后查看全部主题</span>
+              <span v-if="previewTopics(board).length === 0" class="empty-preview">暂无高信号主题，进入后查看全部主题</span>
             </div>
 
             <footer class="board-actions">
-              <span>游客可先查看；登录后再关注通知。</span>
+              <span>可先查看内容；登录后再关注通知。</span>
               <RouterLink class="open-board-link" :to="{ name: 'board-detail', params: { slug: board.slug } }">
                 查看相关问题
               </RouterLink>
@@ -217,7 +217,7 @@ function boardSignals(board: BoardSummary) {
 
         <UiCard v-else class="no-board-results">
           <h2>没有匹配的版块</h2>
-          <p>换一个错误码、API 名称或中文症状试试，例如 “OIDC”、“导入超时”、“Markdown”。</p>
+          <p>换一个错误码、接口名或中文症状试试，例如 “OIDC”、“导入超时”、“Markdown”。</p>
         </UiCard>
       </main>
 
@@ -235,7 +235,7 @@ function boardSignals(board: BoardSummary) {
 
         <UiCard class="sidebar-panel guide-panel">
           <span class="panel-kicker">发帖前</span>
-          <h2>让问题更快被接住</h2>
+          <h2>让问题更快得到回复</h2>
           <ol>
             <li>先搜错误码、接口名、日志关键字。</li>
             <li>排障类主题附环境、复现步骤和完整报错。</li>

@@ -14,7 +14,6 @@ withDefaults(
     :class="`ui-button--${tone}`"
     :type="tone === 'primary' ? 'primary' : 'default'"
     :html-type="type"
-    shape="round"
   >
     <slot name="icon" />
     <slot />
@@ -25,30 +24,28 @@ withDefaults(
 .ui-button {
   display: inline-flex !important;
   align-items: center;
-  gap: 0.45rem;
-  font-weight: 760;
+  gap: 0.4rem;
+  border-radius: 0.25rem !important;
+  font-weight: 600;
+  box-shadow: none !important;
   transition:
-    transform 160ms ease,
-    box-shadow 160ms ease,
-    background 160ms ease;
-}
-
-.ui-button:hover {
-  transform: translateY(-1px);
+    border-color 120ms ease,
+    background 120ms ease;
 }
 
 .ui-button:focus-visible {
-  outline: 3px solid rgba(59, 130, 246, 0.35);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
 .ui-button--primary {
   color: white !important;
+  border-color: var(--primary) !important;
   background: var(--primary) !important;
-  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.24);
 }
 
 .ui-button--primary:hover {
+  border-color: var(--primary-hover) !important;
   background: var(--primary-hover) !important;
 }
 
@@ -56,13 +53,12 @@ withDefaults(
   color: white !important;
   border-color: var(--accent-geek) !important;
   background: var(--accent-geek) !important;
-  box-shadow: 0 12px 24px rgba(16, 185, 129, 0.22);
 }
 
 .ui-button--subtle {
   color: var(--primary) !important;
   border-color: transparent !important;
-  background: rgba(59, 130, 246, 0.1) !important;
+  background: var(--bg-selected) !important;
 }
 
 .ui-button--ghost {

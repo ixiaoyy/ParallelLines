@@ -1,0 +1,101 @@
+.user-profile-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.profile-hero {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  min-height: 11rem;
+  padding: clamp(1rem, 2.4vw, 1.5rem);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(59, 130, 246, 0.14), transparent 22rem),
+    rgba(255, 255, 255, 0.9);
+}
+
+.profile-hero h1,
+.profile-hero p,
+.profile-topics h2 {
+  margin: 0;
+}
+
+.profile-hero h1 {
+  margin-top: 0.45rem;
+  color: var(--title);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.06em;
+}
+
+.profile-hero p {
+  margin-top: 0.4rem;
+  color: var(--text);
+}
+
+.profile-stats {
+  display: flex;
+  gap: 0.7rem;
+  margin: 1rem 0 0;
+}
+
+.profile-stats div {
+  min-width: 5.5rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.profile-stats dt,
+.profile-stats dd {
+  margin: 0;
+}
+
+.profile-stats dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 820;
+}
+
+.profile-stats dd {
+  margin-top: 0.25rem;
+  color: var(--title);
+  font-size: 1.35rem;
+  font-weight: 920;
+}
+
+.profile-topics {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.profile-topics header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+}
+
+.profile-topics h2 {
+  margin-top: 0.3rem;
+  color: var(--title);
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+}
+
+.profile-state {
+  padding: 1rem;
+  color: var(--text);
+  font-weight: 760;
+}
+
+.profile-state--error {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+@media (max-width: 640px) {
+  .profile-hero {
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "id": "frontend-cx-polish",
+  "name": "frontend-cx-polish",
+  "title": "Frontend CX problem-solving redesign",
+  "description": "Refactor forum home and topic discovery UI around problem-solving customer experience: search-first, lower cognitive load, clearer solved/unanswered states, and reduced sidebar noise.",
+  "status": "completed",
+  "dev_type": "frontend",
+  "scope": null,
+  "package": null,
+  "priority": "P0",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-14",
+  "completedAt": "2026-05-16",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 4,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [
+    {
+      "name": "Board directory CX cleanup",
+      "status": "completed"
+    },
+    {
+      "name": "Support board detail CX cleanup",
+      "status": "completed"
+    },
+    {
+      "name": "Topic list status and density cleanup",
+      "status": "completed"
+    },
+    {
+      "name": "Run visual/accessibility smoke checks",
+      "status": "completed"
+    },
+    {
+      "name": "New topic page and sidebar link repair",
+      "status": "completed"
+    }
+  ],
+  "children": [],
+  "parent": "05-14-board-topic-post-core",
+  "relatedFiles": [
+    "apps/web/src/pages/board/BoardDirectoryPage.vue",
+    "apps/web/src/pages/board/BoardDirectoryPage.scss",
+    "apps/web/src/pages/board/BoardPage.vue",
+    "apps/web/src/pages/board/BoardPage.scss",
+    "apps/web/src/features/topics/components/TopicCard.vue",
+    "apps/web/src/features/topics/components/TopicCard.scss",
+    "apps/web/src/features/topics/components/TopicList.vue",
+    "apps/web/src/features/topics/components/TopicList.scss",
+    "apps/web/src/shared/api/mockForum.ts",
+    "C:/Users/phpxi/Downloads/screencapture-127-0-0-1-5173-boards-2026-05-14-16_53_38.png",
+    "C:/Users/phpxi/Downloads/screencapture-127-0-0-1-5173-b-support-2026-05-14-16_54_24.png",
+    "apps/web/src/pages/topic/NewTopicPage.vue",
+    "apps/web/src/pages/topic/NewTopicPage.scss",
+    "apps/web/src/app/router.ts",
+    "apps/web/src/app/layouts/AppShell.vue",
+    "apps/web/src/pages/home/HomePage.vue"
+  ],
+  "notes": "Expanded with screenshot-specific visitor CX critique for board directory and support board pages: abbreviation threshold, literary copy, weak search, low density, premature follow CTAs, pale/disabled-looking affordances.\nImplemented search-first board directory, compact board detail, solution-state topic rows, visitor-safe CTAs, and smoke-checked /boards + /b/support on 2026-05-14.\nAdded /new-topic page with clickable left step navigation, board-aware draft form, autosave, preview checklist, and repaired home/sidebar publish navigation targets.",
+  "meta": {}
+}

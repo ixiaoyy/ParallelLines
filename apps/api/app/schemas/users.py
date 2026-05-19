@@ -13,3 +13,14 @@ class UserPublic(ORMModel):
     role: str
     status: str
     created_at: datetime
+
+
+class UserProfileResponse(ORMModel):
+    id: str
+    username: str
+    avatar_url: str | None = None
+    role: str
+    status: str
+    created_at: datetime
+    topic_count: int
+    post_count: int

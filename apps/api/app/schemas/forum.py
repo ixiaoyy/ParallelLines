@@ -55,6 +55,10 @@ class PostCreateRequest(BaseModel):
     parent_post_id: str | None = None
 
 
+class PostUpdateRequest(BaseModel):
+    raw_md: str = Field(min_length=1, max_length=20_000)
+
+
 class TopicResponse(BaseModel):
     id: str
     slug: str
@@ -120,6 +124,7 @@ class PostResponse(BaseModel):
 
     @classmethod
     def from_model(cls, post: Post) -> PostResponse:
+        hidden = post.deleted_at is not None
         return cls(
             id=post.id,
             topic_id=post.topic_id,
@@ -127,8 +132,8 @@ class PostResponse(BaseModel):
             author_name=post.author.username,
             parent_id=post.parent_id,
             post_number=post.post_number,
-            raw_md=post.raw_md,
-            cooked_html=post.cooked_html,
+            raw_md="" if hidden else post.raw_md,
+            cooked_html="" if hidden else post.cooked_html,
             reply_count=post.reply_count,
             like_count=post.like_count,
             deleted_at=post.deleted_at,

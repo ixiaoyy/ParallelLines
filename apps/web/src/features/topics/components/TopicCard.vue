@@ -4,11 +4,14 @@ import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
+import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiBadge from "@/shared/ui/Badge.vue";
 
 const props = defineProps<{ topic: TopicCardVM }>();
 
 const topicUrl = computed(() => `/t/${props.topic.slug}/${props.topic.id}`);
+const visiblePosterNames = computed(() => props.topic.posterNames.slice(0, 3));
+const extraPosterCount = computed(() => Math.max(props.topic.posterNames.length - visiblePosterNames.value.length, 0));
 
 const answerState = computed(() => {
   if (props.topic.status === "closed") {
@@ -57,6 +60,20 @@ const answerState = computed(() => {
 
         <span v-for="tag in topic.tags" :key="tag" class="topic-tag">#{{ tag }}</span>
         <span>{{ compactNumber(topic.viewCount) }} 浏览</span>
+      </div>
+
+      <div class="participant-strip" aria-label="参与者">
+        <div class="participant-avatars">
+          <UiAvatar
+            v-for="poster in visiblePosterNames"
+            :key="poster"
+            :name="poster"
+            size="sm"
+            :title="poster"
+          />
+          <span v-if="extraPosterCount" class="posters-more">+{{ extraPosterCount }}</span>
+        </div>
+        <span>{{ topic.authorName }} 发起 · {{ relativeTime(topic.lastPostedAt) }}有新动静</span>
       </div>
     </div>
 

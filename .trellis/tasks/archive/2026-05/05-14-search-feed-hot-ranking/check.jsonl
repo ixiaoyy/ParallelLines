@@ -1,0 +1,5 @@
+{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
+{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend tests for search/feed/hot job"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Frontend search page type/lint/build"}
+{"file": ".trellis/spec/backend/search-feed-hot-ranking.md", "reason": "Verify search filters, cursor meta, and hot score recompute"}

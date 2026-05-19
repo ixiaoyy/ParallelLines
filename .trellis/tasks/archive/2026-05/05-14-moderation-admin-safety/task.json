@@ -1,0 +1,81 @@
+{
+  "id": "moderation-admin-safety",
+  "name": "moderation-admin-safety",
+  "title": "Moderation admin and safety",
+  "description": "Implement reports, soft delete, audit logs, board moderators, admin workflows, and anti-spam safety rules.",
+  "status": "completed",
+  "dev_type": "fullstack",
+  "scope": "moderation-admin-safety",
+  "package": null,
+  "priority": "P1",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-14",
+  "completedAt": "2026-05-16",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 6,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [
+    {
+      "name": "Add flag flow",
+      "status": "completed"
+    },
+    {
+      "name": "Add moderation permissions",
+      "status": "completed"
+    },
+    {
+      "name": "Add audit logs",
+      "status": "completed"
+    },
+    {
+      "name": "Build moderation panel",
+      "status": "completed"
+    }
+  ],
+  "children": [],
+  "parent": "05-14-parallellines-mvp",
+  "relatedFiles": [
+    "apps/api/alembic/versions/0004_create_moderation.py",
+    "apps/api/app/models/moderation.py",
+    "apps/api/app/schemas/moderation.py",
+    "apps/api/app/services/moderation.py",
+    "apps/api/app/api/v1/moderation.py",
+    "apps/api/tests/test_moderation.py",
+    "apps/web/src/features/moderation/",
+    "apps/web/src/pages/admin/ModerationPage.vue",
+    ".trellis/spec/backend/moderation-admin-safety.md",
+    ".trellis/spec/frontend/moderation-admin-safety.md"
+  ],
+  "notes": "Implementation complete and verified; awaiting human review/commit before task archival/session recording.",
+  "meta": {}
+}

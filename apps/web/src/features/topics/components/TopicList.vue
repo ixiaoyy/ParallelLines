@@ -20,11 +20,11 @@ defineProps<{ topics: TopicCardVM[] }>();
 
     <div v-else class="topic-list-empty">
       <strong>没有符合条件的主题</strong>
-      <span>清除筛选或换一个错误码、API 名称再试。</span>
+      <span>清除筛选或换一个错误码、接口名再试。</span>
     </div>
 
     <footer v-if="topics.length" class="topic-list-footer">
-      <button type="button">加载更多主题</button>
+      <span>已显示当前匹配的主题。</span>
     </footer>
   </section>
 </template>
