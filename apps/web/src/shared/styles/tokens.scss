@@ -8,53 +8,54 @@
   --bg-panel: #ffffff;
   --bg-panel-strong: #ffffff;
   --bg-subtle: #f1f5f9;
-  --bg-hover: #e8f2fa;
-  --bg-selected: #dff1ff;
-  --pinned-bg: #fff9e6;
+  --bg-hover: #f0f9ff;
+  --bg-selected: #e0f2fe;
+  --pinned-bg: #fffbeb;
 
-  /* 明亮主色 */
-  --primary: #38bdf8;
-  --primary-rgb: 56, 189, 248;
-  --primary-hover: #0ea5e9;
+  /* 雅致冰蓝冷光主色 */
+  --primary: #0ea5e9;
+  --primary-rgb: 14, 165, 233;
+  --primary-hover: #0284c7;
 
-  --accent-geek: #2dd4bf;
-  --accent-geek-rgb: 45, 212, 191;
+  --accent-geek: #10b981;
+  --accent-geek-rgb: 16, 185, 129;
   --brand-blue: #38bdf8;
-  --brand-cyan: #2dd4bf;
+  --brand-cyan: #22d3ee;
 
-  --accent-coral: #fb923c;
-  --accent-coral-rgb: 251, 146, 60;
-  --accent-lime: #a3e635;
-  --accent-lime-rgb: 163, 230, 53;
-  --accent-gold: #facc15;
-  --accent-gold-rgb: 250, 204, 21;
-  --accent-violet: #a78bfa;
-  --accent-violet-rgb: 167, 139, 250;
-  --accent-pink: #f472b6;
-  --accent-pink-rgb: 244, 114, 182;
-  --accent-sky: #60a5fa;
-  --accent-sky-rgb: 96, 165, 250;
+  --accent-coral: #ea580c;
+  --accent-coral-rgb: 234, 88, 12;
+  --accent-lime: #84cc16;
+  --accent-lime-rgb: 132, 204, 22;
+  --accent-gold: #eab308;
+  --accent-gold-rgb: 234, 179, 8;
+  --accent-violet: #6366f1;
+  --accent-violet-rgb: 99, 102, 241;
+  --accent-pink: #db2777;
+  --accent-pink-rgb: 219, 39, 119;
+  --accent-sky: #0ea5e9;
+  --accent-sky-rgb: 14, 165, 233;
 
   --cyan-soft: #e0f2fe;
-  --navy-soft: #dbeafe;
-  --coral-soft: #ffedd5;
-  --lime-soft: #ecfccb;
-  --gold-soft: #fef9c3;
-  --violet-soft: #ede9fe;
-  --pink-soft: #fce7f3;
+  --tag-text: #0ea5e9;
+  --navy-soft: #f1f5f9;
+  --coral-soft: #fff7ed;
+  --lime-soft: #f7fee7;
+  --gold-soft: #fefce8;
+  --violet-soft: #f5f3ff;
+  --pink-soft: #fdf2f8;
 
   /* 左侧导航图标色 */
   --rail-icon-home: #0ea5e9;
-  --rail-icon-home-bg: #e0f2fe;
-  /* 话题：暖红；高信号：logo 线条柠绿 */
-  --rail-icon-topics: #e11d48;
-  --rail-icon-topics-bg: #ffe4e6;
-  --rail-icon-signal: #94c93f;
-  --rail-icon-signal-rgb: 148, 201, 63;
-  --rail-icon-signal-bg: rgba(163, 230, 53, 0.14);
-  --rail-icon-signal-active: rgba(163, 230, 53, 0.48);
+  --rail-icon-home-bg: #f0f9ff;
+  /* 话题：明亮红；高信号：明亮绿色 */
+  --rail-icon-topics: #ef4444;
+  --rail-icon-topics-bg: #fef2f2;
+  --rail-icon-signal: #10b981;
+  --rail-icon-signal-rgb: 16, 185, 129;
+  --rail-icon-signal-bg: rgba(16, 185, 129, 0.08);
+  --rail-icon-signal-active: rgba(16, 185, 129, 0.2);
   --rail-icon-more: #8b5cf6;
-  --rail-icon-more-bg: #ede9fe;
+  --rail-icon-more-bg: #f5f3ff;
 
   --success: #22c55e;
   --success-rgb: 34, 197, 94;
@@ -99,6 +100,6 @@
   /* 柔和品牌渐变：同色相邻近色，避免珊瑚跳色 */
   --gradient-brand: linear-gradient(135deg, #6dd0fa 0%, #5ec4f4 46%, #66d4cb 100%);
   --gradient-brand-hover: linear-gradient(135deg, #5ec4f4 0%, #4fb8eb 46%, #5cc9c0 100%);
-  --shadow-brand: 0 8px 20px rgba(var(--primary-rgb), 0.16);
-  --shadow-brand-hover: 0 12px 26px rgba(var(--primary-rgb), 0.2);
+  --shadow-brand: 0 4px 12px rgba(2, 132, 199, 0.16);
+  --shadow-brand-hover: 0 6px 16px rgba(2, 132, 199, 0.22);
 }

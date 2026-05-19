@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import { useBoards } from "@/features/boards/queries";
@@ -15,7 +15,6 @@ import {
 } from "@ant-design/icons-vue";
 
 import { compactNumber, relativeTime } from "@/shared/lib/format";
-import ParallelCrossingMark from "@/shared/ui/ParallelCrossingMark.vue";
 
 const activeTab = ref<DiscoveryTab["key"]>("latest");
 const heroSearch = ref("");
@@ -33,7 +32,6 @@ const boardSummaries = computed(() => boardsQuery.data.value ?? []);
 const feedTopics = computed(() => topicsQuery.data.value ?? []);
 const topBoards = computed(() => boardSummaries.value.slice(0, 4));
 const railBoards = computed(() => boardSummaries.value.slice(0, 8));
-const heroBoards = computed(() => boardSummaries.value.slice(0, 4));
 const topTags = computed(() => (tagsQuery.data.value ?? []).slice(0, 10));
 
 const communitySignals = computed(() => [
@@ -80,6 +78,62 @@ const visibleTopics = computed(() => {
   }
 
   return sorted;
+});
+
+const displayLimit = ref(5);
+const infiniteScrollActive = ref(false);
+const scrollTriggerRef = ref<HTMLElement | null>(null);
+
+const slicedTopics = computed(() => {
+  return visibleTopics.value.slice(0, displayLimit.value);
+});
+
+function handleLoadMore() {
+  displayLimit.value = Math.min(displayLimit.value + 5, visibleTopics.value.length);
+  infiniteScrollActive.value = true;
+}
+
+let observer: IntersectionObserver | null = null;
+
+function setupObserver() {
+  if (observer) {
+    observer.disconnect();
+  }
+  if (!infiniteScrollActive.value || !scrollTriggerRef.value) return;
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting) {
+        loadMoreOnScroll();
+      }
+    },
+    {
+      rootMargin: "150px",
+    }
+  );
+
+  observer.observe(scrollTriggerRef.value);
+}
+
+function loadMoreOnScroll() {
+  if (displayLimit.value < visibleTopics.value.length) {
+    displayLimit.value = Math.min(displayLimit.value + 10, visibleTopics.value.length);
+  }
+}
+
+watch([infiniteScrollActive, scrollTriggerRef], () => {
+  setupObserver();
+});
+
+watch(activeTab, () => {
+  displayLimit.value = 5;
+  infiniteScrollActive.value = false;
+});
+
+onUnmounted(() => {
+  if (observer) {
+    observer.disconnect();
+  }
 });
 
 watch(
@@ -209,7 +263,7 @@ function submitHeroSearch() {
 
             <div class="signal-card" aria-label="社区实时信号">
               <div class="signal-visual" aria-hidden="true">
-                <ParallelCrossingMark />
+                <img src="/parallel_convergence_graphic.png" alt="平行线交汇" class="hero-convergence-img" />
               </div>
               <div class="signal-caption">
                 <div v-for="signal in communitySignals" :key="signal.label">
@@ -258,7 +312,7 @@ function submitHeroSearch() {
           </div>
         </section>
 
-        <section class="feed" aria-label="主题列表">
+        <section class="feed" aria-label="主题发现流">
           <div class="tabs">
             <div class="tab-list" role="tablist" aria-label="主题筛选">
               <button
@@ -289,11 +343,11 @@ function submitHeroSearch() {
           </p>
           <p v-else-if="!visibleTopics.length" class="panel-state">暂无主题。</p>
           <template v-else>
-            <article v-for="topic in visibleTopics" :key="topic.id" class="topic-row">
+            <article v-for="topic in slicedTopics" :key="topic.id" class="topic-row">
               <div class="topic-main">
-                <div class="avatar-stack" aria-hidden="true">
-                  <span>{{ topic.authorName.slice(0, 1).toUpperCase() }}</span>
-                  <span>{{ topic.boardName.slice(0, 1) }}</span>
+                <div class="author-avatar-wrapper" aria-hidden="true">
+                  <div class="author-avatar">{{ topic.authorName.slice(0, 1).toUpperCase() }}</div>
+                  <span class="board-badge-dot" :style="{ '--board-color': topic.boardColor }" :title="topic.boardName"></span>
                 </div>
                 <div class="topic-copy">
                   <div class="topic-title-line">
@@ -321,10 +375,34 @@ function submitHeroSearch() {
                   </div>
                 </div>
               </div>
-              <div class="metric">{{ compactNumber(topic.replyCount) }}<span>回复</span></div>
-              <div class="metric">{{ compactNumber(topic.viewCount) }}<span>浏览</span></div>
+              <div class="metric">{{ compactNumber(topic.replyCount) }}</div>
+              <div class="metric">{{ compactNumber(topic.viewCount) }}</div>
               <div class="activity">{{ relativeTime(topic.lastPostedAt) }}</div>
             </article>
+
+            <!-- 加载更多 / 滚动触发器 -->
+            <div class="feed-load-container">
+              <div v-if="visibleTopics.length > displayLimit" class="load-more-action">
+                <button class="btn-load-more" @click="handleLoadMore">
+                  显示全部主题 <span class="arrow">→</span>
+                </button>
+              </div>
+              <div
+                v-if="infiniteScrollActive"
+                ref="scrollTriggerRef"
+                class="scroll-trigger"
+              >
+                <div v-if="displayLimit < visibleTopics.length" class="loading-spinner">
+                  <span class="dot"></span>
+                  <span class="dot"></span>
+                  <span class="dot"></span>
+                  正在加载更多...
+                </div>
+                <div v-else class="all-loaded">
+                  已显示全部主题
+                </div>
+              </div>
+            </div>
           </template>
         </section>
       </main>
@@ -358,31 +436,10 @@ function submitHeroSearch() {
               #{{ tag.name }}
             </RouterLink>
           </div>
-          <div class="stats">
-            <div v-for="signal in communitySignals" :key="signal.label" class="stat">
-              <strong>{{ signal.value }}</strong>
-              <span>{{ signal.label }}</span>
-            </div>
-          </div>
+
         </section>
 
-        <section class="sidebar-card sidebar-card--boards">
-          <h3>快速进入</h3>
-          <p v-if="boardsQuery.isLoading.value" class="sidebar-state">正在加载版块…</p>
-          <p v-else-if="boardsQuery.isError.value" class="sidebar-state sidebar-state--error">版块暂时不可用</p>
-          <template v-else>
-            <RouterLink
-              v-for="board in heroBoards"
-              :key="board.id"
-              :to="{ name: 'board-detail', params: { slug: board.slug } }"
-              :style="{ '--board-color': board.color }"
-            >
-              <span></span>
-              <strong>{{ board.name }}</strong>
-              <small>{{ compactNumber(board.topicCount) }} 个主题</small>
-            </RouterLink>
-          </template>
-        </section>
+
       </aside>
     </div>
   </div>
