@@ -1,45 +1,104 @@
+/*
+ * 明亮多彩论坛主题 — 取自 Parallel Crossing logo 线条色
+ * 主色偏亮、饱和；辅以珊瑚 / 柠绿 / 金黄 / 紫罗兰等版块与导航点缀
+ */
 :root {
-  --bg-app: #f5f9fb;
+  --bg-app: #f8fafc;
   --bg-surface: #ffffff;
-  --bg-panel: rgba(255, 255, 255, 0.86);
+  --bg-panel: #ffffff;
   --bg-panel-strong: #ffffff;
-  --bg-subtle: #eef6f9;
-  --bg-hover: #edf7fa;
-  --bg-selected: #eaf3fb;
-  --pinned-bg: #fffaf0;
-  --primary: #005aa8;
-  --primary-rgb: 0, 90, 168;
-  --primary-hover: #0d78c4;
-  --accent-geek: #08c7d8;
-  --accent-geek-rgb: 8, 199, 216;
-  --brand-blue: #005aa8;
-  --brand-cyan: #08c7d8;
-  --cyan-soft: #e4fbfe;
-  --navy-soft: #eaf3fb;
-  --success: #35b28f;
-  --success-rgb: 53, 178, 143;
-  --orange: #ffb366;
-  --orange-rgb: 255, 179, 102;
-  --title: #172633;
-  --text: #314a5c;
-  --muted: #6d7d8b;
-  --muted-rgb: 109, 125, 139;
-  --border: #dce8ef;
-  --border-strong: #c6d8e2;
-  --input-border: #b9cbd6;
-  --focus-ring: rgba(8, 199, 216, 0.24);
-  --code-bg: #1e1e1e;
-  --code-text: #d4d4d4;
-  --danger: #c80001;
-  --danger-bg: #fff1f1;
-  --danger-border: #f2b8b8;
-  --warning: #cf7721;
-  --warning-rgb: 207, 119, 33;
+  --bg-subtle: #f1f5f9;
+  --bg-hover: #e8f2fa;
+  --bg-selected: #dff1ff;
+  --pinned-bg: #fff9e6;
+
+  /* 明亮主色 */
+  --primary: #38bdf8;
+  --primary-rgb: 56, 189, 248;
+  --primary-hover: #0ea5e9;
+
+  --accent-geek: #2dd4bf;
+  --accent-geek-rgb: 45, 212, 191;
+  --brand-blue: #38bdf8;
+  --brand-cyan: #2dd4bf;
+
+  --accent-coral: #fb923c;
+  --accent-coral-rgb: 251, 146, 60;
+  --accent-lime: #a3e635;
+  --accent-lime-rgb: 163, 230, 53;
+  --accent-gold: #facc15;
+  --accent-gold-rgb: 250, 204, 21;
+  --accent-violet: #a78bfa;
+  --accent-violet-rgb: 167, 139, 250;
+  --accent-pink: #f472b6;
+  --accent-pink-rgb: 244, 114, 182;
+  --accent-sky: #60a5fa;
+  --accent-sky-rgb: 96, 165, 250;
+
+  --cyan-soft: #e0f2fe;
+  --navy-soft: #dbeafe;
+  --coral-soft: #ffedd5;
+  --lime-soft: #ecfccb;
+  --gold-soft: #fef9c3;
+  --violet-soft: #ede9fe;
+  --pink-soft: #fce7f3;
+
+  /* 左侧导航图标色 */
+  --rail-icon-home: #0ea5e9;
+  --rail-icon-home-bg: #e0f2fe;
+  /* 话题：暖红；高信号：logo 线条柠绿 */
+  --rail-icon-topics: #e11d48;
+  --rail-icon-topics-bg: #ffe4e6;
+  --rail-icon-signal: #94c93f;
+  --rail-icon-signal-rgb: 148, 201, 63;
+  --rail-icon-signal-bg: rgba(163, 230, 53, 0.14);
+  --rail-icon-signal-active: rgba(163, 230, 53, 0.48);
+  --rail-icon-more: #8b5cf6;
+  --rail-icon-more-bg: #ede9fe;
+
+  --success: #22c55e;
+  --success-rgb: 34, 197, 94;
+  --orange: #facc15;
+  --orange-rgb: 250, 204, 21;
+
+  --title: #334155;
+  --text: #475569;
+  --muted: #94a3b8;
+  --muted-rgb: 148, 163, 184;
+
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --input-border: #cbd5e1;
+  --focus-ring: #7dd3fc;
+
+  --code-bg: #1e293b;
+  --code-text: #e2e8f0;
+
+  --danger: #f87171;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
+  --warning: #fbbf24;
+  --warning-rgb: 251, 191, 36;
+
+  --shadow-rgb: 51, 65, 85;
   --radius-card: 16px;
   --radius-large: 22px;
   --radius-xl: 28px;
   --radius-pill: 999px;
-  --shadow-card: 0 10px 26px rgba(19, 55, 77, 0.055);
-  --shadow-soft: 0 20px 70px rgba(15, 48, 72, 0.1), 0 3px 10px rgba(15, 48, 72, 0.06);
-  --shadow-elevated: 0 24px 70px rgba(15, 48, 72, 0.14);
+  --shadow-card: 0 6px 20px rgba(var(--shadow-rgb), 0.07);
+  --shadow-soft: 0 12px 36px rgba(var(--shadow-rgb), 0.09), 0 2px 6px rgba(var(--shadow-rgb), 0.05);
+  --shadow-elevated: 0 18px 44px rgba(var(--shadow-rgb), 0.11);
+
+  --board-palette-1: var(--primary);
+  --board-palette-2: var(--accent-coral);
+  --board-palette-3: var(--accent-lime);
+  --board-palette-4: var(--accent-gold);
+  --board-palette-5: var(--accent-violet);
+  --board-palette-6: var(--accent-pink);
+
+  /* 柔和品牌渐变：同色相邻近色，避免珊瑚跳色 */
+  --gradient-brand: linear-gradient(135deg, #6dd0fa 0%, #5ec4f4 46%, #66d4cb 100%);
+  --gradient-brand-hover: linear-gradient(135deg, #5ec4f4 0%, #4fb8eb 46%, #5cc9c0 100%);
+  --shadow-brand: 0 8px 20px rgba(var(--primary-rgb), 0.16);
+  --shadow-brand-hover: 0 12px 26px rgba(var(--primary-rgb), 0.2);
 }

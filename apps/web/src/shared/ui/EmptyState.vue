@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 defineProps<{ title: string; description: string }>();
 </script>
 
@@ -25,7 +25,11 @@ defineProps<{ title: string; description: string }>();
   width: 3rem;
   height: 3rem;
   border-radius: 1.2rem;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(16, 185, 129, 0.22));
+  background: linear-gradient(
+    135deg,
+    rgba(var(--primary-rgb), 0.22),
+    rgba(var(--accent-lime-rgb), 0.22)
+  );
 }
 
 h3 {

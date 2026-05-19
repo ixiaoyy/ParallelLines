@@ -16,8 +16,6 @@ import NotificationBell from "@/features/notifications/components/NotificationBe
 
 import UiButton from "@/shared/ui/Button.vue";
 
-
-
 const router = useRouter();
 
 const route = useRoute();
@@ -181,9 +179,7 @@ function isNavItemActive(item: NavItem) {
       <RouterLink class="brand" to="/" aria-label="平行线首页">
 
         <span class="brand-mark">
-
-          <img class="brand-logo" src="/logo.png" alt="" aria-hidden="true" />
-
+          <img class="brand-logo" src="/logo-lines.png" alt="" aria-hidden="true" />
         </span>
 
         <span>

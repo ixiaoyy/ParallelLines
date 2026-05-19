@@ -1,4 +1,4 @@
-.user-profile-page {
+﻿.user-profile-page {
   display: grid;
   gap: 1rem;
 }
@@ -10,7 +10,7 @@
   min-height: 11rem;
   padding: clamp(1rem, 2.4vw, 1.5rem);
   background:
-    radial-gradient(circle at 8% 0%, rgba(59, 130, 246, 0.14), transparent 22rem),
+    radial-gradient(circle at 8% 0%, rgba(var(--primary-rgb), 0.14), transparent 22rem),
     rgba(255, 255, 255, 0.9);
 }
 

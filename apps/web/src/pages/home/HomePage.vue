@@ -7,8 +7,15 @@ import { useTags } from "@/features/tags/queries";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicFeed } from "@/features/topics/queries";
 import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
+import {
+  AppstoreOutlined,
+  FireOutlined,
+  HomeOutlined,
+  StarFilled,
+} from "@ant-design/icons-vue";
+
 import { compactNumber, relativeTime } from "@/shared/lib/format";
-import ParallelLinesMark from "@/shared/ui/ParallelLinesMark.vue";
+import ParallelCrossingMark from "@/shared/ui/ParallelCrossingMark.vue";
 
 const activeTab = ref<DiscoveryTab["key"]>("latest");
 const heroSearch = ref("");
@@ -116,21 +123,21 @@ function submitHeroSearch() {
         <RouterLink class="rail-action" :to="{ name: 'new-topic' }">新建主题</RouterLink>
 
         <nav class="rail-section rail-section--primary" aria-label="首页导航">
-          <RouterLink class="rail-link rail-link--active" to="/">
-            <span aria-hidden="true">⌂</span>
+          <RouterLink class="rail-link rail-link--home rail-link--active" to="/">
+            <span class="rail-icon" aria-hidden="true"><HomeOutlined /></span>
             <strong>主页</strong>
             <i aria-hidden="true"></i>
           </RouterLink>
-          <RouterLink class="rail-link" :to="{ name: 'home', hash: '#hot' }">
-            <span aria-hidden="true">◆</span>
+          <RouterLink class="rail-link rail-link--topics" :to="{ name: 'home', hash: '#hot' }">
+            <span class="rail-icon" aria-hidden="true"><FireOutlined /></span>
             <strong>话题</strong>
           </RouterLink>
-          <RouterLink class="rail-link" :to="{ name: 'home', hash: '#solved' }">
-            <span aria-hidden="true">◎</span>
+          <RouterLink class="rail-link rail-link--signal" :to="{ name: 'home', hash: '#solved' }">
+            <span class="rail-icon" aria-hidden="true"><StarFilled /></span>
             <strong>高信号</strong>
           </RouterLink>
-          <RouterLink class="rail-link" :to="{ name: 'board-directory' }">
-            <span aria-hidden="true">⋯</span>
+          <RouterLink class="rail-link rail-link--more" :to="{ name: 'board-directory' }">
+            <span class="rail-icon" aria-hidden="true"><AppstoreOutlined /></span>
             <strong>更多</strong>
           </RouterLink>
         </nav>
@@ -163,9 +170,10 @@ function submitHeroSearch() {
           <p v-else-if="tagsQuery.isError.value" class="rail-state rail-state--error">标签暂时不可用</p>
           <template v-else>
             <RouterLink
-              v-for="tag in topTags.slice(0, 6)"
+              v-for="(tag, tagIndex) in topTags.slice(0, 6)"
               :key="tag.id"
               class="rail-tag"
+              :class="`rail-tag--tone-${(tagIndex % 6) + 1}`"
               :to="{ name: 'search', query: { q: tag.name, tag: tag.name } }"
             >
               #{{ tag.name }}
@@ -178,10 +186,15 @@ function submitHeroSearch() {
         <section class="hero" aria-labelledby="home-hero-title">
           <div class="hero-grid">
             <div class="hero-copy">
-              <span class="eyebrow">技术讨论 · 经验分享 · 项目共创</span>
-              <h1 id="home-hero-title">让不同方向的思考，在<span>平行线</span>上汇合。</h1>
-              <p>
-                一个轻盈、安静、信息密度适中的技术论坛。首页优先呈现最新讨论、热门话题和清晰分类，让成员快速找到可参与的内容。
+              <p class="hero-eyebrow">技术讨论 · 经验分享 · 项目共创</p>
+              <h1 id="home-hero-title" class="hero-title">
+                <span class="hero-title__line">让不同方向的思考，</span>
+                <span class="hero-title__line">
+                  在<em class="hero-brand">平行线</em>上汇合。
+                </span>
+              </h1>
+              <p class="hero-lead">
+                轻盈、安静的技术论坛——优先呈现最新讨论、热门话题与清晰分类，帮你快速找到值得参与的内容。
               </p>
               <form class="hero-search" role="search" aria-label="搜索平行线主题" @submit.prevent="submitHeroSearch">
                 <span aria-hidden="true">⌕</span>
@@ -195,14 +208,9 @@ function submitHeroSearch() {
             </div>
 
             <div class="signal-card" aria-label="社区实时信号">
-              <div class="signal-lines" aria-hidden="true">
-                <span style="--w: 76%"></span>
-                <span style="--w: 88%"></span>
-                <span style="--w: 94%"></span>
-                <span style="--w: 86%"></span>
-                <span style="--w: 72%"></span>
+              <div class="signal-visual" aria-hidden="true">
+                <ParallelCrossingMark />
               </div>
-              <div class="signal-node"><ParallelLinesMark /></div>
               <div class="signal-caption">
                 <div v-for="signal in communitySignals" :key="signal.label">
                   <strong>{{ signal.value }}</strong>

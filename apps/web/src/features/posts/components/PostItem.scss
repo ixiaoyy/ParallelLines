@@ -1,4 +1,4 @@
-.post-item {
+﻿.post-item {
   display: grid;
   grid-template-columns: 9rem minmax(0, 1fr);
   gap: 1rem;
@@ -105,7 +105,7 @@ footer {
 }
 
 .edit-field textarea:focus {
-  outline: 3px solid rgba(59, 130, 246, 0.15);
+  outline: 3px solid rgba(var(--primary-rgb), 0.15);
   border-color: var(--primary);
 }
 

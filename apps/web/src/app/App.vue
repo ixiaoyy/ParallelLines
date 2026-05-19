@@ -5,12 +5,17 @@ import AppShell from "@/app/layouts/AppShell.vue";
 
 const theme = {
   token: {
-    colorPrimary: "#3B82F6",
-    colorSuccess: "#10B981",
-    colorTextHeading: "#111827",
-    colorText: "#4B5563",
-    colorBgLayout: "#F8F9FA",
+    colorPrimary: "#38BDF8",
+    colorSuccess: "#22C55E",
+    colorWarning: "#FBBF24",
+    colorError: "#F87171",
+    colorTextHeading: "#334155",
+    colorText: "#475569",
+    colorBgLayout: "#F8FAFC",
     colorBgContainer: "#FFFFFF",
+    colorBorder: "#E2E8F0",
+    colorLink: "#0EA5E9",
+    colorLinkHover: "#38BDF8",
     borderRadius: 16,
     fontFamily:
       '"LXGW WenKai Screen", "Noto Serif SC", ui-serif, Georgia, "Times New Roman", serif',
@@ -23,7 +28,7 @@ const theme = {
     },
     Card: {
       borderRadiusLG: 16,
-      boxShadowTertiary: "0 12px 30px rgba(17, 24, 39, 0.08)",
+      boxShadowTertiary: "0 12px 24px rgba(61, 78, 94, 0.08)",
     },
   },
 };

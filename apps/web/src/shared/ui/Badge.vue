@@ -1,5 +1,5 @@
 <script setup lang="ts">
-withDefaults(defineProps<{ tone?: "blue" | "green" | "gray" | "amber" }>(), { tone: "gray" });
+withDefaults(defineProps<{ tone?: "blue" | "green" | "gray" | "amber" | "coral" }>(), { tone: "gray" });
 </script>
 
 <template>
@@ -20,17 +20,22 @@ withDefaults(defineProps<{ tone?: "blue" | "green" | "gray" | "amber" }>(), { to
 
 .badge--blue {
   color: var(--primary-hover);
-  background: var(--bg-selected);
+  background: var(--cyan-soft);
 }
 
 .badge--green {
-  color: var(--accent-geek);
-  background: var(--bg-hover);
+  color: #6f9c2e;
+  background: var(--lime-soft);
 }
 
 .badge--amber {
-  color: var(--warning);
-  background: var(--pinned-bg);
+  color: #c99220;
+  background: var(--gold-soft);
+}
+
+.badge--coral {
+  color: #d97a62;
+  background: var(--coral-soft);
 }
 
 .badge--gray {

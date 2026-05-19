@@ -2,9 +2,11 @@
   min-height: 100vh;
   overflow-x: clip;
   background:
-    radial-gradient(circle at 12% 10%, rgba(var(--accent-geek-rgb), 0.18), transparent 25rem),
-    radial-gradient(circle at 85% 4%, rgba(var(--primary-rgb), 0.14), transparent 28rem),
-    linear-gradient(180deg, var(--bg-panel-strong) 0%, var(--bg-app) 56%, var(--bg-subtle) 100%);
+    radial-gradient(circle at 4% 10%, rgba(var(--accent-coral-rgb), 0.12), transparent 20rem),
+    radial-gradient(circle at 96% 8%, rgba(var(--accent-lime-rgb), 0.12), transparent 18rem),
+    radial-gradient(circle at 50% 0%, rgba(var(--accent-violet-rgb), 0.08), transparent 24rem),
+    radial-gradient(circle at 80% 90%, rgba(var(--primary-rgb), 0.1), transparent 22rem),
+    linear-gradient(180deg, #ffffff 0%, var(--bg-app) 55%, var(--bg-subtle) 100%);
 }
 
 .topbar {
@@ -19,11 +21,10 @@
   min-height: 4.2rem;
   margin: 0.875rem auto 0;
   padding: 0.75rem 0.9rem;
-  border: 1px solid rgba(220, 232, 239, 0.92);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.74);
-  box-shadow: 0 10px 36px rgba(19, 55, 77, 0.08);
-  backdrop-filter: blur(18px);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-card);
 }
 
 .brand {
@@ -36,22 +37,38 @@
 }
 
 .brand-mark {
-  display: grid;
+  position: relative;
+  display: block;
   width: 2.9rem;
   height: 2.9rem;
   flex: 0 0 auto;
-  place-items: center;
+  overflow: hidden;
   border-radius: 0.9rem;
-  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), rgba(var(--accent-geek-rgb), 0.16));
-  box-shadow: inset 0 0 0 1px rgba(var(--accent-geek-rgb), 0.2);
+  background: var(--bg-surface);
+  box-sizing: border-box;
 }
 
+.brand-mark::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 1px solid var(--border-strong);
+  border-radius: inherit;
+  pointer-events: none;
+  content: "";
+}
+
+/* 完整 Logo 撑满容器，通过放大 + 顶对齐裁掉下方英文/中文，只露出线条区 */
 .brand-logo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   display: block;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.7rem;
-  object-fit: contain;
+  width: 100%;
+  height: 3.8rem;
+  max-width: none;
+  object-fit: cover;
+  object-position: center top;
 }
 
 .brand strong {
@@ -60,17 +77,6 @@
   font-size: 1.08rem;
   line-height: 1.05;
   letter-spacing: 0.02em;
-}
-
-/* 与 .brand-mark 同档尺寸，用于 logo 图替代「平」字块 */
-.brand-logo {
-  display: block;
-  width: 2.55rem;
-  height: 2.55rem;
-  border-radius: 0.9rem;
-  object-fit: cover;
-  object-position: -2.05rem;
-  box-shadow: 0 14px 28px rgba(59, 130, 246, 0.24);
 }
 
 .brand small {
@@ -119,7 +125,7 @@
   border: 1px solid var(--border) !important;
   border-radius: var(--radius-pill) !important;
   color: var(--muted);
-  background: rgba(246, 250, 252, 0.76) !important;
+  background: var(--bg-subtle) !important;
 }
 
 .search-box :deep(input) {
@@ -140,8 +146,13 @@
   min-height: 2.55rem;
   border-radius: var(--radius-pill) !important;
   padding-inline: 1rem !important;
-  background: linear-gradient(135deg, var(--primary), var(--accent-geek)) !important;
-  box-shadow: 0 10px 22px rgba(4, 139, 196, 0.2) !important;
+  background: var(--gradient-brand) !important;
+  box-shadow: var(--shadow-brand) !important;
+}
+
+.publish-link :deep(.ui-button:hover) {
+  background: var(--gradient-brand-hover) !important;
+  box-shadow: var(--shadow-brand-hover) !important;
 }
 
 .auth-link,
@@ -303,9 +314,7 @@
   }
 
   .brand-logo {
-    width: 1.95rem;
-    height: 1.95rem;
-    border-radius: 0.6rem;
+    height: 218%;
   }
 
   .brand strong {

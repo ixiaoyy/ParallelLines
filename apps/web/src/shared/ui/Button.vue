@@ -40,13 +40,15 @@ withDefaults(
 
 .ui-button--primary {
   color: white !important;
-  border-color: var(--primary) !important;
-  background: var(--primary) !important;
+  border-color: transparent !important;
+  background: var(--gradient-brand) !important;
+  box-shadow: var(--shadow-brand);
 }
 
 .ui-button--primary:hover {
-  border-color: var(--primary-hover) !important;
-  background: var(--primary-hover) !important;
+  border-color: transparent !important;
+  background: var(--gradient-brand-hover) !important;
+  box-shadow: var(--shadow-brand-hover);
 }
 
 .ui-button--success {

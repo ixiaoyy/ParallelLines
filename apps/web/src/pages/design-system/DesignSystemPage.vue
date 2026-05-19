@@ -16,12 +16,15 @@ import UiSkeleton from "@/shared/ui/Skeleton.vue";
     </header>
 
     <section class="swatches">
-      <div style="--swatch: var(--bg-app)">#F8F9FA</div>
-      <div style="--swatch: var(--primary)">#3B82F6</div>
-      <div style="--swatch: var(--accent-geek)">#10B981</div>
-      <div style="--swatch: var(--title)">#111827</div>
-      <div style="--swatch: var(--text)">#4B5563</div>
-      <div style="--swatch: var(--code-bg)">#1E1E1E</div>
+      <div style="--swatch: var(--bg-app)">背景</div>
+      <div style="--swatch: var(--primary)">主色</div>
+      <div style="--swatch: var(--accent-geek)">青绿</div>
+      <div style="--swatch: var(--accent-coral)">珊瑚</div>
+      <div style="--swatch: var(--accent-lime)">柠绿</div>
+      <div style="--swatch: var(--accent-gold)">金黄</div>
+      <div style="--swatch: var(--title)">标题</div>
+      <div style="--swatch: var(--text)">正文</div>
+      <div style="--swatch: var(--code-bg)">代码</div>
     </section>
 
     <div class="grid">
