@@ -185,3 +185,63 @@ async def test_post_edit_author_other_user_owner_and_board_moderator_permissions
         assert empty.json()["error"]["code"] == "empty_post"
 
     await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_reply_cannot_be_edited_but_author_can_delete_it() -> None:
+    session_factory, engine = await create_test_session()
+
+    async def override_session():
+        async with session_factory() as session:
+            yield session
+
+    app = create_app()
+    app.dependency_overrides[get_session] = override_session
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        owner = await register_user(client, "owner")
+        author = await register_user(client, "author")
+        stranger = await register_user(client, "stranger")
+        await create_board(client, owner["auth"])
+        topic = await create_topic(client, author["auth"], "回复删除规则测试", "首楼可以继续编辑。")
+
+        reply = await client.post(
+            f"/api/v1/topics/{topic['id']}/posts",
+            headers={"Authorization": author["auth"]},
+            json={"raw_md": "这是一条只能删除、不能编辑的回复。"},
+        )
+        assert reply.status_code == 201
+        reply_id = reply.json()["data"]["id"]
+
+        edit_reply = await client.patch(
+            f"/api/v1/posts/{reply_id}",
+            headers={"Authorization": author["auth"]},
+            json={"raw_md": "尝试编辑回复。"},
+        )
+        assert edit_reply.status_code == 422
+        assert edit_reply.json()["error"]["code"] == "reply_edit_not_allowed"
+
+        stranger_delete = await client.delete(
+            f"/api/v1/posts/{reply_id}",
+            headers={"Authorization": stranger["auth"]},
+        )
+        assert stranger_delete.status_code == 403
+        assert stranger_delete.json()["error"]["code"] == "permission_denied"
+
+        author_delete = await client.delete(
+            f"/api/v1/posts/{reply_id}",
+            headers={"Authorization": author["auth"]},
+        )
+        assert author_delete.status_code == 200
+        deleted_reply = author_delete.json()["data"]
+        assert deleted_reply["deleted_at"] is not None
+        assert deleted_reply["raw_md"] == ""
+        assert deleted_reply["cooked_html"] == ""
+
+        posts = await client.get(f"/api/v1/topics/{topic['id']}/posts")
+        assert posts.status_code == 200
+        saved_reply = next(item for item in posts.json()["data"] if item["id"] == reply_id)
+        assert saved_reply["deleted_at"] is not None
+        assert saved_reply["raw_md"] == ""
+
+    await engine.dispose()

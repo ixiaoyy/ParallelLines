@@ -1,4 +1,5 @@
 import { relativeTime } from "@/shared/lib/format";
+import { topicDetailPath } from "@/shared/router/topicRoutes";
 
 export type NotificationType =
   | "replied"
@@ -196,7 +197,11 @@ function buildNotificationUrl(notification: NotificationResponse): string {
   const topicSlug = readString(notification.data.topic_slug);
   if (notification.topic_id && topicSlug) {
     const hash = readNumber(notification.data.post_number);
-    return `/t/${topicSlug}/${notification.topic_id}${hash ? `#post-${hash}` : ""}`;
+    return topicDetailPath({
+      id: notification.topic_id,
+      slug: topicSlug,
+      hash: hash ? `post-${hash}` : null,
+    });
   }
 
   const boardSlug = readString(notification.data.board_slug);

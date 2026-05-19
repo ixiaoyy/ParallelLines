@@ -13,36 +13,110 @@ const route = useRoute();
 const username = computed(() => String(route.params.username ?? ""));
 const profileQuery = useUserProfile(username);
 const topicsQuery = useUserTopics(username);
+const profile = computed(() => profileQuery.data.value ?? null);
 
 const joinedAt = computed(() => {
-  const createdAt = profileQuery.data.value?.created_at;
+  const createdAt = profile.value?.created_at;
   return createdAt ? relativeTime(createdAt) : "未知";
 });
+
+const profileStats = computed(() => {
+  const topicCount = profile.value?.topic_count ?? 0;
+  const postCount = profile.value?.post_count ?? 0;
+
+  return [
+    { label: "主题", value: topicCount, note: topicCount > 0 ? "已发起讨论" : "等待首帖" },
+    { label: "楼层", value: postCount, note: postCount > 0 ? "参与回复" : "还没接楼" },
+    { label: "贡献", value: topicCount + postCount, note: "公开内容" },
+  ];
+});
+
+const profileSummary = computed(() => {
+  const topicCount = profile.value?.topic_count ?? 0;
+  const postCount = profile.value?.post_count ?? 0;
+
+  if (topicCount + postCount === 0) {
+    return "还没有留下公开讨论，但这条平行线已经预留好了第一束信号。";
+  }
+
+  if (topicCount >= postCount) {
+    return "更擅长把问题开成主题，适合作为讨论的起点。";
+  }
+
+  return "更常出现在楼层里补充线索，是讨论中的协作者。";
+});
+
+function roleLabel(role: string): string {
+  const labels: Record<string, string> = {
+    admin: "管理员",
+    moderator: "版主",
+    user: "成员",
+  };
+
+  return labels[role] ?? role;
+}
+
+function statusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    active: "正常",
+    silenced: "禁言中",
+    suspended: "暂停",
+    deleted: "已注销",
+  };
+
+  return labels[status] ?? status;
+}
 </script>
 
 <template>
   <div class="user-profile-page">
     <UiCard class="profile-hero">
+      <span class="profile-hero__glow profile-hero__glow--cyan" aria-hidden="true"></span>
+      <span class="profile-hero__glow profile-hero__glow--lime" aria-hidden="true"></span>
+      <div class="profile-lines" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+
       <div v-if="profileQuery.isLoading.value" class="profile-state">正在加载用户资料…</div>
       <div v-else-if="profileQuery.isError.value" class="profile-state profile-state--error" role="alert">
         用户资料暂时不可用。请稍后重试，或确认用户是否存在。
       </div>
-      <template v-else-if="profileQuery.data.value">
-        <UiAvatar :name="profileQuery.data.value.username" :src="profileQuery.data.value.avatar_url" size="lg" />
-        <div>
-          <UiBadge tone="green">{{ profileQuery.data.value.role }}</UiBadge>
-          <h1>{{ profileQuery.data.value.username }}</h1>
-          <p>状态：{{ profileQuery.data.value.status }} · 加入 {{ joinedAt }}</p>
-          <dl class="profile-stats" aria-label="用户内容统计">
-            <div>
-              <dt>主题</dt>
-              <dd>{{ profileQuery.data.value.topic_count }}</dd>
+      <template v-else-if="profile">
+        <div class="profile-identity">
+          <div class="profile-avatar-frame">
+            <UiAvatar :name="profile.username" :src="profile.avatar_url" size="lg" />
+          </div>
+
+          <div class="profile-copy">
+            <div class="profile-kicker">
+              <UiBadge tone="green">{{ roleLabel(profile.role) }}</UiBadge>
+              <span class="profile-status">
+                <span class="profile-status__dot"></span>
+                {{ statusLabel(profile.status) }}
+              </span>
             </div>
-            <div>
-              <dt>楼层</dt>
-              <dd>{{ profileQuery.data.value.post_count }}</dd>
+            <h1>{{ profile.username }}</h1>
+            <p class="profile-meta">加入 {{ joinedAt }} · 平行线成员档案</p>
+            <p class="profile-summary">{{ profileSummary }}</p>
+          </div>
+        </div>
+
+        <div class="profile-dashboard" aria-label="用户内容统计">
+          <dl class="profile-stats">
+            <div v-for="stat in profileStats" :key="stat.label">
+              <dt>{{ stat.label }}</dt>
+              <dd>{{ stat.value }}</dd>
+              <span>{{ stat.note }}</span>
             </div>
           </dl>
+
+          <div class="profile-signal-card">
+            <span>信号状态</span>
+            <strong>{{ profile.topic_count || profile.post_count ? "已接入讨论" : "等待第一条线索" }}</strong>
+            <p>公开资料只展示主题与楼层，不暴露邮箱。</p>
+          </div>
         </div>
       </template>
     </UiCard>
@@ -51,7 +125,8 @@ const joinedAt = computed(() => {
       <header>
         <div>
           <UiBadge tone="blue">用户主题</UiBadge>
-          <h2 id="profile-topics-title">{{ username }} 发布的主题</h2>
+          <h2 id="profile-topics-title">{{ username }} 的公开主题</h2>
+          <p>只收录仍可见的公开讨论，隐藏或删除内容不会出现在这里。</p>
         </div>
       </header>
 
@@ -59,8 +134,13 @@ const joinedAt = computed(() => {
       <UiCard v-else-if="topicsQuery.isError.value" class="profile-state profile-state--error" role="alert">
         暂时无法读取该用户的主题列表。请稍后重试。
       </UiCard>
-      <UiCard v-else-if="!topicsQuery.data.value?.length" class="profile-state">
-        还没有可展示的主题。
+      <UiCard v-else-if="!topicsQuery.data.value?.length" class="profile-empty">
+        <span class="profile-empty__mark">∅</span>
+        <div>
+          <strong>还没有可展示的主题</strong>
+          <p>等第一篇帖子发布后，这里会变成一条清晰的个人讨论时间线。</p>
+        </div>
+        <RouterLink class="profile-empty__link" to="/boards">去看看版块</RouterLink>
       </UiCard>
       <TopicList v-else :topics="topicsQuery.data.value" />
     </section>

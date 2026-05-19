@@ -3,11 +3,15 @@ import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import { useLogin, useRegister } from "@/features/auth/queries";
+import { ApiError } from "@/shared/api/client";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 type AuthTab = "login" | "register";
+
+const USERNAME_PATTERN = /^[\p{L}\p{N}_.-]+$/u;
+const USERNAME_HELPER = "用户名需为 3-32 位，可使用中文、字母、数字、点、下划线或短横线。";
 
 const route = useRoute();
 const router = useRouter();
@@ -53,15 +57,28 @@ async function submitLogin() {
 
 async function submitRegister() {
   formError.value = "";
-  if (!username.value.trim() || !email.value.trim() || registerPassword.value.length < 8) {
-    formError.value = "请输入用户名、邮箱，并使用至少 8 位密码。";
+  const trimmedUsername = username.value.trim();
+  const trimmedEmail = email.value.trim();
+
+  if (!isValidUsername(trimmedUsername)) {
+    formError.value = USERNAME_HELPER;
+    return;
+  }
+
+  if (!trimmedEmail) {
+    formError.value = "请输入有效邮箱。";
+    return;
+  }
+
+  if (registerPassword.value.length < 8) {
+    formError.value = "请使用至少 8 位密码。";
     return;
   }
 
   try {
     await registerMutation.mutateAsync({
-      username: username.value.trim(),
-      email: email.value.trim(),
+      username: trimmedUsername,
+      email: trimmedEmail,
       password: registerPassword.value,
     });
     await router.push(redirectTarget.value);
@@ -87,8 +104,66 @@ function readAuthTab(mode: unknown): AuthTab {
   return mode === "register" ? "register" : "login";
 }
 
+function isValidUsername(value: string): boolean {
+  return value.length >= 3 && value.length <= 32 && USERNAME_PATTERN.test(value);
+}
+
 function toAuthError(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) {
+    if (error.code === "account_exists") {
+      return "用户名或邮箱已被注册。";
+    }
+
+    if (error.code === "invalid_credentials") {
+      return "账号或密码不正确。";
+    }
+
+    if (error.code === "account_disabled") {
+      return "账号当前不可用。";
+    }
+
+    if (error.code === "validation_error") {
+      return toValidationError(error.details) ?? fallback;
+    }
+  }
+
   return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function toValidationError(details: Record<string, unknown>): string | null {
+  const errors = details.errors;
+  if (!Array.isArray(errors)) {
+    return null;
+  }
+
+  if (hasFieldError(errors, "username")) {
+    return USERNAME_HELPER;
+  }
+
+  if (hasFieldError(errors, "email")) {
+    return "请输入有效邮箱。";
+  }
+
+  if (hasFieldError(errors, "password")) {
+    return "密码需为 8-128 位。";
+  }
+
+  return null;
+}
+
+function hasFieldError(errors: unknown[], field: string): boolean {
+  return errors.some((error) => {
+    if (!isRecord(error)) {
+      return false;
+    }
+
+    const loc = error.loc;
+    return Array.isArray(loc) && loc.some((part) => part === field);
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 </script>
 
@@ -124,7 +199,7 @@ function toAuthError(error: unknown, fallback: string): string {
       <form v-else class="auth-form" aria-label="注册表单" @submit.prevent="submitRegister">
         <label>
           <span>用户名</span>
-          <input v-model="username" autocomplete="username" placeholder="3-32 位字母、数字、点、下划线或短横线" />
+          <input v-model="username" autocomplete="username" placeholder="3-32 位中文、字母、数字、点、下划线或短横线" />
         </label>
         <label>
           <span>邮箱</span>

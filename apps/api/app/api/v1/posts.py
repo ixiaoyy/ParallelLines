@@ -17,3 +17,13 @@ async def update_post(
 ) -> ApiResponse[PostResponse]:
     post = await ForumService(session).update_post(post_id, payload, current_user)
     return ApiResponse(data=PostResponse.from_model(post))
+
+
+@router.delete("/{post_id}", response_model=ApiResponse[PostResponse])
+async def delete_post(
+    post_id: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[PostResponse]:
+    post = await ForumService(session).delete_post(post_id, current_user)
+    return ApiResponse(data=PostResponse.from_model(post))

@@ -22,6 +22,40 @@
 - Keep only tiny primitive styles inline in `shared/ui` when the style block is short and tightly coupled to the wrapper.
 - Use SCSS nesting sparingly; keep selectors shallow enough to preserve Vue scoped-style readability.
 
+## Component Size and Decomposition Contract
+
+**What**: Route pages compose data state, routing, and feature components; they must not become a dumping ground for every panel, toolbar, sidebar, and card in the page.
+
+**Why**: Large page files made the topic-detail layout hard to reason about and allowed wrapper-specific CSS bugs to hide across hundreds of lines. Splitting the page into feature components keeps UI changes reviewable and prevents future visual regressions.
+
+**Limits**:
+
+- Treat `250` lines as the warning threshold for route-level `.vue` files and `300` lines as the warning threshold for page-level `.scss` files.
+- Before adding non-trivial markup to a file already near the threshold, extract a named component under the owning feature module (`features/topics/components/*`, `features/posts/components/*`, etc.).
+- A route page may keep orchestration functions such as query composition, draft handling, and event wiring, but presentational sections such as hero, toolbar, sidebars, stat panels, and repeated cards belong in feature components.
+- Co-locate each extracted component's SCSS file beside its `.vue`; do not move the bloat from one page stylesheet into another single global stylesheet.
+- When styling wrapped Ant Design Vue components such as `UiCard`, target the wrapper body explicitly (for example, `.my-card :deep(.ant-card-body)`) and set grid placement on direct children when layout order matters.
+
+### Wrong
+
+```vue
+<!-- pages/topic/TopicDetailPage.vue -->
+<template>
+  <!-- Hundreds of lines of hero, toolbar, sidebar, post stream, and reply form markup here -->
+</template>
+```
+
+### Correct
+
+```vue
+<!-- pages/topic/TopicDetailPage.vue -->
+<template>
+  <TopicDetailHero :topic="topic" :stats="topicStats" />
+  <TopicThreadToolbar @copy-link="copyTopicLink" />
+  <TopicDetailSidebar :topic="topic" :posts="displayedPosts" />
+</template>
+```
+
 ## Design Tokens
 
 Use CSS variables from `shared/styles/tokens.scss`:

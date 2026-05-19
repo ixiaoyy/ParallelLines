@@ -383,12 +383,43 @@ class ForumService:
         if not post or post.deleted_at is not None or post.topic.deleted_at is not None:
             raise NotFoundError("post_not_found", "Post not found")
 
+        if post.post_number != 1:
+            raise ValidationError("reply_edit_not_allowed", "Replies cannot be edited")
+
         if not await self._can_edit_post(post, current_user):
             raise PermissionDeniedError("permission_denied", "Permission denied")
 
         stripped = payload.raw_md.strip()
         post.raw_md = stripped
         post.cooked_html = self._render_required_markdown(stripped)
+        post.updated_at = utcnow()
+        await self.session.commit()
+        return await self._get_post(post.id)
+
+    async def delete_post(self, post_id: str, current_user: User) -> Post:
+        post = await self.session.scalar(
+            select(Post)
+            .options(
+                selectinload(Post.author),
+                selectinload(Post.topic).selectinload(Topic.board),
+            )
+            .where(Post.id == post_id)
+        )
+        if not post or post.deleted_at is not None or post.topic.deleted_at is not None:
+            raise NotFoundError("post_not_found", "Post not found")
+
+        if post.post_number == 1:
+            raise ValidationError(
+                "topic_post_delete_not_allowed",
+                "Topic posts cannot be deleted here",
+            )
+
+        if not await self._can_delete_post(post, current_user):
+            raise PermissionDeniedError("permission_denied", "Permission denied")
+
+        post.deleted_at = utcnow()
+        post.raw_md = ""
+        post.cooked_html = ""
         post.updated_at = utcnow()
         await self.session.commit()
         return await self._get_post(post.id)
@@ -408,6 +439,11 @@ class ForumService:
         if member:
             return True
         return post.topic.board.owner_id == current_user.id
+
+    async def _can_delete_post(self, post: Post, current_user: User) -> bool:
+        if post.user_id == current_user.id:
+            return True
+        return await self._can_edit_post(post, current_user)
 
     async def _get_post(self, post_id: str) -> Post:
         post = await self.session.scalar(

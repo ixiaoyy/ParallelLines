@@ -1,5 +1,13 @@
 import { createRouter, createWebHistory } from "vue-router";
 
+function firstRouteParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+
+  return value ?? "";
+}
+
 export const router = createRouter({
   history: createWebHistory(),
   scrollBehavior(to) {
@@ -52,6 +60,18 @@ export const router = createRouter({
     },
     {
       path: "/t/:slug/:id",
+      redirect: (to) => ({
+        name: "topic-detail",
+        params: {
+          id: firstRouteParam(to.params.id),
+          slug: firstRouteParam(to.params.slug),
+        },
+        query: to.query,
+        hash: to.hash,
+      }),
+    },
+    {
+      path: "/topics/:id/:slug?",
       name: "topic-detail",
       component: () => import("@/pages/topic/TopicDetailPage.vue"),
     },

@@ -1,0 +1,62 @@
+.topic-thread-toolbar :deep(.ant-card-body) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.7rem 1rem;
+  align-items: center;
+  padding: 0.95rem 1rem;
+}
+
+.toolbar-summary {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.panel-kicker {
+  color: var(--accent-geek);
+  font-size: 0.72rem;
+  font-weight: 920;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.toolbar-summary strong {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--title);
+}
+
+.toolbar-actions {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+
+.toolbar-status {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 820;
+}
+
+@media (max-width: 720px) {
+  .topic-thread-toolbar :deep(.ant-card-body) {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar-summary,
+  .toolbar-actions,
+  .toolbar-status {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .toolbar-actions {
+    justify-content: flex-start;
+  }
+}
+

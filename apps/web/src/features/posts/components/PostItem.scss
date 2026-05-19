@@ -1,16 +1,23 @@
-﻿.post-item {
+.post-item {
+  overflow: hidden;
+}
+
+.post-item :deep(.ant-card-body) {
   display: grid;
-  grid-template-columns: 9rem minmax(0, 1fr);
+  grid-template-columns: minmax(7.5rem, 9rem) minmax(0, 1fr);
   gap: 1rem;
   padding: 1rem;
 }
 
 .post-author {
+  grid-column: 1;
+  grid-row: 1;
   display: grid;
   align-content: start;
   justify-items: center;
   gap: 0.35rem;
   color: var(--title);
+  text-align: center;
 }
 
 .post-author span,
@@ -20,12 +27,22 @@ time {
 }
 
 .post-body {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
   min-width: 0;
+  align-content: start;
+}
+
+.post-body time {
+  margin-bottom: 0.5rem;
 }
 
 .post-body :deep(.markdown-body) {
+  min-width: 0;
   color: var(--text);
   line-height: 1.78;
+  overflow-wrap: anywhere;
 }
 
 .post-body :deep(.markdown-body p) {
@@ -38,17 +55,28 @@ time {
 
 .post-body :deep(.markdown-body pre) {
   position: relative;
+  max-width: 100%;
   margin: 1rem 0;
+  overflow: auto;
+  border-radius: 0.95rem;
+  padding: 1rem;
+  color: var(--code-text);
+  background: var(--code-bg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .post-body :deep(.markdown-body pre)::before {
   position: absolute;
   top: 0.5rem;
   right: 0.75rem;
-  color: rgba(212, 212, 212, 0.6);
+  color: rgba(226, 232, 240, 0.62);
   font-size: 0.72rem;
   font-weight: 760;
   content: "CODE";
+}
+
+.post-body :deep(.markdown-body code) {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 .deleted {
@@ -69,15 +97,9 @@ footer {
   margin-top: 0.75rem;
 }
 
-@media (max-width: 680px) {
-  .post-item {
-    grid-template-columns: 1fr;
-  }
-
-  .post-author {
-    grid-template-columns: auto auto 1fr;
-    justify-items: start;
-  }
+.post-delete-button {
+  color: #dc2626 !important;
+  background: rgba(239, 68, 68, 0.08) !important;
 }
 
 .edit-field {
@@ -118,4 +140,22 @@ footer {
 
 .post-status {
   margin: 0.65rem 0 0;
+}
+
+@media (max-width: 680px) {
+  .post-item :deep(.ant-card-body) {
+    grid-template-columns: 1fr;
+  }
+
+  .post-author,
+  .post-body {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .post-author {
+    grid-template-columns: auto auto 1fr;
+    justify-items: start;
+    text-align: left;
+  }
 }

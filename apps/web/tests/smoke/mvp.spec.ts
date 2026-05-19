@@ -10,6 +10,19 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function topicIdFromUrl(value: string) {
+  const segments = new URL(value).pathname.split("/").filter(Boolean);
+  if (segments[0] === "topics") {
+    return segments[1] ?? "";
+  }
+
+  if (segments[0] === "t") {
+    return segments[2] ?? "";
+  }
+
+  return segments.at(-1) ?? "";
+}
+
 test("register login create topic reply and interactions", async ({ page, request }) => {
   const suffix = Date.now().toString(36);
   const username = `smoke_${suffix}`;
@@ -76,7 +89,7 @@ test("register login create topic reply and interactions", async ({ page, reques
   await page.getByRole("button", { name: buttonName("发布主题") }).last().click();
 
   await expect(page.getByRole("heading", { name: topicTitle })).toBeVisible();
-  const topicId = new URL(page.url()).pathname.split("/").filter(Boolean).pop();
+  const topicId = topicIdFromUrl(page.url());
   if (!topicId) {
     throw new Error("Expected topic id in topic detail URL");
   }

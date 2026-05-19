@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiRequest } from "@/shared/api/client";
+import { apiDelete, apiGet, apiPost, apiRequest } from "@/shared/api/client";
 
 import type { CreatePostRequest, PostResponse, UpdatePostRequest } from "./model";
 
@@ -15,4 +15,8 @@ export function updatePost(postId: string, payload: UpdatePostRequest): Promise<
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+}
+
+export function deletePost(postId: string): Promise<PostResponse> {
+  return apiDelete<PostResponse>(`/posts/${postId}`);
 }

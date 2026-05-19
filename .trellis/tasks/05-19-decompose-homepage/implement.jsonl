@@ -1,0 +1,5 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "首页组件拆分与单文件阈值"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "文件组织"}
+{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "保持真实 API 数据流"}

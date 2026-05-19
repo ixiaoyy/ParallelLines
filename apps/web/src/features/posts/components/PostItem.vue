@@ -5,7 +5,7 @@ import type { PostItemVM } from "@/entities/post/model";
 import { setPostLike } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
 import { useCreateFlag } from "@/features/moderation/queries";
-import { useUpdatePost } from "@/features/posts/queries";
+import { useDeletePost, useUpdatePost } from "@/features/posts/queries";
 import { hasAccessToken } from "@/shared/api/client";
 import { relativeTime } from "@/shared/lib/format";
 import UiAvatar from "@/shared/ui/Avatar.vue";
@@ -25,12 +25,16 @@ const editing = ref(false);
 const editDraft = ref(props.post.rawMd);
 const firstCodeText = computed(() => extractFirstCodeText(props.post.cookedHtml));
 const hasCodeBlock = computed(() => firstCodeText.value.length > 0);
-const canEdit = computed(() => Boolean(props.currentUserId && props.currentUserId === props.post.userId && !props.post.deleted));
+const isOwnPost = computed(() => Boolean(props.currentUserId && props.currentUserId === props.post.userId));
+const canEdit = computed(() => Boolean(isOwnPost.value && props.post.floor === 1 && !props.post.deleted));
+const canDelete = computed(() => Boolean(isOwnPost.value && props.post.floor > 1 && !props.post.deleted));
 const canFlag = computed(() => hasAccessToken() && !props.post.deleted);
 const flagPostMutation = useCreateFlag();
 const flagPending = computed(() => flagPostMutation.isPending.value);
 const updatePostMutation = useUpdatePost(() => props.post.topicId);
+const deletePostMutation = useDeletePost(() => props.post.topicId);
 const savingEdit = computed(() => updatePostMutation.isPending.value);
+const deletingPost = computed(() => deletePostMutation.isPending.value);
 const {
   active: liked,
   count: optimisticLikeCount,
@@ -101,6 +105,22 @@ function saveEdit() {
   );
 }
 
+function deleteReply() {
+  if (!canDelete.value || deletingPost.value) {
+    return;
+  }
+
+  const confirmed = window.confirm("确定删除这条回复吗？删除后正文会被隐藏。");
+  if (!confirmed) {
+    return;
+  }
+
+  deletePostMutation.mutate(props.post.id, {
+    onSuccess: () => setStatus("回复已删除"),
+    onError: () => setStatus("删除失败，请确认登录状态后重试"),
+  });
+}
+
 function flagPost() {
   if (!canFlag.value) {
     return;
@@ -154,7 +174,7 @@ function setStatus(message: string) {
     </aside>
     <article class="post-body">
       <time>{{ relativeTime(post.createdAt) }}</time>
-      <div v-if="post.deleted" class="deleted-copy">该楼层已被版主隐藏。</div>
+      <div v-if="post.deleted" class="deleted-copy">该楼层已删除或隐藏。</div>
       <template v-else-if="editing">
         <label class="edit-field">
           <span>编辑本楼层</span>
@@ -169,7 +189,7 @@ function setStatus(message: string) {
       </template>
       <div v-else class="markdown-body" v-html="post.cookedHtml" />
       <p v-if="statusMessage" class="post-status" role="status">{{ statusMessage }}</p>
-      <footer>
+      <footer v-if="!post.deleted">
         <UiButton
           :tone="liked ? 'success' : 'ghost'"
           :aria-pressed="liked"
@@ -183,6 +203,9 @@ function setStatus(message: string) {
         <UiButton tone="ghost" :disabled="flagPending || !canFlag" @click="flagPost">举报</UiButton>
         <UiButton tone="ghost" @click="quotePost">引用</UiButton>
         <UiButton v-if="canEdit" tone="subtle" @click="startEdit">编辑</UiButton>
+        <UiButton v-if="canDelete" class="post-delete-button" tone="ghost" :disabled="deletingPost" @click="deleteReply">
+          {{ deletingPost ? "删除中…" : "删除" }}
+        </UiButton>
       </footer>
     </article>
   </UiCard>

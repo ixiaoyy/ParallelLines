@@ -1,0 +1,57 @@
+.home-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.75rem 0.25rem 0.1rem;
+}
+
+.home-section-head--feed {
+  margin-top: 0.95rem;
+}
+
+.home-section-head h2 {
+  margin: 0;
+  color: var(--title);
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+
+.home-section-head p {
+  margin: 0.38rem 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.section-link {
+  display: inline-flex;
+  min-height: 2.8rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 0.72rem 1rem;
+  color: color-mix(in srgb, var(--primary) 32%, var(--text));
+  background: var(--bg-surface);
+  text-decoration: none;
+  font-weight: 800;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.section-link:hover,
+.section-link:focus-visible {
+  border-color: var(--accent-geek);
+  color: var(--primary);
+  outline: none;
+}
+
+@media (max-width: 720px) {
+  .home-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -4,12 +4,13 @@ import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
+import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiBadge from "@/shared/ui/Badge.vue";
 
 const props = defineProps<{ topic: TopicCardVM }>();
 
-const topicUrl = computed(() => `/t/${props.topic.slug}/${props.topic.id}`);
+const topicRoute = computed(() => topicDetailRoute(props.topic));
 const visiblePosterNames = computed(() => props.topic.posterNames.slice(0, 3));
 const extraPosterCount = computed(() => Math.max(props.topic.posterNames.length - visiblePosterNames.value.length, 0));
 
@@ -47,7 +48,7 @@ const answerState = computed(() => {
         <UiBadge v-if="topic.featured && !topic.solved" tone="green">精华</UiBadge>
         <UiBadge v-if="topic.unreadCount" tone="blue">{{ topic.unreadCount }} 新</UiBadge>
         <LockOutlined v-if="topic.status === 'closed'" class="topic-status-icon" aria-label="已关闭" />
-        <RouterLink class="topic-title" :to="topicUrl">{{ topic.title }}</RouterLink>
+        <RouterLink class="topic-title" :to="topicRoute">{{ topic.title }}</RouterLink>
       </div>
 
       <p class="topic-excerpt">{{ topic.excerpt }}</p>

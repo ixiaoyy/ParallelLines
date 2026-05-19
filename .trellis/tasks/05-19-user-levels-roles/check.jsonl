@@ -1,0 +1,11 @@
+{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
+{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "检查用户角色/等级跨层契约完整性"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "检查角色常量和权限判断是否复用"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "检查迁移、默认值和回填"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "检查权限错误语义"}
+{"file": ".trellis/spec/backend/moderation-admin-safety.md", "reason": "检查管理员权限安全"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查后端测试质量"}
+{"file": ".trellis/spec/frontend/auth-user-session.md", "reason": "检查会话 DTO/UI 状态"}
+{"file": ".trellis/spec/frontend/moderation-admin-safety.md", "reason": "检查管理员入口与保护"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "检查前端类型安全"}

@@ -1,0 +1,7 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "文件组织与组件拆分要求"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Vue/SCSS/UI 组件规范"}
+{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "主题详情 API/VM 边界"}
+{"file": ".trellis/spec/frontend/post-actions.md", "reason": "帖子详情操作行为合同"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "响应式与质量门槛"}

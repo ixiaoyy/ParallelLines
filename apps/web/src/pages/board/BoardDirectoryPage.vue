@@ -5,6 +5,7 @@ import type { BoardSummary } from "@/entities/board/model";
 import { useBoards } from "@/features/boards/queries";
 import { useTopicFeed } from "@/features/topics/queries";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
+import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
@@ -195,7 +196,7 @@ function getTopicsByBoardSlugLocal(slug: string) {
               <RouterLink
                 v-for="topic in previewTopics(board)"
                 :key="topic.id"
-                :to="`/t/${topic.slug}/${topic.id}`"
+                :to="topicDetailRoute(topic)"
               >
                 <span>{{ topic.title }}</span>
                 <small>
@@ -227,7 +228,7 @@ function getTopicsByBoardSlugLocal(slug: string) {
           <h2>优先从这些主题开始</h2>
           <ul>
             <li v-for="topic in featuredTopics" :key="topic.id">
-              <RouterLink :to="`/t/${topic.slug}/${topic.id}`">{{ topic.title }}</RouterLink>
+              <RouterLink :to="topicDetailRoute(topic)">{{ topic.title }}</RouterLink>
               <small>{{ topic.boardName }} · {{ topic.solved ? "已解决" : topic.officialReply ? "官方回复" : "精华" }}</small>
             </li>
           </ul>

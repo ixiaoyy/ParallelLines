@@ -25,14 +25,14 @@ async def test_register_login_and_me() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         register = await client.post(
             "/api/v1/auth/register",
-            json={"username": "lina", "email": "lina@example.com", "password": "strong-pass-123"},
+            json={"username": "大脚板", "email": "lina@example.com", "password": "strong-pass-123"},
         )
         assert register.status_code == 201
         access_token = register.json()["data"]["access_token"]
 
         login = await client.post(
             "/api/v1/auth/login",
-            json={"account": "lina@example.com", "password": "strong-pass-123"},
+            json={"account": "大脚板", "password": "strong-pass-123"},
         )
         assert login.status_code == 200
 
@@ -41,6 +41,17 @@ async def test_register_login_and_me() -> None:
             headers={"Authorization": f"Bearer {access_token}"},
         )
         assert me.status_code == 200
-        assert me.json()["data"]["username"] == "lina"
+        assert me.json()["data"]["username"] == "大脚板"
+
+        invalid_username = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "bad name",
+                "email": "bad-name@example.com",
+                "password": "strong-pass-123",
+            },
+        )
+        assert invalid_username.status_code == 422
+        assert invalid_username.json()["error"]["code"] == "validation_error"
 
     await engine.dispose()

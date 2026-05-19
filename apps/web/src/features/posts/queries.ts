@@ -5,7 +5,7 @@ import type { MaybeRefOrGetter } from "vue";
 import { hasAccessToken } from "@/shared/api/client";
 import { queryKeys } from "@/shared/api/queryKeys";
 
-import { createPost, fetchPosts, updatePost } from "./api";
+import { createPost, deletePost, fetchPosts, updatePost } from "./api";
 import { toPostItem } from "./model";
 import type { CreatePostRequest, PostResponse, UpdatePostRequest } from "./model";
 
@@ -52,6 +52,25 @@ export function useUpdatePost(topicId: MaybeRefOrGetter<string>) {
       }
 
       return updatePost(postId, payload);
+    },
+    onSuccess: () => {
+      const id = toValue(topicId);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.posts(id) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.topic(id) });
+    },
+  });
+}
+
+export function useDeletePost(topicId: MaybeRefOrGetter<string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<PostResponse, Error, string>({
+    mutationFn: (postId) => {
+      if (!postId || !hasAccessToken()) {
+        throw new Error("authentication_required");
+      }
+
+      return deletePost(postId);
     },
     onSuccess: () => {
       const id = toValue(topicId);

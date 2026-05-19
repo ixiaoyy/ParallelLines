@@ -7,6 +7,7 @@ import { useBoards } from "@/features/boards/queries";
 import { useCreateTopic } from "@/features/topics/queries";
 import { compactNumber } from "@/shared/lib/format";
 import { readRouteParam } from "@/shared/router/params";
+import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -163,7 +164,7 @@ async function handleSubmit() {
       },
     });
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
-    await router.push({ name: "topic-detail", params: { slug: topic.slug, id: topic.id } });
+    await router.push(topicDetailRoute(topic));
   } catch {
     publishState.value = "submitted";
     publishError.value = "当前未登录或服务暂时不可用，已保留为发布预览；登录后可再次提交。";

@@ -16,6 +16,7 @@ import {
 } from "@/features/moderation/queries";
 import { hasAccessToken } from "@/shared/api/client";
 import { relativeTime } from "@/shared/lib/format";
+import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
@@ -81,10 +82,11 @@ function updateUser() {
 function targetRoute(flag: FlagResponse) {
   const topicId = flag.target.topic_id ?? flag.target.target_id;
   const topicSlug = flag.target.topic_slug ?? flag.target.board_slug;
-  return {
-    path: `/t/${topicSlug}/${topicId}`,
-    hash: flag.target.post_number ? `#post-${flag.target.post_number}` : "",
-  };
+  return topicDetailRoute({
+    id: topicId,
+    slug: topicSlug,
+    hash: flag.target.post_number ? `post-${flag.target.post_number}` : null,
+  });
 }
 </script>
 
