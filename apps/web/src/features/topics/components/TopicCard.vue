@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircleOutlined, LockOutlined } from "@ant-design/icons-vue";
+import { CheckCircleOutlined, LockOutlined, MessageOutlined } from "@ant-design/icons-vue";
 import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
@@ -60,7 +60,6 @@ const answerState = computed(() => {
         </span>
 
         <span v-for="tag in topic.tags" :key="tag" class="topic-tag">#{{ tag }}</span>
-        <span>{{ compactNumber(topic.viewCount) }} 浏览</span>
       </div>
 
       <div class="participant-strip" aria-label="参与者">
@@ -86,7 +85,10 @@ const answerState = computed(() => {
     </div>
 
     <div class="topic-stat">
-      <strong>{{ compactNumber(topic.replyCount) }}</strong>
+      <div class="topic-stat__bubble">
+        <MessageOutlined class="stat-icon" />
+        <strong>{{ compactNumber(topic.replyCount) }}</strong>
+      </div>
       <span>回复</span>
     </div>
 

@@ -35,8 +35,35 @@ services:
       JWT_SECRET_KEY: local-dev-secret-change-before-deploying
       CORS_ORIGINS: '["http://localhost:5174","http://127.0.0.1:5174"]'
       SLOW_REQUEST_MS: 500
+      EMAIL_DELIVERY_MODE: memory
+      PASSWORD_RESET_TOKEN_TTL_MINUTES: 30
+      EMAIL_CHANGE_TOKEN_TTL_MINUTES: 30
+      TWO_FACTOR_CHALLENGE_MINUTES: 5
+      TWO_FACTOR_ISSUER: ParallelLines
+      OAUTH_ENABLED_PROVIDERS: "[]"
+      RATE_LIMIT_WINDOW_SECONDS: 60
+      RATE_LIMIT_REGISTER_IP: 5
+      RATE_LIMIT_REGISTER_EMAIL: 3
+      RATE_LIMIT_LOGIN_IP: 10
+      RATE_LIMIT_LOGIN_ACCOUNT: 10
+      RATE_LIMIT_TOPIC_USER: 5
+      RATE_LIMIT_TOPIC_IP: 10
+      RATE_LIMIT_REPLY_USER: 10
+      RATE_LIMIT_REPLY_IP: 20
+      RATE_LIMIT_UPLOAD_USER: 20
+      RATE_LIMIT_UPLOAD_IP: 30
+      RATE_LIMIT_FLAG_USER: 10
+      RATE_LIMIT_FLAG_IP: 20
+      NEW_USER_LINK_LIMIT: 5
+      NEW_USER_SCREENING_DAYS: 7
+      UPLOAD_STORAGE_BACKEND: local
+      UPLOAD_STORAGE_PATH: /var/lib/parallellines/uploads
+      UPLOAD_MAX_BYTES: 5242880
+      UPLOAD_MAX_AVATAR_BYTES: 2097152
     ports:
       - "8000:8000"
+    volumes:
+      - upload-data:/var/lib/parallellines/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -66,10 +93,30 @@ services:
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET_KEY: local-dev-secret-change-before-deploying
       HOT_RANK_INTERVAL_SECONDS: 300
+      EMAIL_DELIVERY_MODE: memory
     depends_on:
       api:
         condition: service_healthy
     command: python -m app.workers.hot_ranking
+
+  upload-cleanup-worker:
+    build:
+      context: ./apps/api
+    environment:
+      ENVIRONMENT: local
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/parallellines
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: local-dev-secret-change-before-deploying
+      EMAIL_DELIVERY_MODE: memory
+      UPLOAD_STORAGE_BACKEND: local
+      UPLOAD_STORAGE_PATH: /var/lib/parallellines/uploads
+      UPLOAD_CLEANUP_INTERVAL_SECONDS: 3600
+    volumes:
+      - upload-data:/var/lib/parallellines/uploads
+    depends_on:
+      api:
+        condition: service_healthy
+    command: python -m app.workers.upload_cleanup
 
   web:
     build:
@@ -87,3 +134,4 @@ services:
 
 volumes:
   postgres-data:
+  upload-data:

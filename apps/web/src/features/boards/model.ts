@@ -28,6 +28,7 @@ export function toBoardSummary(board: BoardResponse): BoardSummary {
     name: board.name,
     description: board.description,
     color: board.color,
+    visibility: board.visibility,
     topicCount: board.topic_count,
     postCount: board.post_count,
     followerCount: board.follower_count,

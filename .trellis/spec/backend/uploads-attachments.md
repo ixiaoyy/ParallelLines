@@ -1,0 +1,141 @@
+# Backend Uploads, Avatars, and Attachment Contract
+
+## Scenario: Safe local uploads with post attachment ACL
+
+### 1. Scope / Trigger
+
+- Trigger: implementing or changing file upload, avatar upload, attachment references in
+  Markdown, local/S3 storage configuration, or upload cleanup jobs.
+- Applies to `apps/api/app/models/upload.py`, `schemas/uploads.py`, `services/uploads.py`,
+  `api/v1/uploads.py`, `services/forum.py`, `workers/upload_cleanup.py`, and upload migrations.
+
+### 2. Signatures
+
+API endpoints:
+
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `POST /api/v1/uploads` multipart `file`, form `kind=post_attachment|avatar` | active user | Save one upload and return metadata/URL. |
+| `POST /api/v1/uploads/avatar` multipart `file` | active user | Save avatar image, update `User.avatar_url`, return `UserPublic`. |
+| `GET /api/v1/uploads/{upload_id}/content?download=false` | optional | Stream file content after avatar/public/private ACL checks. |
+
+DB table:
+
+- `uploads`: `user_id`, `board_id`, `topic_id`, `post_id`, `original_filename`,
+  `storage_backend`, `storage_key`, `media_type`, `byte_size`, `sha256`, `kind`,
+  `status`, `is_image`, `expires_at`, `deleted_at`, timestamps.
+
+Settings:
+
+- `UPLOAD_STORAGE_BACKEND=local|s3`
+- `UPLOAD_STORAGE_PATH=var/uploads`
+- `UPLOAD_CDN_BASE_URL`, `UPLOAD_S3_BUCKET`, `UPLOAD_S3_REGION`,
+  `UPLOAD_S3_ENDPOINT_URL`
+- `UPLOAD_MAX_BYTES`, `UPLOAD_MAX_AVATAR_BYTES`, `UPLOAD_MAX_FILES_PER_POST`
+- `UPLOAD_TEMPORARY_TTL_HOURS`, `UPLOAD_CLEANUP_INTERVAL_SECONDS`
+
+Service methods:
+
+- `UploadService.create_post_upload(file, current_user) -> Upload`
+- `UploadService.update_avatar(file, current_user) -> Upload`
+- `UploadService.attach_uploads_to_post(raw_md, post, topic, board, current_user) -> None`
+- `UploadService.get_upload_content(upload_id, current_user) -> UploadContent`
+- `UploadService.cleanup_expired_temporary_uploads() -> int`
+
+### 3. Contracts
+
+- Routers parse multipart input only; `UploadService` owns validation, disk writes,
+  DB metadata, ACL checks, and cleanup.
+- Upload URLs returned to clients are API-relative (`/uploads/{id}/content`); clients may
+  convert them to absolute API URLs before inserting Markdown.
+- `services/forum.py` must call `attach_uploads_to_post` after creating the first post,
+  creating replies, and editing the topic first post. Attachments are discovered from
+  Markdown URLs matching `/uploads/{id}/content` or `/api/v1/uploads/{id}/content`.
+- Temporary post uploads start as `status="temporary"` and expire after
+  `UPLOAD_TEMPORARY_TTL_HOURS`; attaching sets `status="attached"` and clears expiry.
+- Avatar uploads must be images and set `status="avatar"`; `User.avatar_url` stores the
+  API-relative content URL.
+- Private-board attachments follow board visibility:
+  - avatar: public;
+  - temporary upload: owner only;
+  - attached upload: readable only when the parent post/topic is visible and the current
+    user can access the board;
+  - deleted/hidden post or deleted upload: always `upload_not_found`.
+- Validation is based on server-side signature sniffing, not only browser MIME headers.
+  Disallowed active types include `svg`, `html`, `js`, shell/PowerShell/batch scripts,
+  PHP, DLL, COM, and EXE.
+- Local storage paths are generated from upload UUIDs and must never accept user-provided
+  path segments.
+
+### 4. Validation & Error Matrix
+
+| Case | Error/Behavior |
+|---|---|
+| No auth uploads | `authentication_required` / 401 |
+| Unsupported storage backend selected | `upload_storage_backend_unavailable` / 503 |
+| Empty file | `upload_empty` / 422 |
+| Exceeds configured size | `upload_too_large` / 422 with `max_bytes` |
+| Disallowed extension/signature | `upload_type_not_allowed` / 422 |
+| Declared MIME disagrees with sniffed content | `upload_mime_mismatch` / 422 |
+| Avatar is not image | `avatar_must_be_image` / 422 |
+| Markdown references another user's temporary upload | `upload_forbidden` / 403 |
+| Markdown references missing/deleted upload | `upload_not_found` / 404 |
+| Single post references too many uploads | `upload_count_exceeded` / 422 |
+| Anonymous reads public-board attached image | 200 |
+| Anonymous/stranger reads private-board attachment | `upload_not_found` / 404 |
+| Accepted private-board member reads attachment | 200 |
+
+### 5. Good/Base/Bad Cases
+
+- Good: upload image → insert `![diagram](https://api/api/v1/uploads/{id}/content)` →
+  create topic → service attaches upload to first post → refreshed post renders `<img>`.
+- Base: user uploads avatar with `POST /uploads/avatar`, then `/auth/me` and
+  `/users/{username}` return the same `avatar_url`.
+- Bad: frontend hides the link to a private attachment but `GET /uploads/{id}/content`
+  streams it to anonymous users.
+- Bad: trusting `UploadFile.content_type == "image/png"` without checking PNG bytes.
+- Bad: storing an absolute local path in `uploads.storage_key`.
+
+### 6. Tests Required
+
+- `tests/test_uploads.py` must assert:
+  - image upload attaches to topic first post and renders `<img>`;
+  - content route returns original bytes for public attached uploads;
+  - disallowed extension, MIME mismatch, and oversize files return project error shape;
+  - avatar upload updates `/auth/me` and public profile consistently;
+  - private-board attachments are hidden from anonymous/stranger and visible after invite accept.
+- Regression commands:
+  - `ruff check app tests alembic`
+  - `pytest -q --tb=short`
+  - Alembic upgrade on a clean database through `0009_uploads`.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```python
+path = Path(settings.upload_storage_path) / file.filename
+path.write_bytes(await file.read())
+return {"url": f"/static/{file.filename}"}
+```
+
+#### Correct
+
+```python
+upload = await UploadService(session, settings).create_post_upload(file, current_user)
+await session.commit()
+return ApiResponse(data=UploadResponse.from_model(upload))
+```
+
+#### Wrong
+
+```python
+return FileResponse(upload.storage_key)
+```
+
+#### Correct
+
+```python
+content = await UploadService(session, settings).get_upload_content(upload_id, current_user)
+return FileResponse(content.path, media_type=content.upload.media_type)
+```

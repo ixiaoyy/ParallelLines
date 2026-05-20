@@ -8,6 +8,7 @@ from app.db.base import Base
 from app.main import create_app
 from app.models.moderation import AuditLog, Flag
 from app.models.user import User
+from tests.helpers import register_and_verify_user
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
@@ -18,16 +19,7 @@ async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], objec
 
 
 async def register_user(client: AsyncClient, username: str) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/register",
-        json={
-            "username": username,
-            "email": f"{username}@example.com",
-            "password": "strong-pass-123",
-        },
-    )
-    assert response.status_code == 201
-    data = response.json()["data"]
+    data = await register_and_verify_user(client, username)
     return {
         "id": data["user"]["id"],
         "token": data["access_token"],
@@ -103,6 +95,19 @@ async def test_report_queue_hide_post_and_audit_permissions() -> None:
         assert flag_data["status"] == "pending"
         assert flag_data["target"]["board_slug"] == "support"
 
+        duplicate_flag = await client.post(
+            "/api/v1/moderation/flags",
+            headers=reporter_headers,
+            json={
+                "target_type": "post",
+                "target_id": fixture["post_id"],
+                "reason": "spam",
+                "detail": "再次举报应合并到同一待处理记录。",
+            },
+        )
+        assert duplicate_flag.status_code == 201
+        assert duplicate_flag.json()["data"]["id"] == flag_data["id"]
+
         forbidden_queue = await client.get("/api/v1/moderation/queue", headers=reporter_headers)
         assert forbidden_queue.status_code == 403
 
@@ -126,6 +131,10 @@ async def test_report_queue_hide_post_and_audit_permissions() -> None:
         assert hidden_post["deleted_at"] is not None
         assert hidden_post["raw_md"] == ""
         assert hidden_post["cooked_html"] == ""
+
+        hidden_search = await client.get("/api/v1/search?q=具体内容")
+        assert hidden_search.status_code == 200
+        assert fixture["topic_id"] not in {item["id"] for item in hidden_search.json()["data"]}
 
         resolved = await client.put(
             f"/api/v1/moderation/flags/{flag_data['id']}/status",

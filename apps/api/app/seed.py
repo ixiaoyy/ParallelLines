@@ -307,10 +307,18 @@ def starter_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dic
     ]
 
 
-async def upsert_user(session: AsyncSession, *, username: str, email: str, role: str) -> User:
+async def upsert_user(
+    session: AsyncSession,
+    *,
+    username: str,
+    email: str,
+    role: str,
+    level: int = 0,
+) -> User:
     user = await session.scalar(select(User).where(User.username == username))
     if user:
         user.role = role
+        user.level = level
         user.status = "active"
         return user
     user = User(
@@ -318,6 +326,7 @@ async def upsert_user(session: AsyncSession, *, username: str, email: str, role:
         email=email,
         hashed_password=hash_password(DEMO_PASSWORD),
         role=role,
+        level=level,
         status="active",
     )
     session.add(user)

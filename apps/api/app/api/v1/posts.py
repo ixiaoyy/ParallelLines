@@ -1,8 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
 from app.api.v1.dependencies import CurrentUserDep, SessionDep
 from app.schemas.common import ApiResponse
-from app.schemas.forum import PostResponse, PostUpdateRequest
+from app.schemas.forum import (
+    PostResponse,
+    PostRevisionResponse,
+    PostRevisionRestoreRequest,
+    PostUpdateRequest,
+)
 from app.services.forum import ForumService
 
 router = APIRouter(prefix="/posts", tags=["posts"])
@@ -12,10 +17,55 @@ router = APIRouter(prefix="/posts", tags=["posts"])
 async def update_post(
     post_id: str,
     payload: PostUpdateRequest,
+    request: Request,
     session: SessionDep,
     current_user: CurrentUserDep,
 ) -> ApiResponse[PostResponse]:
-    post = await ForumService(session).update_post(post_id, payload, current_user)
+    post = await ForumService(session).update_post(post_id, payload, current_user, request)
+    return ApiResponse(data=PostResponse.from_model(post))
+
+
+@router.get("/{post_id}/revisions", response_model=ApiResponse[list[PostRevisionResponse]])
+async def list_post_revisions(
+    post_id: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[list[PostRevisionResponse]]:
+    revisions = await ForumService(session).list_post_revisions(post_id, current_user)
+    return ApiResponse(data=[PostRevisionResponse.from_model(revision) for revision in revisions])
+
+
+@router.get(
+    "/{post_id}/revisions/{revision_id}",
+    response_model=ApiResponse[PostRevisionResponse],
+)
+async def get_post_revision(
+    post_id: str,
+    revision_id: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[PostRevisionResponse]:
+    revision = await ForumService(session).get_post_revision(post_id, revision_id, current_user)
+    return ApiResponse(data=PostRevisionResponse.from_model(revision))
+
+
+@router.post(
+    "/{post_id}/revisions/{revision_id}/restore",
+    response_model=ApiResponse[PostResponse],
+)
+async def restore_post_revision(
+    post_id: str,
+    revision_id: str,
+    payload: PostRevisionRestoreRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[PostResponse]:
+    post = await ForumService(session).restore_post_revision(
+        post_id,
+        revision_id,
+        payload,
+        current_user,
+    )
     return ApiResponse(data=PostResponse.from_model(post))
 
 

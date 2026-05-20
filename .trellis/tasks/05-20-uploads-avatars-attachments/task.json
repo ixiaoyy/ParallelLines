@@ -1,0 +1,84 @@
+{
+  "id": "uploads-avatars-attachments",
+  "name": "uploads-avatars-attachments",
+  "title": "上传、头像与附件存储",
+  "description": "补齐图片/文件上传、头像上传、附件引用、存储清理与 CDN/S3 兼容能力。",
+  "status": "completed",
+  "dev_type": "fullstack",
+  "scope": "uploads",
+  "package": null,
+  "priority": "P0",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-20",
+  "completedAt": "2026-05-20",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 6,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [
+    {
+      "name": "Backend upload model, migration, validation, content route, and cleanup worker",
+      "status": "completed"
+    },
+    {
+      "name": "Attachment binding to topic/reply/edit Markdown with private-board ACL",
+      "status": "completed"
+    },
+    {
+      "name": "Frontend composer upload insertion and profile avatar upload",
+      "status": "completed"
+    },
+    {
+      "name": "Specs, docs, Docker storage volume, and quality checks",
+      "status": "completed"
+    }
+  ],
+  "children": [],
+  "parent": "05-20-discourse-parity-roadmap",
+  "relatedFiles": [
+    "apps/api/app/models/upload.py",
+    "apps/api/alembic/versions/0009_uploads.py",
+    "apps/api/app/api/v1/uploads.py",
+    "apps/api/app/services/uploads.py",
+    "apps/api/app/services/forum.py",
+    "apps/api/app/workers/upload_cleanup.py",
+    "apps/api/tests/test_uploads.py",
+    "apps/web/src/features/uploads/",
+    "apps/web/src/features/topics/components/ComposerDrawer.vue",
+    "apps/web/src/pages/topic/NewTopicPage.vue",
+    "apps/web/src/pages/user/UserProfilePage.vue",
+    ".trellis/spec/backend/uploads-attachments.md",
+    ".trellis/spec/frontend/uploads-attachments.md"
+  ],
+  "notes": "Implemented safe multipart uploads, local upload metadata/storage, avatar updates, Markdown attachment binding, private-board attachment ACL, temporary upload cleanup worker, Docker upload volume, frontend composer upload insertion, and own-profile avatar upload. Checks passed: API ruff, full API pytest (22 passed), Alembic clean SQLite upgrade through 0009, web typecheck/lint/build, docker compose config, and git diff --check.",
+  "meta": {}
+}

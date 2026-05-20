@@ -1,0 +1,53 @@
+{
+  "id": "background-job-scheduler",
+  "name": "background-job-scheduler",
+  "title": "后台任务队列、重试与定时调度",
+  "description": "建立可靠后台任务体系，承载邮件、通知、索引、清理、备份和统计等异步工作。",
+  "status": "planning",
+  "dev_type": "backend",
+  "scope": "infra",
+  "package": null,
+  "priority": "P0",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-20",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "05-20-discourse-parity-roadmap",
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

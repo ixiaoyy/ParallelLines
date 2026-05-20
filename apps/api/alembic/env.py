@@ -15,14 +15,22 @@ from app.models import (  # noqa: F401
     Board,
     BoardMember,
     Bookmark,
+    EmailVerificationCode,
     Flag,
     Notification,
     Post,
+    PostRevision,
+    RateLimitEvent,
     Reaction,
+    ScreenedRule,
+    SpamAction,
     Tag,
     Topic,
     TopicRead,
     User,
+    UserRecoveryCode,
+    UserSecurityToken,
+    UserSession,
 )
 
 config = context.config

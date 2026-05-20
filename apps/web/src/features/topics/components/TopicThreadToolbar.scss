@@ -35,6 +35,16 @@
   justify-content: flex-end;
 }
 
+.lifecycle-actions {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  border-top: 1px solid rgba(var(--primary-rgb), 0.1);
+  padding-top: 0.75rem;
+}
+
 .toolbar-status {
   grid-column: 1 / -1;
   margin: 0;
@@ -50,6 +60,7 @@
 
   .toolbar-summary,
   .toolbar-actions,
+  .lifecycle-actions,
   .toolbar-status {
     grid-column: 1;
     grid-row: auto;

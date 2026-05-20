@@ -1,0 +1,53 @@
+{
+  "id": "user-social-relationships-pm",
+  "name": "user-social-relationships-pm",
+  "title": "用户关注、忽略/屏蔽与私信",
+  "description": "实现用户关系和私密交流能力：关注用户、忽略/屏蔽用户、私信主题。",
+  "status": "planning",
+  "dev_type": "fullstack",
+  "scope": "social",
+  "package": null,
+  "priority": "P1",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-20",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "05-20-discourse-parity-roadmap",
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

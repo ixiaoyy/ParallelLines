@@ -11,7 +11,9 @@ class UserPublic(ORMModel):
     email: EmailStr
     avatar_url: str | None = None
     role: str
+    level: int
     status: str
+    two_factor_enabled: bool
     created_at: datetime
 
 
@@ -20,6 +22,7 @@ class UserProfileResponse(ORMModel):
     username: str
     avatar_url: str | None = None
     role: str
+    level: int
     status: str
     created_at: datetime
     topic_count: int

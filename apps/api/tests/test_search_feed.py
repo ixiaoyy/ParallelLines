@@ -8,6 +8,7 @@ from app.db.base import Base
 from app.main import create_app
 from app.models.forum import Topic
 from app.workers.hot_ranking import recompute_hot_scores
+from tests.helpers import register_and_verify_user
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
@@ -18,16 +19,8 @@ async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], objec
 
 
 async def register_user(client: AsyncClient) -> str:
-    response = await client.post(
-        "/api/v1/auth/register",
-        json={
-            "username": "searcher",
-            "email": "searcher@example.com",
-            "password": "strong-pass-123",
-        },
-    )
-    assert response.status_code == 201
-    return f"Bearer {response.json()['data']['access_token']}"
+    response = await register_and_verify_user(client, "searcher", email="searcher@example.com")
+    return f"Bearer {response['access_token']}"
 
 
 async def create_board(client: AsyncClient, auth: str, slug: str, name: str) -> None:

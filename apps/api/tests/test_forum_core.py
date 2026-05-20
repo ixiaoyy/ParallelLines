@@ -10,6 +10,7 @@ from app.models.forum import Board, Post, Topic, TopicRead
 from app.models.user import User
 from app.schemas.forum import BoardCreateRequest, PostCreateRequest, TopicCreateRequest
 from app.services.forum import ForumService
+from tests.helpers import register_and_verify_user
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
@@ -31,16 +32,8 @@ async def test_forum_api_happy_path() -> None:
     app.dependency_overrides[get_session] = override_session
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        register = await client.post(
-            "/api/v1/auth/register",
-            json={
-                "username": "lina",
-                "email": "lina@example.com",
-                "password": "strong-pass-123",
-            },
-        )
-        assert register.status_code == 201
-        headers = {"Authorization": f"Bearer {register.json()['data']['access_token']}"}
+        user = await register_and_verify_user(client, "lina", email="lina@example.com")
+        headers = {"Authorization": f"Bearer {user['access_token']}"}
 
         board = await client.post(
             "/api/v1/boards",

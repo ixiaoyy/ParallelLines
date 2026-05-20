@@ -1,0 +1,53 @@
+{
+  "id": "admin-site-settings-user-management",
+  "name": "admin-site-settings-user-management",
+  "title": "后台站点设置、用户管理与系统面板",
+  "description": "从单一审核台扩展为可运营后台：用户管理、站点设置、系统健康、邮件日志与审计。",
+  "status": "planning",
+  "dev_type": "fullstack",
+  "scope": "admin",
+  "package": null,
+  "priority": "P0",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-20",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "05-20-discourse-parity-roadmap",
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

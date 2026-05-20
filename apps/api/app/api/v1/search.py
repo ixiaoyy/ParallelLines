@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from app.api.v1.dependencies import SessionDep
+from app.api.v1.dependencies import OptionalCurrentUserDep, SessionDep
 from app.schemas.common import ApiResponse
 from app.schemas.forum import TopicResponse, TopicSort
 from app.services.forum import ForumService
@@ -14,6 +14,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 @router.get("", response_model=ApiResponse[list[TopicResponse]])
 async def search_topics(
     session: SessionDep,
+    current_user: OptionalCurrentUserDep,
     q: Annotated[str, Query(min_length=1, max_length=120)],
     board: str | None = None,
     tag: str | None = None,
@@ -30,6 +31,7 @@ async def search_topics(
         tag=tag,
         author=author,
         cursor=cursor,
+        current_user=current_user,
     )
     return ApiResponse(
         data=[TopicResponse.from_model(topic) for topic in topics],

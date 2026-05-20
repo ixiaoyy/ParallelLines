@@ -18,6 +18,10 @@
   letter-spacing: -0.035em;
 }
 
+.section-title-mobile {
+  display: none;
+}
+
 .home-section-head p {
   margin: 0.38rem 0 0;
   color: var(--muted);
@@ -53,5 +57,15 @@
   .home-section-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 980px) {
+  .section-title-desktop--has-mobile {
+    display: none;
+  }
+
+  .section-title-mobile {
+    display: inline;
   }
 }

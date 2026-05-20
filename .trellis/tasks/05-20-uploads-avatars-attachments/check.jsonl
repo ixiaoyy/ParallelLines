@@ -1,0 +1,11 @@
+{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
+{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
+{"file": ".trellis\\spec\\backend\\database-guidelines.md", "reason": "schema/migration verification"}
+{"file": ".trellis\\spec\\backend\\error-handling.md", "reason": "error shape verification"}
+{"file": ".trellis\\spec\\backend\\board-visibility-invites.md", "reason": "privacy verification"}
+{"file": ".trellis\\spec\\frontend\\forum-api-wiring.md", "reason": "API contract verification"}
+{"file": ".trellis\\spec\\frontend\\auth-user-session.md", "reason": "avatar session verification"}
+{"file": ".trellis\\spec\\frontend\\type-safety.md", "reason": "TS verification"}
+{"file": ".trellis\\spec\\backend\\uploads-attachments.md", "reason": "upload contract verification"}
+{"file": ".trellis\\spec\\frontend\\uploads-attachments.md", "reason": "frontend upload contract verification"}
+{"file": ".trellis\\spec\\backend\\deployment-observability.md", "reason": "upload env and cleanup worker verification"}

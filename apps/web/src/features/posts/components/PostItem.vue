@@ -5,8 +5,14 @@ import type { PostItemVM } from "@/entities/post/model";
 import { setPostLike } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
 import { useCreateFlag } from "@/features/moderation/queries";
-import { useDeletePost, useUpdatePost } from "@/features/posts/queries";
+import {
+  useDeletePost,
+  usePostRevisions,
+  useRestorePostRevision,
+  useUpdatePost,
+} from "@/features/posts/queries";
 import { hasAccessToken } from "@/shared/api/client";
+import { contentPolicyMessage } from "@/shared/api/errors";
 import { relativeTime } from "@/shared/lib/format";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiButton from "@/shared/ui/Button.vue";
@@ -15,6 +21,7 @@ import UiCard from "@/shared/ui/Card.vue";
 const props = defineProps<{
   post: PostItemVM;
   currentUserId?: string | null;
+  currentUserRole?: string | null;
 }>();
 const emit = defineEmits<{
   quote: [post: PostItemVM];
@@ -23,18 +30,33 @@ const emit = defineEmits<{
 const statusMessage = ref("");
 const editing = ref(false);
 const editDraft = ref(props.post.rawMd);
+const editReason = ref("");
+const historyOpen = ref(false);
 const firstCodeText = computed(() => extractFirstCodeText(props.post.cookedHtml));
 const hasCodeBlock = computed(() => firstCodeText.value.length > 0);
 const isOwnPost = computed(() => Boolean(props.currentUserId && props.currentUserId === props.post.userId));
+const canModerateGlobally = computed(
+  () => props.currentUserRole === "admin" || props.currentUserRole === "moderator",
+);
 const canEdit = computed(() => Boolean(isOwnPost.value && props.post.floor === 1 && !props.post.deleted));
 const canDelete = computed(() => Boolean(isOwnPost.value && props.post.floor > 1 && !props.post.deleted));
 const canFlag = computed(() => hasAccessToken() && !props.post.deleted);
+const canViewHistory = computed(
+  () => Boolean(!props.post.deleted && (isOwnPost.value || canModerateGlobally.value)),
+);
+const canRestoreHistory = computed(() => Boolean(!props.post.deleted && canModerateGlobally.value));
 const flagPostMutation = useCreateFlag();
 const flagPending = computed(() => flagPostMutation.isPending.value);
 const updatePostMutation = useUpdatePost(() => props.post.topicId);
 const deletePostMutation = useDeletePost(() => props.post.topicId);
+const revisionsQuery = usePostRevisions(
+  () => props.post.id,
+  () => historyOpen.value && canViewHistory.value,
+);
+const restoreRevisionMutation = useRestorePostRevision(() => props.post.topicId);
 const savingEdit = computed(() => updatePostMutation.isPending.value);
 const deletingPost = computed(() => deletePostMutation.isPending.value);
+const restoringRevision = computed(() => restoreRevisionMutation.isPending.value);
 const {
   active: liked,
   count: optimisticLikeCount,
@@ -78,6 +100,7 @@ function startEdit() {
   }
 
   editDraft.value = props.post.rawMd;
+  editReason.value = "";
   editing.value = true;
   statusMessage.value = "";
 }
@@ -85,6 +108,7 @@ function startEdit() {
 function cancelEdit() {
   editing.value = false;
   editDraft.value = props.post.rawMd;
+  editReason.value = "";
 }
 
 function saveEdit() {
@@ -94,13 +118,52 @@ function saveEdit() {
   }
 
   updatePostMutation.mutate(
-    { postId: props.post.id, payload: { raw_md: rawMd } },
+    {
+      postId: props.post.id,
+      payload: { raw_md: rawMd, edit_reason: editReason.value.trim() || null },
+    },
     {
       onSuccess: () => {
         editing.value = false;
+        editReason.value = "";
         setStatus("已保存编辑");
       },
-      onError: () => setStatus("保存失败，请确认登录状态后重试"),
+      onError: (error) => {
+        setStatus(contentPolicyMessage(error, "保存失败，请确认登录状态后重试"));
+      },
+    },
+  );
+}
+
+function toggleHistory() {
+  if (!canViewHistory.value) {
+    return;
+  }
+
+  historyOpen.value = !historyOpen.value;
+  if (historyOpen.value) {
+    void revisionsQuery.refetch();
+  }
+}
+
+function restoreRevision(revisionId: string, versionNumber: number) {
+  if (!canRestoreHistory.value || restoringRevision.value) {
+    return;
+  }
+
+  restoreRevisionMutation.mutate(
+    {
+      postId: props.post.id,
+      revisionId,
+      payload: { reason: `恢复到版本 ${versionNumber}` },
+    },
+    {
+      onSuccess: () => {
+        setStatus(`已恢复到版本 ${versionNumber}`);
+      },
+      onError: () => {
+        setStatus("恢复失败，请确认版主权限后重试");
+      },
     },
   );
 }
@@ -180,6 +243,10 @@ function setStatus(message: string) {
           <span>编辑本楼层</span>
           <textarea v-model="editDraft" rows="6" aria-label="编辑回复内容" />
         </label>
+        <label class="edit-field edit-field--compact">
+          <span>编辑原因（可选）</span>
+          <input v-model="editReason" maxlength="500" placeholder="例如：补充复现步骤、修正错别字" />
+        </label>
         <div class="edit-actions">
           <UiButton tone="primary" :disabled="!editDraft.trim() || savingEdit" @click="saveEdit">
             {{ savingEdit ? "保存中…" : "保存编辑" }}
@@ -203,10 +270,36 @@ function setStatus(message: string) {
         <UiButton tone="ghost" :disabled="flagPending || !canFlag" @click="flagPost">举报</UiButton>
         <UiButton tone="ghost" @click="quotePost">引用</UiButton>
         <UiButton v-if="canEdit" tone="subtle" @click="startEdit">编辑</UiButton>
+        <UiButton v-if="canViewHistory" tone="ghost" @click="toggleHistory">
+          {{ historyOpen ? "收起历史" : "历史" }}
+        </UiButton>
         <UiButton v-if="canDelete" class="post-delete-button" tone="ghost" :disabled="deletingPost" @click="deleteReply">
           {{ deletingPost ? "删除中…" : "删除" }}
         </UiButton>
       </footer>
+      <section v-if="historyOpen && canViewHistory" class="revision-panel" aria-label="帖子编辑历史">
+        <p v-if="revisionsQuery.isLoading.value" role="status">正在加载编辑历史…</p>
+        <p v-else-if="revisionsQuery.isError.value" role="alert">编辑历史加载失败。</p>
+        <p v-else-if="!revisionsQuery.data.value?.length">暂无历史版本。</p>
+        <template v-else>
+          <article v-for="revision in revisionsQuery.data.value" :key="revision.id" class="revision-card">
+            <header>
+              <strong>版本 {{ revision.versionNumber }}</strong>
+              <span>{{ revision.editorName ?? "已删除用户" }} · {{ relativeTime(revision.createdAt) }}</span>
+            </header>
+            <p>{{ revision.summary }}</p>
+            <pre>{{ revision.rawMd.slice(0, 260) }}{{ revision.rawMd.length > 260 ? "…" : "" }}</pre>
+            <UiButton
+              v-if="canRestoreHistory"
+              tone="subtle"
+              :disabled="restoringRevision"
+              @click="restoreRevision(revision.id, revision.versionNumber)"
+            >
+              恢复此版本
+            </UiButton>
+          </article>
+        </template>
+      </section>
     </article>
   </UiCard>
 </template>

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/vue-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed, toValue } from "vue";
 import type { MaybeRefOrGetter } from "vue";
 
@@ -7,7 +7,8 @@ import { toTopicCard } from "@/features/topics/model";
 import type { TopicCardVM } from "@/entities/topic/model";
 import { queryKeys } from "@/shared/api/queryKeys";
 
-import { fetchBoardDetail, fetchBoards } from "./api";
+import { createBoard, fetchBoardDetail, fetchBoards } from "./api";
+import type { CreateBoardRequest } from "./api";
 import { toBoardSummary } from "./model";
 
 export interface BoardDetailVM extends BoardSummary {
@@ -35,5 +36,16 @@ export function useBoardDetail(slug: MaybeRefOrGetter<string>) {
     },
     enabled: computed(() => Boolean(toValue(slug))),
     staleTime: 30_000,
+  });
+}
+
+export function useCreateBoard() {
+  const queryClient = useQueryClient();
+
+  return useMutation<BoardSummary, Error, CreateBoardRequest>({
+    mutationFn: async (payload) => toBoardSummary(await createBoard(payload)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.boards });
+    },
   });
 }

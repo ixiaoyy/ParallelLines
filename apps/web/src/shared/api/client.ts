@@ -19,6 +19,27 @@ export function getApiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
 
+export function resolveApiAssetUrl(url: string | null | undefined): string | undefined {
+  if (!url) {
+    return undefined;
+  }
+
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+    return url;
+  }
+
+  if (url.startsWith("/uploads/")) {
+    return getApiUrl(url);
+  }
+
+  if (url.startsWith("/api/v1/")) {
+    const apiRoot = API_BASE_URL.replace(/\/api\/v1\/?$/, "");
+    return `${apiRoot}${url}`;
+  }
+
+  return url;
+}
+
 export function getAccessToken(): string | null {
   try {
     return (
@@ -68,7 +89,8 @@ export function createApiHeaders(init?: HeadersInit): Headers {
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = createApiHeaders(init?.headers);
-  if (init?.body && !headers.has("Content-Type")) {
+  const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
+  if (init?.body && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 

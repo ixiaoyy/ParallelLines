@@ -7,6 +7,7 @@ from app.api.v1.dependencies import get_session
 from app.db.base import Base
 from app.main import create_app
 from app.models.forum import Board, BoardMember
+from tests.helpers import register_and_verify_user
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
@@ -17,16 +18,7 @@ async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], objec
 
 
 async def register_user(client: AsyncClient, username: str) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/register",
-        json={
-            "username": username,
-            "email": f"{username}@example.com",
-            "password": "strong-pass-123",
-        },
-    )
-    assert response.status_code == 201
-    data = response.json()["data"]
+    data = await register_and_verify_user(client, username)
     return {
         "id": data["user"]["id"],
         "auth": f"Bearer {data['access_token']}",
@@ -85,6 +77,7 @@ async def test_public_user_profile_does_not_leak_email_and_filters_hidden_topics
         assert profile.status_code == 200
         profile_data = profile.json()["data"]
         assert profile_data["username"] == "author"
+        assert profile_data["level"] == 0
         assert profile_data["topic_count"] == 1
         assert profile_data["post_count"] == 1
         assert "email" not in profile_data

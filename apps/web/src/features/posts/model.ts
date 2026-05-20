@@ -23,6 +23,41 @@ export interface CreatePostRequest {
 
 export interface UpdatePostRequest {
   raw_md: string;
+  edit_reason?: string | null;
+}
+
+export interface RestorePostRevisionRequest {
+  reason?: string | null;
+}
+
+export interface PostRevisionResponse {
+  id: string;
+  post_id: string;
+  topic_id: string;
+  version_number: number;
+  editor_id: string | null;
+  editor_name: string | null;
+  raw_md: string;
+  cooked_html: string;
+  edit_reason: string | null;
+  summary: string;
+  restored_from_revision_id: string | null;
+  created_at: string;
+}
+
+export interface PostRevisionVM {
+  id: string;
+  postId: string;
+  topicId: string;
+  versionNumber: number;
+  editorId: string | null;
+  editorName: string | null;
+  rawMd: string;
+  cookedHtml: string;
+  editReason: string | null;
+  summary: string;
+  restoredFromRevisionId: string | null;
+  createdAt: string;
 }
 
 export function toPostItem(post: PostResponse): PostItemVM {
@@ -39,5 +74,22 @@ export function toPostItem(post: PostResponse): PostItemVM {
     likeCount: post.like_count,
     replyCount: post.reply_count,
     deleted: Boolean(post.deleted_at),
+  };
+}
+
+export function toPostRevision(revision: PostRevisionResponse): PostRevisionVM {
+  return {
+    id: revision.id,
+    postId: revision.post_id,
+    topicId: revision.topic_id,
+    versionNumber: revision.version_number,
+    editorId: revision.editor_id,
+    editorName: revision.editor_name,
+    rawMd: revision.raw_md,
+    cookedHtml: revision.cooked_html,
+    editReason: revision.edit_reason,
+    summary: revision.summary,
+    restoredFromRevisionId: revision.restored_from_revision_id,
+    createdAt: revision.created_at,
   };
 }

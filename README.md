@@ -25,7 +25,7 @@ Services:
 - PostgreSQL: `localhost:5432`, database/user/password `parallellines/postgres/postgres`
 - Redis: `localhost:6379`
 
-`docker compose up` runs Alembic migrations, seeds demo data, starts the API, web preview server, PostgreSQL, Redis, and the hot-ranking worker.
+`docker compose up` runs Alembic migrations, seeds demo data, starts the API, web preview server, PostgreSQL, Redis, the hot-ranking worker, and the expired-upload cleanup worker.
 
 Demo accounts share this local-only password: `parallellines-demo-123`.
 
@@ -54,6 +54,7 @@ Useful commands:
 uv run ruff check app tests
 uv run pytest -q
 uv run python -m app.workers.hot_ranking
+uv run python -m app.workers.upload_cleanup
 ```
 
 ### Frontend
@@ -72,6 +73,42 @@ pnpm --dir apps/web build
 ```
 
 The frontend reads `VITE_API_BASE_URL`; the default is `http://localhost:8000/api/v1`.
+
+### 注册邮件验证码
+
+本地和 CI 默认使用 `EMAIL_DELIVERY_MODE=memory`，注册接口会返回仅用于开发测试的
+`dev_verification_code`，前端会自动填入验证码输入框。真实环境请改为 SMTP：
+
+```powershell
+EMAIL_DELIVERY_MODE=smtp
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=your-smtp-user
+SMTP_PASSWORD=your-smtp-password
+SMTP_FROM_EMAIL=noreply@example.com
+SMTP_USE_TLS=true
+```
+
+生产环境不得使用 `memory` 模式；验证码有效期和重发/尝试限制可通过
+`EMAIL_VERIFICATION_CODE_TTL_MINUTES`、`EMAIL_VERIFICATION_RESEND_SECONDS`、
+`EMAIL_VERIFICATION_MAX_ATTEMPTS` 调整。
+
+### 上传、头像与附件
+
+本地默认使用 `UPLOAD_STORAGE_BACKEND=local`，文件保存到 `UPLOAD_STORAGE_PATH=var/uploads`，
+发帖上传会返回 `/uploads/{id}/content` 引用，创建/编辑帖子后自动绑定到对应楼层。头像通过
+`POST /api/v1/uploads/avatar` 更新，并会同步到 `/auth/me` 和公开用户资料。
+
+关键限制：
+
+- `UPLOAD_MAX_BYTES`：帖子图片/附件单文件大小。
+- `UPLOAD_MAX_AVATAR_BYTES`：头像单文件大小。
+- `UPLOAD_MAX_FILES_PER_POST`：单个帖子最多引用的上传数量。
+- `UPLOAD_TEMPORARY_TTL_HOURS`：未绑定临时上传的过期时间。
+- `UPLOAD_CLEANUP_INTERVAL_SECONDS`：`app.workers.upload_cleanup` 清理间隔。
+
+当前已预留 `UPLOAD_CDN_BASE_URL` 和 S3 相关配置项；生产本地存储需把
+`UPLOAD_STORAGE_PATH` 挂载到持久化卷。
 
 ## Smoke Tests
 
@@ -98,7 +135,7 @@ pnpm --dir apps/web test:smoke
 Before deployment:
 
 - Set `JWT_SECRET_KEY` to a strong secret; never use the local default.
-- Set `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGINS`, and `ENVIRONMENT` for the target environment.
+- Set `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGINS`, `ENVIRONMENT`, SMTP email settings, and upload storage settings for the target environment.
 - Run `alembic upgrade head` before starting new application code.
 - Check `/healthz`, `/metrics`, API request logs, and worker logs after rollout.
 - Run smoke tests against the target environment or staging before promotion.

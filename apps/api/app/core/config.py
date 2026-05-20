@@ -26,6 +26,51 @@ class Settings(BaseSettings):
     access_token_minutes: int = 15
     refresh_token_days: int = 30
 
+    email_delivery_mode: Literal["memory", "smtp"] = "memory"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str = "noreply@parallellines.local"
+    smtp_use_tls: bool = True
+    smtp_use_ssl: bool = False
+    smtp_timeout_seconds: float = 10.0
+    email_verification_code_ttl_minutes: int = 10
+    email_verification_resend_seconds: int = 60
+    email_verification_max_attempts: int = 5
+    password_reset_token_ttl_minutes: int = 30
+    email_change_token_ttl_minutes: int = 30
+    two_factor_challenge_minutes: int = 5
+    two_factor_issuer: str = "ParallelLines"
+    oauth_enabled_providers: list[str] = Field(default_factory=list)
+    rate_limit_window_seconds: int = 60
+    rate_limit_register_ip: int = 5
+    rate_limit_register_email: int = 3
+    rate_limit_login_ip: int = 10
+    rate_limit_login_account: int = 10
+    rate_limit_topic_user: int = 5
+    rate_limit_topic_ip: int = 10
+    rate_limit_reply_user: int = 10
+    rate_limit_reply_ip: int = 20
+    rate_limit_upload_user: int = 20
+    rate_limit_upload_ip: int = 30
+    rate_limit_flag_user: int = 10
+    rate_limit_flag_ip: int = 20
+    new_user_link_limit: int = 5
+    new_user_screening_days: int = 7
+
+    upload_storage_backend: Literal["local", "s3"] = "local"
+    upload_storage_path: str = "var/uploads"
+    upload_cdn_base_url: str | None = None
+    upload_s3_bucket: str | None = None
+    upload_s3_region: str | None = None
+    upload_s3_endpoint_url: str | None = None
+    upload_max_bytes: int = 5 * 1024 * 1024
+    upload_max_avatar_bytes: int = 2 * 1024 * 1024
+    upload_max_files_per_post: int = 8
+    upload_temporary_ttl_hours: int = 24
+    upload_cleanup_interval_seconds: int = 3600
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

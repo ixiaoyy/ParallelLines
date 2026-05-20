@@ -27,6 +27,7 @@ BoardVisibility = Literal["public", "private", "unlisted"]
 BoardMemberRole = Literal["follower", "moderator", "owner"]
 NotificationLevel = Literal["muted", "normal", "tracking", "watching"]
 TopicStatus = Literal["open", "closed", "archived", "hidden"]
+BoardInvitationStatus = Literal["pending", "accepted", "declined", "revoked", "expired"]
 
 
 topic_tags = Table(
@@ -68,6 +69,35 @@ class BoardMember(UUIDPrimaryKeyMixin, Base):
     notification_level: Mapped[str] = mapped_column(String(32), nullable=False, default="normal")
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
+class BoardInvitation(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "board_invitations"
+    __table_args__ = (
+        Index("ix_board_invitations_invitee_status", "invitee_id", "status"),
+        Index("ix_board_invitations_board_status", "board_id", "status"),
+    )
+
+    board_id: Mapped[str] = mapped_column(
+        ForeignKey("boards.id", ondelete="CASCADE"), nullable=False
+    )
+    inviter_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    invitee_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+    board: Mapped[Board] = relationship("Board", lazy="selectin")
+    inviter: Mapped[User] = relationship("User", foreign_keys=[inviter_id], lazy="selectin")
+    invitee: Mapped[User] = relationship("User", foreign_keys=[invitee_id], lazy="selectin")
+    revoked_by: Mapped[User | None] = relationship(
+        "User", foreign_keys=[revoked_by_id], lazy="selectin"
     )
 
 
@@ -114,9 +144,17 @@ class Topic(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         DateTime(timezone=True), default=utcnow, nullable=False
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    merged_into_topic_id: Mapped[str | None] = mapped_column(
+        ForeignKey("topics.id", ondelete="SET NULL")
+    )
 
     board: Mapped[Board] = relationship(back_populates="topics", lazy="selectin")
     author: Mapped[User] = relationship("User", lazy="selectin")
+    merged_into: Mapped[Topic | None] = relationship(
+        "Topic",
+        remote_side="Topic.id",
+        lazy="selectin",
+    )
     posts: Mapped[list[Post]] = relationship(back_populates="topic", lazy="selectin")
     tags: Mapped[list[Tag]] = relationship(
         secondary=topic_tags,
@@ -143,6 +181,43 @@ class Post(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     topic: Mapped[Topic] = relationship(back_populates="posts", lazy="selectin")
     author: Mapped[User] = relationship("User", lazy="selectin")
+
+
+class PostRevision(UUIDPrimaryKeyMixin, Base):
+    __tablename__ = "post_revisions"
+    __table_args__ = (
+        UniqueConstraint("post_id", "version_number", name="uq_post_revisions_post_version"),
+        Index("ix_post_revisions_post_created", "post_id", "created_at"),
+        Index("ix_post_revisions_editor_created", "editor_id", "created_at"),
+    )
+
+    post_id: Mapped[str] = mapped_column(
+        ForeignKey("posts.id", ondelete="CASCADE"), nullable=False
+    )
+    topic_id: Mapped[str] = mapped_column(
+        ForeignKey("topics.id", ondelete="CASCADE"), nullable=False
+    )
+    editor_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    raw_md: Mapped[str] = mapped_column(Text, nullable=False)
+    cooked_html: Mapped[str] = mapped_column(Text, nullable=False)
+    edit_reason: Mapped[str | None] = mapped_column(String(500))
+    summary: Mapped[str] = mapped_column(String(500), nullable=False)
+    restored_from_revision_id: Mapped[str | None] = mapped_column(
+        ForeignKey("post_revisions.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+    post: Mapped[Post] = relationship("Post", lazy="selectin")
+    topic: Mapped[Topic] = relationship("Topic", lazy="selectin")
+    editor: Mapped[User | None] = relationship("User", lazy="selectin")
+    restored_from_revision: Mapped[PostRevision | None] = relationship(
+        "PostRevision",
+        remote_side="PostRevision.id",
+        lazy="selectin",
+    )
 
 
 class TopicRead(UUIDPrimaryKeyMixin, TimestampMixin, Base):

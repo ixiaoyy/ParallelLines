@@ -1,0 +1,53 @@
+{
+  "id": "site-theme-i18n-branding",
+  "name": "site-theme-i18n-branding",
+  "title": "站点主题、品牌配置与文案国际化",
+  "description": "支持管理员配置 Logo、色板、站点文案、主题和多语言基础。",
+  "status": "planning",
+  "dev_type": "fullstack",
+  "scope": "customization",
+  "package": null,
+  "priority": "P1",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-20",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "05-20-discourse-parity-roadmap",
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

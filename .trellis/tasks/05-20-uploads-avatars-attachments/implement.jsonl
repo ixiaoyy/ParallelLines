@@ -1,0 +1,15 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis\\spec\\backend\\directory-structure.md", "reason": "backend file placement"}
+{"file": ".trellis\\spec\\backend\\database-guidelines.md", "reason": "upload schema and migration comments"}
+{"file": ".trellis\\spec\\backend\\error-handling.md", "reason": "typed upload errors"}
+{"file": ".trellis\\spec\\backend\\board-visibility-invites.md", "reason": "private board attachment ACL"}
+{"file": ".trellis\\spec\\frontend\\directory-structure.md", "reason": "frontend feature placement"}
+{"file": ".trellis\\spec\\frontend\\component-guidelines.md", "reason": "upload UI components"}
+{"file": ".trellis\\spec\\frontend\\forum-api-wiring.md", "reason": "API/VM mapping"}
+{"file": ".trellis\\spec\\frontend\\auth-user-session.md", "reason": "avatar current-user/profile consistency"}
+{"file": ".trellis\\spec\\frontend\\type-safety.md", "reason": "upload DTO types"}
+{"file": ".trellis\\spec\\guides\\cross-layer-thinking-guide.md", "reason": "DB/API/frontend data flow"}
+{"file": ".trellis\\spec\\backend\\uploads-attachments.md", "reason": "implemented upload storage contract"}
+{"file": ".trellis\\spec\\frontend\\uploads-attachments.md", "reason": "implemented upload UI contract"}

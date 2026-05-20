@@ -115,6 +115,54 @@
   font-weight: 600;
 }
 
+.auth-success,
+.auth-helper {
+  margin: 0;
+  border-radius: 0.35rem;
+  padding: 0.65rem 0.7rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.auth-success {
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  color: var(--success);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.auth-helper {
+  color: var(--muted);
+  background: var(--bg-hover);
+}
+
+.auth-helper strong {
+  color: var(--title);
+  letter-spacing: 0.08em;
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.auth-link-button {
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  color: var(--primary);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.auth-link-button:hover,
+.auth-link-button:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
 .auth-notes {
   display: grid;
   gap: 0.85rem;

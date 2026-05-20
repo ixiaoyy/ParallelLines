@@ -1,0 +1,92 @@
+{
+  "id": "discourse-parity-roadmap",
+  "name": "discourse-parity-roadmap",
+  "title": "Discourse 级论坛能力补齐路线图",
+  "description": "对照本地 Discourse，将真实论坛运营所需能力拆成可排期 Trellis 任务并按优先级逐个实现。",
+  "status": "planning",
+  "dev_type": "fullstack",
+  "scope": "roadmap",
+  "package": null,
+  "priority": "P0",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-20",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "05-18-public-invite-boards",
+    "05-20-uploads-avatars-attachments",
+    "05-20-account-recovery-security",
+    "05-20-anti-spam-rate-limits-screening",
+    "05-20-post-revisions-history",
+    "05-20-topic-lifecycle-move-merge-split",
+    "05-20-admin-site-settings-user-management",
+    "05-20-background-job-scheduler",
+    "05-20-email-notifications-digests-inbound",
+    "05-20-backup-restore-export",
+    "05-20-full-text-search-engine",
+    "05-20-moderation-reviewable-workflow",
+    "05-20-server-side-drafts",
+    "05-20-notification-preferences-tracking",
+    "05-20-user-social-relationships-pm",
+    "05-20-board-management-required-tags",
+    "05-20-topic-solved-voting-polls",
+    "05-20-social-actions",
+    "05-20-user-points-experience",
+    "05-20-badges-trust-levels",
+    "05-20-api-keys-webhooks",
+    "05-20-seo-permalinks-sitemap",
+    "05-20-rich-composer-onebox-emoji",
+    "05-20-site-theme-i18n-branding",
+    "05-20-user-profile-settings-directory",
+    "05-20-privacy-data-retention-anonymization",
+    "05-20-public-api-docs-openapi-client",
+    "05-20-plugin-extension-system",
+    "05-20-chat-presence",
+    "05-20-analytics-data-explorer-reports",
+    "05-20-subscriptions-payments",
+    "05-20-calendar-events",
+    "05-20-external-integrations",
+    "05-20-ai-forum-assistant",
+    "05-20-theme-marketplace",
+    "05-20-mobile-push-pwa",
+    "05-20-import-export-migration-tools",
+    "05-20-localization-multilingual-content"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "Backlog generated from local Discourse comparison; execute children in P0 -> P1 -> P2 order.",
+  "meta": {}
+}

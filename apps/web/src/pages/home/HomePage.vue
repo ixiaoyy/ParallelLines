@@ -126,24 +126,38 @@ function submitHeroSearch() {
       />
 
       <main class="main-column" aria-label="平行线首页内容">
-        <HomeHero v-model:search="heroSearch" :signals="communitySignals" @submit-search="submitHeroSearch" />
+        <HomeHero
+          v-model:search="heroSearch"
+          class="home-hero-slot"
+          :signals="communitySignals"
+          @submit-search="submitHeroSearch"
+        />
 
         <HomeSectionHead
           id="category-title"
+          class="category-head"
           title="推荐分类"
+          mobile-title="其他板块"
           description="用少量、明确的入口降低浏览压力。"
           link-label="查看全部分类"
           :link-to="{ name: 'board-directory' }"
         />
-        <HomeCategoryGrid :boards="topBoards" :loading="boardsQuery.isLoading.value" :error="boardsQuery.isError.value" />
+        <HomeCategoryGrid
+          class="category-grid-slot"
+          :boards="topBoards"
+          :loading="boardsQuery.isLoading.value"
+          :error="boardsQuery.isError.value"
+        />
 
         <HomeSectionHead
           id="feed-title"
+          class="feed-head"
           title="最新讨论"
           description="列表保持克制：主题、摘要、标签、回复、浏览、动态。"
           feed
         />
         <HomeTopicFeed
+          class="feed-slot"
           :tabs="discoveryTabs"
           :active-tab="activeTab"
           :topics="visibleTopics"

@@ -1,4 +1,19 @@
 <script setup lang="ts">
+import {
+  SearchOutlined,
+  CheckCircleOutlined,
+  CompassOutlined,
+  FileTextOutlined,
+  FireOutlined,
+  HeartOutlined,
+  HistoryOutlined,
+  QuestionCircleOutlined,
+  RightOutlined,
+  StarFilled,
+  StarOutlined,
+  TeamOutlined,
+  BulbOutlined,
+} from "@ant-design/icons-vue";
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -16,6 +31,55 @@ import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
 type BoardSort = "latest" | "hot" | "top";
 type TopicStatusFilter = "all" | "solved" | "unanswered" | "official";
+
+const boardIcons: Record<string, string> = {
+  engineering: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M26 60V18M38 60V18" />
+    <path d="M26 50h12M26 40h12M26 30h12M26 20h12" />
+    <path d="M26 50l12-10M26 40l12-10M26 30l12-10M26 20l12-8" />
+    <path d="M20 60h24" />
+    <path d="M8 18h48" />
+    <path d="M12 18l14-10h12" />
+    <rect x="46" y="21" width="6" height="8" rx="1" fill="currentColor" />
+    <rect x="18" y="18" width="4" height="3" fill="currentColor" />
+    <path d="M20 21v10" />
+    <circle cx="20" cy="33" r="2" />
+  </svg>`,
+  announcements: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 20h10l16-12v40L20 36H10a2 2 0 0 1-2-2V22a2 2 0 0 1 2-2z" />
+    <path d="M36 28h4v4h-4z" />
+    <path d="M44 20c3 3.5 3 10.5 0 14M49 14c6 6.5 6 19.5 0 26" />
+    <path d="M18 36v12a4 4 0 0 0 8 0V36" />
+  </svg>`,
+  support: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="32" r="22" />
+    <circle cx="32" cy="32" r="10" />
+    <path d="M16 16l11 11M48 16L37 27M16 48l11-11M48 48L37 37" />
+    <path d="M22 10a22 22 0 0 1 20 0M54 22a22 22 0 0 1 0 20M42 54a22 22 0 0 1-20 0M10 42a22 22 0 0 1 0-20" opacity="0.3" />
+  </svg>`,
+  frontend: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="8" y="10" width="48" height="34" rx="3" />
+    <path d="M20 54h24M32 44v10" />
+    <path d="M20 22l-6 5 6 5M44 22l6 5-6 5M35 19l-6 16" />
+  </svg>`,
+  plugins: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 28V16a4 4 0 0 0-4-4h-4a4 4 0 0 1-4-4 4 4 0 0 1-4 4h-4a4 4 0 0 0-4 4v12a4 4 0 0 1-4 4H10v8h10a4 4 0 0 1 4 4v12h12v-6a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v6h8V28h-6a4 4 0 0 1-4-4z" />
+  </svg>`,
+  community: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 38v8l8-4h18a4 4 0 0 0 4-4V22a4 4 0 0 0-4-4H14a4 4 0 0 0-4 4v12a4 4 0 0 0 4 4z" />
+    <path d="M48 18h2a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4h-6l-6 4v-4" />
+  </svg>`
+};
+
+function getBoardIcon(slug: string): string | undefined {
+  return boardIcons[slug];
+}
+
+function getSortIcon(key: string) {
+  if (key === "latest") return HistoryOutlined;
+  if (key === "hot") return FireOutlined;
+  return CheckCircleOutlined;
+}
 
 const sortTabs: Array<{ key: BoardSort; label: string; helper: string }> = [
   { key: "latest", label: "最新", helper: "按最后回复时间" },
@@ -120,7 +184,7 @@ const solutionStats = computed(() => {
 
   return [
     { label: "已解决", value: compactNumber(topicsInBoard.filter((topic) => topic.solved).length), helper: "可直接比对" },
-    { label: "未回复", value: compactNumber(topicsInBoard.filter((topic) => topic.replyCount === 0).length), helper: "等待首答" },
+    { label: "未回复", value: compactNumber(topicsInBoard.filter((topic) => topic.replyCount === 0).length), helper: "等待解答" },
     { label: "官方回复", value: compactNumber(topicsInBoard.filter((topic) => topic.officialReply).length), helper: "团队已介入" },
     { label: "关注者", value: compactNumber(followerCount.value), helper: followingBoard.value ? "正在接收通知" : "可一键关注" },
   ];
@@ -135,7 +199,8 @@ const searchPlaceholder = computed(() => {
 });
 
 function boardMark(name: string) {
-  return name.includes("与") ? name.split("与")[0] : name;
+  const base = name.includes("与") ? name.split("与")[0] : name;
+  return base.slice(0, 2);
 }
 
 function updateQuery(patch: Record<string, string | undefined>) {
@@ -170,49 +235,86 @@ function updateQuery(patch: Record<string, string | undefined>) {
 
     <template v-else-if="board">
       <section class="board-hero" :style="{ '--board-color': board.color }" aria-labelledby="board-title">
+        <div v-if="slug === 'engineering'" class="board-hero__bg-illustration" v-html="boardIcons.engineering" aria-hidden="true"></div>
         <div class="board-hero__header">
-          <span class="board-hero__mark" aria-hidden="true">{{ boardMark(board.name) }}</span>
+          <span
+            class="board-hero__mark"
+            :class="`board-hero__mark--${board.slug}`"
+            aria-hidden="true"
+            v-html="getBoardIcon(board.slug) || boardMark(board.name)"
+          ></span>
           <div class="board-hero__copy">
             <div class="board-breadcrumb">
               <RouterLink to="/boards">全部版块</RouterLink>
               <span>/</span>
               <span>{{ board.name }}</span>
             </div>
-            <h1 id="board-title">{{ board.name }}</h1>
-            <p>{{ board.description }}</p>
+            <div class="board-title-row">
+              <h1 id="board-title">{{ board.name }}</h1>
+              <UiButton
+                class="board-follow-btn"
+                :tone="followingBoard ? 'success' : 'subtle'"
+                :aria-pressed="followingBoard"
+                :disabled="followPending"
+                @click="toggleBoardFollow"
+              >
+                <template #icon>
+                  <StarFilled v-if="followingBoard" />
+                  <StarOutlined v-else />
+                </template>
+                {{ followingBoard ? "已关注版块" : "关注版块" }}
+              </UiButton>
+            </div>
+            <p class="board-desc">{{ board.description }}</p>
+            <p class="board-notice">
+              <span class="notice-dot"></span>
+              {{ followingBoard ? "已开启通知，新主题发布时将通知您" : "关注此版块，不错过任何新主题" }}
+            </p>
           </div>
         </div>
 
-        <label class="board-local-search" for="board-local-search">
-          <span>在 {{ board.name }} 中搜索</span>
-          <input
-            id="board-local-search"
-            v-model="searchQuery"
-            type="search"
-            :placeholder="searchPlaceholder"
-            autocomplete="off"
-          />
-        </label>
-
-        <div class="board-follow-strip">
-          <span>{{ followingBoard ? "新主题会进入通知中心。" : "关注后，新主题会进入通知中心。" }}</span>
-          <UiButton
-            :tone="followingBoard ? 'success' : 'primary'"
-            :aria-pressed="followingBoard"
-            :disabled="followPending"
-            @click="toggleBoardFollow"
-          >
-            {{ followingBoard ? "已关注版块" : "关注版块" }}
-          </UiButton>
-        </div>
-
-        <dl class="board-hero__signals" aria-label="解答信号">
-          <div v-for="signal in solutionStats" :key="signal.label">
-            <dt>{{ signal.label }}</dt>
-            <dd>{{ signal.value }}</dd>
-            <span>{{ signal.helper }}</span>
+        <div class="board-hero__signals" aria-label="解答信号">
+          <div class="signal-card signal-card--solved">
+            <div class="signal-icon-wrapper">
+              <CheckCircleOutlined />
+            </div>
+            <div class="signal-info">
+              <span class="signal-label">已解决</span>
+              <strong class="signal-value">{{ solutionStats[0].value }}</strong>
+              <span class="signal-helper">可直接比对</span>
+            </div>
           </div>
-        </dl>
+          <div class="signal-card signal-card--unanswered">
+            <div class="signal-icon-wrapper">
+              <QuestionCircleOutlined />
+            </div>
+            <div class="signal-info">
+              <span class="signal-label">未回复</span>
+              <strong class="signal-value">{{ solutionStats[1].value }}</strong>
+              <span class="signal-helper">等待解答</span>
+            </div>
+          </div>
+          <div class="signal-card signal-card--official">
+            <div class="signal-icon-wrapper">
+              <TeamOutlined />
+            </div>
+            <div class="signal-info">
+              <span class="signal-label">官方回复</span>
+              <strong class="signal-value">{{ solutionStats[2].value }}</strong>
+              <span class="signal-helper">团队已介入</span>
+            </div>
+          </div>
+          <div class="signal-card signal-card--followers">
+            <div class="signal-icon-wrapper">
+              <HeartOutlined />
+            </div>
+            <div class="signal-info">
+              <span class="signal-label">关注者</span>
+              <strong class="signal-value">{{ solutionStats[3].value }}</strong>
+              <span class="signal-helper">{{ followingBoard ? '正在接收通知' : '可一键关注' }}</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       <div class="board-layout">
@@ -226,21 +328,39 @@ function updateQuery(patch: Record<string, string | undefined>) {
                 :class="{ active: activeSort === tab.key }"
                 @click="activeSort = tab.key"
               >
-                <strong>{{ tab.label }}</strong>
-                <span>{{ tab.helper }}</span>
+                <div class="tab-content">
+                  <component :is="getSortIcon(tab.key)" class="tab-icon" />
+                  <div class="tab-text">
+                    <strong>{{ tab.label }}</strong>
+                    <span>{{ tab.helper }}</span>
+                  </div>
+                </div>
               </button>
             </div>
 
-            <div class="status-filters" aria-label="解答状态">
-              <button
-                v-for="filter in statusFilters"
-                :key="filter.key"
-                type="button"
-                :class="{ active: activeStatus === filter.key }"
-                @click="activeStatus = filter.key"
-              >
-                {{ filter.label }}
-              </button>
+            <div class="board-toolbar__actions">
+              <div class="board-search-wrapper">
+                <SearchOutlined class="search-icon" />
+                <input
+                  v-model="searchQuery"
+                  type="search"
+                  :placeholder="searchPlaceholder"
+                  autocomplete="off"
+                  class="board-search-input"
+                />
+              </div>
+
+              <div class="status-filters" aria-label="解答状态">
+                <button
+                  v-for="filter in statusFilters"
+                  :key="filter.key"
+                  type="button"
+                  :class="{ active: activeStatus === filter.key }"
+                  @click="activeStatus = filter.key"
+                >
+                  {{ filter.label }}
+                </button>
+              </div>
             </div>
           </section>
 
@@ -268,6 +388,42 @@ function updateQuery(patch: Record<string, string | undefined>) {
               <li>仍未命中时，发布新问题并附环境、复现步骤、期望结果。</li>
             </ol>
             <RouterLink class="ask-link" :to="{ name: 'new-topic', query: { board: slug } }">发布新问题</RouterLink>
+          </UiCard>
+
+          <UiCard class="sidebar-panel quick-links-panel">
+            <h2>快捷入口</h2>
+            <div class="quick-links">
+              <a href="#" class="quick-link-item" @click.prevent>
+                <div class="quick-link-icon-wrapper">
+                  <FileTextOutlined class="quick-link-icon" />
+                </div>
+                <div class="quick-link-text">
+                  <h3>接口文档</h3>
+                  <p>查看接口规范与示例</p>
+                </div>
+                <RightOutlined class="quick-link-arrow" />
+              </a>
+              <a href="#" class="quick-link-item" @click.prevent>
+                <div class="quick-link-icon-wrapper">
+                  <BulbOutlined class="quick-link-icon" />
+                </div>
+                <div class="quick-link-text">
+                  <h3>常见问题</h3>
+                  <p>汇总高频问题与方案</p>
+                </div>
+                <RightOutlined class="quick-link-arrow" />
+              </a>
+              <a href="#" class="quick-link-item" @click.prevent>
+                <div class="quick-link-icon-wrapper">
+                  <CompassOutlined class="quick-link-icon" />
+                </div>
+                <div class="quick-link-text">
+                  <h3>社区指南</h3>
+                  <p>了解提问规范与流程</p>
+                </div>
+                <RightOutlined class="quick-link-arrow" />
+              </a>
+            </div>
           </UiCard>
         </aside>
       </div>

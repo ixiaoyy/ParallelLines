@@ -24,7 +24,7 @@ defineProps<{ topics: TopicCardVM[] }>();
     </div>
 
     <footer v-if="topics.length" class="topic-list-footer">
-      <span>已显示当前匹配的主题。</span>
+      <span>已经到底啦 🎉</span>
     </footer>
   </section>
 </template>

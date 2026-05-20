@@ -42,6 +42,9 @@ test("register login create topic reply and interactions", async ({ page, reques
   await registerForm.getByLabel("邮箱").fill(`${username}@example.com`);
   await registerForm.getByLabel("密码").fill(password);
   await registerForm.getByRole("button", { name: buttonName("创建账号") }).click();
+  const verificationForm = page.getByRole("form", { name: "验证码激活表单" });
+  await expect(verificationForm.getByText(/验证码已发送至/)).toBeVisible();
+  await verificationForm.getByRole("button", { name: buttonName("激活账号") }).click();
   await expect(page.getByRole("banner").getByRole("link", { name: username })).toBeVisible();
 
   await page.getByRole("button", { name: "退出" }).click();
@@ -66,9 +69,19 @@ test("register login create topic reply and interactions", async ({ page, reques
   });
   expect(otherRegisterResponse.ok()).toBeTruthy();
   const otherRegisterPayload = (await otherRegisterResponse.json()) as {
+    data: { email: string; dev_verification_code: string };
+  };
+  const otherVerifyResponse = await request.post(`${apiBaseUrl}/auth/verify-email`, {
+    data: {
+      email: otherRegisterPayload.data.email,
+      code: otherRegisterPayload.data.dev_verification_code,
+    },
+  });
+  expect(otherVerifyResponse.ok()).toBeTruthy();
+  const otherVerifyPayload = (await otherVerifyResponse.json()) as {
     data: { access_token: string };
   };
-  const otherToken = otherRegisterPayload.data.access_token;
+  const otherToken = otherVerifyPayload.data.access_token;
 
   const boardResponse = await request.post(`${apiBaseUrl}/boards`, {
     headers: { Authorization: `Bearer ${token ?? ""}` },

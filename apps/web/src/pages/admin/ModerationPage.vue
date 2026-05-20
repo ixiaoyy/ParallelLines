@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+import { isAdmin } from "@/features/auth/permissions";
+import { useCurrentUser } from "@/features/auth/queries";
 import {
   auditActionLabel,
   flagReasonLabel,
@@ -29,11 +31,13 @@ const auditQuery = useAuditLogs();
 const flagStatusMutation = useFlagStatusMutation();
 const contentMutation = useContentModerationMutation();
 const userStatusMutation = useUserStatusMutation();
+const currentUserQuery = useCurrentUser();
 
 const userId = ref("");
 const userStatus = ref<UserModerationStatus>("silenced");
 const userNote = ref("");
 const hasToken = computed(() => hasAccessToken());
+const canUpdateUserStatus = computed(() => isAdmin(currentUserQuery.data.value));
 const flags = computed(() => queueQuery.data.value ?? []);
 const auditLogs = computed(() => auditQuery.data.value ?? []);
 const queueError = computed(() => queueQuery.isError.value || auditQuery.isError.value);
@@ -184,7 +188,7 @@ function targetRoute(flag: FlagResponse) {
         </main>
 
         <aside class="side-column" aria-label="管理工具">
-          <UiCard class="user-tool">
+          <UiCard v-if="canUpdateUserStatus" class="user-tool">
             <span class="panel-kicker">Admin action</span>
             <h2>用户状态</h2>
             <label>
@@ -204,6 +208,12 @@ function targetRoute(flag: FlagResponse) {
               <textarea v-model="userNote" rows="3" placeholder="记录调整原因" />
             </label>
             <UiButton :disabled="pendingAction || !userId.trim()" @click="updateUser">更新用户状态</UiButton>
+          </UiCard>
+
+          <UiCard v-else class="user-tool">
+            <span class="panel-kicker">Admin action</span>
+            <h2>用户状态</h2>
+            <p>只有管理员可以调整用户状态；版主可以处理举报和内容可见性。</p>
           </UiCard>
 
           <UiCard class="audit-panel">

@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import type { BoardSummary } from "@/entities/board/model";
 import { useBoards } from "@/features/boards/queries";
 import { useCreateTopic } from "@/features/topics/queries";
+import MarkdownUploadButton from "@/features/uploads/components/MarkdownUploadButton.vue";
+import { contentPolicyMessage } from "@/shared/api/errors";
 import { compactNumber } from "@/shared/lib/format";
 import { readRouteParam } from "@/shared/router/params";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
@@ -60,6 +62,7 @@ const selectedIntent = ref<TopicIntent>(defaultDraft.intent);
 const title = ref(defaultDraft.title);
 const body = ref(defaultDraft.body);
 const tags = ref(defaultDraft.tags);
+const bodyTextarea = ref<HTMLTextAreaElement | null>(null);
 const publishState = ref<PublishState>("idle");
 const publishError = ref("");
 
@@ -146,6 +149,28 @@ function handleSaveDraft() {
   publishState.value = "saved";
 }
 
+function insertMarkdownUpload(markdown: string) {
+  const textarea = bodyTextarea.value;
+  if (!textarea) {
+    body.value = [body.value.trimEnd(), markdown].filter(Boolean).join("\n\n");
+    return;
+  }
+
+  const start = textarea.selectionStart ?? body.value.length;
+  const end = textarea.selectionEnd ?? start;
+  const before = body.value.slice(0, start);
+  const after = body.value.slice(end);
+  const leadingBreak = before && !before.endsWith("\n") ? "\n\n" : "";
+  const trailingBreak = after && !after.startsWith("\n") ? "\n\n" : "";
+  const insert = `${leadingBreak}${markdown}${trailingBreak}`;
+  body.value = `${before}${insert}${after}`;
+  const cursor = before.length + insert.length;
+  void nextTick(() => {
+    textarea.focus();
+    textarea.setSelectionRange(cursor, cursor);
+  });
+}
+
 async function handleSubmit() {
   if (!canPublish.value) {
     return;
@@ -165,9 +190,12 @@ async function handleSubmit() {
     });
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     await router.push(topicDetailRoute(topic));
-  } catch {
+  } catch (error) {
     publishState.value = "submitted";
-    publishError.value = "当前未登录或服务暂时不可用，已保留为发布预览；登录后可再次提交。";
+    publishError.value = contentPolicyMessage(
+      error,
+      "当前未登录或服务暂时不可用，已保留为发布预览；登录后可再次提交。",
+    );
   }
 }
 
@@ -337,14 +365,17 @@ function isTopicIntent(value: unknown): value is TopicIntent {
             </div>
           </div>
 
-          <label class="field-block">
-            <span>正文</span>
+          <div class="field-block">
+            <label for="new-topic-body">正文</label>
             <textarea
+              id="new-topic-body"
+              ref="bodyTextarea"
               v-model="body"
               rows="10"
               placeholder="环境：\n复现步骤：\n实际结果：\n期望结果：\n我已经尝试过："
             ></textarea>
-          </label>
+            <MarkdownUploadButton @insert="insertMarkdownUpload" />
+          </div>
         </UiCard>
 
         <UiCard id="tags" class="form-panel">

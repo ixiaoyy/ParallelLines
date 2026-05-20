@@ -1,0 +1,191 @@
+.my-invites-page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.invites-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(0, 90, 168, 0.12);
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, rgba(0, 90, 168, 0.1), rgba(8, 199, 216, 0.1)), #fff;
+
+  span {
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  h1 {
+    margin: 0.35rem 0;
+    color: var(--title);
+    font-size: clamp(1.8rem, 4vw, 3rem);
+  }
+
+  p {
+    margin: 0;
+    color: var(--text);
+  }
+}
+
+.hero-link,
+.empty-link {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.invites-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+  gap: 1rem;
+}
+
+.invites-main,
+.invites-side {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+}
+
+.invite-panel {
+  :deep(.ant-card-body) {
+    display: grid;
+    gap: 1rem;
+  }
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+
+  span {
+    color: var(--primary);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  h2 {
+    margin: 0.2rem 0 0;
+    color: var(--title);
+  }
+}
+
+.panel-state {
+  margin: 0;
+  color: var(--text);
+}
+
+.panel-state--error,
+.invite-status {
+  color: #b42318;
+}
+
+.invite-card,
+.managed-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid rgba(0, 90, 168, 0.1);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.invite-mark {
+  width: 0.85rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: var(--board-color, var(--primary));
+}
+
+.invite-card p,
+.managed-item span {
+  margin: 0.2rem 0;
+  color: var(--text);
+}
+
+.invite-card small {
+  color: rgba(49, 74, 92, 0.72);
+}
+
+.invite-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.invite-form,
+.create-board-form {
+  display: grid;
+  gap: 0.85rem;
+
+  label {
+    display: grid;
+    gap: 0.35rem;
+    color: var(--title);
+    font-weight: 700;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    border: 1px solid rgba(0, 90, 168, 0.14);
+    border-radius: 0.9rem;
+    padding: 0.75rem 0.85rem;
+    color: var(--text);
+    font: inherit;
+  }
+}
+
+.managed-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.managed-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.invite-status {
+  position: sticky;
+  bottom: 1rem;
+  justify-self: center;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(23, 38, 51, 0.12);
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .invites-hero,
+  .invites-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .invites-layout {
+    display: grid;
+  }
+}
+
+@media (max-width: 640px) {
+  .invites-hero,
+  .invite-card {
+    align-items: start;
+  }
+
+  .invite-card {
+    grid-template-columns: auto 1fr;
+  }
+
+  .invite-actions {
+    grid-column: 2;
+  }
+}

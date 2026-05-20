@@ -49,6 +49,16 @@ export const router = createRouter({
       component: () => import("@/pages/topic/NewTopicPage.vue"),
     },
     {
+      path: "/invites",
+      name: "my-invites",
+      component: () => import("@/pages/invites/MyInvitesPage.vue"),
+    },
+    {
+      path: "/security",
+      name: "security",
+      component: () => import("@/pages/security/SecurityPage.vue"),
+    },
+    {
       path: "/search",
       name: "search",
       component: () => import("@/pages/search/SearchPage.vue"),

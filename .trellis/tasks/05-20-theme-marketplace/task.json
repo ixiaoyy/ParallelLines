@@ -1,0 +1,53 @@
+{
+  "id": "theme-marketplace",
+  "name": "theme-marketplace",
+  "title": "主题市场、组件安装与安全沙箱",
+  "description": "支持安装/更新/回滚主题和主题组件，并隔离不可信代码风险。",
+  "status": "planning",
+  "dev_type": "frontend",
+  "scope": "themes",
+  "package": null,
+  "priority": "P2",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-20",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "05-20-discourse-parity-roadmap",
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

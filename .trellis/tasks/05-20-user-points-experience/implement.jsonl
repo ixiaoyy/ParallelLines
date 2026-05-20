@@ -1,0 +1,8 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "积分/经验/等级字段与流水表建模"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "成长规则 API 错误与权限处理"}
+{"file": ".trellis/spec/frontend/auth-user-session.md", "reason": "当前用户资料与会话字段展示"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "跨层枚举和数值字段类型安全"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "用户成长字段跨 DB/API/UI 契约"}

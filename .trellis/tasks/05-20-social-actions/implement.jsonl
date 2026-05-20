@@ -1,0 +1,8 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/backend/interactions-notifications.md", "reason": "点赞、收藏、关注/通知 fan-out 合约"}
+{"file": ".trellis/spec/frontend/notifications-interactions.md", "reason": "前端互动动作、乐观更新与通知展示"}
+{"file": ".trellis/spec/frontend/post-actions.md", "reason": "帖子详情操作按钮行为"}
+{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "DTO 到 ViewModel 与 API query wiring"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层互动状态与计数一致性"}

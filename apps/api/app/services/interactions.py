@@ -30,7 +30,7 @@ class InteractionService:
         *,
         notification_level: str = "watching",
     ) -> BoardFollowResponse:
-        board = await self._get_board(slug)
+        board = await self._get_board(slug, current_user)
         member = await self._get_board_member(board.id, current_user.id)
         if member:
             member.notification_level = notification_level
@@ -55,7 +55,7 @@ class InteractionService:
         )
 
     async def unfollow_board(self, slug: str, current_user: User) -> BoardFollowResponse:
-        board = await self._get_board(slug)
+        board = await self._get_board(slug, current_user)
         member = await self._get_board_member(board.id, current_user.id)
         if not member:
             return BoardFollowResponse(
@@ -82,7 +82,7 @@ class InteractionService:
         )
 
     async def like_post(self, post_id: str, current_user: User) -> InteractionStateResponse:
-        post = await self._get_post(post_id)
+        post = await self._get_post(post_id, current_user)
         existing = await self._get_reaction("post", post.id, current_user.id)
         if not existing:
             self.session.add(
@@ -127,7 +127,7 @@ class InteractionService:
         )
 
     async def unlike_post(self, post_id: str, current_user: User) -> InteractionStateResponse:
-        post = await self._get_post(post_id)
+        post = await self._get_post(post_id, current_user)
         existing = await self._get_reaction("post", post.id, current_user.id)
         if existing:
             await self.session.delete(existing)
@@ -149,7 +149,7 @@ class InteractionService:
         )
 
     async def bookmark_topic(self, topic_id: str, current_user: User) -> InteractionStateResponse:
-        topic = await self._get_topic(topic_id)
+        topic = await self._get_topic(topic_id, current_user)
         existing = await self._get_bookmark("topic", topic.id, current_user.id)
         if not existing:
             self.session.add(
@@ -166,7 +166,7 @@ class InteractionService:
         )
 
     async def unbookmark_topic(self, topic_id: str, current_user: User) -> InteractionStateResponse:
-        topic = await self._get_topic(topic_id)
+        topic = await self._get_topic(topic_id, current_user)
         existing = await self._get_bookmark("topic", topic.id, current_user.id)
         if existing:
             await self.session.delete(existing)
@@ -250,29 +250,39 @@ class InteractionService:
             ],
         )
 
-    async def _get_board(self, slug: str) -> Board:
+    async def _get_board(self, slug: str, current_user: User) -> Board:
         board = await self.session.scalar(select(Board).where(Board.slug == slug))
-        if not board:
+        if not board or not await self._can_access_board(board, current_user):
             raise NotFoundError("board_not_found", "Board not found")
         return board
 
-    async def _get_topic(self, topic_id: str) -> Topic:
+    async def _get_topic(self, topic_id: str, current_user: User) -> Topic:
         topic = await self.session.scalar(
-            select(Topic).where(Topic.id == topic_id, Topic.deleted_at.is_(None))
+            select(Topic)
+            .options(selectinload(Topic.board))
+            .where(Topic.id == topic_id, Topic.deleted_at.is_(None))
         )
-        if not topic:
+        if not topic or not await self._can_access_board(topic.board, current_user):
             raise NotFoundError("topic_not_found", "Topic not found")
         return topic
 
-    async def _get_post(self, post_id: str) -> Post:
+    async def _get_post(self, post_id: str, current_user: User) -> Post:
         post = await self.session.scalar(
             select(Post)
-            .options(selectinload(Post.topic))
+            .options(selectinload(Post.topic).selectinload(Topic.board))
             .where(Post.id == post_id, Post.deleted_at.is_(None))
         )
-        if not post:
+        if not post or not await self._can_access_board(post.topic.board, current_user):
             raise NotFoundError("post_not_found", "Post not found")
         return post
+
+    async def _can_access_board(self, board: Board, current_user: User) -> bool:
+        if board.visibility == "public":
+            return True
+        if board.owner_id == current_user.id:
+            return True
+        member = await self._get_board_member(board.id, current_user.id)
+        return member is not None
 
     async def _get_board_member(self, board_id: str, user_id: str) -> BoardMember | None:
         return await self.session.scalar(

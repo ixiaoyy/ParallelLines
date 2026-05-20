@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 
+import MarkdownUploadButton from "@/features/uploads/components/MarkdownUploadButton.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
@@ -29,6 +30,7 @@ const emit = defineEmits<{ submit: [rawMd: string] }>();
 const draft = ref("");
 const title = ref("");
 const tags = ref("fastapi, 排障");
+const draftTextarea = ref<HTMLTextAreaElement | null>(null);
 
 const isReplyMode = computed(() => props.mode === "reply");
 const heading = computed(() => (isReplyMode.value ? "回复这个主题" : "发一条新主题"));
@@ -78,6 +80,28 @@ function handleSubmit() {
   }
 
   emit("submit", rawMd);
+}
+
+function insertMarkdownUpload(markdown: string) {
+  const textarea = draftTextarea.value;
+  if (!textarea) {
+    draft.value = [draft.value.trimEnd(), markdown].filter(Boolean).join("\n\n");
+    return;
+  }
+
+  const start = textarea.selectionStart ?? draft.value.length;
+  const end = textarea.selectionEnd ?? start;
+  const before = draft.value.slice(0, start);
+  const after = draft.value.slice(end);
+  const leadingBreak = before && !before.endsWith("\n") ? "\n\n" : "";
+  const trailingBreak = after && !after.startsWith("\n") ? "\n\n" : "";
+  const insert = `${leadingBreak}${markdown}${trailingBreak}`;
+  draft.value = `${before}${insert}${after}`;
+  const cursor = before.length + insert.length;
+  void nextTick(() => {
+    textarea.focus();
+    textarea.setSelectionRange(cursor, cursor);
+  });
 }
 
 function restoreDraft() {
@@ -141,7 +165,14 @@ function clearSavedDraft() {
       <strong>{{ isReplyMode ? topicTitle : boardName }}</strong>
     </div>
 
-    <textarea v-model="draft" :aria-label="isReplyMode ? '回复正文' : '正文'" :placeholder="placeholder" rows="4" />
+    <textarea
+      ref="draftTextarea"
+      v-model="draft"
+      :aria-label="isReplyMode ? '回复正文' : '正文'"
+      :placeholder="placeholder"
+      rows="4"
+    />
+    <MarkdownUploadButton :compact="compact" @insert="insertMarkdownUpload" />
 
     <label v-if="!isReplyMode" class="composer-field composer-field--tags">
       <span>标签</span>

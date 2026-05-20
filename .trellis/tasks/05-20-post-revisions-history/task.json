@@ -1,0 +1,93 @@
+{
+  "id": "post-revisions-history",
+  "name": "post-revisions-history",
+  "title": "帖子编辑历史、版本对比与恢复",
+  "description": "记录帖子编辑版本，支持作者/版主查看差异、恢复版本和审计编辑行为。",
+  "status": "completed",
+  "dev_type": "fullstack",
+  "scope": "posts",
+  "package": null,
+  "priority": "P0",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-20",
+  "completedAt": "2026-05-20",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 6,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [
+    {
+      "title": "Post revision DB model, schema comments, and Alembic migration",
+      "status": "completed"
+    },
+    {
+      "title": "Edit history capture, author/moderator read APIs, and moderator restore",
+      "status": "completed"
+    },
+    {
+      "title": "Frontend revision API/query wiring and PostItem history panel",
+      "status": "completed"
+    },
+    {
+      "title": "Audit logs, search consistency tests, and code-spec updates",
+      "status": "completed"
+    }
+  ],
+  "children": [],
+  "parent": "05-20-discourse-parity-roadmap",
+  "relatedFiles": [
+    "apps/api/app/models/forum.py",
+    "apps/api/app/models/moderation.py",
+    "apps/api/app/models/__init__.py",
+    "apps/api/alembic/env.py",
+    "apps/api/alembic/versions/0012_post_revisions.py",
+    "apps/api/app/db/schema_comments.py",
+    "apps/api/app/schemas/forum.py",
+    "apps/api/app/services/forum.py",
+    "apps/api/app/api/v1/posts.py",
+    "apps/api/tests/test_post_revisions.py",
+    "apps/web/src/features/posts/api.ts",
+    "apps/web/src/features/posts/queries.ts",
+    "apps/web/src/features/posts/model.ts",
+    "apps/web/src/features/posts/components/PostItem.vue",
+    "apps/web/src/features/posts/components/PostItem.scss",
+    "apps/web/src/pages/topic/TopicDetailPage.vue",
+    "apps/web/src/shared/api/queryKeys.ts",
+    ".trellis/spec/backend/post-revisions-history.md",
+    ".trellis/spec/backend/index.md",
+    ".trellis/spec/backend/user-content-operations.md",
+    ".trellis/spec/backend/moderation-admin-safety.md",
+    ".trellis/spec/frontend/post-actions.md"
+  ],
+  "notes": "Implemented post edit history and moderator restore. Every successful first-post edit stores the previous raw/cooked content with editor, version number, optional reason, summary, and audit log. Added author/moderator revision list/detail APIs, moderator-only restore that creates a new revision and updates live post/search content, frontend revision panel and restore action wiring, migration 0012, tests, and executable specs. Validation: ruff check passed; targeted revision/edit tests 6 passed; full API pytest 32 passed; pnpm web lint passed; pnpm web build passed; clean SQLite Alembic upgrade through 0012 passed; docker compose config passed; git diff --check passed with CRLF warnings only.",
+  "meta": {}
+}

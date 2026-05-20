@@ -6,10 +6,29 @@ import type { TopicCardVM } from "@/entities/topic/model";
 import { hasAccessToken } from "@/shared/api/client";
 import { queryKeys } from "@/shared/api/queryKeys";
 
-import { createTopic, fetchBoardTopics, fetchTopic, fetchTopics, searchTopics } from "./api";
+import {
+  createTopic,
+  fetchBoardTopics,
+  fetchTopic,
+  fetchTopics,
+  mergeTopic,
+  moveTopic,
+  searchTopics,
+  splitTopic,
+  updateTopicLifecycle,
+} from "./api";
 import type { TopicSearchParams } from "./api";
 import { toTopicCard } from "./model";
-import type { CreateTopicRequest, TopicResponse, TopicSort } from "./model";
+import type {
+  CreateTopicRequest,
+  TopicLifecycleRequest,
+  TopicLifecycleResponse,
+  TopicMergeRequest,
+  TopicMoveRequest,
+  TopicResponse,
+  TopicSort,
+  TopicSplitRequest,
+} from "./model";
 
 export function useTopicFeed(sort: MaybeRefOrGetter<TopicSort> = "latest") {
   return useQuery({
@@ -112,4 +131,108 @@ export function useCreateTopic() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
     },
   });
+}
+
+export function useTopicLifecycle(topicId: MaybeRefOrGetter<string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<TopicResponse, Error, TopicLifecycleRequest>({
+    mutationFn: (payload) => {
+      const id = toValue(topicId);
+      if (!id || !hasAccessToken()) {
+        throw new Error("authentication_required");
+      }
+
+      return updateTopicLifecycle(id, payload);
+    },
+    onSuccess: (topic) => {
+      invalidateTopicLifecycleQueries(queryClient, topic.id, topic.board_slug);
+    },
+  });
+}
+
+export function useMoveTopic(topicId: MaybeRefOrGetter<string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<TopicResponse, Error, TopicMoveRequest>({
+    mutationFn: (payload) => {
+      const id = toValue(topicId);
+      if (!id || !hasAccessToken()) {
+        throw new Error("authentication_required");
+      }
+
+      return moveTopic(id, payload);
+    },
+    onSuccess: (topic) => {
+      invalidateTopicLifecycleQueries(queryClient, topic.id, topic.board_slug);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.boards });
+    },
+  });
+}
+
+export function useSplitTopic(topicId: MaybeRefOrGetter<string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<TopicLifecycleResponse, Error, TopicSplitRequest>({
+    mutationFn: (payload) => {
+      const id = toValue(topicId);
+      if (!id || !hasAccessToken()) {
+        throw new Error("authentication_required");
+      }
+
+      return splitTopic(id, payload);
+    },
+    onSuccess: (response) => {
+      if (response.source_topic) {
+        invalidateTopicLifecycleQueries(
+          queryClient,
+          response.source_topic.id,
+          response.source_topic.board_slug,
+        );
+      }
+      invalidateTopicLifecycleQueries(
+        queryClient,
+        response.target_topic.id,
+        response.target_topic.board_slug,
+      );
+      void queryClient.invalidateQueries({ queryKey: queryKeys.boards });
+    },
+  });
+}
+
+export function useMergeTopic(topicId: MaybeRefOrGetter<string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<TopicLifecycleResponse, Error, TopicMergeRequest>({
+    mutationFn: (payload) => {
+      const id = toValue(topicId);
+      if (!id || !hasAccessToken()) {
+        throw new Error("authentication_required");
+      }
+
+      return mergeTopic(id, payload);
+    },
+    onSuccess: (response) => {
+      const sourceId = toValue(topicId);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.topic(sourceId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.posts(sourceId) });
+      invalidateTopicLifecycleQueries(
+        queryClient,
+        response.target_topic.id,
+        response.target_topic.board_slug,
+      );
+      void queryClient.invalidateQueries({ queryKey: queryKeys.boards });
+    },
+  });
+}
+
+function invalidateTopicLifecycleQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  topicId: string,
+  boardSlug: string,
+) {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topicId) });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.posts(topicId) });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topics(`board:${boardSlug}:latest`) });
 }

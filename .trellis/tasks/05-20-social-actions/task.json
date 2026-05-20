@@ -1,0 +1,53 @@
+{
+  "id": "social-actions",
+  "name": "social-actions",
+  "title": "社区互动动作补齐：点赞、收藏、转发与邀请入口",
+  "description": "补齐帖子/回复的点赞、收藏/书签、转发分享与邀请相关入口，形成前后端闭环并接入通知与登录态。",
+  "status": "planning",
+  "dev_type": "fullstack",
+  "scope": "forum",
+  "package": null,
+  "priority": "P1",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-20",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "05-20-discourse-parity-roadmap",
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

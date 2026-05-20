@@ -1,6 +1,8 @@
 export const queryKeys = {
   auth: ["auth"] as const,
   currentUser: ["auth", "me"] as const,
+  sessions: ["auth", "sessions"] as const,
+  oauthProviders: ["auth", "oauth", "providers"] as const,
   user: (username: string) => ["users", username] as const,
   userTopics: (username: string) => ["users", username, "topics"] as const,
   boards: ["boards"] as const,
@@ -8,7 +10,11 @@ export const queryKeys = {
   topics: (filter: string) => ["topics", filter] as const,
   topic: (id: string) => ["topics", "detail", id] as const,
   posts: (topicId: string) => ["topics", "posts", topicId] as const,
+  postRevisions: (postId: string) => ["posts", postId, "revisions"] as const,
+  postRevision: (postId: string, revisionId: string) =>
+    ["posts", postId, "revisions", revisionId] as const,
   tags: (limit: number) => ["tags", limit] as const,
+  invites: ["invites"] as const,
   notifications: ["notifications"] as const,
   moderationRoot: ["moderation"] as const,
   moderationQueue: (status: string) => ["moderation", "queue", status] as const,

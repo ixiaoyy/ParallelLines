@@ -147,6 +147,34 @@
   transform: rotate(3deg);
 }
 
+.avatar-upload {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  min-width: 7.8rem;
+  transform: translateX(-50%) rotate(3deg);
+}
+
+.avatar-upload__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.avatar-upload span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 760;
+}
+
 .profile-copy {
   min-width: 0;
 }

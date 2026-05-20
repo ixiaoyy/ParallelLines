@@ -23,6 +23,8 @@ export interface TopicResponse {
   last_posted_at: string;
   created_at: string;
   updated_at: string;
+  merged_into_topic_id: string | null;
+  excerpt: string;
 }
 
 export interface CreateTopicRequest {
@@ -31,6 +33,38 @@ export interface CreateTopicRequest {
   tags: string[];
   pinned?: boolean;
   featured?: boolean;
+}
+
+export interface TopicLifecycleRequest {
+  status?: "open" | "closed" | "archived" | null;
+  pinned?: boolean | null;
+  note?: string | null;
+}
+
+export interface TopicMoveRequest {
+  board_id?: string | null;
+  board_slug?: string | null;
+  note?: string | null;
+}
+
+export interface TopicSplitRequest {
+  title: string;
+  post_ids: string[];
+  board_id?: string | null;
+  board_slug?: string | null;
+  note?: string | null;
+}
+
+export interface TopicMergeRequest {
+  target_topic_id: string;
+  note?: string | null;
+}
+
+export interface TopicLifecycleResponse {
+  source_topic: TopicResponse | null;
+  target_topic: TopicResponse;
+  moved_post_count: number;
+  audit_action: string;
 }
 
 export function toTopicCard(topic: TopicResponse): TopicCardVM {
@@ -44,7 +78,7 @@ export function toTopicCard(topic: TopicResponse): TopicCardVM {
     authorName: topic.author_name,
     posterNames: [topic.author_name],
     tags: topic.tags,
-    excerpt: buildTopicExcerpt(topic),
+    excerpt: topic.excerpt,
     replyCount: topic.reply_count,
     viewCount: topic.view_count,
     likeCount: topic.like_count,
@@ -64,12 +98,4 @@ function normalizeTopicStatus(value: string): TopicStatus {
   }
 
   return "open";
-}
-
-function buildTopicExcerpt(topic: TopicResponse): string {
-  if (topic.tags.length) {
-    return `来自 ${topic.board_name} · 标签：${topic.tags.map((tag) => `#${tag}`).join(" ")}`;
-  }
-
-  return `来自 ${topic.board_name} 的讨论，打开主题查看楼层与上下文。`;
 }

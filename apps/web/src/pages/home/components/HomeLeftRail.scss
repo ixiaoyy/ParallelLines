@@ -65,6 +65,15 @@
   color: var(--accent-violet);
 }
 
+.rail-subtitle {
+  margin: 0.35rem 0 0.15rem;
+  padding: 0 0.6rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
 .rail-link,
 .rail-board {
   display: grid;
@@ -223,6 +232,11 @@
   color: var(--title);
   outline: none;
   background: var(--bg-hover);
+}
+
+.rail-board--private {
+  border: 1px solid rgba(var(--primary-rgb), 0.08);
+  background: rgba(var(--primary-rgb), 0.035);
 }
 
 .rail-board-mark {

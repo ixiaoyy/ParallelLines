@@ -5,12 +5,14 @@ from app.api.v1 import (
     boards,
     health,
     interactions,
+    invites,
     moderation,
     notifications,
     posts,
     search,
     tags,
     topics,
+    uploads,
     users,
 )
 
@@ -22,7 +24,9 @@ api_router.include_router(topics.router)
 api_router.include_router(users.router)
 api_router.include_router(posts.router)
 api_router.include_router(interactions.router)
+api_router.include_router(invites.router)
 api_router.include_router(notifications.router)
 api_router.include_router(search.router)
 api_router.include_router(tags.router)
 api_router.include_router(moderation.router)
+api_router.include_router(uploads.router)

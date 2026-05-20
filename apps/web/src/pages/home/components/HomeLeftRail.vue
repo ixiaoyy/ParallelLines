@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { AppstoreOutlined, FireOutlined, HomeOutlined, StarFilled } from "@ant-design/icons-vue";
+import { computed } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
 import type { TagItemVM } from "@/features/tags/model";
 import { compactNumber } from "@/shared/lib/format";
 
-defineProps<{
+const props = defineProps<{
   boards: BoardSummary[];
   tags: TagItemVM[];
   boardsLoading: boolean;
@@ -13,6 +14,9 @@ defineProps<{
   tagsLoading: boolean;
   tagsError: boolean;
 }>();
+
+const publicBoards = computed(() => props.boards.filter((board) => board.visibility === "public"));
+const privateBoards = computed(() => props.boards.filter((board) => board.visibility !== "public"));
 </script>
 
 <template>
@@ -44,10 +48,27 @@ defineProps<{
       <p v-if="boardsLoading" class="rail-state">正在加载版块…</p>
       <p v-else-if="boardsError" class="rail-state rail-state--error">版块暂时不可用</p>
       <template v-else>
+        <p v-if="!publicBoards.length && !privateBoards.length" class="rail-state">暂无可见版块</p>
+        <h3 v-if="publicBoards.length" class="rail-subtitle">公共版块</h3>
         <RouterLink
-          v-for="board in boards"
+          v-for="board in publicBoards"
           :key="board.id"
           class="rail-board"
+          :to="{ name: 'board-detail', params: { slug: board.slug } }"
+          :style="{ '--board-color': board.color }"
+        >
+          <span class="rail-board-mark" aria-hidden="true"></span>
+          <span class="rail-board-copy">
+            <strong>{{ board.name }}</strong>
+            <small>{{ board.description }}</small>
+          </span>
+          <em>{{ compactNumber(board.topicCount) }}</em>
+        </RouterLink>
+        <h3 v-if="privateBoards.length" class="rail-subtitle">邀请版块</h3>
+        <RouterLink
+          v-for="board in privateBoards"
+          :key="board.id"
+          class="rail-board rail-board--private"
           :to="{ name: 'board-detail', params: { slug: board.slug } }"
           :style="{ '--board-color': board.color }"
         >

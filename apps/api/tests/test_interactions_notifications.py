@@ -8,6 +8,7 @@ from app.db.base import Base
 from app.main import create_app
 from app.models.forum import BoardMember, Topic
 from app.models.interaction import Bookmark, Notification, Reaction
+from tests.helpers import register_and_verify_user
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
@@ -18,16 +19,7 @@ async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], objec
 
 
 async def register_user(client: AsyncClient, username: str) -> dict[str, str]:
-    response = await client.post(
-        "/api/v1/auth/register",
-        json={
-            "username": username,
-            "email": f"{username}@example.com",
-            "password": "strong-pass-123",
-        },
-    )
-    assert response.status_code == 201
-    data = response.json()["data"]
+    data = await register_and_verify_user(client, username)
     return {
         "id": data["user"]["id"],
         "token": data["access_token"],

@@ -5,6 +5,7 @@ export interface UserProfile {
   username: string;
   avatar_url: string | null;
   role: UserRole;
+  level: number;
   status: UserStatus;
   created_at: string;
   topic_count: number;

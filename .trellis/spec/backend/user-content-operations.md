@@ -10,7 +10,7 @@ Applies to public user profile reads, authored topic lists, and post editing und
 |---|---|---|
 | `GET /api/v1/users/{username}` | public | Return public user profile without email. |
 | `GET /api/v1/users/{username}/topics?limit=` | public | Return visible topics authored by username using `TopicResponse`. |
-| `PATCH /api/v1/posts/{post_id}` | active user | Update post Markdown and rendered HTML. |
+| `PATCH /api/v1/posts/{post_id}` | active user | Update post Markdown/rendered HTML and optionally save `edit_reason` into revision history. |
 
 ## Response Contracts
 
@@ -23,7 +23,7 @@ Applies to public user profile reads, authored topic lists, and post editing und
 
 `GET /users/{username}/topics` returns `TopicResponse[]` ordered by latest activity and excludes topics where `deleted_at is not null`.
 
-`PATCH /posts/{post_id}` accepts `{ "raw_md": string }` and returns `PostResponse` after updating `raw_md`, `cooked_html`, and `updated_at`.
+`PATCH /posts/{post_id}` accepts `{ "raw_md": string, "edit_reason"?: string | null }` and returns `PostResponse` after updating `raw_md`, `cooked_html`, and `updated_at`. It must create a `post_revisions` row before overwriting live content; see `post-revisions-history.md`.
 
 ## Permissions and Errors
 

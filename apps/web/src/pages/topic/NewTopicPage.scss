@@ -272,6 +272,7 @@
 }
 
 .field-block span,
+.field-block > label,
 .helper-card > span {
   color: var(--accent-geek);
   font-size: 0.76rem;

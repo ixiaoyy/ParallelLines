@@ -1,9 +1,9 @@
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 
-from app.api.v1.dependencies import CurrentUserDep, SessionDep
+from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep
 from app.schemas.common import ApiResponse
 from app.schemas.forum import (
     BoardCreateRequest,
@@ -21,8 +21,11 @@ router = APIRouter(prefix="/boards", tags=["boards"])
 
 
 @router.get("", response_model=ApiResponse[list[BoardResponse]])
-async def list_boards(session: SessionDep) -> ApiResponse[list[BoardResponse]]:
-    boards = await ForumService(session).list_boards()
+async def list_boards(
+    session: SessionDep,
+    current_user: OptionalCurrentUserDep,
+) -> ApiResponse[list[BoardResponse]]:
+    boards = await ForumService(session).list_boards(current_user)
     return ApiResponse(data=[BoardResponse.model_validate(board) for board in boards])
 
 
@@ -41,8 +44,15 @@ async def create_board(
 
 
 @router.get("/{slug}", response_model=ApiResponse[BoardDetailResponse])
-async def get_board(slug: str, session: SessionDep) -> ApiResponse[BoardDetailResponse]:
-    board, latest_topics = await ForumService(session).get_board_detail(slug)
+async def get_board(
+    slug: str,
+    session: SessionDep,
+    current_user: OptionalCurrentUserDep,
+) -> ApiResponse[BoardDetailResponse]:
+    board, latest_topics = await ForumService(session).get_board_detail(
+        slug,
+        current_user=current_user,
+    )
     return ApiResponse(data=BoardDetailResponse.from_board_and_topics(board, latest_topics))
 
 
@@ -75,6 +85,7 @@ async def unfollow_board(
 async def list_board_topics(
     slug: str,
     session: SessionDep,
+    current_user: OptionalCurrentUserDep,
     q: str | None = None,
     tag: str | None = None,
     author: str | None = None,
@@ -90,6 +101,7 @@ async def list_board_topics(
         tag=tag,
         author=author,
         cursor=cursor,
+        current_user=current_user,
     )
     return ApiResponse(
         data=[TopicResponse.from_model(topic) for topic in topics],
@@ -109,8 +121,9 @@ async def list_board_topics(
 async def create_topic(
     slug: str,
     payload: TopicCreateRequest,
+    request: Request,
     session: SessionDep,
     current_user: CurrentUserDep,
 ) -> ApiResponse[TopicResponse]:
-    topic = await ForumService(session).create_topic(slug, payload, current_user)
+    topic = await ForumService(session).create_topic(slug, payload, current_user, request)
     return ApiResponse(data=TopicResponse.from_model(topic))

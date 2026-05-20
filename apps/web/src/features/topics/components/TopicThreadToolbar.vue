@@ -2,6 +2,9 @@
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
+type TopicStatus = "open" | "closed" | "archived" | "hidden";
+type TopicLifecycleStatus = "open" | "closed" | "archived";
+
 defineProps<{
   visibleCount: number;
   totalCount: number;
@@ -11,6 +14,10 @@ defineProps<{
   bookmarkPending: boolean;
   canFlagTopic: boolean;
   flagTopicPending: boolean;
+  canManageTopic: boolean;
+  topicStatus: TopicStatus;
+  topicPinned: boolean;
+  lifecyclePending: boolean;
   status: string;
 }>();
 
@@ -19,6 +26,11 @@ const emit = defineEmits<{
   toggleBookmark: [];
   copyLink: [];
   flagTopic: [];
+  setTopicStatus: [status: TopicLifecycleStatus];
+  toggleTopicPinned: [];
+  moveTopic: [];
+  splitTopic: [];
+  mergeTopic: [];
 }>();
 </script>
 
@@ -45,6 +57,24 @@ const emit = defineEmits<{
       <UiButton tone="ghost" :disabled="flagTopicPending || !canFlagTopic" @click="emit('flagTopic')">
         举报主题
       </UiButton>
+    </div>
+    <div v-if="canManageTopic" class="lifecycle-actions" aria-label="版主主题管理">
+      <UiButton
+        tone="subtle"
+        :disabled="lifecyclePending"
+        @click="emit('setTopicStatus', topicStatus === 'open' ? 'closed' : 'open')"
+      >
+        {{ topicStatus === "open" ? "关闭主题" : "重新打开" }}
+      </UiButton>
+      <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('setTopicStatus', 'archived')">
+        归档
+      </UiButton>
+      <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('toggleTopicPinned')">
+        {{ topicPinned ? "取消置顶" : "置顶" }}
+      </UiButton>
+      <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('moveTopic')">移动</UiButton>
+      <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('splitTopic')">拆分</UiButton>
+      <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('mergeTopic')">合并</UiButton>
     </div>
     <p v-if="status" class="toolbar-status" role="status">{{ status }}</p>
   </UiCard>

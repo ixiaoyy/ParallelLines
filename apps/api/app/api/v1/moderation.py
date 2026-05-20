@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 
 from app.api.v1.dependencies import CurrentUserDep, SessionDep
 from app.schemas.common import ApiResponse
@@ -12,10 +12,15 @@ from app.schemas.moderation import (
     FlagStatusUpdateRequest,
     HideContentRequest,
     ModerationActionResponse,
+    ScreenedRuleCreateRequest,
+    ScreenedRuleKind,
+    ScreenedRuleResponse,
+    SpamActionResponse,
     UserStatusResponse,
     UserStatusUpdateRequest,
 )
 from app.services.moderation import ModerationService
+from app.services.spam import SpamPreventionService
 
 router = APIRouter(prefix="/moderation", tags=["moderation"])
 
@@ -27,10 +32,11 @@ router = APIRouter(prefix="/moderation", tags=["moderation"])
 )
 async def create_flag(
     payload: FlagCreateRequest,
+    request: Request,
     session: SessionDep,
     current_user: CurrentUserDep,
 ) -> ApiResponse[FlagResponse]:
-    flag = await ModerationService(session).create_flag(payload, current_user)
+    flag = await ModerationService(session).create_flag(payload, current_user, request)
     return ApiResponse(data=flag)
 
 
@@ -123,3 +129,55 @@ async def list_audit_logs(
 ) -> ApiResponse[list[AuditLogResponse]]:
     logs = await ModerationService(session).list_audit_logs(current_user, limit=limit)
     return ApiResponse(data=logs)
+
+
+@router.get("/screened-rules", response_model=ApiResponse[list[ScreenedRuleResponse]])
+async def list_screened_rules(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    kind: ScreenedRuleKind | None = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
+) -> ApiResponse[list[ScreenedRuleResponse]]:
+    rules = await SpamPreventionService(session).list_screened_rules(
+        current_user,
+        kind=kind,
+        limit=limit,
+    )
+    return ApiResponse(data=rules)
+
+
+@router.post(
+    "/screened-rules",
+    response_model=ApiResponse[ScreenedRuleResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_screened_rule(
+    payload: ScreenedRuleCreateRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[ScreenedRuleResponse]:
+    rule = await SpamPreventionService(session).create_screened_rule(payload, current_user)
+    return ApiResponse(data=rule)
+
+
+@router.delete("/screened-rules/{rule_id}", response_model=ApiResponse[dict[str, bool]])
+async def delete_screened_rule(
+    rule_id: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[dict[str, bool]]:
+    await SpamPreventionService(session).delete_screened_rule(rule_id, current_user)
+    return ApiResponse(data={"ok": True})
+
+
+@router.get("/spam-actions", response_model=ApiResponse[list[SpamActionResponse]])
+async def list_spam_actions(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
+) -> ApiResponse[list[SpamActionResponse]]:
+    actions = await SpamPreventionService(session).list_spam_actions(
+        current_user,
+        limit=limit,
+    )
+    return ApiResponse(data=actions)

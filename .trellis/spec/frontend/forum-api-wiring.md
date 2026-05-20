@@ -23,6 +23,10 @@ Frontend API functions:
 | `fetchTags(limit)` | `GET /api/v1/tags?limit=` | `TagResponse[]` |
 | `createTopic(boardSlug, payload)` | `POST /api/v1/boards/{slug}/topics` | `TopicResponse` |
 | `createPost(topicId, payload)` | `POST /api/v1/topics/{topic_id}/posts` | `PostResponse` |
+| `updateTopicLifecycle(topicId, payload)` | `PUT /api/v1/topics/{topic_id}/lifecycle` | `TopicResponse` |
+| `moveTopic(topicId, payload)` | `POST /api/v1/topics/{topic_id}/move` | `TopicResponse` |
+| `splitTopic(topicId, payload)` | `POST /api/v1/topics/{topic_id}/split` | `TopicLifecycleResponse` |
+| `mergeTopic(topicId, payload)` | `POST /api/v1/topics/{topic_id}/merge` | `TopicLifecycleResponse` |
 
 Query composables:
 
@@ -36,6 +40,10 @@ Query composables:
 - `useTags(limit)`
 - `useCreateTopic()`
 - `useCreatePost(topicId)`
+- `useTopicLifecycle(topicId)`
+- `useMoveTopic(topicId)`
+- `useSplitTopic(topicId)`
+- `useMergeTopic(topicId)`
 
 ### 3. Contracts
 
@@ -49,6 +57,8 @@ Query composables:
 - Empty API responses render honest empty states and calls to action; discovery surfaces must not invent boards, topics, posts, or tags.
 - Authenticated write mutations (`createTopic`, `createPost`) must use `shared/api/client.ts` so `Authorization` is attached consistently.
 - If writes fail because the user is not logged in or the backend is down, keep the current draft/preview state rather than dropping user content.
+- Topic lifecycle payloads stay snake_case (`board_slug`, `post_ids`, `target_topic_id`) and are owned by `features/topics/api.ts`; pages/components must call the lifecycle composables instead of direct `apiPost`/`apiPut`.
+- Lifecycle mutations invalidate topic detail, topic posts, public/latest feeds, board topic lists, and board counters; move/merge navigation must use the returned `TopicResponse` / `TopicLifecycleResponse.target_topic`.
 - Search route state belongs in URL query parameters (`q`, `sort`, `board`, `tag`, `author`) so result pages are shareable.
 - Static fixture/sample data is allowed only in explicitly named design-system, story, or test modules. Production page/query paths must not import `shared/api/mockForum.ts` or notification mocks.
 
@@ -59,6 +69,8 @@ Query composables:
 | Backend unavailable | Query enters error state; page shows a visible API unavailable/error message and no fake content |
 | Backend returns empty public lists during early setup | Discovery surfaces show empty states and publish/explore calls to action |
 | Missing access token on create topic/reply | Mutation fails; page keeps draft and displays preview/helper copy |
+| Closed or archived topic | Reply composer is hidden/guarded and lifecycle controls remain moderator-only |
+| Move/split/merge succeeds | Related topic/board/feed queries invalidate and navigation uses returned topic fields |
 | Topic/board not found | Page shows existing empty-state component |
 | Backend DTO dates are ISO strings | UI formatting happens via `relativeTime` only after mapping |
 | Search query empty | Search page shows guidance instead of firing an empty API request |
@@ -78,6 +90,7 @@ Query composables:
 - `pnpm --dir apps/web test:smoke` must verify UI-created boards/topics/tags appear through real API-backed pages after navigation/reload.
 - Backend tests for board/topic/post endpoints must keep passing when frontend contracts depend on fields.
 - Backend tests for `GET /api/v1/tags` must verify tag responses are real DB rows ordered by usage.
+- Backend `test_topic_lifecycle.py` and frontend `typecheck` must stay in sync for `TopicLifecycle*` payload/response fields.
 
 ### 7. Wrong vs Correct
 

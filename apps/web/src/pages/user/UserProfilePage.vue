@@ -1,19 +1,30 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 
+import { useCurrentUser } from "@/features/auth/queries";
 import TopicList from "@/features/topics/components/TopicList.vue";
+import { useUploadAvatar } from "@/features/uploads/queries";
 import { useUserProfile, useUserTopics } from "@/features/users/queries";
+import { ApiError, resolveApiAssetUrl } from "@/shared/api/client";
 import { relativeTime } from "@/shared/lib/format";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiBadge from "@/shared/ui/Badge.vue";
+import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 const route = useRoute();
 const username = computed(() => String(route.params.username ?? ""));
+const avatarInput = ref<HTMLInputElement | null>(null);
+const avatarStatus = ref("");
+const currentUserQuery = useCurrentUser();
 const profileQuery = useUserProfile(username);
 const topicsQuery = useUserTopics(username);
 const profile = computed(() => profileQuery.data.value ?? null);
+const avatarMutation = useUploadAvatar(() => profile.value?.username ?? username.value);
+const isOwnProfile = computed(
+  () => currentUserQuery.data.value?.username === profile.value?.username,
+);
 
 const joinedAt = computed(() => {
   const createdAt = profile.value?.created_at;
@@ -66,6 +77,45 @@ function statusLabel(status: string): string {
 
   return labels[status] ?? status;
 }
+
+function openAvatarPicker() {
+  if (avatarMutation.isPending.value) {
+    return;
+  }
+
+  avatarInput.value?.click();
+}
+
+async function handleAvatarChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  if (!file) {
+    return;
+  }
+
+  avatarStatus.value = "";
+  try {
+    await avatarMutation.mutateAsync(file);
+    await profileQuery.refetch();
+    avatarStatus.value = "头像已更新。";
+  } catch (error) {
+    avatarStatus.value = avatarErrorMessage(error);
+  }
+}
+
+function avatarErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.code === "avatar_must_be_image") {
+      return "头像必须是 PNG、JPG、GIF 或 WebP 图片。";
+    }
+    if (error.code === "upload_too_large") {
+      return "头像文件超过大小限制。";
+    }
+  }
+
+  return "头像上传失败，请确认已登录且文件类型安全。";
+}
 </script>
 
 <template>
@@ -86,12 +136,30 @@ function statusLabel(status: string): string {
       <template v-else-if="profile">
         <div class="profile-identity">
           <div class="profile-avatar-frame">
-            <UiAvatar :name="profile.username" :src="profile.avatar_url" size="lg" />
+            <UiAvatar
+              :name="profile.username"
+              :src="resolveApiAssetUrl(profile.avatar_url)"
+              size="lg"
+            />
+            <div v-if="isOwnProfile" class="avatar-upload">
+              <input
+                ref="avatarInput"
+                class="avatar-upload__input"
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                @change="handleAvatarChange"
+              />
+              <UiButton type="button" tone="ghost" @click="openAvatarPicker">
+                {{ avatarMutation.isPending.value ? "上传中…" : "更换头像" }}
+              </UiButton>
+              <span v-if="avatarStatus" role="status">{{ avatarStatus }}</span>
+            </div>
           </div>
 
           <div class="profile-copy">
             <div class="profile-kicker">
               <UiBadge tone="green">{{ roleLabel(profile.role) }}</UiBadge>
+              <UiBadge tone="blue">Lv.{{ profile.level }}</UiBadge>
               <span class="profile-status">
                 <span class="profile-status__dot"></span>
                 {{ statusLabel(profile.status) }}

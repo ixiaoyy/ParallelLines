@@ -5,8 +5,10 @@ from dataclasses import dataclass
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from starlette.requests import Request
 
 from app.core.exceptions import NotFoundError, PermissionDeniedError, ValidationError
+from app.core.permissions import BOARD_MODERATOR_ROLES, is_admin, is_global_moderator
 from app.db.base import utcnow
 from app.models.forum import BoardMember, Post, Topic
 from app.models.moderation import AuditLog, Flag
@@ -22,9 +24,8 @@ from app.schemas.moderation import (
     UserStatusResponse,
     UserStatusUpdateRequest,
 )
+from app.services.spam import SpamPreventionService
 
-GLOBAL_MODERATOR_ROLES = {"admin", "moderator"}
-BOARD_MODERATOR_ROLES = {"moderator", "owner"}
 VALID_FLAG_STATUSES = {"pending", "resolved", "rejected"}
 
 
@@ -68,8 +69,31 @@ class ModerationService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def create_flag(self, payload: FlagCreateRequest, current_user: User) -> FlagResponse:
+    async def create_flag(
+        self,
+        payload: FlagCreateRequest,
+        current_user: User,
+        request: Request | None = None,
+    ) -> FlagResponse:
+        await SpamPreventionService(self.session).enforce_flag(request, current_user=current_user)
         target = await self._resolve_target(payload.target_type, payload.target_id)
+        existing_flag = await self.session.scalar(
+            select(Flag)
+            .options(selectinload(Flag.reporter), selectinload(Flag.resolved_by))
+            .where(
+                Flag.target_type == payload.target_type,
+                Flag.target_id == payload.target_id,
+                Flag.reporter_id == current_user.id,
+                Flag.status == "pending",
+            )
+        )
+        if existing_flag:
+            return await self.get_flag(
+                existing_flag.id,
+                current_user=current_user,
+                allow_reporter=True,
+            )
+
         flag = Flag(
             target_type=payload.target_type,
             target_id=payload.target_id,
@@ -275,7 +299,7 @@ class ModerationService:
         payload: UserStatusUpdateRequest,
         current_user: User,
     ) -> UserStatusResponse:
-        if current_user.role != "admin":
+        if not is_admin(current_user):
             raise PermissionDeniedError("admin_required", "Admin role required")
         if current_user.id == user_id:
             raise ValidationError("cannot_moderate_self", "Cannot change your own status")
@@ -417,7 +441,7 @@ class ModerationService:
             raise PermissionDeniedError("moderation_forbidden", "Moderation permission required")
 
     def _is_global_moderator(self, current_user: User) -> bool:
-        return current_user.role in GLOBAL_MODERATOR_ROLES
+        return is_global_moderator(current_user)
 
     def _add_audit_log(
         self,

@@ -1,0 +1,53 @@
+{
+  "id": "localization-multilingual-content",
+  "name": "localization-multilingual-content",
+  "title": "多语言内容、本地化与翻译工作流",
+  "description": "支持多语言 UI、内容本地化、翻译覆盖和语言偏好。",
+  "status": "planning",
+  "dev_type": "fullstack",
+  "scope": "i18n",
+  "package": null,
+  "priority": "P2",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-05-20",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 0,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "05-20-discourse-parity-roadmap",
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

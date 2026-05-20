@@ -32,6 +32,7 @@ Query composables:
 ### 3. Contracts
 
 - Report actions live in topic and post action bars and call `useCreateFlag()`; they must not call `fetch` directly.
+- Duplicate report submissions for the same visible target are backend-idempotent; the UI should treat a successful `FlagResponse` as success even if it reuses an existing `id`.
 - Moderation console route is `/admin/moderation` and must be shareable/bookmarkable.
 - Queue status is local UI state (`pending`, `resolved`, `rejected`, `all`); server state remains in TanStack Query under `queryKeys.moderationRoot`.
 - Frontend DTOs keep backend snake_case; display helpers map only labels (`flagReasonLabel`, `flagStatusLabel`, `auditActionLabel`).
@@ -43,6 +44,7 @@ Query composables:
 | Case | Expected behavior |
 |---|---|
 | Anonymous user clicks report | Mutation throws `authentication_required`; UI remains unchanged |
+| Logged-in user repeats a report on the same target | Mutation succeeds with the existing flag id; queue is not spammed |
 | Moderator queue returns 403 | Console renders permission guidance |
 | Empty queue for selected status | Empty state explains that no flags match |
 | Hide/restore succeeds | Invalidate `moderationRoot` and topic feed query |

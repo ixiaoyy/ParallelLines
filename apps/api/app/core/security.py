@@ -21,9 +21,10 @@ def verify_password(password: str, hashed_password: str) -> bool:
 def create_token(
     *,
     subject: str,
-    token_type: Literal["access", "refresh"],
+    token_type: Literal["access", "refresh", "two_factor"],
     settings: Settings,
     expires_delta: timedelta,
+    session_id: str | None = None,
 ) -> str:
     now = datetime.now(UTC)
     payload: dict[str, Any] = {
@@ -32,6 +33,8 @@ def create_token(
         "iat": now,
         "exp": now + expires_delta,
     }
+    if session_id:
+        payload["sid"] = session_id
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 

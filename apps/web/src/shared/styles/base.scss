@@ -47,3 +47,12 @@ pre {
   color: inherit;
   background: transparent;
 }
+
+.markdown-body img {
+  max-width: min(100%, 44rem);
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.95rem;
+  background: var(--bg-surface);
+  box-shadow: 0 12px 26px rgba(var(--shadow-rgb), 0.1);
+}
