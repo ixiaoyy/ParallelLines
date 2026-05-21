@@ -14,6 +14,7 @@ from app.models import (  # noqa: F401
     AuditLog,
     BackgroundJob,
     BackgroundJobLog,
+    BackupArtifact,
     Board,
     BoardMember,
     Bookmark,

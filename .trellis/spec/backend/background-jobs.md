@@ -4,8 +4,8 @@
 
 ### 1. Scope / Trigger
 
-- Trigger: adding or changing async mail delivery, notification fan-out, scheduled maintenance, retry/dead-letter handling, or worker deployment.
-- Applies to `app/models/background_job.py`, `app/services/background_jobs.py`, `app/workers/background_jobs.py`, `api/v1/admin.py`, `schemas/admin.py`, Alembic migrations, and `docker-compose.yml` worker commands.
+- Trigger: adding or changing async mail delivery, notification fan-out, scheduled maintenance, backup generation, retry/dead-letter handling, or worker deployment.
+- Applies to `app/models/background_job.py`, `app/services/background_jobs.py`, `app/workers/background_jobs.py`, `api/v1/admin.py`, `schemas/admin.py`, backup services, Alembic migrations, and `docker-compose.yml` worker commands.
 - This project is still in active development: do **not** preserve old standalone worker entrypoints when the unified worker replaces them.
 
 ### 2. Signatures
@@ -54,6 +54,7 @@ Runtime env:
 ### 3. Contracts
 
 - The unified worker owns all backend async work: mail delivery, notification creation, digest dispatch, hot-score recompute, temporary upload cleanup, and stale session cleanup.
+- Site backup generation is also a unified worker task via `create_site_backup`; admin request handlers only enqueue it.
 - Do not add new `app/workers/<single-purpose>.py` daemons or Compose services for background work; add a handler to `JOB_HANDLERS` instead.
 - `idempotency_key` is globally unique when non-null. Re-enqueueing the same key returns the existing row and must not duplicate side effects.
 - Handler payloads must be small JSON dictionaries. They must not contain passwords or large rendered bodies; auth email jobs may contain the one-time email secret needed to deliver that message.
@@ -72,6 +73,7 @@ Runtime env:
 | Handler raises on final attempt | Job status `dead`, `finished_at` set, `dead` log appended |
 | Unknown `task_name` | Job moves to `dead` with `Unknown task handler` error |
 | Worker loop called repeatedly in one schedule bucket | One scheduled row per task and bucket |
+| Backup archive generation fails | Job enters retry/dead-letter and `backup_artifacts.status` becomes `failed` |
 | Non-admin queries queue APIs | `403 admin_required` |
 | Missing job logs route target | `404 background_job_not_found` |
 

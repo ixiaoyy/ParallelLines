@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     upload_max_avatar_bytes: int = 2 * 1024 * 1024
     upload_max_files_per_post: int = 8
     upload_temporary_ttl_hours: int = 24
+    backup_storage_path: str = "var/backups"
 
     model_config = SettingsConfigDict(
         env_file=".env",

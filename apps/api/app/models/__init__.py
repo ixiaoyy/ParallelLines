@@ -2,6 +2,7 @@ from app.db.base import Base
 from app.db.schema_comments import apply_schema_comments
 from app.models.admin import SiteSetting
 from app.models.background_job import BackgroundJob, BackgroundJobLog
+from app.models.backup import BackupArtifact
 from app.models.email import EmailDeliveryEvent, InboundEmail, UserEmailPreference
 from app.models.forum import (
     Board,
@@ -29,6 +30,7 @@ apply_schema_comments(Base.metadata)
 
 __all__ = [
     "AuditLog",
+    "BackupArtifact",
     "BackgroundJob",
     "BackgroundJobLog",
     "Board",

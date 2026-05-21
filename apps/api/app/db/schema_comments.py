@@ -51,6 +51,7 @@ TABLE_COMMENTS: dict[str, str] = {
     "user_email_preferences": "用户邮件通知、摘要频率和投递禁用状态。",
     "email_delivery_events": "邮件供应商投递、退信和投诉事件记录。",
     "inbound_emails": "入站邮件回复 webhook 记录及匹配状态。",
+    "backup_artifacts": "备份、导出归档元数据、校验和和状态记录。",
 }
 
 COLUMN_COMMENTS: dict[str, dict[str, str]] = {
@@ -333,6 +334,19 @@ COLUMN_COMMENTS: dict[str, dict[str, str]] = {
         "reason": "未接受或仅记录的原因摘要。",
         "payload": "入站 webhook 原始上下文的安全摘录。",
         "created_at": "入站邮件记录时间（UTC）。",
+    },
+    "backup_artifacts": {
+        "kind": "归档类型：site_backup、site_export 或 user_export。",
+        "status": "归档状态：queued、running、succeeded、failed 或 deleted。",
+        "filename": "下载文件名。",
+        "storage_backend": "归档存储后端，当前为 local。",
+        "storage_key": "归档在存储后端内的对象键；未生成或删除时为空。",
+        "byte_size": "归档文件字节数。",
+        "sha256": "归档文件 SHA-256 校验和。",
+        "metadata": "归档元数据、表计数和安全摘录；不包含密码或令牌明文。",
+        "failure_reason": "备份失败原因摘要；成功时为空。",
+        "created_by_id": "触发备份或导出的管理员 ID；用户删除后为空。",
+        "completed_at": "归档成功、失败或删除完成时间；队列中为空。",
     },
 }
 

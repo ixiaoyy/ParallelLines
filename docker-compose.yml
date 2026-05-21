@@ -58,12 +58,14 @@ services:
       NEW_USER_SCREENING_DAYS: 7
       UPLOAD_STORAGE_BACKEND: local
       UPLOAD_STORAGE_PATH: /var/lib/parallellines/uploads
+      BACKUP_STORAGE_PATH: /var/lib/parallellines/backups
       UPLOAD_MAX_BYTES: 5242880
       UPLOAD_MAX_AVATAR_BYTES: 2097152
     ports:
       - "8000:8000"
     volumes:
       - upload-data:/var/lib/parallellines/uploads
+      - backup-data:/var/lib/parallellines/backups
     depends_on:
       db:
         condition: service_healthy
@@ -102,8 +104,10 @@ services:
       EMAIL_DELIVERY_MODE: memory
       UPLOAD_STORAGE_BACKEND: local
       UPLOAD_STORAGE_PATH: /var/lib/parallellines/uploads
+      BACKUP_STORAGE_PATH: /var/lib/parallellines/backups
     volumes:
       - upload-data:/var/lib/parallellines/uploads
+      - backup-data:/var/lib/parallellines/backups
     depends_on:
       api:
         condition: service_healthy
@@ -126,3 +130,4 @@ services:
 volumes:
   postgres-data:
   upload-data:
+  backup-data:

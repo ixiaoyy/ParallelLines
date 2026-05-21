@@ -17,6 +17,7 @@ from app.models.forum import Topic
 from app.models.interaction import Notification
 from app.models.user import UserSession
 from app.services.background_jobs import BackgroundJobHandler, BackgroundJobService
+from app.services.backups import BackupService
 from app.services.email import EmailService
 from app.services.email_notifications import EmailNotificationService
 from app.services.forum import calculate_hot_score
@@ -136,6 +137,13 @@ async def handle_send_email(
     return {"kind": kind, "to_email_domain": to_email.rsplit("@", 1)[-1]}
 
 
+async def handle_create_site_backup(
+    session: AsyncSession,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    return await BackupService(session).run_site_backup(_payload_str(payload, "backup_id"))
+
+
 JOB_HANDLERS: dict[str, BackgroundJobHandler] = {
     "recompute_hot_scores": handle_recompute_hot_scores,
     "cleanup_expired_uploads": handle_cleanup_expired_uploads,
@@ -144,6 +152,7 @@ JOB_HANDLERS: dict[str, BackgroundJobHandler] = {
     "send_notification_email": handle_send_notification_email,
     "send_digest_emails": handle_send_digest_emails,
     "send_email": handle_send_email,
+    "create_site_backup": handle_create_site_backup,
 }
 
 WORKER_QUEUES = ("mail", "notifications", "maintenance", "default")

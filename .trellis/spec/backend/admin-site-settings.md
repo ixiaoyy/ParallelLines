@@ -25,6 +25,12 @@ Backend endpoints:
 | `GET /api/v1/admin/system` | admin | Returns DB/cache/mail/worker status, stats, recent audit and mail logs. |
 | `GET /api/v1/admin/background-jobs?status=&limit=` | admin | Lists queued/running/succeeded/dead jobs. |
 | `GET /api/v1/admin/background-jobs/{job_id}/logs` | admin | Lists event logs for one background job. |
+| `POST /api/v1/admin/backups` | admin | Enqueue a site backup artifact job. |
+| `GET /api/v1/admin/backups?status=&limit=` | admin | Lists backup artifacts and statuses. |
+| `GET /api/v1/admin/backups/{backup_id}/download` | admin | Downloads a succeeded backup ZIP with checksum header. |
+| `DELETE /api/v1/admin/backups/{backup_id}` | admin | Deletes the local backup archive and marks metadata deleted. |
+| `POST /api/v1/admin/backups/{backup_id}/restore` | admin | Non-destructive restore validation with exact confirmation. |
+| `GET /api/v1/admin/exports/site` | admin | Downloads a redacted full-site data export. |
 | `GET /api/v1/admin/audit-logs?limit=` | admin | Lists global admin audit logs. |
 | `GET /api/v1/admin/email-logs?limit=` | admin | Lists masked recent local/dev mail logs. |
 
@@ -58,6 +64,8 @@ Settings with request-path effects:
   `/admin/users/{self}`.
 - Email logs exposed by the admin API must mask recipient local parts and must not
   include verification codes or one-time tokens.
+- Backup and export APIs must redact password/token/secret/code fields and must not
+  generate large backup files synchronously in admin request handlers.
 - System health may report cache/workers as `degraded` or `unknown`; it must not fail
   the whole endpoint if Redis is down.
 - System health `queue` includes unified background worker name, queue status counts, poll/batch settings,
@@ -77,6 +85,8 @@ Settings with request-path effects:
 | Admin tries to suspend self | `cannot_moderate_self` / 422 |
 | Redis unavailable during `/admin/system` | Endpoint still returns 200 with cache `degraded` |
 | Admin queries missing background job logs | `404 background_job_not_found` |
+| Ordinary user creates or downloads backup | `admin_required` / 403 |
+| Backup download before success | `backup_not_ready` / 422 |
 
 ### 5. Good/Base/Bad Cases
 

@@ -59,6 +59,12 @@ Upload storage env:
 | `UPLOAD_MAX_FILES_PER_POST` | Maximum number of upload URLs attachable to one post. |
 | `UPLOAD_TEMPORARY_TTL_HOURS` | Expiry window for uploads not yet attached to a post. |
 
+Backup storage env:
+
+| Env | Contract |
+|---|---|
+| `BACKUP_STORAGE_PATH` | Local backup/export archive directory; API and worker must share the same persistent volume. |
+
 Background worker env:
 
 | Env | Contract |
@@ -94,8 +100,9 @@ CI commands:
 - Docker Compose must start a usable local environment from an empty volume with `docker compose up --build`.
 - API startup in Compose must run `alembic upgrade head` before `python -m app.seed`.
 - Worker image reuses the API build and must not run migrations.
-- API and `worker` must share the same `UPLOAD_STORAGE_PATH` volume; otherwise DB metadata
-  will point at files the cleanup handler or API cannot see.
+- API and `worker` must share the same `UPLOAD_STORAGE_PATH` and `BACKUP_STORAGE_PATH`
+  volumes; otherwise DB metadata will point at files the cleanup handler, backup
+  handler, or API cannot see.
 - `VITE_API_BASE_URL` is a build-time frontend contract; Docker build args and CI env must set it explicitly when not using the default.
 - CI uses SQLite for backend tests/smoke to stay self-contained, while Docker Compose uses PostgreSQL.
 - Slow API requests log `request_slow` when duration exceeds `SLOW_REQUEST_MS`.
@@ -122,6 +129,7 @@ CI commands:
 | Rate-limited write path | API returns `429 rate_limited`; admin-only `spam_actions` records context. |
 | Screened email/IP/URL hit | API returns `403 screening_blocked`; public response does not include matched rule value. |
 | Upload volume missing/mismatched | Uploaded metadata may exist but content route returns `upload_not_found`; Compose must mount shared `upload-data`. |
+| Backup volume missing/mismatched | Backup metadata may be succeeded but download returns `backup_file_not_found`; Compose must mount shared `backup-data`. |
 
 ### 5. Good/Base/Bad Cases
 

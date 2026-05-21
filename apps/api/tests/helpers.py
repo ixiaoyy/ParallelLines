@@ -1,6 +1,7 @@
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config import Settings
 from app.workers.background_jobs import run_once
 
 
@@ -35,12 +36,14 @@ async def register_and_verify_user(
 async def drain_background_jobs(
     session_factory: async_sessionmaker[AsyncSession],
     *,
+    settings: Settings | None = None,
     max_iterations: int = 10,
 ) -> int:
     processed_total = 0
     for _ in range(max_iterations):
         processed_count = await run_once(
             session_factory=session_factory,
+            settings=settings,
             enqueue_scheduled=False,
         )
         processed_total += processed_count

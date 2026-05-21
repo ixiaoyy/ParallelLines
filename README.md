@@ -106,6 +106,18 @@ SMTP_USE_TLS=true
 - `UPLOAD_TEMPORARY_TTL_HOURS`：未绑定临时上传的过期时间。
 - `BACKGROUND_UPLOAD_CLEANUP_INTERVAL_SECONDS`：统一后台任务 worker 的临时上传清理调度间隔。
 
+### 备份、恢复校验与数据导出
+
+管理员可通过 `/api/v1/admin/backups` 创建站点备份任务，统一后台 worker 会生成包含数据库 JSON 快照和可选上传文件的 ZIP 归档。备份元数据会记录状态、创建人、文件大小和 SHA-256 校验和。
+
+- `BACKUP_STORAGE_PATH`：备份 ZIP 的本地存储目录；Docker Compose 中 API 和 worker 共享 `backup-data` 卷。
+- `/api/v1/admin/backups/{id}/download`：仅管理员可下载成功备份，并返回 `X-Backup-SHA256`。
+- `/api/v1/admin/backups/{id}/restore`：当前阶段只做非破坏性校验，必须提交 `RESTORE {id}` 确认，生产环境禁用。
+- `/api/v1/users/me/export`：登录用户导出自己的资料、主题、帖子和互动记录。
+- `/api/v1/admin/exports/site`：管理员导出脱敏后的全站 JSON ZIP。
+
+导出与备份中的 password/token/secret/code 字段会被脱敏，不导出明文密码或一次性令牌。
+
 ### 通知邮件、摘要与入站回复
 
 即时通知邮件、每日/每周摘要、退信/投诉回调和入站回复记录都由统一后台任务与 `/api/v1/email/*` API 承载：
@@ -143,7 +155,7 @@ pnpm --dir apps/web test:smoke
 Before deployment:
 
 - Set `JWT_SECRET_KEY` to a strong secret; never use the local default.
-- Set `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGINS`, `ENVIRONMENT`, SMTP email settings, `EMAIL_WEBHOOK_SECRET`, background job intervals, and upload storage settings for the target environment.
+- Set `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGINS`, `ENVIRONMENT`, SMTP email settings, `EMAIL_WEBHOOK_SECRET`, background job intervals, upload storage settings, and `BACKUP_STORAGE_PATH` for the target environment.
 - Run `alembic upgrade head` before starting new application code.
 - Check `/healthz`, `/metrics`, API request logs, and worker logs after rollout.
 - Run smoke tests against the target environment or staging before promotion.

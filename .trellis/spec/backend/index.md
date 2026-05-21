@@ -25,6 +25,7 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 | [Admin Site Settings](./admin-site-settings.md) | Admin-only site settings, user management, system panel, public settings, mail logs, and audit contracts | Filled |
 | [Background Jobs](./background-jobs.md) | Unified async queue, worker runtime, scheduled maintenance, retries, dead letters, and admin queue logs | Filled |
 | [Email Notifications and Digests](./email-notifications-digests.md) | Email preferences, notification emails, digest jobs, delivery webhooks, and inbound reply contract | Filled |
+| [Backup, Restore, and Export](./backup-restore-export.md) | Admin backup artifacts, safe restore validation, personal export, site export, checksums, and worker contract | Filled |
 | [User Content Operations](./user-content-operations.md) | Public user profiles, authored topics, and post edit permissions | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Filled |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | Filled |
@@ -50,4 +51,5 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 16. Read `admin-site-settings.md` before changing admin settings, user management, public site settings, or system dashboard APIs.
 17. Read `background-jobs.md` before changing mail delivery, notification fan-out, scheduled maintenance, or worker deployment.
 18. Read `email-notifications-digests.md` before changing email preferences, notification emails, digest jobs, or provider webhooks.
-19. For cross-layer features, read `../guides/cross-layer-thinking-guide.md`.
+19. Read `backup-restore-export.md` before changing backup artifacts, restore validation, backup downloads, or data exports.
+20. For cross-layer features, read `../guides/cross-layer-thinking-guide.md`.

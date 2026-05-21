@@ -1,14 +1,33 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Query
+from starlette.responses import Response
 
-from app.api.v1.dependencies import OptionalCurrentUserDep, SessionDep
+from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep, SettingsDep
 from app.schemas.common import ApiResponse
 from app.schemas.forum import TopicResponse
 from app.schemas.users import UserProfileResponse
+from app.services.backups import BackupService
 from app.services.forum import ForumService
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+
+@router.get("/me/export")
+async def export_current_user(
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> Response:
+    archive = await BackupService(session, settings).build_user_export(current_user)
+    return Response(
+        content=archive.content,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{archive.filename}"',
+            "X-Export-SHA256": archive.sha256,
+        },
+    )
 
 
 @router.get("/{username}", response_model=ApiResponse[UserProfileResponse])
