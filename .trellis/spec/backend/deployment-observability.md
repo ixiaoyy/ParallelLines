@@ -15,8 +15,7 @@ Runtime services:
 |---|---|---|
 | `api` | `uvicorn app.main:app --host 0.0.0.0 --port 8000` | Runs migrations/seed in Compose before serving |
 | `web` | `pnpm --dir apps/web preview --host 0.0.0.0 --port 5174` | Static Vite preview built with `VITE_API_BASE_URL` |
-| `worker` | `python -m app.workers.hot_ranking` | Recomputes topic hot scores every `HOT_RANK_INTERVAL_SECONDS` |
-| `upload-cleanup-worker` | `python -m app.workers.upload_cleanup` | Removes expired temporary uploads every `UPLOAD_CLEANUP_INTERVAL_SECONDS` |
+| `worker` | `python -m app.workers.background_jobs` | Unified queue worker for mail, notifications, hot ranking, upload cleanup, and session cleanup |
 | `db` | `postgres:16-alpine` | PostgreSQL source of truth |
 | `redis` | `redis:7-alpine` | Cache/coordination dependency |
 
@@ -29,7 +28,8 @@ Email verification env:
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | Optional SMTP auth credentials; never log or commit. |
 | `SMTP_FROM_EMAIL` | Sender address used for verification emails. |
 | `SMTP_USE_TLS` / `SMTP_USE_SSL` | TLS mode; `SMTP_USE_TLS=true` starts STARTTLS unless SSL is enabled. |
-| `SMTP_TIMEOUT_SECONDS` | Timeout for request-path SMTP send attempts. |
+| `SMTP_TIMEOUT_SECONDS` | Timeout used by the background email handler when `EMAIL_DELIVERY_MODE=smtp`. |
+| `EMAIL_WEBHOOK_SECRET` | Optional shared secret required in `X-Email-Webhook-Secret` for email delivery/inbound webhooks. |
 | `EMAIL_VERIFICATION_CODE_TTL_MINUTES` | Verification code expiry. |
 | `EMAIL_VERIFICATION_RESEND_SECONDS` | Minimum resend interval. |
 | `EMAIL_VERIFICATION_MAX_ATTEMPTS` | Invalid-code attempts before lockout. |
@@ -58,7 +58,18 @@ Upload storage env:
 | `UPLOAD_MAX_BYTES` / `UPLOAD_MAX_AVATAR_BYTES` | Single-file limits for post attachments and avatars. |
 | `UPLOAD_MAX_FILES_PER_POST` | Maximum number of upload URLs attachable to one post. |
 | `UPLOAD_TEMPORARY_TTL_HOURS` | Expiry window for uploads not yet attached to a post. |
-| `UPLOAD_CLEANUP_INTERVAL_SECONDS` | Worker interval for deleting expired temporary upload files. |
+
+Background worker env:
+
+| Env | Contract |
+|---|---|
+| `BACKGROUND_JOB_POLL_SECONDS` | Unified worker poll interval. |
+| `BACKGROUND_JOB_BATCH_SIZE` | Max jobs processed per worker loop. |
+| `BACKGROUND_JOB_RETRY_DELAY_SECONDS` | Base retry delay for failed jobs. |
+| `BACKGROUND_HOT_RANK_INTERVAL_SECONDS` | Time-bucket interval for hot-score recompute jobs. |
+| `BACKGROUND_UPLOAD_CLEANUP_INTERVAL_SECONDS` | Time-bucket interval for expired temporary upload cleanup jobs. |
+| `BACKGROUND_SESSION_CLEANUP_INTERVAL_SECONDS` | Time-bucket interval for stale session cleanup jobs. |
+| `BACKGROUND_DIGEST_INTERVAL_SECONDS` | Time-bucket interval for email digest dispatcher jobs. |
 
 API ops endpoints:
 
@@ -83,14 +94,15 @@ CI commands:
 - Docker Compose must start a usable local environment from an empty volume with `docker compose up --build`.
 - API startup in Compose must run `alembic upgrade head` before `python -m app.seed`.
 - Worker image reuses the API build and must not run migrations.
-- API and `upload-cleanup-worker` must share the same `UPLOAD_STORAGE_PATH` volume;
-  otherwise DB metadata will point at files the cleanup worker or API cannot see.
+- API and `worker` must share the same `UPLOAD_STORAGE_PATH` volume; otherwise DB metadata
+  will point at files the cleanup handler or API cannot see.
 - `VITE_API_BASE_URL` is a build-time frontend contract; Docker build args and CI env must set it explicitly when not using the default.
 - CI uses SQLite for backend tests/smoke to stay self-contained, while Docker Compose uses PostgreSQL.
 - Slow API requests log `request_slow` when duration exceeds `SLOW_REQUEST_MS`.
 - Seed data must not log or print passwords; README may document demo credentials for local-only use.
 - Registration creates a pending account, stores only a verification-code hash, and activates the user only after `/auth/verify-email`.
-- SMTP delivery failures return typed 503 errors (`email_delivery_unavailable` or `email_delivery_failed`) and must not log raw codes, passwords, or SMTP secrets.
+- SMTP delivery failures are recorded on `background_jobs.last_error` and
+  `background_job_logs`; logs must not contain passwords or SMTP secrets.
 - Password-reset/email-change messages carry raw one-time tokens only in email bodies; DB rows store HMAC hashes and expiry/consumption timestamps.
 - Anti-spam rate limits persist sliding-window events in `rate_limit_events`; public errors return generic `rate_limited` or `screening_blocked` without revealing thresholds or screened values.
 
@@ -104,7 +116,7 @@ CI commands:
 | Slow request | Structured warning log includes method, path, status, duration, threshold |
 | Smoke registration conflicts | Test uses unique usernames/boards per run |
 | CI lint/type/test failure | Workflow fails before smoke promotion |
-| SMTP not configured in real delivery mode | Register fails with `email_delivery_unavailable`; no plaintext code is leaked. |
+| SMTP not configured in real delivery mode | Email job retries then enters dead-letter state; no SMTP secret is logged. |
 | Verification code invalid/expired | Account remains pending; login returns `email_not_verified`. |
 | Password-reset unknown email | API still returns `200` with the same shape as known emails; no account existence leak. |
 | Rate-limited write path | API returns `429 rate_limited`; admin-only `spam_actions` records context. |
@@ -117,7 +129,7 @@ CI commands:
 - Base: CI runs backend and frontend quality gates, then starts temporary API/web servers and executes Playwright happy path.
 - Bad: a Docker entrypoint seeds data before migrations, or CI runs smoke tests against a frontend build pointing at a different API URL.
 - Bad: deploying with `EMAIL_DELIVERY_MODE=memory`, which exposes a dev-only verification code in API responses.
-- Bad: running upload cleanup in a container without the same persistent upload volume as the API.
+- Bad: adding a second standalone worker service instead of a `JOB_HANDLERS` entry in the unified worker.
 
 ### 6. Tests Required
 

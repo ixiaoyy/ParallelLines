@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import html
+import json
 import re
 from collections.abc import Iterable
 from datetime import datetime
+from hashlib import sha256
 
 from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,6 +42,7 @@ from app.schemas.forum import (
     TopicSort,
     TopicSplitRequest,
 )
+from app.services.background_jobs import BackgroundJobService
 from app.services.content_safety import enforce_content_policy
 from app.services.spam import SpamPreventionService
 from app.services.uploads import UploadService
@@ -63,6 +66,31 @@ def slugify(value: str, *, fallback_prefix: str = "item") -> str:
 
 def normalize_tag_name(value: str) -> str:
     return TAG_SEPARATOR_PATTERN.sub("-", value.strip().lower()).strip("-#")
+
+
+def notification_idempotency_key(
+    *,
+    kind: str,
+    user_id: str,
+    topic_id: str | None,
+    post_id: str | None,
+    actor_id: str | None,
+    data: dict[str, object],
+) -> str:
+    payload = json.dumps(
+        {
+            "kind": kind,
+            "user_id": user_id,
+            "topic_id": topic_id,
+            "post_id": post_id,
+            "actor_id": actor_id,
+            "data": data,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        default=str,
+    )
+    return f"notification:{kind}:{user_id}:{sha256(payload.encode()).hexdigest()}"
 
 
 def render_markdown(raw_md: str) -> str:
@@ -127,9 +155,7 @@ def render_inline_markdown(line: str) -> str:
             safe_url = html.escape(url, quote=True)
             safe_label = html.escape(label or "upload", quote=True)
             if marker:
-                rendered.append(
-                    f'<img src="{safe_url}" alt="{safe_label}" loading="lazy" />'
-                )
+                rendered.append(f'<img src="{safe_url}" alt="{safe_label}" loading="lazy" />')
             else:
                 rendered.append(
                     f'<a href="{safe_url}" target="_blank" rel="nofollow noopener noreferrer">'
@@ -193,9 +219,7 @@ class ForumService:
 
     async def list_boards(self, current_user: User | None = None) -> list[Board]:
         statement = select(Board).where(self._board_visible_condition(current_user))
-        result = await self.session.scalars(
-            statement.order_by(desc(Board.topic_count), Board.name)
-        )
+        result = await self.session.scalars(statement.order_by(desc(Board.topic_count), Board.name))
         return list(result)
 
     async def get_board_by_slug(
@@ -207,8 +231,7 @@ class ForumService:
     ) -> Board:
         board = await self.session.scalar(select(Board).where(Board.slug == slug))
         if not board or (
-            not include_private_for_owner
-            and not await self._can_access_board(board, current_user)
+            not include_private_for_owner and not await self._can_access_board(board, current_user)
         ):
             raise NotFoundError("board_not_found", "Board not found")
         return board
@@ -1054,7 +1077,7 @@ class ForumService:
         )
         self.session.add(invitation)
         await self.session.flush()
-        self._add_notification(
+        await self._add_notification(
             user_id=invitee.id,
             kind="board_invite",
             topic_id=None,
@@ -1299,9 +1322,7 @@ class ForumService:
             .values(topic_id=topic_id, board_id=board_id)
         )
         await self.session.execute(
-            update(PostRevision)
-            .where(PostRevision.post_id.in_(post_ids))
-            .values(topic_id=topic_id)
+            update(PostRevision).where(PostRevision.post_id.in_(post_ids)).values(topic_id=topic_id)
         )
 
     async def _merge_topic_reads(self, source_topic_id: str, target_topic_id: str) -> None:
@@ -1520,7 +1541,7 @@ class ForumService:
             )
         )
         for watcher in watchers:
-            self._add_notification(
+            await self._add_notification(
                 user_id=watcher.user_id,
                 kind="board_new_topic",
                 topic_id=topic.id,
@@ -1545,18 +1566,18 @@ class ForumService:
         notified_user_ids: set[str] = set()
 
         if topic.user_id != current_user.id:
-            self._add_reply_notification(topic.user_id, topic, post, current_user)
+            await self._add_reply_notification(topic.user_id, topic, post, current_user)
             notified_user_ids.add(topic.user_id)
 
         if parent_post and parent_post.user_id != current_user.id:
-            self._add_reply_notification(parent_post.user_id, topic, post, current_user)
+            await self._add_reply_notification(parent_post.user_id, topic, post, current_user)
             notified_user_ids.add(parent_post.user_id)
 
         mentioned_users = await self._find_mentioned_users(post.raw_md)
         for mentioned_user in mentioned_users:
             if mentioned_user.id == current_user.id:
                 continue
-            self._add_notification(
+            await self._add_notification(
                 user_id=mentioned_user.id,
                 kind="mentioned",
                 topic_id=topic.id,
@@ -1581,7 +1602,7 @@ class ForumService:
         for read_state in read_states:
             if read_state.user_id in notified_user_ids:
                 continue
-            self._add_notification(
+            await self._add_notification(
                 user_id=read_state.user_id,
                 kind="topic_new_post",
                 topic_id=topic.id,
@@ -1595,14 +1616,14 @@ class ForumService:
                 },
             )
 
-    def _add_reply_notification(
+    async def _add_reply_notification(
         self,
         user_id: str,
         topic: Topic,
         post: Post,
         current_user: User,
     ) -> None:
-        self._add_notification(
+        await self._add_notification(
             user_id=user_id,
             kind="replied",
             topic_id=topic.id,
@@ -1645,7 +1666,7 @@ class ForumService:
             )
         )
 
-    def _add_notification(
+    async def _add_notification(
         self,
         *,
         user_id: str,
@@ -1655,15 +1676,20 @@ class ForumService:
         actor_id: str | None,
         data: dict[str, object],
     ) -> None:
-        if actor_id and user_id == actor_id:
-            return
-        self.session.add(
-            Notification(
+        await BackgroundJobService(self.session).enqueue_notification(
+            user_id=user_id,
+            kind=kind,
+            topic_id=topic_id,
+            post_id=post_id,
+            actor_id=actor_id,
+            data=data,
+            idempotency_key=notification_idempotency_key(
+                kind=kind,
                 user_id=user_id,
-                type=kind,
                 topic_id=topic_id,
                 post_id=post_id,
                 actor_id=actor_id,
                 data=data,
-            )
+            ),
+            commit=False,
         )

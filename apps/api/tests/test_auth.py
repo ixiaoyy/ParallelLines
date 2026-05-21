@@ -15,7 +15,7 @@ from app.main import create_app
 from app.models.user import User, UserSecurityToken
 from app.services.auth import TOTP_STEP_SECONDS, hotp
 from app.services.email import clear_email_outbox, latest_email_secret, latest_verification_code
-from tests.helpers import register_and_verify_user
+from tests.helpers import drain_background_jobs, register_and_verify_user
 
 
 @asynccontextmanager
@@ -153,6 +153,7 @@ async def test_resend_verification_rate_limit() -> None:
         assert limited.status_code == 429
         assert limited.json()["error"]["code"] == "verification_resend_limited"
 
+        await drain_background_jobs(session_factory)
         assert latest_verification_code("resend@example.com")
 
     await engine.dispose()
@@ -224,6 +225,7 @@ async def test_password_reset_is_uniform_expiring_and_one_time() -> None:
         assert known.status_code == 200
         assert unknown.status_code == 200
         assert known.json()["data"] == unknown.json()["data"]
+        await drain_background_jobs(session_factory)
         assert latest_email_secret("missing-reset@example.com", kind="password_reset") is None
 
         expired_token = latest_email_secret("resetter@example.com", kind="password_reset")
@@ -252,6 +254,7 @@ async def test_password_reset_is_uniform_expiring_and_one_time() -> None:
             "/api/v1/auth/password-reset/request",
             json={"email": "resetter@example.com"},
         )
+        await drain_background_jobs(session_factory)
         fresh_token = latest_email_secret("resetter@example.com", kind="password_reset")
         assert fresh_token and fresh_token != expired_token
 
@@ -291,7 +294,7 @@ async def test_password_reset_is_uniform_expiring_and_one_time() -> None:
 
 @pytest.mark.anyio
 async def test_email_change_token_updates_email_and_cannot_be_reused() -> None:
-    async with auth_client() as (client, _session_factory):
+    async with auth_client() as (client, session_factory):
         token_pair = await register_and_verify_user(
             client,
             "mailchanger",
@@ -308,6 +311,7 @@ async def test_email_change_token_updates_email_and_cannot_be_reused() -> None:
         assert requested.status_code == 200
         assert requested.json()["data"]["email"] == "new-mailchanger@example.com"
 
+        await drain_background_jobs(session_factory)
         token = latest_email_secret("new-mailchanger@example.com", kind="email_change")
         assert token
         confirmed = await client.post(
@@ -355,9 +359,7 @@ async def test_user_can_list_and_revoke_active_sessions() -> None:
             first_pair["session_id"],
             second_pair["session_id"],
         }
-        assert [item["id"] for item in sessions if item["current"]] == [
-            second_pair["session_id"]
-        ]
+        assert [item["id"] for item in sessions if item["current"]] == [second_pair["session_id"]]
 
         revoked = await client.delete(
             f"/api/v1/auth/sessions/{first_pair['session_id']}",
@@ -371,9 +373,7 @@ async def test_user_can_list_and_revoke_active_sessions() -> None:
 
         after_revoke = await client.get("/api/v1/auth/sessions", headers=second_headers)
         assert after_revoke.status_code == 200
-        assert [item["id"] for item in after_revoke.json()["data"]] == [
-            second_pair["session_id"]
-        ]
+        assert [item["id"] for item in after_revoke.json()["data"]] == [second_pair["session_id"]]
 
         third_login = await client.post(
             "/api/v1/auth/login",

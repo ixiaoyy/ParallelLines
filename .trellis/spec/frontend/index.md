@@ -25,6 +25,8 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F5F9F
 | [Auth and User Session](./auth-user-session.md) | Login/register UI, verified session state, profile DTOs, and draft persistence | Filled |
 | [Account Security UI](./account-security.md) | Forgot-password, 2FA login, security settings, sessions, and OAuth provider discovery UI contracts | Filled |
 | [Topic Lifecycle UI](./topic-lifecycle.md) | Moderator toolbar, lifecycle mutations, cache invalidation, and closed-topic composer behavior | Filled |
+| [Admin Dashboard](./admin-dashboard.md) | Admin dashboard, site settings UI, public setting refresh, user management, system health, and audit/mail panels | Filled |
+| [Email Preferences](./email-preferences.md) | User email notification toggles, digest frequency UI, API wiring, and authenticated navigation | Filled |
 | [Type Safety](./type-safety.md) | Type patterns, validation | Filled |
 
 ## Mandatory Pre-Development Checklist
@@ -43,5 +45,7 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F5F9F
 12. Read `auth-user-session.md` before changing auth UI, current-user state, profile pages, or authenticated drafts.
 13. Read `account-security.md` before changing forgot-password, 2FA login, security settings, or session revocation UI.
 14. Read `topic-lifecycle.md` before changing close/open, pin, move, split, merge, or closed-topic composer behavior.
-15. For cross-layer API work, read `../guides/cross-layer-thinking-guide.md`.
+15. Read `admin-dashboard.md` before changing `/admin`, public site settings, user management, system health, or admin navigation.
+16. Read `email-preferences.md` before changing `/email-preferences`, email preference API wiring, or mail navigation.
+17. For cross-layer API work, read `../guides/cross-layer-thinking-guide.md`.
 

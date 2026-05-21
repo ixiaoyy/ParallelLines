@@ -1,0 +1,13 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Backend router/service/model placement"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Site settings table migration/comment rules"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Admin API typed errors"}
+{"file": ".trellis/spec/backend/moderation-admin-safety.md", "reason": "Admin permissions and audit log contract"}
+{"file": ".trellis/spec/backend/deployment-observability.md", "reason": "System health/dashboard contracts"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Admin page and feature module placement"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Vue component and SCSS structure"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "TanStack query composables"}
+{"file": ".trellis/spec/frontend/auth-user-session.md", "reason": "Admin role checks use shared helpers"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Backend-to-frontend setting/user contracts"}

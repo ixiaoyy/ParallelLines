@@ -47,6 +47,27 @@ class EmailService:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
+    async def send_message(
+        self,
+        *,
+        to_email: str,
+        subject: str,
+        body: str,
+        kind: str,
+        secret: str = "",
+    ) -> None:
+        if self.settings.email_delivery_mode == "memory":
+            self._send_to_memory(
+                to_email=to_email,
+                subject=subject,
+                body=body,
+                code=secret,
+                kind=kind,
+            )
+            return
+
+        await self._send_via_smtp(to_email=to_email, subject=subject, body=body)
+
     async def send_verification_code(self, *, to_email: str, username: str, code: str) -> None:
         subject = "平行线注册验证码"
         body = (
@@ -56,17 +77,13 @@ class EmailService:
             "如果这不是你本人操作，请忽略这封邮件。"
         )
 
-        if self.settings.email_delivery_mode == "memory":
-            self._send_to_memory(
-                to_email=to_email,
-                subject=subject,
-                body=body,
-                code=code,
-                kind="email_verification",
-            )
-            return
-
-        await self._send_via_smtp(to_email=to_email, subject=subject, body=body)
+        await self.send_message(
+            to_email=to_email,
+            subject=subject,
+            body=body,
+            kind="email_verification",
+            secret=code,
+        )
 
     async def send_password_reset(self, *, to_email: str, username: str, token: str) -> None:
         subject = "平行线密码重置"
@@ -78,17 +95,13 @@ class EmailService:
             "如果这不是你本人操作，请忽略这封邮件。"
         )
 
-        if self.settings.email_delivery_mode == "memory":
-            self._send_to_memory(
-                to_email=to_email,
-                subject=subject,
-                body=body,
-                code=token,
-                kind="password_reset",
-            )
-            return
-
-        await self._send_via_smtp(to_email=to_email, subject=subject, body=body)
+        await self.send_message(
+            to_email=to_email,
+            subject=subject,
+            body=body,
+            kind="password_reset",
+            secret=token,
+        )
 
     async def send_email_change(self, *, to_email: str, username: str, token: str) -> None:
         subject = "平行线邮箱变更确认"
@@ -100,17 +113,13 @@ class EmailService:
             "如果这不是你本人操作，请忽略这封邮件。"
         )
 
-        if self.settings.email_delivery_mode == "memory":
-            self._send_to_memory(
-                to_email=to_email,
-                subject=subject,
-                body=body,
-                code=token,
-                kind="email_change",
-            )
-            return
-
-        await self._send_via_smtp(to_email=to_email, subject=subject, body=body)
+        await self.send_message(
+            to_email=to_email,
+            subject=subject,
+            body=body,
+            kind="email_change",
+            secret=token,
+        )
 
     def _send_to_memory(
         self,

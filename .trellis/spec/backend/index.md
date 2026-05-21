@@ -22,6 +22,9 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 | [Spam Prevention and Rate Limits](./spam-prevention-rate-limits.md) | Write-path throttles, screened email/IP/URL rules, auto-silence actions, and admin rule management | Filled |
 | [Post Revisions and Restore](./post-revisions-history.md) | Post edit history, version detail, moderator restore, and audit/search consistency | Filled |
 | [Topic Lifecycle](./topic-lifecycle.md) | Moderator close/open, pin, move, split, and merge contracts with counters and audit logs | Filled |
+| [Admin Site Settings](./admin-site-settings.md) | Admin-only site settings, user management, system panel, public settings, mail logs, and audit contracts | Filled |
+| [Background Jobs](./background-jobs.md) | Unified async queue, worker runtime, scheduled maintenance, retries, dead letters, and admin queue logs | Filled |
+| [Email Notifications and Digests](./email-notifications-digests.md) | Email preferences, notification emails, digest jobs, delivery webhooks, and inbound reply contract | Filled |
 | [User Content Operations](./user-content-operations.md) | Public user profiles, authored topics, and post edit permissions | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Filled |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | Filled |
@@ -44,4 +47,7 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 13. Read `user-content-operations.md` before changing public user profile, authored topic, or post edit endpoints.
 14. Read `post-revisions-history.md` before changing post edit history or restore behavior.
 15. Read `topic-lifecycle.md` before changing topic status, pinning, move, split, merge, topic counters, or merged-topic routing.
-16. For cross-layer features, read `../guides/cross-layer-thinking-guide.md`.
+16. Read `admin-site-settings.md` before changing admin settings, user management, public site settings, or system dashboard APIs.
+17. Read `background-jobs.md` before changing mail delivery, notification fan-out, scheduled maintenance, or worker deployment.
+18. Read `email-notifications-digests.md` before changing email preferences, notification emails, digest jobs, or provider webhooks.
+19. For cross-layer features, read `../guides/cross-layer-thinking-guide.md`.

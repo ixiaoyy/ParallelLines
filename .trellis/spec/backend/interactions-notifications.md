@@ -38,6 +38,8 @@ Database signatures:
 - Mark-read request: `{ "ids": string[] | null }`; omit or pass `null` to mark all unread notifications for the current user.
 - Notification stream event: SSE event `notifications` with data `{ "unread_count": number, "notifications": NotificationResponse[] }`; emit heartbeats as SSE comments when unchanged.
 - Notification `data` is a small JSON summary only; include navigational fields such as `topic_title`, `topic_slug`, `post_number`, and `board_slug` when available, but do not store raw post bodies or secrets in notification payloads.
+- Write-path services enqueue `create_notification` background jobs with `commit=False`; the unified background worker creates `notifications` rows after the request transaction commits.
+- Notification jobs must include deterministic idempotency keys so repeated enqueue attempts do not create duplicate notification rows.
 
 ### 4. Validation & Error Matrix
 
@@ -48,6 +50,7 @@ Database signatures:
 | Duplicate like/bookmark/follow | Return current state without inserting duplicate rows |
 | Unlike/unbookmark/unfollow missing row | Return inactive state without error |
 | Notification IDs from another user | Do not update them; never leak existence |
+| Worker has not processed queued notification | Notification list stays unchanged until the queued job succeeds |
 
 ### 5. Good/Base/Bad Cases
 
@@ -59,7 +62,7 @@ Database signatures:
 
 - API test for follow/like/bookmark idempotency and counter/cache behavior.
 - Service or API test proving duplicate rows cannot be created through repeated calls.
-- Notification test proving reply + mention fan-out creates unread records.
+- Notification test proving reply + mention fan-out creates queued jobs and, after draining the worker, unread records.
 - Mark-read test proving only the current user's unread notifications are updated.
 - Migration check on a clean SQLite/PostgreSQL/MySQL-compatible database URL.
 

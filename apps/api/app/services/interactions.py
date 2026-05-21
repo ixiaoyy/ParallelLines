@@ -16,7 +16,8 @@ from app.schemas.interactions import (
     NotificationResponse,
     NotificationStreamResponse,
 )
-from app.services.forum import calculate_hot_score
+from app.services.background_jobs import BackgroundJobService
+from app.services.forum import calculate_hot_score, notification_idempotency_key
 
 
 class InteractionService:
@@ -101,20 +102,28 @@ class InteractionService:
                 view_count=post.topic.view_count,
             )
             if post.user_id != current_user.id:
-                self.session.add(
-                    Notification(
+                notification_data: dict[str, object] = {
+                    "topic_title": post.topic.title,
+                    "topic_slug": post.topic.slug,
+                    "post_number": post.post_number,
+                    "actor_name": current_user.username,
+                }
+                await BackgroundJobService(self.session).enqueue_notification(
+                    user_id=post.user_id,
+                    kind="liked",
+                    topic_id=post.topic_id,
+                    post_id=post.id,
+                    actor_id=current_user.id,
+                    data=notification_data,
+                    idempotency_key=notification_idempotency_key(
+                        kind="liked",
                         user_id=post.user_id,
-                        type="liked",
                         topic_id=post.topic_id,
                         post_id=post.id,
                         actor_id=current_user.id,
-                        data={
-                            "topic_title": post.topic.title,
-                            "topic_slug": post.topic.slug,
-                            "post_number": post.post_number,
-                            "actor_name": current_user.username,
-                        },
-                    )
+                        data=notification_data,
+                    ),
+                    commit=False,
                 )
         await self.session.flush()
         count = await self._reaction_count("post", post.id)

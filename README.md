@@ -6,7 +6,7 @@
 
 - Frontend: Vue 3, Vite, TypeScript, Ant Design Vue, Vue Router, Pinia, TanStack Query
 - Backend: FastAPI, SQLAlchemy 2.x async, Alembic, PostgreSQL/MySQL, Redis
-- Worker: Python async background jobs for hot ranking and future notifications/search indexing
+- Worker: Python async background job runner for notifications, email digests, hot ranking, and cleanup tasks
 - Palette: `#F8F9FA`, `#3B82F6`, `#10B981`, `#111827`, `#4B5563`, `#1E1E1E`
 
 ## Quick Start with Docker
@@ -25,7 +25,7 @@ Services:
 - PostgreSQL: `localhost:5432`, database/user/password `parallellines/postgres/postgres`
 - Redis: `localhost:6379`
 
-`docker compose up` runs Alembic migrations, seeds demo data, starts the API, web preview server, PostgreSQL, Redis, the hot-ranking worker, and the expired-upload cleanup worker.
+`docker compose up` runs Alembic migrations, seeds demo data, starts the API, web preview server, PostgreSQL, Redis, and the unified background job worker.
 
 Demo accounts share this local-only password: `parallellines-demo-123`.
 
@@ -53,8 +53,7 @@ Useful commands:
 ```powershell
 uv run ruff check app tests
 uv run pytest -q
-uv run python -m app.workers.hot_ranking
-uv run python -m app.workers.upload_cleanup
+uv run python -m app.workers.background_jobs
 ```
 
 ### Frontend
@@ -105,7 +104,16 @@ SMTP_USE_TLS=true
 - `UPLOAD_MAX_AVATAR_BYTES`：头像单文件大小。
 - `UPLOAD_MAX_FILES_PER_POST`：单个帖子最多引用的上传数量。
 - `UPLOAD_TEMPORARY_TTL_HOURS`：未绑定临时上传的过期时间。
-- `UPLOAD_CLEANUP_INTERVAL_SECONDS`：`app.workers.upload_cleanup` 清理间隔。
+- `BACKGROUND_UPLOAD_CLEANUP_INTERVAL_SECONDS`：统一后台任务 worker 的临时上传清理调度间隔。
+
+### 通知邮件、摘要与入站回复
+
+即时通知邮件、每日/每周摘要、退信/投诉回调和入站回复记录都由统一后台任务与 `/api/v1/email/*` API 承载：
+
+- 用户在 `/email-preferences` 管理邮件总开关、单类通知开关和摘要频率。
+- `BACKGROUND_DIGEST_INTERVAL_SECONDS` 控制摘要任务调度间隔。
+- 配置 `EMAIL_WEBHOOK_SECRET` 后，邮件服务商回调必须传入 `X-Email-Webhook-Secret`。
+- 本地可运行 `uv run python -m app.workers.background_jobs` 处理 `mail`、`notifications` 和 `maintenance` 队列。
 
 当前已预留 `UPLOAD_CDN_BASE_URL` 和 S3 相关配置项；生产本地存储需把
 `UPLOAD_STORAGE_PATH` 挂载到持久化卷。
@@ -135,7 +143,7 @@ pnpm --dir apps/web test:smoke
 Before deployment:
 
 - Set `JWT_SECRET_KEY` to a strong secret; never use the local default.
-- Set `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGINS`, `ENVIRONMENT`, SMTP email settings, and upload storage settings for the target environment.
+- Set `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGINS`, `ENVIRONMENT`, SMTP email settings, `EMAIL_WEBHOOK_SECRET`, background job intervals, and upload storage settings for the target environment.
 - Run `alembic upgrade head` before starting new application code.
 - Check `/healthz`, `/metrics`, API request logs, and worker logs after rollout.
 - Run smoke tests against the target environment or staging before promotion.

@@ -40,7 +40,9 @@ DB tables/columns:
 
 ### 3. Contracts
 
-- Reset/email-change raw tokens are sent by `EmailService` only; DB stores HMAC hashes.
+- Reset/email-change raw tokens are delivered by `send_email` background jobs; `user_security_tokens`
+  stores only HMAC hashes, expiry, and consumption state.
+- Request paths enqueue email jobs with `BackgroundJobService(..., commit=False)` and do not perform SMTP work synchronously.
 - `request_password_reset` returns the same success payload for known and unknown emails.
 - Consuming a reset or email-change token sets `consumed_at`; successful confirmation also
   consumes other open tokens of the same purpose for that user.
@@ -61,7 +63,7 @@ DB tables/columns:
 
 | Case | Expected error/behavior |
 |---|---|
-| Unknown password-reset email | `200` with the same `{ ok, expires_in_seconds }`; no outbox token |
+| Unknown password-reset email | `200` with the same `{ ok, expires_in_seconds }`; no email job/outbox token |
 | Reset/email token expired or consumed | `422 invalid_reset_token` / `invalid_email_change_token` |
 | Reset token reused | `422 invalid_reset_token`; password is not changed again |
 | Login before 2FA verify | No `access_token`; client must submit `challenge_token` + code |
@@ -79,7 +81,7 @@ DB tables/columns:
 - Base: tokens without `sid` are accepted for legacy/test compatibility, but new token pairs
   always include `sid`.
 - Bad: returning different reset responses for known vs unknown emails.
-- Bad: storing raw reset/recovery secrets in DB or logs.
+- Bad: storing raw reset/recovery secrets in user tables or job logs.
 - Bad: listing revoked sessions in the active sessions response.
 
 ### 6. Tests Required

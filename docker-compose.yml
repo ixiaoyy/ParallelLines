@@ -92,31 +92,22 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/parallellines
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET_KEY: local-dev-secret-change-before-deploying
-      HOT_RANK_INTERVAL_SECONDS: 300
-      EMAIL_DELIVERY_MODE: memory
-    depends_on:
-      api:
-        condition: service_healthy
-    command: python -m app.workers.hot_ranking
-
-  upload-cleanup-worker:
-    build:
-      context: ./apps/api
-    environment:
-      ENVIRONMENT: local
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/parallellines
-      REDIS_URL: redis://redis:6379/0
-      JWT_SECRET_KEY: local-dev-secret-change-before-deploying
+      BACKGROUND_JOB_POLL_SECONDS: 5
+      BACKGROUND_JOB_BATCH_SIZE: 25
+      BACKGROUND_JOB_RETRY_DELAY_SECONDS: 60
+      BACKGROUND_HOT_RANK_INTERVAL_SECONDS: 300
+      BACKGROUND_UPLOAD_CLEANUP_INTERVAL_SECONDS: 3600
+      BACKGROUND_SESSION_CLEANUP_INTERVAL_SECONDS: 3600
+      BACKGROUND_DIGEST_INTERVAL_SECONDS: 3600
       EMAIL_DELIVERY_MODE: memory
       UPLOAD_STORAGE_BACKEND: local
       UPLOAD_STORAGE_PATH: /var/lib/parallellines/uploads
-      UPLOAD_CLEANUP_INTERVAL_SECONDS: 3600
     volumes:
       - upload-data:/var/lib/parallellines/uploads
     depends_on:
       api:
         condition: service_healthy
-    command: python -m app.workers.upload_cleanup
+    command: python -m app.workers.background_jobs
 
   web:
     build:

@@ -8,7 +8,7 @@ from app.db.base import Base
 from app.main import create_app
 from app.models.forum import BoardMember, Topic
 from app.models.interaction import Bookmark, Notification, Reaction
-from tests.helpers import register_and_verify_user
+from tests.helpers import drain_background_jobs, register_and_verify_user
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
@@ -180,6 +180,7 @@ async def test_reply_and_board_follow_create_readable_notifications() -> None:
             },
         )
         assert new_topic.status_code == 201
+        await drain_background_jobs(session_factory)
 
         watcher_notifications = await client.get(
             "/api/v1/notifications",
@@ -196,6 +197,7 @@ async def test_reply_and_board_follow_create_readable_notifications() -> None:
             json={"raw_md": "@owner 我复现了这个通知路径。"},
         )
         assert reply.status_code == 201
+        await drain_background_jobs(session_factory)
 
         owner_notifications = await client.get("/api/v1/notifications", headers=owner_headers)
         assert owner_notifications.status_code == 200

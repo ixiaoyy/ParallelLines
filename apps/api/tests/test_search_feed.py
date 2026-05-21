@@ -7,7 +7,7 @@ from app.api.v1.dependencies import get_session
 from app.db.base import Base
 from app.main import create_app
 from app.models.forum import Topic
-from app.workers.hot_ranking import recompute_hot_scores
+from app.workers.background_jobs import recompute_hot_scores
 from tests.helpers import register_and_verify_user
 
 
@@ -123,9 +123,7 @@ async def test_search_filters_cursor_and_hot_recompute() -> None:
         updated_count = await recompute_hot_scores(session)
         assert updated_count == 2
 
-        hot_topics = list(
-            await session.scalars(select(Topic).order_by(Topic.hot_score.desc()))
-        )
+        hot_topics = list(await session.scalars(select(Topic).order_by(Topic.hot_score.desc())))
         assert hot_topics[0].id == timeout_topic_id
         assert hot_topics[0].hot_score > hot_topics[1].hot_score
 

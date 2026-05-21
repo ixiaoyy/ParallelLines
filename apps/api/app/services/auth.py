@@ -14,7 +14,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
 from app.core.config import Settings
-from app.core.exceptions import AuthenticationError, ConflictError, RateLimitError, ValidationError
+from app.core.exceptions import (
+    AuthenticationError,
+    ConflictError,
+    PermissionDeniedError,
+    RateLimitError,
+    ValidationError,
+)
 from app.core.security import create_token, hash_password, verify_password
 from app.db.base import utcnow
 from app.models.user import (
@@ -49,7 +55,8 @@ from app.schemas.auth import (
     VerifyEmailRequest,
 )
 from app.schemas.users import UserPublic
-from app.services.email import EmailService
+from app.services.admin import SiteSettingService
+from app.services.background_jobs import BackgroundJobService
 from app.services.spam import SpamPreventionService
 
 PASSWORD_RESET_PURPOSE = "password_reset"
@@ -69,6 +76,11 @@ class AuthService:
         payload: RegisterRequest,
         request: Request | None = None,
     ) -> RegistrationStartResponse:
+        if not await SiteSettingService(self.session, self.settings).registration_enabled():
+            raise PermissionDeniedError(
+                "registration_disabled",
+                "Registration is currently disabled",
+            )
         email = str(payload.email).lower()
         await SpamPreventionService(self.session, self.settings).enforce_registration(
             request,
@@ -203,10 +215,13 @@ class AuthService:
                 email=user.email,
                 ttl_minutes=self.settings.password_reset_token_ttl_minutes,
             )
-            await EmailService(self.settings).send_password_reset(
+            await BackgroundJobService(self.session).enqueue_email(
+                kind=PASSWORD_RESET_PURPOSE,
                 to_email=user.email,
                 username=user.username,
-                token=token,
+                secret=token,
+                idempotency_key=f"email:{PASSWORD_RESET_PURPOSE}:{self._hash_token(token)}",
+                commit=False,
             )
             await self.session.commit()
         return PasswordResetStartResponse(
@@ -253,10 +268,13 @@ class AuthService:
             payload={"new_email": new_email},
             ttl_minutes=self.settings.email_change_token_ttl_minutes,
         )
-        await EmailService(self.settings).send_email_change(
+        await BackgroundJobService(self.session).enqueue_email(
+            kind=EMAIL_CHANGE_PURPOSE,
             to_email=new_email,
             username=current_user.username,
-            token=token,
+            secret=token,
+            idempotency_key=f"email:{EMAIL_CHANGE_PURPOSE}:{self._hash_token(token)}",
+            commit=False,
         )
         await self.session.commit()
         return EmailChangeStartResponse(
@@ -483,10 +501,16 @@ class AuthService:
             expires_at=now + timedelta(minutes=self.settings.email_verification_code_ttl_minutes),
         )
         self.session.add(verification)
-        await EmailService(self.settings).send_verification_code(
+        idempotency_key = (
+            f"email:verification:{user.id}:{self._hash_verification_code(user.id, code)}"
+        )
+        await BackgroundJobService(self.session).enqueue_email(
+            kind="email_verification",
             to_email=user.email,
             username=user.username,
-            code=code,
+            secret=code,
+            idempotency_key=idempotency_key,
+            commit=False,
         )
         return code
 

@@ -7,7 +7,7 @@
 - Trigger: implementing or changing file upload, avatar upload, attachment references in
   Markdown, local/S3 storage configuration, or upload cleanup jobs.
 - Applies to `apps/api/app/models/upload.py`, `schemas/uploads.py`, `services/uploads.py`,
-  `api/v1/uploads.py`, `services/forum.py`, `workers/upload_cleanup.py`, and upload migrations.
+  `api/v1/uploads.py`, `services/forum.py`, `workers/background_jobs.py`, and upload migrations.
 
 ### 2. Signatures
 
@@ -32,7 +32,7 @@ Settings:
 - `UPLOAD_CDN_BASE_URL`, `UPLOAD_S3_BUCKET`, `UPLOAD_S3_REGION`,
   `UPLOAD_S3_ENDPOINT_URL`
 - `UPLOAD_MAX_BYTES`, `UPLOAD_MAX_AVATAR_BYTES`, `UPLOAD_MAX_FILES_PER_POST`
-- `UPLOAD_TEMPORARY_TTL_HOURS`, `UPLOAD_CLEANUP_INTERVAL_SECONDS`
+- `UPLOAD_TEMPORARY_TTL_HOURS`, `BACKGROUND_UPLOAD_CLEANUP_INTERVAL_SECONDS`
 
 Service methods:
 

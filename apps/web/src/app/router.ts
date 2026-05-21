@@ -59,9 +59,19 @@ export const router = createRouter({
       component: () => import("@/pages/security/SecurityPage.vue"),
     },
     {
+      path: "/email-preferences",
+      name: "email-preferences",
+      component: () => import("@/pages/email/EmailPreferencesPage.vue"),
+    },
+    {
       path: "/search",
       name: "search",
       component: () => import("@/pages/search/SearchPage.vue"),
+    },
+    {
+      path: "/admin",
+      name: "admin-dashboard",
+      component: () => import("@/pages/admin/AdminDashboardPage.vue"),
     },
     {
       path: "/admin/moderation",

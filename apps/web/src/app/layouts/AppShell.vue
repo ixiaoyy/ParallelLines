@@ -4,7 +4,9 @@ import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { RouteLocationRaw } from "vue-router";
 
-import { canAccessModeration } from "@/features/auth/permissions";
+import { publicSettingString } from "@/features/admin/model";
+import { usePublicSiteSettings } from "@/features/admin/queries";
+import { canAccessModeration, isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser, useLogout } from "@/features/auth/queries";
 import NotificationBell from "@/features/notifications/components/NotificationBell.vue";
 import UiButton from "@/shared/ui/Button.vue";
@@ -14,11 +16,22 @@ const route = useRoute();
 const globalSearch = ref("");
 const isNavOpen = ref(false);
 const currentUserQuery = useCurrentUser();
+const siteSettingsQuery = usePublicSiteSettings();
 const logout = useLogout();
 const currentUser = computed(() => currentUserQuery.data.value);
+const siteTitle = computed(() =>
+  publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
+);
+const siteTagline = computed(() =>
+  publicSettingString(siteSettingsQuery.data.value, "site_tagline", "让答案可追溯"),
+);
+const adminLinkTarget = computed<RouteLocationRaw>(() =>
+  isAdmin(currentUser.value) ? { name: "admin-dashboard" } : { name: "admin-moderation" },
+);
+const adminLinkLabel = computed(() => (isAdmin(currentUser.value) ? "后台" : "审核"));
 
 interface NavItem {
-  key: "home" | "boards" | "security" | "admin";
+  key: "home" | "boards" | "security" | "email" | "admin" | "moderation";
   label: string;
   to: RouteLocationRaw;
 }
@@ -27,7 +40,9 @@ const navItems: NavItem[] = [
   { key: "home", label: "首页", to: "/" },
   { key: "boards", label: "版块", to: "/boards" },
   { key: "security", label: "安全", to: { name: "security" } },
-  { key: "admin", label: "审核", to: { name: "admin-moderation" } },
+  { key: "email", label: "邮件", to: { name: "email-preferences" } },
+  { key: "admin", label: "后台", to: { name: "admin-dashboard" } },
+  { key: "moderation", label: "审核", to: { name: "admin-moderation" } },
 ];
 
 const visibleNavItems = computed(() =>
@@ -36,7 +51,15 @@ const visibleNavItems = computed(() =>
       return Boolean(currentUser.value);
     }
 
-    return item.key !== "admin" || canAccessModeration(currentUser.value);
+    if (item.key === "email") {
+      return Boolean(currentUser.value);
+    }
+
+    if (item.key === "admin") {
+      return isAdmin(currentUser.value);
+    }
+
+    return item.key !== "moderation" || canAccessModeration(currentUser.value);
   }),
 );
 
@@ -82,6 +105,14 @@ function isNavItemActive(item: NavItem) {
     return route.name === "security";
   }
 
+  if (item.key === "email") {
+    return route.name === "email-preferences";
+  }
+
+  if (item.key === "admin") {
+    return route.name === "admin-dashboard";
+  }
+
   return route.name === "admin-moderation";
 }
 </script>
@@ -96,8 +127,8 @@ function isNavItemActive(item: NavItem) {
           <img class="brand-logo" src="/logo-lines.png" alt="" aria-hidden="true" />
         </span>
         <span>
-          <strong>平行线</strong>
-          <small>让答案可追溯</small>
+          <strong>{{ siteTitle }}</strong>
+          <small>{{ siteTagline }}</small>
         </span>
       </RouterLink>
 
@@ -130,10 +161,10 @@ function isNavItemActive(item: NavItem) {
         <RouterLink
           v-if="canAccessModeration(currentUser)"
           class="admin-link"
-          :to="{ name: 'admin-moderation' }"
-          :class="{ 'is-active': route.name === 'admin-moderation' }"
+          :to="adminLinkTarget"
+          :class="{ 'is-active': route.name === 'admin-dashboard' || route.name === 'admin-moderation' }"
         >
-          审核
+          {{ adminLinkLabel }}
         </RouterLink>
 
         <NotificationBell />
@@ -142,6 +173,13 @@ function isNavItemActive(item: NavItem) {
         <template v-else>
           <RouterLink class="auth-link" :to="{ name: 'security' }" :class="{ 'is-active': route.name === 'security' }">
             安全
+          </RouterLink>
+          <RouterLink
+            class="auth-link"
+            :to="{ name: 'email-preferences' }"
+            :class="{ 'is-active': route.name === 'email-preferences' }"
+          >
+            邮件
           </RouterLink>
           <RouterLink class="user-link" :to="{ name: 'user-profile', params: { username: currentUser.username } }">
             {{ currentUser.username }}

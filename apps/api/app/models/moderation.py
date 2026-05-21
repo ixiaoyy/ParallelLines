@@ -32,6 +32,8 @@ ModerationAction = Literal[
     "user_status_changed",
     "screened_rule_created",
     "screened_rule_deleted",
+    "site_setting_updated",
+    "user_admin_updated",
 ]
 ScreenedRuleKind = Literal["email", "ip", "url"]
 ScreenedRuleAction = Literal["block", "silence"]
@@ -118,9 +120,7 @@ class ScreenedRule(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     action: Mapped[str] = mapped_column(String(32), nullable=False, default="block")
     note: Mapped[str | None] = mapped_column(Text)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_by_id: Mapped[str | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL")
-    )
+    created_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
     created_by: Mapped[User | None] = relationship("User", lazy="selectin")
 

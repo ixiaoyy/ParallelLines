@@ -1,5 +1,8 @@
 from app.db.base import Base
 from app.db.schema_comments import apply_schema_comments
+from app.models.admin import SiteSetting
+from app.models.background_job import BackgroundJob, BackgroundJobLog
+from app.models.email import EmailDeliveryEvent, InboundEmail, UserEmailPreference
 from app.models.forum import (
     Board,
     BoardInvitation,
@@ -26,24 +29,30 @@ apply_schema_comments(Base.metadata)
 
 __all__ = [
     "AuditLog",
+    "BackgroundJob",
+    "BackgroundJobLog",
     "Board",
     "BoardInvitation",
     "BoardMember",
     "Bookmark",
     "EmailVerificationCode",
+    "EmailDeliveryEvent",
     "Flag",
     "Notification",
+    "InboundEmail",
     "Post",
     "PostRevision",
     "RateLimitEvent",
     "Reaction",
     "ScreenedRule",
+    "SiteSetting",
     "SpamAction",
     "Tag",
     "Topic",
     "TopicRead",
     "Upload",
     "User",
+    "UserEmailPreference",
     "UserRecoveryCode",
     "UserSecurityToken",
     "UserSession",

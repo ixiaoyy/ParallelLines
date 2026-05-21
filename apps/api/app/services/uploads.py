@@ -19,6 +19,7 @@ from app.db.base import new_uuid, utcnow
 from app.models.forum import Board, BoardMember, Post, Topic
 from app.models.upload import Upload
 from app.models.user import User
+from app.services.admin import SiteSettingService
 from app.services.spam import SpamPreventionService
 
 UPLOAD_REFERENCE_PATTERN = re.compile(
@@ -204,6 +205,10 @@ class UploadService:
             self.settings.upload_max_avatar_bytes
             if kind == "avatar"
             else self.settings.upload_max_bytes
+        )
+        max_bytes = await SiteSettingService(self.session, self.settings).upload_limit_bytes(
+            kind=kind,
+            fallback=max_bytes,
         )
         content = await self._read_limited(file, max_bytes)
         filename = sanitize_filename(file.filename or "upload")

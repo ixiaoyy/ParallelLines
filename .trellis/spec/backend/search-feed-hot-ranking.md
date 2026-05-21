@@ -5,7 +5,7 @@
 ### 1. Scope / Trigger
 
 - Trigger: changing latest/top/hot feeds, board-scoped topic lists, search filters, tag cloud data, cursor pagination, or hot score recomputation.
-- Applies to `ForumService.list_topics`, `ForumService.list_tags`, `app/api/v1/topics.py`, `app/api/v1/boards.py`, `app/api/v1/search.py`, `app/api/v1/tags.py`, and `app/workers/hot_ranking.py`.
+- Applies to `ForumService.list_topics`, `ForumService.list_tags`, `app/api/v1/topics.py`, `app/api/v1/boards.py`, `app/api/v1/search.py`, `app/api/v1/tags.py`, and `app/workers/background_jobs.py`.
 
 ### 2. Signatures
 
@@ -63,7 +63,7 @@ Service/worker:
 - API test for tag filter and cursor meta.
 - API test for `GET /tags` returning persisted tag names and `topic_count`.
 - Feed ordering test for latest/hot/top when counters differ.
-- Worker test proving `recompute_hot_scores` updates all non-deleted topics and is safe to rerun.
+- Worker test proving `recompute_hot_scores` updates all non-deleted topics and is safe to rerun through the unified background worker module.
 
 ### 7. Wrong vs Correct
 

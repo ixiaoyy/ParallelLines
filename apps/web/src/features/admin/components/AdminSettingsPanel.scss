@@ -1,0 +1,88 @@
+.settings-panel {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.section-head h2,
+.settings-group h3,
+.setting-row strong {
+  margin: 0;
+  color: var(--title);
+}
+
+.panel-kicker {
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 920;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.panel-state,
+.setting-row span {
+  color: var(--muted);
+}
+
+.panel-state--error {
+  color: var(--danger);
+}
+
+.settings-groups,
+.settings-group {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.setting-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(9rem, 14rem) auto;
+  gap: 0.75rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 0.92rem;
+  padding: 0.78rem;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.setting-row div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.setting-control {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.82rem;
+  padding: 0.62rem 0.72rem;
+  color: var(--title);
+  background: var(--bg-surface);
+  font: inherit;
+  outline: none;
+}
+
+.setting-control--toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--title);
+  font-weight: 820;
+}
+
+@media (max-width: 720px) {
+  .section-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .setting-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -15,7 +15,13 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/parallellines"
     redis_url: str = "redis://localhost:6379/0"
     slow_request_ms: int = 500
-    hot_rank_interval_seconds: int = 300
+    background_job_poll_seconds: int = 5
+    background_job_batch_size: int = 25
+    background_job_retry_delay_seconds: int = 60
+    background_hot_rank_interval_seconds: int = 300
+    background_upload_cleanup_interval_seconds: int = 3600
+    background_session_cleanup_interval_seconds: int = 3600
+    background_digest_interval_seconds: int = 3600
 
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5174", "http://127.0.0.1:5174"]
@@ -35,6 +41,7 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = True
     smtp_use_ssl: bool = False
     smtp_timeout_seconds: float = 10.0
+    email_webhook_secret: str | None = None
     email_verification_code_ttl_minutes: int = 10
     email_verification_resend_seconds: int = 60
     email_verification_max_attempts: int = 5
@@ -69,7 +76,6 @@ class Settings(BaseSettings):
     upload_max_avatar_bytes: int = 2 * 1024 * 1024
     upload_max_files_per_post: int = 8
     upload_temporary_ttl_hours: int = 24
-    upload_cleanup_interval_seconds: int = 3600
 
     model_config = SettingsConfigDict(
         env_file=".env",
