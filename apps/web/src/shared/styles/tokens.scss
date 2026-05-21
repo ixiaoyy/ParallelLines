@@ -97,9 +97,29 @@
   --board-palette-5: var(--accent-violet);
   --board-palette-6: var(--accent-pink);
 
-  /* 柔和品牌渐变：同色相邻近色，避免珊瑚跳色 */
-  --gradient-brand: linear-gradient(135deg, #6dd0fa 0%, #5ec4f4 46%, #66d4cb 100%);
-  --gradient-brand-hover: linear-gradient(135deg, #5ec4f4 0%, #4fb8eb 46%, #5cc9c0 100%);
-  --shadow-brand: 0 4px 12px rgba(2, 132, 199, 0.16);
-  --shadow-brand-hover: 0 6px 16px rgba(2, 132, 199, 0.22);
+  /* 品牌按钮渐变：清透天蓝、饱和度充足，过渡仍保持柔和 */
+  --gradient-brand: linear-gradient(
+    168deg,
+    #5ecdf9 0%,
+    var(--brand-blue) 34%,
+    var(--primary) 72%,
+    var(--primary-hover) 100%
+  );
+  --gradient-brand-hover: linear-gradient(
+    168deg,
+    var(--brand-blue) 0%,
+    var(--primary) 38%,
+    var(--primary-hover) 100%
+  );
+  --shadow-brand: 0 3px 10px rgba(var(--primary-rgb), 0.22);
+  --shadow-brand-hover: 0 5px 14px rgba(var(--primary-rgb), 0.28);
+
+  /* 版块色由 boardPalette.ts 注入；以下为无 tone 时的兜底 */
+  --gradient-board-mark: linear-gradient(
+    168deg,
+    color-mix(in srgb, var(--primary) 28%, #ffffff) 0%,
+    var(--primary) 55%,
+    var(--primary-hover) 100%
+  );
+  --shadow-board-mark: 0 6px 14px color-mix(in srgb, var(--board-accent, var(--primary)) 14%, transparent);
 }

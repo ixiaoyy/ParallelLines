@@ -2,6 +2,7 @@
 import type { PostItemVM } from "@/entities/post/model";
 import type { TopicCardVM } from "@/entities/topic/model";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
+import { tagToneClass } from "@/shared/theme/boardPalette";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -47,6 +48,8 @@ defineProps<{
         <RouterLink
           v-for="tag in topic.tags"
           :key="tag"
+          class="tone-chip"
+          :class="tagToneClass(tag)"
           :to="{ name: 'search', query: { q: tag, tag } }"
         >
           #{{ tag }}

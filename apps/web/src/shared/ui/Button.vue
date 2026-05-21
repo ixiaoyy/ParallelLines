@@ -29,8 +29,10 @@ withDefaults(
   font-weight: 600;
   box-shadow: none !important;
   transition:
-    border-color 120ms ease,
-    background 120ms ease;
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease,
+    transform 160ms ease;
 }
 
 .ui-button:focus-visible {
@@ -49,6 +51,7 @@ withDefaults(
   border-color: transparent !important;
   background: var(--gradient-brand-hover) !important;
   box-shadow: var(--shadow-brand-hover);
+  transform: translateY(-1px);
 }
 
 .ui-button--success {

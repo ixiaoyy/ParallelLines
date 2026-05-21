@@ -124,6 +124,9 @@
   background: var(--gradient-brand);
   box-shadow: var(--shadow-brand);
   cursor: pointer;
+  transition:
+    background 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .hero-search button:hover:not(:disabled) {
@@ -173,7 +176,7 @@
 .btn-primary:hover,
 .btn-primary:focus-visible {
   outline: none;
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   background: var(--gradient-brand-hover);
   box-shadow: var(--shadow-brand-hover);
 }
@@ -203,17 +206,11 @@
 
 .signal-visual {
   display: flex;
-  min-height: 12.5rem;
+  min-height: 11.5rem;
   align-items: center;
   justify-content: center;
   margin-bottom: 0.65rem;
-}
-
-.hero-convergence-img {
-  width: min(100%, 24.5rem);
-  height: auto;
-  border-radius: var(--radius-card);
-  object-fit: cover;
+  padding: 0.25rem 0;
 }
 
 .signal-caption {
@@ -318,7 +315,4 @@
     min-height: 10rem;
   }
 
-  .hero-convergence-img {
-    width: min(100%, 19rem);
-  }
 }

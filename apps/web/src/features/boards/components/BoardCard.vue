@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { BoardSummary } from "@/entities/board/model";
 import { compactNumber } from "@/shared/lib/format";
+import { boardToneClass } from "@/shared/theme/boardPalette";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -10,8 +11,8 @@ defineEmits<{ toggleFollow: [slug: string] }>();
 </script>
 
 <template>
-  <UiCard class="board-card">
-    <div class="board-mark" :style="{ '--board-color': board.color }">
+  <UiCard class="board-card" :class="boardToneClass(board.slug)">
+    <div class="board-mark tone-mark-square" :title="board.name">
       {{ board.name.slice(0, 1) }}
     </div>
     <div class="board-body">
@@ -57,11 +58,12 @@ defineEmits<{ toggleFollow: [slug: string] }>();
   width: 3.4rem;
   height: 3.4rem;
   place-items: center;
+  border: 1px solid var(--board-mark-border);
   border-radius: 1.15rem;
-  color: white;
+  color: var(--board-mark-fg);
+  background: var(--board-mark-bg);
   font-size: 1.35rem;
   font-weight: 900;
-  background: linear-gradient(135deg, var(--board-color), var(--accent-geek));
 }
 
 .board-heading {

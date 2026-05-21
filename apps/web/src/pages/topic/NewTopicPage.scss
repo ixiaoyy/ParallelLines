@@ -245,7 +245,7 @@
   width: 0.9rem;
   height: 0.9rem;
   border-radius: 0.25rem;
-  background: var(--board-color);
+  background: var(--board-accent, var(--primary));
 }
 
 .board-picker strong,
@@ -342,7 +342,7 @@ textarea:focus {
   margin: 0.5rem 0;
   padding: 1rem;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--board-color) 10%, transparent), transparent 40%),
+    linear-gradient(90deg, color-mix(in srgb, var(--board-accent, var(--primary)) 10%, transparent), transparent 40%),
     rgba(255, 255, 255, 0.84);
 }
 

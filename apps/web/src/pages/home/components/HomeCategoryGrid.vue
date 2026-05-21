@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { BoardSummary } from "@/entities/board/model";
 import { compactNumber } from "@/shared/lib/format";
+import { boardToneClass } from "@/shared/theme/boardPalette";
 
 defineProps<{
   boards: BoardSummary[];
@@ -18,8 +19,8 @@ defineProps<{
         v-for="board in boards"
         :key="board.id"
         class="category"
+        :class="boardToneClass(board.slug)"
         :to="{ name: 'board-detail', params: { slug: board.slug } }"
-        :style="{ '--board-color': board.color }"
       >
         <h3>{{ board.name }}</h3>
         <p>{{ board.description }}</p>

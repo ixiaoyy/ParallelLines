@@ -18,7 +18,12 @@ import { createApp } from "vue";
 import App from "@/app/App.vue";
 import { router } from "@/app/router";
 import "@/shared/styles/base.scss";
+import { injectBoardPalette } from "@/shared/theme/boardPalette";
+
 import "@/shared/styles/tokens.scss";
+import "@/shared/styles/tone-utilities.scss";
+
+injectBoardPalette();
 
 createApp(App)
   .use(createPinia())

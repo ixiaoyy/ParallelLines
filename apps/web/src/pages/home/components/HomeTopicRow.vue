@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TopicCardVM } from "@/entities/topic/model";
+import { boardToneClass, tagToneClass } from "@/shared/theme/boardPalette";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 
@@ -7,11 +8,11 @@ defineProps<{ topic: TopicCardVM }>();
 </script>
 
 <template>
-  <article class="home-topic-row">
+  <article class="home-topic-row" :class="boardToneClass(topic.boardSlug)">
     <div class="topic-main">
       <div class="author-avatar-wrapper" aria-hidden="true">
         <div class="author-avatar">{{ topic.authorName.slice(0, 1).toUpperCase() }}</div>
-        <span class="board-badge-dot" :style="{ '--board-color': topic.boardColor }" :title="topic.boardName"></span>
+        <span class="board-badge-dot" :title="topic.boardName"></span>
       </div>
       <div class="topic-copy">
         <div class="topic-title-line">
@@ -23,15 +24,17 @@ defineProps<{ topic: TopicCardVM }>();
         <p>{{ topic.excerpt }}</p>
         <div class="topic-tags">
           <RouterLink
-            class="board-chip"
+            class="board-chip tone-chip"
+            :class="boardToneClass(topic.boardSlug)"
             :to="{ name: 'board-detail', params: { slug: topic.boardSlug } }"
-            :style="{ '--board-color': topic.boardColor }"
           >
             {{ topic.boardName }}
           </RouterLink>
           <RouterLink
             v-for="tag in topic.tags.slice(0, 3)"
             :key="tag"
+            class="tone-chip"
+            :class="tagToneClass(tag)"
             :to="{ name: 'search', query: { q: tag, tag } }"
           >
             #{{ tag }}

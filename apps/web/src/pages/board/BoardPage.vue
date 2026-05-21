@@ -25,6 +25,7 @@ import { useBoardTopics } from "@/features/topics/queries";
 import { hasAccessToken } from "@/shared/api/client";
 import { compactNumber } from "@/shared/lib/format";
 import { readRouteParam } from "@/shared/router/params";
+import { boardToneClass } from "@/shared/theme/boardPalette";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
@@ -234,7 +235,7 @@ function updateQuery(patch: Record<string, string | undefined>) {
     </UiEmptyState>
 
     <template v-else-if="board">
-      <section class="board-hero" :style="{ '--board-color': board.color }" aria-labelledby="board-title">
+      <section class="board-hero" :class="boardToneClass(board.slug)" aria-labelledby="board-title">
         <div v-if="slug === 'engineering'" class="board-hero__bg-illustration" v-html="boardIcons.engineering" aria-hidden="true"></div>
         <div class="board-hero__header">
           <span
@@ -317,7 +318,7 @@ function updateQuery(patch: Record<string, string | undefined>) {
         </div>
       </section>
 
-      <div class="board-layout">
+      <div class="board-layout" :class="boardToneClass(board.slug)">
         <main class="board-main" aria-label="版块主题列表">
           <section class="board-toolbar" aria-label="主题筛选">
             <div class="board-tabs" aria-label="排序方式">

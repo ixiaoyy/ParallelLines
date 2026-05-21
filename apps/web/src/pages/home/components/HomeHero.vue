@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import HeroMeetVisual from "@/pages/home/components/HeroMeetVisual.vue";
+
 export interface CommunitySignal {
   label: string;
   value: string;
@@ -45,7 +47,7 @@ function updateSearch(event: Event) {
 
       <div class="signal-card" aria-label="社区实时信号">
         <div class="signal-visual" aria-hidden="true">
-          <img src="/parallel_convergence_graphic.png" alt="平行线交汇" class="hero-convergence-img" />
+          <HeroMeetVisual />
         </div>
         <div class="signal-caption">
           <div v-for="signal in signals" :key="signal.label">

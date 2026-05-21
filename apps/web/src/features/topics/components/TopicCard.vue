@@ -4,6 +4,7 @@ import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
+import { boardToneClass, tagToneClass } from "@/shared/theme/boardPalette";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiBadge from "@/shared/ui/Badge.vue";
@@ -41,7 +42,7 @@ const answerState = computed(() => {
 </script>
 
 <template>
-  <article class="topic-row" :class="{ 'topic-row--pinned': topic.pinned }">
+  <article class="topic-row" :class="[boardToneClass(topic.boardSlug), { 'topic-row--pinned': topic.pinned }]">
     <div class="topic-main">
       <div class="topic-title-line">
         <UiBadge v-if="topic.pinned" tone="amber">置顶</UiBadge>
@@ -54,12 +55,12 @@ const answerState = computed(() => {
       <p class="topic-excerpt">{{ topic.excerpt }}</p>
 
       <div class="topic-meta-line">
-        <span class="category-chip" :style="{ '--category-color': topic.boardColor }">
-          <span class="category-dot" aria-hidden="true"></span>
+        <span class="category-chip tone-chip" :class="boardToneClass(topic.boardSlug)">
+          <span class="category-dot tone-mark-dot" aria-hidden="true"></span>
           {{ topic.boardName }}
         </span>
 
-        <span v-for="tag in topic.tags" :key="tag" class="topic-tag">#{{ tag }}</span>
+        <span v-for="tag in topic.tags" :key="tag" class="topic-tag tone-chip" :class="tagToneClass(tag)">#{{ tag }}</span>
       </div>
 
       <div class="participant-strip" aria-label="参与者">

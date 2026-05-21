@@ -243,8 +243,6 @@
   width: 0.78rem;
   height: 0.78rem;
   border-radius: 0.22rem;
-  background: var(--board-color, var(--primary));
-  box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--board-color, var(--primary)) 14%, transparent);
 }
 
 .rail-board-copy {
@@ -299,34 +297,8 @@
 }
 
 .rail-tag {
-  display: inline-flex;
-  align-items: center;
-  border-radius: var(--radius-pill);
-  padding: 0.3rem 0.5rem;
-  text-decoration: none;
   font-size: 0.78rem;
-  font-weight: 750;
 }
-
-.rail-tag--tone-1 { color: var(--primary-hover); background: var(--cyan-soft); }
-.rail-tag--tone-2 { color: var(--accent-coral); background: var(--coral-soft); }
-.rail-tag--tone-3 { color: color-mix(in srgb, var(--accent-lime) 70%, var(--title)); background: var(--lime-soft); }
-.rail-tag--tone-4 { color: color-mix(in srgb, var(--accent-gold) 70%, var(--title)); background: var(--gold-soft); }
-.rail-tag--tone-5 { color: var(--accent-violet); background: var(--violet-soft); }
-.rail-tag--tone-6 { color: var(--accent-pink); background: var(--pink-soft); }
-
-.rail-tag--tone-1:hover,
-.rail-tag--tone-1:focus-visible { color: var(--bg-surface); background: var(--primary); }
-.rail-tag--tone-2:hover,
-.rail-tag--tone-2:focus-visible { color: var(--bg-surface); background: var(--accent-coral); }
-.rail-tag--tone-3:hover,
-.rail-tag--tone-3:focus-visible { color: var(--bg-surface); background: var(--accent-lime); }
-.rail-tag--tone-4:hover,
-.rail-tag--tone-4:focus-visible { color: var(--bg-surface); background: var(--accent-gold); }
-.rail-tag--tone-5:hover,
-.rail-tag--tone-5:focus-visible { color: var(--bg-surface); background: var(--accent-violet); }
-.rail-tag--tone-6:hover,
-.rail-tag--tone-6:focus-visible { color: var(--bg-surface); background: var(--accent-pink); }
 
 @media (max-width: 980px) {
   .home-left-rail {

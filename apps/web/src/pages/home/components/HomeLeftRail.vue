@@ -5,6 +5,7 @@ import { computed } from "vue";
 import type { BoardSummary } from "@/entities/board/model";
 import type { TagItemVM } from "@/features/tags/model";
 import { compactNumber } from "@/shared/lib/format";
+import { boardToneClass, tagToneClass } from "@/shared/theme/boardPalette";
 
 const props = defineProps<{
   boards: BoardSummary[];
@@ -54,10 +55,10 @@ const privateBoards = computed(() => props.boards.filter((board) => board.visibi
           v-for="board in publicBoards"
           :key="board.id"
           class="rail-board"
+          :class="boardToneClass(board.slug)"
           :to="{ name: 'board-detail', params: { slug: board.slug } }"
-          :style="{ '--board-color': board.color }"
         >
-          <span class="rail-board-mark" aria-hidden="true"></span>
+          <span class="rail-board-mark tone-mark-square" aria-hidden="true"></span>
           <span class="rail-board-copy">
             <strong>{{ board.name }}</strong>
             <small>{{ board.description }}</small>
@@ -69,10 +70,10 @@ const privateBoards = computed(() => props.boards.filter((board) => board.visibi
           v-for="board in privateBoards"
           :key="board.id"
           class="rail-board rail-board--private"
+          :class="boardToneClass(board.slug)"
           :to="{ name: 'board-detail', params: { slug: board.slug } }"
-          :style="{ '--board-color': board.color }"
         >
-          <span class="rail-board-mark" aria-hidden="true"></span>
+          <span class="rail-board-mark tone-mark-square" aria-hidden="true"></span>
           <span class="rail-board-copy">
             <strong>{{ board.name }}</strong>
             <small>{{ board.description }}</small>
@@ -88,10 +89,10 @@ const privateBoards = computed(() => props.boards.filter((board) => board.visibi
       <p v-else-if="tagsError" class="rail-state rail-state--error">标签暂时不可用</p>
       <template v-else>
         <RouterLink
-          v-for="(tag, tagIndex) in tags.slice(0, 6)"
+          v-for="tag in tags.slice(0, 6)"
           :key="tag.id"
-          class="rail-tag"
-          :class="`rail-tag--tone-${(tagIndex % 6) + 1}`"
+          class="rail-tag tone-chip"
+          :class="tagToneClass(tag.name)"
           :to="{ name: 'search', query: { q: tag.name, tag: tag.name } }"
         >
           #{{ tag.name }}

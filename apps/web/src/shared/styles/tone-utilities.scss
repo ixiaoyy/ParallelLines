@@ -1,0 +1,35 @@
+/* 依赖 .board-tone-N 注入的变量，全站 chip / 徽标通用样式 */
+
+.tone-mark-square {
+  background: var(--board-accent, var(--primary));
+  box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--board-accent, var(--primary)) 14%, transparent);
+}
+
+.tone-mark-dot {
+  background: var(--board-accent, var(--primary));
+}
+
+.tone-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--board-mark-border, var(--border));
+  border-radius: var(--radius-pill);
+  padding: 0.22rem 0.52rem;
+  color: var(--board-mark-fg, var(--text));
+  background: var(--board-mark-bg, var(--bg-subtle));
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 750;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.tone-chip:hover,
+.tone-chip:focus-visible {
+  color: var(--board-mark-fg, var(--text));
+  border-color: color-mix(in srgb, var(--board-accent, var(--primary)) 38%, transparent);
+  background: color-mix(in srgb, var(--board-accent, var(--primary)) 12%, var(--board-mark-bg, var(--bg-subtle)));
+  outline: none;
+}

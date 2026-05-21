@@ -44,7 +44,7 @@
 .tab.active {
   color: var(--bg-surface);
   background: var(--gradient-brand);
-  box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.15);
+  box-shadow: var(--shadow-brand);
   outline: none;
 }
 

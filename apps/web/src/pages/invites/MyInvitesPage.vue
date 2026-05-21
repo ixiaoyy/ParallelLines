@@ -6,6 +6,7 @@ import { useCreateBoard } from "@/features/boards/queries";
 import { useCreateBoardInvite, useInviteAction, useMyBoardInvites } from "@/features/invites/queries";
 import { hasAccessToken } from "@/shared/api/client";
 import { relativeTime } from "@/shared/lib/format";
+import { boardToneClass } from "@/shared/theme/boardPalette";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
@@ -141,9 +142,9 @@ async function runInviteAction(inviteId: string, action: "accept" | "decline" | 
             v-for="invite in data?.received"
             :key="invite.id"
             class="invite-card"
-            :style="{ '--board-color': invite.boardColor }"
+            :class="boardToneClass(invite.boardSlug)"
           >
-            <span class="invite-mark" aria-hidden="true"></span>
+            <span class="invite-mark tone-mark-square" aria-hidden="true"></span>
             <div>
               <strong>{{ invite.boardName }}</strong>
               <p>{{ invite.boardDescription }}</p>

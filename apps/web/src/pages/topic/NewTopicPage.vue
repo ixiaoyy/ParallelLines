@@ -9,6 +9,7 @@ import MarkdownUploadButton from "@/features/uploads/components/MarkdownUploadBu
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { compactNumber } from "@/shared/lib/format";
 import { readRouteParam } from "@/shared/router/params";
+import { boardToneClass } from "@/shared/theme/boardPalette";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
@@ -310,11 +311,10 @@ function isTopicIntent(value: unknown): value is TopicIntent {
               v-for="board in boardOptions"
               :key="board.id"
               type="button"
-              :class="{ active: selectedBoardSlug === board.slug }"
-              :style="{ '--board-color': board.color }"
+              :class="[boardToneClass(board.slug), { active: selectedBoardSlug === board.slug }]"
               @click="chooseBoard(board)"
             >
-              <span aria-hidden="true"></span>
+              <span class="tone-mark-square" aria-hidden="true"></span>
               <strong>{{ board.name }}</strong>
               <small>{{ board.description }}</small>
               <em>{{ compactNumber(board.topicCount) }} 主题</em>
@@ -407,7 +407,11 @@ function isTopicIntent(value: unknown): value is TopicIntent {
             </div>
           </div>
 
-          <article class="topic-preview-card" :style="{ '--board-color': selectedBoard?.color }">
+          <article
+            v-if="selectedBoard"
+            class="topic-preview-card"
+            :class="boardToneClass(selectedBoard.slug)"
+          >
             <header>
               <span>{{ selectedBoard?.name }}</span>
               <strong>{{ title || "这里会显示你的主题标题" }}</strong>

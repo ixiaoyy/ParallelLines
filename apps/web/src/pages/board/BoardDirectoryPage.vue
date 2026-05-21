@@ -4,6 +4,7 @@ import { computed, ref } from "vue";
 import type { BoardSummary } from "@/entities/board/model";
 import { useBoards } from "@/features/boards/queries";
 import { useTopicFeed } from "@/features/topics/queries";
+import { boardToneClass } from "@/shared/theme/boardPalette";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiBadge from "@/shared/ui/Badge.vue";
@@ -174,10 +175,12 @@ function getTopicsByBoardSlugLocal(slug: string) {
             v-for="board in filteredBoards"
             :key="board.id"
             class="board-tile"
-            :style="{ '--board-color': board.color }"
+            :class="boardToneClass(board.slug)"
           >
             <RouterLink class="board-tile__main" :to="{ name: 'board-detail', params: { slug: board.slug } }">
-              <span class="board-mark" aria-hidden="true">{{ boardMark(board) }}</span>
+              <span class="board-mark" :title="board.name">
+                <span class="board-mark__text">{{ boardMark(board) }}</span>
+              </span>
               <span class="board-copy">
                 <span class="board-kicker">{{ boardIntent(board) }}</span>
                 <strong>{{ board.name }}</strong>
@@ -193,6 +196,7 @@ function getTopicsByBoardSlugLocal(slug: string) {
             </dl>
 
             <div class="board-topic-preview" aria-label="高信号主题">
+              <span class="board-topic-preview__label">推荐先看</span>
               <RouterLink
                 v-for="topic in previewTopics(board)"
                 :key="topic.id"
@@ -224,8 +228,10 @@ function getTopicsByBoardSlugLocal(slug: string) {
 
       <aside class="board-directory-sidebar" aria-label="版块侧边栏">
         <UiCard class="sidebar-panel spotlight-panel">
-          <span class="panel-kicker">高信号入口</span>
-          <h2>优先从这些主题开始</h2>
+          <div class="sidebar-panel__head">
+            <span class="panel-kicker">高信号入口</span>
+            <h2>优先从这些主题开始</h2>
+          </div>
           <ul>
             <li v-for="topic in featuredTopics" :key="topic.id">
               <RouterLink :to="topicDetailRoute(topic)">{{ topic.title }}</RouterLink>
@@ -235,9 +241,11 @@ function getTopicsByBoardSlugLocal(slug: string) {
         </UiCard>
 
         <UiCard class="sidebar-panel guide-panel">
-          <span class="panel-kicker">发帖前</span>
-          <h2>让问题更快得到回复</h2>
-          <ol>
+          <div class="sidebar-panel__head">
+            <span class="panel-kicker">发帖前</span>
+            <p class="guide-panel__lead">让问题更快得到回复</p>
+          </div>
+          <ol class="guide-panel__steps">
             <li>先搜错误码、接口名、日志关键字。</li>
             <li>排障类主题附环境、复现步骤和完整报错。</li>
             <li>如果已有相似主题，优先补充你的差异信息。</li>

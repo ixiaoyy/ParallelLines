@@ -113,9 +113,9 @@
 
 .sort-tabs button.active {
   color: var(--bg-surface);
-  border-color: var(--primary);
-  background: var(--primary);
-  box-shadow: 0 10px 20px rgba(var(--primary-rgb), 0.18);
+  border-color: transparent;
+  background: var(--gradient-brand);
+  box-shadow: var(--shadow-brand);
 }
 
 .search-empty {

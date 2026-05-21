@@ -21,7 +21,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 0.32rem;
-  background: linear-gradient(180deg, var(--board-color, var(--primary)), var(--accent-geek));
+  background: var(--board-accent, var(--primary));
   content: "";
 }
 
