@@ -24,6 +24,7 @@ from app.schemas.moderation import (
     UserStatusResponse,
     UserStatusUpdateRequest,
 )
+from app.services.search import SearchIndexService
 from app.services.spam import SpamPreventionService
 
 VALID_FLAG_STATUSES = {"pending", "resolved", "rejected"}
@@ -211,6 +212,7 @@ class ModerationService:
         await self._require_can_moderate_board(current_user, target.board_id)
         target.topic.deleted_at = utcnow()
         target.topic.status = "hidden"
+        await SearchIndexService(self.session).remove_topic(target.topic.id)
         self._add_audit_log(
             actor_id=current_user.id,
             action="topic_hidden",
@@ -236,6 +238,7 @@ class ModerationService:
         await self._require_can_moderate_board(current_user, target.board_id)
         target.topic.deleted_at = None
         target.topic.status = "open"
+        await SearchIndexService(self.session).sync_topic(target.topic.id)
         self._add_audit_log(
             actor_id=current_user.id,
             action="topic_restored",
@@ -260,6 +263,7 @@ class ModerationService:
             raise NotFoundError("post_not_found", "Post not found")
         await self._require_can_moderate_board(current_user, target.board_id)
         target.post.deleted_at = utcnow()
+        await SearchIndexService(self.session).sync_topic(target.topic_id or target.post.topic_id)
         self._add_audit_log(
             actor_id=current_user.id,
             action="post_hidden",
@@ -282,6 +286,7 @@ class ModerationService:
             raise NotFoundError("post_not_found", "Post not found")
         await self._require_can_moderate_board(current_user, target.board_id)
         target.post.deleted_at = None
+        await SearchIndexService(self.session).sync_topic(target.topic_id or target.post.topic_id)
         self._add_audit_log(
             actor_id=current_user.id,
             action="post_restored",

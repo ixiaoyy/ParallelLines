@@ -1,0 +1,17 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Backend service/router/model placement"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Reviewable tables/migrations require comments and indexes"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Typed moderation/reviewable errors"}
+{"file": ".trellis/spec/backend/moderation-admin-safety.md", "reason": "Existing flags, hide/restore, audit and permissions"}
+{"file": ".trellis/spec/backend/spam-prevention-rate-limits.md", "reason": "Auto-rules and screened/spam action context"}
+{"file": ".trellis/spec/backend/interactions-notifications.md", "reason": "Notify users for review decisions and appeals"}
+{"file": ".trellis/spec/backend/background-jobs.md", "reason": "Use unified jobs for async notifications if needed"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Frontend file placement"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Moderation UI component patterns"}
+{"file": ".trellis/spec/frontend/moderation-admin-safety.md", "reason": "Existing moderation console contracts"}
+{"file": ".trellis/spec/frontend/notifications-interactions.md", "reason": "Review decision notification UI contract"}
+{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "API composables and DTO mapping patterns"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "DTO/UI type safety"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Reviewable spans DB/API/service/frontend/notifications"}

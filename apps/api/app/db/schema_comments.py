@@ -52,6 +52,8 @@ TABLE_COMMENTS: dict[str, str] = {
     "email_delivery_events": "邮件供应商投递、退信和投诉事件记录。",
     "inbound_emails": "入站邮件回复 webhook 记录及匹配状态。",
     "backup_artifacts": "备份、导出归档元数据、校验和和状态记录。",
+    "search_documents": "全文搜索索引文档，保存主题可搜索文本与过滤快照。",
+    "search_logs": "搜索查询日志，用于无结果分析、热词统计和运营分析。",
 }
 
 COLUMN_COMMENTS: dict[str, dict[str, str]] = {
@@ -347,6 +349,25 @@ COLUMN_COMMENTS: dict[str, dict[str, str]] = {
         "failure_reason": "备份失败原因摘要；成功时为空。",
         "created_by_id": "触发备份或导出的管理员 ID；用户删除后为空。",
         "completed_at": "归档成功、失败或删除完成时间；队列中为空。",
+    },
+    "search_documents": {
+        "topic_id": "关联主题 ID。",
+        "board_id": "关联版块 ID。",
+        "author_id": "主题作者用户 ID。",
+        "author_username": "主题作者用户名快照。",
+        "topic_status": "主题状态快照：open、closed 或 archived。",
+        "title": "搜索索引中的主题标题。",
+        "body": "可见帖子 Markdown 聚合正文。",
+        "tags_text": "标签名称、标签 slug 和作者名聚合文本。",
+        "indexed_at": "索引文档最后生成时间（UTC）。",
+    },
+    "search_logs": {
+        "user_id": "搜索用户 ID；匿名搜索为空。",
+        "query": "用户原始搜索词截断快照。",
+        "normalized_query": "归一化搜索词，用于热词和无结果分析。",
+        "filters": "搜索过滤条件 JSON 快照。",
+        "result_count": "本次搜索返回结果数量。",
+        "has_results": "本次搜索是否有结果。",
     },
 }
 

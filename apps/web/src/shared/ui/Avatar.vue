@@ -16,6 +16,9 @@ const initials = props.name.slice(0, 2).toUpperCase();
 
 <style scoped>
 .avatar {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   border: 2px solid white;
   color: white !important;
@@ -24,23 +27,26 @@ const initials = props.name.slice(0, 2).toUpperCase();
   box-shadow: 0 8px 18px rgba(17, 24, 39, 0.12);
 }
 
+.avatar :deep(.ant-avatar-string) {
+  position: static !important;
+  transform: none !important;
+  line-height: 1 !important;
+}
+
 .avatar--sm {
   width: 2rem;
   height: 2rem;
-  line-height: 2rem;
   font-size: 0.75rem;
 }
 
 .avatar--md {
   width: 2.55rem;
   height: 2.55rem;
-  line-height: 2.55rem;
 }
 
 .avatar--lg {
   width: 3.4rem;
   height: 3.4rem;
-  line-height: 3.4rem;
   font-size: 1.1rem;
 }
 

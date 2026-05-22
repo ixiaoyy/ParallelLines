@@ -21,6 +21,7 @@ from app.services.backups import BackupService
 from app.services.email import EmailService
 from app.services.email_notifications import EmailNotificationService
 from app.services.forum import calculate_hot_score
+from app.services.search import SearchIndexService
 from app.services.uploads import UploadService
 
 
@@ -144,6 +145,13 @@ async def handle_create_site_backup(
     return await BackupService(session).run_site_backup(_payload_str(payload, "backup_id"))
 
 
+async def handle_rebuild_search_index(
+    session: AsyncSession,
+    _payload: dict[str, object],
+) -> dict[str, object]:
+    return await SearchIndexService(session).rebuild_all()
+
+
 JOB_HANDLERS: dict[str, BackgroundJobHandler] = {
     "recompute_hot_scores": handle_recompute_hot_scores,
     "cleanup_expired_uploads": handle_cleanup_expired_uploads,
@@ -153,6 +161,7 @@ JOB_HANDLERS: dict[str, BackgroundJobHandler] = {
     "send_digest_emails": handle_send_digest_emails,
     "send_email": handle_send_email,
     "create_site_backup": handle_create_site_backup,
+    "rebuild_search_index": handle_rebuild_search_index,
 }
 
 WORKER_QUEUES = ("mail", "notifications", "maintenance", "default")

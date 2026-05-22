@@ -28,6 +28,8 @@ from app.models import (  # noqa: F401
     RateLimitEvent,
     Reaction,
     ScreenedRule,
+    SearchDocument,
+    SearchLog,
     SiteSetting,
     SpamAction,
     Tag,
