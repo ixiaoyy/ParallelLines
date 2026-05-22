@@ -14,10 +14,10 @@
 
 ## Acceptance Criteria
 
-- [ ] 备份任务成功生成可下载归档和校验信息。
-- [ ] 非管理员无法触发或下载全站备份。
-- [ ] 失败备份有日志和状态。
-- [ ] 导出文件不包含明文密码/token。
+- [x] 备份任务成功生成可下载归档和校验信息。
+- [x] 非管理员无法触发或下载全站备份。
+- [x] 失败备份有日志和状态。
+- [x] 导出文件不包含明文密码/token。
 
 ## Priority
 
@@ -32,3 +32,4 @@
 - Parent roadmap: `.trellis/tasks/05-20-discourse-parity-roadmap`
 - Source comparison: `D:\work\ParallelLines` vs `D:\work\discourse`
 - Implement with project specs under `.trellis/spec/` and update specs when contracts change.
+

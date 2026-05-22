@@ -72,3 +72,36 @@ Completed and recorded the ParallelLines forum MVP implementation in commit `ada
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: feat(search): implement full text search and fix initials avatar alignment
+
+**Date**: 2026-05-22
+**Task**: feat(search): implement full text search and fix initials avatar alignment
+**Branch**: `main`
+
+### Summary
+
+Completed full text search implementation with SQLite search documents indexing, search logger, relevance ordering, and permissions filtering. Also fixed initials avatar layout centering on board topic lists by setting line-height.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f86b881` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

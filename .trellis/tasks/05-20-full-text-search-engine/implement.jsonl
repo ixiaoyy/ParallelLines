@@ -1,0 +1,12 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Backend file placement and service/router separation"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "New search tables/migrations must include comments and indexes"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Search API/service errors use typed envelope"}
+{"file": ".trellis/spec/backend/search-feed-hot-ranking.md", "reason": "Existing search/feed contracts and LIKE escaping behavior"}
+{"file": ".trellis/spec/backend/board-visibility-invites.md", "reason": "Search must filter private board content by optional current user"}
+{"file": ".trellis/spec/backend/moderation-admin-safety.md", "reason": "Hidden topics/posts must not leak through search"}
+{"file": ".trellis/spec/backend/post-revisions-history.md", "reason": "Post edit/restore must sync searchable content"}
+{"file": ".trellis/spec/backend/topic-lifecycle.md", "reason": "Move/split/merge lifecycle must keep search index scoped"}
+{"file": ".trellis/spec/backend/background-jobs.md", "reason": "Use unified worker for async index rebuild tasks"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Feature spans DB/service/API/worker/tests"}

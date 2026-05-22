@@ -3,7 +3,7 @@
   "name": "full-text-search-engine",
   "title": "正式全文搜索与搜索分析",
   "description": "从 SQL LIKE 升级为可运营全文搜索，支持索引、相关性、权限过滤和搜索日志。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "backend",
   "scope": "search",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
+  "completedAt": "2026-05-22",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
