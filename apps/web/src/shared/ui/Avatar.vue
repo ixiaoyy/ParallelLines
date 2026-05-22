@@ -27,17 +27,20 @@ const initials = props.name.slice(0, 2).toUpperCase();
 .avatar--sm {
   width: 2rem;
   height: 2rem;
+  line-height: 2rem;
   font-size: 0.75rem;
 }
 
 .avatar--md {
   width: 2.55rem;
   height: 2.55rem;
+  line-height: 2.55rem;
 }
 
 .avatar--lg {
   width: 3.4rem;
   height: 3.4rem;
+  line-height: 3.4rem;
   font-size: 1.1rem;
 }
 

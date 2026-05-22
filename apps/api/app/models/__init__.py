@@ -17,6 +17,7 @@ from app.models.forum import (
 )
 from app.models.interaction import Bookmark, Notification, Reaction
 from app.models.moderation import AuditLog, Flag, RateLimitEvent, ScreenedRule, SpamAction
+from app.models.search import SearchDocument, SearchLog
 from app.models.upload import Upload
 from app.models.user import (
     EmailVerificationCode,
@@ -47,6 +48,8 @@ __all__ = [
     "RateLimitEvent",
     "Reaction",
     "ScreenedRule",
+    "SearchDocument",
+    "SearchLog",
     "SiteSetting",
     "SpamAction",
     "Tag",

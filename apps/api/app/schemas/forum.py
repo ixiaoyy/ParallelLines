@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from app.models.forum import Board, BoardInvitation, Post, PostRevision, Topic
 from app.schemas.common import ORMModel
 
-TopicSort = Literal["latest", "hot", "top"]
+TopicSort = Literal["latest", "hot", "top", "relevance"]
 
 
 class BoardCreateRequest(BaseModel):

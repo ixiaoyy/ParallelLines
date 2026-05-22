@@ -27,6 +27,7 @@ from app.models.forum import (
 )
 from app.models.interaction import Notification
 from app.models.moderation import AuditLog
+from app.models.search import SearchDocument
 from app.models.upload import Upload
 from app.models.user import User
 from app.schemas.forum import (
@@ -44,6 +45,11 @@ from app.schemas.forum import (
 )
 from app.services.background_jobs import BackgroundJobService
 from app.services.content_safety import enforce_content_policy
+from app.services.search import (
+    SearchIndexService,
+    search_match_conditions,
+    search_relevance_expression,
+)
 from app.services.spam import SpamPreventionService
 from app.services.uploads import UploadService
 
@@ -277,18 +283,13 @@ class ForumService:
             board = await self.get_board_by_slug(board_slug, current_user=current_user)
             statement = statement.where(Topic.board_id == board.id)
 
-        if query:
-            pattern = f"%{escape_like(query.strip())}%"
-            post_match = (
-                select(Post.id)
-                .where(
-                    Post.topic_id == Topic.id,
-                    Post.deleted_at.is_(None),
-                    Post.raw_md.ilike(pattern, escape="\\"),
-                )
-                .exists()
-            )
-            statement = statement.where(or_(Topic.title.ilike(pattern, escape="\\"), post_match))
+        relevance = None
+        if query and query.strip():
+            relevance = search_relevance_expression(query)
+            statement = statement.join(
+                SearchDocument,
+                SearchDocument.topic_id == Topic.id,
+            ).where(*search_match_conditions(query))
 
         if tag:
             normalized_tag = normalize_tag_name(tag)
@@ -303,7 +304,13 @@ class ForumService:
         if cursor:
             statement = statement.where(Topic.last_posted_at < cursor)
 
-        if sort == "hot":
+        if sort == "relevance" and relevance is not None:
+            statement = statement.order_by(
+                relevance.desc(),
+                desc(Topic.last_posted_at),
+                desc(Topic.id),
+            )
+        elif sort == "hot":
             statement = statement.order_by(desc(Topic.hot_score), desc(Topic.last_posted_at))
         elif sort == "top":
             statement = statement.order_by(desc(Topic.like_count), desc(Topic.reply_count))
@@ -451,6 +458,7 @@ class ForumService:
             current_user=current_user,
         )
         await self._queue_board_new_topic_notifications(board, topic, first_post, current_user)
+        await SearchIndexService(self.session).sync_topic(topic.id)
         await self.session.commit()
         return await self.get_topic(topic.id, current_user=current_user)
 
@@ -540,6 +548,7 @@ class ForumService:
                 },
             )
 
+        await SearchIndexService(self.session).sync_topic(topic.id)
         await self.session.commit()
         return await self.get_topic(topic.id, current_user=current_user)
 
@@ -576,6 +585,7 @@ class ForumService:
         target_board.topic_count += 1
         target_board.post_count += moved_post_count
         await self._update_topic_related_board(topic.id, target_board.id)
+        await SearchIndexService(self.session).sync_topic(topic.id)
         self._add_audit_log(
             actor_id=current_user.id,
             action="topic_moved",
@@ -658,6 +668,9 @@ class ForumService:
             topic_id=new_topic.id,
             board_id=target_board.id,
         )
+        search_index = SearchIndexService(self.session)
+        await search_index.sync_topic(source.id)
+        await search_index.sync_topic(new_topic.id)
         self._add_audit_log(
             actor_id=current_user.id,
             action="topic_split",
@@ -726,6 +739,9 @@ class ForumService:
         await self._recompute_topic_counters(target)
         source.reply_count = 0
         source.hot_score = 0.0
+        search_index = SearchIndexService(self.session)
+        await search_index.remove_topic(source.id)
+        await search_index.sync_topic(target.id)
         self._add_audit_log(
             actor_id=current_user.id,
             action="topic_merged",
@@ -801,6 +817,7 @@ class ForumService:
             current_user=current_user,
         )
         await self._queue_reply_notifications(topic, post, current_user, parent_post)
+        await SearchIndexService(self.session).sync_topic(topic.id)
         await self.session.commit()
         return await self._get_post(post.id)
 
@@ -864,6 +881,7 @@ class ForumService:
             board=post.topic.board,
             current_user=current_user,
         )
+        await SearchIndexService(self.session).sync_topic(post.topic_id)
         await self.session.commit()
         return await self._get_post(post.id)
 
@@ -952,6 +970,7 @@ class ForumService:
             board=post.topic.board,
             current_user=current_user,
         )
+        await SearchIndexService(self.session).sync_topic(post.topic_id)
         await self.session.commit()
         return await self._get_post(post.id)
 
@@ -980,6 +999,7 @@ class ForumService:
         post.raw_md = ""
         post.cooked_html = ""
         post.updated_at = utcnow()
+        await SearchIndexService(self.session).sync_topic(post.topic_id)
         await self.session.commit()
         return await self._get_post(post.id)
 

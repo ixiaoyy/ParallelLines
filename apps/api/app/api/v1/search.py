@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query
 from app.api.v1.dependencies import OptionalCurrentUserDep, SessionDep
 from app.schemas.common import ApiResponse
 from app.schemas.forum import TopicResponse, TopicSort
-from app.services.forum import ForumService
+from app.services.search import SearchFilters, SearchService
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -19,18 +19,26 @@ async def search_topics(
     board: str | None = None,
     tag: str | None = None,
     author: str | None = None,
-    sort: TopicSort = "latest",
+    status: Annotated[str | None, Query(pattern="^(open|closed|archived)$")] = None,
+    created_after: datetime | None = None,
+    created_before: datetime | None = None,
+    sort: TopicSort = "relevance",
     cursor: datetime | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> ApiResponse[list[TopicResponse]]:
-    topics = await ForumService(session).list_topics(
-        board_slug=board,
-        sort=sort,
-        limit=limit,
+    topics = await SearchService(session).search_topics(
         query=q,
-        tag=tag,
-        author=author,
+        filters=SearchFilters(
+            board_slug=board,
+            tag=tag,
+            author=author,
+            created_after=created_after,
+            created_before=created_before,
+            status=status,
+        ),
+        sort=sort,
         cursor=cursor,
+        limit=limit,
         current_user=current_user,
     )
     return ApiResponse(
