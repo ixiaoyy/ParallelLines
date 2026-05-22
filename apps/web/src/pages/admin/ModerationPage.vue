@@ -124,6 +124,14 @@ function submitDecision() {
   );
 }
 
+function hasReviewableTarget(reviewable: ReviewableResponse) {
+  return Boolean(reviewable.target_id && ["topic", "post"].includes(reviewable.target_type ?? ""));
+}
+
+function canSilenceReviewable(reviewable: ReviewableResponse) {
+  return Boolean(reviewable.target_user_id);
+}
+
 function handleClaim(reviewableId: string) {
   claimMutation.mutate(reviewableId);
 }
@@ -520,9 +528,9 @@ function targetRoute(flag: FlagResponse) {
               <select v-model="decisionAction">
                 <option value="approve">通过发布 (Approve)</option>
                 <option value="reject">拒绝并驳回 (Reject)</option>
-                <option value="hide">隐藏内容 (Hide)</option>
-                <option value="delete">彻底删除 (Delete)</option>
-                <option value="silence">禁言作者 (Silence Author)</option>
+                <option value="hide" :disabled="!hasReviewableTarget(selectedReviewable)">隐藏内容 (Hide)</option>
+                <option value="delete" :disabled="!hasReviewableTarget(selectedReviewable)">彻底删除 (Delete)</option>
+                <option value="silence" :disabled="!canSilenceReviewable(selectedReviewable)">禁言作者 (Silence Author)</option>
                 <option value="escalate">升级审核 (Escalate)</option>
               </select>
             </label>
