@@ -19,6 +19,10 @@ const updateMutation = useUpdateEmailPreferences();
 const draft = ref<EmailPreferenceResponse | null>(null);
 const notice = ref("");
 const errorMessage = ref("");
+const hourOptions = Array.from({ length: 24 }, (_, hour) => ({
+  value: hour,
+  label: `${String(hour).padStart(2, "0")}:00 UTC`,
+}));
 
 const currentUser = computed(() => currentUserQuery.data.value);
 const preferences = computed(() => preferencesQuery.data.value);
@@ -29,6 +33,38 @@ const enabledToggleCount = computed(() => {
   }
 
   return emailToggleItems.filter((item) => draft.value?.[item.key]).length;
+});
+const quietHoursEnabled = computed({
+  get() {
+    return Boolean(
+      draft.value &&
+        draft.value.quiet_hours_start !== null &&
+        draft.value.quiet_hours_end !== null,
+    );
+  },
+  set(enabled: boolean) {
+    if (!draft.value) {
+      return;
+    }
+
+    if (enabled) {
+      draft.value.quiet_hours_start ??= 22;
+      draft.value.quiet_hours_end ??= 7;
+      return;
+    }
+
+    draft.value.quiet_hours_start = null;
+    draft.value.quiet_hours_end = null;
+  },
+});
+const quietHoursSummary = computed(() => {
+  if (!draft.value || !quietHoursEnabled.value) {
+    return "未开启免打扰，即时邮件会按事件偏好发送。";
+  }
+
+  const start = formatHour(draft.value.quiet_hours_start);
+  const end = formatHour(draft.value.quiet_hours_end);
+  return `${start} 至 ${end} 期间暂停即时通知邮件。`;
 });
 
 watch(
@@ -55,6 +91,8 @@ async function savePreferences() {
       notify_topic_new_post: draft.value.notify_topic_new_post,
       notify_board_new_topic: draft.value.notify_board_new_topic,
       digest_frequency: normalizeDigest(draft.value.digest_frequency),
+      quiet_hours_start: draft.value.quiet_hours_start,
+      quiet_hours_end: draft.value.quiet_hours_end,
     });
     draft.value = { ...saved };
     notice.value = "邮件偏好已保存。";
@@ -76,6 +114,14 @@ function formatDate(value: string | null): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatHour(value: number | null): string {
+  if (value === null) {
+    return "--:-- UTC";
+  }
+
+  return `${String(value).padStart(2, "0")}:00 UTC`;
 }
 
 function toPreferenceError(error: unknown): string {
@@ -160,6 +206,42 @@ function toPreferenceError(error: unknown): string {
           <option value="daily">每日摘要</option>
           <option value="weekly">每周摘要</option>
         </select>
+      </UiCard>
+
+      <UiCard class="email-panel quiet-panel">
+        <header>
+          <span class="eyebrow">免打扰</span>
+          <h2>{{ quietHoursEnabled ? "安静时段已启用" : "安静时段未启用" }}</h2>
+          <p>{{ quietHoursSummary }}</p>
+        </header>
+        <label class="quiet-toggle">
+          <span>暂停安静时段内的即时邮件</span>
+          <input v-model="quietHoursEnabled" type="checkbox" :disabled="!draft.email_enabled" />
+        </label>
+        <div class="quiet-range" :aria-disabled="!quietHoursEnabled">
+          <label>
+            <span>开始</span>
+            <select
+              v-model.number="draft.quiet_hours_start"
+              :disabled="!draft.email_enabled || !quietHoursEnabled"
+            >
+              <option v-for="option in hourOptions" :key="`start-${option.value}`" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
+          <label>
+            <span>结束</span>
+            <select
+              v-model.number="draft.quiet_hours_end"
+              :disabled="!draft.email_enabled || !quietHoursEnabled"
+            >
+              <option v-for="option in hourOptions" :key="`end-${option.value}`" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
+        </div>
       </UiCard>
 
       <UiCard class="email-panel telemetry-panel">

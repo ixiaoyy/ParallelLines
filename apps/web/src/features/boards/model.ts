@@ -1,4 +1,4 @@
-import type { BoardSummary } from "@/entities/board/model";
+import type { BoardNotificationLevel, BoardSummary } from "@/entities/board/model";
 import type { TopicResponse } from "@/features/topics/model";
 
 export interface BoardResponse {
@@ -13,6 +13,8 @@ export interface BoardResponse {
   topic_count: number;
   post_count: number;
   follower_count: number;
+  is_following: boolean;
+  notification_level: BoardNotificationLevel | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +34,7 @@ export function toBoardSummary(board: BoardResponse): BoardSummary {
     topicCount: board.topic_count,
     postCount: board.post_count,
     followerCount: board.follower_count,
-    isFollowing: false,
+    isFollowing: board.is_following,
+    notificationLevel: board.notification_level,
   };
 }

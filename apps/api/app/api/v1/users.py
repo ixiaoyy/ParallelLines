@@ -6,9 +6,15 @@ from starlette.responses import Response
 from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep, SettingsDep
 from app.schemas.common import ApiResponse
 from app.schemas.forum import TopicResponse
-from app.schemas.users import UserProfileResponse
+from app.schemas.users import (
+    PrivateMessageCreateRequest,
+    PrivateMessageTopicResponse,
+    UserProfileResponse,
+    UserRelationshipStateResponse,
+)
 from app.services.backups import BackupService
 from app.services.forum import ForumService
+from app.services.social import SocialService
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -28,6 +34,96 @@ async def export_current_user(
             "X-Export-SHA256": archive.sha256,
         },
     )
+
+
+@router.get("/messages", response_model=ApiResponse[list[PrivateMessageTopicResponse]])
+async def list_private_messages(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+) -> ApiResponse[list[PrivateMessageTopicResponse]]:
+    messages = await SocialService(session).list_private_messages(current_user, limit=limit)
+    return ApiResponse(data=messages)
+
+
+@router.post("/messages", response_model=ApiResponse[PrivateMessageTopicResponse], status_code=201)
+async def create_private_message(
+    payload: PrivateMessageCreateRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[PrivateMessageTopicResponse]:
+    message = await SocialService(session).create_private_message(payload, current_user)
+    return ApiResponse(data=message)
+
+
+@router.get("/{username}/relationship", response_model=ApiResponse[UserRelationshipStateResponse])
+async def get_user_relationship(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).relationship_state(username, current_user)
+    return ApiResponse(data=state)
+
+
+@router.put("/{username}/follow", response_model=ApiResponse[UserRelationshipStateResponse])
+async def follow_user(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).set_relationship(username, "follow", current_user)
+    return ApiResponse(data=state)
+
+
+@router.delete("/{username}/follow", response_model=ApiResponse[UserRelationshipStateResponse])
+async def unfollow_user(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).clear_relationship(username, "follow", current_user)
+    return ApiResponse(data=state)
+
+
+@router.put("/{username}/ignore", response_model=ApiResponse[UserRelationshipStateResponse])
+async def ignore_user(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).set_relationship(username, "ignore", current_user)
+    return ApiResponse(data=state)
+
+
+@router.delete("/{username}/ignore", response_model=ApiResponse[UserRelationshipStateResponse])
+async def unignore_user(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).clear_relationship(username, "ignore", current_user)
+    return ApiResponse(data=state)
+
+
+@router.put("/{username}/block", response_model=ApiResponse[UserRelationshipStateResponse])
+async def block_user(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).set_relationship(username, "block", current_user)
+    return ApiResponse(data=state)
+
+
+@router.delete("/{username}/block", response_model=ApiResponse[UserRelationshipStateResponse])
+async def unblock_user(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).clear_relationship(username, "block", current_user)
+    return ApiResponse(data=state)
 
 
 @router.get("/{username}", response_model=ApiResponse[UserProfileResponse])

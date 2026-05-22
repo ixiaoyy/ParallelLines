@@ -18,6 +18,7 @@ from app.models import (  # noqa: F401
     Board,
     BoardMember,
     Bookmark,
+    Draft,
     EmailDeliveryEvent,
     EmailVerificationCode,
     Flag,
@@ -25,6 +26,7 @@ from app.models import (  # noqa: F401
     Notification,
     Post,
     PostRevision,
+    PrivateMessageParticipant,
     RateLimitEvent,
     Reaction,
     Reviewable,
@@ -40,6 +42,7 @@ from app.models import (  # noqa: F401
     User,
     UserEmailPreference,
     UserRecoveryCode,
+    UserRelationship,
     UserSecurityToken,
     UserSession,
 )

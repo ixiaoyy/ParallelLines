@@ -18,7 +18,7 @@ class BoardFollowResponse(BaseModel):
     board_slug: str
     following: bool
     role: str | None
-    notification_level: str | None
+    notification_level: NotificationLevel | None
     follower_count: int
 
 
@@ -72,3 +72,13 @@ class NotificationReadResponse(BaseModel):
 class NotificationStreamResponse(BaseModel):
     unread_count: int
     notifications: list[NotificationResponse]
+
+
+class TopicNotificationLevelRequest(BaseModel):
+    notification_level: NotificationLevel
+
+
+class TopicNotificationLevelResponse(BaseModel):
+    topic_id: str
+    notification_level: NotificationLevel
+    last_read_post_number: int

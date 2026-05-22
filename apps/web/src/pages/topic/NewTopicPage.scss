@@ -1,4 +1,4 @@
-﻿.new-topic-page {
+.new-topic-page {
   display: grid;
   gap: 1rem;
 }
@@ -494,5 +494,35 @@ textarea:focus {
 
   .new-topic-hero h1 {
     font-size: clamp(2rem, 10vw, 2.45rem);
+  }
+}
+
+.conflict-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  animation: slideIn 0.3s ease-out;
+
+  .conflict-icon {
+    flex-shrink: 0;
+    color: #ef4444;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

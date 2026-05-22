@@ -56,6 +56,9 @@ TABLE_COMMENTS: dict[str, str] = {
     "backup_artifacts": "备份、导出归档元数据、校验和和状态记录。",
     "search_documents": "全文搜索索引文档，保存主题可搜索文本与过滤快照。",
     "search_logs": "搜索查询日志，用于无结果分析、热词统计和运营分析。",
+    "drafts": "用户未发布的帖子与主题草稿，支持多设备恢复与冲突处理。",
+    "user_relationships": "用户之间的关注、忽略和屏蔽关系。",
+    "private_message_participants": "私信主题参与者及其已读状态。",
 }
 
 COLUMN_COMMENTS: dict[str, dict[str, str]] = {
@@ -118,6 +121,11 @@ COLUMN_COMMENTS: dict[str, dict[str, str]] = {
         "user_id": "主题作者用户 ID。",
         "title": "主题标题。",
         "slug": "主题 URL 标识，在同一版块内唯一。",
+        "topic_type": "主题类型：regular 表示公开/版块主题，private_message 表示私信主题。",
+        "visibility": (
+            "主题可见性：public 表示沿用版块可见性，"
+            "private_message 表示仅私信参与者可见。"
+        ),
         "status": "主题状态：开放、关闭、归档或隐藏。",
         "pinned": "是否置顶主题。",
         "featured": "是否标记为精选/高信号主题。",
@@ -349,6 +357,11 @@ COLUMN_COMMENTS: dict[str, dict[str, str]] = {
         "last_digest_sent_at": "上次摘要邮件发送时间；为空表示从未发送。",
         "delivery_status": "邮件投递状态：ok、bounced、complained 或 disabled。",
         "disabled_reason": "邮件被自动或手动停发的原因；为空表示未停发。",
+        "quiet_hours_start": "免打扰开始小时（UTC，0-23）；为空表示未启用免打扰。",
+        "quiet_hours_end": (
+            "免打扰结束小时（UTC，0-23）；为空表示未启用免打扰；"
+            "等于开始小时表示全天免打扰。"
+        ),
     },
     "email_delivery_events": {
         "user_id": "匹配到的用户 ID；未知邮箱为空。",
@@ -403,6 +416,29 @@ COLUMN_COMMENTS: dict[str, dict[str, str]] = {
         "filters": "搜索过滤条件 JSON 快照。",
         "result_count": "本次搜索返回结果数量。",
         "has_results": "本次搜索是否有结果。",
+    },
+    "drafts": {
+        "user_id": "草稿所属用户 ID。",
+        "target_type": "草稿目标类型：new_topic 表示新主题，topic 表示某主题回复。",
+        "target_id": "草稿目标 ID；新主题草稿为空字符串，回复草稿为主题 ID。",
+        "draft_type": "草稿类型：topic (主题) 或 reply (回复)。",
+        "data": "草稿结构化数据，保存标题、正文、标签等客户端状态。",
+        "version": "草稿版本号，用于客户端-服务端冲突检测。",
+    },
+    "user_relationships": {
+        "actor_user_id": "发起关系的用户 ID。",
+        "target_user_id": "被关注、忽略或屏蔽的目标用户 ID。",
+        "relationship_type": "用户关系类型：follow、ignore 或 block。",
+        "note": "关系备注；为空表示未填写。",
+    },
+    "private_message_participants": {
+        "topic_id": "私信主题 ID。",
+        "user_id": "参与私信的用户 ID。",
+        "role": "私信参与者角色：owner 或 participant。",
+        "last_read_post_number": "该参与者已读到的最高楼层编号。",
+        "muted": "该参与者是否静音此私信主题。",
+        "last_read_at": "该参与者最后阅读私信的时间；为空表示尚未阅读。",
+        "joined_at": "加入私信时间。",
     },
 }
 

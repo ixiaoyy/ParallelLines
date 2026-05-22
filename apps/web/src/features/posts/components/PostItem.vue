@@ -4,7 +4,7 @@ import { computed, nextTick, ref, watch } from "vue";
 import type { PostItemVM } from "@/entities/post/model";
 import { setPostLike } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
-import { useCreateFlag } from "@/features/moderation/queries";
+import ReportModal from "@/features/moderation/components/ReportModal.vue";
 import {
   useDeletePost,
   usePostRevisions,
@@ -32,6 +32,7 @@ const editing = ref(false);
 const editDraft = ref(props.post.rawMd);
 const editReason = ref("");
 const historyOpen = ref(false);
+const reportModalOpen = ref(false);
 const firstCodeText = computed(() => extractFirstCodeText(props.post.cookedHtml));
 const hasCodeBlock = computed(() => firstCodeText.value.length > 0);
 const isOwnPost = computed(() => Boolean(props.currentUserId && props.currentUserId === props.post.userId));
@@ -45,8 +46,6 @@ const canViewHistory = computed(
   () => Boolean(!props.post.deleted && (isOwnPost.value || canModerateGlobally.value)),
 );
 const canRestoreHistory = computed(() => Boolean(!props.post.deleted && canModerateGlobally.value));
-const flagPostMutation = useCreateFlag();
-const flagPending = computed(() => flagPostMutation.isPending.value);
 const updatePostMutation = useUpdatePost(() => props.post.topicId);
 const deletePostMutation = useDeletePost(() => props.post.topicId);
 const revisionsQuery = usePostRevisions(
@@ -188,13 +187,7 @@ function flagPost() {
   if (!canFlag.value) {
     return;
   }
-
-  flagPostMutation.mutate({
-    target_type: "post",
-    target_id: props.post.id,
-    reason: "other",
-    detail: "用户从楼层操作发起举报。",
-  });
+  reportModalOpen.value = true;
 }
 
 function extractFirstCodeText(html: string) {
@@ -267,7 +260,7 @@ function setStatus(message: string) {
         </UiButton>
         <UiButton tone="ghost" @click="quotePost">回复 {{ post.replyCount }}</UiButton>
         <UiButton v-if="hasCodeBlock" tone="subtle" aria-label="复制本楼层代码块" @click="copyCode">复制代码</UiButton>
-        <UiButton tone="ghost" :disabled="flagPending || !canFlag" @click="flagPost">举报</UiButton>
+        <UiButton tone="ghost" :disabled="!canFlag" @click="flagPost">举报</UiButton>
         <UiButton tone="ghost" @click="quotePost">引用</UiButton>
         <UiButton v-if="canEdit" tone="subtle" @click="startEdit">编辑</UiButton>
         <UiButton v-if="canViewHistory" tone="ghost" @click="toggleHistory">
@@ -301,6 +294,13 @@ function setStatus(message: string) {
         </template>
       </section>
     </article>
+    <ReportModal
+      :open="reportModalOpen"
+      target-type="post"
+      :target-id="post.id"
+      @close="reportModalOpen = false"
+      @success="setStatus('已提交举报')"
+    />
   </UiCard>
 </template>
 

@@ -6,8 +6,9 @@ from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import NotFoundError, ValidationError
 from app.db.base import utcnow
-from app.models.forum import Board, BoardMember, Post, Topic
+from app.models.forum import Board, BoardMember, NotificationLevel, Post, Topic, TopicRead
 from app.models.interaction import Bookmark, Notification, Reaction
+from app.models.social import UserRelationship
 from app.models.user import User
 from app.schemas.interactions import (
     BoardFollowResponse,
@@ -29,7 +30,7 @@ class InteractionService:
         slug: str,
         current_user: User,
         *,
-        notification_level: str = "watching",
+        notification_level: NotificationLevel = "watching",
     ) -> BoardFollowResponse:
         board = await self._get_board(slug, current_user)
         member = await self._get_board_member(board.id, current_user.id)
@@ -102,29 +103,43 @@ class InteractionService:
                 view_count=post.topic.view_count,
             )
             if post.user_id != current_user.id:
-                notification_data: dict[str, object] = {
-                    "topic_title": post.topic.title,
-                    "topic_slug": post.topic.slug,
-                    "post_number": post.post_number,
-                    "actor_name": current_user.username,
-                }
-                await BackgroundJobService(self.session).enqueue_notification(
-                    user_id=post.user_id,
-                    kind="liked",
-                    topic_id=post.topic_id,
-                    post_id=post.id,
+                # Suppress if the post author has muted this topic
+                author_read_state = await self.session.scalar(
+                    select(TopicRead).where(
+                        TopicRead.topic_id == post.topic_id,
+                        TopicRead.user_id == post.user_id,
+                    )
+                )
+                if not (
+                    author_read_state
+                    and author_read_state.notification_level == "muted"
+                ) and not await self._relationship_blocks_notification(
+                    recipient_id=post.user_id,
                     actor_id=current_user.id,
-                    data=notification_data,
-                    idempotency_key=notification_idempotency_key(
-                        kind="liked",
+                ):
+                    notification_data: dict[str, object] = {
+                        "topic_title": post.topic.title,
+                        "topic_slug": post.topic.slug,
+                        "post_number": post.post_number,
+                        "actor_name": current_user.username,
+                    }
+                    await BackgroundJobService(self.session).enqueue_notification(
                         user_id=post.user_id,
+                        kind="liked",
                         topic_id=post.topic_id,
                         post_id=post.id,
                         actor_id=current_user.id,
                         data=notification_data,
-                    ),
-                    commit=False,
-                )
+                        idempotency_key=notification_idempotency_key(
+                            kind="liked",
+                            user_id=post.user_id,
+                            topic_id=post.topic_id,
+                            post_id=post.id,
+                            actor_id=current_user.id,
+                            data=notification_data,
+                        ),
+                        commit=False,
+                    )
         await self.session.flush()
         count = await self._reaction_count("post", post.id)
         await self.session.commit()
@@ -258,6 +273,23 @@ class InteractionService:
                 NotificationResponse.from_model(notification) for notification in notifications
             ],
         )
+
+    async def _relationship_blocks_notification(self, recipient_id: str, actor_id: str) -> bool:
+        relationship_id = await self.session.scalar(
+            select(UserRelationship.id).where(
+                (
+                    (UserRelationship.actor_user_id == recipient_id)
+                    & (UserRelationship.target_user_id == actor_id)
+                    & (UserRelationship.relationship_type.in_(("ignore", "block")))
+                )
+                | (
+                    (UserRelationship.actor_user_id == actor_id)
+                    & (UserRelationship.target_user_id == recipient_id)
+                    & (UserRelationship.relationship_type == "block")
+                )
+            )
+        )
+        return relationship_id is not None
 
     async def _get_board(self, slug: str, current_user: User) -> Board:
         board = await self.session.scalar(select(Board).where(Board.slug == slug))

@@ -64,6 +64,11 @@ export const router = createRouter({
       component: () => import("@/pages/email/EmailPreferencesPage.vue"),
     },
     {
+      path: "/messages",
+      name: "messages",
+      component: () => import("@/pages/messages/MessagesPage.vue"),
+    },
+    {
       path: "/moderation/reviewables",
       name: "my-reviewables",
       component: () => import("@/pages/moderation/MyReviewablesPage.vue"),

@@ -7,7 +7,7 @@ from collections.abc import Iterable, Mapping
 from datetime import datetime
 from hashlib import sha256
 
-from sqlalchemy import desc, func, or_, select, update
+from sqlalchemy import desc, func, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.requests import Request
@@ -19,6 +19,7 @@ from app.models.forum import (
     Board,
     BoardInvitation,
     BoardMember,
+    NotificationLevel,
     Post,
     PostRevision,
     Tag,
@@ -28,6 +29,7 @@ from app.models.forum import (
 from app.models.interaction import Notification
 from app.models.moderation import AuditLog, Reviewable
 from app.models.search import SearchDocument
+from app.models.social import PrivateMessageParticipant, UserRelationship
 from app.models.upload import Upload
 from app.models.user import User
 from app.schemas.forum import (
@@ -43,6 +45,7 @@ from app.schemas.forum import (
     TopicSort,
     TopicSplitRequest,
 )
+from app.schemas.interactions import TopicNotificationLevelResponse
 from app.services.background_jobs import BackgroundJobService
 from app.services.content_safety import moderate_text_fields
 from app.services.search import (
@@ -228,6 +231,24 @@ class ForumService:
         result = await self.session.scalars(statement.order_by(desc(Board.topic_count), Board.name))
         return list(result)
 
+    async def board_memberships_for_user(
+        self,
+        board_ids: Iterable[str],
+        current_user: User | None,
+    ) -> dict[str, BoardMember]:
+        if current_user is None:
+            return {}
+        ids = list(dict.fromkeys(board_ids))
+        if not ids:
+            return {}
+        result = await self.session.scalars(
+            select(BoardMember).where(
+                BoardMember.board_id.in_(ids),
+                BoardMember.user_id == current_user.id,
+            )
+        )
+        return {member.board_id: member for member in result}
+
     async def get_board_by_slug(
         self,
         slug: str,
@@ -278,7 +299,10 @@ class ForumService:
                 selectinload(Topic.tags),
             )
             .where(Topic.deleted_at.is_(None), self._board_visible_condition(current_user))
+            .where(Topic.visibility == "public")
         )
+        if current_user is not None:
+            statement = statement.where(self._visible_author_condition(current_user))
         if board_slug:
             board = await self.get_board_by_slug(board_slug, current_user=current_user)
             statement = statement.where(Topic.board_id == board.id)
@@ -336,7 +360,11 @@ class ForumService:
             select(Tag)
             .join(Tag.topics)
             .join(Topic.board)
-            .where(Tag.topic_count > 0, self._board_visible_condition(current_user))
+            .where(
+                Tag.topic_count > 0,
+                Topic.visibility == "public",
+                self._board_visible_condition(current_user),
+            )
             .group_by(Tag.id)
             .order_by(desc(Tag.topic_count), Tag.name)
             .limit(limit)
@@ -357,6 +385,7 @@ class ForumService:
                 .where(
                     Topic.user_id == user.id,
                     Topic.deleted_at.is_(None),
+                    Topic.visibility == "public",
                     self._board_visible_condition(current_user),
                 )
             )
@@ -371,6 +400,7 @@ class ForumService:
                     Post.user_id == user.id,
                     Post.deleted_at.is_(None),
                     Topic.deleted_at.is_(None),
+                    Topic.visibility == "public",
                     self._board_visible_condition(current_user),
                 )
             )
@@ -386,7 +416,7 @@ class ForumService:
         current_user: User | None = None,
     ) -> list[Topic]:
         user = await self.get_user_by_username(username)
-        result = await self.session.scalars(
+        statement = (
             select(Topic)
             .join(Topic.board)
             .options(
@@ -397,11 +427,15 @@ class ForumService:
             .where(
                 Topic.user_id == user.id,
                 Topic.deleted_at.is_(None),
+                Topic.visibility == "public",
                 self._board_visible_condition(current_user),
             )
             .order_by(desc(Topic.last_posted_at))
             .limit(limit)
         )
+        if current_user is not None:
+            statement = statement.where(self._visible_author_condition(current_user))
+        result = await self.session.scalars(statement)
         return list(result)
 
     async def create_topic(
@@ -418,20 +452,30 @@ class ForumService:
             title=payload.title,
             raw_md=payload.raw_md,
         )
-        filtered = await self._moderate_or_queue_content(
-            {"title": payload.title, "raw_md": payload.raw_md},
-            current_user=current_user,
-            reviewable_type="queued_topic",
-            board=board,
-            data={
-                "title": payload.title,
-                "raw_md": payload.raw_md,
-                "tags": payload.tags,
-                "pinned": payload.pinned,
-                "featured": payload.featured,
-                "board_slug": board.slug,
-            },
-        )
+        try:
+            filtered = await self._moderate_or_queue_content(
+                {"title": payload.title, "raw_md": payload.raw_md},
+                current_user=current_user,
+                reviewable_type="queued_topic",
+                board=board,
+                data={
+                    "title": payload.title,
+                    "raw_md": payload.raw_md,
+                    "tags": payload.tags,
+                    "pinned": payload.pinned,
+                    "featured": payload.featured,
+                    "board_slug": board.slug,
+                },
+            )
+        except ValidationError as e:
+            if e.code == "content_pending_review":
+                from app.services.draft import DraftService
+                await DraftService(self.session).delete_draft(
+                    user_id=current_user.id,
+                    target_type="new_topic",
+                    target_id="",
+                )
+            raise e
         title = filtered["title"].strip()
         raw_md = filtered["raw_md"].strip()
         cooked_html = self._render_required_markdown(raw_md)
@@ -471,7 +515,14 @@ class ForumService:
             current_user=current_user,
         )
         await self._queue_board_new_topic_notifications(board, topic, first_post, current_user)
+        await self._queue_followed_user_new_topic_notifications(topic, first_post, current_user)
         await SearchIndexService(self.session).sync_topic(topic.id)
+        from app.services.draft import DraftService
+        await DraftService(self.session).delete_draft(
+            user_id=current_user.id,
+            target_type="new_topic",
+            target_id="",
+        )
         await self.session.commit()
         return await self.get_topic(topic.id, current_user=current_user)
 
@@ -498,13 +549,15 @@ class ForumService:
         if (
             not topic
             or topic.deleted_at is not None
-            or not await self._can_access_board(topic.board, current_user)
+            or not await self._can_access_topic(topic, current_user)
         ):
             raise NotFoundError("topic_not_found", "Topic not found")
         return topic
 
     async def list_posts(self, topic_id: str, *, current_user: User | None = None) -> list[Post]:
-        await self.get_topic(topic_id, current_user=current_user)
+        topic = await self.get_topic(topic_id, current_user=current_user)
+        if topic.visibility == "private_message" and current_user is not None:
+            await self._mark_private_message_read(topic, current_user)
         result = await self.session.scalars(
             select(Post)
             .options(selectinload(Post.author))
@@ -792,19 +845,29 @@ class ForumService:
             current_user=current_user,
             raw_md=payload.raw_md,
         )
-        filtered = await self._moderate_or_queue_content(
-            {"raw_md": payload.raw_md},
-            current_user=current_user,
-            reviewable_type="queued_post",
-            board=topic.board,
-            topic=topic,
-            data={
-                "raw_md": payload.raw_md,
-                "parent_post_id": payload.parent_post_id,
-                "topic_title": topic.title,
-                "topic_slug": topic.slug,
-            },
-        )
+        try:
+            filtered = await self._moderate_or_queue_content(
+                {"raw_md": payload.raw_md},
+                current_user=current_user,
+                reviewable_type="queued_post",
+                board=topic.board,
+                topic=topic,
+                data={
+                    "raw_md": payload.raw_md,
+                    "parent_post_id": payload.parent_post_id,
+                    "topic_title": topic.title,
+                    "topic_slug": topic.slug,
+                },
+            )
+        except ValidationError as e:
+            if e.code == "content_pending_review":
+                from app.services.draft import DraftService
+                await DraftService(self.session).delete_draft(
+                    user_id=current_user.id,
+                    target_type="topic",
+                    target_id=topic_id,
+                )
+            raise e
         raw_md = filtered["raw_md"].strip()
         next_number = (
             await self.session.scalar(
@@ -841,8 +904,17 @@ class ForumService:
             board=topic.board,
             current_user=current_user,
         )
-        await self._queue_reply_notifications(topic, post, current_user, parent_post)
-        await SearchIndexService(self.session).sync_topic(topic.id)
+        if topic.visibility == "private_message":
+            await self._queue_private_message_reply_notifications(topic, post, current_user)
+        else:
+            await self._queue_reply_notifications(topic, post, current_user, parent_post)
+            await SearchIndexService(self.session).sync_topic(topic.id)
+        from app.services.draft import DraftService
+        await DraftService(self.session).delete_draft(
+            user_id=current_user.id,
+            target_type="topic",
+            target_id=topic_id,
+        )
         await self.session.commit()
         return await self._get_post(post.id)
 
@@ -1210,6 +1282,47 @@ class ForumService:
             .exists()
         )
         return or_(Board.visibility == "public", member_exists)
+
+    def _visible_author_condition(self, current_user: User):
+        hidden_author_exists = (
+            select(UserRelationship.id)
+            .where(
+                UserRelationship.actor_user_id == current_user.id,
+                UserRelationship.target_user_id == Topic.user_id,
+                UserRelationship.relationship_type.in_(("ignore", "block")),
+            )
+            .exists()
+        )
+        return not_(hidden_author_exists)
+
+    async def _can_access_topic(self, topic: Topic, current_user: User | None) -> bool:
+        if topic.visibility == "private_message":
+            if current_user is None:
+                return False
+            return await self._is_private_message_participant(topic.id, current_user.id)
+        return await self._can_access_board(topic.board, current_user)
+
+    async def _is_private_message_participant(self, topic_id: str, user_id: str) -> bool:
+        participant_id = await self.session.scalar(
+            select(PrivateMessageParticipant.id).where(
+                PrivateMessageParticipant.topic_id == topic_id,
+                PrivateMessageParticipant.user_id == user_id,
+            )
+        )
+        return participant_id is not None
+
+    async def _mark_private_message_read(self, topic: Topic, current_user: User) -> None:
+        participant = await self.session.scalar(
+            select(PrivateMessageParticipant).where(
+                PrivateMessageParticipant.topic_id == topic.id,
+                PrivateMessageParticipant.user_id == current_user.id,
+            )
+        )
+        if participant is None:
+            return
+        participant.last_read_post_number = topic.reply_count + 1
+        participant.last_read_at = utcnow()
+        await self.session.commit()
 
     async def _can_access_board(self, board: Board, current_user: User | None) -> bool:
         if board.visibility == "public":
@@ -1614,7 +1727,9 @@ class ForumService:
         )
         if read_state:
             read_state.last_read_post_number = post_number
-            read_state.notification_level = "tracking"
+            # Only auto-upgrade to tracking if the user hasn't explicitly set a level
+            if read_state.notification_level == "normal":
+                read_state.notification_level = "tracking"
             return
 
         self.session.add(
@@ -1624,6 +1739,60 @@ class ForumService:
                 last_read_post_number=post_number,
                 notification_level="tracking",
             )
+        )
+
+    async def get_topic_notification_level(
+        self,
+        topic_id: str,
+        current_user: User,
+    ) -> TopicNotificationLevelResponse:
+        await self.get_topic(topic_id, current_user=current_user)
+        read_state = await self.session.scalar(
+            select(TopicRead).where(
+                TopicRead.topic_id == topic_id,
+                TopicRead.user_id == current_user.id,
+            )
+        )
+        if read_state:
+            return TopicNotificationLevelResponse(
+                topic_id=topic_id,
+                notification_level=read_state.notification_level,
+                last_read_post_number=read_state.last_read_post_number,
+            )
+        return TopicNotificationLevelResponse(
+            topic_id=topic_id,
+            notification_level="normal",
+            last_read_post_number=0,
+        )
+
+    async def set_topic_notification_level(
+        self,
+        topic_id: str,
+        level: NotificationLevel,
+        current_user: User,
+    ) -> TopicNotificationLevelResponse:
+        await self.get_topic(topic_id, current_user=current_user)
+        read_state = await self.session.scalar(
+            select(TopicRead).where(
+                TopicRead.topic_id == topic_id,
+                TopicRead.user_id == current_user.id,
+            )
+        )
+        if read_state:
+            read_state.notification_level = level
+        else:
+            read_state = TopicRead(
+                topic_id=topic_id,
+                user_id=current_user.id,
+                last_read_post_number=0,
+                notification_level=level,
+            )
+            self.session.add(read_state)
+        await self.session.commit()
+        return TopicNotificationLevelResponse(
+            topic_id=topic_id,
+            notification_level=read_state.notification_level,
+            last_read_post_number=read_state.last_read_post_number,
         )
 
     def _render_required_markdown(self, raw_md: str) -> str:
@@ -1662,6 +1831,35 @@ class ForumService:
                 },
             )
 
+    async def _queue_followed_user_new_topic_notifications(
+        self,
+        topic: Topic,
+        first_post: Post,
+        current_user: User,
+    ) -> None:
+        followers = await self.session.scalars(
+            select(UserRelationship).where(
+                UserRelationship.target_user_id == current_user.id,
+                UserRelationship.actor_user_id != current_user.id,
+                UserRelationship.relationship_type == "follow",
+            )
+        )
+        for follower in followers:
+            await self._add_notification(
+                user_id=follower.actor_user_id,
+                kind="user_new_topic",
+                topic_id=topic.id,
+                post_id=first_post.id,
+                actor_id=current_user.id,
+                data={
+                    "topic_title": topic.title,
+                    "topic_slug": topic.slug,
+                    "board_slug": topic.board.slug,
+                    "post_number": first_post.post_number,
+                    "actor_name": current_user.username,
+                },
+            )
+
     async def _queue_reply_notifications(
         self,
         topic: Topic,
@@ -1672,16 +1870,18 @@ class ForumService:
         notified_user_ids: set[str] = set()
 
         if topic.user_id != current_user.id:
-            await self._add_reply_notification(topic.user_id, topic, post, current_user)
-            notified_user_ids.add(topic.user_id)
+            if await self._add_reply_notification(topic.user_id, topic, post, current_user):
+                notified_user_ids.add(topic.user_id)
 
         if parent_post and parent_post.user_id != current_user.id:
-            await self._add_reply_notification(parent_post.user_id, topic, post, current_user)
-            notified_user_ids.add(parent_post.user_id)
+            if await self._add_reply_notification(parent_post.user_id, topic, post, current_user):
+                notified_user_ids.add(parent_post.user_id)
 
         mentioned_users = await self._find_mentioned_users(post.raw_md)
         for mentioned_user in mentioned_users:
             if mentioned_user.id == current_user.id:
+                continue
+            if await self._is_topic_muted_for_user(topic.id, mentioned_user.id):
                 continue
             await self._add_notification(
                 user_id=mentioned_user.id,
@@ -1722,13 +1922,43 @@ class ForumService:
                 },
             )
 
+    async def _queue_private_message_reply_notifications(
+        self,
+        topic: Topic,
+        post: Post,
+        current_user: User,
+    ) -> None:
+        participants = await self.session.scalars(
+            select(PrivateMessageParticipant).where(
+                PrivateMessageParticipant.topic_id == topic.id,
+                PrivateMessageParticipant.user_id != current_user.id,
+                PrivateMessageParticipant.muted.is_(False),
+            )
+        )
+        for participant in participants:
+            await self._add_notification(
+                user_id=participant.user_id,
+                kind="private_message",
+                topic_id=topic.id,
+                post_id=post.id,
+                actor_id=current_user.id,
+                data={
+                    "topic_title": topic.title,
+                    "topic_slug": topic.slug,
+                    "post_number": post.post_number,
+                    "actor_name": current_user.username,
+                },
+            )
+
     async def _add_reply_notification(
         self,
         user_id: str,
         topic: Topic,
         post: Post,
         current_user: User,
-    ) -> None:
+    ) -> bool:
+        if await self._is_topic_muted_for_user(topic.id, user_id):
+            return False
         await self._add_notification(
             user_id=user_id,
             kind="replied",
@@ -1742,6 +1972,16 @@ class ForumService:
                 "actor_name": current_user.username,
             },
         )
+        return True
+
+    async def _is_topic_muted_for_user(self, topic_id: str, user_id: str) -> bool:
+        read_state = await self.session.scalar(
+            select(TopicRead.notification_level).where(
+                TopicRead.topic_id == topic_id,
+                TopicRead.user_id == user_id,
+            )
+        )
+        return read_state == "muted"
 
     async def _find_mentioned_users(self, raw_md: str) -> list[User]:
         mentioned_names = {match.group(1) for match in MENTION_PATTERN.finditer(raw_md)}
@@ -1782,6 +2022,8 @@ class ForumService:
         actor_id: str | None,
         data: dict[str, object],
     ) -> None:
+        if actor_id and await self._relationship_blocks_notification(user_id, actor_id):
+            return
         await BackgroundJobService(self.session).enqueue_notification(
             user_id=user_id,
             kind=kind,
@@ -1799,6 +2041,25 @@ class ForumService:
             ),
             commit=False,
         )
+
+    async def _relationship_blocks_notification(self, recipient_id: str, actor_id: str) -> bool:
+        relationship_id = await self.session.scalar(
+            select(UserRelationship.id).where(
+                or_(
+                    (
+                        (UserRelationship.actor_user_id == recipient_id)
+                        & (UserRelationship.target_user_id == actor_id)
+                        & (UserRelationship.relationship_type.in_(("ignore", "block")))
+                    ),
+                    (
+                        (UserRelationship.actor_user_id == actor_id)
+                        & (UserRelationship.target_user_id == recipient_id)
+                        & (UserRelationship.relationship_type == "block")
+                    ),
+                )
+            )
+        )
+        return relationship_id is not None
 
     async def publish_queued_topic(self, reviewable: Reviewable) -> Topic:
         board = await self.get_board_by_slug(reviewable.data["board_slug"])

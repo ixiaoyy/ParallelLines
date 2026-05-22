@@ -4,6 +4,7 @@ from app.api.v1 import (
     admin,
     auth,
     boards,
+    drafts,
     email,
     health,
     interactions,
@@ -36,3 +37,4 @@ api_router.include_router(moderation.router)
 api_router.include_router(uploads.router)
 api_router.include_router(admin.router)
 api_router.include_router(site.router)
+api_router.include_router(drafts.router)

@@ -1,5 +1,6 @@
 import { apiDelete, apiPut } from "@/shared/api/client";
 
+import type { NotificationLevel } from "@/features/notifications/model";
 import type { BoardFollowResponse, InteractionStateResponse } from "./model";
 
 export function setPostLike(postId: string, active: boolean): Promise<InteractionStateResponse> {
@@ -22,7 +23,7 @@ export function setTopicBookmark(
 export function setBoardFollow(
   boardSlug: string,
   active: boolean,
-  notificationLevel = "watching",
+  notificationLevel: NotificationLevel = "watching",
 ): Promise<BoardFollowResponse> {
   const path = `/boards/${boardSlug}/follow`;
   return active

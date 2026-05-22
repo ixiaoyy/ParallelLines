@@ -245,6 +245,59 @@
   font: inherit;
 }
 
+.quiet-panel {
+  align-content: start;
+}
+
+.quiet-toggle {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid rgba(var(--primary-rgb), 0.1);
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  color: var(--title);
+  background: linear-gradient(135deg, var(--bg-surface), var(--bg-subtle));
+  font-weight: 760;
+}
+
+.quiet-toggle input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--primary);
+}
+
+.quiet-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.quiet-range label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 720;
+}
+
+.quiet-range select {
+  min-height: 2.45rem;
+  border: 1px solid var(--input-border);
+  border-radius: 0.55rem;
+  padding: 0 0.65rem;
+  color: var(--title);
+  background: var(--bg-surface);
+  font: inherit;
+}
+
+.quiet-range select:disabled {
+  color: var(--muted);
+  background: var(--bg-subtle);
+  cursor: not-allowed;
+}
+
 .telemetry-panel {
   align-content: start;
 }
@@ -296,6 +349,10 @@
   }
 
   .email-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quiet-range {
     grid-template-columns: 1fr;
   }
 }

@@ -21,6 +21,8 @@ NotificationType = Literal[
     "liked",
     "topic_new_post",
     "board_new_topic",
+    "user_new_topic",
+    "private_message",
     "moderation",
 ]
 

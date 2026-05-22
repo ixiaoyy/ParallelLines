@@ -16,6 +16,10 @@ from app.schemas.forum import (
     TopicSort,
     TopicSplitRequest,
 )
+from app.schemas.interactions import (
+    TopicNotificationLevelRequest,
+    TopicNotificationLevelResponse,
+)
 from app.services.forum import ForumService
 
 router = APIRouter(prefix="/topics", tags=["topics"])
@@ -151,3 +155,32 @@ async def reply_to_topic(
 ) -> ApiResponse[PostResponse]:
     post = await ForumService(session).reply_to_topic(topic_id, payload, current_user, request)
     return ApiResponse(data=PostResponse.from_model(post))
+
+
+@router.get(
+    "/{topic_id}/notification-level",
+    response_model=ApiResponse[TopicNotificationLevelResponse],
+)
+async def get_topic_notification_level(
+    topic_id: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[TopicNotificationLevelResponse]:
+    result = await ForumService(session).get_topic_notification_level(topic_id, current_user)
+    return ApiResponse(data=result)
+
+
+@router.put(
+    "/{topic_id}/notification-level",
+    response_model=ApiResponse[TopicNotificationLevelResponse],
+)
+async def set_topic_notification_level(
+    topic_id: str,
+    payload: TopicNotificationLevelRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[TopicNotificationLevelResponse]:
+    result = await ForumService(session).set_topic_notification_level(
+        topic_id, payload.notification_level, current_user
+    )
+    return ApiResponse(data=result)

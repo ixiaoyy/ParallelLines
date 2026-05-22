@@ -18,6 +18,8 @@ class EmailPreferenceUpdateRequest(BaseModel):
     notify_topic_new_post: bool | None = None
     notify_board_new_topic: bool | None = None
     digest_frequency: DigestFrequency | None = None
+    quiet_hours_start: int | None = Field(default=None, ge=0, le=23)
+    quiet_hours_end: int | None = Field(default=None, ge=0, le=23)
 
 
 class EmailPreferenceResponse(ORMModel):
@@ -31,6 +33,8 @@ class EmailPreferenceResponse(ORMModel):
     last_digest_sent_at: datetime | None = None
     delivery_status: str
     disabled_reason: str | None = None
+    quiet_hours_start: int | None = None
+    quiet_hours_end: int | None = None
     updated_at: datetime
 
     @classmethod
@@ -46,6 +50,8 @@ class EmailPreferenceResponse(ORMModel):
             last_digest_sent_at=preference.last_digest_sent_at,
             delivery_status=preference.delivery_status,
             disabled_reason=preference.disabled_reason,
+            quiet_hours_start=preference.quiet_hours_start,
+            quiet_hours_end=preference.quiet_hours_end,
             updated_at=preference.updated_at,
         )
 

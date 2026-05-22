@@ -136,3 +136,34 @@ Completed backend models, services, migrations, APIs and frontend integration fo
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: 实现用户端举报弹窗（ReportModal）
+
+**Date**: 2026-05-22
+**Task**: 实现用户端举报弹窗（ReportModal）
+**Branch**: `main`
+
+### Summary
+
+新建 ReportModal.vue 和 ReportModal.scss，实现带毛玻璃背景、单选卡片选项的高质量举报弹窗。将 PostItem.vue 和 TopicDetailPage.vue 中的硬编码举报调用替换为打开弹窗。用户可选择 spam/harassment/off_topic/private_info/other 等具体原因并填写补充描述，重复举报时显示友好提示。所有前端检查（typecheck、lint、build）及后端 56 个测试全部通过。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

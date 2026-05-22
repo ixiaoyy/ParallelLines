@@ -6,7 +6,13 @@ import type { PostItemVM } from "@/entities/post/model";
 import { useCurrentUser } from "@/features/auth/queries";
 import { setTopicBookmark } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
+import ReportModal from "@/features/moderation/components/ReportModal.vue";
 import { useCreateFlag } from "@/features/moderation/queries";
+import type { NotificationLevel } from "@/features/notifications/model";
+import {
+  useTopicNotificationLevel,
+  useUpdateTopicNotificationLevel,
+} from "@/features/notifications/queries";
 import PostItem from "@/features/posts/components/PostItem.vue";
 import { useCreatePost, useTopicPosts } from "@/features/posts/queries";
 import ComposerDrawer from "@/features/topics/components/ComposerDrawer.vue";
@@ -37,6 +43,8 @@ const topicQuery = useTopicDetail(topicId);
 const postsQuery = useTopicPosts(topicId);
 const createPost = useCreatePost(topicId);
 const currentUserQuery = useCurrentUser();
+const topicNotificationQuery = useTopicNotificationLevel(topicId);
+const updateTopicNotificationMutation = useUpdateTopicNotificationLevel(topicId);
 const topic = computed(() => topicQuery.data.value);
 const posts = computed(() => postsQuery.data.value ?? []);
 const onlyAuthor = ref(false);
@@ -63,6 +71,14 @@ const splitTopicMutation = useSplitTopic(topicId);
 const mergeTopicMutation = useMergeTopic(topicId);
 const canFlagTopic = computed(() => Boolean(topic.value?.id) && hasAccessToken());
 const flagTopicPending = computed(() => flagTopicMutation.isPending.value);
+const reportModalOpen = ref(false);
+const topicNotificationLevel = computed<NotificationLevel>(
+  () => topicNotificationQuery.data.value?.notification_level ?? "normal",
+);
+const topicNotificationPending = computed(
+  () => topicNotificationQuery.isFetching.value || updateTopicNotificationMutation.isPending.value,
+);
+const canSetTopicNotification = computed(() => Boolean(topic.value?.id) && hasAccessToken());
 const lifecyclePending = computed(
   () =>
     lifecycleMutation.isPending.value ||
@@ -169,6 +185,41 @@ function toggleTopicPinned() {
       onError: () => setToolbarStatus("置顶状态更新失败，请确认权限"),
     },
   );
+}
+
+function setTopicNotificationLevel(level: NotificationLevel) {
+  if (!topic.value?.id) {
+    return;
+  }
+
+  if (!hasAccessToken()) {
+    setToolbarStatus("请先登录后再设置主题通知。");
+    void router.push({ name: "auth", query: { redirect: route.fullPath } });
+    return;
+  }
+
+  updateTopicNotificationMutation.mutate(level, {
+    onSuccess: (response) => {
+      setToolbarStatus(`主题通知已设为${notificationLevelLabel(response.notification_level)}`);
+    },
+    onError: () => setToolbarStatus("主题通知设置失败，请稍后重试"),
+  });
+}
+
+function notificationLevelLabel(level: NotificationLevel): string {
+  if (level === "watching") {
+    return "关注";
+  }
+
+  if (level === "tracking") {
+    return "跟踪";
+  }
+
+  if (level === "muted") {
+    return "静音";
+  }
+
+  return "普通";
 }
 
 function moveTopic() {
@@ -321,13 +372,7 @@ function flagTopic() {
   if (!topic.value || !canFlagTopic.value) {
     return;
   }
-
-  flagTopicMutation.mutate({
-    target_type: "topic",
-    target_id: topic.value.id,
-    reason: "other",
-    detail: "用户从主题工具栏发起举报。",
-  });
+  reportModalOpen.value = true;
 }
 </script>
 
@@ -363,11 +408,15 @@ function flagTopic() {
             :topic-status="topic.status"
             :topic-pinned="Boolean(topic.pinned)"
             :lifecycle-pending="lifecyclePending"
+            :notification-level="topicNotificationLevel"
+            :notification-pending="topicNotificationPending"
+            :can-set-notification="canSetTopicNotification"
             :status="toolbarStatus"
             @toggle-only-author="toggleOnlyAuthor"
             @toggle-bookmark="toggleBookmark"
             @copy-link="copyTopicLink"
             @flag-topic="flagTopic"
+            @set-notification-level="setTopicNotificationLevel"
             @set-topic-status="setTopicStatus"
             @toggle-topic-pinned="toggleTopicPinned"
             @move-topic="moveTopic"
@@ -407,6 +456,14 @@ function flagTopic() {
 
         <TopicDetailSidebar :topic="topic" :posts="displayedPosts" :related-topics="relatedTopics" />
       </div>
+      <ReportModal
+        v-if="topic"
+        :open="reportModalOpen"
+        target-type="topic"
+        :target-id="topic.id"
+        @close="reportModalOpen = false"
+        @success="setToolbarStatus('主题举报已提交')"
+      />
     </template>
 
     <UiEmptyState v-else title="没有找到这个主题" description="主题可能已被合并或隐藏，回到首页继续浏览。">

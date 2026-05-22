@@ -5,6 +5,8 @@ export const queryKeys = {
   oauthProviders: ["auth", "oauth", "providers"] as const,
   user: (username: string) => ["users", username] as const,
   userTopics: (username: string) => ["users", username, "topics"] as const,
+  userRelationship: (username: string) => ["users", username, "relationship"] as const,
+  privateMessages: ["users", "messages"] as const,
   boards: ["boards"] as const,
   board: (slug: string) => ["boards", slug] as const,
   topics: (filter: string) => ["topics", filter] as const,
@@ -29,4 +31,7 @@ export const queryKeys = {
   moderationReviewables: (status: string) => ["moderation", "reviewables", status] as const,
   moderationMyReviewables: ["moderation", "reviewables", "me"] as const,
   moderationAudit: ["moderation", "audit"] as const,
+  drafts: ["drafts"] as const,
+  draft: (targetType: string, targetId: string) => ["drafts", targetType, targetId] as const,
+  topicNotificationLevel: (topicId: string) => ["topics", "notification-level", topicId] as const,
 };

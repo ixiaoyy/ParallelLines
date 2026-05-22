@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 import { useCurrentUser } from "@/features/auth/queries";
+import { relationshipSummary } from "@/features/social/model";
+import {
+  useCreatePrivateMessage,
+  useUpdateUserRelationship,
+  useUserRelationship,
+} from "@/features/social/queries";
 import TopicList from "@/features/topics/components/TopicList.vue";
 import { useUploadAvatar } from "@/features/uploads/queries";
 import { useUserProfile, useUserTopics } from "@/features/users/queries";
-import { ApiError, resolveApiAssetUrl } from "@/shared/api/client";
+import { ApiError, hasAccessToken, resolveApiAssetUrl } from "@/shared/api/client";
 import { relativeTime } from "@/shared/lib/format";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiBadge from "@/shared/ui/Badge.vue";
@@ -14,9 +20,14 @@ import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 const route = useRoute();
+const router = useRouter();
 const username = computed(() => String(route.params.username ?? ""));
 const avatarInput = ref<HTMLInputElement | null>(null);
 const avatarStatus = ref("");
+const socialStatus = ref("");
+const messageFormOpen = ref(false);
+const messageTitle = ref("");
+const messageBody = ref("");
 const currentUserQuery = useCurrentUser();
 const profileQuery = useUserProfile(username);
 const topicsQuery = useUserTopics(username);
@@ -25,6 +36,14 @@ const avatarMutation = useUploadAvatar(() => profile.value?.username ?? username
 const isOwnProfile = computed(
   () => currentUserQuery.data.value?.username === profile.value?.username,
 );
+const canUseSocialActions = computed(
+  () => Boolean(currentUserQuery.data.value && profile.value && !isOwnProfile.value),
+);
+const relationshipQuery = useUserRelationship(username, canUseSocialActions);
+const relationshipMutation = useUpdateUserRelationship(username);
+const createMessageMutation = useCreatePrivateMessage();
+const relationship = computed(() => relationshipQuery.data.value ?? null);
+const socialSummary = computed(() => relationshipSummary(relationship.value));
 
 const joinedAt = computed(() => {
   const createdAt = profile.value?.created_at;
@@ -86,6 +105,77 @@ function openAvatarPicker() {
   avatarInput.value?.click();
 }
 
+function requireLogin() {
+  if (hasAccessToken()) {
+    return false;
+  }
+
+  void router.push({ name: "auth", query: { redirect: route.fullPath } });
+  return true;
+}
+
+function toggleRelationship(kind: "follow" | "ignore" | "block", active: boolean) {
+  if (!profile.value || isOwnProfile.value || requireLogin()) {
+    return;
+  }
+
+  socialStatus.value = "";
+  relationshipMutation.mutate(
+    { kind, active },
+    {
+      onSuccess: (nextState) => {
+        if (kind === "follow") {
+          socialStatus.value = nextState.following ? "已关注该成员。" : "已取消关注。";
+          return;
+        }
+
+        if (kind === "ignore") {
+          socialStatus.value = nextState.ignored ? "已忽略该成员。" : "已取消忽略。";
+          return;
+        }
+
+        socialStatus.value = nextState.blocked ? "已屏蔽该成员。" : "已取消屏蔽。";
+      },
+      onError: (error) => {
+        socialStatus.value = socialErrorMessage(error);
+      },
+    },
+  );
+}
+
+function openMessageForm() {
+  if (!profile.value || isOwnProfile.value || requireLogin()) {
+    return;
+  }
+
+  messageTitle.value = `和 ${profile.value.username} 的私信`;
+  messageFormOpen.value = true;
+}
+
+async function sendPrivateMessage() {
+  if (!profile.value || !messageBody.value.trim()) {
+    socialStatus.value = "请先写下私信内容。";
+    return;
+  }
+
+  try {
+    const created = await createMessageMutation.mutateAsync({
+      participant_usernames: [profile.value.username],
+      title: messageTitle.value.trim() || `和 ${profile.value.username} 的私信`,
+      raw_md: messageBody.value.trim(),
+    });
+    socialStatus.value = "私信已创建。";
+    messageFormOpen.value = false;
+    messageBody.value = "";
+    void router.push({
+      name: "topic-detail",
+      params: { id: created.topic.id, slug: created.topic.slug },
+    });
+  } catch (error) {
+    socialStatus.value = socialErrorMessage(error);
+  }
+}
+
 async function handleAvatarChange(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
@@ -115,6 +205,20 @@ function avatarErrorMessage(error: unknown): string {
   }
 
   return "头像上传失败，请确认已登录且文件类型安全。";
+}
+
+function socialErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.code === "relationship_blocked") {
+      return "屏蔽边界内无法关注对方。";
+    }
+
+    if (error.code === "private_message_blocked") {
+      return "屏蔽边界内无法互发私信。";
+    }
+  }
+
+  return "操作失败，请稍后重试。";
 }
 </script>
 
@@ -184,6 +288,66 @@ function avatarErrorMessage(error: unknown): string {
             <span>信号状态</span>
             <strong>{{ profile.topic_count || profile.post_count ? "已接入讨论" : "等待第一条线索" }}</strong>
             <p>公开资料只展示主题与楼层，不暴露邮箱。</p>
+          </div>
+
+          <div v-if="!isOwnProfile" class="profile-social-card">
+            <span>关系边界</span>
+            <strong>{{ socialSummary }}</strong>
+            <div class="profile-social-actions">
+              <UiButton
+                type="button"
+                :tone="relationship?.following ? 'success' : 'primary'"
+                :disabled="relationshipMutation.isPending.value"
+                @click="toggleRelationship('follow', !relationship?.following)"
+              >
+                {{ relationship?.following ? "已关注" : "关注" }}
+              </UiButton>
+              <UiButton
+                type="button"
+                tone="subtle"
+                :disabled="relationshipMutation.isPending.value"
+                @click="toggleRelationship('ignore', !relationship?.ignored)"
+              >
+                {{ relationship?.ignored ? "取消忽略" : "忽略" }}
+              </UiButton>
+              <UiButton
+                type="button"
+                tone="subtle"
+                :disabled="relationshipMutation.isPending.value"
+                @click="toggleRelationship('block', !relationship?.blocked)"
+              >
+                {{ relationship?.blocked ? "取消屏蔽" : "屏蔽" }}
+              </UiButton>
+              <UiButton type="button" tone="ghost" @click="openMessageForm">私信</UiButton>
+            </div>
+            <p v-if="socialStatus" class="profile-social-status" role="status">{{ socialStatus }}</p>
+            <div v-if="messageFormOpen" class="profile-message-form">
+              <label>
+                <span>私信标题</span>
+                <input v-model="messageTitle" type="text" maxlength="180" />
+              </label>
+              <label>
+                <span>第一条消息</span>
+                <textarea
+                  v-model="messageBody"
+                  rows="4"
+                  placeholder="写一段只对参与者可见的上下文…"
+                ></textarea>
+              </label>
+              <div class="profile-message-actions">
+                <UiButton
+                  type="button"
+                  tone="primary"
+                  :disabled="createMessageMutation.isPending.value"
+                  @click="sendPrivateMessage"
+                >
+                  {{ createMessageMutation.isPending.value ? "发送中…" : "创建私信" }}
+                </UiButton>
+                <UiButton type="button" tone="subtle" @click="messageFormOpen = false">
+                  取消
+                </UiButton>
+              </div>
+            </div>
           </div>
         </div>
       </template>

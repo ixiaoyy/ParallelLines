@@ -130,12 +130,44 @@
   margin-top: 0.15rem;
 }
 
+.board-follow-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
 .board-follow-btn {
   height: 1.85rem;
   padding: 0 0.85rem;
   font-size: 0.8rem;
   font-weight: 800;
   border-radius: var(--radius-pill);
+}
+
+.board-notification-select {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 780;
+}
+
+.board-notification-select select {
+  min-height: 1.95rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.22);
+  border-radius: var(--radius-pill);
+  padding: 0 0.7rem;
+  color: var(--title);
+  background: var(--bg-surface);
+  font: inherit;
+}
+
+.board-notification-select select:disabled {
+  color: var(--muted);
+  background: var(--bg-subtle);
+  cursor: not-allowed;
 }
 
 .board-notice {

@@ -27,6 +27,7 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F5F9F
 | [Topic Lifecycle UI](./topic-lifecycle.md) | Moderator toolbar, lifecycle mutations, cache invalidation, and closed-topic composer behavior | Filled |
 | [Admin Dashboard](./admin-dashboard.md) | Admin dashboard, site settings UI, public setting refresh, user management, system health, and audit/mail panels | Filled |
 | [Email Preferences](./email-preferences.md) | User email notification toggles, digest frequency UI, API wiring, and authenticated navigation | Filled |
+| [User Social Relationships and Private Messages](./user-social-relationships-pm.md) | Profile follow/ignore/block controls, private-message creation, and PM inbox | Filled |
 | [Type Safety](./type-safety.md) | Type patterns, validation | Filled |
 
 ## Mandatory Pre-Development Checklist
@@ -47,5 +48,5 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F5F9F
 14. Read `topic-lifecycle.md` before changing close/open, pin, move, split, merge, or closed-topic composer behavior.
 15. Read `admin-dashboard.md` before changing `/admin`, public site settings, user management, system health, or admin navigation.
 16. Read `email-preferences.md` before changing `/email-preferences`, email preference API wiring, or mail navigation.
-17. For cross-layer API work, read `../guides/cross-layer-thinking-guide.md`.
-
+17. Read `user-social-relationships-pm.md` before changing profile relationship actions, PM creation, or `/messages`.
+18. For cross-layer API work, read `../guides/cross-layer-thinking-guide.md`.

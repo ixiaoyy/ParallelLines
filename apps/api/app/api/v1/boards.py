@@ -25,8 +25,15 @@ async def list_boards(
     session: SessionDep,
     current_user: OptionalCurrentUserDep,
 ) -> ApiResponse[list[BoardResponse]]:
-    boards = await ForumService(session).list_boards(current_user)
-    return ApiResponse(data=[BoardResponse.model_validate(board) for board in boards])
+    service = ForumService(session)
+    boards = await service.list_boards(current_user)
+    memberships = await service.board_memberships_for_user(
+        [board.id for board in boards],
+        current_user,
+    )
+    return ApiResponse(
+        data=[BoardResponse.from_board(board, memberships.get(board.id)) for board in boards]
+    )
 
 
 @router.post(
@@ -39,8 +46,10 @@ async def create_board(
     session: SessionDep,
     current_user: CurrentUserDep,
 ) -> ApiResponse[BoardResponse]:
-    board = await ForumService(session).create_board(payload, current_user)
-    return ApiResponse(data=BoardResponse.model_validate(board))
+    service = ForumService(session)
+    board = await service.create_board(payload, current_user)
+    memberships = await service.board_memberships_for_user([board.id], current_user)
+    return ApiResponse(data=BoardResponse.from_board(board, memberships.get(board.id)))
 
 
 @router.get("/{slug}", response_model=ApiResponse[BoardDetailResponse])
@@ -49,11 +58,19 @@ async def get_board(
     session: SessionDep,
     current_user: OptionalCurrentUserDep,
 ) -> ApiResponse[BoardDetailResponse]:
-    board, latest_topics = await ForumService(session).get_board_detail(
+    service = ForumService(session)
+    board, latest_topics = await service.get_board_detail(
         slug,
         current_user=current_user,
     )
-    return ApiResponse(data=BoardDetailResponse.from_board_and_topics(board, latest_topics))
+    memberships = await service.board_memberships_for_user([board.id], current_user)
+    return ApiResponse(
+        data=BoardDetailResponse.from_board_and_topics(
+            board,
+            latest_topics,
+            memberships.get(board.id),
+        )
+    )
 
 
 @router.put("/{slug}/follow", response_model=ApiResponse[BoardFollowResponse])

@@ -13,6 +13,8 @@ export interface TopicResponse {
   author_id: string;
   author_name: string;
   tags: string[];
+  topic_type: "regular" | "private_message" | (string & {});
+  visibility: "public" | "private_message" | (string & {});
   status: string;
   pinned: boolean;
   featured: boolean;

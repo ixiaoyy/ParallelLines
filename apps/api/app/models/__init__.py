@@ -3,6 +3,7 @@ from app.db.schema_comments import apply_schema_comments
 from app.models.admin import SiteSetting
 from app.models.background_job import BackgroundJob, BackgroundJobLog
 from app.models.backup import BackupArtifact
+from app.models.draft import Draft
 from app.models.email import EmailDeliveryEvent, InboundEmail, UserEmailPreference
 from app.models.forum import (
     Board,
@@ -26,6 +27,7 @@ from app.models.moderation import (
     SpamAction,
 )
 from app.models.search import SearchDocument, SearchLog
+from app.models.social import PrivateMessageParticipant, UserRelationship
 from app.models.upload import Upload
 from app.models.user import (
     EmailVerificationCode,
@@ -46,6 +48,7 @@ __all__ = [
     "BoardInvitation",
     "BoardMember",
     "Bookmark",
+    "Draft",
     "EmailVerificationCode",
     "EmailDeliveryEvent",
     "Flag",
@@ -53,6 +56,7 @@ __all__ = [
     "InboundEmail",
     "Post",
     "PostRevision",
+    "PrivateMessageParticipant",
     "RateLimitEvent",
     "Reviewable",
     "ReviewableEvent",
@@ -67,6 +71,7 @@ __all__ = [
     "TopicRead",
     "Upload",
     "User",
+    "UserRelationship",
     "UserEmailPreference",
     "UserRecoveryCode",
     "UserSecurityToken",

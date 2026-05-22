@@ -31,7 +31,15 @@ const adminLinkTarget = computed<RouteLocationRaw>(() =>
 const adminLinkLabel = computed(() => (isAdmin(currentUser.value) ? "后台" : "审核"));
 
 interface NavItem {
-  key: "home" | "boards" | "security" | "email" | "reviewables" | "admin" | "moderation";
+  key:
+    | "home"
+    | "boards"
+    | "security"
+    | "email"
+    | "messages"
+    | "reviewables"
+    | "admin"
+    | "moderation";
   label: string;
   to: RouteLocationRaw;
 }
@@ -41,6 +49,7 @@ const navItems: NavItem[] = [
   { key: "boards", label: "版块", to: "/boards" },
   { key: "security", label: "安全", to: { name: "security" } },
   { key: "email", label: "邮件", to: { name: "email-preferences" } },
+  { key: "messages", label: "私信", to: { name: "messages" } },
   { key: "reviewables", label: "申诉", to: { name: "my-reviewables" } },
   { key: "admin", label: "后台", to: { name: "admin-dashboard" } },
   { key: "moderation", label: "审核", to: { name: "admin-moderation" } },
@@ -53,6 +62,10 @@ const visibleNavItems = computed(() =>
     }
 
     if (item.key === "email") {
+      return Boolean(currentUser.value);
+    }
+
+    if (item.key === "messages") {
       return Boolean(currentUser.value);
     }
 
@@ -112,6 +125,10 @@ function isNavItemActive(item: NavItem) {
 
   if (item.key === "email") {
     return route.name === "email-preferences";
+  }
+
+  if (item.key === "messages") {
+    return route.name === "messages";
   }
 
   if (item.key === "reviewables") {
@@ -189,6 +206,13 @@ function isNavItemActive(item: NavItem) {
             :class="{ 'is-active': route.name === 'email-preferences' }"
           >
             邮件
+          </RouterLink>
+          <RouterLink
+            class="auth-link"
+            :to="{ name: 'messages' }"
+            :class="{ 'is-active': route.name === 'messages' }"
+          >
+            私信
           </RouterLink>
           <RouterLink
             class="auth-link"

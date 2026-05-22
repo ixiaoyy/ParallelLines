@@ -1,3 +1,5 @@
+export type BoardNotificationLevel = "muted" | "normal" | "tracking" | "watching";
+
 export interface BoardSummary {
   id: string;
   slug: string;
@@ -9,4 +11,5 @@ export interface BoardSummary {
   postCount: number;
   followerCount: number;
   isFollowing: boolean;
+  notificationLevel: BoardNotificationLevel | null;
 }

@@ -5,12 +5,17 @@ import { useRoute, useRouter } from "vue-router";
 import type { BoardSummary } from "@/entities/board/model";
 import { useBoards } from "@/features/boards/queries";
 import { useCreateTopic } from "@/features/topics/queries";
+import { useSaveDraft, useDeleteDraft } from "@/features/drafts/queries";
+import { lookupDraft } from "@/features/drafts/api";
+import type { DraftResponse } from "@/features/drafts/model";
 import MarkdownUploadButton from "@/features/uploads/components/MarkdownUploadButton.vue";
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { compactNumber } from "@/shared/lib/format";
 import { readRouteParam } from "@/shared/router/params";
 import { boardToneClass } from "@/shared/theme/boardPalette";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
+import { hasAccessToken } from "@/shared/api/client";
+import { isApiErrorCode } from "@/shared/api/errors";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -25,6 +30,7 @@ interface NewTopicDraft {
   title: string;
   body: string;
   tags: string;
+  version: number;
 }
 
 const DRAFT_STORAGE_KEY = "parallellines:new-topic-draft";
@@ -33,6 +39,8 @@ const route = useRoute();
 const router = useRouter();
 const boardsQuery = useBoards();
 const createTopic = useCreateTopic();
+const saveDraftMutation = useSaveDraft();
+const deleteDraftMutation = useDeleteDraft();
 
 const sectionLinks = [
   { id: "board", label: "选择版块", helper: "先找对问题区" },
@@ -50,7 +58,7 @@ const topicIntents: Array<{ key: TopicIntent; label: string; helper: string }> =
   { key: "guide", label: "经验复盘", helper: "沉淀步骤和结论" },
 ];
 
-const defaultDraft: NewTopicDraft = {
+const defaultDraft: Omit<NewTopicDraft, "version"> = {
   boardSlug: "support",
   intent: "question",
   title: "",
@@ -63,9 +71,13 @@ const selectedIntent = ref<TopicIntent>(defaultDraft.intent);
 const title = ref(defaultDraft.title);
 const body = ref(defaultDraft.body);
 const tags = ref(defaultDraft.tags);
+const currentVersion = ref(1);
+
 const bodyTextarea = ref<HTMLTextAreaElement | null>(null);
 const publishState = ref<PublishState>("idle");
 const publishError = ref("");
+const showConflictBanner = ref(false);
+const isSaving = ref(false);
 
 const boardOptions = computed(() => boardsQuery.data.value ?? []);
 const selectedBoard = computed(
@@ -94,6 +106,10 @@ const draftStatus = computed(() => {
     return "已生成发布预览";
   }
 
+  if (isSaving.value) {
+    return "同步中...";
+  }
+
   if (publishState.value === "saved") {
     return "草稿已保存";
   }
@@ -105,16 +121,63 @@ const previewBody = computed(() =>
   body.value.trim() || "正文预览会显示在这里。建议包含：环境、错误信息、复现步骤、已经尝试过的方法。",
 );
 
-onMounted(() => {
-  const savedDraft = readSavedDraft();
+let isRestoring = false;
 
-  if (savedDraft) {
-    selectedBoardSlug.value = savedDraft.boardSlug;
-    selectedIntent.value = savedDraft.intent;
-    title.value = savedDraft.title;
-    body.value = savedDraft.body;
-    tags.value = savedDraft.tags;
+onMounted(async () => {
+  isRestoring = true;
+  const localDraft = readSavedDraft();
+  let serverDraft: DraftResponse | null = null;
+
+  if (hasAccessToken()) {
+    try {
+      serverDraft = await lookupDraft("new_topic", "");
+    } catch (e) {
+      console.error("Failed to fetch server draft on mount", e);
+    }
   }
+
+  if (localDraft && serverDraft) {
+    const localVer = localDraft.version ?? 1;
+    const serverVer = serverDraft.version;
+
+    if (localVer > serverVer) {
+      loadDraftState(localVerDraft(localDraft));
+      void performServerSave();
+    } else if (serverVer > localVer) {
+      loadDraftState(serverDraftToLocal(serverDraft));
+      saveLocalDraft();
+    } else {
+      const mappedServer = serverDraftToLocal(serverDraft);
+      if (isDraftEqual(localDraft, mappedServer)) {
+        loadDraftState(localDraft);
+      } else {
+        loadDraftState(localDraft);
+        void performServerSave();
+      }
+    }
+  } else if (localDraft) {
+    loadDraftState(localVerDraft(localDraft));
+    if (hasAccessToken()) {
+      void performServerSave();
+    }
+  } else if (serverDraft) {
+    loadDraftState(serverDraftToLocal(serverDraft));
+    saveLocalDraft();
+  } else {
+    loadDraftState({
+      boardSlug: defaultDraft.boardSlug,
+      intent: defaultDraft.intent,
+      title: defaultDraft.title,
+      body: defaultDraft.body,
+      tags: defaultDraft.tags,
+      version: 1,
+    });
+    saveLocalDraft();
+  }
+
+  nextTick(() => {
+    isRestoring = false;
+  });
 });
 
 watch(
@@ -134,7 +197,10 @@ watch(
 );
 
 watch([selectedBoardSlug, selectedIntent, title, body, tags], () => {
-  saveDraft();
+  if (isRestoring) {
+    return;
+  }
+  triggerAutosave();
 });
 
 function chooseBoard(board: BoardSummary) {
@@ -145,9 +211,141 @@ function chooseIntent(intent: TopicIntent) {
   selectedIntent.value = intent;
 }
 
-function handleSaveDraft() {
-  saveDraft();
-  publishState.value = "saved";
+function localVerDraft(local: NewTopicDraft): NewTopicDraft {
+  return {
+    boardSlug: local.boardSlug,
+    intent: local.intent,
+    title: local.title,
+    body: local.body,
+    tags: local.tags,
+    version: local.version ?? 1,
+  };
+}
+
+function serverDraftToLocal(server: DraftResponse): NewTopicDraft {
+  return {
+    boardSlug: (server.data.boardSlug as string) ?? defaultDraft.boardSlug,
+    intent: (server.data.intent as TopicIntent) ?? defaultDraft.intent,
+    title: (server.data.title as string) ?? defaultDraft.title,
+    body: (server.data.body as string) ?? defaultDraft.body,
+    tags: (server.data.tags as string) ?? defaultDraft.tags,
+    version: server.version,
+  };
+}
+
+function isDraftEqual(a: NewTopicDraft, b: NewTopicDraft) {
+  return (
+    a.boardSlug === b.boardSlug &&
+    a.intent === b.intent &&
+    a.title === b.title &&
+    a.body === b.body &&
+    a.tags === b.tags
+  );
+}
+
+function loadDraftState(draft: NewTopicDraft) {
+  isRestoring = true;
+  selectedBoardSlug.value = draft.boardSlug;
+  selectedIntent.value = draft.intent;
+  title.value = draft.title;
+  body.value = draft.body;
+  tags.value = draft.tags;
+  currentVersion.value = draft.version ?? 1;
+
+  nextTick(() => {
+    isRestoring = false;
+  });
+}
+
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function triggerAutosave() {
+  saveLocalDraft();
+
+  if (!hasAccessToken()) {
+    return;
+  }
+
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+
+  publishState.value = "idle";
+
+  saveTimeout = setTimeout(async () => {
+    await performServerSave();
+  }, 1000);
+}
+
+async function performServerSave() {
+  if (isSaving.value) {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(performServerSave, 500);
+    return;
+  }
+
+  isSaving.value = true;
+  const nextVersion = currentVersion.value + 1;
+
+  try {
+    const draftPayload = {
+      boardSlug: selectedBoardSlug.value,
+      intent: selectedIntent.value,
+      title: title.value,
+      body: body.value,
+      tags: tags.value,
+    };
+
+    const result = await saveDraftMutation.mutateAsync({
+      target_type: "new_topic",
+      target_id: "",
+      draft_type: "topic",
+      data: draftPayload,
+      version: nextVersion,
+    });
+
+    currentVersion.value = result.version;
+    publishState.value = "saved";
+    saveLocalDraft();
+  } catch (error: unknown) {
+    if (isApiErrorCode(error, "draft_conflict")) {
+      await handleDraftConflict();
+    } else {
+      console.error("Autosave failed:", error);
+    }
+  } finally {
+    isSaving.value = false;
+  }
+}
+
+async function handleDraftConflict() {
+  showConflictBanner.value = true;
+  setTimeout(() => {
+    showConflictBanner.value = false;
+  }, 5000);
+
+  try {
+    const serverDraft = await lookupDraft("new_topic", "");
+    if (serverDraft) {
+      loadDraftState(serverDraftToLocal(serverDraft));
+      saveLocalDraft();
+    }
+  } catch (err) {
+    console.error("Failed to recover from draft conflict:", err);
+  }
+}
+
+async function handleSaveDraft() {
+  saveLocalDraft();
+  if (hasAccessToken()) {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+    publishState.value = "idle";
+    await performServerSave();
+  } else {
+    publishState.value = "saved";
+  }
 }
 
 function insertMarkdownUpload(markdown: string) {
@@ -177,7 +375,10 @@ async function handleSubmit() {
     return;
   }
 
-  saveDraft();
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+
   publishError.value = "";
 
   try {
@@ -189,6 +390,14 @@ async function handleSubmit() {
         tags: parsedTags.value,
       },
     });
+
+    if (hasAccessToken()) {
+      try {
+        await deleteDraftMutation.mutateAsync({ targetType: "new_topic", targetId: "" });
+      } catch (e) {
+        console.error("Failed to delete draft on server", e);
+      }
+    }
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     await router.push(topicDetailRoute(topic));
   } catch (error) {
@@ -200,7 +409,7 @@ async function handleSubmit() {
   }
 }
 
-function saveDraft() {
+function saveLocalDraft() {
   if (typeof window === "undefined") {
     return;
   }
@@ -211,6 +420,7 @@ function saveDraft() {
     title: title.value,
     body: body.value,
     tags: tags.value,
+    version: currentVersion.value,
   };
 
   window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
@@ -250,7 +460,8 @@ function isDraft(value: unknown): value is NewTopicDraft {
     isTopicIntent(value.intent) &&
     typeof value.title === "string" &&
     typeof value.body === "string" &&
-    typeof value.tags === "string"
+    typeof value.tags === "string" &&
+    (value.version === undefined || typeof value.version === "number")
   );
 }
 
@@ -297,6 +508,11 @@ function isTopicIntent(value: unknown): value is TopicIntent {
       </aside>
 
       <form class="topic-form" aria-label="发布主题表单" @submit.prevent="handleSubmit">
+        <div v-if="showConflictBanner" class="conflict-banner" role="alert">
+          <span class="conflict-icon">⚠️</span>
+          <span>草稿已在其他设备更新，已加载最新版本</span>
+        </div>
+
         <UiCard id="board" class="form-panel">
           <div class="panel-heading">
             <span>01</span>

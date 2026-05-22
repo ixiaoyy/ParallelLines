@@ -22,6 +22,8 @@ API routes:
 | `GET` | `/api/v1/notifications?unread_only=&limit=` | yes | List current user's notifications |
 | `PUT` | `/api/v1/notifications/read` | yes | Mark selected or all notifications read |
 | `GET` | `/api/v1/notifications/stream?poll_seconds=&limit=` | yes | SSE stream for unread count and recent unread notifications |
+| `GET` | `/api/v1/topics/{topic_id}/notification-level` | yes | Read current user's topic read/notification level |
+| `PUT` | `/api/v1/topics/{topic_id}/notification-level` | yes | Set current user's topic notification level |
 
 Database signatures:
 
@@ -33,6 +35,9 @@ Database signatures:
 
 - All routes return the existing envelope: `{ "data": ..., "meta": {} }`.
 - Follow request body: `{ "notification_level": "muted|normal|tracking|watching" }`.
+- Topic notification request body: `{ "notification_level": "muted|normal|tracking|watching" }`.
+- Topic notification response:
+  `{ "topic_id": string, "notification_level": "muted|normal|tracking|watching", "last_read_post_number": number }`.
 - Interaction response: `{ "target_type": "post|topic", "target_id": string, "active": boolean, "count": number }`.
 - Notification list response: `{ "notifications": NotificationResponse[], "unread_count": number }`.
 - Mark-read request: `{ "ids": string[] | null }`; omit or pass `null` to mark all unread notifications for the current user.
@@ -40,6 +45,14 @@ Database signatures:
 - Notification `data` is a small JSON summary only; include navigational fields such as `topic_title`, `topic_slug`, `post_number`, and `board_slug` when available, but do not store raw post bodies or secrets in notification payloads.
 - Write-path services enqueue `create_notification` background jobs with `commit=False`; the unified background worker creates `notifications` rows after the request transaction commits.
 - Notification jobs must include deterministic idempotency keys so repeated enqueue attempts do not create duplicate notification rows.
+- Topic muted state is authoritative for all topic-scoped notification fan-out. If a recipient has
+  `topic_reads.notification_level="muted"`, suppress `replied`, `mentioned`, `liked`, and
+  `topic_new_post` notifications for that topic.
+- `watching` and `tracking` topic read states receive `topic_new_post` fan-out when they were not
+  already notified by a direct reply/mention notification.
+- Board members with `notification_level in ("watching", "tracking")` receive `board_new_topic`
+  fan-out. `normal` and `muted` board levels remain membership/follow state but do not trigger
+  board-new-topic fan-out.
 
 ### 4. Validation & Error Matrix
 
@@ -51,11 +64,15 @@ Database signatures:
 | Unlike/unbookmark/unfollow missing row | Return inactive state without error |
 | Notification IDs from another user | Do not update them; never leak existence |
 | Worker has not processed queued notification | Notification list stays unchanged until the queued job succeeds |
+| Muted topic recipient is replied to, mentioned, liked, or watching | Do not enqueue a topic notification job for that recipient |
+| Unknown/private topic notification-level read or write | Raise `NotFoundError("topic_not_found")` using the same board ACL checks as topic detail |
 
 ### 5. Good/Base/Bad Cases
 
 - Good: user likes the same post twice; row count remains 1 and post/topic like counters remain 1.
 - Base: user replies to a topic; topic author receives `replied`; mentioned users receive `mentioned`; tracking readers receive `topic_new_post`.
+- Good: user mutes a topic; later replies, mentions, likes, and watcher fan-out for that topic are
+  suppressed for that user, while other watchers still receive their notifications.
 - Bad: router manually commits a reaction or constructs SQL; service must own the transaction and counter updates.
 
 ### 6. Tests Required
@@ -63,6 +80,10 @@ Database signatures:
 - API test for follow/like/bookmark idempotency and counter/cache behavior.
 - Service or API test proving duplicate rows cannot be created through repeated calls.
 - Notification test proving reply + mention fan-out creates queued jobs and, after draining the worker, unread records.
+- Preference matrix test proving muted topic suppresses `replied`, `mentioned`, and `liked`, and
+  watching/tracking topics receive `topic_new_post`.
+- API tests for `GET|PUT /topics/{topic_id}/notification-level`, including default `normal` when no
+  `topic_reads` row exists.
 - Mark-read test proving only the current user's unread notifications are updated.
 - Migration check on a clean SQLite/PostgreSQL/MySQL-compatible database URL.
 

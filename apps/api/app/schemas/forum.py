@@ -5,7 +5,15 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.models.forum import Board, BoardInvitation, Post, PostRevision, Topic
+from app.models.forum import (
+    Board,
+    BoardInvitation,
+    BoardMember,
+    NotificationLevel,
+    Post,
+    PostRevision,
+    Topic,
+)
 from app.schemas.common import ORMModel
 
 TopicSort = Literal["latest", "hot", "top", "relevance"]
@@ -31,8 +39,17 @@ class BoardResponse(ORMModel):
     topic_count: int
     post_count: int
     follower_count: int
+    is_following: bool = False
+    notification_level: NotificationLevel | None = None
     created_at: datetime
     updated_at: datetime
+
+    @classmethod
+    def from_board(cls, board: Board, member: BoardMember | None = None) -> BoardResponse:
+        board_data = cls.model_validate(board).model_dump()
+        board_data["is_following"] = member is not None
+        board_data["notification_level"] = member.notification_level if member else None
+        return cls(**board_data)
 
 
 class TagResponse(ORMModel):
@@ -100,6 +117,8 @@ class TopicResponse(BaseModel):
     author_id: str
     author_name: str
     tags: list[str]
+    topic_type: str
+    visibility: str
     status: str
     pinned: bool
     featured: bool
@@ -135,6 +154,8 @@ class TopicResponse(BaseModel):
             author_id=topic.user_id,
             author_name=topic.author.username,
             tags=[tag.name for tag in topic.tags],
+            topic_type=topic.topic_type,
+            visibility=topic.visibility,
             status=topic.status,
             pinned=topic.pinned,
             featured=topic.featured,
@@ -237,8 +258,13 @@ class BoardDetailResponse(BoardResponse):
     latest_topics: list[TopicResponse]
 
     @classmethod
-    def from_board_and_topics(cls, board: Board, topics: list[Topic]) -> BoardDetailResponse:
-        board_data = BoardResponse.model_validate(board).model_dump()
+    def from_board_and_topics(
+        cls,
+        board: Board,
+        topics: list[Topic],
+        member: BoardMember | None = None,
+    ) -> BoardDetailResponse:
+        board_data = BoardResponse.from_board(board, member).model_dump()
         return cls(
             **board_data, latest_topics=[TopicResponse.from_model(topic) for topic in topics]
         )

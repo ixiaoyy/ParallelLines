@@ -1,9 +1,17 @@
 <script setup lang="ts">
+import type { NotificationLevel } from "@/features/notifications/model";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 type TopicStatus = "open" | "closed" | "archived" | "hidden";
 type TopicLifecycleStatus = "open" | "closed" | "archived";
+
+const notificationOptions: Array<{ value: NotificationLevel; label: string; helper: string }> = [
+  { value: "watching", label: "关注", helper: "所有新楼层通知" },
+  { value: "tracking", label: "跟踪", helper: "重要更新通知" },
+  { value: "normal", label: "普通", helper: "只收回复/提及" },
+  { value: "muted", label: "静音", helper: "不接收主题通知" },
+];
 
 defineProps<{
   visibleCount: number;
@@ -18,6 +26,9 @@ defineProps<{
   topicStatus: TopicStatus;
   topicPinned: boolean;
   lifecyclePending: boolean;
+  notificationLevel: NotificationLevel;
+  notificationPending: boolean;
+  canSetNotification: boolean;
   status: string;
 }>();
 
@@ -31,7 +42,13 @@ const emit = defineEmits<{
   moveTopic: [];
   splitTopic: [];
   mergeTopic: [];
+  setNotificationLevel: [level: NotificationLevel];
 }>();
+
+function onNotificationChange(event: Event) {
+  const target = event.target as HTMLSelectElement;
+  emit("setNotificationLevel", target.value as NotificationLevel);
+}
 </script>
 
 <template>
@@ -58,6 +75,19 @@ const emit = defineEmits<{
         举报主题
       </UiButton>
     </div>
+    <label class="notification-control">
+      <span>主题通知</span>
+      <select
+        :value="notificationLevel"
+        :disabled="notificationPending || !canSetNotification"
+        aria-label="设置主题通知级别"
+        @change="onNotificationChange"
+      >
+        <option v-for="option in notificationOptions" :key="option.value" :value="option.value">
+          {{ option.label }} · {{ option.helper }}
+        </option>
+      </select>
+    </label>
     <div v-if="canManageTopic" class="lifecycle-actions" aria-label="版主主题管理">
       <UiButton
         tone="subtle"

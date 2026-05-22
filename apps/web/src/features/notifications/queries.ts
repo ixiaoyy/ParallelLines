@@ -1,16 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
-import { onBeforeUnmount, onMounted } from "vue";
+import { computed, onBeforeUnmount, onMounted, toValue } from "vue";
+import type { MaybeRefOrGetter } from "vue";
 
 import { createApiHeaders, getApiUrl, hasAccessToken } from "@/shared/api/client";
 import { queryKeys } from "@/shared/api/queryKeys";
 
-import { fetchNotifications, markNotificationsRead } from "./api";
+import {
+  fetchNotifications,
+  getTopicNotificationLevel,
+  markNotificationsRead,
+  setTopicNotificationLevel,
+} from "./api";
 import {
   markNotificationListRead,
   mergeNotificationLists,
   parseNotificationStreamPayload,
 } from "./model";
-import type { NotificationListResponse, NotificationReadResponse } from "./model";
+import type {
+  NotificationLevel,
+  NotificationListResponse,
+  NotificationReadResponse,
+} from "./model";
+import type { TopicNotificationLevelResponse } from "./api";
 
 export function useNotificationList() {
   return useQuery({
@@ -63,6 +74,34 @@ export function useMarkNotificationsRead() {
       if (hasAccessToken()) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
       }
+    },
+  });
+}
+
+export function useTopicNotificationLevel(topicId: MaybeRefOrGetter<string>) {
+  return useQuery<TopicNotificationLevelResponse | null, Error>({
+    queryKey: computed(() => queryKeys.topicNotificationLevel(toValue(topicId))),
+    queryFn: async () => {
+      const currentTopicId = toValue(topicId);
+      if (!currentTopicId || !hasAccessToken()) {
+        return null;
+      }
+
+      return getTopicNotificationLevel(currentTopicId);
+    },
+    enabled: computed(() => Boolean(toValue(topicId))),
+    staleTime: 30_000,
+  });
+}
+
+export function useUpdateTopicNotificationLevel(topicId: MaybeRefOrGetter<string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<TopicNotificationLevelResponse, Error, NotificationLevel>({
+    mutationFn: (level) => setTopicNotificationLevel(toValue(topicId), level),
+    onSuccess: (response) => {
+      queryClient.setQueryData(queryKeys.topicNotificationLevel(response.topic_id), response);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
     },
   });
 }

@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 BoardVisibility = Literal["public", "private", "unlisted"]
 BoardMemberRole = Literal["follower", "moderator", "owner"]
 NotificationLevel = Literal["muted", "normal", "tracking", "watching"]
+TopicType = Literal["regular", "private_message"]
+TopicVisibility = Literal["public", "private_message"]
 TopicStatus = Literal["open", "closed", "archived", "hidden"]
 BoardInvitationStatus = Literal["pending", "accepted", "declined", "revoked", "expired"]
 
@@ -133,6 +135,18 @@ class Topic(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String(180), nullable=False)
     slug: Mapped[str] = mapped_column(String(220), nullable=False)
+    topic_type: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="regular",
+        comment="主题类型：regular 表示公开/版块主题，private_message 表示私信主题。",
+    )
+    visibility: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="public",
+        comment="主题可见性：public 表示沿用版块可见性，private_message 表示仅私信参与者可见。",
+    )
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="open")
     pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     featured: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

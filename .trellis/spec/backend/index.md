@@ -27,6 +27,7 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 | [Email Notifications and Digests](./email-notifications-digests.md) | Email preferences, notification emails, digest jobs, delivery webhooks, and inbound reply contract | Filled |
 | [Backup, Restore, and Export](./backup-restore-export.md) | Admin backup artifacts, safe restore validation, personal export, site export, checksums, and worker contract | Filled |
 | [User Content Operations](./user-content-operations.md) | Public user profiles, authored topics, and post edit permissions | Filled |
+| [User Social Relationships and Private Messages](./user-social-relationships-pm.md) | Follow/ignore/block users, notification suppression, and participant-only private message topics | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Filled |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | Filled |
 | [Deployment and Observability](./deployment-observability.md) | Docker Compose, CI, seed data, metrics, workers, smoke-test contracts | Filled |
@@ -52,4 +53,5 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 17. Read `background-jobs.md` before changing mail delivery, notification fan-out, scheduled maintenance, or worker deployment.
 18. Read `email-notifications-digests.md` before changing email preferences, notification emails, digest jobs, or provider webhooks.
 19. Read `backup-restore-export.md` before changing backup artifacts, restore validation, backup downloads, or data exports.
-20. For cross-layer features, read `../guides/cross-layer-thinking-guide.md`.
+20. Read `user-social-relationships-pm.md` before changing user follows, ignores, blocks, or private messages.
+21. For cross-layer features, read `../guides/cross-layer-thinking-guide.md`.

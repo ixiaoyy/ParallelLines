@@ -3,7 +3,7 @@
   "name": "notification-preferences-tracking",
   "title": "通知偏好、跟踪状态与免打扰",
   "description": "补齐 watching/tracking/muted、邮件/站内偏好、免打扰和已读游标。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "fullstack",
   "scope": "notifications",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
-  "branch": null,
+  "completedAt": "2026-05-22",
+  "branch": "codex/notification-preferences-tracking",
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -48,6 +48,6 @@
   "children": [],
   "parent": "05-20-discourse-parity-roadmap",
   "relatedFiles": [],
-  "notes": "",
+  "notes": "Implemented notification levels, muted fan-out suppression, quiet hours, read-state APIs, frontend controls, specs, migration, and tests.",
   "meta": {}
 }

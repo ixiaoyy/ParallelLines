@@ -3,7 +3,17 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -32,6 +42,14 @@ class UserEmailPreference(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     last_digest_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delivery_status: Mapped[str] = mapped_column(String(32), default="ok", nullable=False)
     disabled_reason: Mapped[str | None] = mapped_column(String(255))
+    quiet_hours_start: Mapped[int | None] = mapped_column(
+        Integer,
+        comment="免打扰开始小时（UTC，0-23）；为空表示未启用免打扰。",
+    )
+    quiet_hours_end: Mapped[int | None] = mapped_column(
+        Integer,
+        comment="免打扰结束小时（UTC，0-23）；为空表示未启用免打扰；等于开始小时表示全天免打扰。",
+    )
 
     user = relationship("User", lazy="selectin")
 

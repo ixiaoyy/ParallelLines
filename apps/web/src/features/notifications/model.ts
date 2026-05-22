@@ -7,7 +7,11 @@ export type NotificationType =
   | "liked"
   | "topic_new_post"
   | "board_new_topic"
+  | "user_new_topic"
+  | "private_message"
   | "moderation";
+
+export type NotificationLevel = "muted" | "normal" | "tracking" | "watching";
 
 export interface NotificationResponse {
   id: string;
@@ -52,6 +56,8 @@ const typeMeta: Record<
   liked: { title: "有人赞同了你的楼层", tone: "amber", description: "赞同" },
   topic_new_post: { title: "关注主题有新楼层", tone: "blue", description: "新楼层" },
   board_new_topic: { title: "关注版块有新主题", tone: "green", description: "新主题" },
+  user_new_topic: { title: "关注成员发布主题", tone: "blue", description: "成员动态" },
+  private_message: { title: "收到新的私信", tone: "green", description: "私密主题" },
   moderation: { title: "版务提醒", tone: "red", description: "站务" },
 };
 
@@ -196,6 +202,18 @@ function buildDescription(
 function buildNotificationUrl(notification: NotificationResponse): string {
   if (notification.type === "moderation" && readString(notification.data.reviewable_id)) {
     return "/moderation/reviewables";
+  }
+
+  if (notification.type === "private_message") {
+    return notification.topic_id
+      ? topicDetailPath({
+          id: notification.topic_id,
+          slug: readString(notification.data.topic_slug) ?? "private-message",
+          hash: readNumber(notification.data.post_number)
+            ? `post-${readNumber(notification.data.post_number)}`
+            : null,
+        })
+      : "/messages";
   }
 
   const topicSlug = readString(notification.data.topic_slug);
