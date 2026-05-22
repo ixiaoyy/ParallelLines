@@ -26,10 +26,18 @@ Backend endpoints:
 | `POST /api/v1/moderation/screened-rules` | admin only | Create a screening rule |
 | `DELETE /api/v1/moderation/screened-rules/{rule_id}` | admin only | Remove a screening rule |
 | `GET /api/v1/moderation/spam-actions?limit=` | admin only | List automatic anti-spam actions |
+| `GET /api/v1/moderation/reviewables?status=&type=&limit=` | moderator | List unified reviewable queue scoped by board permission |
+| `GET /api/v1/moderation/reviewables/me?limit=` | active user | List reviewables created by or targeting the current user, with public-safe data |
+| `POST /api/v1/moderation/reviewables/{id}/claim` | moderator | Claim an open reviewable for exclusive handling |
+| `POST /api/v1/moderation/reviewables/{id}/release` | assigned moderator/global moderator | Release a claimed reviewable back to pending |
+| `POST /api/v1/moderation/reviewables/{id}/decide` | moderator | Apply `approve`, `reject`, `hide`, `delete`, `silence`, or `escalate` |
+| `POST /api/v1/moderation/reviewables/{id}/appeal` | owner/target user | Re-open a terminal reviewable as an appeal |
 
 DB tables:
 
 - `flags`: `target_type`, `target_id`, `board_id`, `reporter_id`, `reason`, `detail`, `status`, `resolution_note`, `resolved_by_id`, `resolved_at`, timestamps.
+- `reviewables`: unified moderation objects with `type`, `status`, `priority`, `source`, `source_summary`, target pointers, assignment/resolution fields, and JSON `data`.
+- `reviewable_events`: immutable workflow events with `reviewable_id`, `actor_id`, `event`, status transition fields, `note`, JSON `data`, and `created_at`.
 - `audit_logs`: `actor_id`, `action`, `target_type`, `target_id`, `board_id`, `data`, `created_at`.
 - `topics.merged_into_topic_id`: nullable pointer to the target topic after a merge.
 - `users`: `role` (`user`, `moderator`, `admin`) and `level` (`int`, default `0`).
@@ -57,6 +65,26 @@ Permission helpers:
 - Public topic feeds/search exclude hidden topics via `Topic.deleted_at is null`.
 - Public post responses must not leak hidden `raw_md` or `cooked_html`; return empty strings with `deleted_at` set.
 - Every flag creation, status transition, hide/restore, and user status change writes an `audit_logs` row in the same transaction.
+- Every new flag creates exactly one `reviewables` row with `type='flag'` and an initial
+  `reviewable_events.event='created'`; duplicate pending flags reuse the existing flag and
+  do not create a second reviewable.
+- Pending-review content safety matches create `queued_topic`, `queued_post`, or
+  `queued_edit` reviewables before returning `content_pending_review`; no topic/post/edit is
+  published until a moderator approves that reviewable.
+- Reviewable claim conflicts are explicit: if `assigned_to_id` is another user, claim returns
+  `reviewable_already_claimed` / 409 rather than silently stealing ownership.
+- Reviewable decisions always write `reviewable_decided` audit/event rows and notify the
+  affected user when the actor is different. `approve` publishes queued content or resolves
+  an associated flag; `reject` rejects queued content or a flag; `hide`/`delete` require an
+  existing topic/post target; `silence` requires `target_user_id`; `escalate` marks the item
+  for staff follow-up without mutating content.
+- `GET /reviewables/me` must filter by `created_by_id` or `target_user_id` and return only
+  public-safe data. It may include the user's own submitted content/excerpt and appeal status,
+  but must not expose board-wide queue details.
+- Appeals are only allowed from the reviewable creator/target user after terminal moderation
+  statuses (`rejected`, `hidden`, `deleted`, `silenced`, `escalated`). Appeal transitions set
+  status `appealed`, append a workflow event, write audit, and notify the assigned/resolving
+  staff user when available.
 - Screened-rule create/delete is global admin-only and writes `screened_rule_created` /
   `screened_rule_deleted` audit logs; details are admin-only and must not leak in public
   screening errors.
@@ -85,12 +113,28 @@ Permission helpers:
 | Hidden topic requested via public topic endpoint | `topic_not_found` / 404 |
 | Moderator merges a topic | Source topic is hidden, `merged_into_topic_id` is set, and `topic_merged` audit row is written |
 | Public read of merged source topic with target access | `topic_merged` / 409 with `target_topic_id` |
+| Ordinary user reads `/moderation/reviewables` | `moderation_forbidden` / 403 |
+| Ordinary user reads `/moderation/reviewables/me` | 200 with only own reviewables and public-safe data |
+| Pending-review token in topic/reply/edit | 422 `content_pending_review` with `reviewable_id`, no public content created |
+| Another moderator claims an already assigned reviewable | `reviewable_already_claimed` / 409 |
+| User appeals a terminal reviewable they own/target | 200, status becomes `appealed`, audit/event written |
+| User appeals someone else's reviewable | `reviewable_forbidden` / 403 |
+| Moderator hides a queued reviewable without an existing target | `reviewable_target_required` / 422 |
 
 ### 5. Good/Base/Bad Cases
 
 - Good: reporter creates a flag; board owner sees it in `/moderation/queue`, hides the post, resolves the flag, then sees audit rows.
+- Good: user submits content with the pending-review test token; API returns
+  `content_pending_review`; moderator approves the reviewable; the topic/post/edit is
+  published once and the reviewable is resolved.
+- Good: moderator claims a reviewable; another moderator gets 409 instead of double-handling;
+  after a terminal decision the target user can use `/reviewables/me` to appeal.
 - Base: admin sets a spammer to `silenced`; the action is captured in `audit_logs` with status transition details.
 - Bad: router directly sets `deleted_at` without calling `ModerationService` and therefore skips permission checks or audit logging.
+- Bad: content safety creates a reviewable but rolls back by raising after the session closes;
+  queueing paths must persist the reviewable before returning `content_pending_review`.
+- Bad: `/reviewables/me` returns full `data` or all workflow notes from staff-only queue
+  context to ordinary users.
 - Bad: topic move/split/merge updates posts but skips `audit_logs`, board counters, or related notification/upload/revision rows.
 - Bad: `if user.level > 0:` grants moderation/admin powers; levels are not permissions.
 
@@ -103,6 +147,12 @@ Permission helpers:
   - hidden topics disappear from public reads/lists;
   - non-admin user status updates fail and admin updates succeed;
   - audit log rows are written for moderation actions.
+- `pytest tests/test_reviewables.py` must assert:
+  - flags create reviewables and moderator queue listing/claim/release/decision works;
+  - claim conflicts return 409 for another moderator;
+  - pending-review content returns `content_pending_review` and publishes only after approval;
+  - ordinary users cannot read the staff queue but can read `/reviewables/me`;
+  - terminal decisions can be appealed by the affected user and create event/audit records.
 - `pytest tests/test_topic_lifecycle.py` must assert lifecycle audit actions, moderator-only access, hidden merged sources, and board/topic counter maintenance.
 - Auth/profile tests must assert registered users default to `role='user'` and `level=0`, and profile/current-user DTOs include `level`.
 - Full backend regression: `pytest -q` and `ruff check app tests`.
@@ -142,11 +192,12 @@ Service functions:
 | `moderate_text_fields(fields: Mapping[str, str]) -> ContentModerationResult` | Normalize fields, detect configured rules, and return sanitized text plus matched field lists |
 | `enforce_content_policy(fields: Mapping[str, str]) -> dict[str, str]` | Apply rules and raise `ValidationError("content_policy_violation")` when a blocking rule matches |
 
-Initial rule actions:
+Rule actions:
 
 - `block`: reject the write with `content_policy_violation`.
 - `mask`: replace matched text spans with `***` before Markdown rendering/storage.
-- Pending-review/auto-hide remains a future action until a persisted review state is added.
+- `review`: create a persisted reviewable and reject the write with
+  `content_pending_review` containing a `reviewable_id` and public field list.
 
 ### 3. Contracts
 
