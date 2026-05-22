@@ -105,3 +105,34 @@ Completed full text search implementation with SQLite search documents indexing,
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Implement server-side drafts
+
+**Date**: 2026-05-22
+**Task**: Implement server-side drafts
+**Branch**: `main`
+
+### Summary
+
+Completed backend models, services, migrations, APIs and frontend integration for server-side drafts. Verified typecheck, lint, and all pytest tests pass.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

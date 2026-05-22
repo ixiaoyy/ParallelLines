@@ -3,7 +3,7 @@
   "name": "email-notifications-digests-inbound",
   "title": "邮件通知、摘要邮件与入站回复",
   "description": "补齐真实论坛的邮件触达：通知邮件、摘要邮件、退信处理和邮件回复入站。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "fullstack",
   "scope": "email",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
+  "completedAt": "2026-05-22",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,10 @@
   "subtasks": [],
   "children": [],
   "parent": "05-20-discourse-parity-roadmap",
-  "relatedFiles": [],
-  "notes": "",
+  "relatedFiles": [
+    "apps/api/app/services/email_notifications.py",
+    "apps/api/tests/test_email_notifications.py"
+  ],
+  "notes": "Implemented email notification service, user preferences, digest scheduler & emails, delivery webhook, and inbound reply webhook. Tests passed.",
   "meta": {}
 }

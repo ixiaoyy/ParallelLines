@@ -3,7 +3,7 @@
   "name": "background-job-scheduler",
   "title": "后台任务队列、重试与定时调度",
   "description": "建立可靠后台任务体系，承载邮件、通知、索引、清理、备份和统计等异步工作。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "backend",
   "scope": "infra",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
+  "completedAt": "2026-05-22",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,11 @@
   "subtasks": [],
   "children": [],
   "parent": "05-20-discourse-parity-roadmap",
-  "relatedFiles": [],
-  "notes": "",
+  "relatedFiles": [
+    "apps/api/app/services/background_jobs.py",
+    "apps/api/app/workers/background_jobs.py",
+    "apps/api/tests/test_background_jobs.py"
+  ],
+  "notes": "Implemented BackgroundJobService, background worker, scheduler for hot topics, session cleanups, temporary upload cleanup, retry mechanism, dead-letter state, and idempotency key support. Checked with unit tests.",
   "meta": {}
 }
