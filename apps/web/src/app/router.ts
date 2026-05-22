@@ -64,6 +64,11 @@ export const router = createRouter({
       component: () => import("@/pages/email/EmailPreferencesPage.vue"),
     },
     {
+      path: "/moderation/reviewables",
+      name: "my-reviewables",
+      component: () => import("@/pages/moderation/MyReviewablesPage.vue"),
+    },
+    {
       path: "/search",
       name: "search",
       component: () => import("@/pages/search/SearchPage.vue"),

@@ -12,6 +12,11 @@ from app.schemas.moderation import (
     FlagStatusUpdateRequest,
     HideContentRequest,
     ModerationActionResponse,
+    ReviewableAppealRequest,
+    ReviewableDecisionRequest,
+    ReviewableResponse,
+    ReviewableStatus,
+    ReviewableType,
     ScreenedRuleCreateRequest,
     ScreenedRuleKind,
     ScreenedRuleResponse,
@@ -53,6 +58,86 @@ async def list_moderation_queue(
         limit=limit,
     )
     return ApiResponse(data=flags)
+
+
+@router.get("/reviewables", response_model=ApiResponse[list[ReviewableResponse]])
+async def list_reviewables(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    reviewable_status: Annotated[ReviewableStatus | None, Query(alias="status")] = "pending",
+    reviewable_type: Annotated[ReviewableType | None, Query(alias="type")] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> ApiResponse[list[ReviewableResponse]]:
+    reviewables = await ModerationService(session).list_reviewables(
+        current_user,
+        status=reviewable_status,
+        reviewable_type=reviewable_type,
+        limit=limit,
+    )
+    return ApiResponse(data=reviewables)
+
+
+@router.get("/reviewables/me", response_model=ApiResponse[list[ReviewableResponse]])
+async def list_my_reviewables(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> ApiResponse[list[ReviewableResponse]]:
+    reviewables = await ModerationService(session).list_my_reviewables(
+        current_user,
+        limit=limit,
+    )
+    return ApiResponse(data=reviewables)
+
+
+@router.post("/reviewables/{reviewable_id}/claim", response_model=ApiResponse[ReviewableResponse])
+async def claim_reviewable(
+    reviewable_id: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[ReviewableResponse]:
+    reviewable = await ModerationService(session).claim_reviewable(reviewable_id, current_user)
+    return ApiResponse(data=reviewable)
+
+
+@router.post("/reviewables/{reviewable_id}/release", response_model=ApiResponse[ReviewableResponse])
+async def release_reviewable(
+    reviewable_id: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[ReviewableResponse]:
+    reviewable = await ModerationService(session).release_reviewable(reviewable_id, current_user)
+    return ApiResponse(data=reviewable)
+
+
+@router.post("/reviewables/{reviewable_id}/decide", response_model=ApiResponse[ReviewableResponse])
+async def decide_reviewable(
+    reviewable_id: str,
+    payload: ReviewableDecisionRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[ReviewableResponse]:
+    reviewable = await ModerationService(session).decide_reviewable(
+        reviewable_id,
+        payload,
+        current_user,
+    )
+    return ApiResponse(data=reviewable)
+
+
+@router.post("/reviewables/{reviewable_id}/appeal", response_model=ApiResponse[ReviewableResponse])
+async def appeal_reviewable(
+    reviewable_id: str,
+    payload: ReviewableAppealRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[ReviewableResponse]:
+    reviewable = await ModerationService(session).appeal_reviewable(
+        reviewable_id,
+        payload,
+        current_user,
+    )
+    return ApiResponse(data=reviewable)
 
 
 @router.put("/flags/{flag_id}/status", response_model=ApiResponse[FlagResponse])

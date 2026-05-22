@@ -7,11 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.requests import Request
 
-from app.core.exceptions import NotFoundError, PermissionDeniedError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
 from app.core.permissions import BOARD_MODERATOR_ROLES, is_admin, is_global_moderator
 from app.db.base import utcnow
-from app.models.forum import BoardMember, Post, Topic
-from app.models.moderation import AuditLog, Flag
+from app.models.forum import Board, BoardMember, Post, Topic
+from app.models.moderation import AuditLog, Flag, Reviewable, ReviewableEvent
 from app.models.user import User
 from app.schemas.moderation import (
     AuditLogResponse,
@@ -21,13 +21,37 @@ from app.schemas.moderation import (
     HideContentRequest,
     ModerationActionResponse,
     ModerationTargetResponse,
+    ReviewableAppealRequest,
+    ReviewableDecisionRequest,
+    ReviewableResponse,
     UserStatusResponse,
     UserStatusUpdateRequest,
 )
+from app.services.background_jobs import BackgroundJobService
 from app.services.search import SearchIndexService
 from app.services.spam import SpamPreventionService
 
 VALID_FLAG_STATUSES = {"pending", "resolved", "rejected"}
+VALID_REVIEWABLE_STATUSES = {
+    "pending",
+    "claimed",
+    "approved",
+    "rejected",
+    "hidden",
+    "deleted",
+    "silenced",
+    "escalated",
+    "appealed",
+}
+DECISION_STATUS = {
+    "approve": "approved",
+    "reject": "rejected",
+    "hide": "hidden",
+    "delete": "deleted",
+    "silence": "silenced",
+    "escalate": "escalated",
+}
+OPEN_REVIEWABLE_STATUSES = {"pending", "claimed", "appealed"}
 
 
 @dataclass(frozen=True)
@@ -106,6 +130,7 @@ class ModerationService:
         )
         self.session.add(flag)
         await self.session.flush()
+        await self._create_flag_reviewable(flag, target, current_user)
         self._add_audit_log(
             actor_id=current_user.id,
             action="flag_created",
@@ -346,6 +371,538 @@ class ModerationService:
             statement = statement.where(AuditLog.board_id.in_(board_ids))
         logs = list(await self.session.scalars(statement))
         return [AuditLogResponse.from_model(log) for log in logs]
+
+    async def create_content_reviewable(
+        self,
+        *,
+        current_user: User,
+        reviewable_type: str,
+        board: Board,
+        sanitized_fields: dict[str, str],
+        matched_fields: tuple[str, ...],
+        data: dict[str, object],
+        topic: Topic | None = None,
+        post: Post | None = None,
+    ) -> Reviewable:
+        title = str(data.get("title") or data.get("topic_title") or "Content pending review")
+        excerpt = str(sanitized_fields.get("raw_md") or sanitized_fields.get("title") or title)[
+            :180
+        ]
+        reviewable = Reviewable(
+            type=reviewable_type,
+            status="pending",
+            priority=80,
+            source="content_safety",
+            source_summary="Content matched a pending-review safety rule",
+            target_type="post" if post else ("topic" if topic else None),
+            target_id=post.id if post else (topic.id if topic else None),
+            board_id=board.id,
+            topic_id=topic.id if topic else None,
+            post_id=post.id if post else None,
+            created_by_id=current_user.id,
+            target_user_id=current_user.id,
+            data={
+                **data,
+                "title": title,
+                "excerpt": excerpt,
+                "fields": sanitized_fields,
+                "matched_fields": list(matched_fields),
+            },
+        )
+        self.session.add(reviewable)
+        await self.session.flush()
+        self._add_reviewable_event(
+            reviewable,
+            actor_id=current_user.id,
+            event="created",
+            from_status=None,
+            to_status=reviewable.status,
+            note=None,
+            data={"source": reviewable.source, "matched_fields": list(matched_fields)},
+        )
+        self._add_audit_log(
+            actor_id=current_user.id,
+            action="reviewable_created",
+            target_type="reviewable",
+            target_id=reviewable.id,
+            board_id=board.id,
+            data={
+                "type": reviewable.type,
+                "source": reviewable.source,
+                "matched_fields": list(matched_fields),
+            },
+        )
+        return reviewable
+
+    async def list_reviewables(
+        self,
+        current_user: User,
+        *,
+        status: str | None = "pending",
+        reviewable_type: str | None = None,
+        limit: int = 50,
+    ) -> list[ReviewableResponse]:
+        statement = (
+            select(Reviewable)
+            .options(*self._reviewable_options())
+            .order_by(Reviewable.priority.asc(), desc(Reviewable.created_at))
+            .limit(limit)
+        )
+        if status and status != "all":
+            if status not in VALID_REVIEWABLE_STATUSES:
+                raise ValidationError("invalid_reviewable_status", "Reviewable status is invalid")
+            statement = statement.where(Reviewable.status == status)
+        if reviewable_type:
+            statement = statement.where(Reviewable.type == reviewable_type)
+        if not self._is_global_moderator(current_user):
+            board_ids = await self._moderatable_board_ids(current_user)
+            if not board_ids:
+                raise PermissionDeniedError(
+                    "moderation_forbidden", "Moderation permission required"
+                )
+            statement = statement.where(Reviewable.board_id.in_(board_ids))
+        reviewables = list(await self.session.scalars(statement))
+        return [ReviewableResponse.from_model(reviewable) for reviewable in reviewables]
+
+    async def list_my_reviewables(
+        self,
+        current_user: User,
+        *,
+        limit: int = 50,
+    ) -> list[ReviewableResponse]:
+        reviewables = list(
+            await self.session.scalars(
+                select(Reviewable)
+                .options(*self._reviewable_options())
+                .where(
+                    (Reviewable.created_by_id == current_user.id)
+                    | (Reviewable.target_user_id == current_user.id)
+                )
+                .order_by(desc(Reviewable.created_at))
+                .limit(limit)
+            )
+        )
+        return [
+            ReviewableResponse.from_model(
+                reviewable,
+                include_private_data=False,
+                current_user_id=current_user.id,
+            )
+            for reviewable in reviewables
+        ]
+
+    async def claim_reviewable(self, reviewable_id: str, current_user: User) -> ReviewableResponse:
+        reviewable = await self._get_reviewable(reviewable_id)
+        await self._require_can_access_reviewable(current_user, reviewable)
+        if reviewable.status not in {"pending", "claimed", "appealed"}:
+            raise ValidationError("reviewable_not_open", "Reviewable is not open")
+        if reviewable.assigned_to_id and reviewable.assigned_to_id != current_user.id:
+            raise ConflictError(
+                "reviewable_already_claimed",
+                "Reviewable has already been claimed",
+                {"assigned_to_id": reviewable.assigned_to_id},
+            )
+        previous_status = reviewable.status
+        reviewable.status = "claimed"
+        reviewable.assigned_to_id = current_user.id
+        reviewable.assigned_at = utcnow()
+        self._record_reviewable_transition(
+            reviewable,
+            actor=current_user,
+            event="claimed",
+            from_status=previous_status,
+            to_status=reviewable.status,
+            note=None,
+            data={},
+        )
+        await self.session.commit()
+        return ReviewableResponse.from_model(await self._get_reviewable(reviewable.id))
+
+    async def release_reviewable(
+        self,
+        reviewable_id: str,
+        current_user: User,
+    ) -> ReviewableResponse:
+        reviewable = await self._get_reviewable(reviewable_id)
+        await self._require_can_access_reviewable(current_user, reviewable)
+        if reviewable.assigned_to_id and (
+            reviewable.assigned_to_id != current_user.id
+            and not self._is_global_moderator(current_user)
+        ):
+            raise PermissionDeniedError("reviewable_claim_required", "Reviewable is claimed")
+        previous_status = reviewable.status
+        reviewable.status = "pending" if reviewable.status == "claimed" else reviewable.status
+        reviewable.assigned_to_id = None
+        reviewable.assigned_at = None
+        self._record_reviewable_transition(
+            reviewable,
+            actor=current_user,
+            event="released",
+            from_status=previous_status,
+            to_status=reviewable.status,
+            note=None,
+            data={},
+        )
+        await self.session.commit()
+        return ReviewableResponse.from_model(await self._get_reviewable(reviewable.id))
+
+    async def decide_reviewable(
+        self,
+        reviewable_id: str,
+        payload: ReviewableDecisionRequest,
+        current_user: User,
+    ) -> ReviewableResponse:
+        reviewable = await self._get_reviewable(reviewable_id)
+        await self._require_can_access_reviewable(current_user, reviewable)
+        if reviewable.status not in OPEN_REVIEWABLE_STATUSES:
+            raise ValidationError("reviewable_not_open", "Reviewable is not open")
+        previous_status = reviewable.status
+        target_status = DECISION_STATUS[payload.action]
+        await self._apply_reviewable_decision(reviewable, payload.action)
+        reviewable.status = target_status
+        reviewable.resolved_by_id = current_user.id
+        reviewable.resolved_at = utcnow()
+        reviewable.assigned_to_id = current_user.id
+        reviewable.assigned_at = reviewable.assigned_at or utcnow()
+        self._record_reviewable_transition(
+            reviewable,
+            actor=current_user,
+            event="decided",
+            from_status=previous_status,
+            to_status=reviewable.status,
+            note=payload.note,
+            data={"action": payload.action},
+        )
+        await self._notify_reviewable_user(
+            reviewable,
+            actor=current_user,
+            event="decided",
+            idempotency_suffix=payload.action,
+        )
+        await self.session.commit()
+        return ReviewableResponse.from_model(await self._get_reviewable(reviewable.id))
+
+    async def appeal_reviewable(
+        self,
+        reviewable_id: str,
+        payload: ReviewableAppealRequest,
+        current_user: User,
+    ) -> ReviewableResponse:
+        reviewable = await self._get_reviewable(reviewable_id)
+        if current_user.id not in {reviewable.created_by_id, reviewable.target_user_id}:
+            raise PermissionDeniedError("reviewable_forbidden", "Reviewable access denied")
+        if reviewable.status not in {"rejected", "hidden", "deleted", "silenced", "escalated"}:
+            raise ValidationError("reviewable_appeal_unavailable", "Reviewable cannot be appealed")
+        previous_status = reviewable.status
+        reviewable.status = "appealed"
+        reviewable.data = {
+            **reviewable.data,
+            "appeal_count": int(reviewable.data.get("appeal_count") or 0) + 1,
+        }
+        self._record_reviewable_transition(
+            reviewable,
+            actor=current_user,
+            event="appealed",
+            from_status=previous_status,
+            to_status=reviewable.status,
+            note=payload.reason,
+            data={},
+        )
+        await self._notify_reviewable_staff(
+            reviewable,
+            actor=current_user,
+            idempotency_suffix=str(reviewable.data["appeal_count"]),
+        )
+        await self.session.commit()
+        return ReviewableResponse.from_model(
+            await self._get_reviewable(reviewable.id),
+            include_private_data=False,
+            current_user_id=current_user.id,
+        )
+
+    async def _create_flag_reviewable(
+        self,
+        flag: Flag,
+        target: ModerationTarget,
+        current_user: User,
+    ) -> Reviewable:
+        existing = await self.session.scalar(
+            select(Reviewable).where(Reviewable.flag_id == flag.id)
+        )
+        if existing:
+            return existing
+        reviewable = Reviewable(
+            type="flag",
+            status="pending",
+            priority=50,
+            source="flag",
+            source_summary=f"User report: {flag.reason}",
+            target_type=flag.target_type,
+            target_id=flag.target_id,
+            board_id=target.board_id,
+            topic_id=target.topic_id,
+            post_id=target.target_id if target.target_type == "post" else None,
+            flag_id=flag.id,
+            created_by_id=current_user.id,
+            target_user_id=target.author_id,
+            data={
+                "reason": flag.reason,
+                "detail": flag.detail,
+                "title": target.title,
+                "excerpt": target.excerpt,
+                "topic_slug": target.topic_slug,
+                "post_number": target.post_number,
+            },
+        )
+        self.session.add(reviewable)
+        await self.session.flush()
+        self._add_reviewable_event(
+            reviewable,
+            actor_id=current_user.id,
+            event="created",
+            from_status=None,
+            to_status=reviewable.status,
+            note=flag.detail,
+            data={"source": "flag", "flag_id": flag.id, "reason": flag.reason},
+        )
+        self._add_audit_log(
+            actor_id=current_user.id,
+            action="reviewable_created",
+            target_type="reviewable",
+            target_id=reviewable.id,
+            board_id=target.board_id,
+            data={"type": "flag", "flag_id": flag.id, "reason": flag.reason},
+        )
+        return reviewable
+
+    def _reviewable_options(self):
+        return (
+            selectinload(Reviewable.board),
+            selectinload(Reviewable.created_by),
+            selectinload(Reviewable.target_user),
+            selectinload(Reviewable.assigned_to),
+            selectinload(Reviewable.resolved_by),
+            selectinload(Reviewable.events).selectinload(ReviewableEvent.actor),
+        )
+
+    async def _get_reviewable(self, reviewable_id: str) -> Reviewable:
+        reviewable = await self.session.scalar(
+            select(Reviewable)
+            .options(*self._reviewable_options())
+            .where(Reviewable.id == reviewable_id)
+        )
+        if not reviewable:
+            raise NotFoundError("reviewable_not_found", "Reviewable not found")
+        return reviewable
+
+    async def _require_can_access_reviewable(
+        self,
+        current_user: User,
+        reviewable: Reviewable,
+    ) -> None:
+        if reviewable.board_id is None:
+            if not self._is_global_moderator(current_user):
+                raise PermissionDeniedError(
+                    "moderation_forbidden", "Moderation permission required"
+                )
+            return
+        await self._require_can_moderate_board(current_user, reviewable.board_id)
+
+    async def _apply_reviewable_decision(
+        self,
+        reviewable: Reviewable,
+        action: str,
+    ) -> None:
+        if action == "reject" and reviewable.flag_id:
+            await self._set_flag_status(reviewable.flag_id, "rejected", None)
+            return
+        if action in {"approve", "escalate"}:
+            if action == "approve":
+                if reviewable.type == "queued_topic":
+                    from app.services.forum import ForumService
+
+                    await ForumService(self.session).publish_queued_topic(reviewable)
+                elif reviewable.type == "queued_post":
+                    from app.services.forum import ForumService
+
+                    await ForumService(self.session).publish_queued_post(reviewable)
+                elif reviewable.type == "queued_edit":
+                    from app.services.forum import ForumService
+
+                    await ForumService(self.session).publish_queued_edit(reviewable)
+            if reviewable.flag_id:
+                await self._set_flag_status(reviewable.flag_id, "resolved", None)
+            return
+        if action in {"hide", "delete"}:
+            await self._hide_reviewable_target(reviewable, delete=(action == "delete"))
+            if reviewable.flag_id:
+                await self._set_flag_status(reviewable.flag_id, "resolved", None)
+            return
+        if action == "silence":
+            if not reviewable.target_user_id:
+                raise ValidationError("reviewable_target_user_required", "Target user is required")
+            user = await self.session.get(User, reviewable.target_user_id)
+            if not user:
+                raise NotFoundError("user_not_found", "User not found")
+            user.status = "silenced"
+            if reviewable.flag_id:
+                await self._set_flag_status(reviewable.flag_id, "resolved", None)
+            return
+
+    async def _hide_reviewable_target(self, reviewable: Reviewable, *, delete: bool) -> None:
+        if reviewable.target_type == "topic" and reviewable.target_id:
+            topic = await self.session.get(Topic, reviewable.target_id)
+            if not topic:
+                raise NotFoundError("topic_not_found", "Topic not found")
+            topic.deleted_at = utcnow()
+            topic.status = "hidden"
+            await SearchIndexService(self.session).remove_topic(topic.id)
+            return
+        if reviewable.target_type == "post" and reviewable.target_id:
+            post = await self.session.get(Post, reviewable.target_id)
+            if not post:
+                raise NotFoundError("post_not_found", "Post not found")
+            post.deleted_at = utcnow()
+            if delete:
+                post.raw_md = ""
+                post.cooked_html = ""
+            await SearchIndexService(self.session).sync_topic(post.topic_id)
+            return
+        raise ValidationError("reviewable_target_required", "Reviewable target is required")
+
+    async def _set_flag_status(
+        self,
+        flag_id: str,
+        status: str,
+        resolution_note: str | None,
+    ) -> None:
+        flag = await self.session.get(Flag, flag_id)
+        if not flag:
+            return
+        flag.status = status
+        flag.resolution_note = resolution_note
+        flag.resolved_at = utcnow()
+
+    def _record_reviewable_transition(
+        self,
+        reviewable: Reviewable,
+        *,
+        actor: User,
+        event: str,
+        from_status: str | None,
+        to_status: str | None,
+        note: str | None,
+        data: dict[str, object],
+    ) -> None:
+        self._add_reviewable_event(
+            reviewable,
+            actor_id=actor.id,
+            event=event,
+            from_status=from_status,
+            to_status=to_status,
+            note=note,
+            data=data,
+        )
+        self._add_audit_log(
+            actor_id=actor.id,
+            action=f"reviewable_{event}",
+            target_type="reviewable",
+            target_id=reviewable.id,
+            board_id=reviewable.board_id,
+            data={
+                "from_status": from_status,
+                "to_status": to_status,
+                "note": note or "",
+                **data,
+            },
+        )
+
+    def _add_reviewable_event(
+        self,
+        reviewable: Reviewable,
+        *,
+        actor_id: str | None,
+        event: str,
+        from_status: str | None,
+        to_status: str | None,
+        note: str | None,
+        data: dict[str, object],
+    ) -> None:
+        self.session.add(
+            ReviewableEvent(
+                reviewable_id=reviewable.id,
+                actor_id=actor_id,
+                event=event,
+                from_status=from_status,
+                to_status=to_status,
+                note=note.strip() if note else None,
+                data=data,
+                created_at=utcnow(),
+            )
+        )
+
+    async def _notify_reviewable_user(
+        self,
+        reviewable: Reviewable,
+        *,
+        actor: User,
+        event: str,
+        idempotency_suffix: str,
+    ) -> None:
+        user_id = reviewable.target_user_id or reviewable.created_by_id
+        if not user_id or user_id == actor.id:
+            return
+        await BackgroundJobService(self.session).enqueue_notification(
+            user_id=user_id,
+            kind="moderation",
+            topic_id=reviewable.topic_id,
+            post_id=reviewable.post_id,
+            actor_id=actor.id,
+            data=self._notification_data(reviewable, event=event, actor=actor),
+            idempotency_key=f"reviewable:{reviewable.id}:{event}:{idempotency_suffix}",
+            commit=False,
+        )
+
+    async def _notify_reviewable_staff(
+        self,
+        reviewable: Reviewable,
+        *,
+        actor: User,
+        idempotency_suffix: str,
+    ) -> None:
+        user_id = reviewable.assigned_to_id or reviewable.resolved_by_id
+        if not user_id or user_id == actor.id:
+            return
+        await BackgroundJobService(self.session).enqueue_notification(
+            user_id=user_id,
+            kind="moderation",
+            topic_id=reviewable.topic_id,
+            post_id=reviewable.post_id,
+            actor_id=actor.id,
+            data=self._notification_data(reviewable, event="appealed", actor=actor),
+            idempotency_key=f"reviewable:{reviewable.id}:appeal:{idempotency_suffix}",
+            commit=False,
+        )
+
+    def _notification_data(
+        self,
+        reviewable: Reviewable,
+        *,
+        event: str,
+        actor: User,
+    ) -> dict[str, object]:
+        return {
+            "reviewable_id": reviewable.id,
+            "reviewable_status": reviewable.status,
+            "reviewable_type": reviewable.type,
+            "event": event,
+            "topic_title": reviewable.data.get("title") or reviewable.source_summary,
+            "topic_slug": reviewable.data.get("topic_slug"),
+            "post_number": reviewable.data.get("post_number"),
+            "board_slug": reviewable.board.slug if reviewable.board else None,
+            "board_name": reviewable.board.name if reviewable.board else None,
+            "actor_name": actor.username,
+        }
 
     async def _get_flag(self, flag_id: str) -> Flag:
         flag = await self.session.scalar(

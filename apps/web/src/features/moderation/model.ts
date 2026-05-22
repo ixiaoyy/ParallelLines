@@ -2,6 +2,30 @@ export type FlagTargetType = "topic" | "post";
 export type FlagReason = "spam" | "harassment" | "off_topic" | "private_info" | "other";
 export type FlagStatus = "pending" | "resolved" | "rejected";
 export type UserModerationStatus = "active" | "silenced" | "suspended";
+export type ReviewableType =
+  | "flag"
+  | "queued_topic"
+  | "queued_post"
+  | "queued_edit"
+  | "appeal"
+  | "system";
+export type ReviewableStatus =
+  | "pending"
+  | "claimed"
+  | "approved"
+  | "rejected"
+  | "hidden"
+  | "deleted"
+  | "silenced"
+  | "escalated"
+  | "appealed";
+export type ReviewableDecisionAction =
+  | "approve"
+  | "reject"
+  | "hide"
+  | "delete"
+  | "silence"
+  | "escalate";
 
 export interface FlagCreateRequest {
   target_type: FlagTargetType;
@@ -22,6 +46,15 @@ export interface HideContentRequest {
 export interface UserStatusUpdateRequest {
   status: UserModerationStatus;
   note?: string | null;
+}
+
+export interface ReviewableDecisionRequest {
+  action: ReviewableDecisionAction;
+  note?: string | null;
+}
+
+export interface ReviewableAppealRequest {
+  reason: string;
 }
 
 export interface ModerationTargetResponse {
@@ -83,6 +116,49 @@ export interface AuditLogResponse {
   created_at: string;
 }
 
+export interface ReviewableEventResponse {
+  id: string;
+  actor_id: string | null;
+  actor_name: string | null;
+  event: string;
+  from_status: string | null;
+  to_status: string | null;
+  note: string | null;
+  data: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ReviewableResponse {
+  id: string;
+  type: ReviewableType | (string & {});
+  status: ReviewableStatus | (string & {});
+  priority: number;
+  source: string;
+  source_summary: string;
+  target_type: string | null;
+  target_id: string | null;
+  board_id: string | null;
+  board_name: string | null;
+  topic_id: string | null;
+  post_id: string | null;
+  flag_id: string | null;
+  created_by_id: string | null;
+  created_by_name: string | null;
+  target_user_id: string | null;
+  target_user_name: string | null;
+  assigned_to_id: string | null;
+  assigned_to_name: string | null;
+  assigned_at: string | null;
+  resolved_by_id: string | null;
+  resolved_by_name: string | null;
+  resolved_at: string | null;
+  appeal_available: boolean;
+  data: Record<string, unknown>;
+  events: ReviewableEventResponse[];
+  created_at: string;
+  updated_at: string;
+}
+
 export function flagReasonLabel(reason: FlagReason): string {
   const labels: Record<FlagReason, string> = {
     spam: "垃圾/刷屏",
@@ -112,6 +188,43 @@ export function auditActionLabel(action: string): string {
     post_hidden: "隐藏楼层",
     post_restored: "恢复楼层",
     user_status_changed: "调整用户状态",
+    reviewable_created: "创建审核项",
+    reviewable_claimed: "认领审核项",
+    reviewable_released: "释放审核项",
+    reviewable_decided: "处理审核项",
+    reviewable_appealed: "提交申诉",
+    created: "创建",
+    claimed: "认领",
+    released: "释放",
+    decided: "处理",
+    appealed: "申诉",
   };
   return labels[action] ?? action;
+}
+
+export function reviewableStatusLabel(status: string): string {
+  const labels: Record<ReviewableStatus, string> = {
+    pending: "待处理",
+    claimed: "已认领",
+    approved: "已通过",
+    rejected: "已拒绝",
+    hidden: "已隐藏",
+    deleted: "已删除",
+    silenced: "已禁言",
+    escalated: "已升级",
+    appealed: "申诉中",
+  };
+  return labels[status as ReviewableStatus] ?? status;
+}
+
+export function reviewableTypeLabel(type: string): string {
+  const labels: Record<ReviewableType, string> = {
+    flag: "用户举报",
+    queued_topic: "待审主题",
+    queued_post: "待审回复",
+    queued_edit: "待审编辑",
+    appeal: "申诉",
+    system: "系统规则",
+  };
+  return labels[type as ReviewableType] ?? type;
 }

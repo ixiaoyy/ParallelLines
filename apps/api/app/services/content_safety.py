@@ -7,12 +7,13 @@ from typing import Literal
 
 from app.core.exceptions import ValidationError
 
-ContentSafetyAction = Literal["block", "mask"]
+ContentSafetyAction = Literal["block", "mask", "review"]
 
 # Public placeholder tokens for tests and seed-like local verification only. Real policy
 # terms should be supplied through a private deployment channel before production use.
 BLOCK_POLICY_TEST_TOKEN = "blocked-demo-term"
 MASK_POLICY_TEST_TOKEN = "mask-demo-term"
+REVIEW_POLICY_TEST_TOKEN = "review-demo-term"
 
 
 @dataclass(frozen=True)
@@ -33,11 +34,13 @@ class ContentModerationResult:
     sanitized_fields: dict[str, str]
     blocked_fields: tuple[str, ...]
     masked_fields: tuple[str, ...]
+    review_fields: tuple[str, ...]
 
 
 CONTENT_SAFETY_RULES: tuple[ContentSafetyRule, ...] = (
     ContentSafetyRule(token=BLOCK_POLICY_TEST_TOKEN, action="block"),
     ContentSafetyRule(token=MASK_POLICY_TEST_TOKEN, action="mask"),
+    ContentSafetyRule(token=REVIEW_POLICY_TEST_TOKEN, action="review"),
 )
 
 
@@ -54,6 +57,15 @@ def enforce_content_policy(fields: Mapping[str, str]) -> dict[str, str]:
                 "fields": list(result.blocked_fields),
             },
         )
+    if result.review_fields:
+        raise ValidationError(
+            "content_pending_review",
+            "Content was queued for moderator review",
+            {
+                "action": "review",
+                "fields": list(result.review_fields),
+            },
+        )
     return result.sanitized_fields
 
 
@@ -61,6 +73,7 @@ def moderate_text_fields(fields: Mapping[str, str]) -> ContentModerationResult:
     sanitized_fields = dict(fields)
     blocked_fields: set[str] = set()
     masked_fields: set[str] = set()
+    review_fields: set[str] = set()
 
     for field_name, value in fields.items():
         mask_spans: list[tuple[int, int]] = []
@@ -74,6 +87,8 @@ def moderate_text_fields(fields: Mapping[str, str]) -> ContentModerationResult:
             elif rule.action == "mask":
                 masked_fields.add(field_name)
                 mask_spans.extend(spans)
+            elif rule.action == "review":
+                review_fields.add(field_name)
 
         if mask_spans:
             sanitized_fields[field_name] = _replace_spans(value, _merge_spans(mask_spans))
@@ -82,6 +97,7 @@ def moderate_text_fields(fields: Mapping[str, str]) -> ContentModerationResult:
         sanitized_fields=sanitized_fields,
         blocked_fields=tuple(sorted(blocked_fields)),
         masked_fields=tuple(sorted(masked_fields)),
+        review_fields=tuple(sorted(review_fields)),
     )
 
 

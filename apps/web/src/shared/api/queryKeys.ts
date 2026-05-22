@@ -26,5 +26,7 @@ export const queryKeys = {
   adminEmailLogs: ["admin", "email-logs"] as const,
   moderationRoot: ["moderation"] as const,
   moderationQueue: (status: string) => ["moderation", "queue", status] as const,
+  moderationReviewables: (status: string) => ["moderation", "reviewables", status] as const,
+  moderationMyReviewables: ["moderation", "reviewables", "me"] as const,
   moderationAudit: ["moderation", "audit"] as const,
 };

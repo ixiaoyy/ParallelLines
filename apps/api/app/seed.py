@@ -210,8 +210,7 @@ def starter_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dic
             "author": users["member"],
             "title": "OIDC 登录回调 state mismatch 如何排查？",
             "raw_md": (
-                "我们在回调日志中看到 state mismatch，需要确认 Cookie、"
-                "回调地址、代理头和时钟偏移。"
+                "我们在回调日志中看到 state mismatch，需要确认 Cookie、回调地址、代理头和时钟偏移。"
             ),
             "tags": ["oidc", "登录", "已解决"],
         },

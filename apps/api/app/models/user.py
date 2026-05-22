@@ -32,9 +32,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 class EmailVerificationCode(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "email_verification_codes"
-    __table_args__ = (
-        Index("ix_email_verification_codes_user_sent", "user_id", "sent_at"),
-    )
+    __table_args__ = (Index("ix_email_verification_codes_user_sent", "user_id", "sent_at"),)
 
     user_id: Mapped[str] = mapped_column(
         String(36),
@@ -73,9 +71,7 @@ class UserSecurityToken(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 class UserSession(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "user_sessions"
-    __table_args__ = (
-        Index("ix_user_sessions_user_revoked", "user_id", "revoked_at"),
-    )
+    __table_args__ = (Index("ix_user_sessions_user_revoked", "user_id", "revoked_at"),)
 
     user_id: Mapped[str] = mapped_column(
         String(36),
@@ -91,9 +87,7 @@ class UserSession(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 class UserRecoveryCode(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "user_recovery_codes"
-    __table_args__ = (
-        Index("ix_user_recovery_codes_user_used", "user_id", "used_at"),
-    )
+    __table_args__ = (Index("ix_user_recovery_codes_user_used", "user_id", "used_at"),)
 
     user_id: Mapped[str] = mapped_column(
         String(36),

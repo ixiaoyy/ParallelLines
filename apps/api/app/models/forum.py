@@ -191,9 +191,7 @@ class PostRevision(UUIDPrimaryKeyMixin, Base):
         Index("ix_post_revisions_editor_created", "editor_id", "created_at"),
     )
 
-    post_id: Mapped[str] = mapped_column(
-        ForeignKey("posts.id", ondelete="CASCADE"), nullable=False
-    )
+    post_id: Mapped[str] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
     topic_id: Mapped[str] = mapped_column(
         ForeignKey("topics.id", ondelete="CASCADE"), nullable=False
     )

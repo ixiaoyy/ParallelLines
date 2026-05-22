@@ -27,6 +27,8 @@ from app.models import (  # noqa: F401
     PostRevision,
     RateLimitEvent,
     Reaction,
+    Reviewable,
+    ReviewableEvent,
     ScreenedRule,
     SearchDocument,
     SearchLog,

@@ -3,7 +3,17 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Literal
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -15,6 +25,19 @@ if TYPE_CHECKING:
 FlagTargetType = Literal["topic", "post"]
 FlagReason = Literal["spam", "harassment", "off_topic", "private_info", "other"]
 FlagStatus = Literal["pending", "resolved", "rejected"]
+ReviewableType = Literal["flag", "queued_topic", "queued_post", "queued_edit", "appeal", "system"]
+ReviewableStatus = Literal[
+    "pending",
+    "claimed",
+    "approved",
+    "rejected",
+    "hidden",
+    "deleted",
+    "silenced",
+    "escalated",
+    "appealed",
+]
+ReviewableDecisionAction = Literal["approve", "reject", "hide", "delete", "silence", "escalate"]
 ModerationAction = Literal[
     "flag_created",
     "flag_status_changed",
@@ -34,6 +57,11 @@ ModerationAction = Literal[
     "screened_rule_deleted",
     "site_setting_updated",
     "user_admin_updated",
+    "reviewable_created",
+    "reviewable_claimed",
+    "reviewable_released",
+    "reviewable_decided",
+    "reviewable_appealed",
 ]
 ScreenedRuleKind = Literal["email", "ip", "url"]
 ScreenedRuleAction = Literal["block", "silence"]
@@ -67,6 +95,80 @@ class Flag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     resolved_by: Mapped[User | None] = relationship(
         "User", foreign_keys=[resolved_by_id], lazy="selectin"
     )
+
+
+class Reviewable(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "reviewables"
+    __table_args__ = (
+        Index("ix_reviewables_status_created", "status", "created_at"),
+        Index("ix_reviewables_board_status", "board_id", "status"),
+        Index("ix_reviewables_assignee_status", "assigned_to_id", "status"),
+        Index("ix_reviewables_created_by_status", "created_by_id", "status"),
+        Index("ix_reviewables_flag", "flag_id"),
+    )
+
+    type: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    source: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_summary: Mapped[str] = mapped_column(String(500), nullable=False)
+    target_type: Mapped[str | None] = mapped_column(String(32))
+    target_id: Mapped[str | None] = mapped_column(String(36))
+    board_id: Mapped[str | None] = mapped_column(ForeignKey("boards.id", ondelete="SET NULL"))
+    topic_id: Mapped[str | None] = mapped_column(ForeignKey("topics.id", ondelete="SET NULL"))
+    post_id: Mapped[str | None] = mapped_column(ForeignKey("posts.id", ondelete="SET NULL"))
+    flag_id: Mapped[str | None] = mapped_column(ForeignKey("flags.id", ondelete="SET NULL"))
+    created_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    target_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    assigned_to_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    data: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default=dict)
+
+    board: Mapped[Board | None] = relationship("Board", lazy="selectin")
+    flag: Mapped[Flag | None] = relationship("Flag", lazy="selectin")
+    created_by: Mapped[User | None] = relationship(
+        "User", foreign_keys=[created_by_id], lazy="selectin"
+    )
+    target_user: Mapped[User | None] = relationship(
+        "User", foreign_keys=[target_user_id], lazy="selectin"
+    )
+    assigned_to: Mapped[User | None] = relationship(
+        "User", foreign_keys=[assigned_to_id], lazy="selectin"
+    )
+    resolved_by: Mapped[User | None] = relationship(
+        "User", foreign_keys=[resolved_by_id], lazy="selectin"
+    )
+    events: Mapped[list[ReviewableEvent]] = relationship(
+        "ReviewableEvent",
+        back_populates="reviewable",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+
+
+class ReviewableEvent(UUIDPrimaryKeyMixin, Base):
+    __tablename__ = "reviewable_events"
+    __table_args__ = (
+        Index("ix_reviewable_events_reviewable_created", "reviewable_id", "created_at"),
+        Index("ix_reviewable_events_actor_created", "actor_id", "created_at"),
+        Index("ix_reviewable_events_event_created", "event", "created_at"),
+    )
+
+    reviewable_id: Mapped[str] = mapped_column(
+        ForeignKey("reviewables.id", ondelete="CASCADE"), nullable=False
+    )
+    actor_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    event: Mapped[str] = mapped_column(String(32), nullable=False)
+    from_status: Mapped[str | None] = mapped_column(String(32))
+    to_status: Mapped[str | None] = mapped_column(String(32))
+    note: Mapped[str | None] = mapped_column(Text)
+    data: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    reviewable: Mapped[Reviewable] = relationship("Reviewable", back_populates="events")
+    actor: Mapped[User | None] = relationship("User", lazy="selectin")
 
 
 class AuditLog(UUIDPrimaryKeyMixin, Base):

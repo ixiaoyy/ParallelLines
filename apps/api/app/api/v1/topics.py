@@ -46,9 +46,7 @@ async def list_topics(
     return ApiResponse(
         data=[TopicResponse.from_model(topic) for topic in topics],
         meta={
-            "next_cursor": topics[-1].last_posted_at.isoformat()
-            if len(topics) == limit
-            else None
+            "next_cursor": topics[-1].last_posted_at.isoformat() if len(topics) == limit else None
         },
     )
 

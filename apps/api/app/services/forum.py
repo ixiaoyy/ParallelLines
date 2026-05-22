@@ -3,7 +3,7 @@ from __future__ import annotations
 import html
 import json
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from datetime import datetime
 from hashlib import sha256
 
@@ -26,7 +26,7 @@ from app.models.forum import (
     TopicRead,
 )
 from app.models.interaction import Notification
-from app.models.moderation import AuditLog
+from app.models.moderation import AuditLog, Reviewable
 from app.models.search import SearchDocument
 from app.models.upload import Upload
 from app.models.user import User
@@ -44,7 +44,7 @@ from app.schemas.forum import (
     TopicSplitRequest,
 )
 from app.services.background_jobs import BackgroundJobService
-from app.services.content_safety import enforce_content_policy
+from app.services.content_safety import moderate_text_fields
 from app.services.search import (
     SearchIndexService,
     search_match_conditions,
@@ -418,7 +418,20 @@ class ForumService:
             title=payload.title,
             raw_md=payload.raw_md,
         )
-        filtered = enforce_content_policy({"title": payload.title, "raw_md": payload.raw_md})
+        filtered = await self._moderate_or_queue_content(
+            {"title": payload.title, "raw_md": payload.raw_md},
+            current_user=current_user,
+            reviewable_type="queued_topic",
+            board=board,
+            data={
+                "title": payload.title,
+                "raw_md": payload.raw_md,
+                "tags": payload.tags,
+                "pinned": payload.pinned,
+                "featured": payload.featured,
+                "board_slug": board.slug,
+            },
+        )
         title = filtered["title"].strip()
         raw_md = filtered["raw_md"].strip()
         cooked_html = self._render_required_markdown(raw_md)
@@ -779,7 +792,19 @@ class ForumService:
             current_user=current_user,
             raw_md=payload.raw_md,
         )
-        filtered = enforce_content_policy({"raw_md": payload.raw_md})
+        filtered = await self._moderate_or_queue_content(
+            {"raw_md": payload.raw_md},
+            current_user=current_user,
+            reviewable_type="queued_post",
+            board=topic.board,
+            topic=topic,
+            data={
+                "raw_md": payload.raw_md,
+                "parent_post_id": payload.parent_post_id,
+                "topic_title": topic.title,
+                "topic_slug": topic.slug,
+            },
+        )
         raw_md = filtered["raw_md"].strip()
         next_number = (
             await self.session.scalar(
@@ -850,7 +875,21 @@ class ForumService:
             current_user=current_user,
             raw_md=payload.raw_md,
         )
-        filtered = enforce_content_policy({"raw_md": payload.raw_md})
+        filtered = await self._moderate_or_queue_content(
+            {"raw_md": payload.raw_md},
+            current_user=current_user,
+            reviewable_type="queued_edit",
+            board=post.topic.board,
+            topic=post.topic,
+            post=post,
+            data={
+                "raw_md": payload.raw_md,
+                "edit_reason": payload.edit_reason,
+                "topic_title": post.topic.title,
+                "topic_slug": post.topic.slug,
+                "post_number": post.post_number,
+            },
+        )
         stripped = filtered["raw_md"].strip()
         revision = await self._create_post_revision(
             post,
@@ -1200,6 +1239,53 @@ class ForumService:
         if not invitation:
             raise NotFoundError("board_invite_not_found", "Board invite not found")
         return invitation
+
+    async def _moderate_or_queue_content(
+        self,
+        fields: Mapping[str, str],
+        *,
+        current_user: User,
+        reviewable_type: str,
+        board: Board,
+        topic: Topic | None = None,
+        post: Post | None = None,
+        data: dict[str, object] | None = None,
+    ) -> dict[str, str]:
+        result = moderate_text_fields(fields)
+        if result.blocked_fields:
+            raise ValidationError(
+                "content_policy_violation",
+                "Content violates community safety rules; please edit and retry",
+                {
+                    "action": "blocked",
+                    "fields": list(result.blocked_fields),
+                },
+            )
+        if result.review_fields:
+            from app.services.moderation import ModerationService
+
+            reviewable = await ModerationService(self.session).create_content_reviewable(
+                current_user=current_user,
+                reviewable_type=reviewable_type,
+                board=board,
+                topic=topic,
+                post=post,
+                sanitized_fields=result.sanitized_fields,
+                matched_fields=result.review_fields,
+                data=data or {},
+            )
+            await self.session.commit()
+            raise ValidationError(
+                "content_pending_review",
+                "Content was queued for moderator review",
+                {
+                    "action": "review",
+                    "reviewable_id": reviewable.id,
+                    "fields": list(result.review_fields),
+                    "appeal_available": True,
+                },
+            )
+        return result.sanitized_fields
 
     def _require_invitee(self, invitation: BoardInvitation, current_user: User) -> None:
         if invitation.invitee_id != current_user.id:
@@ -1713,3 +1799,156 @@ class ForumService:
             ),
             commit=False,
         )
+
+    async def publish_queued_topic(self, reviewable: Reviewable) -> Topic:
+        board = await self.get_board_by_slug(reviewable.data["board_slug"])
+        creator = await self.session.get(User, reviewable.created_by_id)
+        if not creator:
+            raise NotFoundError("user_not_found", "Creator not found")
+
+        title = str(reviewable.data["title"]).strip()
+        raw_md = str(reviewable.data["raw_md"]).strip()
+        cooked_html = self._render_required_markdown(raw_md)
+        topic_slug = await self._unique_topic_slug(board.id, title)
+        tags = await self._resolve_tags(reviewable.data["tags"])
+        now = utcnow()
+        topic = Topic(
+            board_id=board.id,
+            user_id=creator.id,
+            title=title,
+            slug=topic_slug,
+            pinned=reviewable.data["pinned"],
+            featured=reviewable.data["featured"],
+            hot_score=calculate_hot_score(reply_count=0, like_count=0, view_count=0),
+            last_posted_at=now,
+            tags=tags,
+        )
+        self.session.add(topic)
+        await self.session.flush()
+        first_post = Post(
+            topic_id=topic.id,
+            user_id=creator.id,
+            post_number=1,
+            raw_md=raw_md,
+            cooked_html=cooked_html,
+        )
+        self.session.add(first_post)
+        board.topic_count += 1
+        board.post_count += 1
+        await self._upsert_read_state(topic.id, creator.id, post_number=1)
+        await self.session.flush()
+        await UploadService(self.session).attach_uploads_to_post(
+            raw_md,
+            post=first_post,
+            topic=topic,
+            board=board,
+            current_user=creator,
+        )
+        await self._queue_board_new_topic_notifications(board, topic, first_post, creator)
+        await SearchIndexService(self.session).sync_topic(topic.id)
+
+        reviewable.target_type = "topic"
+        reviewable.target_id = topic.id
+        reviewable.topic_id = topic.id
+        reviewable.post_id = first_post.id
+        return topic
+
+    async def publish_queued_post(self, reviewable: Reviewable) -> Post:
+        topic = await self.session.get(Topic, reviewable.topic_id)
+        if not topic:
+            raise NotFoundError("topic_not_found", "Topic not found")
+        creator = await self.session.get(User, reviewable.created_by_id)
+        if not creator:
+            raise NotFoundError("user_not_found", "Creator not found")
+
+        parent_post = None
+        if reviewable.data.get("parent_post_id"):
+            parent_post = await self.session.get(Post, reviewable.data["parent_post_id"])
+
+        raw_md = str(reviewable.data["raw_md"]).strip()
+        next_number = (
+            await self.session.scalar(
+                select(func.max(Post.post_number)).where(Post.topic_id == topic.id)
+            )
+            or 0
+        ) + 1
+        post = Post(
+            topic_id=topic.id,
+            user_id=creator.id,
+            parent_id=parent_post.id if parent_post else None,
+            post_number=next_number,
+            raw_md=raw_md,
+            cooked_html=self._render_required_markdown(raw_md),
+        )
+        self.session.add(post)
+
+        if parent_post:
+            parent_post.reply_count += 1
+        topic.reply_count += 1
+        topic.last_posted_at = utcnow()
+        topic.hot_score = calculate_hot_score(
+            reply_count=topic.reply_count,
+            like_count=topic.like_count,
+            view_count=topic.view_count,
+        )
+        topic.board.post_count += 1
+        await self._upsert_read_state(topic.id, creator.id, post_number=next_number)
+        await self.session.flush()
+        await UploadService(self.session).attach_uploads_to_post(
+            raw_md,
+            post=post,
+            topic=topic,
+            board=topic.board,
+            current_user=creator,
+        )
+        await self._queue_reply_notifications(topic, post, creator, parent_post)
+        await SearchIndexService(self.session).sync_topic(topic.id)
+
+        reviewable.target_type = "post"
+        reviewable.target_id = post.id
+        reviewable.post_id = post.id
+        return post
+
+    async def publish_queued_edit(self, reviewable: Reviewable) -> Post:
+        post = await self.session.get(Post, reviewable.post_id)
+        if not post:
+            raise NotFoundError("post_not_found", "Post not found")
+        editor = await self.session.get(User, reviewable.created_by_id)
+        if not editor:
+            raise NotFoundError("user_not_found", "Editor not found")
+
+        raw_md = str(reviewable.data["raw_md"]).strip()
+        revision = await self._create_post_revision(
+            post,
+            editor=editor,
+            reason=reviewable.data.get("edit_reason"),
+            next_raw_md=raw_md,
+        )
+        post.raw_md = raw_md
+        post.cooked_html = self._render_required_markdown(raw_md)
+        post.updated_at = utcnow()
+        self._add_audit_log(
+            actor_id=editor.id,
+            action="post_edited",
+            target_type="post",
+            target_id=post.id,
+            board_id=post.topic.board_id,
+            data={
+                "revision_id": revision.id,
+                "version_number": revision.version_number,
+                "post_number": post.post_number,
+                "reason": revision.edit_reason or "",
+            },
+        )
+        await UploadService(self.session).attach_uploads_to_post(
+            raw_md,
+            post=post,
+            topic=post.topic,
+            board=post.topic.board,
+            current_user=editor,
+        )
+        await SearchIndexService(self.session).sync_topic(post.topic_id)
+
+        reviewable.target_type = "post"
+        reviewable.target_id = post.id
+        return post

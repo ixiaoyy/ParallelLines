@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut } from "@/shared/api/client";
+import { apiGet, apiPost, apiPut, apiRequest } from "@/shared/api/client";
 
 import type {
   AuditLogResponse,
@@ -9,6 +9,11 @@ import type {
   FlagTargetType,
   HideContentRequest,
   ModerationActionResponse,
+  ReviewableAppealRequest,
+  ReviewableDecisionRequest,
+  ReviewableResponse,
+  ReviewableStatus,
+  ReviewableType,
   UserStatusResponse,
   UserStatusUpdateRequest,
 } from "./model";
@@ -23,6 +28,57 @@ export function fetchModerationQueue(status?: FlagStatus, limit = 50): Promise<F
     query.set("status", status);
   }
   return apiGet<FlagResponse[]>(`/moderation/queue?${query.toString()}`);
+}
+
+export function fetchReviewables(
+  status?: ReviewableStatus,
+  reviewableType?: ReviewableType,
+  limit = 50,
+): Promise<ReviewableResponse[]> {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (status) {
+    query.set("status", status);
+  }
+  if (reviewableType) {
+    query.set("type", reviewableType);
+  }
+  return apiGet<ReviewableResponse[]>(`/moderation/reviewables?${query.toString()}`);
+}
+
+export function fetchMyReviewables(limit = 50): Promise<ReviewableResponse[]> {
+  return apiGet<ReviewableResponse[]>(`/moderation/reviewables/me?limit=${limit}`);
+}
+
+export function claimReviewable(reviewableId: string): Promise<ReviewableResponse> {
+  return apiRequest<ReviewableResponse>(`/moderation/reviewables/${reviewableId}/claim`, {
+    method: "POST",
+  });
+}
+
+export function releaseReviewable(reviewableId: string): Promise<ReviewableResponse> {
+  return apiRequest<ReviewableResponse>(`/moderation/reviewables/${reviewableId}/release`, {
+    method: "POST",
+  });
+}
+
+export function decideReviewable(
+  reviewableId: string,
+  payload: ReviewableDecisionRequest,
+): Promise<ReviewableResponse> {
+  return apiPost<ReviewableResponse, ReviewableDecisionRequest>(
+    `/moderation/reviewables/${reviewableId}/decide`,
+    payload,
+  );
+}
+
+export function appealReviewable(
+  reviewableId: string,
+  payload: ReviewableAppealRequest,
+): Promise<ReviewableResponse> {
+  return apiPost<ReviewableResponse, ReviewableAppealRequest>(
+    `/moderation/reviewables/${reviewableId}/appeal`,
+    payload,
+  );
 }
 
 export function updateFlagStatus(

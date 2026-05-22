@@ -194,6 +194,10 @@ function buildDescription(
 }
 
 function buildNotificationUrl(notification: NotificationResponse): string {
+  if (notification.type === "moderation" && readString(notification.data.reviewable_id)) {
+    return "/moderation/reviewables";
+  }
+
   const topicSlug = readString(notification.data.topic_slug);
   if (notification.topic_id && topicSlug) {
     const hash = readNumber(notification.data.post_number);

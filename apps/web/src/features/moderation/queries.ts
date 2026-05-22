@@ -6,9 +6,15 @@ import { hasAccessToken } from "@/shared/api/client";
 import { queryKeys } from "@/shared/api/queryKeys";
 
 import {
+  appealReviewable,
+  claimReviewable,
   createFlag,
+  decideReviewable,
   fetchAuditLogs,
   fetchModerationQueue,
+  fetchMyReviewables,
+  fetchReviewables,
+  releaseReviewable,
   setContentHidden,
   updateFlagStatus,
   updateUserStatus,
@@ -20,6 +26,10 @@ import type {
   FlagStatusUpdateRequest,
   FlagTargetType,
   ModerationActionResponse,
+  ReviewableAppealRequest,
+  ReviewableDecisionRequest,
+  ReviewableResponse,
+  ReviewableStatus,
   UserStatusResponse,
   UserStatusUpdateRequest,
 } from "./model";
@@ -55,6 +65,29 @@ export function useAuditLogs() {
   });
 }
 
+export function useReviewableQueue(status: MaybeRefOrGetter<ReviewableStatus | "all">) {
+  return useQuery({
+    queryKey: computed(() => queryKeys.moderationReviewables(toValue(status))),
+    queryFn: () => {
+      const value = toValue(status);
+      return fetchReviewables(value === "all" ? undefined : value);
+    },
+    enabled: computed(() => hasAccessToken()),
+    retry: false,
+    staleTime: 15_000,
+  });
+}
+
+export function useMyReviewables() {
+  return useQuery({
+    queryKey: queryKeys.moderationMyReviewables,
+    queryFn: () => fetchMyReviewables(),
+    enabled: computed(() => hasAccessToken()),
+    retry: false,
+    staleTime: 15_000,
+  });
+}
+
 export function useFlagStatusMutation() {
   const queryClient = useQueryClient();
   return useMutation<FlagResponse, Error, { flagId: string; payload: FlagStatusUpdateRequest }>({
@@ -84,7 +117,48 @@ export function useUserStatusMutation() {
   });
 }
 
+export function useClaimReviewableMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<ReviewableResponse, Error, string>({
+    mutationFn: claimReviewable,
+    onSuccess: () => invalidateModeration(queryClient),
+  });
+}
+
+export function useReleaseReviewableMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<ReviewableResponse, Error, string>({
+    mutationFn: releaseReviewable,
+    onSuccess: () => invalidateModeration(queryClient),
+  });
+}
+
+export function useReviewableDecisionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    ReviewableResponse,
+    Error,
+    { reviewableId: string; payload: ReviewableDecisionRequest }
+  >({
+    mutationFn: ({ reviewableId, payload }) => decideReviewable(reviewableId, payload),
+    onSuccess: () => invalidateModeration(queryClient),
+  });
+}
+
+export function useAppealReviewableMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    ReviewableResponse,
+    Error,
+    { reviewableId: string; payload: ReviewableAppealRequest }
+  >({
+    mutationFn: ({ reviewableId, payload }) => appealReviewable(reviewableId, payload),
+    onSuccess: () => invalidateModeration(queryClient),
+  });
+}
+
 function invalidateModeration(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: queryKeys.moderationRoot });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.moderationMyReviewables });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
 }

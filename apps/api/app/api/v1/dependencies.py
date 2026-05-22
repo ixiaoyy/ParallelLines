@@ -55,11 +55,7 @@ async def _validate_session(
     if not isinstance(session_id, str) or not session_id:
         return
     user_session = await session.get(UserSession, session_id)
-    if (
-        not user_session
-        or user_session.user_id != user.id
-        or user_session.revoked_at is not None
-    ):
+    if not user_session or user_session.user_id != user.id or user_session.revoked_at is not None:
         raise AuthenticationError("invalid_token", "Invalid or expired token")
 
 
