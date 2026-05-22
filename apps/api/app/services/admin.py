@@ -394,6 +394,23 @@ class AdminService:
             ),
         ]
         queue_summary = await self._queue_summary()
+        dead_jobs = list(
+            await self.session.scalars(
+                select(BackgroundJob)
+                .where(BackgroundJob.status == "dead")
+                .order_by(desc(BackgroundJob.updated_at))
+                .limit(8)
+            )
+        )
+        recent_errors = [
+            {
+                "id": job.id,
+                "task_name": job.task_name,
+                "error": job.last_error or "",
+                "occurred_at": job.updated_at,
+            }
+            for job in dead_jobs
+        ]
         return AdminSystemOverviewResponse(
             version="0.1.0",
             environment=self.settings.environment,
@@ -415,7 +432,7 @@ class AdminService:
             },
             recent_audit_logs=await self.list_audit_logs(current_user, limit=8),
             recent_email_logs=self.email_logs(limit=8),
-            recent_errors=[],
+            recent_errors=recent_errors,
         )
 
     async def list_background_jobs(

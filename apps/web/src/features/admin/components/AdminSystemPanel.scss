@@ -111,6 +111,137 @@
   padding: 0.64rem 0.72rem;
 }
 
+// Title meta
+.title-area {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.system-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+// Background queue section
+.queue-status-section {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.6rem;
+
+  h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--title);
+    font-weight: 600;
+  }
+}
+
+.queue-overview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.queue-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.queue-stat-pill {
+  border: 1px solid var(--border);
+  border-radius: 0.92rem;
+  background: rgba(255, 255, 255, 0.76);
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.6rem;
+
+  span {
+    color: var(--muted);
+    font-size: 0.72rem;
+  }
+
+  strong {
+    color: var(--title);
+    font-size: 1.2rem;
+
+    &.has-dead {
+      color: var(--danger);
+    }
+  }
+}
+
+.queue-config-grid {
+  border: 1px solid var(--border);
+  border-radius: 0.92rem;
+  background: rgba(255, 255, 255, 0.76);
+  padding: 0.6rem 0.8rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+  align-content: center;
+}
+
+.config-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+
+  .config-label {
+    color: var(--muted);
+  }
+
+  .config-value {
+    color: var(--title);
+    font-family: monospace;
+    font-weight: 500;
+  }
+}
+
+// Logs grid and errors card
+.log-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.error-card {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.error-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.error-time {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.error-detail {
+  margin: 0.25rem 0 0 0;
+  padding: 0.5rem;
+  background: rgba(239, 68, 68, 0.08); // Dark red tint
+  border: 1px solid rgba(239, 68, 68, 0.16);
+  color: #ef4444; // Warning red
+  font-family: Consolas, Monaco, monospace;
+  font-size: 0.75rem;
+  border-radius: 0.46rem;
+  overflow: auto;
+  max-height: 8rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+// Media Queries
 @media (max-width: 1120px) {
   .ops-grid,
   .service-grid {
@@ -122,6 +253,12 @@
   }
 }
 
+@media (max-width: 900px) {
+  .log-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 720px) {
   .section-head {
     flex-direction: column;
@@ -129,6 +266,10 @@
   }
 
   .stat-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .queue-overview {
     grid-template-columns: 1fr;
   }
 }

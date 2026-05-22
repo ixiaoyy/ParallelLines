@@ -93,12 +93,26 @@ export interface AuditLogResponse {
   created_at: string;
 }
 
+export interface AdminQueueOverview {
+  queued: number;
+  running: number;
+  dead: number;
+  worker: string;
+  poll_seconds: number;
+  batch_size: number;
+  retry_delay_seconds: number;
+  hot_rank_interval_seconds: number;
+  upload_cleanup_interval_seconds: number;
+  session_cleanup_interval_seconds: number;
+  counts?: Record<string, number>;
+}
+
 export interface AdminSystemOverviewResponse {
   version: string;
   environment: string;
   services: AdminServiceStatusResponse[];
   stats: AdminStatsResponse;
-  queue: Record<string, unknown>;
+  queue: AdminQueueOverview;
   recent_audit_logs: AuditLogResponse[];
   recent_email_logs: AdminEmailLogResponse[];
   recent_errors: Record<string, unknown>[];
