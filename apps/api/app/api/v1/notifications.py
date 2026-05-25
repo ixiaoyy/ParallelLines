@@ -12,7 +12,9 @@ from app.schemas.interactions import (
     NotificationReadResponse,
     NotificationResponse,
 )
+from app.schemas.push import PushSubscriptionRequest, PushSubscriptionStateResponse
 from app.services.interactions import InteractionService
+from app.services.push import PushSubscriptionService
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -50,6 +52,32 @@ async def mark_notifications_read(
         ids=payload.ids,
     )
     return ApiResponse(data=state)
+
+
+@router.get("/push-subscription", response_model=ApiResponse[PushSubscriptionStateResponse])
+async def get_push_subscription(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[PushSubscriptionStateResponse]:
+    return ApiResponse(data=await PushSubscriptionService(session).current_state(current_user))
+
+
+@router.post("/push-subscription", response_model=ApiResponse[PushSubscriptionStateResponse])
+async def save_push_subscription(
+    payload: PushSubscriptionRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[PushSubscriptionStateResponse]:
+    subscription = await PushSubscriptionService(session).subscribe(payload, current_user)
+    return ApiResponse(data=PushSubscriptionStateResponse(subscription=subscription))
+
+
+@router.delete("/push-subscription", response_model=ApiResponse[PushSubscriptionStateResponse])
+async def delete_push_subscription(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[PushSubscriptionStateResponse]:
+    return ApiResponse(data=await PushSubscriptionService(session).unsubscribe(current_user))
 
 
 @router.get("/stream")

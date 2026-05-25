@@ -17,6 +17,9 @@ import {
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import { isAdmin } from "@/features/auth/permissions";
+import { useCurrentUser } from "@/features/auth/queries";
+import BoardSettingsPanel from "@/features/boards/components/BoardSettingsPanel.vue";
 import { useBoardDetail } from "@/features/boards/queries";
 import { setBoardFollow } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
@@ -26,6 +29,7 @@ import { useBoardTopics } from "@/features/topics/queries";
 import { hasAccessToken } from "@/shared/api/client";
 import { compactNumber } from "@/shared/lib/format";
 import { readRouteParam } from "@/shared/router/params";
+import { useSeoMeta } from "@/shared/seo/meta";
 import { boardToneClass } from "@/shared/theme/boardPalette";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -107,8 +111,25 @@ const route = useRoute();
 const router = useRouter();
 
 const slug = computed(() => readRouteParam(route.params.slug));
+const currentUserQuery = useCurrentUser();
 const boardQuery = useBoardDetail(slug);
 const board = computed(() => boardQuery.data.value);
+useSeoMeta(
+  computed(() =>
+    board.value
+      ? {
+          title: `${board.value.name} · 平行线`,
+          description: board.value.description,
+          canonicalPath: `/b/${board.value.slug}`,
+        }
+      : null,
+  ),
+);
+const canManageBoard = computed(
+  () =>
+    Boolean(board.value?.ownerId && board.value.ownerId === currentUserQuery.data.value?.id) ||
+    isAdmin(currentUserQuery.data.value),
+);
 const boardNotificationLevel = ref<NotificationLevel>("watching");
 const boardNotificationPending = ref(false);
 const {
@@ -149,7 +170,9 @@ const searchQuery = computed<string>({
 const activeSort = computed<BoardSort>({
   get() {
     const querySort = readRouteParam(route.query.sort as string | string[] | undefined);
-    return sortTabs.some((tab) => tab.key === querySort) ? (querySort as BoardSort) : "latest";
+    return sortTabs.some((tab) => tab.key === querySort)
+      ? (querySort as BoardSort)
+      : (board.value?.defaultSort ?? "latest");
   },
   set(value) {
     updateQuery({ sort: value === "latest" ? undefined : value });
@@ -480,6 +503,9 @@ async function updateBoardNotificationLevel(event: Event) {
           <UiCard class="sidebar-panel rules-panel">
             <span class="panel-kicker">提问前自检</span>
             <h2>先让答案更快出现</h2>
+            <p v-if="board.requiredTags.length" class="board-policy-copy">
+              必填标签：{{ board.requiredTags.map((tag) => `#${tag}`).join(" ") }}
+            </p>
             <ol>
               <li>先搜错误码、接口名、日志片段。</li>
               <li>优先阅读“已解决”和“官方回复”。</li>
@@ -487,6 +513,21 @@ async function updateBoardNotificationLevel(event: Event) {
             </ol>
             <RouterLink class="ask-link" :to="{ name: 'new-topic', query: { board: slug } }">发布新问题</RouterLink>
           </UiCard>
+
+          <UiCard v-if="board.childBoards.length" class="sidebar-panel child-board-panel">
+            <span class="panel-kicker">子版块</span>
+            <h2>继续细分讨论范围</h2>
+            <RouterLink
+              v-for="child in board.childBoards"
+              :key="child.id"
+              :to="{ name: 'board-detail', params: { slug: child.slug } }"
+            >
+              <strong>{{ child.name }}</strong>
+              <small>{{ child.topicCount }} 主题 · {{ child.description }}</small>
+            </RouterLink>
+          </UiCard>
+
+          <BoardSettingsPanel v-if="canManageBoard" :board="board" />
 
           <UiCard class="sidebar-panel quick-links-panel">
             <h2>快捷入口</h2>

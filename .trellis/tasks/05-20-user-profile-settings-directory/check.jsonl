@@ -1,0 +1,8 @@
+{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
+{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
+{"file": ".trellis\\spec\\backend\\user-content-operations.md", "reason": "Verify profile privacy and no email leak"}
+{"file": ".trellis\\spec\\frontend\\auth-user-session.md", "reason": "Verify profile/current user DTO usage"}
+{"file": ".trellis\\spec\\frontend\\quality-guidelines.md", "reason": "Downgraded frontend validation"}
+{"file": ".trellis\\spec\\backend\\quality-guidelines.md", "reason": "Downgraded backend validation"}
+{"file": ".trellis\\spec\\backend\\user-profile-settings-directory.md", "reason": "Check profile settings backend"}
+{"file": ".trellis\\spec\\frontend\\user-profile-settings-directory.md", "reason": "Check profile settings frontend"}

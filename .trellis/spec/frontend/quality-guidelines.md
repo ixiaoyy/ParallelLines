@@ -7,6 +7,16 @@
 - `pnpm test` for unit/component tests when configured
 - Playwright smoke tests for core flows after they exist
 
+## Default Roadmap Testing Scope
+
+- During normal development of roadmap tasks, default to downgraded testing: run frontend lint,
+  typecheck, and only a focused browser/manual smoke for the touched UI path.
+- Do not add or run broad per-task component/e2e matrices by default; final product-level
+  verification will cover the full integrated experience after larger changes settle.
+- Escalate to detailed frontend tests only when the user explicitly requests detailed/full testing,
+  when preparing a commit/release, or when the change is high-risk (auth/security, payments,
+  destructive data actions, or large routing/state rewrites).
+
 ## UX Quality Bar
 
 - Responsive layouts must work at mobile, tablet, and desktop widths.

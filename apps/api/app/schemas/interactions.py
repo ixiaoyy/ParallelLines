@@ -10,7 +10,7 @@ from app.models.interaction import Notification
 
 
 class BoardFollowRequest(BaseModel):
-    notification_level: NotificationLevel = "watching"
+    notification_level: NotificationLevel | None = None
 
 
 class BoardFollowResponse(BaseModel):
@@ -26,6 +26,18 @@ class InteractionStateResponse(BaseModel):
     target_type: Literal["post", "topic"]
     target_id: str
     active: bool
+    count: int
+
+
+class VoteRequest(BaseModel):
+    value: Literal[-1, 0, 1] = 0
+
+
+class VoteStateResponse(BaseModel):
+    target_type: Literal["post", "topic"]
+    target_id: str
+    value: int
+    score: int
     count: int
 
 

@@ -6,13 +6,13 @@ from typing import Literal
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin
 
 UploadKind = Literal["post_attachment", "avatar"]
 UploadStatus = Literal["temporary", "attached", "avatar", "deleted"]
 
 
-class Upload(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class Upload(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "uploads"
     __table_args__ = (
         Index("ix_uploads_user_status", "user_id", "status"),

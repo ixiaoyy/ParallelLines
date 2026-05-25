@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import type { BoardSummary } from "@/entities/board/model";
+import SimilarTopicHints from "@/features/ai/components/SimilarTopicHints.vue";
 import { useBoards } from "@/features/boards/queries";
 import { useCreateTopic } from "@/features/topics/queries";
 import { useSaveDraft, useDeleteDraft } from "@/features/drafts/queries";
@@ -14,7 +15,7 @@ import { compactNumber } from "@/shared/lib/format";
 import { readRouteParam } from "@/shared/router/params";
 import { boardToneClass } from "@/shared/theme/boardPalette";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
-import { hasAccessToken } from "@/shared/api/client";
+import { ApiError, hasAccessToken } from "@/shared/api/client";
 import { isApiErrorCode } from "@/shared/api/errors";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
@@ -30,6 +31,11 @@ interface NewTopicDraft {
   title: string;
   body: string;
   tags: string;
+  pollEnabled: boolean;
+  pollQuestion: string;
+  pollOptions: string;
+  pollMultipleChoice: boolean;
+  pollClosesAt: string;
   version: number;
 }
 
@@ -47,6 +53,7 @@ const sectionLinks = [
   { id: "title", label: "标题", helper: "症状 + 环境" },
   { id: "content", label: "正文", helper: "日志与复现" },
   { id: "tags", label: "标签", helper: "方便检索" },
+  { id: "poll", label: "投票", helper: "收集选择" },
   { id: "preview", label: "预览检查", helper: "确认可回答" },
   { id: "drafts", label: "草稿", helper: "自动保存" },
 ];
@@ -64,6 +71,11 @@ const defaultDraft: Omit<NewTopicDraft, "version"> = {
   title: "",
   body: "",
   tags: "",
+  pollEnabled: false,
+  pollQuestion: "",
+  pollOptions: "",
+  pollMultipleChoice: false,
+  pollClosesAt: "",
 };
 
 const selectedBoardSlug = ref(defaultDraft.boardSlug);
@@ -71,6 +83,11 @@ const selectedIntent = ref<TopicIntent>(defaultDraft.intent);
 const title = ref(defaultDraft.title);
 const body = ref(defaultDraft.body);
 const tags = ref(defaultDraft.tags);
+const pollEnabled = ref(defaultDraft.pollEnabled);
+const pollQuestion = ref(defaultDraft.pollQuestion);
+const pollOptions = ref(defaultDraft.pollOptions);
+const pollMultipleChoice = ref(defaultDraft.pollMultipleChoice);
+const pollClosesAt = ref(defaultDraft.pollClosesAt);
 const currentVersion = ref(1);
 
 const bodyTextarea = ref<HTMLTextAreaElement | null>(null);
@@ -91,12 +108,65 @@ const parsedTags = computed(() =>
     .filter(Boolean)
     .slice(0, 6),
 );
+const missingRequiredTags = computed(() => {
+  const required = selectedBoard.value?.requiredTags ?? [];
+  return required.filter((tag) => !parsedTags.value.includes(tag));
+});
+const disallowedTags = computed(() => {
+  const allowed = selectedBoard.value?.allowedTags ?? [];
+  if (!allowed.length) {
+    return [];
+  }
+
+  return parsedTags.value.filter((tag) => !allowed.includes(tag));
+});
+const tagPolicyHint = computed(() => {
+  const required = selectedBoard.value?.requiredTags ?? [];
+  const allowed = selectedBoard.value?.allowedTags ?? [];
+  if (required.length) {
+    return `必填：${required.map((tag) => `#${tag}`).join(" ")}${
+      allowed.length ? `；允许：${allowed.map((tag) => `#${tag}`).join(" ")}` : ""
+    }`;
+  }
+
+  if (allowed.length) {
+    return `该版块只允许：${allowed.map((tag) => `#${tag}`).join(" ")}`;
+  }
+
+  return "该版块未限制标签；建议至少补充 1 个可检索标签。";
+});
+
+const parsedPollOptions = computed(() =>
+  pollOptions.value
+    .split(/\r?\n/)
+    .map((option) => option.trim())
+    .filter(Boolean)
+    .slice(0, 12),
+);
+const pollReady = computed(
+  () =>
+    !pollEnabled.value ||
+    (pollQuestion.value.trim().length >= 4 && parsedPollOptions.value.length >= 2),
+);
 
 const checklist = computed(() => [
   { label: "已选择版块", done: Boolean(selectedBoard.value) },
   { label: "标题不少于 12 个字", done: title.value.trim().length >= 12 },
   { label: "正文包含复现/背景", done: body.value.trim().length >= 40 },
-  { label: "至少 1 个标签", done: parsedTags.value.length > 0 },
+  {
+    label: selectedBoard.value?.requiredTags.length ? "必填标签已补齐" : "至少 1 个标签",
+    done: selectedBoard.value?.requiredTags.length
+      ? missingRequiredTags.value.length === 0
+      : parsedTags.value.length > 0,
+  },
+  {
+    label: "标签符合版块范围",
+    done: disallowedTags.value.length === 0,
+  },
+  {
+    label: pollEnabled.value ? "Poll 至少 2 个选项" : "无需 Poll",
+    done: pollReady.value,
+  },
 ]);
 
 const completion = computed(() => checklist.value.filter((item) => item.done).length);
@@ -122,6 +192,14 @@ const previewBody = computed(() =>
 );
 
 let isRestoring = false;
+
+watch(selectedBoard, (board) => {
+  if (!board || isRestoring || body.value.trim() || !board.postTemplate) {
+    return;
+  }
+
+  body.value = board.postTemplate;
+});
 
 onMounted(async () => {
   isRestoring = true;
@@ -170,6 +248,11 @@ onMounted(async () => {
       title: defaultDraft.title,
       body: defaultDraft.body,
       tags: defaultDraft.tags,
+      pollEnabled: defaultDraft.pollEnabled,
+      pollQuestion: defaultDraft.pollQuestion,
+      pollOptions: defaultDraft.pollOptions,
+      pollMultipleChoice: defaultDraft.pollMultipleChoice,
+      pollClosesAt: defaultDraft.pollClosesAt,
       version: 1,
     });
     saveLocalDraft();
@@ -196,7 +279,7 @@ watch(
   { immediate: true },
 );
 
-watch([selectedBoardSlug, selectedIntent, title, body, tags], () => {
+watch([selectedBoardSlug, selectedIntent, title, body, tags, pollEnabled, pollQuestion, pollOptions, pollMultipleChoice, pollClosesAt], () => {
   if (isRestoring) {
     return;
   }
@@ -211,6 +294,15 @@ function chooseIntent(intent: TopicIntent) {
   selectedIntent.value = intent;
 }
 
+function addTag(tag: string) {
+  const currentTags = parsedTags.value;
+  if (currentTags.includes(tag)) {
+    return;
+  }
+
+  tags.value = [...currentTags, tag].join(", ");
+}
+
 function localVerDraft(local: NewTopicDraft): NewTopicDraft {
   return {
     boardSlug: local.boardSlug,
@@ -218,6 +310,11 @@ function localVerDraft(local: NewTopicDraft): NewTopicDraft {
     title: local.title,
     body: local.body,
     tags: local.tags,
+    pollEnabled: local.pollEnabled ?? defaultDraft.pollEnabled,
+    pollQuestion: local.pollQuestion ?? defaultDraft.pollQuestion,
+    pollOptions: local.pollOptions ?? defaultDraft.pollOptions,
+    pollMultipleChoice: local.pollMultipleChoice ?? defaultDraft.pollMultipleChoice,
+    pollClosesAt: local.pollClosesAt ?? defaultDraft.pollClosesAt,
     version: local.version ?? 1,
   };
 }
@@ -229,6 +326,11 @@ function serverDraftToLocal(server: DraftResponse): NewTopicDraft {
     title: (server.data.title as string) ?? defaultDraft.title,
     body: (server.data.body as string) ?? defaultDraft.body,
     tags: (server.data.tags as string) ?? defaultDraft.tags,
+    pollEnabled: (server.data.pollEnabled as boolean) ?? defaultDraft.pollEnabled,
+    pollQuestion: (server.data.pollQuestion as string) ?? defaultDraft.pollQuestion,
+    pollOptions: (server.data.pollOptions as string) ?? defaultDraft.pollOptions,
+    pollMultipleChoice: (server.data.pollMultipleChoice as boolean) ?? defaultDraft.pollMultipleChoice,
+    pollClosesAt: (server.data.pollClosesAt as string) ?? defaultDraft.pollClosesAt,
     version: server.version,
   };
 }
@@ -239,7 +341,12 @@ function isDraftEqual(a: NewTopicDraft, b: NewTopicDraft) {
     a.intent === b.intent &&
     a.title === b.title &&
     a.body === b.body &&
-    a.tags === b.tags
+    a.tags === b.tags &&
+    a.pollEnabled === b.pollEnabled &&
+    a.pollQuestion === b.pollQuestion &&
+    a.pollOptions === b.pollOptions &&
+    a.pollMultipleChoice === b.pollMultipleChoice &&
+    a.pollClosesAt === b.pollClosesAt
   );
 }
 
@@ -250,6 +357,11 @@ function loadDraftState(draft: NewTopicDraft) {
   title.value = draft.title;
   body.value = draft.body;
   tags.value = draft.tags;
+  pollEnabled.value = draft.pollEnabled;
+  pollQuestion.value = draft.pollQuestion;
+  pollOptions.value = draft.pollOptions;
+  pollMultipleChoice.value = draft.pollMultipleChoice;
+  pollClosesAt.value = draft.pollClosesAt;
   currentVersion.value = draft.version ?? 1;
 
   nextTick(() => {
@@ -294,6 +406,11 @@ async function performServerSave() {
       title: title.value,
       body: body.value,
       tags: tags.value,
+      pollEnabled: pollEnabled.value,
+      pollQuestion: pollQuestion.value,
+      pollOptions: pollOptions.value,
+      pollMultipleChoice: pollMultipleChoice.value,
+      pollClosesAt: pollClosesAt.value,
     };
 
     const result = await saveDraftMutation.mutateAsync({
@@ -388,6 +505,14 @@ async function handleSubmit() {
         title: title.value.trim(),
         raw_md: body.value.trim(),
         tags: parsedTags.value,
+        poll: pollEnabled.value
+          ? {
+              question: pollQuestion.value.trim(),
+              options: parsedPollOptions.value,
+              multiple_choice: pollMultipleChoice.value,
+              closes_at: pollClosesAt.value ? new Date(pollClosesAt.value).toISOString() : null,
+            }
+          : null,
       },
     });
 
@@ -402,11 +527,29 @@ async function handleSubmit() {
     await router.push(topicDetailRoute(topic));
   } catch (error) {
     publishState.value = "submitted";
-    publishError.value = contentPolicyMessage(
+    publishError.value = boardPolicyMessage(error) ?? contentPolicyMessage(
       error,
       "当前未登录或服务暂时不可用，已保留为发布预览；登录后可再次提交。",
     );
   }
+}
+
+function boardPolicyMessage(error: unknown): string | null {
+  if (error instanceof ApiError && error.code === "required_tags_missing") {
+    const missing = Array.isArray(error.details.missing_tags)
+      ? error.details.missing_tags.join("、")
+      : "必填标签";
+    return `请补齐版块必填标签：${missing}。`;
+  }
+
+  if (error instanceof ApiError && error.code === "tag_not_allowed") {
+    const disallowed = Array.isArray(error.details.disallowed_tags)
+      ? error.details.disallowed_tags.join("、")
+      : "不允许的标签";
+    return `该版块不允许使用这些标签：${disallowed}。`;
+  }
+
+  return null;
 }
 
 function saveLocalDraft() {
@@ -420,6 +563,11 @@ function saveLocalDraft() {
     title: title.value,
     body: body.value,
     tags: tags.value,
+    pollEnabled: pollEnabled.value,
+    pollQuestion: pollQuestion.value,
+    pollOptions: pollOptions.value,
+    pollMultipleChoice: pollMultipleChoice.value,
+    pollClosesAt: pollClosesAt.value,
     version: currentVersion.value,
   };
 
@@ -461,6 +609,11 @@ function isDraft(value: unknown): value is NewTopicDraft {
     typeof value.title === "string" &&
     typeof value.body === "string" &&
     typeof value.tags === "string" &&
+    (value.pollEnabled === undefined || typeof value.pollEnabled === "boolean") &&
+    (value.pollQuestion === undefined || typeof value.pollQuestion === "string") &&
+    (value.pollOptions === undefined || typeof value.pollOptions === "string") &&
+    (value.pollMultipleChoice === undefined || typeof value.pollMultipleChoice === "boolean") &&
+    (value.pollClosesAt === undefined || typeof value.pollClosesAt === "string") &&
     (value.version === undefined || typeof value.version === "number")
   );
 }
@@ -533,6 +686,7 @@ function isTopicIntent(value: unknown): value is TopicIntent {
               <span class="tone-mark-square" aria-hidden="true"></span>
               <strong>{{ board.name }}</strong>
               <small>{{ board.description }}</small>
+              <small v-if="board.parentBoardName">子版块 · {{ board.parentBoardName }}</small>
               <em>{{ compactNumber(board.topicCount) }} 主题</em>
             </button>
           </div>
@@ -570,6 +724,8 @@ function isTopicIntent(value: unknown): value is TopicIntent {
             <span>主题标题</span>
             <input v-model="title" maxlength="90" placeholder="例如：升级到 v0.1 后迁移提示缺少 notification_cursor 字段" />
           </label>
+
+          <SimilarTopicHints :title="title" :body="body" :tags="parsedTags" />
         </UiCard>
 
         <UiCard id="content" class="form-panel">
@@ -608,15 +764,87 @@ function isTopicIntent(value: unknown): value is TopicIntent {
             <input v-model="tags" placeholder="例如：openid-connect, 迁移, 数据库" />
           </label>
 
+          <div v-if="selectedBoard" class="tag-policy-box">
+            <strong>版块标签策略</strong>
+            <p>{{ tagPolicyHint }}</p>
+            <div v-if="selectedBoard.requiredTags.length" class="tag-chip-actions">
+              <button
+                v-for="tag in selectedBoard.requiredTags"
+                :key="tag"
+                type="button"
+                :disabled="parsedTags.includes(tag)"
+                @click="addTag(tag)"
+              >
+                + #{{ tag }}
+              </button>
+            </div>
+            <p v-if="missingRequiredTags.length" class="form-error">
+              还缺少：{{ missingRequiredTags.map((tag) => `#${tag}`).join(" ") }}
+            </p>
+            <p v-if="disallowedTags.length" class="form-error">
+              不在允许范围：{{ disallowedTags.map((tag) => `#${tag}`).join(" ") }}
+            </p>
+          </div>
+
           <div class="tag-preview" aria-label="标签预览">
             <span v-for="tag in parsedTags" :key="tag">#{{ tag }}</span>
             <em v-if="parsedTags.length === 0">还没有标签</em>
           </div>
         </UiCard>
 
-        <UiCard id="preview" class="form-panel preview-panel">
+        <UiCard id="poll" class="form-panel poll-builder">
           <div class="panel-heading">
             <span>05</span>
+            <div>
+              <h2>可选：附加一个 Poll</h2>
+              <p>适合收集版本选择、方案偏好或复现环境。Poll 会随新主题一起创建。</p>
+            </div>
+          </div>
+
+          <label class="poll-toggle">
+            <input v-model="pollEnabled" type="checkbox" />
+            <span>
+              <strong>启用投票组件</strong>
+              <small>支持单选/多选，截止后只能查看结果。</small>
+            </span>
+          </label>
+
+          <div v-if="pollEnabled" class="poll-fields">
+            <label class="field-block">
+              <span>Poll 问题</span>
+              <input v-model="pollQuestion" maxlength="140" placeholder="例如：你更希望优先支持哪种部署方式？" />
+            </label>
+            <label class="field-block">
+              <span>选项（每行一个）</span>
+              <textarea
+                v-model="pollOptions"
+                rows="5"
+                placeholder="Docker Compose&#10;Kubernetes Helm&#10;裸机 systemd"
+              ></textarea>
+            </label>
+            <div class="poll-settings-row">
+              <label>
+                <input v-model="pollMultipleChoice" type="checkbox" />
+                允许多选
+              </label>
+              <label>
+                <span>截止时间（可选）</span>
+                <input v-model="pollClosesAt" type="datetime-local" />
+              </label>
+            </div>
+            <p v-if="!pollReady" class="form-error" role="alert">
+              启用 Poll 后，请填写问题并至少提供 2 个选项。
+            </p>
+            <div class="poll-option-preview" aria-label="Poll 选项预览">
+              <span v-for="option in parsedPollOptions" :key="option">{{ option }}</span>
+              <em v-if="parsedPollOptions.length === 0">每行一个选项，最多保留 12 个。</em>
+            </div>
+          </div>
+        </UiCard>
+
+        <UiCard id="preview" class="form-panel preview-panel">
+          <div class="panel-heading">
+            <span>06</span>
             <div>
               <h2>预览与发布检查</h2>
               <p>发布前先确认它是否足够清晰、可搜索、可回答。</p>
@@ -637,6 +865,11 @@ function isTopicIntent(value: unknown): value is TopicIntent {
               <span v-for="tag in parsedTags" :key="tag">#{{ tag }}</span>
               <em v-if="parsedTags.length === 0">#待补充标签</em>
             </footer>
+            <section v-if="pollEnabled" class="poll-preview-card" aria-label="Poll 预览">
+              <strong>{{ pollQuestion || "这里会显示 Poll 问题" }}</strong>
+              <span v-for="option in parsedPollOptions" :key="option">{{ option }}</span>
+              <em v-if="parsedPollOptions.length === 0">还没有选项</em>
+            </section>
           </article>
 
           <ul class="publish-checklist">
@@ -668,7 +901,8 @@ function isTopicIntent(value: unknown): value is TopicIntent {
       <aside class="topic-helper" aria-label="发帖辅助说明">
         <UiCard class="helper-card">
           <span>快速模板</span>
-          <h2>排障帖最少包含</h2>
+          <h2>{{ selectedBoard?.postTemplate ? "此版块已配置模板" : "排障帖最少包含" }}</h2>
+          <pre v-if="selectedBoard?.postTemplate">{{ selectedBoard.postTemplate }}</pre>
           <ol>
             <li>环境：系统、浏览器、版本、部署方式。</li>
             <li>复现：从哪个入口点到哪一步出错。</li>

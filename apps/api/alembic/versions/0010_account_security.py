@@ -39,8 +39,8 @@ def upgrade() -> None:
     )
     op.create_table(
         "user_security_tokens",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
-        sa.Column("user_id", sa.String(length=36), nullable=False, comment="安全令牌所属用户 ID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
+        sa.Column("user_id", sa.BigInteger(), nullable=False, comment="安全令牌所属用户 ID。"),
         sa.Column(
             "purpose",
             sa.String(length=32),
@@ -107,8 +107,8 @@ def upgrade() -> None:
     )
     op.create_table(
         "user_sessions",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
-        sa.Column("user_id", sa.String(length=36), nullable=False, comment="会话所属用户 ID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
+        sa.Column("user_id", sa.BigInteger(), nullable=False, comment="会话所属用户 ID。"),
         sa.Column(
             "refresh_token_hash",
             sa.String(length=128),
@@ -158,8 +158,8 @@ def upgrade() -> None:
     )
     op.create_table(
         "user_recovery_codes",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
-        sa.Column("user_id", sa.String(length=36), nullable=False, comment="恢复码所属用户 ID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
+        sa.Column("user_id", sa.BigInteger(), nullable=False, comment="恢复码所属用户 ID。"),
         sa.Column(
             "code_hash", sa.String(length=128), nullable=False, comment="恢复码的不可逆哈希值。"
         ),

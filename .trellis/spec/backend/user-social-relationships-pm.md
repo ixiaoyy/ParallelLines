@@ -44,7 +44,7 @@ Relationship response:
 
 ```json
 {
-  "target_user_id": "uuid",
+  "target_user_id": "1",
   "target_username": "alice",
   "following": true,
   "ignored": false,

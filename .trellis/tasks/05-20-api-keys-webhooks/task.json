@@ -3,7 +3,7 @@
   "name": "api-keys-webhooks",
   "title": "API Key、Webhook 与外部系统接入",
   "description": "提供安全的 API key、作用域、Webhook 事件投递、签名和重试机制。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "fullstack",
   "scope": "integrations",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
-  "branch": null,
+  "completedAt": "2026-05-25",
+  "branch": "codex/api-keys-webhooks",
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 5,
   "next_action": [
     {
       "phase": 1,

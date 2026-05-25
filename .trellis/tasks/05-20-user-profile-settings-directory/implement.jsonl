@@ -1,0 +1,13 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis\\spec\\backend\\user-content-operations.md", "reason": "Public profile and authored content privacy contract"}
+{"file": ".trellis\\spec\\backend\\user-social-relationships-pm.md", "reason": "User relationships and PM profile action context"}
+{"file": ".trellis\\spec\\backend\\interactions-notifications.md", "reason": "Activity pages include likes/bookmarks interactions"}
+{"file": ".trellis\\spec\\frontend\\auth-user-session.md", "reason": "Profile DTOs and current user contracts"}
+{"file": ".trellis\\spec\\frontend\\user-social-relationships-pm.md", "reason": "Profile relationship actions and user page patterns"}
+{"file": ".trellis\\spec\\frontend\\uploads-attachments.md", "reason": "Avatar upload and API-relative avatar URLs"}
+{"file": ".trellis\\spec\\frontend\\email-preferences.md", "reason": "Email preference navigation for user settings"}
+{"file": ".trellis\\spec\\guides\\cross-layer-thinking-guide.md", "reason": "Cross-layer profile privacy/settings flow"}
+{"file": ".trellis\\spec\\backend\\user-profile-settings-directory.md", "reason": "Implemented user profile settings and directory backend contract"}
+{"file": ".trellis\\spec\\frontend\\user-profile-settings-directory.md", "reason": "Implemented user profile settings and directory frontend contract"}

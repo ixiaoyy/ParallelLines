@@ -5,10 +5,10 @@ from typing import Any
 from sqlalchemy import JSON, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin
 
 
-class Draft(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class Draft(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "drafts"
     __table_args__ = (
         Index("ix_drafts_user_id", "user_id"),
@@ -26,10 +26,10 @@ class Draft(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         comment="草稿目标类型：new_topic 表示新主题，topic 表示某主题回复。",
     )
     target_id: Mapped[str] = mapped_column(
-        String(36),
+        String(64),
         nullable=False,
         default="",
-        comment="草稿目标 ID；新主题草稿为空字符串，回复草稿为主题 ID。",
+        comment="草稿目标 ID；新主题草稿为空字符串，回复草稿为数值主题 ID 字符串。",
     )
     draft_type: Mapped[str] = mapped_column(
         String(32),

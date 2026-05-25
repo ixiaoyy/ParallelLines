@@ -20,7 +20,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "reviewables",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column(
             "type",
             sa.String(length=32),
@@ -48,26 +48,26 @@ def upgrade() -> None:
             comment="可展示的来源摘要，不包含敏感规则明文。",
         ),
         sa.Column("target_type", sa.String(length=32), nullable=True, comment="审核目标类型。"),
-        sa.Column("target_id", sa.String(length=36), nullable=True, comment="审核目标 ID。"),
-        sa.Column("board_id", sa.String(length=36), nullable=True, comment="相关版块 ID。"),
-        sa.Column("topic_id", sa.String(length=36), nullable=True, comment="相关主题 ID。"),
-        sa.Column("post_id", sa.String(length=36), nullable=True, comment="相关帖子 ID。"),
-        sa.Column("flag_id", sa.String(length=36), nullable=True, comment="关联举报 ID。"),
+        sa.Column("target_id", sa.BigInteger(), nullable=True, comment="审核目标 ID。"),
+        sa.Column("board_id", sa.BigInteger(), nullable=True, comment="相关版块 ID。"),
+        sa.Column("topic_id", sa.BigInteger(), nullable=True, comment="相关主题 ID。"),
+        sa.Column("post_id", sa.BigInteger(), nullable=True, comment="相关帖子 ID。"),
+        sa.Column("flag_id", sa.BigInteger(), nullable=True, comment="关联举报 ID。"),
         sa.Column(
             "created_by_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="创建审核项的用户 ID；系统创建时为空。",
         ),
         sa.Column(
             "target_user_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="被审核或受处理影响的用户 ID。",
         ),
         sa.Column(
             "assigned_to_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="当前认领审核员 ID；未认领为空。",
         ),
@@ -79,7 +79,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "resolved_by_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="最终处理审核员 ID；未处理为空。",
         ),
@@ -134,14 +134,14 @@ def upgrade() -> None:
 
     op.create_table(
         "reviewable_events",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column(
             "reviewable_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=False,
             comment="关联审核对象 ID。",
         ),
-        sa.Column("actor_id", sa.String(length=36), nullable=True, comment="触发事件的用户 ID。"),
+        sa.Column("actor_id", sa.BigInteger(), nullable=True, comment="触发事件的用户 ID。"),
         sa.Column(
             "event",
             sa.String(length=32),

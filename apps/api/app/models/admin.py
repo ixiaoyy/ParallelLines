@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import JSON, Boolean, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 SiteSettingValue = dict[str, object] | list[object] | str | int | float | bool | None
 
 
-class SiteSetting(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class SiteSetting(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "site_settings"
     __table_args__ = (
         UniqueConstraint("key", name="uq_site_settings_key"),

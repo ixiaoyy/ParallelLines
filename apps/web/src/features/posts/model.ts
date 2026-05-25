@@ -5,12 +5,21 @@ export interface PostResponse {
   topic_id: string;
   user_id: string;
   author_name: string;
+  author_level: number;
+  author_trust_level: number;
+  author_trust_level_label: string;
   parent_id: string | null;
   post_number: number;
   raw_md: string;
   cooked_html: string;
   reply_count: number;
   like_count: number;
+  liked_by_me?: boolean;
+  accepted_answer: boolean;
+  vote_score: number;
+  vote_count: number;
+  my_vote: number;
+  share_url: string;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -67,11 +76,20 @@ export function toPostItem(post: PostResponse): PostItemVM {
     userId: post.user_id,
     floor: post.post_number,
     authorName: post.author_name,
+    authorLevel: post.author_level,
+    authorTrustLevel: post.author_trust_level,
+    authorTrustLevelLabel: post.author_trust_level_label,
     createdAt: post.created_at,
     updatedAt: post.updated_at,
     rawMd: post.raw_md,
     cookedHtml: post.cooked_html,
     likeCount: post.like_count,
+    likedByMe: Boolean(post.liked_by_me),
+    acceptedAnswer: post.accepted_answer,
+    voteScore: post.vote_score,
+    voteCount: post.vote_count,
+    myVote: post.my_vote,
+    shareUrl: post.share_url,
     replyCount: post.reply_count,
     deleted: Boolean(post.deleted_at),
   };

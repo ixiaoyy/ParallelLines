@@ -3,7 +3,7 @@
   "name": "theme-marketplace",
   "title": "主题市场、组件安装与安全沙箱",
   "description": "支持安装/更新/回滚主题和主题组件，并隔离不可信代码风险。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "frontend",
   "scope": "themes",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
-  "branch": null,
+  "completedAt": "2026-05-25",
+  "branch": "codex/external-integrations",
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,10 @@
   "subtasks": [],
   "children": [],
   "parent": "05-20-discourse-parity-roadmap",
-  "relatedFiles": [],
-  "notes": "",
+  "relatedFiles": [
+    "apps/web/src/features/themes/",
+    "apps/web/src/pages/admin/AdminDashboardPage.vue"
+  ],
+  "notes": "Completed: built-in safe theme packages with validation, admin preview, enable, and rollback.",
   "meta": {}
 }

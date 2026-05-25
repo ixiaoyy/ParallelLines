@@ -20,7 +20,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "background_jobs",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column("queue", sa.String(length=64), nullable=False, comment="任务队列名称。"),
         sa.Column("task_name", sa.String(length=128), nullable=False, comment="任务处理器名称。"),
         sa.Column(
@@ -95,8 +95,8 @@ def upgrade() -> None:
     )
     op.create_table(
         "background_job_logs",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
-        sa.Column("job_id", sa.String(length=36), nullable=False, comment="关联后台任务 ID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
+        sa.Column("job_id", sa.BigInteger(), nullable=False, comment="关联后台任务 ID。"),
         sa.Column("event", sa.String(length=64), nullable=False, comment="任务事件类型。"),
         sa.Column("message", sa.Text(), nullable=False, comment="事件说明。"),
         sa.Column(

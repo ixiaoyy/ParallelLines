@@ -1,0 +1,11 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Plugin services/routes placement"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Plugin admin errors and isolation"}
+{"file": ".trellis/spec/backend/admin-site-settings.md", "reason": "Admin plugin enable/disable settings pattern"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Downgraded backend gates"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Plugin slot component placement"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Safe UI extension slot component"}
+{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "API wrapper/query composable convention"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Plugin DTO type safety"}

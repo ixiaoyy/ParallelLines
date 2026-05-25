@@ -519,6 +519,44 @@
   line-height: 1.6;
 }
 
+.board-policy-copy {
+  margin: 0;
+  border: 1px solid rgba(var(--accent-geek-rgb), 0.22);
+  border-radius: 0.85rem;
+  padding: 0.62rem 0.72rem;
+  color: var(--primary);
+  background: rgba(var(--accent-geek-rgb), 0.08);
+  font-size: 0.82rem;
+  font-weight: 820;
+}
+
+.child-board-panel a {
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.13);
+  border-radius: 0.85rem;
+  padding: 0.62rem 0.72rem;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.72);
+  text-decoration: none;
+}
+
+.child-board-panel a:hover,
+.child-board-panel a:focus-visible {
+  border-color: rgba(var(--primary-rgb), 0.3);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.child-board-panel strong {
+  color: var(--title);
+}
+
+.child-board-panel small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .board-follow-btn {
   height: 2rem;
   padding: 0 0.85rem;

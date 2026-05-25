@@ -4,19 +4,37 @@ import type { MaybeRefOrGetter } from "vue";
 
 import { hasAccessToken } from "@/shared/api/client";
 import { queryKeys } from "@/shared/api/queryKeys";
+import type {
+  BadgeGrantRequest,
+  BadgeResponse,
+  BadgeRevokeRequest,
+} from "@/features/badges/model";
 
 import {
+  createAdminApiKey,
+  createAdminWebhook,
+  disableAdminApiKey,
+  disableAdminWebhook,
+  fetchAdminApiKeys,
+  fetchAdminBadges,
   fetchAdminAuditLogs,
   fetchAdminEmailLogs,
   fetchAdminSettings,
   fetchAdminSystem,
   fetchAdminUsers,
+  fetchAdminWebhookDeliveries,
+  fetchAdminWebhooks,
   fetchPublicSiteSettings,
+  grantAdminUserBadge,
+  revokeAdminUserBadge,
   updateAdminSetting,
   updateAdminUser,
 } from "./api";
 import type {
   AdminEmailLogResponse,
+  ApiKeyCreateRequest,
+  ApiKeyCreateResponse,
+  ApiKeyResponse,
   AdminSystemOverviewResponse,
   AdminUserResponse,
   AdminUsersParams,
@@ -25,6 +43,10 @@ import type {
   PublicSiteSettingsResponse,
   SiteSettingResponse,
   SiteSettingUpdateRequest,
+  WebhookDeliveryResponse,
+  WebhookEndpointCreateRequest,
+  WebhookEndpointCreateResponse,
+  WebhookEndpointResponse,
 } from "./model";
 
 export function usePublicSiteSettings() {
@@ -67,6 +89,16 @@ export function useAdminUsers(params: MaybeRefOrGetter<AdminUsersParams>) {
   });
 }
 
+export function useAdminBadges() {
+  return useQuery<BadgeResponse[], Error>({
+    queryKey: queryKeys.adminBadges,
+    queryFn: fetchAdminBadges,
+    enabled: computed(() => hasAccessToken()),
+    retry: false,
+    staleTime: 60_000,
+  });
+}
+
 export function useUpdateAdminUser() {
   const queryClient = useQueryClient();
   return useMutation<AdminUserResponse, Error, { userId: string; payload: AdminUserUpdateRequest }>({
@@ -74,6 +106,105 @@ export function useUpdateAdminUser() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot });
     },
+  });
+}
+
+export function useGrantAdminUserBadge() {
+  const queryClient = useQueryClient();
+  return useMutation<AdminUserResponse, Error, { userId: string; payload: BadgeGrantRequest }>({
+    mutationFn: ({ userId, payload }) => grantAdminUserBadge(userId, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot });
+    },
+  });
+}
+
+export function useRevokeAdminUserBadge() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    AdminUserResponse,
+    Error,
+    { userId: string; badgeSlug: string; payload: BadgeRevokeRequest }
+  >({
+    mutationFn: ({ userId, badgeSlug, payload }) =>
+      revokeAdminUserBadge(userId, badgeSlug, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot });
+    },
+  });
+}
+
+export function useAdminApiKeys() {
+  return useQuery<ApiKeyResponse[], Error>({
+    queryKey: queryKeys.adminApiKeys,
+    queryFn: fetchAdminApiKeys,
+    enabled: computed(() => hasAccessToken()),
+    retry: false,
+    staleTime: 15_000,
+  });
+}
+
+export function useCreateAdminApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation<ApiKeyCreateResponse, Error, ApiKeyCreateRequest>({
+    mutationFn: createAdminApiKey,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminApiKeys });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot });
+    },
+  });
+}
+
+export function useDisableAdminApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation<ApiKeyResponse, Error, string>({
+    mutationFn: disableAdminApiKey,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminApiKeys });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot });
+    },
+  });
+}
+
+export function useAdminWebhooks() {
+  return useQuery<WebhookEndpointResponse[], Error>({
+    queryKey: queryKeys.adminWebhooks,
+    queryFn: fetchAdminWebhooks,
+    enabled: computed(() => hasAccessToken()),
+    retry: false,
+    staleTime: 15_000,
+  });
+}
+
+export function useCreateAdminWebhook() {
+  const queryClient = useQueryClient();
+  return useMutation<WebhookEndpointCreateResponse, Error, WebhookEndpointCreateRequest>({
+    mutationFn: createAdminWebhook,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminWebhooks });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot });
+    },
+  });
+}
+
+export function useDisableAdminWebhook() {
+  const queryClient = useQueryClient();
+  return useMutation<WebhookEndpointResponse, Error, string>({
+    mutationFn: disableAdminWebhook,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminWebhooks });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot });
+    },
+  });
+}
+
+export function useAdminWebhookDeliveries() {
+  return useQuery<WebhookDeliveryResponse[], Error>({
+    queryKey: queryKeys.adminWebhookDeliveries,
+    queryFn: () => fetchAdminWebhookDeliveries(),
+    enabled: computed(() => hasAccessToken()),
+    retry: false,
+    staleTime: 10_000,
   });
 }
 

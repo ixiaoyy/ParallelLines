@@ -1,7 +1,7 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    tone?: "primary" | "ghost" | "subtle" | "success";
+    tone?: "primary" | "ghost" | "subtle" | "success" | "danger";
     type?: "button" | "submit" | "reset";
   }>(),
   { tone: "primary", type: "button" },
@@ -58,6 +58,12 @@ withDefaults(
   color: white !important;
   border-color: var(--accent-geek) !important;
   background: var(--accent-geek) !important;
+}
+
+.ui-button--danger {
+  color: var(--danger) !important;
+  border-color: var(--danger-border) !important;
+  background: var(--danger-bg) !important;
 }
 
 .ui-button--subtle {

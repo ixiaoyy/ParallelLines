@@ -1,0 +1,8 @@
+{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
+{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
+{"file": ".trellis\\spec\\backend\\admin-site-settings.md", "reason": "Verify admin-only and public setting contract"}
+{"file": ".trellis\\spec\\frontend\\admin-dashboard.md", "reason": "Verify public setting refresh and admin form behavior"}
+{"file": ".trellis\\spec\\frontend\\quality-guidelines.md", "reason": "Downgraded frontend validation"}
+{"file": ".trellis\\spec\\backend\\quality-guidelines.md", "reason": "Downgraded backend validation"}
+{"file": ".trellis\\spec\\backend\\site-theme-i18n-branding.md", "reason": "Verify backend branding contracts"}
+{"file": ".trellis\\spec\\frontend\\site-theme-i18n-branding.md", "reason": "Verify frontend branding contracts"}

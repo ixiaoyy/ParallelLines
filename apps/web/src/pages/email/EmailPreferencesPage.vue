@@ -8,6 +8,7 @@ import {
   useEmailPreferences,
   useUpdateEmailPreferences,
 } from "@/features/email-preferences/queries";
+import PushNotificationPanel from "@/features/pwa/components/PushNotificationPanel.vue";
 import { ApiError } from "@/shared/api/client";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
@@ -243,6 +244,8 @@ function toPreferenceError(error: unknown): string {
           </label>
         </div>
       </UiCard>
+
+      <PushNotificationPanel />
 
       <UiCard class="email-panel telemetry-panel">
         <header>

@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "typecheck": "vue-tsc -b --pretty",
     "lint": "eslint . --ext .ts,.vue --max-warnings 0",
-    "test:smoke": "playwright test"
+    "test:smoke": "playwright test",
+    "openapi:types": "node scripts/generate-openapi-types.mjs",
+    "openapi:check": "node scripts/generate-openapi-types.mjs --check"
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",

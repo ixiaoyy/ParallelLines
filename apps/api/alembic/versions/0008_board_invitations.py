@@ -20,22 +20,22 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "board_invitations",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column(
             "board_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=False,
             comment="被邀请加入的版块 ID。",
         ),
         sa.Column(
             "inviter_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=False,
             comment="发出邀请的用户 ID。",
         ),
         sa.Column(
             "invitee_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=False,
             comment="被邀请的用户 ID。",
         ),
@@ -60,7 +60,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "revoked_by_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="撤回邀请的用户 ID；为空表示未撤回。",
         ),

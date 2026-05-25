@@ -20,10 +20,10 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "search_documents",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
-        sa.Column("topic_id", sa.String(length=36), nullable=False, comment="关联主题 ID。"),
-        sa.Column("board_id", sa.String(length=36), nullable=False, comment="关联版块 ID。"),
-        sa.Column("author_id", sa.String(length=36), nullable=False, comment="主题作者用户 ID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
+        sa.Column("topic_id", sa.BigInteger(), nullable=False, comment="关联主题 ID。"),
+        sa.Column("board_id", sa.BigInteger(), nullable=False, comment="关联版块 ID。"),
+        sa.Column("author_id", sa.BigInteger(), nullable=False, comment="主题作者用户 ID。"),
         sa.Column(
             "author_username",
             sa.String(length=64),
@@ -90,10 +90,10 @@ def upgrade() -> None:
 
     op.create_table(
         "search_logs",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column(
             "user_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="搜索用户 ID；匿名搜索为空。",
         ),

@@ -1,17 +1,24 @@
 from collections.abc import Awaitable, Callable
+from secrets import token_hex
 from time import perf_counter
-from uuid import uuid4
 
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse, PlainTextResponse
 
+from app.api.seo import public_seo_router
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.exceptions import AppError
 from app.core.logging import configure_logging
+from app.core.openapi_contract import (
+    COMPATIBILITY_POLICY,
+    PUBLIC_API_DESCRIPTION,
+    PUBLIC_OPENAPI_TAGS,
+)
 from app.schemas.common import ErrorPayload, ErrorResponse
 
 REQUEST_COUNT = 0
@@ -22,7 +29,13 @@ REQUEST_STATUS_COUNTS: dict[str, int] = {}
 def create_app() -> FastAPI:
     configure_logging()
     settings = get_settings()
-    app = FastAPI(title=settings.app_name, version="0.1.0")
+    app = FastAPI(
+        title=settings.app_name,
+        version="0.1.0",
+        description=PUBLIC_API_DESCRIPTION,
+        openapi_tags=PUBLIC_OPENAPI_TAGS,
+        swagger_ui_parameters={"persistAuthorization": True},
+    )
 
     app.add_middleware(
         CORSMiddleware,
@@ -37,7 +50,7 @@ def create_app() -> FastAPI:
         request: Request,
         call_next: Callable[[Request], Awaitable[JSONResponse]],
     ):
-        request_id = request.headers.get("x-request-id", str(uuid4()))
+        request_id = request.headers.get("x-request-id", token_hex(16))
         structlog.contextvars.bind_contextvars(request_id=request_id)
         started_at = perf_counter()
         response = await call_next(request)
@@ -107,7 +120,14 @@ def create_app() -> FastAPI:
             )
         return "\n".join(lines) + "\n"
 
+    app.include_router(public_seo_router)
     app.include_router(api_router, prefix=settings.api_v1_prefix)
+    _install_openapi_contract(app, settings.app_name)
+
+    @app.get(f"{settings.api_v1_prefix}/openapi.json", include_in_schema=False)
+    async def versioned_openapi() -> dict[str, object]:
+        return app.openapi()
+
     return app
 
 
@@ -118,6 +138,30 @@ def _record_request_metric(status_code: int, duration_seconds: float) -> None:
     REQUEST_DURATION_SECONDS += duration_seconds
     status_key = str(status_code)
     REQUEST_STATUS_COUNTS[status_key] = REQUEST_STATUS_COUNTS.get(status_key, 0) + 1
+
+
+def _install_openapi_contract(app: FastAPI, title: str) -> None:
+    def custom_openapi() -> dict[str, object]:
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = get_openapi(
+            title=title,
+            version="0.1.0",
+            description=PUBLIC_API_DESCRIPTION,
+            routes=app.routes,
+            tags=PUBLIC_OPENAPI_TAGS,
+        )
+        components = schema.setdefault("components", {})
+        schemas = components.setdefault("schemas", {})
+        error_schema = ErrorResponse.model_json_schema(ref_template="#/components/schemas/{model}")
+        definitions = error_schema.pop("$defs", {})
+        schemas.update(definitions)
+        schemas["ErrorResponse"] = error_schema
+        schema.setdefault("info", {})["x-api-version-policy"] = COMPATIBILITY_POLICY
+        app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi  # type: ignore[method-assign]
 
 
 app = create_app()

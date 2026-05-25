@@ -20,23 +20,23 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "uploads",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
-        sa.Column("user_id", sa.String(length=36), nullable=False, comment="上传文件的用户 ID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
+        sa.Column("user_id", sa.BigInteger(), nullable=False, comment="上传文件的用户 ID。"),
         sa.Column(
             "board_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="附件归属版块 ID；临时文件或头像为空。",
         ),
         sa.Column(
             "topic_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="附件归属主题 ID；临时文件或头像为空。",
         ),
         sa.Column(
             "post_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="附件归属帖子 ID；临时文件或头像为空。",
         ),

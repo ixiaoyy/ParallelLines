@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.api.v1.dependencies import get_session
 from app.db.base import Base
 from app.main import create_app
+from app.models.user import User
 from app.services.draft import DraftService
 from tests.helpers import register_and_verify_user
 
@@ -21,7 +22,14 @@ async def test_draft_service_crud() -> None:
     session_factory, engine = await create_test_session()
 
     async with session_factory() as session:
-        user_id = "test_user_1"
+        user = User(
+            username="test_user_1",
+            email="test_user_1@example.com",
+            hashed_password="hashed",
+        )
+        session.add(user)
+        await session.flush()
+        user_id = user.id
         service = DraftService(session)
 
         # 1. Save new draft

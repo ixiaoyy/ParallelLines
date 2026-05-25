@@ -53,6 +53,12 @@ Query composables:
   - `toTopicCard(TopicResponse): TopicCardVM`
   - `toPostItem(PostResponse): PostItemVM`
   - `toTagItem(TagResponse): TagItemVM`
+- Social response fields must be mapped at the DTO/VM boundary:
+  - `TopicResponse.liked_by_me/bookmarked_by_me/bookmark_count/share_url` →
+    `TopicCardVM.likedByMe/bookmarkedByMe/bookmarkCount/shareUrl`
+  - `TopicResponse.author_level` → `TopicCardVM.authorLevel`
+  - `PostResponse.liked_by_me/share_url` → `PostItemVM.likedByMe/shareUrl`
+  - `PostResponse.author_level` → `PostItemVM.authorLevel`
 - Production read queries must not silently fall back to static fixtures or mock forum data. Network/API failures surface through TanStack Query error state and page-level empty/error UI.
 - Empty API responses render honest empty states and calls to action; discovery surfaces must not invent boards, topics, posts, or tags.
 - Authenticated write mutations (`createTopic`, `createPost`) must use `shared/api/client.ts` so `Authorization` is attached consistently.

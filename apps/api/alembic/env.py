@@ -12,6 +12,7 @@ from app.core.config import get_settings
 from app.db.base import Base
 from app.models import (  # noqa: F401
     AuditLog,
+    BadgeDefinition,
     BackgroundJob,
     BackgroundJobLog,
     BackupArtifact,
@@ -24,6 +25,10 @@ from app.models import (  # noqa: F401
     Flag,
     InboundEmail,
     Notification,
+    ApiKey,
+    Poll,
+    PollOption,
+    PollVote,
     Post,
     PostRevision,
     PrivateMessageParticipant,
@@ -40,11 +45,17 @@ from app.models import (  # noqa: F401
     Topic,
     TopicRead,
     User,
+    UserBadge,
     UserEmailPreference,
+    UserPointEvent,
     UserRecoveryCode,
     UserRelationship,
     UserSecurityToken,
     UserSession,
+    UserTrustLevelEvent,
+    Vote,
+    WebhookDelivery,
+    WebhookEndpoint,
 )
 
 config = context.config

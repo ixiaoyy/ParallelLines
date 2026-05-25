@@ -42,16 +42,16 @@ def upgrade() -> None:
 
     op.create_table(
         "user_relationships",
-        sa.Column("id", sa.String(length=36), primary_key=True, comment="关系记录 ID。"),
+        sa.Column("id", sa.BigInteger(), primary_key=True, comment="关系记录 ID。"),
         sa.Column(
             "actor_user_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=False,
             comment="发起关系的用户 ID。",
         ),
         sa.Column(
             "target_user_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=False,
             comment="被关注、忽略或屏蔽的目标用户 ID。",
         ),
@@ -92,9 +92,9 @@ def upgrade() -> None:
 
     op.create_table(
         "private_message_participants",
-        sa.Column("id", sa.String(length=36), primary_key=True, comment="私信参与记录 ID。"),
-        sa.Column("topic_id", sa.String(length=36), nullable=False, comment="私信主题 ID。"),
-        sa.Column("user_id", sa.String(length=36), nullable=False, comment="参与私信的用户 ID。"),
+        sa.Column("id", sa.BigInteger(), primary_key=True, comment="私信参与记录 ID。"),
+        sa.Column("topic_id", sa.BigInteger(), nullable=False, comment="私信主题 ID。"),
+        sa.Column("user_id", sa.BigInteger(), nullable=False, comment="参与私信的用户 ID。"),
         sa.Column(
             "role",
             sa.String(length=32),

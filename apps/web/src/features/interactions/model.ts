@@ -15,3 +15,11 @@ export interface BoardFollowResponse {
   notification_level: NotificationLevel | null;
   follower_count: number;
 }
+
+export interface VoteStateResponse {
+  target_type: "post" | "topic";
+  target_id: string;
+  value: number;
+  score: number;
+  count: number;
+}

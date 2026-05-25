@@ -53,7 +53,7 @@ const typeMeta: Record<
 > = {
   replied: { title: "有人回复了你的主题", tone: "blue", description: "新回复" },
   mentioned: { title: "有人提到了你", tone: "green", description: "提及" },
-  liked: { title: "有人赞同了你的楼层", tone: "amber", description: "赞同" },
+  liked: { title: "有人赞同了你的内容", tone: "amber", description: "赞同" },
   topic_new_post: { title: "关注主题有新楼层", tone: "blue", description: "新楼层" },
   board_new_topic: { title: "关注版块有新主题", tone: "green", description: "新主题" },
   user_new_topic: { title: "关注成员发布主题", tone: "blue", description: "成员动态" },

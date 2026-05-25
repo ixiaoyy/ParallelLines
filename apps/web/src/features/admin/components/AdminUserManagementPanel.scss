@@ -64,6 +64,66 @@
   outline: none;
 }
 
+.growth-adjust-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.user-badge-section {
+  display: grid;
+  gap: 0.7rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.85rem;
+}
+
+.user-badge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.user-badge-chip {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  border: 1px solid rgba(var(--primary-rgb), 0.14);
+  border-radius: 999px;
+  padding: 0.28rem 0.4rem 0.28rem 0.58rem;
+  color: var(--title);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.user-badge-chip em {
+  color: var(--accent-geek);
+  font-style: normal;
+}
+
+.user-badge-chip button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.15rem 0.38rem;
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.08);
+  cursor: pointer;
+}
+
+.badge-admin-form {
+  display: grid;
+  grid-template-columns: 0.8fr 1fr 1fr auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.growth-adjust-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
 .user-list {
   max-height: 24rem;
   overflow: auto;
@@ -100,7 +160,7 @@
 
 .user-facts {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   gap: 0.5rem;
   margin: 0;
 }
@@ -121,7 +181,9 @@
   }
 
   .user-filters,
-  .user-facts {
+  .user-facts,
+  .growth-adjust-grid,
+  .badge-admin-form {
     grid-template-columns: 1fr;
   }
 }

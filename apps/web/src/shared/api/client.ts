@@ -124,6 +124,18 @@ export async function apiPut<T, TBody extends object>(
   });
 }
 
+export async function apiPatch<T, TBody extends object>(
+  path: string,
+  body?: TBody,
+  init?: RequestInit,
+): Promise<T> {
+  return apiRequest<T>(path, {
+    ...init,
+    method: "PATCH",
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
 export async function apiPost<T, TBody extends object>(
   path: string,
   body: TBody,

@@ -17,9 +17,17 @@ defineProps<{
   visibleCount: number;
   totalCount: number;
   onlyAuthor: boolean;
+  qaSort: boolean;
   bookmarked: boolean;
   bookmarkCount: number;
   bookmarkPending: boolean;
+  topicLiked: boolean;
+  topicLikeCount: number;
+  topicLikePending: boolean;
+  topicVoteScore: number;
+  topicVoteCount: number;
+  topicVoteValue: number;
+  topicVotePending: boolean;
   canFlagTopic: boolean;
   flagTopicPending: boolean;
   canManageTopic: boolean;
@@ -34,8 +42,11 @@ defineProps<{
 
 const emit = defineEmits<{
   toggleOnlyAuthor: [];
+  toggleQaSort: [];
   toggleBookmark: [];
+  toggleTopicLike: [];
   copyLink: [];
+  openInvites: [];
   flagTopic: [];
   setTopicStatus: [status: TopicLifecycleStatus];
   toggleTopicPinned: [];
@@ -43,6 +54,7 @@ const emit = defineEmits<{
   splitTopic: [];
   mergeTopic: [];
   setNotificationLevel: [level: NotificationLevel];
+  voteTopic: [value: -1 | 0 | 1];
 }>();
 
 function onNotificationChange(event: Event) {
@@ -61,6 +73,18 @@ function onNotificationChange(event: Event) {
       <UiButton tone="ghost" :aria-pressed="onlyAuthor" @click="emit('toggleOnlyAuthor')">
         {{ onlyAuthor ? "显示全部" : "只看楼主" }}
       </UiButton>
+      <UiButton tone="ghost" :aria-pressed="qaSort" @click="emit('toggleQaSort')">
+        {{ qaSort ? "按时间排序" : "问答排序" }}
+      </UiButton>
+      <UiButton
+        :tone="topicLiked ? 'success' : 'subtle'"
+        :aria-pressed="topicLiked"
+        :disabled="topicLikePending"
+        @click="emit('toggleTopicLike')"
+      >
+        {{ topicLiked ? "已点赞" : "点赞主题" }}
+        <span v-if="topicLikeCount">· {{ topicLikeCount }}</span>
+      </UiButton>
       <UiButton
         :tone="bookmarked ? 'success' : 'subtle'"
         :aria-pressed="bookmarked"
@@ -70,7 +94,28 @@ function onNotificationChange(event: Event) {
         {{ bookmarked ? "已收藏" : "收藏主题" }}
         <span v-if="bookmarkCount">· {{ bookmarkCount }}</span>
       </UiButton>
+      <div class="topic-score-vote" aria-label="主题赞成反对投票">
+        <UiButton
+          :tone="topicVoteValue === 1 ? 'success' : 'ghost'"
+          :aria-pressed="topicVoteValue === 1"
+          :disabled="topicVotePending"
+          @click="emit('voteTopic', topicVoteValue === 1 ? 0 : 1)"
+        >
+          赞成
+        </UiButton>
+        <strong>{{ topicVoteScore }}</strong>
+        <UiButton
+          :tone="topicVoteValue === -1 ? 'danger' : 'ghost'"
+          :aria-pressed="topicVoteValue === -1"
+          :disabled="topicVotePending"
+          @click="emit('voteTopic', topicVoteValue === -1 ? 0 : -1)"
+        >
+          反对
+        </UiButton>
+        <span>{{ topicVoteCount }} 票</span>
+      </div>
       <UiButton tone="subtle" @click="emit('copyLink')">复制链接</UiButton>
+      <UiButton tone="subtle" @click="emit('openInvites')">邀请成员</UiButton>
       <UiButton tone="ghost" :disabled="flagTopicPending || !canFlagTopic" @click="emit('flagTopic')">
         举报主题
       </UiButton>

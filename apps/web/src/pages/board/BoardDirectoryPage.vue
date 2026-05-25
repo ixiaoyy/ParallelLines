@@ -92,6 +92,10 @@ function boardMark(board: BoardSummary) {
 }
 
 function boardIntent(board: BoardSummary) {
+  if (board.parentBoardName) {
+    return `子版块 · ${board.parentBoardName}`;
+  }
+
   const labels: Record<string, string> = {
     announcements: "版本通知 / 维护窗口",
     support: "报错定位 / 可复现排查",

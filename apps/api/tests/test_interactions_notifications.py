@@ -103,6 +103,13 @@ async def test_follow_like_and_bookmark_are_idempotent() -> None:
             "count": 1,
         }
 
+        topic_like = await client.put(
+            f"/api/v1/topics/{fixture['topic_id']}/like",
+            headers=member_headers,
+        )
+        assert topic_like.status_code == 200
+        assert topic_like.json()["data"]["active"] is True
+
         bookmark = await client.put(
             f"/api/v1/topics/{fixture['topic_id']}/bookmark",
             headers=member_headers,
@@ -117,8 +124,12 @@ async def test_follow_like_and_bookmark_are_idempotent() -> None:
 
         topic = await client.get(f"/api/v1/topics/{fixture['topic_id']}")
         assert topic.status_code == 200
-        assert topic.json()["data"]["like_count"] == 1
+        assert topic.json()["data"]["like_count"] == 2
 
+        unlike_topic = await client.delete(
+            f"/api/v1/topics/{fixture['topic_id']}/like",
+            headers=member_headers,
+        )
         unlike = await client.delete(
             f"/api/v1/posts/{fixture['post_id']}/like", headers=member_headers
         )
@@ -127,6 +138,7 @@ async def test_follow_like_and_bookmark_are_idempotent() -> None:
             headers=member_headers,
         )
         unfollow = await client.delete("/api/v1/boards/support/follow", headers=member_headers)
+        assert unlike_topic.status_code == 200
         assert unlike.status_code == 200
         assert unlike.json()["data"]["count"] == 0
         assert unbookmark.status_code == 200

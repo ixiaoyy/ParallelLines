@@ -1,9 +1,9 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ApiResponse[T](BaseModel):
     data: T
-    meta: dict[str, object] = {}
+    meta: dict[str, object] = Field(default_factory=dict)
 
 
 class ErrorPayload(BaseModel):
@@ -22,4 +22,4 @@ class CursorPageMeta(BaseModel):
 
 
 class ORMModel(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, coerce_numbers_to_str=True)

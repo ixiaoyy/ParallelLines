@@ -20,7 +20,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "users",
-        sa.Column("id", sa.String(length=36), primary_key=True),
+        sa.Column("id", sa.BigInteger(), primary_key=True),
         sa.Column("username", sa.String(length=32), nullable=False),
         sa.Column("email", sa.String(length=255), nullable=False),
         sa.Column("hashed_password", sa.String(length=255), nullable=False),

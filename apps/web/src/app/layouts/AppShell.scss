@@ -161,6 +161,48 @@
   cursor: pointer;
 }
 
+.locale-select {
+  display: inline-flex;
+  align-items: center;
+}
+
+.locale-select select {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 0.45rem 0.65rem;
+  color: var(--text);
+  background: var(--bg-subtle);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.locale-select select:focus-visible {
+  outline: 2px solid rgba(var(--primary-rgb), 0.35);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.user-link {
+  display: inline-grid;
+  gap: 0.08rem;
+  line-height: 1.05;
+}
+
+.user-link small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 760;
+}
+
 .topbar-actions {
   display: inline-flex;
   gap: 0.35rem;
@@ -304,6 +346,8 @@
   .topbar-actions :deep(.ui-button),
   .auth-link,
   .admin-link,
+  .locale-select,
+  .desktop-plugin-slot,
   .logout-button {
     display: none !important;
   }
@@ -313,6 +357,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .user-link small {
+    display: none;
   }
 
   .mobile-nav-links {

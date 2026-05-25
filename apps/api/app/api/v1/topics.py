@@ -6,13 +6,17 @@ from fastapi import APIRouter, Query, Request, status
 from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep
 from app.schemas.common import ApiResponse
 from app.schemas.forum import (
+    PollResponse,
+    PollVoteRequest,
     PostCreateRequest,
     PostResponse,
+    PostSort,
     TopicLifecycleRequest,
     TopicLifecycleResponse,
     TopicMergeRequest,
     TopicMoveRequest,
     TopicResponse,
+    TopicSolutionRequest,
     TopicSort,
     TopicSplitRequest,
 )
@@ -63,6 +67,38 @@ async def get_topic(
 ) -> ApiResponse[TopicResponse]:
     topic = await ForumService(session).get_topic(topic_id, current_user=current_user)
     return ApiResponse(data=TopicResponse.from_model(topic))
+
+
+@router.put("/{topic_id}/solution", response_model=ApiResponse[TopicResponse])
+async def set_topic_solution(
+    topic_id: str,
+    payload: TopicSolutionRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[TopicResponse]:
+    topic = await ForumService(session).set_topic_solution(topic_id, payload, current_user)
+    return ApiResponse(data=TopicResponse.from_model(topic))
+
+
+@router.get("/{topic_id}/poll", response_model=ApiResponse[PollResponse])
+async def get_topic_poll(
+    topic_id: str,
+    session: SessionDep,
+    current_user: OptionalCurrentUserDep,
+) -> ApiResponse[PollResponse]:
+    poll = await ForumService(session).get_topic_poll(topic_id, current_user=current_user)
+    return ApiResponse(data=PollResponse.from_model(poll))
+
+
+@router.put("/{topic_id}/poll/vote", response_model=ApiResponse[PollResponse])
+async def vote_topic_poll(
+    topic_id: str,
+    payload: PollVoteRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[PollResponse]:
+    poll = await ForumService(session).vote_topic_poll(topic_id, payload, current_user)
+    return ApiResponse(data=PollResponse.from_model(poll))
 
 
 @router.put("/{topic_id}/lifecycle", response_model=ApiResponse[TopicResponse])
@@ -136,8 +172,11 @@ async def list_posts(
     topic_id: str,
     session: SessionDep,
     current_user: OptionalCurrentUserDep,
+    sort: PostSort = "chronological",
 ) -> ApiResponse[list[PostResponse]]:
-    posts = await ForumService(session).list_posts(topic_id, current_user=current_user)
+    posts = await ForumService(session).list_posts(
+        topic_id, current_user=current_user, sort=sort
+    )
     return ApiResponse(data=[PostResponse.from_model(post) for post in posts])
 
 

@@ -1,0 +1,149 @@
+.admin-migration-tools-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.panel-heading {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.panel-heading h2 {
+  margin: 0.2rem 0;
+  color: var(--title);
+}
+
+.panel-heading p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.panel-kicker {
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.migration-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(16rem, 0.6fr);
+  gap: 1rem;
+}
+
+.json-editor {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--title);
+  font-weight: 700;
+}
+
+.json-editor textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 0.85rem;
+  color: var(--title);
+  background: var(--bg-subtle);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.migration-side {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+}
+
+.status-card,
+.export-summary {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  padding: 0.75rem;
+  color: var(--text);
+  background: var(--bg-subtle);
+}
+
+.status-card.is-error {
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.migration-actions,
+.export-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.migration-actions button,
+.secondary-action,
+.danger-action {
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 0.58rem 0.9rem;
+  color: white;
+  background: var(--primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.secondary-action {
+  color: var(--primary);
+  background: var(--navy-soft);
+}
+
+.danger-action {
+  background: #dc2626 !important;
+}
+
+.migration-actions button:disabled,
+.secondary-action:disabled,
+.danger-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.migration-rows {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.migration-rows li {
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.6rem;
+  background: var(--bg-surface);
+}
+
+.migration-rows strong {
+  color: var(--primary);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+@media (max-width: 860px) {
+  .panel-heading,
+  .migration-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-heading {
+    display: grid;
+  }
+}

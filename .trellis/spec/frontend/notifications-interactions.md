@@ -30,6 +30,7 @@ Backend endpoints consumed:
 - `PUT /api/v1/notifications/read`
 - `GET /api/v1/notifications/stream?poll_seconds=5&limit=5`
 - `PUT|DELETE /api/v1/posts/{post_id}/like`
+- `PUT|DELETE /api/v1/topics/{topic_id}/like`
 - `PUT|DELETE /api/v1/topics/{topic_id}/bookmark`
 - `PUT|DELETE /api/v1/boards/{slug}/follow`
 - `GET|PUT /api/v1/topics/{topic_id}/notification-level`
@@ -40,7 +41,11 @@ Backend endpoints consumed:
 - `NotificationBell` owns panel open/close UI and delegates data loading/mutation to notification composables.
 - SSE is parsed through runtime validation (`parseNotificationStreamPayload`) before updating query cache.
 - Optimistic interactions must update local UI immediately, then reconcile with API response when `hasAccessToken()` is true.
-- Without an access token, frontend uses local mock state so the static prototype remains interactive.
+- `useOptimisticToggle()` supports two unauthenticated modes: default local mock state for static
+  prototype surfaces, and `mockWhenDisabled: false` plus `onDisabled()` for production write controls
+  that must guide the visitor to login without mutating local state.
+- Topic/post actions that come from real API data should read active state from DTO-backed VM fields
+  (`likedByMe`, `bookmarkedByMe`) instead of hardcoded `false`.
 - Notification links require `topic_slug` + `topic_id` when available; fall back to `board_slug`, then `/`.
 - Topic detail toolbar owns the visible notification-level selector, but data loading/mutation stays in
   `features/notifications/queries.ts`; pages pass `notificationLevel`, `notificationPending`, and
@@ -55,7 +60,8 @@ Backend endpoints consumed:
 
 | Case | Expected behavior |
 |---|---|
-| Missing access token | Show mock notifications and keep optimistic toggles local |
+| Missing access token on prototype-only toggle | Show mock notifications and keep optimistic toggles local |
+| Missing access token on real like/bookmark controls | Show visible login guidance, route to auth when page context is available, and do not change persisted-looking state |
 | Notification fetch fails | Fall back to mock list; do not crash the app shell |
 | Malformed SSE frame | Ignore the frame; wait for the next valid `notifications` event |
 | Stream unmount/navigation | Abort the fetch stream via `AbortController` |
@@ -77,7 +83,7 @@ Backend endpoints consumed:
 - `pnpm --dir apps/web typecheck` must pass for notification DTOs, composables, and template bindings.
 - `pnpm --dir apps/web lint` must pass with no warnings.
 - `pnpm --dir apps/web build` must complete; chunk size warnings are acceptable unless they fail the build.
-- Manual smoke: open the bell, mark one/all read, toggle a post like, board follow, and topic bookmark.
+- Manual smoke: open the bell, mark one/all read, toggle a topic like, post like, board follow, and topic bookmark.
 - Manual smoke: open a topic while logged in, switch notification level through
   normal/tracking/watching/muted, reload, and confirm the selected level persists.
 

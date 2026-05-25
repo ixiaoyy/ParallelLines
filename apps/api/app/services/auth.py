@@ -57,6 +57,9 @@ from app.schemas.auth import (
 from app.schemas.users import UserPublic
 from app.services.admin import SiteSettingService
 from app.services.background_jobs import BackgroundJobService
+from app.services.badges import BadgeTrustService
+from app.services.growth import GrowthService
+from app.services.integrations import IntegrationService
 from app.services.spam import SpamPreventionService
 
 PASSWORD_RESET_PURPOSE = "password_reset"
@@ -105,6 +108,15 @@ class AuthService:
         try:
             self.session.add(user)
             await self.session.flush()
+            await IntegrationService(self.session).enqueue_event(
+                "user.created",
+                {
+                    "user_id": user.id,
+                    "username": user.username,
+                    "status": user.status,
+                    "created_at": user.created_at.isoformat(),
+                },
+            )
             code = await self._create_and_send_verification_code(user)
             await self.session.commit()
         except Exception:
@@ -180,6 +192,39 @@ class AuthService:
 
         verification.consumed_at = now
         user.status = "active"
+        await GrowthService(self.session).award(
+            user.id,
+            "email_verified",
+            source_id=user.id,
+            actor_id=user.id,
+            note="邮箱验证激活奖励",
+        )
+        badge_service = BadgeTrustService(self.session)
+        await badge_service.grant_badge(
+            user_id=user.id,
+            badge_slug="verified-member",
+            source_type="email_verified",
+            source_id=user.id,
+            actor_id=user.id,
+            note="完成邮箱验证",
+            idempotency_key=f"badge:verified-member:{user.id}",
+        )
+        await badge_service.recompute_trust(
+            user,
+            source_type="email_verified",
+            source_id=user.id,
+            actor_id=user.id,
+            note="邮箱验证后重算信任等级",
+        )
+        await IntegrationService(self.session).enqueue_event(
+            "user.verified",
+            {
+                "user_id": user.id,
+                "username": user.username,
+                "status": user.status,
+                "verified_at": now.isoformat(),
+            },
+        )
         return await self._token_pair(user, request)
 
     async def resend_verification(

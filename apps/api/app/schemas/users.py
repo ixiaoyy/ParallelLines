@@ -1,9 +1,11 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
 from app.models.forum import Topic
 from app.models.social import PrivateMessageParticipant
+from app.schemas.badges import UserBadgeResponse
 from app.schemas.common import ORMModel
 from app.schemas.forum import TopicResponse
 
@@ -13,10 +15,24 @@ class UserPublic(ORMModel):
     username: str
     email: EmailStr
     avatar_url: str | None = None
+    display_name: str | None = None
+    bio: str | None = None
+    website_url: str | None = None
+    location: str | None = None
     role: str
     level: int
+    trust_level: int
+    trust_level_label: str
+    points_balance: int
+    experience_total: int
+    experience_to_next_level: int
+    level_progress_percent: int
     status: str
     two_factor_enabled: bool
+    profile_visibility: str
+    show_activity: bool
+    interface_theme: str
+    locale: str
     created_at: datetime
 
 
@@ -24,12 +40,64 @@ class UserProfileResponse(ORMModel):
     id: str
     username: str
     avatar_url: str | None = None
+    display_name: str | None = None
+    bio: str | None = None
+    website_url: str | None = None
+    location: str | None = None
     role: str
     level: int
+    trust_level: int
+    trust_level_label: str
+    points_balance: int
+    experience_total: int
+    experience_to_next_level: int
+    level_progress_percent: int
     status: str
+    profile_visibility: str
+    show_activity: bool
+    can_edit: bool = False
     created_at: datetime
     topic_count: int
     post_count: int
+    badges: list[UserBadgeResponse] = Field(default_factory=list)
+
+
+class UserProfileUpdateRequest(BaseModel):
+    display_name: str | None = Field(default=None, max_length=80)
+    bio: str | None = Field(default=None, max_length=1000)
+    website_url: str | None = Field(default=None, max_length=512)
+    location: str | None = Field(default=None, max_length=120)
+    profile_visibility: Literal["public", "members", "private"] | None = None
+    show_activity: bool | None = None
+    interface_theme: Literal["system", "light", "colorful"] | None = None
+    locale: Literal["zh-CN", "en-US"] | None = None
+
+
+class UserDirectoryResponse(BaseModel):
+    id: str
+    username: str
+    display_name: str | None = None
+    avatar_url: str | None = None
+    role: str
+    level: int
+    trust_level: int
+    trust_level_label: str
+    points_balance: int
+    topic_count: int
+    post_count: int
+    last_seen_at: datetime | None = None
+    created_at: datetime
+
+
+class UserActivityItemResponse(BaseModel):
+    id: str
+    type: Literal["post", "liked_topic", "liked_post", "bookmarked_topic", "bookmarked_post"]
+    created_at: datetime
+    topic_id: str
+    topic_title: str
+    topic_slug: str
+    post_number: int | None = None
+    excerpt: str
 
 
 class UserRelationshipStateResponse(BaseModel):

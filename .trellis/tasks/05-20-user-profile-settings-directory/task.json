@@ -3,7 +3,7 @@
   "name": "user-profile-settings-directory",
   "title": "用户设置、公开目录与个人资料完善",
   "description": "扩展用户中心：资料编辑、偏好设置、公开用户目录、隐私设置和活动页。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "fullstack",
   "scope": "users",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
-  "branch": null,
+  "completedAt": "2026-05-25",
+  "branch": "codex/user-profile-settings-directory",
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 5,
   "next_action": [
     {
       "phase": 1,
@@ -48,6 +48,6 @@
   "children": [],
   "parent": "05-20-discourse-parity-roadmap",
   "relatedFiles": [],
-  "notes": "",
+  "notes": "Implemented editable profile fields, privacy controls, public user directory, activity API/UI, and focused no-email/privacy tests. Validation: backend ruff targeted, pytest tests/test_user_profile_settings_directory.py -q, web npm run typecheck, npm run lint.",
   "meta": {}
 }

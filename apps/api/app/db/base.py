@@ -1,12 +1,43 @@
 from datetime import UTC, datetime
-from uuid import uuid4
+from secrets import token_hex
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import BigInteger, DateTime, Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.types import TypeDecorator
 
 
-def new_uuid() -> str:
-    return str(uuid4())
+class NumericStringId(TypeDecorator[str]):
+    """Database BIGINT/INTEGER id that keeps API-facing Python values as strings."""
+
+    impl = BigInteger
+    cache_ok = True
+
+    @property
+    def python_type(self) -> type[str]:
+        return str
+
+    def load_dialect_impl(self, dialect):  # type: ignore[no-untyped-def]
+        if dialect.name == "sqlite":
+            return dialect.type_descriptor(Integer())
+        return dialect.type_descriptor(BigInteger())
+
+    def process_bind_param(self, value: object, dialect):  # type: ignore[no-untyped-def]
+        if value is None or value == "":
+            return None
+        return int(value)
+
+    def process_result_value(self, value: object, dialect):  # type: ignore[no-untyped-def]
+        if value is None:
+            return None
+        return str(value)
+
+
+def id_column_type() -> NumericStringId:
+    return NumericStringId()
+
+
+def new_random_suffix(byte_count: int = 4) -> str:
+    return token_hex(byte_count)
 
 
 def utcnow() -> datetime:
@@ -17,8 +48,8 @@ class Base(DeclarativeBase):
     pass
 
 
-class UUIDPrimaryKeyMixin:
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_uuid)
+class IntegerPrimaryKeyMixin:
+    id: Mapped[str] = mapped_column(id_column_type(), primary_key=True, autoincrement=True)
 
 
 class TimestampMixin:

@@ -1,0 +1,132 @@
+.poll-panel :deep(.ant-card-body) {
+  display: grid;
+  gap: 0.95rem;
+  padding: 1rem;
+}
+
+.poll-panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.poll-panel__header h2 {
+  margin: 0.18rem 0 0;
+  color: var(--title);
+  font-size: 1.18rem;
+  line-height: 1.35;
+}
+
+.panel-kicker {
+  color: var(--accent-geek);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.poll-options {
+  display: grid;
+  gap: 0.62rem;
+  min-width: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.poll-options legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.poll-option {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(7rem, 32%);
+  gap: 0.65rem;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(var(--primary-rgb), 0.12);
+  border-radius: 1rem;
+  padding: 0.75rem 0.82rem;
+  background:
+    linear-gradient(90deg, rgba(var(--accent-geek-rgb), 0.08), transparent 42%),
+    rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.poll-option:hover,
+.poll-option:focus-within,
+.poll-option.selected {
+  transform: translateY(-1px);
+  border-color: rgba(var(--primary-rgb), 0.32);
+  box-shadow: 0 12px 24px rgba(var(--primary-rgb), 0.1);
+}
+
+.poll-option input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--primary);
+}
+
+.poll-option__copy {
+  display: grid;
+  gap: 0.14rem;
+  min-width: 0;
+}
+
+.poll-option__copy strong {
+  color: var(--title);
+  overflow-wrap: anywhere;
+}
+
+.poll-option__copy small,
+.poll-panel__footer span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 760;
+}
+
+.poll-option__bar {
+  display: block;
+  overflow: hidden;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: rgba(var(--muted-rgb), 0.13);
+}
+
+.poll-option__bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gradient-brand);
+  transition: width 200ms ease;
+}
+
+.poll-panel__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (max-width: 640px) {
+  .poll-option {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .poll-option__bar {
+    grid-column: 2;
+  }
+}

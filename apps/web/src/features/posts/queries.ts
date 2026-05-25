@@ -14,6 +14,7 @@ import {
   restorePostRevision,
   updatePost,
 } from "./api";
+import type { PostSort } from "./api";
 import { toPostItem, toPostRevision } from "./model";
 import type {
   CreatePostRequest,
@@ -23,12 +24,15 @@ import type {
   UpdatePostRequest,
 } from "./model";
 
-export function useTopicPosts(topicId: MaybeRefOrGetter<string>) {
+export function useTopicPosts(
+  topicId: MaybeRefOrGetter<string>,
+  sort: MaybeRefOrGetter<PostSort> = "chronological",
+) {
   return useQuery({
-    queryKey: computed(() => queryKeys.posts(toValue(topicId))),
+    queryKey: computed(() => queryKeys.posts(toValue(topicId), toValue(sort))),
     queryFn: async () => {
       const id = toValue(topicId);
-      return (await fetchPosts(id)).map(toPostItem);
+      return (await fetchPosts(id, toValue(sort))).map(toPostItem);
     },
     enabled: computed(() => Boolean(toValue(topicId))),
     staleTime: 20_000,

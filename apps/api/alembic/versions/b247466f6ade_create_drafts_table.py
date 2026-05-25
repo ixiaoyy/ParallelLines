@@ -20,8 +20,8 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "drafts",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
-        sa.Column("user_id", sa.String(length=36), nullable=False, comment="草稿所属用户 ID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
+        sa.Column("user_id", sa.BigInteger(), nullable=False, comment="草稿所属用户 ID。"),
         sa.Column(
             "target_type",
             sa.String(length=32),
@@ -30,9 +30,9 @@ def upgrade() -> None:
         ),
         sa.Column(
             "target_id",
-            sa.String(length=36),
+            sa.String(length=64),
             nullable=False,
-            comment="草稿目标 ID；新主题草稿为空字符串，回复草稿为主题 ID。",
+            comment="草稿目标 ID；新主题草稿为空字符串，回复草稿为数值主题 ID 字符串。",
         ),
         sa.Column(
             "draft_type",

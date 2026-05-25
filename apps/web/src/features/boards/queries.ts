@@ -3,16 +3,32 @@ import { computed, toValue } from "vue";
 import type { MaybeRefOrGetter } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
-import { toTopicCard } from "@/features/topics/model";
 import type { TopicCardVM } from "@/entities/topic/model";
+import { toTopicCard } from "@/features/topics/model";
 import { queryKeys } from "@/shared/api/queryKeys";
 
-import { createBoard, fetchBoardDetail, fetchBoards } from "./api";
+import {
+  createBoard,
+  fetchBoardDetail,
+  fetchBoardSettings,
+  fetchBoards,
+  removeBoardMember,
+  updateBoardMember,
+  updateBoardSettings,
+} from "./api";
 import type { CreateBoardRequest } from "./api";
 import { toBoardSummary } from "./model";
+import type {
+  BoardMemberRemoveResponse,
+  BoardMemberResponse,
+  BoardMemberUpdateRequest,
+  BoardSettingsResponse,
+  BoardSettingsUpdateRequest,
+} from "./model";
 
 export interface BoardDetailVM extends BoardSummary {
   latestTopics: TopicCardVM[];
+  childBoards: BoardSummary[];
 }
 
 export function useBoards() {
@@ -32,6 +48,7 @@ export function useBoardDetail(slug: MaybeRefOrGetter<string>) {
       return {
         ...toBoardSummary(board),
         latestTopics: board.latest_topics.map(toTopicCard),
+        childBoards: board.child_boards.map(toBoardSummary),
       } satisfies BoardDetailVM;
     },
     enabled: computed(() => Boolean(toValue(slug))),
@@ -48,4 +65,73 @@ export function useCreateBoard() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.boards });
     },
   });
+}
+
+export function useBoardSettings(
+  slug: MaybeRefOrGetter<string>,
+  enabled: MaybeRefOrGetter<boolean> = true,
+) {
+  return useQuery<BoardSettingsResponse | null, Error>({
+    queryKey: computed(() => queryKeys.boardSettings(toValue(slug))),
+    queryFn: async () => {
+      const boardSlug = toValue(slug);
+      if (!boardSlug || !toValue(enabled)) {
+        return null;
+      }
+
+      return fetchBoardSettings(boardSlug);
+    },
+    enabled: computed(() => Boolean(toValue(slug)) && toValue(enabled)),
+    retry: false,
+    staleTime: 30_000,
+  });
+}
+
+export function useUpdateBoardSettings(slug: MaybeRefOrGetter<string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<BoardSummary, Error, BoardSettingsUpdateRequest>({
+    mutationFn: async (payload) => toBoardSummary(await updateBoardSettings(toValue(slug), payload)),
+    onSuccess: (board) => {
+      void invalidateBoardManagementQueries(queryClient, board.slug);
+    },
+  });
+}
+
+export function useUpdateBoardMember(slug: MaybeRefOrGetter<string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    BoardMemberResponse,
+    Error,
+    { username: string; payload: BoardMemberUpdateRequest }
+  >({
+    mutationFn: ({ username, payload }) => updateBoardMember(toValue(slug), username, payload),
+    onSuccess: () => {
+      void invalidateBoardManagementQueries(queryClient, toValue(slug));
+    },
+  });
+}
+
+export function useRemoveBoardMember(slug: MaybeRefOrGetter<string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<BoardMemberRemoveResponse, Error, string>({
+    mutationFn: (username) => removeBoardMember(toValue(slug), username),
+    onSuccess: () => {
+      void invalidateBoardManagementQueries(queryClient, toValue(slug));
+    },
+  });
+}
+
+async function invalidateBoardManagementQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  slug: string,
+) {
+  await queryClient.invalidateQueries({ queryKey: queryKeys.boards });
+  await queryClient.invalidateQueries({ queryKey: queryKeys.board(slug) });
+  await queryClient.invalidateQueries({ queryKey: queryKeys.boardSettings(slug) });
+  await queryClient.invalidateQueries({ queryKey: queryKeys.topics(`board:${slug}:latest`) });
+  await queryClient.invalidateQueries({ queryKey: queryKeys.topics(`board:${slug}:hot`) });
+  await queryClient.invalidateQueries({ queryKey: queryKeys.topics(`board:${slug}:top`) });
 }

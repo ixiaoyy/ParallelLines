@@ -1,0 +1,41 @@
+.similar-topic-hints {
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.85rem;
+  background: var(--bg-subtle);
+}
+
+.similar-topic-hints > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.similar-topic-hints strong {
+  color: var(--title);
+}
+
+.similar-topic-hints span,
+.hint-status,
+.similar-list small {
+  color: var(--muted);
+}
+
+.similar-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.similar-list li {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.similar-list a {
+  color: var(--primary);
+  font-weight: 800;
+  text-decoration: none;
+}

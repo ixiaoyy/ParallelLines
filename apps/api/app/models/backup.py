@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Literal
 from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -15,7 +15,7 @@ BackupArtifactKind = Literal["site_backup", "site_export", "user_export"]
 BackupArtifactStatus = Literal["queued", "running", "succeeded", "failed", "deleted"]
 
 
-class BackupArtifact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class BackupArtifact(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "backup_artifacts"
     __table_args__ = (
         Index("ix_backup_artifacts_status_created", "status", "created_at"),

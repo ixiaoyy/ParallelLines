@@ -3,7 +3,7 @@
   "name": "privacy-data-retention-anonymization",
   "title": "隐私、数据保留、匿名化与账号删除",
   "description": "提供真实社区需要的数据隐私能力：导出、匿名化、账号删除、保留策略和日志脱敏。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "backend",
   "scope": "privacy",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
-  "branch": null,
+  "completedAt": "2026-05-25",
+  "branch": "codex/privacy-data-retention-anonymization",
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,

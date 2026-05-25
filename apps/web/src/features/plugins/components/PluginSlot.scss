@@ -1,0 +1,36 @@
+.plugin-slot {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.plugin-slot__entry {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.35rem;
+  border: 1px dashed rgba(var(--primary-rgb), 0.32);
+  border-radius: var(--radius-pill);
+  padding: 0.5rem 0.68rem;
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.06);
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.plugin-slot__entry:hover,
+.plugin-slot__entry:focus-visible {
+  outline: none;
+  background: rgba(var(--primary-rgb), 0.12);
+}
+
+.plugin-slot--compact {
+  display: contents;
+}
+
+.plugin-slot--compact .plugin-slot__entry {
+  justify-content: center;
+  min-height: auto;
+  padding: 0.62rem 0.7rem;
+  font-size: 0.9rem;
+}

@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from "vue";
 
 import type { PostItemVM } from "@/entities/post/model";
-import { setPostLike } from "@/features/interactions/api";
+import { setPostLike, setPostVote } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
 import ReportModal from "@/features/moderation/components/ReportModal.vue";
 import {
@@ -22,9 +22,13 @@ const props = defineProps<{
   post: PostItemVM;
   currentUserId?: string | null;
   currentUserRole?: string | null;
+  canManageSolution?: boolean;
+  solutionPending?: boolean;
 }>();
 const emit = defineEmits<{
   quote: [post: PostItemVM];
+  requireLogin: [message: string];
+  toggleSolution: [post: PostItemVM];
 }>();
 
 const statusMessage = ref("");
@@ -33,6 +37,10 @@ const editDraft = ref(props.post.rawMd);
 const editReason = ref("");
 const historyOpen = ref(false);
 const reportModalOpen = ref(false);
+const voteValue = ref(props.post.myVote);
+const voteScore = ref(props.post.voteScore);
+const voteCount = ref(props.post.voteCount);
+const votePending = ref(false);
 const firstCodeText = computed(() => extractFirstCodeText(props.post.cookedHtml));
 const hasCodeBlock = computed(() => firstCodeText.value.length > 0);
 const isOwnPost = computed(() => Boolean(props.currentUserId && props.currentUserId === props.post.userId));
@@ -42,6 +50,9 @@ const canModerateGlobally = computed(
 const canEdit = computed(() => Boolean(isOwnPost.value && props.post.floor === 1 && !props.post.deleted));
 const canDelete = computed(() => Boolean(isOwnPost.value && props.post.floor > 1 && !props.post.deleted));
 const canFlag = computed(() => hasAccessToken() && !props.post.deleted);
+const canToggleSolution = computed(
+  () => Boolean(props.canManageSolution && props.post.floor > 1 && !props.post.deleted),
+);
 const canViewHistory = computed(
   () => Boolean(!props.post.deleted && (isOwnPost.value || canModerateGlobally.value)),
 );
@@ -62,12 +73,14 @@ const {
   pending: likePending,
   toggle: toggleLike,
 } = useOptimisticToggle({
-  active: () => false,
+  active: () => Boolean(props.post.likedByMe),
   count: () => props.post.likeCount,
   enabled: hasAccessToken,
   commit: (active) => setPostLike(props.post.id, active),
   readActive: (response) => response.active,
   readCount: (response) => response.count,
+  onDisabled: () => requestLogin("请先登录后再点赞楼层。"),
+  mockWhenDisabled: false,
 });
 
 watch(
@@ -76,6 +89,19 @@ watch(
     if (!editing.value) {
       editDraft.value = rawMd;
     }
+  },
+);
+
+watch(
+  () => [props.post.myVote, props.post.voteScore, props.post.voteCount] as const,
+  ([myVote, score, count]) => {
+    if (votePending.value) {
+      return;
+    }
+
+    voteValue.value = myVote;
+    voteScore.value = score;
+    voteCount.value = count;
   },
 );
 
@@ -91,6 +117,36 @@ async function copyCode() {
 function quotePost() {
   emit("quote", props.post);
   setStatus("已插入引用");
+}
+
+async function votePost(nextValue: -1 | 0 | 1) {
+  if (votePending.value) {
+    return;
+  }
+  if (!hasAccessToken()) {
+    requestLogin("请先登录后再投票。");
+    return;
+  }
+  const value = voteValue.value === nextValue ? 0 : nextValue;
+  votePending.value = true;
+  try {
+    const response = await setPostVote(props.post.id, value);
+    voteValue.value = response.value;
+    voteScore.value = response.score;
+    voteCount.value = response.count;
+    setStatus(value === 0 ? "已撤销投票" : "投票已记录");
+  } catch {
+    setStatus("投票失败，请稍后重试");
+  } finally {
+    votePending.value = false;
+  }
+}
+
+function toggleSolution() {
+  if (!canToggleSolution.value || props.solutionPending) {
+    return;
+  }
+  emit("toggleSolution", props.post);
 }
 
 function startEdit() {
@@ -190,6 +246,23 @@ function flagPost() {
   reportModalOpen.value = true;
 }
 
+async function copyPostLink() {
+  const fallbackUrl = `${window.location.href.split("#")[0]}#post-${props.post.floor}`;
+  const url = props.post.shareUrl
+    ? new URL(props.post.shareUrl, window.location.origin).href
+    : fallbackUrl;
+  const copied = await writeClipboard(url);
+  if (!copied) {
+    window.location.hash = `post-${props.post.floor}`;
+  }
+  setStatus(copied ? "已复制楼层链接" : "无法访问剪贴板，已更新地址栏锚点");
+}
+
+function requestLogin(message: string) {
+  setStatus(message);
+  emit("requireLogin", message);
+}
+
 function extractFirstCodeText(html: string) {
   if (!html.includes("<pre")) {
     return "";
@@ -226,10 +299,13 @@ function setStatus(message: string) {
     <aside class="post-author">
       <UiAvatar :name="post.authorName" />
       <strong>{{ post.authorName }}</strong>
+      <span class="author-level">Lv.{{ post.authorLevel }}</span>
+      <span class="author-trust">TL{{ post.authorTrustLevel }} · {{ post.authorTrustLevelLabel }}</span>
       <span>#{{ post.floor }}</span>
     </aside>
     <article class="post-body">
       <time>{{ relativeTime(post.createdAt) }}</time>
+      <div v-if="post.acceptedAnswer" class="accepted-answer-badge">✓ 已采纳解决方案</div>
       <div v-if="post.deleted" class="deleted-copy">该楼层已删除或隐藏。</div>
       <template v-else-if="editing">
         <label class="edit-field">
@@ -250,6 +326,26 @@ function setStatus(message: string) {
       <div v-else class="markdown-body" v-html="post.cookedHtml" />
       <p v-if="statusMessage" class="post-status" role="status">{{ statusMessage }}</p>
       <footer v-if="!post.deleted">
+        <div class="score-vote" aria-label="楼层赞成反对投票">
+          <UiButton
+            :tone="voteValue === 1 ? 'success' : 'ghost'"
+            :aria-pressed="voteValue === 1"
+            :disabled="votePending"
+            @click="votePost(1)"
+          >
+            赞成
+          </UiButton>
+          <strong>{{ voteScore }}</strong>
+          <UiButton
+            :tone="voteValue === -1 ? 'danger' : 'ghost'"
+            :aria-pressed="voteValue === -1"
+            :disabled="votePending"
+            @click="votePost(-1)"
+          >
+            反对
+          </UiButton>
+          <span>{{ voteCount }} 票</span>
+        </div>
         <UiButton
           :tone="liked ? 'success' : 'ghost'"
           :aria-pressed="liked"
@@ -259,9 +355,18 @@ function setStatus(message: string) {
           {{ liked ? "已赞" : "赞" }} {{ optimisticLikeCount }}
         </UiButton>
         <UiButton tone="ghost" @click="quotePost">回复 {{ post.replyCount }}</UiButton>
+        <UiButton tone="subtle" @click="copyPostLink">复制楼层链接</UiButton>
         <UiButton v-if="hasCodeBlock" tone="subtle" aria-label="复制本楼层代码块" @click="copyCode">复制代码</UiButton>
         <UiButton tone="ghost" :disabled="!canFlag" @click="flagPost">举报</UiButton>
         <UiButton tone="ghost" @click="quotePost">引用</UiButton>
+        <UiButton
+          v-if="canToggleSolution"
+          :tone="post.acceptedAnswer ? 'success' : 'subtle'"
+          :disabled="solutionPending"
+          @click="toggleSolution"
+        >
+          {{ post.acceptedAnswer ? "取消采纳" : "采纳为答案" }}
+        </UiButton>
         <UiButton v-if="canEdit" tone="subtle" @click="startEdit">编辑</UiButton>
         <UiButton v-if="canViewHistory" tone="ghost" @click="toggleHistory">
           {{ historyOpen ? "收起历史" : "历史" }}

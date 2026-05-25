@@ -6,10 +6,24 @@ export interface UserPublic {
   username: string;
   email: string;
   avatar_url: string | null;
+  display_name: string | null;
+  bio: string | null;
+  website_url: string | null;
+  location: string | null;
   role: UserRole;
   level: number;
+  trust_level: number;
+  trust_level_label: string;
+  points_balance: number;
+  experience_total: number;
+  experience_to_next_level: number;
+  level_progress_percent: number;
   status: UserStatus;
   two_factor_enabled: boolean;
+  profile_visibility: "public" | "members" | "private" | string;
+  show_activity: boolean;
+  interface_theme: "system" | "light" | "colorful" | string;
+  locale: "zh-CN" | "en-US" | string;
   created_at: string;
 }
 

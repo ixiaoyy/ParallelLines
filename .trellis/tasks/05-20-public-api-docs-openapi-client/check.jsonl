@@ -1,0 +1,7 @@
+{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
+{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "OpenAPI examples must reflect error shape"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Generated types catch drift"}
+{"file": ".trellis/spec/backend/deployment-observability.md", "reason": "CI/schema generation check"}
+{"file": ".trellis/spec/backend/public-api-openapi-client.md", "reason": "Check OpenAPI snapshot contract"}
+{"file": ".trellis/spec/frontend/public-api-openapi-client.md", "reason": "Check generated type drift contract"}

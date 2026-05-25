@@ -16,7 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin
 
 EmailDigestFrequency = Literal["off", "daily", "weekly"]
 EmailDeliveryStatus = Literal["ok", "bounced", "complained", "disabled"]
@@ -24,7 +24,7 @@ EmailDeliveryEventType = Literal["sent", "delivered", "bounce", "complaint", "dr
 InboundEmailStatus = Literal["accepted", "unknown_sender", "topic_not_found", "recorded"]
 
 
-class UserEmailPreference(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class UserEmailPreference(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "user_email_preferences"
     __table_args__ = (
         UniqueConstraint("user_id", name="uq_user_email_preferences_user"),
@@ -54,7 +54,7 @@ class UserEmailPreference(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     user = relationship("User", lazy="selectin")
 
 
-class EmailDeliveryEvent(UUIDPrimaryKeyMixin, Base):
+class EmailDeliveryEvent(IntegerPrimaryKeyMixin, Base):
     __tablename__ = "email_delivery_events"
     __table_args__ = (
         Index("ix_email_delivery_events_email_created", "email", "created_at"),
@@ -73,7 +73,7 @@ class EmailDeliveryEvent(UUIDPrimaryKeyMixin, Base):
     user = relationship("User", lazy="selectin")
 
 
-class InboundEmail(UUIDPrimaryKeyMixin, Base):
+class InboundEmail(IntegerPrimaryKeyMixin, Base):
     __tablename__ = "inbound_emails"
     __table_args__ = (
         Index("ix_inbound_emails_status_created", "status", "created_at"),

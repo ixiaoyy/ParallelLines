@@ -20,7 +20,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "rate_limit_events",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column(
             "scope",
             sa.String(length=64),
@@ -41,7 +41,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "user_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="触发频控事件的用户 ID；匿名路径为空。",
         ),
@@ -82,7 +82,7 @@ def upgrade() -> None:
 
     op.create_table(
         "screened_rules",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column(
             "kind", sa.String(length=32), nullable=False, comment="规则类型：email、ip 或 url。"
         ),
@@ -112,7 +112,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "created_by_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="创建规则的管理员 ID。",
         ),
@@ -137,7 +137,7 @@ def upgrade() -> None:
 
     op.create_table(
         "spam_actions",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column(
             "kind",
             sa.String(length=64),
@@ -153,7 +153,7 @@ def upgrade() -> None:
         sa.Column("reason", sa.String(length=128), nullable=False, comment="触发处置的原因摘要。"),
         sa.Column(
             "user_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="被处置用户 ID；匿名注册/登录路径为空。",
         ),
@@ -166,7 +166,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "screened_rule_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="命中的屏蔽规则 ID；频控或新用户筛查为空。",
         ),

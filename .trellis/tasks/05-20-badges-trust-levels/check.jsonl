@@ -1,0 +1,5 @@
+{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
+{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Downgraded backend lint/focused tests"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Downgraded frontend lint/typecheck/browser smoke"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Verify backend/frontend field alignment"}

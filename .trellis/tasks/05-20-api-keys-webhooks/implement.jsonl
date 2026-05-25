@@ -1,0 +1,14 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "API key/webhook tables and migration contracts"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Typed API errors for key scope and webhook validation"}
+{"file": ".trellis/spec/backend/background-jobs.md", "reason": "Webhook retry/delivery queue must use unified jobs"}
+{"file": ".trellis/spec/backend/admin-site-settings.md", "reason": "Admin-only management endpoints and audit patterns"}
+{"file": ".trellis/spec/backend/account-security.md", "reason": "Token hashing and secret handling patterns"}
+{"file": ".trellis/spec/frontend/admin-dashboard.md", "reason": "Admin dashboard integration patterns"}
+{"file": ".trellis/spec/frontend/auth-user-session.md", "reason": "Session/user token handling boundaries"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "DTO type contracts"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer API/service/frontend payload flow"}
+{"file": ".trellis\\spec\\backend\\api-keys-webhooks.md", "reason": "API Key/Webhook 后端合同"}
+{"file": ".trellis\\spec\\frontend\\api-keys-webhooks.md", "reason": "API Key/Webhook 前端合同"}

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Literal
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin, utcnow
+from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin, utcnow
 
 if TYPE_CHECKING:
     from app.models.forum import Topic
@@ -16,7 +16,7 @@ UserRelationshipType = Literal["follow", "ignore", "block"]
 PrivateMessageParticipantRole = Literal["owner", "participant"]
 
 
-class UserRelationship(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class UserRelationship(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "user_relationships"
     __table_args__ = (
         UniqueConstraint(
@@ -53,7 +53,7 @@ class UserRelationship(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     target: Mapped[User] = relationship("User", foreign_keys=[target_user_id], lazy="selectin")
 
 
-class PrivateMessageParticipant(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class PrivateMessageParticipant(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "private_message_participants"
     __table_args__ = (
         UniqueConstraint("topic_id", "user_id", name="uq_private_message_participants_topic_user"),

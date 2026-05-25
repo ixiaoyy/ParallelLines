@@ -3,7 +3,7 @@
   "name": "localization-multilingual-content",
   "title": "多语言内容、本地化与翻译工作流",
   "description": "支持多语言 UI、内容本地化、翻译覆盖和语言偏好。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "fullstack",
   "scope": "i18n",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
-  "branch": null,
+  "completedAt": "2026-05-25",
+  "branch": "codex/external-integrations",
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,14 @@
   "subtasks": [],
   "children": [],
   "parent": "05-20-discourse-parity-roadmap",
-  "relatedFiles": [],
-  "notes": "",
+  "relatedFiles": [
+    "apps/api/app/api/v1/localization.py",
+    "apps/api/app/services/localization.py",
+    "apps/api/app/schemas/localization.py",
+    "apps/api/alembic/versions/0034_content_localizations.py",
+    "apps/web/src/shared/i18n/locale.ts",
+    "apps/api/tests/test_localization.py"
+  ],
+  "notes": "Completed: app language selector, built-in/site text fallbacks, topic/board localization fields, and localization API.",
   "meta": {}
 }

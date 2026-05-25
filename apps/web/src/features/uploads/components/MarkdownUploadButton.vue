@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
-import { ApiError, getApiUrl } from "@/shared/api/client";
+import { getApiUrl } from "@/shared/api/client";
 import UiButton from "@/shared/ui/Button.vue";
 
+import { uploadErrorMessage } from "../errors";
 import { toMarkdownUpload } from "../model";
 import { useUploadFile } from "../queries";
 
@@ -50,19 +51,6 @@ async function handleFileChange(event: Event) {
   } catch (error) {
     statusMessage.value = uploadErrorMessage(error);
   }
-}
-
-function uploadErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.code === "upload_too_large") {
-      return "文件超过当前上传大小限制。";
-    }
-    if (error.code === "upload_type_not_allowed" || error.code === "upload_mime_mismatch") {
-      return "文件类型不被允许，或内容与扩展名不一致。";
-    }
-  }
-
-  return "上传失败：请确认已登录且文件类型安全。";
 }
 </script>
 

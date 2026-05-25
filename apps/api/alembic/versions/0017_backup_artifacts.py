@@ -20,7 +20,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "backup_artifacts",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column(
             "kind",
             sa.String(length=32),
@@ -62,7 +62,7 @@ def upgrade() -> None:
         sa.Column("failure_reason", sa.Text(), nullable=True, comment="备份失败原因摘要。"),
         sa.Column(
             "created_by_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="触发备份或导出的管理员 ID；用户删除后为空。",
         ),

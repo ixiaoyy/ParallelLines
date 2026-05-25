@@ -20,9 +20,9 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "user_email_preferences",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column(
-            "user_id", sa.String(length=36), nullable=False, comment="偏好所属用户 ID，唯一。"
+            "user_id", sa.BigInteger(), nullable=False, comment="偏好所属用户 ID，唯一。"
         ),
         sa.Column(
             "email_enabled", sa.Boolean(), nullable=False, comment="是否允许向该用户发送社区邮件。"
@@ -95,10 +95,10 @@ def upgrade() -> None:
     )
     op.create_table(
         "email_delivery_events",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column(
             "user_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="匹配到的用户 ID；未知邮箱为空。",
         ),
@@ -150,21 +150,21 @@ def upgrade() -> None:
     )
     op.create_table(
         "inbound_emails",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column(
             "from_email", sa.String(length=255), nullable=False, comment="入站邮件发件人邮箱。"
         ),
         sa.Column(
             "user_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="匹配到的站内用户 ID；未知发件人为空。",
         ),
         sa.Column(
-            "topic_id", sa.String(length=36), nullable=True, comment="邮件声称回复的主题 ID。"
+            "topic_id", sa.BigInteger(), nullable=True, comment="邮件声称回复的主题 ID。"
         ),
         sa.Column(
-            "post_id", sa.String(length=36), nullable=True, comment="邮件声称回复的父帖子 ID。"
+            "post_id", sa.BigInteger(), nullable=True, comment="邮件声称回复的父帖子 ID。"
         ),
         sa.Column(
             "provider_message_id",
