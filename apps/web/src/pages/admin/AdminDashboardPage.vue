@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+import AdminIntegrationsPanel from "@/features/admin/components/AdminIntegrationsPanel.vue";
+import AdminExternalIntegrationsPanel from "@/features/external-integrations/components/AdminExternalIntegrationsPanel.vue";
 import AdminSettingsPanel from "@/features/admin/components/AdminSettingsPanel.vue";
 import AdminSystemPanel from "@/features/admin/components/AdminSystemPanel.vue";
 import AdminUserManagementPanel from "@/features/admin/components/AdminUserManagementPanel.vue";
+import AdminAnalyticsPanel from "@/features/analytics/components/AdminAnalyticsPanel.vue";
 import { isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser } from "@/features/auth/queries";
+import AdminMigrationToolsPanel from "@/features/migrations/components/AdminMigrationToolsPanel.vue";
+import AdminPaymentsPanel from "@/features/payments/components/AdminPaymentsPanel.vue";
+import AdminPluginsPanel from "@/features/plugins/components/AdminPluginsPanel.vue";
+import AdminThemeMarketplacePanel from "@/features/themes/components/AdminThemeMarketplacePanel.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 const currentUserQuery = useCurrentUser();
@@ -35,10 +42,17 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
 
     <template v-else>
       <AdminSystemPanel />
+      <AdminAnalyticsPanel />
+      <AdminPaymentsPanel />
       <section class="admin-main-grid">
         <AdminSettingsPanel />
         <AdminUserManagementPanel />
       </section>
+      <AdminIntegrationsPanel />
+      <AdminExternalIntegrationsPanel />
+      <AdminPluginsPanel />
+      <AdminThemeMarketplacePanel />
+      <AdminMigrationToolsPanel />
     </template>
   </div>
 </template>

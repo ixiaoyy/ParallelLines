@@ -20,10 +20,10 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "reactions",
-        sa.Column("id", sa.String(length=36), primary_key=True),
+        sa.Column("id", sa.BigInteger(), primary_key=True),
         sa.Column("target_type", sa.String(length=32), nullable=False),
-        sa.Column("target_id", sa.String(length=36), nullable=False),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
+        sa.Column("target_id", sa.BigInteger(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
         sa.Column("type", sa.String(length=32), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
@@ -40,10 +40,10 @@ def upgrade() -> None:
 
     op.create_table(
         "bookmarks",
-        sa.Column("id", sa.String(length=36), primary_key=True),
+        sa.Column("id", sa.BigInteger(), primary_key=True),
         sa.Column("target_type", sa.String(length=32), nullable=False),
-        sa.Column("target_id", sa.String(length=36), nullable=False),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
+        sa.Column("target_id", sa.BigInteger(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
@@ -54,12 +54,12 @@ def upgrade() -> None:
 
     op.create_table(
         "notifications",
-        sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
+        sa.Column("id", sa.BigInteger(), primary_key=True),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
         sa.Column("type", sa.String(length=64), nullable=False),
-        sa.Column("topic_id", sa.String(length=36), nullable=True),
-        sa.Column("post_id", sa.String(length=36), nullable=True),
-        sa.Column("actor_id", sa.String(length=36), nullable=True),
+        sa.Column("topic_id", sa.BigInteger(), nullable=True),
+        sa.Column("post_id", sa.BigInteger(), nullable=True),
+        sa.Column("actor_id", sa.BigInteger(), nullable=True),
         sa.Column("data", sa.JSON(), nullable=False),
         sa.Column("read_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),

@@ -14,7 +14,7 @@ API routes:
 | Method | Path | Auth | Purpose |
 |---|---|---:|---|
 | `GET` | `/api/v1/email/preferences` | user | Return current user's email preferences, creating defaults when missing |
-| `PUT` | `/api/v1/email/preferences` | user | Update master email switch, per-type notification toggles, and digest frequency |
+| `PUT` | `/api/v1/email/preferences` | user | Update master email switch, per-type notification toggles, digest frequency, and quiet hours |
 | `POST` | `/api/v1/email/webhooks/delivery` | webhook secret when configured | Record provider delivery/bounce/complaint/drop event |
 | `POST` | `/api/v1/email/webhooks/inbound-reply` | webhook secret when configured | Record first-version inbound reply webhook payload |
 
@@ -22,7 +22,7 @@ Database tables:
 
 | Table | Contract |
 |---|---|
-| `user_email_preferences` | One row per user with master `email_enabled`, per notification type toggles, `digest_frequency`, last digest, and delivery status |
+| `user_email_preferences` | One row per user with master `email_enabled`, per notification type toggles, `digest_frequency`, UTC quiet-hour window, last digest, and delivery status |
 | `email_delivery_events` | Append-only provider and local sent events, without SMTP secrets or auth tokens |
 | `inbound_emails` | Inbound reply webhook records with sender/topic matching status |
 
@@ -40,6 +40,20 @@ Env:
 ### 3. Contracts
 
 - User preferences default to email enabled, replied/mentioned/liked enabled, topic/board bulk notifications disabled, and daily digest enabled.
+- Preference payload fields are:
+  - `email_enabled`
+  - `notify_replied`
+  - `notify_mentioned`
+  - `notify_liked`
+  - `notify_topic_new_post`
+  - `notify_board_new_topic`
+  - `digest_frequency: "off" | "daily" | "weekly"`
+  - `quiet_hours_start: 0..23 | null`
+  - `quiet_hours_end: 0..23 | null`
+- Quiet hours use UTC integer hours. Both `quiet_hours_start` and `quiet_hours_end` must be non-null
+  to suppress immediate notification emails. A range with `start < end` covers `[start, end)`;
+  `start > end` wraps midnight; `start == end` means all-day quiet. Passing `null` for either field
+  disables quiet-hour suppression.
 - Request paths never perform SMTP; they enqueue or record only. SMTP happens inside background handlers.
 - Notification email idempotency key is `email-notification:{notification_id}`.
 - Digest jobs send only to active users whose `email_enabled=true`, `delivery_status="ok"`, and `digest_frequency != "off"`.
@@ -54,6 +68,9 @@ Env:
 | Missing auth on preferences | `401 invalid_token` |
 | Invalid digest frequency | FastAPI/Pydantic validation error |
 | User disables `notify_replied` | Reply notification row may exist, but no `notification_replied` email is sent |
+| Current UTC hour is within quiet hours | Notification row may exist, but no immediate notification email job is enqueued/sent |
+| Quiet hour start/end is outside 0..23 | FastAPI/Pydantic validation error |
+| Quiet hour start equals end | Treat as all-day quiet; suppress immediate notification emails |
 | Digest user inactive | Skipped; no digest email |
 | Delivery webhook with configured wrong secret | `403 email_webhook_secret_invalid` |
 | Bounce/complaint/drop for known email | Event recorded and user's email delivery disabled |
@@ -65,6 +82,8 @@ Env:
 
 - Good: a reply creates a notification job, then a mail job, and the request returns before email delivery.
 - Good: a user turns off only replied emails while still receiving mentions and digests.
+- Good: a user sets quiet hours `22 -> 6`; immediate notification emails are suppressed at 02:00 UTC
+  and allowed at 14:00 UTC.
 - Base: provider bounce webhook pauses future mail for that address.
 - Bad: calling `EmailService` directly from `ForumService` or an API route.
 - Bad: treating inbound reply payload as trusted post content before the reply creation contract is implemented.
@@ -73,6 +92,7 @@ Env:
 
 - Backend tests must cover:
   - reply notification email and per-type preference suppression;
+  - quiet-hours suppression for non-wrapping, midnight-wrapping, and all-day ranges;
   - digest job sends only due active users with notifications;
   - delivery webhook records event and disables bounced email;
   - inbound reply webhook records accepted status.

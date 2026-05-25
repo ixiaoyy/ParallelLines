@@ -1,0 +1,10 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis\\spec\\frontend\\directory-structure.md", "reason": "Frontend file placement for composer utilities"}
+{"file": ".trellis\\spec\\frontend\\component-guidelines.md", "reason": "Composer component patterns and accessibility"}
+{"file": ".trellis\\spec\\frontend\\uploads-attachments.md", "reason": "Drag/drop upload and markdown insertion contract"}
+{"file": ".trellis\\spec\\frontend\\state-management.md", "reason": "Draft and local UI state guidance"}
+{"file": ".trellis\\spec\\frontend\\type-safety.md", "reason": "Strict TS utility types"}
+{"file": ".trellis\\spec\\frontend\\post-actions.md", "reason": "Code copy/quote/composer behavior"}
+{"file": ".trellis\\spec\\frontend\\quality-guidelines.md", "reason": "Downgraded validation and UX quality"}
+{"file": ".trellis\\spec\\frontend\\rich-composer-onebox-emoji.md", "reason": "Implemented composer rich markdown, preview, upload, onebox, emoji, and code contracts"}

@@ -9,7 +9,12 @@
 
 ## Core Model Conventions
 
-- Use UUID or big integer primary keys consistently; choose one during the backend foundation task and document it in the first migration.
+- Use one primary-key strategy consistently. This project uses database-native `BIGINT`
+  auto-increment IDs for primary keys and foreign keys; API response schemas may expose them
+  as strings for TypeScript compatibility. Use UUID/ULID only when offline creation,
+  cross-region ID generation, or public non-enumerable IDs are a real requirement. If
+  sequential IDs must not be exposed, keep internal `BIGINT` IDs and add slugs/public IDs at
+  the API boundary instead of making every foreign key a UUID string.
 - Tables use plural snake_case names: `boards`, `topics`, `posts`, `topic_reads`.
 - Timestamps: `created_at`, `updated_at`; soft deletable rows also have `deleted_at` and optionally `deleted_by_id`.
 - Slugs are stored separately from titles/names and must be unique within their natural scope.

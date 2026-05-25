@@ -8,6 +8,8 @@ export interface OptimisticToggleOptions<TResponse> {
   commit: (active: boolean) => Promise<TResponse>;
   readActive: (response: TResponse) => boolean;
   readCount: (response: TResponse) => number;
+  onDisabled?: () => void;
+  mockWhenDisabled?: boolean;
 }
 
 export function useOptimisticToggle<TResponse>(options: OptimisticToggleOptions<TResponse>) {
@@ -34,6 +36,11 @@ export function useOptimisticToggle<TResponse>(options: OptimisticToggleOptions<
     count.value = Math.max(0, count.value + (nextActive ? 1 : -1));
 
     if (!options.enabled()) {
+      options.onDisabled?.();
+      if (options.mockWhenDisabled === false) {
+        active.value = previousActive;
+        count.value = previousCount;
+      }
       return;
     }
 

@@ -1,7 +1,11 @@
-import { apiGet, apiPut } from "@/shared/api/client";
+import { apiGet, apiPost, apiPut } from "@/shared/api/client";
 
+import type { BadgeGrantRequest, BadgeResponse, BadgeRevokeRequest } from "@/features/badges/model";
 import type {
   AdminEmailLogResponse,
+  ApiKeyCreateRequest,
+  ApiKeyCreateResponse,
+  ApiKeyResponse,
   AdminSystemOverviewResponse,
   AdminUserResponse,
   AdminUsersParams,
@@ -10,6 +14,10 @@ import type {
   PublicSiteSettingsResponse,
   SiteSettingResponse,
   SiteSettingUpdateRequest,
+  WebhookDeliveryResponse,
+  WebhookEndpointCreateRequest,
+  WebhookEndpointCreateResponse,
+  WebhookEndpointResponse,
 } from "./model";
 
 export function fetchPublicSiteSettings(): Promise<PublicSiteSettingsResponse> {
@@ -46,6 +54,69 @@ export function updateAdminUser(
   payload: AdminUserUpdateRequest,
 ): Promise<AdminUserResponse> {
   return apiPut<AdminUserResponse, AdminUserUpdateRequest>(`/admin/users/${userId}`, payload);
+}
+
+export function fetchAdminBadges(): Promise<BadgeResponse[]> {
+  return apiGet<BadgeResponse[]>("/admin/badges");
+}
+
+export function grantAdminUserBadge(
+  userId: string,
+  payload: BadgeGrantRequest,
+): Promise<AdminUserResponse> {
+  return apiPost<AdminUserResponse, BadgeGrantRequest>(`/admin/users/${userId}/badges`, payload);
+}
+
+export function revokeAdminUserBadge(
+  userId: string,
+  badgeSlug: string,
+  payload: BadgeRevokeRequest,
+): Promise<AdminUserResponse> {
+  return apiPost<AdminUserResponse, BadgeRevokeRequest>(
+    `/admin/users/${userId}/badges/${encodeURIComponent(badgeSlug)}/revoke`,
+    payload,
+  );
+}
+
+export function fetchAdminApiKeys(): Promise<ApiKeyResponse[]> {
+  return apiGet<ApiKeyResponse[]>("/admin/api-keys");
+}
+
+export function createAdminApiKey(
+  payload: ApiKeyCreateRequest,
+): Promise<ApiKeyCreateResponse> {
+  return apiPost<ApiKeyCreateResponse, ApiKeyCreateRequest>("/admin/api-keys", payload);
+}
+
+export function disableAdminApiKey(keyId: string): Promise<ApiKeyResponse> {
+  return apiPost<ApiKeyResponse, Record<string, never>>(
+    `/admin/api-keys/${keyId}/disable`,
+    {},
+  );
+}
+
+export function fetchAdminWebhooks(): Promise<WebhookEndpointResponse[]> {
+  return apiGet<WebhookEndpointResponse[]>("/admin/webhooks");
+}
+
+export function createAdminWebhook(
+  payload: WebhookEndpointCreateRequest,
+): Promise<WebhookEndpointCreateResponse> {
+  return apiPost<WebhookEndpointCreateResponse, WebhookEndpointCreateRequest>(
+    "/admin/webhooks",
+    payload,
+  );
+}
+
+export function disableAdminWebhook(webhookId: string): Promise<WebhookEndpointResponse> {
+  return apiPost<WebhookEndpointResponse, Record<string, never>>(
+    `/admin/webhooks/${webhookId}/disable`,
+    {},
+  );
+}
+
+export function fetchAdminWebhookDeliveries(limit = 20): Promise<WebhookDeliveryResponse[]> {
+  return apiGet<WebhookDeliveryResponse[]>(`/admin/webhook-deliveries?limit=${limit}`);
 }
 
 export function fetchAdminSystem(): Promise<AdminSystemOverviewResponse> {

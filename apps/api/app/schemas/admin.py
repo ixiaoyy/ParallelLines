@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from app.models.admin import SiteSetting
 from app.models.background_job import BackgroundJob, BackgroundJobLog
 from app.models.user import User
+from app.schemas.badges import UserBadgeResponse
 from app.schemas.common import ORMModel
 from app.schemas.moderation import AuditLogResponse
 
@@ -53,6 +54,9 @@ class AdminUserUpdateRequest(BaseModel):
     role: Literal["user", "moderator", "admin"] | None = None
     status: Literal["active", "silenced", "suspended", "deleted"] | None = None
     level: int | None = Field(default=None, ge=0, le=100)
+    points_delta: int | None = Field(default=None, ge=-100_000, le=100_000)
+    experience_delta: int | None = Field(default=None, ge=-100_000, le=100_000)
+    adjustment_reason: str | None = Field(default=None, max_length=500)
 
 
 class AdminUserResponse(ORMModel):
@@ -62,6 +66,12 @@ class AdminUserResponse(ORMModel):
     avatar_url: str | None = None
     role: str
     level: int
+    trust_level: int
+    trust_level_label: str
+    points_balance: int
+    experience_total: int
+    experience_to_next_level: int
+    level_progress_percent: int
     status: str
     two_factor_enabled: bool
     created_at: datetime
@@ -69,6 +79,7 @@ class AdminUserResponse(ORMModel):
     last_seen_at: datetime | None = None
     topic_count: int
     post_count: int
+    badges: list[UserBadgeResponse] = Field(default_factory=list)
 
     @classmethod
     def from_model(
@@ -77,6 +88,7 @@ class AdminUserResponse(ORMModel):
         *,
         topic_count: int = 0,
         post_count: int = 0,
+        badges: list[UserBadgeResponse] | None = None,
     ) -> "AdminUserResponse":
         return cls(
             id=user.id,
@@ -85,6 +97,12 @@ class AdminUserResponse(ORMModel):
             avatar_url=user.avatar_url,
             role=user.role,
             level=user.level,
+            trust_level=user.trust_level,
+            trust_level_label=user.trust_level_label,
+            points_balance=user.points_balance,
+            experience_total=user.experience_total,
+            experience_to_next_level=user.experience_to_next_level,
+            level_progress_percent=user.level_progress_percent,
             status=user.status,
             two_factor_enabled=user.two_factor_enabled,
             created_at=user.created_at,
@@ -92,6 +110,7 @@ class AdminUserResponse(ORMModel):
             last_seen_at=user.last_seen_at,
             topic_count=topic_count,
             post_count=post_count,
+            badges=badges or [],
         )
 
 

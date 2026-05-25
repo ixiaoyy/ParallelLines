@@ -229,6 +229,15 @@ python3 ./.trellis/scripts/task.py create "<title>" --slug <task-name>
 - [OK] Type checks pass (if applicable)
 - [OK] Manual feature testing passes
 
+**Default testing scope during roadmap development**:
+- During iterative roadmap tasks, keep tests intentionally lightweight: run lint/typecheck and a
+  focused smoke/regression check for the code path changed.
+- Do not expand broad per-task unit/integration/e2e matrices by default. The project will do a
+  larger end-to-end implementation pass later, after broader changes settle.
+- Only run or author full detailed test suites when the user explicitly asks for "详细测试",
+  "完整测试", "全量测试", release/commit readiness, or when a high-risk schema/security/data-loss
+  change makes detailed verification necessary.
+
 **Project-specific checks**:
 - See `.trellis/spec/<package>/<layer>/quality-guidelines.md` for package-specific checks
 

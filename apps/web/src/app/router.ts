@@ -39,6 +39,11 @@ export const router = createRouter({
       component: () => import("@/pages/user/UserProfilePage.vue"),
     },
     {
+      path: "/users",
+      name: "user-directory",
+      component: () => import("@/pages/user/UserDirectoryPage.vue"),
+    },
+    {
       path: "/b/:slug",
       name: "board-detail",
       component: () => import("@/pages/board/BoardPage.vue"),
@@ -62,6 +67,26 @@ export const router = createRouter({
       path: "/email-preferences",
       name: "email-preferences",
       component: () => import("@/pages/email/EmailPreferencesPage.vue"),
+    },
+    {
+      path: "/messages",
+      name: "messages",
+      component: () => import("@/pages/messages/MessagesPage.vue"),
+    },
+    {
+      path: "/chat",
+      name: "chat",
+      component: () => import("@/pages/chat/ChatPage.vue"),
+    },
+    {
+      path: "/billing",
+      name: "billing",
+      component: () => import("@/pages/billing/BillingPage.vue"),
+    },
+    {
+      path: "/events",
+      name: "events",
+      component: () => import("@/pages/events/EventsPage.vue"),
     },
     {
       path: "/moderation/reviewables",

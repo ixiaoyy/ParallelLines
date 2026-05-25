@@ -3,7 +3,7 @@
   "name": "import-export-migration-tools",
   "title": "导入、导出与迁移工具",
   "description": "支持从其他论坛/CSV/Markdown 导入数据，以及面向迁移的导出工具。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "backend",
   "scope": "ops",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
-  "branch": null,
+  "completedAt": "2026-05-25",
+  "branch": "codex/external-integrations",
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,13 @@
   "subtasks": [],
   "children": [],
   "parent": "05-20-discourse-parity-roadmap",
-  "relatedFiles": [],
-  "notes": "",
+  "relatedFiles": [
+    "apps/api/app/api/v1/migrations.py",
+    "apps/api/app/services/migrations.py",
+    "apps/api/app/schemas/migrations.py",
+    "apps/web/src/features/migrations/",
+    "apps/api/tests/test_import_export_migrations.py"
+  ],
+  "notes": "Completed: admin JSON migration preview/run/export with idempotency, row errors, and admin UI.",
   "meta": {}
 }

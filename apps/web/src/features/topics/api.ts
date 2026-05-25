@@ -2,11 +2,14 @@ import { apiGet, apiPost, apiPut } from "@/shared/api/client";
 
 import type {
   CreateTopicRequest,
+  PollResponse,
+  PollVoteRequest,
   TopicLifecycleRequest,
   TopicLifecycleResponse,
   TopicMergeRequest,
   TopicMoveRequest,
   TopicResponse,
+  TopicSolutionRequest,
   TopicSort,
   TopicSplitRequest,
 } from "./model";
@@ -83,4 +86,15 @@ export function mergeTopic(
   payload: TopicMergeRequest,
 ): Promise<TopicLifecycleResponse> {
   return apiPost<TopicLifecycleResponse, TopicMergeRequest>(`/topics/${topicId}/merge`, payload);
+}
+
+export function setTopicSolution(
+  topicId: string,
+  payload: TopicSolutionRequest,
+): Promise<TopicResponse> {
+  return apiPut<TopicResponse, TopicSolutionRequest>(`/topics/${topicId}/solution`, payload);
+}
+
+export function votePoll(topicId: string, payload: PollVoteRequest): Promise<PollResponse> {
+  return apiPut<PollResponse, PollVoteRequest>(`/topics/${topicId}/poll/vote`, payload);
 }

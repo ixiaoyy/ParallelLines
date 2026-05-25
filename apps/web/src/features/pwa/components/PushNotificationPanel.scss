@@ -1,0 +1,37 @@
+.push-panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.push-panel header {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.push-panel h2,
+.push-panel p {
+  margin: 0;
+}
+
+.push-panel h2 {
+  color: var(--title);
+  font-size: 1.2rem;
+}
+
+.push-panel p,
+.push-state,
+.push-status {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.push-warning {
+  color: var(--danger) !important;
+}
+
+.push-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}

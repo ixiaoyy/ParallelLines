@@ -1,4 +1,4 @@
-﻿.new-topic-page {
+.new-topic-page {
   display: grid;
   gap: 1rem;
 }
@@ -334,6 +334,149 @@ textarea:focus {
   font-style: normal;
 }
 
+.poll-builder {
+  position: relative;
+}
+
+.poll-toggle {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  border: 1px solid rgba(var(--primary-rgb), 0.16);
+  border-radius: 1rem;
+  padding: 0.78rem 0.85rem;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(var(--accent-geek-rgb), 0.14), transparent 11rem),
+    rgba(255, 255, 255, 0.78);
+}
+
+.poll-toggle input,
+.poll-settings-row input[type="checkbox"] {
+  width: 1rem;
+  min-height: auto;
+  accent-color: var(--primary);
+}
+
+.poll-toggle span {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.poll-toggle strong {
+  color: var(--title);
+}
+
+.poll-toggle small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.poll-fields {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.poll-settings-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.8fr) minmax(14rem, 1.2fr);
+  gap: 0.7rem;
+  align-items: end;
+}
+
+.poll-settings-row label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text);
+  font-weight: 780;
+}
+
+.poll-settings-row label:first-child {
+  display: flex;
+  align-items: center;
+  min-height: 3rem;
+  border: 1px dashed rgba(var(--primary-rgb), 0.2);
+  border-radius: 0.95rem;
+  padding: 0 0.85rem;
+  background: rgba(var(--primary-rgb), 0.06);
+}
+
+.poll-settings-row span {
+  color: var(--accent-geek);
+  font-size: 0.76rem;
+  font-weight: 920;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.poll-option-preview,
+.poll-preview-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.poll-option-preview span,
+.poll-preview-card span {
+  border-radius: 999px;
+  padding: 0.36rem 0.58rem;
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.1);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.poll-option-preview em,
+.poll-preview-card em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.tag-policy-box {
+  display: grid;
+  gap: 0.45rem;
+  border: 1px solid rgba(var(--accent-geek-rgb), 0.22);
+  border-radius: 0.95rem;
+  padding: 0.76rem 0.85rem;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(var(--accent-geek-rgb), 0.12), transparent 10rem),
+    rgba(255, 255, 255, 0.78);
+}
+
+.tag-policy-box strong {
+  color: var(--title);
+  font-size: 0.9rem;
+}
+
+.tag-policy-box p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.tag-chip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.tag-chip-actions button {
+  border: 1px solid rgba(var(--primary-rgb), 0.18);
+  border-radius: 999px;
+  padding: 0.34rem 0.58rem;
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.08);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.tag-chip-actions button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
 .topic-preview-card {
   display: grid;
   gap: 0.75rem;
@@ -368,6 +511,16 @@ textarea:focus {
   color: var(--text);
   line-height: 1.65;
   white-space: pre-wrap;
+}
+
+.poll-preview-card {
+  border-top: 1px solid rgba(var(--muted-rgb), 0.16);
+  padding-top: 0.65rem;
+}
+
+.poll-preview-card strong {
+  flex-basis: 100%;
+  color: var(--title);
 }
 
 .publish-checklist {
@@ -426,6 +579,18 @@ textarea:focus {
   position: relative;
 }
 
+.helper-card pre {
+  overflow: auto;
+  border-radius: 0.9rem;
+  margin: 0;
+  padding: 0.8rem;
+  color: #d1e7ff;
+  background: var(--code-bg);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
 .helper-card ol {
   display: grid;
   gap: 0.5rem;
@@ -450,6 +615,7 @@ textarea:focus {
   .new-topic-layout,
   .board-picker,
   .intent-picker,
+  .poll-settings-row,
   .draft-panel {
     grid-template-columns: 1fr;
   }
@@ -494,5 +660,35 @@ textarea:focus {
 
   .new-topic-hero h1 {
     font-size: clamp(2rem, 10vw, 2.45rem);
+  }
+}
+
+.conflict-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  animation: slideIn 0.3s ease-out;
+
+  .conflict-icon {
+    flex-shrink: 0;
+    color: #ef4444;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

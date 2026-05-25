@@ -21,7 +21,7 @@ Backend endpoints:
 | `PUT /api/v1/admin/settings/{key}` | admin | Updates one whitelisted setting. |
 | `GET /api/v1/admin/users?query=&role=&status=&limit=` | admin | Searches users by username/email and optional filters. |
 | `GET /api/v1/admin/users/{user_id}` | admin | Returns one user with content counts. |
-| `PUT /api/v1/admin/users/{user_id}` | admin | Updates user role/status/level fields. |
+| `PUT /api/v1/admin/users/{user_id}` | admin | Updates user role/status/level fields and optional growth deltas. |
 | `GET /api/v1/admin/system` | admin | Returns DB/cache/mail/worker status, stats, recent audit and mail logs. |
 | `GET /api/v1/admin/background-jobs?status=&limit=` | admin | Lists queued/running/succeeded/dead jobs. |
 | `GET /api/v1/admin/background-jobs/{job_id}/logs` | admin | Lists event logs for one background job. |
@@ -60,6 +60,8 @@ Settings with request-path effects:
 - Every admin write writes an `audit_logs` row in the same transaction:
   `site_setting_updated` for setting changes and `user_admin_updated` for user changes.
 - User `role` remains the permission source of truth. `level` is display/growth metadata.
+- User growth adjustments must call `GrowthService.adjust_user()` so
+  `points_delta` / `experience_delta` write `user_point_events` and recompute level from XP.
 - Admins cannot disable their own account or remove their own admin role through
   `/admin/users/{self}`.
 - Email logs exposed by the admin API must mask recipient local parts and must not
@@ -82,6 +84,7 @@ Settings with request-path effects:
 | `registration_enabled=false` and visitor registers | `registration_disabled` / 403 |
 | Admin updates site title | Public `/site/settings` returns new title and audit row is written |
 | Admin updates another user's role/status/level | User response reflects changes and `user_admin_updated` audit row exists |
+| Admin sends points/experience deltas | Response reflects floored balance/XP, growth ledger row exists, and audit row includes before/after |
 | Admin tries to suspend self | `cannot_moderate_self` / 422 |
 | Redis unavailable during `/admin/system` | Endpoint still returns 200 with cache `degraded` |
 | Admin queries missing background job logs | `404 background_job_not_found` |
@@ -92,8 +95,8 @@ Settings with request-path effects:
 
 - Good: admin changes `site_title`; frontend app shell refetches public settings and
   displays the new title without exposing admin-only settings.
-- Base: admin searches a user by email, changes status to `silenced`, and audit logs
-  show before/after role/status/level.
+- Base: admin searches a user by email, changes status to `silenced`, or applies growth deltas,
+  and audit logs show before/after role/status/level/points/experience.
 - Bad: router mutates a `User` row directly without `AdminService`, skipping self
   protection or audit logs.
 - Bad: `/admin/system` reports old `hot_ranking` or `upload_cleanup` worker state after the unified worker is deployed.

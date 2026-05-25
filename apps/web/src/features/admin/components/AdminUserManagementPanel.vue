@@ -1,14 +1,23 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 
+import type { UserBadgeResponse } from "@/features/badges/model";
 import { adminRoleLabel, adminStatusLabel } from "@/features/admin/model";
-import type { AdminUserResponse } from "@/features/admin/model";
-import { useAdminUsers, useUpdateAdminUser } from "@/features/admin/queries";
+import type { AdminUserResponse, AdminUserUpdateRequest } from "@/features/admin/model";
+import {
+  useAdminBadges,
+  useAdminUsers,
+  useGrantAdminUserBadge,
+  useRevokeAdminUserBadge,
+  useUpdateAdminUser,
+} from "@/features/admin/queries";
 import { relativeTime } from "@/shared/lib/format";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 const updateUserMutation = useUpdateAdminUser();
+const grantBadgeMutation = useGrantAdminUserBadge();
+const revokeBadgeMutation = useRevokeAdminUserBadge();
 const userFilters = reactive({ query: "", role: "", status: "" });
 const userParams = computed(() => ({
   limit: 50,
@@ -17,7 +26,9 @@ const userParams = computed(() => ({
   status: userFilters.status || undefined,
 }));
 const usersQuery = useAdminUsers(userParams);
+const badgesQuery = useAdminBadges();
 const users = computed(() => usersQuery.data.value ?? []);
+const badgeCatalog = computed(() => badgesQuery.data.value?.filter((badge) => badge.active) ?? []);
 const selectedUserId = ref<string | null>(null);
 const selectedUser = computed(() =>
   users.value.find((user) => user.id === selectedUserId.value) ?? users.value[0] ?? null,
@@ -26,6 +37,14 @@ const userDraft = reactive({
   role: "user" as "user" | "moderator" | "admin",
   status: "active" as "active" | "silenced" | "suspended" | "deleted",
   level: 0,
+  pointsDelta: 0,
+  experienceDelta: 0,
+  adjustmentReason: "",
+});
+const badgeDraft = reactive({
+  badgeSlug: "",
+  note: "",
+  revokeReason: "",
 });
 
 watch(
@@ -41,6 +60,22 @@ watch(
         ? user.status
         : "active";
     userDraft.level = user.level;
+    userDraft.pointsDelta = 0;
+    userDraft.experienceDelta = 0;
+    userDraft.adjustmentReason = "";
+    badgeDraft.badgeSlug = "";
+    badgeDraft.note = "";
+    badgeDraft.revokeReason = "";
+  },
+  { immediate: true },
+);
+
+watch(
+  badgeCatalog,
+  (badges) => {
+    if (!badgeDraft.badgeSlug && badges.length > 0) {
+      badgeDraft.badgeSlug = badges[0].slug;
+    }
   },
   { immediate: true },
 );
@@ -53,9 +88,52 @@ function saveUser() {
   if (!selectedUser.value) {
     return;
   }
+  const payload: AdminUserUpdateRequest = {
+    role: userDraft.role,
+    status: userDraft.status,
+    level: Number(userDraft.level),
+  };
+  const pointsDelta = Number(userDraft.pointsDelta);
+  const experienceDelta = Number(userDraft.experienceDelta);
+  if (pointsDelta !== 0) {
+    payload.points_delta = pointsDelta;
+  }
+  if (experienceDelta !== 0) {
+    payload.experience_delta = experienceDelta;
+  }
+  const reason = userDraft.adjustmentReason.trim();
+  if (reason) {
+    payload.adjustment_reason = reason;
+  }
   updateUserMutation.mutate({
     userId: selectedUser.value.id,
-    payload: { role: userDraft.role, status: userDraft.status, level: Number(userDraft.level) },
+    payload,
+  });
+}
+
+function grantBadge() {
+  if (!selectedUser.value || !badgeDraft.badgeSlug) {
+    return;
+  }
+  grantBadgeMutation.mutate({
+    userId: selectedUser.value.id,
+    payload: {
+      badge_slug: badgeDraft.badgeSlug,
+      note: badgeDraft.note.trim() || null,
+    },
+  });
+}
+
+function revokeBadge(badge: UserBadgeResponse) {
+  if (!selectedUser.value) {
+    return;
+  }
+  revokeBadgeMutation.mutate({
+    userId: selectedUser.value.id,
+    badgeSlug: badge.badge_slug,
+    payload: {
+      reason: badgeDraft.revokeReason.trim() || "管理员手动撤销",
+    },
   });
 }
 </script>
@@ -115,6 +193,18 @@ function saveUser() {
           <dd>{{ selectedUser.topic_count }} 主题 / {{ selectedUser.post_count }} 帖子</dd>
         </div>
         <div>
+          <dt>成长</dt>
+          <dd>Lv.{{ selectedUser.level }} · {{ selectedUser.experience_total }} XP</dd>
+        </div>
+        <div>
+          <dt>信任</dt>
+          <dd>TL{{ selectedUser.trust_level }} · {{ selectedUser.trust_level_label }}</dd>
+        </div>
+        <div>
+          <dt>积分</dt>
+          <dd>{{ selectedUser.points_balance }} 分 · 进度 {{ selectedUser.level_progress_percent }}%</dd>
+        </div>
+        <div>
           <dt>最后活跃</dt>
           <dd>{{ selectedUser.last_seen_at ? relativeTime(selectedUser.last_seen_at) : "未记录" }}</dd>
         </div>
@@ -140,7 +230,69 @@ function saveUser() {
         <span>等级</span>
         <input v-model.number="userDraft.level" type="number" min="0" max="100" />
       </label>
+      <div class="growth-adjust-grid">
+        <label>
+          <span>积分调整</span>
+          <input v-model.number="userDraft.pointsDelta" type="number" min="-100000" max="100000" />
+        </label>
+        <label>
+          <span>经验调整</span>
+          <input v-model.number="userDraft.experienceDelta" type="number" min="-100000" max="100000" />
+        </label>
+      </div>
+      <label>
+        <span>调整备注</span>
+        <input v-model="userDraft.adjustmentReason" type="text" maxlength="500" placeholder="人工调整原因（可选）" />
+      </label>
+      <p class="growth-adjust-note">
+        经验调整会按集中成长规则重算等级，并触发信任等级重算；信任等级不等同于管理员权限。
+      </p>
       <UiButton :disabled="updateUserMutation.isPending.value" @click="saveUser">保存用户变更</UiButton>
+
+      <section class="user-badge-section" aria-label="徽章管理">
+        <div class="section-head">
+          <span class="panel-kicker">Badges</span>
+          <strong>{{ selectedUser.badges.length }} 个有效徽章</strong>
+        </div>
+        <div v-if="selectedUser.badges.length" class="user-badge-list">
+          <span v-for="badge in selectedUser.badges" :key="badge.id" class="user-badge-chip">
+            <em>{{ badge.icon }}</em>
+            {{ badge.name }}
+            <button type="button" :disabled="revokeBadgeMutation.isPending.value" @click="revokeBadge(badge)">
+              撤销
+            </button>
+          </span>
+        </div>
+        <p v-else class="growth-adjust-note">暂无有效徽章。</p>
+        <div class="badge-admin-form">
+          <label>
+            <span>授予徽章</span>
+            <select v-model="badgeDraft.badgeSlug">
+              <option v-for="badge in badgeCatalog" :key="badge.slug" :value="badge.slug">
+                {{ badge.icon }} {{ badge.name }}（TL{{ badge.trust_level_required }}）
+              </option>
+            </select>
+          </label>
+          <label>
+            <span>授予备注</span>
+            <input v-model="badgeDraft.note" maxlength="500" placeholder="授予原因（可选）" />
+          </label>
+          <label>
+            <span>撤销原因</span>
+            <input v-model="badgeDraft.revokeReason" maxlength="500" placeholder="撤销时使用（可选）" />
+          </label>
+          <UiButton
+            tone="subtle"
+            :disabled="!badgeDraft.badgeSlug || grantBadgeMutation.isPending.value"
+            @click="grantBadge"
+          >
+            {{ grantBadgeMutation.isPending.value ? "授予中…" : "授予徽章" }}
+          </UiButton>
+        </div>
+        <p v-if="badgesQuery.isError.value" class="panel-state panel-state--error" role="alert">
+          徽章目录加载失败。
+        </p>
+      </section>
     </UiCard>
   </aside>
 </template>

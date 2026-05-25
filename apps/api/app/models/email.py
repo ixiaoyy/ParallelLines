@@ -3,10 +3,20 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin
 
 EmailDigestFrequency = Literal["off", "daily", "weekly"]
 EmailDeliveryStatus = Literal["ok", "bounced", "complained", "disabled"]
@@ -14,7 +24,7 @@ EmailDeliveryEventType = Literal["sent", "delivered", "bounce", "complaint", "dr
 InboundEmailStatus = Literal["accepted", "unknown_sender", "topic_not_found", "recorded"]
 
 
-class UserEmailPreference(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class UserEmailPreference(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "user_email_preferences"
     __table_args__ = (
         UniqueConstraint("user_id", name="uq_user_email_preferences_user"),
@@ -32,11 +42,19 @@ class UserEmailPreference(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     last_digest_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delivery_status: Mapped[str] = mapped_column(String(32), default="ok", nullable=False)
     disabled_reason: Mapped[str | None] = mapped_column(String(255))
+    quiet_hours_start: Mapped[int | None] = mapped_column(
+        Integer,
+        comment="免打扰开始小时（UTC，0-23）；为空表示未启用免打扰。",
+    )
+    quiet_hours_end: Mapped[int | None] = mapped_column(
+        Integer,
+        comment="免打扰结束小时（UTC，0-23）；为空表示未启用免打扰；等于开始小时表示全天免打扰。",
+    )
 
     user = relationship("User", lazy="selectin")
 
 
-class EmailDeliveryEvent(UUIDPrimaryKeyMixin, Base):
+class EmailDeliveryEvent(IntegerPrimaryKeyMixin, Base):
     __tablename__ = "email_delivery_events"
     __table_args__ = (
         Index("ix_email_delivery_events_email_created", "email", "created_at"),
@@ -55,7 +73,7 @@ class EmailDeliveryEvent(UUIDPrimaryKeyMixin, Base):
     user = relationship("User", lazy="selectin")
 
 
-class InboundEmail(UUIDPrimaryKeyMixin, Base):
+class InboundEmail(IntegerPrimaryKeyMixin, Base):
     __tablename__ = "inbound_emails"
     __table_args__ = (
         Index("ix_inbound_emails_status_created", "status", "created_at"),

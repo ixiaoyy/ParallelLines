@@ -64,7 +64,15 @@ async def test_admin_settings_public_settings_and_registration_gate() -> None:
         )
         assert settings.status_code == 200
         setting_keys = {item["key"] for item in settings.json()["data"]}
-        assert {"site_title", "registration_enabled", "upload_max_bytes"}.issubset(setting_keys)
+        assert {
+            "site_title",
+            "brand_logo_url",
+            "brand_favicon_url",
+            "brand_accent_color",
+            "site_text_overrides",
+            "registration_enabled",
+            "upload_max_bytes",
+        }.issubset(setting_keys)
 
         title = await client.put(
             "/api/v1/admin/settings/site_title",
@@ -77,6 +85,23 @@ async def test_admin_settings_public_settings_and_registration_gate() -> None:
         public_settings = await client.get("/api/v1/site/settings")
         assert public_settings.status_code == 200
         assert public_settings.json()["data"]["settings"]["site_title"] == "平行线实验场"
+        assert public_settings.json()["data"]["settings"]["brand_logo_url"] == "/logo-lines.png"
+
+        text_overrides = await client.put(
+            "/api/v1/admin/settings/site_text_overrides",
+            headers={"Authorization": admin["auth"]},
+            json={"value": {"nav.home": "社区首页", "topic.publish": "发新帖"}},
+        )
+        assert text_overrides.status_code == 200
+        assert text_overrides.json()["data"]["value"]["nav.home"] == "社区首页"
+
+        invalid_color = await client.put(
+            "/api/v1/admin/settings/brand_primary_color",
+            headers={"Authorization": admin["auth"]},
+            json={"value": "red;"},
+        )
+        assert invalid_color.status_code == 422
+        assert invalid_color.json()["error"]["code"] == "invalid_site_setting_value"
 
         disabled = await client.put(
             "/api/v1/admin/settings/registration_enabled",

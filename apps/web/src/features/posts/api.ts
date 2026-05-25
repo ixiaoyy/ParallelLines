@@ -8,8 +8,10 @@ import type {
   UpdatePostRequest,
 } from "./model";
 
-export function fetchPosts(topicId: string): Promise<PostResponse[]> {
-  return apiGet<PostResponse[]>(`/topics/${topicId}/posts`);
+export type PostSort = "chronological" | "qa";
+
+export function fetchPosts(topicId: string, sort: PostSort = "chronological"): Promise<PostResponse[]> {
+  return apiGet<PostResponse[]>(`/topics/${topicId}/posts?sort=${sort}`);
 }
 
 export function createPost(topicId: string, payload: CreatePostRequest): Promise<PostResponse> {

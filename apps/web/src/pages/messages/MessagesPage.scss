@@ -1,0 +1,181 @@
+.messages-page {
+  display: grid;
+  gap: clamp(1rem, 2vw, 1.5rem);
+}
+
+.messages-hero {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(var(--primary-rgb), 0.16);
+  background:
+    radial-gradient(circle at 88% 14%, rgba(var(--accent-geek-rgb), 0.2), transparent 16rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(232, 245, 255, 0.82));
+}
+
+.messages-hero :deep(.ant-card-body) {
+  position: relative;
+  min-height: 12rem;
+  padding: clamp(1.4rem, 3vw, 2.2rem);
+}
+
+.messages-hero h1,
+.messages-hero p,
+.message-card h2,
+.message-card p {
+  margin: 0;
+}
+
+.messages-hero h1 {
+  margin-top: 0.55rem;
+  color: var(--title);
+  font-size: clamp(2.4rem, 5vw, 4.7rem);
+  line-height: 0.95;
+  letter-spacing: -0.08em;
+}
+
+.messages-hero p {
+  max-width: 40rem;
+  margin-top: 0.85rem;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.messages-orbit {
+  position: absolute;
+  right: clamp(1rem, 6vw, 6rem);
+  bottom: -4rem;
+  width: 16rem;
+  height: 16rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.22);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, transparent 48%, rgba(var(--primary-rgb), 0.16) 49%, transparent 52%),
+    radial-gradient(circle, rgba(var(--accent-geek-rgb), 0.18), transparent 64%);
+}
+
+.messages-state {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1.25rem;
+  color: var(--text);
+}
+
+.messages-state strong {
+  color: var(--title);
+  font-size: 1.05rem;
+}
+
+.messages-state p {
+  margin: 0;
+}
+
+.messages-state a {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.6rem 0.9rem;
+  color: white;
+  background: var(--gradient-brand);
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.messages-state--error {
+  border-color: rgba(239, 68, 68, 0.24);
+  background: rgba(254, 242, 242, 0.86);
+}
+
+.messages-empty {
+  border-style: dashed;
+}
+
+.messages-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.message-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(var(--primary-rgb), 0.14);
+  border-radius: 1.25rem;
+  padding: 1rem 1.15rem;
+  color: inherit;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.86)),
+    radial-gradient(circle at 0% 0%, rgba(var(--primary-rgb), 0.1), transparent 14rem);
+  text-decoration: none;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.message-card:hover,
+.message-card:focus-visible {
+  border-color: rgba(var(--primary-rgb), 0.34);
+  box-shadow: 0 18px 36px rgba(var(--primary-rgb), 0.12);
+  outline: none;
+  transform: translateY(-2px);
+}
+
+.message-card.unread {
+  border-color: rgba(var(--accent-geek-rgb), 0.35);
+  background:
+    linear-gradient(90deg, rgba(var(--accent-geek-rgb), 0.13), transparent 42%),
+    rgba(255, 255, 255, 0.96);
+}
+
+.message-card__rail {
+  width: 0.45rem;
+  height: 4.4rem;
+  border-radius: 999px;
+  background: var(--gradient-brand);
+}
+
+.message-card__kicker {
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 920;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.message-card h2 {
+  margin-top: 0.28rem;
+  color: var(--title);
+  font-size: clamp(1.2rem, 2vw, 1.55rem);
+  letter-spacing: -0.045em;
+}
+
+.message-card p {
+  margin-top: 0.35rem;
+  color: var(--text);
+}
+
+.message-card small {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--muted);
+  font-weight: 780;
+}
+
+.message-card > strong {
+  color: var(--primary);
+  font-size: 1.2rem;
+}
+
+@media (max-width: 640px) {
+  .message-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .message-card__rail {
+    width: 100%;
+    height: 0.35rem;
+  }
+}

@@ -64,7 +64,7 @@ Service methods:
 - Validation is based on server-side signature sniffing, not only browser MIME headers.
   Disallowed active types include `svg`, `html`, `js`, shell/PowerShell/batch scripts,
   PHP, DLL, COM, and EXE.
-- Local storage paths are generated from upload UUIDs and must never accept user-provided
+- Local storage paths are generated from server-assigned numeric upload IDs and must never accept user-provided
   path segments.
 
 ### 4. Validation & Error Matrix

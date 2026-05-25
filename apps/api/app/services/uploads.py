@@ -15,7 +15,7 @@ from starlette.requests import Request
 
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppError, NotFoundError, PermissionDeniedError, ValidationError
-from app.db.base import new_uuid, utcnow
+from app.db.base import new_random_suffix, utcnow
 from app.models.forum import Board, BoardMember, Post, Topic
 from app.models.upload import Upload
 from app.models.user import User
@@ -23,8 +23,11 @@ from app.services.admin import SiteSettingService
 from app.services.spam import SpamPreventionService
 
 UPLOAD_REFERENCE_PATTERN = re.compile(
-    r"(?:/api/v1)?/uploads/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
-    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/content"
+    r"(?:/api/v1)?/uploads/("
+    r"[1-9][0-9]*|"
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    r")/content"
 )
 SAFE_FILENAME_PATTERN = re.compile(r"[^A-Za-z0-9._-]+")
 IMAGE_MEDIA_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
@@ -221,13 +224,11 @@ class UploadService:
             raise ValidationError("avatar_must_be_image", "Avatar upload must be an image")
         sha256 = hashlib.sha256(content).hexdigest()
         extension = extension_for_media_type(media_type, filename)
-        upload_id = new_uuid()
         upload = Upload(
-            id=upload_id,
             user_id=current_user.id,
             original_filename=filename,
             storage_backend=self.settings.upload_storage_backend,
-            storage_key=storage_key_for(upload_id, extension),
+            storage_key=storage_key_for(f"pending-{new_random_suffix(8)}", extension),
             media_type=media_type,
             byte_size=len(content),
             sha256=sha256,
@@ -241,6 +242,8 @@ class UploadService:
             ),
         )
         self.session.add(upload)
+        await self.session.flush()
+        upload.storage_key = storage_key_for(upload.id, extension)
         path = self.local_path_for(upload)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(content)
@@ -328,7 +331,8 @@ def sanitize_filename(filename: str) -> str:
 
 def storage_key_for(upload_id: str, extension: str) -> str:
     safe_extension = extension if extension.startswith(".") else f".{extension}"
-    return f"{upload_id[:2]}/{upload_id}{safe_extension}"
+    bucket = upload_id[-2:].zfill(2)
+    return f"{bucket}/{upload_id}{safe_extension}"
 
 
 def sniff_media_type(

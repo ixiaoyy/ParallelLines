@@ -1,0 +1,11 @@
+{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
+{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Verify migration/comment/counter rules"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Verify error codes and route/service boundaries"}
+{"file": ".trellis/spec/backend/interactions-notifications.md", "reason": "Verify idempotency and counter rules"}
+{"file": ".trellis/spec/backend/topic-lifecycle.md", "reason": "Verify moderator permission consistency"}
+{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "Verify API and VM mappings"}
+{"file": ".trellis/spec/frontend/post-actions.md", "reason": "Verify post action UX"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Verify no unsafe TS patterns"}
+{"file": ".trellis/spec/backend/topic-solved-voting-polls.md", "reason": "Verify solved/voting/poll backend contract"}
+{"file": ".trellis/spec/frontend/topic-solved-voting-polls.md", "reason": "Verify solved/voting/poll frontend contract"}

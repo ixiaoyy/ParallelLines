@@ -14,6 +14,7 @@ from starlette.requests import Request
 from app.core.config import Settings, get_settings
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError, RateLimitError
 from app.core.permissions import is_admin
+from app.core.trust import trust_adjusted_limit
 from app.db.base import utcnow
 from app.models.moderation import AuditLog, RateLimitEvent, ScreenedRule, SpamAction
 from app.models.user import User
@@ -295,6 +296,11 @@ class SpamPreventionService:
         now = utcnow()
         ip_address = request_ip(request)
         for policy in policies:
+            effective_limit = (
+                trust_adjusted_limit(policy.limit, actor.trust_level)
+                if actor is not None and policy.identity_type == "user"
+                else policy.limit
+            )
             cutoff = now - timedelta(seconds=policy.window_seconds)
             count = await self.session.scalar(
                 select(func.count(RateLimitEvent.id)).where(
@@ -313,7 +319,7 @@ class SpamPreventionService:
                     created_at=now,
                 )
             )
-            if (count or 0) >= policy.limit:
+            if (count or 0) >= effective_limit:
                 self._add_spam_action(
                     kind="rate_limit",
                     action="block",
@@ -323,6 +329,9 @@ class SpamPreventionService:
                     data={
                         "scope": policy.scope,
                         "identity_type": policy.identity_type,
+                        "limit": effective_limit,
+                        "base_limit": policy.limit,
+                        "trust_level": actor.trust_level if actor else None,
                         "window_seconds": policy.window_seconds,
                     },
                 )
@@ -392,7 +401,7 @@ class SpamPreventionService:
         urls = extract_urls(raw_md)
         if len(urls) < self.settings.new_user_link_limit:
             return
-        if current_user.level > 0:
+        if current_user.trust_level > 0:
             return
         cutoff = utcnow() - timedelta(days=self.settings.new_user_screening_days)
         if current_user.created_at < cutoff:

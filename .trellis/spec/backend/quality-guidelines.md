@@ -7,6 +7,16 @@
 - `pytest` for unit and integration tests.
 - Alembic migration upgrade on a clean database.
 
+## Default Roadmap Testing Scope
+
+- During normal development of roadmap tasks, default to downgraded testing: run backend lint and
+  one focused pytest smoke/regression target for the touched behavior.
+- Do not add or run broad per-task backend matrices by default; final product-level verification
+  will cover the full integrated behavior after larger changes settle.
+- Escalate to detailed backend tests only when the user explicitly requests detailed/full testing,
+  when preparing a commit/release, or when the change is high-risk (schema/data migration, security,
+  permissions, irreversible data mutation).
+
 ## Test Expectations
 
 - Routers: authentication, permissions, validation, response shape.

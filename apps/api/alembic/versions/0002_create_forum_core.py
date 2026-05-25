@@ -20,13 +20,13 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "boards",
-        sa.Column("id", sa.String(length=36), primary_key=True),
+        sa.Column("id", sa.BigInteger(), primary_key=True),
         sa.Column("slug", sa.String(length=96), nullable=False),
         sa.Column("name", sa.String(length=80), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
         sa.Column("color", sa.String(length=32), nullable=False),
         sa.Column("avatar_url", sa.String(length=512), nullable=True),
-        sa.Column("owner_id", sa.String(length=36), nullable=True),
+        sa.Column("owner_id", sa.BigInteger(), nullable=True),
         sa.Column("visibility", sa.String(length=32), nullable=False),
         sa.Column("topic_count", sa.Integer(), nullable=False),
         sa.Column("post_count", sa.Integer(), nullable=False),
@@ -40,9 +40,9 @@ def upgrade() -> None:
 
     op.create_table(
         "board_members",
-        sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("board_id", sa.String(length=36), nullable=False),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
+        sa.Column("id", sa.BigInteger(), primary_key=True),
+        sa.Column("board_id", sa.BigInteger(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
         sa.Column("role", sa.String(length=32), nullable=False),
         sa.Column("notification_level", sa.String(length=32), nullable=False),
         sa.Column("joined_at", sa.DateTime(timezone=True), nullable=False),
@@ -53,7 +53,7 @@ def upgrade() -> None:
 
     op.create_table(
         "tags",
-        sa.Column("id", sa.String(length=36), primary_key=True),
+        sa.Column("id", sa.BigInteger(), primary_key=True),
         sa.Column("name", sa.String(length=48), nullable=False),
         sa.Column("slug", sa.String(length=64), nullable=False),
         sa.Column("topic_count", sa.Integer(), nullable=False),
@@ -66,9 +66,9 @@ def upgrade() -> None:
 
     op.create_table(
         "topics",
-        sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("board_id", sa.String(length=36), nullable=False),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
+        sa.Column("id", sa.BigInteger(), primary_key=True),
+        sa.Column("board_id", sa.BigInteger(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
         sa.Column("title", sa.String(length=180), nullable=False),
         sa.Column("slug", sa.String(length=220), nullable=False),
         sa.Column("status", sa.String(length=32), nullable=False),
@@ -91,8 +91,8 @@ def upgrade() -> None:
 
     op.create_table(
         "topic_tags",
-        sa.Column("topic_id", sa.String(length=36), nullable=False),
-        sa.Column("tag_id", sa.String(length=36), nullable=False),
+        sa.Column("topic_id", sa.BigInteger(), nullable=False),
+        sa.Column("tag_id", sa.BigInteger(), nullable=False),
         sa.ForeignKeyConstraint(["tag_id"], ["tags.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["topic_id"], ["topics.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("topic_id", "tag_id"),
@@ -100,10 +100,10 @@ def upgrade() -> None:
 
     op.create_table(
         "posts",
-        sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("topic_id", sa.String(length=36), nullable=False),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
-        sa.Column("parent_id", sa.String(length=36), nullable=True),
+        sa.Column("id", sa.BigInteger(), primary_key=True),
+        sa.Column("topic_id", sa.BigInteger(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
+        sa.Column("parent_id", sa.BigInteger(), nullable=True),
         sa.Column("post_number", sa.Integer(), nullable=False),
         sa.Column("raw_md", sa.Text(), nullable=False),
         sa.Column("cooked_html", sa.Text(), nullable=False),
@@ -120,9 +120,9 @@ def upgrade() -> None:
 
     op.create_table(
         "topic_reads",
-        sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("topic_id", sa.String(length=36), nullable=False),
-        sa.Column("user_id", sa.String(length=36), nullable=False),
+        sa.Column("id", sa.BigInteger(), primary_key=True),
+        sa.Column("topic_id", sa.BigInteger(), nullable=False),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
         sa.Column("last_read_post_number", sa.Integer(), nullable=False),
         sa.Column("notification_level", sa.String(length=32), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),

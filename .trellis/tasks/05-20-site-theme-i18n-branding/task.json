@@ -3,7 +3,7 @@
   "name": "site-theme-i18n-branding",
   "title": "站点主题、品牌配置与文案国际化",
   "description": "支持管理员配置 Logo、色板、站点文案、主题和多语言基础。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "fullstack",
   "scope": "customization",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
-  "branch": null,
+  "completedAt": "2026-05-25",
+  "branch": "codex/site-theme-i18n-branding",
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 5,
   "next_action": [
     {
       "phase": 1,
@@ -48,6 +48,6 @@
   "children": [],
   "parent": "05-20-discourse-parity-roadmap",
   "relatedFiles": [],
-  "notes": "",
+  "notes": "Implemented public/admin branding settings for logo/favicon/colors/text overrides, strict backend validation, AppShell i18n fallbacks/theme application, and admin preview/rollback. Validation: backend ruff targeted, pytest tests/test_admin.py -q, web npm run typecheck, npm run lint.",
   "meta": {}
 }

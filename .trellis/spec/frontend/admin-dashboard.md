@@ -52,8 +52,10 @@ Routes:
   - string sends trimmed/editable string.
 - Mutations invalidate `queryKeys.adminRoot`; setting mutations also invalidate
   `queryKeys.siteSettingsPublic` so public branding refreshes.
-- User management changes role/status/level together through `updateAdminUser`;
-  pages must not infer admin powers from `level`.
+- User management changes role/status/level and optional `points_delta` / `experience_delta`
+  through `updateAdminUser`; pages must not infer admin powers from `level`.
+- Admin growth adjustments display current points/XP/progress from `AdminUserResponse` and send
+  only delta values plus an optional audit reason, never client-computed absolute balances.
 
 ### 4. Validation & Error Matrix
 
@@ -64,6 +66,7 @@ Routes:
 | Admin updates `site_title` | Public settings query invalidates and app shell title updates |
 | Backend returns cache degraded in system overview | Dashboard shows degraded badge, not a hard failure |
 | User list is empty for filters | User detail is not submitted without a selected user |
+| Admin enters growth deltas | Payload uses `points_delta` / `experience_delta` and keeps backend as source of truth for recalculated level |
 | Setting save is pending | Save buttons are disabled to prevent duplicate writes |
 
 ### 5. Good/Base/Bad Cases
@@ -71,7 +74,7 @@ Routes:
 - Good: `AppShell.vue` reads `usePublicSiteSettings()` and falls back to checked-in
   Chinese defaults if the public settings API fails.
 - Base: admin opens `/admin`, sees system counters, edits a setting, selects a user,
-  changes role/status/level, then confirms audit timeline updated after refetch.
+  changes role/status/level or growth deltas, then confirms audit timeline updated after refetch.
 - Bad: admin page imports `apiPut` directly instead of using `features/admin/api.ts`.
 - Bad: public settings query is stored in Pinia and drifts from backend state.
 

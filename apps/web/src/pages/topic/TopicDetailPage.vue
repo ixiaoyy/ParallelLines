@@ -1,15 +1,25 @@
 <script setup lang="ts">
+import { useQueryClient } from "@tanstack/vue-query";
 import { computed, nextTick, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import type { PostItemVM } from "@/entities/post/model";
+import TopicAiSummaryCard from "@/features/ai/components/TopicAiSummaryCard.vue";
 import { useCurrentUser } from "@/features/auth/queries";
-import { setTopicBookmark } from "@/features/interactions/api";
+import { setTopicBookmark, setTopicLike, setTopicVote } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
+import ReportModal from "@/features/moderation/components/ReportModal.vue";
 import { useCreateFlag } from "@/features/moderation/queries";
+import type { NotificationLevel } from "@/features/notifications/model";
+import {
+  useTopicNotificationLevel,
+  useUpdateTopicNotificationLevel,
+} from "@/features/notifications/queries";
+import type { PostSort } from "@/features/posts/api";
 import PostItem from "@/features/posts/components/PostItem.vue";
 import { useCreatePost, useTopicPosts } from "@/features/posts/queries";
 import ComposerDrawer from "@/features/topics/components/ComposerDrawer.vue";
+import PollPanel from "@/features/topics/components/PollPanel.vue";
 import TopicDetailHero from "@/features/topics/components/TopicDetailHero.vue";
 import TopicDetailSidebar from "@/features/topics/components/TopicDetailSidebar.vue";
 import TopicThreadToolbar from "@/features/topics/components/TopicThreadToolbar.vue";
@@ -17,43 +27,72 @@ import {
   useMergeTopic,
   useMoveTopic,
   useRelatedTopics,
+  useSetTopicSolution,
   useSplitTopic,
   useTopicDetail,
   useTopicLifecycle,
+  useVotePoll,
 } from "@/features/topics/queries";
 import { hasAccessToken } from "@/shared/api/client";
 import { contentPolicyMessage } from "@/shared/api/errors";
+import { queryKeys } from "@/shared/api/queryKeys";
 import { compactNumber } from "@/shared/lib/format";
 import { readRouteParam } from "@/shared/router/params";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
+import { useSeoMeta } from "@/shared/seo/meta";
 import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
 const route = useRoute();
 const router = useRouter();
+const queryClient = useQueryClient();
 
 const topicId = computed(() => readRouteParam(route.params.id));
+const postSort = ref<PostSort>("chronological");
 const topicQuery = useTopicDetail(topicId);
-const postsQuery = useTopicPosts(topicId);
+const postsQuery = useTopicPosts(topicId, postSort);
 const createPost = useCreatePost(topicId);
 const currentUserQuery = useCurrentUser();
+const topicNotificationQuery = useTopicNotificationLevel(topicId);
+const updateTopicNotificationMutation = useUpdateTopicNotificationLevel(topicId);
 const topic = computed(() => topicQuery.data.value);
+useSeoMeta(
+  computed(() =>
+    topic.value
+      ? {
+          title: `${topic.value.title} · ${topic.value.boardName} · 平行线`,
+          description:
+            topic.value.excerpt || `${topic.value.boardName} 中的公开主题：${topic.value.title}`,
+          canonicalPath: `/topics/${topic.value.id}/${topic.value.slug}`,
+          ogType: "article",
+        }
+      : null,
+  ),
+);
 const posts = computed(() => postsQuery.data.value ?? []);
 const onlyAuthor = ref(false);
 const toolbarStatus = ref("");
 const replyStatus = ref("");
 const replyResetToken = ref(0);
+const topicVoteValue = ref(0);
+const topicVoteScore = ref(0);
+const topicVoteCount = ref(0);
+const topicVotePending = ref(false);
 const currentUserId = computed(() => currentUserQuery.data.value?.id ?? null);
 const currentUserRole = computed(() => currentUserQuery.data.value?.role ?? null);
 const canManageTopic = computed(
   () => currentUserRole.value === "admin" || currentUserRole.value === "moderator",
 );
+const canManageSolution = computed(
+  () => Boolean(topic.value && currentUserId.value && currentUserId.value === topic.value.authorId) || canManageTopic.value,
+);
+const qaSort = computed(() => postSort.value === "qa");
 const displayedPosts = computed(() => {
   if (!onlyAuthor.value || !topic.value) {
     return posts.value;
   }
 
-  return posts.value.filter((post) => post.authorName === topic.value?.authorName);
+  return posts.value.filter((post) => post.userId === topic.value?.authorId);
 });
 const relatedTopics = useRelatedTopics(topic);
 const flagTopicMutation = useCreateFlag();
@@ -61,8 +100,18 @@ const lifecycleMutation = useTopicLifecycle(topicId);
 const moveTopicMutation = useMoveTopic(topicId);
 const splitTopicMutation = useSplitTopic(topicId);
 const mergeTopicMutation = useMergeTopic(topicId);
+const solutionMutation = useSetTopicSolution(topicId);
+const pollVoteMutation = useVotePoll(topicId);
 const canFlagTopic = computed(() => Boolean(topic.value?.id) && hasAccessToken());
 const flagTopicPending = computed(() => flagTopicMutation.isPending.value);
+const reportModalOpen = ref(false);
+const topicNotificationLevel = computed<NotificationLevel>(
+  () => topicNotificationQuery.data.value?.notification_level ?? "normal",
+);
+const topicNotificationPending = computed(
+  () => topicNotificationQuery.isFetching.value || updateTopicNotificationMutation.isPending.value,
+);
+const canSetTopicNotification = computed(() => Boolean(topic.value?.id) && hasAccessToken());
 const lifecyclePending = computed(
   () =>
     lifecycleMutation.isPending.value ||
@@ -76,12 +125,38 @@ const {
   pending: bookmarkPending,
   toggle: toggleBookmark,
 } = useOptimisticToggle({
-  active: () => Boolean(topic.value?.id) && false,
-  count: () => (topic.value ? 0 : 0),
+  active: () => Boolean(topic.value?.bookmarkedByMe),
+  count: () => topic.value?.bookmarkCount ?? 0,
   enabled: hasAccessToken,
-  commit: (active) => setTopicBookmark(topic.value?.id ?? "", active),
+  commit: async (active) => {
+    const response = await setTopicBookmark(topic.value?.id ?? "", active);
+    void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topic.value?.id ?? "") });
+    return response;
+  },
   readActive: (response) => response.active,
   readCount: (response) => response.count,
+  onDisabled: () => requireLogin("请先登录后再收藏主题。"),
+  mockWhenDisabled: false,
+});
+const {
+  active: topicLiked,
+  count: topicLikeCount,
+  pending: topicLikePending,
+  toggle: toggleTopicLike,
+} = useOptimisticToggle({
+  active: () => Boolean(topic.value?.likedByMe),
+  count: () => topic.value?.likeCount ?? 0,
+  enabled: hasAccessToken,
+  commit: async (active) => {
+    const response = await setTopicLike(topic.value?.id ?? "", active);
+    void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topic.value?.id ?? "") });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:hot") });
+    return response;
+  },
+  readActive: (response) => response.active,
+  readCount: (response) => response.count,
+  onDisabled: () => requireLogin("请先登录后再点赞主题。"),
+  mockWhenDisabled: false,
 });
 
 const topicStats = computed(() => {
@@ -92,10 +167,25 @@ const topicStats = computed(() => {
   return [
     { label: "回复", value: compactNumber(topic.value.replyCount) },
     { label: "浏览", value: compactNumber(topic.value.viewCount) },
-    { label: "赞同", value: compactNumber(topic.value.likeCount) },
+    { label: "赞同", value: compactNumber(topicLikeCount.value) },
+    { label: "投票", value: compactNumber(topicVoteScore.value) },
     { label: "热度", value: String(topic.value.hotScore) },
   ];
 });
+
+watch(
+  topic,
+  (current) => {
+    if (!current || topicVotePending.value) {
+      return;
+    }
+
+    topicVoteValue.value = current.myVote;
+    topicVoteScore.value = current.voteScore;
+    topicVoteCount.value = current.voteCount;
+  },
+  { immediate: true },
+);
 
 watch(
   topic,
@@ -147,6 +237,11 @@ function handleReply(rawMd: string) {
   );
 }
 
+function requireLogin(message: string) {
+  setToolbarStatus(message);
+  void router.push({ name: "auth", query: { redirect: route.fullPath } });
+}
+
 function setTopicStatus(status: "open" | "closed" | "archived") {
   lifecycleMutation.mutate(
     { status, note: "从主题页工具栏更新状态" },
@@ -169,6 +264,110 @@ function toggleTopicPinned() {
       onError: () => setToolbarStatus("置顶状态更新失败，请确认权限"),
     },
   );
+}
+
+function setTopicNotificationLevel(level: NotificationLevel) {
+  if (!topic.value?.id) {
+    return;
+  }
+
+  if (!hasAccessToken()) {
+    setToolbarStatus("请先登录后再设置主题通知。");
+    void router.push({ name: "auth", query: { redirect: route.fullPath } });
+    return;
+  }
+
+  updateTopicNotificationMutation.mutate(level, {
+    onSuccess: (response) => {
+      setToolbarStatus(`主题通知已设为${notificationLevelLabel(response.notification_level)}`);
+    },
+    onError: () => setToolbarStatus("主题通知设置失败，请稍后重试"),
+  });
+}
+
+function toggleQaSort() {
+  postSort.value = postSort.value === "qa" ? "chronological" : "qa";
+  setToolbarStatus(postSort.value === "qa" ? "已切换为问答排序" : "已按发布时间排序");
+}
+
+async function voteTopic(nextValue: -1 | 0 | 1) {
+  if (!topic.value?.id || topicVotePending.value) {
+    return;
+  }
+
+  if (!hasAccessToken()) {
+    setToolbarStatus("请先登录后再给主题投票。");
+    void router.push({ name: "auth", query: { redirect: route.fullPath } });
+    return;
+  }
+
+  topicVotePending.value = true;
+  try {
+    const response = await setTopicVote(topic.value.id, nextValue);
+    topicVoteValue.value = response.value;
+    topicVoteScore.value = response.score;
+    topicVoteCount.value = response.count;
+    setToolbarStatus(nextValue === 0 ? "已撤销主题投票" : "主题投票已记录");
+    void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topic.value.id) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:votes") });
+  } catch {
+    setToolbarStatus("主题投票失败，请稍后重试");
+  } finally {
+    topicVotePending.value = false;
+  }
+}
+
+function togglePostSolution(post: PostItemVM) {
+  if (!topic.value?.id || !canManageSolution.value) {
+    return;
+  }
+
+  const clearing = topic.value.acceptedAnswerPostId === post.id;
+  solutionMutation.mutate(
+    { post_id: clearing ? null : post.id },
+    {
+      onSuccess: () => {
+        setToolbarStatus(clearing ? "已取消采纳答案" : `已采纳 #${post.floor} 为解决方案`);
+      },
+      onError: () => setToolbarStatus("采纳失败，请确认主题权限和楼层状态"),
+    },
+  );
+}
+
+function votePoll(optionIds: string[]) {
+  if (!topic.value?.poll) {
+    return;
+  }
+
+  if (!hasAccessToken()) {
+    setToolbarStatus("请先登录后再参与投票，当前选择已保留。");
+    void router.push({ name: "auth", query: { redirect: route.fullPath } });
+    return;
+  }
+
+  pollVoteMutation.mutate(
+    { option_ids: optionIds },
+    {
+      onSuccess: () => setToolbarStatus("Poll 投票已更新"),
+      onError: () => setToolbarStatus("Poll 投票失败，可能已截止或选项无效"),
+    },
+  );
+}
+
+function notificationLevelLabel(level: NotificationLevel): string {
+  if (level === "watching") {
+    return "关注";
+  }
+
+  if (level === "tracking") {
+    return "跟踪";
+  }
+
+  if (level === "muted") {
+    return "静音";
+  }
+
+  return "普通";
 }
 
 function moveTopic() {
@@ -253,7 +452,10 @@ function parseFloorNumbers(value: string) {
 }
 
 async function copyTopicLink() {
-  const url = window.location.href.split("#")[0];
+  const url =
+    topic.value?.shareUrl
+      ? new URL(topic.value.shareUrl, window.location.origin).href
+      : window.location.href.split("#")[0];
   const copied = await writeClipboard(url);
 
   if (!copied) {
@@ -261,6 +463,14 @@ async function copyTopicLink() {
   }
 
   setToolbarStatus(copied ? "已复制主题链接" : "无法访问剪贴板，已更新地址栏锚点");
+}
+
+function openInviteCenter() {
+  if (!hasAccessToken()) {
+    requireLogin("请先登录后再邀请成员。");
+    return;
+  }
+  void router.push({ name: "my-invites" });
 }
 
 function toggleOnlyAuthor() {
@@ -321,13 +531,7 @@ function flagTopic() {
   if (!topic.value || !canFlagTopic.value) {
     return;
   }
-
-  flagTopicMutation.mutate({
-    target_type: "topic",
-    target_id: topic.value.id,
-    reason: "other",
-    detail: "用户从主题工具栏发起举报。",
-  });
+  reportModalOpen.value = true;
 }
 </script>
 
@@ -347,6 +551,7 @@ function flagTopic() {
 
     <template v-else-if="topic">
       <TopicDetailHero :topic="topic" :stats="topicStats" />
+      <TopicAiSummaryCard :topic-id="topic.id" />
 
       <div class="topic-layout">
         <main class="post-stream" aria-label="楼层流">
@@ -354,25 +559,48 @@ function flagTopic() {
             :visible-count="displayedPosts.length"
             :total-count="posts.length"
             :only-author="onlyAuthor"
+            :qa-sort="qaSort"
             :bookmarked="bookmarked"
             :bookmark-count="bookmarkCount"
             :bookmark-pending="bookmarkPending"
+            :topic-liked="topicLiked"
+            :topic-like-count="topicLikeCount"
+            :topic-like-pending="topicLikePending"
+            :topic-vote-score="topicVoteScore"
+            :topic-vote-count="topicVoteCount"
+            :topic-vote-value="topicVoteValue"
+            :topic-vote-pending="topicVotePending"
             :can-flag-topic="canFlagTopic"
             :flag-topic-pending="flagTopicPending"
             :can-manage-topic="canManageTopic"
             :topic-status="topic.status"
             :topic-pinned="Boolean(topic.pinned)"
             :lifecycle-pending="lifecyclePending"
+            :notification-level="topicNotificationLevel"
+            :notification-pending="topicNotificationPending"
+            :can-set-notification="canSetTopicNotification"
             :status="toolbarStatus"
             @toggle-only-author="toggleOnlyAuthor"
+            @toggle-qa-sort="toggleQaSort"
             @toggle-bookmark="toggleBookmark"
+            @toggle-topic-like="toggleTopicLike"
+            @vote-topic="voteTopic"
             @copy-link="copyTopicLink"
+            @open-invites="openInviteCenter"
             @flag-topic="flagTopic"
+            @set-notification-level="setTopicNotificationLevel"
             @set-topic-status="setTopicStatus"
             @toggle-topic-pinned="toggleTopicPinned"
             @move-topic="moveTopic"
             @split-topic="splitTopic"
             @merge-topic="mergeTopic"
+          />
+
+          <PollPanel
+            v-if="topic.poll"
+            :poll="topic.poll"
+            :pending="pollVoteMutation.isPending.value"
+            @vote="votePoll"
           />
 
           <div class="post-list">
@@ -384,7 +612,11 @@ function flagTopic() {
                 :post="post"
                 :current-user-id="currentUserId"
                 :current-user-role="currentUserRole"
+                :can-manage-solution="canManageSolution"
+                :solution-pending="solutionMutation.isPending.value"
                 @quote="quotePost"
+                @require-login="requireLogin"
+                @toggle-solution="togglePostSolution"
               />
             </div>
           </div>
@@ -407,6 +639,14 @@ function flagTopic() {
 
         <TopicDetailSidebar :topic="topic" :posts="displayedPosts" :related-topics="relatedTopics" />
       </div>
+      <ReportModal
+        v-if="topic"
+        :open="reportModalOpen"
+        target-type="topic"
+        :target-id="topic.id"
+        @close="reportModalOpen = false"
+        @success="setToolbarStatus('主题举报已提交')"
+      />
     </template>
 
     <UiEmptyState v-else title="没有找到这个主题" description="主题可能已被合并或隐藏，回到首页继续浏览。">

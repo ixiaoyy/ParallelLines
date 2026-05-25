@@ -3,7 +3,7 @@
   "name": "external-integrations",
   "title": "GitHub、Zendesk、Patreon 等外部集成",
   "description": "实现常见社区外部集成框架和若干 provider。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "fullstack",
   "scope": "integrations",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
-  "branch": null,
+  "completedAt": "2026-05-25",
+  "branch": "codex/external-integrations",
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,14 @@
   "subtasks": [],
   "children": [],
   "parent": "05-20-discourse-parity-roadmap",
-  "relatedFiles": [],
-  "notes": "",
+  "relatedFiles": [
+    "apps/api/app/api/v1/integrations.py",
+    "apps/api/app/services/integrations.py",
+    "apps/api/app/models/integration.py",
+    "apps/api/alembic/versions/0031_external_integrations.py",
+    "apps/web/src/features/external-integrations/",
+    "apps/api/tests/test_external_integrations.py"
+  ],
+  "notes": "Completed: provider health/config, GitHub HMAC webhook ingestion, retryable events, issue unfurl cache, and admin UI.",
   "meta": {}
 }

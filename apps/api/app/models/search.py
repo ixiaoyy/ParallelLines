@@ -5,10 +5,10 @@ from datetime import datetime
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin, utcnow
+from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin, utcnow
 
 
-class SearchDocument(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class SearchDocument(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "search_documents"
     __table_args__ = (
         Index("ix_search_documents_topic", "topic_id", unique=True),
@@ -38,7 +38,7 @@ class SearchDocument(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     topic = relationship("Topic", lazy="selectin")
 
 
-class SearchLog(UUIDPrimaryKeyMixin, Base):
+class SearchLog(IntegerPrimaryKeyMixin, Base):
     __tablename__ = "search_logs"
     __table_args__ = (
         Index("ix_search_logs_query_created", "normalized_query", "created_at"),

@@ -302,7 +302,10 @@ function toSecurityError(error: unknown, fallback: string): string {
       <div>
         <span>角色/等级</span>
         <strong>{{ currentUser.role }} · Lv {{ currentUser.level }}</strong>
-        <small>{{ currentUser.status }}</small>
+        <small>
+          {{ currentUser.status }} · TL{{ currentUser.trust_level }} {{ currentUser.trust_level_label }} ·
+          {{ currentUser.points_balance }} 积分 · {{ currentUser.experience_total }} XP
+        </small>
       </div>
       <div>
         <span>二次验证</span>

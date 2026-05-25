@@ -4,21 +4,25 @@ import html
 import json
 import re
 from collections.abc import Iterable, Mapping
-from datetime import datetime
+from datetime import UTC, datetime
 from hashlib import sha256
 
-from sqlalchemy import desc, func, or_, select, update
+from sqlalchemy import desc, func, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.requests import Request
 
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
-from app.core.permissions import BOARD_MODERATOR_ROLES, is_global_moderator
-from app.db.base import new_uuid, utcnow
+from app.core.permissions import BOARD_MODERATOR_ROLES, is_admin, is_global_moderator
+from app.db.base import new_random_suffix, utcnow
 from app.models.forum import (
     Board,
     BoardInvitation,
     BoardMember,
+    NotificationLevel,
+    Poll,
+    PollOption,
+    PollVote,
     Post,
     PostRevision,
     Tag,
@@ -28,23 +32,34 @@ from app.models.forum import (
 from app.models.interaction import Notification
 from app.models.moderation import AuditLog, Reviewable
 from app.models.search import SearchDocument
+from app.models.social import PrivateMessageParticipant, UserRelationship
 from app.models.upload import Upload
 from app.models.user import User
 from app.schemas.forum import (
     BoardCreateRequest,
     BoardInviteCreateRequest,
+    BoardMemberUpdateRequest,
+    BoardSettingsResponse,
+    BoardSettingsUpdateRequest,
+    PollVoteRequest,
     PostCreateRequest,
     PostRevisionRestoreRequest,
+    PostSort,
     PostUpdateRequest,
     TopicCreateRequest,
     TopicLifecycleRequest,
     TopicMergeRequest,
     TopicMoveRequest,
+    TopicSolutionRequest,
     TopicSort,
     TopicSplitRequest,
 )
+from app.schemas.interactions import TopicNotificationLevelResponse
 from app.services.background_jobs import BackgroundJobService
+from app.services.badges import BadgeTrustService
 from app.services.content_safety import moderate_text_fields
+from app.services.growth import GrowthService
+from app.services.integrations import IntegrationService
 from app.services.search import (
     SearchIndexService,
     search_match_conditions,
@@ -61,13 +76,17 @@ INLINE_MARKDOWN_LINK_PATTERN = re.compile(
     r"(!?)\[([^\]\n]{0,160})\]\((https?://[^)\s]+|/[^\s)]+)\)"
 )
 SAFE_UPLOAD_PATH_PATTERN = re.compile(
-    r"^/(?:api/v1/)?uploads/[0-9a-fA-F-]{36}/content(?:\?[^<>\"]*)?$"
+    r"^/(?:api/v1/)?uploads/(?:"
+    r"[1-9][0-9]*|"
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+    r")/content(?:\?[^<>\"]*)?$"
 )
 
 
 def slugify(value: str, *, fallback_prefix: str = "item") -> str:
     normalized = SLUG_SEPARATOR_PATTERN.sub("-", value.lower()).strip("-")
-    return normalized or f"{fallback_prefix}-{new_uuid()[:8]}"
+    return normalized or f"{fallback_prefix}-{new_random_suffix(4)}"
 
 
 def normalize_tag_name(value: str) -> str:
@@ -200,6 +219,14 @@ class ForumService:
                 "Board slug is already in use",
                 {"slug": payload.slug},
             )
+        parent_board = await self._resolve_parent_board(
+            parent_board_id=payload.parent_board_id,
+            parent_board_slug=payload.parent_board_slug,
+            current_user=current_user,
+        )
+        required_tags = self._normalized_unique_tags(payload.required_tags)
+        allowed_tags = self._normalized_unique_tags(payload.allowed_tags)
+        self._validate_board_tag_policy(required_tags, allowed_tags)
 
         board = Board(
             slug=payload.slug,
@@ -207,7 +234,13 @@ class ForumService:
             description=payload.description,
             color=payload.color,
             owner_id=current_user.id,
+            parent_board_id=parent_board.id if parent_board else None,
             visibility=payload.visibility,
+            required_tags=required_tags,
+            allowed_tags=allowed_tags,
+            post_template=self._clean_optional_text(payload.post_template),
+            default_notification_level=payload.default_notification_level,
+            default_sort=payload.default_sort,
             follower_count=1,
         )
         self.session.add(board)
@@ -224,9 +257,31 @@ class ForumService:
         return await self.get_board_by_slug(board.slug, current_user=current_user)
 
     async def list_boards(self, current_user: User | None = None) -> list[Board]:
-        statement = select(Board).where(self._board_visible_condition(current_user))
+        statement = (
+            select(Board)
+            .options(selectinload(Board.parent_board))
+            .where(self._board_visible_condition(current_user))
+        )
         result = await self.session.scalars(statement.order_by(desc(Board.topic_count), Board.name))
         return list(result)
+
+    async def board_memberships_for_user(
+        self,
+        board_ids: Iterable[str],
+        current_user: User | None,
+    ) -> dict[str, BoardMember]:
+        if current_user is None:
+            return {}
+        ids = list(dict.fromkeys(board_ids))
+        if not ids:
+            return {}
+        result = await self.session.scalars(
+            select(BoardMember).where(
+                BoardMember.board_id.in_(ids),
+                BoardMember.user_id == current_user.id,
+            )
+        )
+        return {member.board_id: member for member in result}
 
     async def get_board_by_slug(
         self,
@@ -235,7 +290,9 @@ class ForumService:
         current_user: User | None = None,
         include_private_for_owner: bool = False,
     ) -> Board:
-        board = await self.session.scalar(select(Board).where(Board.slug == slug))
+        board = await self.session.scalar(
+            select(Board).options(selectinload(Board.parent_board)).where(Board.slug == slug)
+        )
         if not board or (
             not include_private_for_owner and not await self._can_access_board(board, current_user)
         ):
@@ -247,7 +304,7 @@ class ForumService:
         slug: str,
         *,
         current_user: User | None = None,
-    ) -> tuple[Board, list[Topic]]:
+    ) -> tuple[Board, list[Topic], list[Board]]:
         board = await self.get_board_by_slug(slug, current_user=current_user)
         topics = await self.list_topics(
             board_slug=board.slug,
@@ -255,7 +312,155 @@ class ForumService:
             limit=5,
             current_user=current_user,
         )
-        return board, topics
+        child_boards = await self.list_child_boards(board.id, current_user=current_user)
+        return board, topics, child_boards
+
+    async def list_child_boards(
+        self,
+        parent_board_id: str,
+        *,
+        current_user: User | None = None,
+    ) -> list[Board]:
+        result = await self.session.scalars(
+            select(Board)
+            .options(selectinload(Board.parent_board))
+            .where(
+                Board.parent_board_id == parent_board_id,
+                self._board_visible_condition(current_user),
+            )
+            .order_by(desc(Board.topic_count), Board.name)
+        )
+        return list(result)
+
+    async def get_board_settings(
+        self,
+        slug: str,
+        current_user: User,
+    ) -> BoardSettingsResponse:
+        board = await self.get_board_by_slug(slug, current_user=current_user)
+        await self._require_can_manage_board_settings(current_user, board)
+        memberships = await self.board_memberships_for_user([board.id], current_user)
+        members = await self.list_board_members(board.id)
+        from app.schemas.forum import BoardMemberResponse, BoardResponse
+
+        return BoardSettingsResponse(
+            board=BoardResponse.from_board(board, memberships.get(board.id)),
+            members=[BoardMemberResponse.from_member(member) for member in members],
+        )
+
+    async def update_board_settings(
+        self,
+        slug: str,
+        payload: BoardSettingsUpdateRequest,
+        current_user: User,
+    ) -> Board:
+        board = await self.get_board_by_slug(slug, current_user=current_user)
+        await self._require_can_manage_board_settings(current_user, board)
+        parent_board = await self._resolve_parent_board(
+            parent_board_id=payload.parent_board_id,
+            parent_board_slug=payload.parent_board_slug,
+            current_user=current_user,
+        )
+        if parent_board and parent_board.id == board.id:
+            raise ValidationError("board_parent_invalid", "Board cannot be its own parent")
+        if parent_board and await self._would_create_board_parent_cycle(board.id, parent_board.id):
+            raise ValidationError("board_parent_cycle", "Board parent would create a cycle")
+
+        required_tags = self._normalized_unique_tags(payload.required_tags)
+        allowed_tags = self._normalized_unique_tags(payload.allowed_tags)
+        self._validate_board_tag_policy(required_tags, allowed_tags)
+
+        board.parent_board_id = parent_board.id if parent_board else None
+        board.required_tags = required_tags
+        board.allowed_tags = allowed_tags
+        board.post_template = self._clean_optional_text(payload.post_template)
+        board.default_notification_level = payload.default_notification_level
+        board.default_sort = payload.default_sort
+        board.updated_at = utcnow()
+        await self.session.commit()
+        return await self.get_board_by_slug(board.slug, current_user=current_user)
+
+    async def list_board_members(self, board_id: str) -> list[BoardMember]:
+        result = await self.session.scalars(
+            select(BoardMember)
+            .options(selectinload(BoardMember.user))
+            .where(BoardMember.board_id == board_id)
+            .order_by(BoardMember.role.desc(), BoardMember.joined_at)
+        )
+        return list(result)
+
+    async def update_board_member(
+        self,
+        slug: str,
+        username: str,
+        payload: BoardMemberUpdateRequest,
+        current_user: User,
+    ) -> BoardMember:
+        board = await self.get_board_by_slug(slug, current_user=current_user)
+        await self._require_can_manage_board_settings(current_user, board)
+        target_user = await self.get_user_by_username(username)
+        if target_user.id == board.owner_id:
+            raise ValidationError(
+                "board_owner_role_protected",
+                "Board owner membership cannot be demoted through member management.",
+            )
+
+        member = await self.session.scalar(
+            select(BoardMember).where(
+                BoardMember.board_id == board.id,
+                BoardMember.user_id == target_user.id,
+            )
+        )
+        if member is None:
+            member = BoardMember(
+                board_id=board.id,
+                user_id=target_user.id,
+                role=payload.role,
+                notification_level=payload.notification_level or board.default_notification_level,
+            )
+            self.session.add(member)
+            board.follower_count += 1
+        else:
+            if member.role == "owner":
+                raise ValidationError(
+                    "board_owner_role_protected",
+                    "Board owner membership cannot be demoted through member management.",
+                )
+            member.role = payload.role
+            if payload.notification_level is not None:
+                member.notification_level = payload.notification_level
+        await self.session.commit()
+        return await self.session.scalar(
+            select(BoardMember)
+            .options(selectinload(BoardMember.user))
+            .where(BoardMember.id == member.id)
+        )
+
+    async def remove_board_member(
+        self,
+        slug: str,
+        username: str,
+        current_user: User,
+    ) -> None:
+        board = await self.get_board_by_slug(slug, current_user=current_user)
+        await self._require_can_manage_board_settings(current_user, board)
+        target_user = await self.get_user_by_username(username)
+        member = await self.session.scalar(
+            select(BoardMember).where(
+                BoardMember.board_id == board.id,
+                BoardMember.user_id == target_user.id,
+            )
+        )
+        if member is None:
+            raise NotFoundError("board_member_not_found", "Board member not found")
+        if member.role == "owner" or target_user.id == board.owner_id:
+            raise ValidationError(
+                "board_owner_role_protected",
+                "Board owner membership cannot be removed.",
+            )
+        await self.session.delete(member)
+        board.follower_count = max(0, board.follower_count - 1)
+        await self.session.commit()
 
     async def list_topics(
         self,
@@ -276,9 +481,13 @@ class ForumService:
                 selectinload(Topic.board),
                 selectinload(Topic.author),
                 selectinload(Topic.tags),
+                selectinload(Topic.poll).selectinload(Poll.options),
             )
             .where(Topic.deleted_at.is_(None), self._board_visible_condition(current_user))
+            .where(Topic.visibility == "public")
         )
+        if current_user is not None:
+            statement = statement.where(self._visible_author_condition(current_user))
         if board_slug:
             board = await self.get_board_by_slug(board_slug, current_user=current_user)
             statement = statement.where(Topic.board_id == board.id)
@@ -314,11 +523,19 @@ class ForumService:
             statement = statement.order_by(desc(Topic.hot_score), desc(Topic.last_posted_at))
         elif sort == "top":
             statement = statement.order_by(desc(Topic.like_count), desc(Topic.reply_count))
+        elif sort == "votes":
+            statement = statement.order_by(
+                desc(Topic.vote_score),
+                desc(Topic.vote_count),
+                desc(Topic.last_posted_at),
+            )
         else:
             statement = statement.order_by(desc(Topic.last_posted_at))
 
         result = await self.session.scalars(statement.distinct().limit(limit))
-        return list(result)
+        topics = list(result)
+        await self._decorate_topics_for_user(topics, current_user)
+        return topics
 
     async def get_user_by_username(self, username: str) -> User:
         user = await self.session.scalar(select(User).where(User.username == username))
@@ -336,7 +553,11 @@ class ForumService:
             select(Tag)
             .join(Tag.topics)
             .join(Topic.board)
-            .where(Tag.topic_count > 0, self._board_visible_condition(current_user))
+            .where(
+                Tag.topic_count > 0,
+                Topic.visibility == "public",
+                self._board_visible_condition(current_user),
+            )
             .group_by(Tag.id)
             .order_by(desc(Tag.topic_count), Tag.name)
             .limit(limit)
@@ -357,6 +578,7 @@ class ForumService:
                 .where(
                     Topic.user_id == user.id,
                     Topic.deleted_at.is_(None),
+                    Topic.visibility == "public",
                     self._board_visible_condition(current_user),
                 )
             )
@@ -371,6 +593,7 @@ class ForumService:
                     Post.user_id == user.id,
                     Post.deleted_at.is_(None),
                     Topic.deleted_at.is_(None),
+                    Topic.visibility == "public",
                     self._board_visible_condition(current_user),
                 )
             )
@@ -386,7 +609,7 @@ class ForumService:
         current_user: User | None = None,
     ) -> list[Topic]:
         user = await self.get_user_by_username(username)
-        result = await self.session.scalars(
+        statement = (
             select(Topic)
             .join(Topic.board)
             .options(
@@ -397,11 +620,15 @@ class ForumService:
             .where(
                 Topic.user_id == user.id,
                 Topic.deleted_at.is_(None),
+                Topic.visibility == "public",
                 self._board_visible_condition(current_user),
             )
             .order_by(desc(Topic.last_posted_at))
             .limit(limit)
         )
+        if current_user is not None:
+            statement = statement.where(self._visible_author_condition(current_user))
+        result = await self.session.scalars(statement)
         return list(result)
 
     async def create_topic(
@@ -418,25 +645,38 @@ class ForumService:
             title=payload.title,
             raw_md=payload.raw_md,
         )
-        filtered = await self._moderate_or_queue_content(
-            {"title": payload.title, "raw_md": payload.raw_md},
-            current_user=current_user,
-            reviewable_type="queued_topic",
-            board=board,
-            data={
-                "title": payload.title,
-                "raw_md": payload.raw_md,
-                "tags": payload.tags,
-                "pinned": payload.pinned,
-                "featured": payload.featured,
-                "board_slug": board.slug,
-            },
-        )
+        normalized_tags = self._normalized_unique_tags(payload.tags)
+        self._validate_board_topic_tags(board, normalized_tags)
+        try:
+            filtered = await self._moderate_or_queue_content(
+                {"title": payload.title, "raw_md": payload.raw_md},
+                current_user=current_user,
+                reviewable_type="queued_topic",
+                board=board,
+                data={
+                    "title": payload.title,
+                    "raw_md": payload.raw_md,
+                    "tags": normalized_tags,
+                    "pinned": payload.pinned,
+                    "featured": payload.featured,
+                    "board_slug": board.slug,
+                },
+            )
+        except ValidationError as e:
+            if e.code == "content_pending_review":
+                from app.services.draft import DraftService
+
+                await DraftService(self.session).delete_draft(
+                    user_id=current_user.id,
+                    target_type="new_topic",
+                    target_id="",
+                )
+            raise e
         title = filtered["title"].strip()
         raw_md = filtered["raw_md"].strip()
         cooked_html = self._render_required_markdown(raw_md)
         topic_slug = await self._unique_topic_slug(board.id, title)
-        tags = await self._resolve_tags(payload.tags)
+        tags = await self._resolve_tags(normalized_tags)
         now = utcnow()
         topic = Topic(
             board_id=board.id,
@@ -459,6 +699,8 @@ class ForumService:
             cooked_html=cooked_html,
         )
         self.session.add(first_post)
+        if payload.poll:
+            await self._create_poll(topic, payload.poll)
         board.topic_count += 1
         board.post_count += 1
         await self._upsert_read_state(topic.id, current_user.id, post_number=1)
@@ -471,7 +713,67 @@ class ForumService:
             current_user=current_user,
         )
         await self._queue_board_new_topic_notifications(board, topic, first_post, current_user)
+        await self._queue_followed_user_new_topic_notifications(topic, first_post, current_user)
+        await GrowthService(self.session).award(
+            current_user.id,
+            "topic_created",
+            source_id=topic.id,
+            actor_id=current_user.id,
+            note="发布主题奖励",
+        )
+        badge_service = BadgeTrustService(self.session)
+        await badge_service.grant_badge(
+            user_id=current_user.id,
+            badge_slug="first-topic",
+            source_type="topic_created",
+            source_id=topic.id,
+            actor_id=current_user.id,
+            note="发布第一条公开主题",
+            idempotency_key=f"badge:first-topic:{current_user.id}",
+        )
+        await badge_service.recompute_trust(
+            current_user,
+            source_type="topic_created",
+            source_id=topic.id,
+            actor_id=current_user.id,
+            note="发布主题后重算信任等级",
+        )
+        await IntegrationService(self.session).enqueue_event(
+            "topic.created",
+            {
+                "topic_id": topic.id,
+                "title": topic.title,
+                "slug": topic.slug,
+                "board_id": topic.board_id,
+                "board_slug": board.slug,
+                "author_id": current_user.id,
+                "author_name": current_user.username,
+                "created_at": topic.created_at.isoformat(),
+            },
+        )
+        from app.services.plugins import PluginService
+
+        await PluginService(self.session).emit_event(
+            "topic.created",
+            {
+                "topic_id": topic.id,
+                "title": topic.title,
+                "slug": topic.slug,
+                "board_id": topic.board_id,
+                "board_slug": board.slug,
+                "author_id": current_user.id,
+                "author_name": current_user.username,
+                "created_at": topic.created_at.isoformat(),
+            },
+        )
         await SearchIndexService(self.session).sync_topic(topic.id)
+        from app.services.draft import DraftService
+
+        await DraftService(self.session).delete_draft(
+            user_id=current_user.id,
+            target_type="new_topic",
+            target_id="",
+        )
         await self.session.commit()
         return await self.get_topic(topic.id, current_user=current_user)
 
@@ -479,7 +781,11 @@ class ForumService:
         topic = await self.session.scalar(
             select(Topic)
             .options(
-                selectinload(Topic.board), selectinload(Topic.author), selectinload(Topic.tags)
+                selectinload(Topic.board),
+                selectinload(Topic.author),
+                selectinload(Topic.tags),
+                selectinload(Topic.posts),
+                selectinload(Topic.poll).selectinload(Poll.options),
             )
             .where(Topic.id == topic_id)
         )
@@ -498,20 +804,153 @@ class ForumService:
         if (
             not topic
             or topic.deleted_at is not None
-            or not await self._can_access_board(topic.board, current_user)
+            or not await self._can_access_topic(topic, current_user)
         ):
             raise NotFoundError("topic_not_found", "Topic not found")
+        await self._decorate_topics_for_user([topic], current_user)
         return topic
 
-    async def list_posts(self, topic_id: str, *, current_user: User | None = None) -> list[Post]:
-        await self.get_topic(topic_id, current_user=current_user)
+    async def list_posts(
+        self,
+        topic_id: str,
+        *,
+        current_user: User | None = None,
+        sort: PostSort = "chronological",
+    ) -> list[Post]:
+        topic = await self.get_topic(topic_id, current_user=current_user)
+        if topic.visibility == "private_message" and current_user is not None:
+            await self._mark_private_message_read(topic, current_user)
         result = await self.session.scalars(
             select(Post)
-            .options(selectinload(Post.author))
+            .options(selectinload(Post.author), selectinload(Post.topic))
             .where(Post.topic_id == topic_id)
             .order_by(Post.post_number)
         )
-        return list(result)
+        posts = list(result)
+        await self._decorate_posts_for_user(posts, current_user)
+        if sort == "qa":
+            posts = self._sort_posts_for_qa(posts, topic.accepted_answer_post_id)
+        return posts
+
+    async def set_topic_solution(
+        self,
+        topic_id: str,
+        payload: TopicSolutionRequest,
+        current_user: User,
+    ) -> Topic:
+        topic = await self.get_topic(topic_id, current_user=current_user)
+        if not await self._can_manage_solution(topic, current_user):
+            raise PermissionDeniedError(
+                "solution_forbidden",
+                "Topic author or moderator permission required",
+            )
+
+        if payload.post_id is None:
+            previous_post_id = topic.accepted_answer_post_id
+            topic.accepted_answer_post_id = None
+            topic.solved_at = None
+            topic.solved_by_id = None
+            topic.answer_mode = False
+            topic.updated_at = utcnow()
+            self._add_audit_log(
+                actor_id=current_user.id,
+                action="topic_solution_cleared",
+                target_type="topic",
+                target_id=topic.id,
+                board_id=topic.board_id,
+                data={"previous_post_id": previous_post_id or ""},
+            )
+            await SearchIndexService(self.session).sync_topic(topic.id)
+            await self.session.commit()
+            return await self.get_topic(topic.id, current_user=current_user)
+
+        post = await self.session.scalar(
+            select(Post)
+            .options(selectinload(Post.topic))
+            .where(Post.id == payload.post_id, Post.topic_id == topic.id)
+        )
+        if not post or post.deleted_at is not None:
+            raise NotFoundError("post_not_found", "Post not found")
+        if post.post_number == 1:
+            raise ValidationError("solution_must_be_reply", "Solution must be a reply post")
+
+        previous_post_id = topic.accepted_answer_post_id
+        topic.accepted_answer_post_id = post.id
+        topic.solved_at = utcnow()
+        topic.solved_by_id = current_user.id
+        topic.answer_mode = True
+        topic.updated_at = utcnow()
+        self._add_audit_log(
+            actor_id=current_user.id,
+            action="topic_solution_marked",
+            target_type="topic",
+            target_id=topic.id,
+            board_id=topic.board_id,
+            data={
+                "previous_post_id": previous_post_id or "",
+                "accepted_answer_post_id": post.id,
+                "post_number": post.post_number,
+            },
+        )
+        await SearchIndexService(self.session).sync_topic(topic.id)
+        await self.session.commit()
+        return await self.get_topic(topic.id, current_user=current_user)
+
+    async def get_topic_poll(
+        self,
+        topic_id: str,
+        *,
+        current_user: User | None = None,
+    ) -> Poll:
+        await self.get_topic(topic_id, current_user=current_user)
+        poll = await self._get_poll_for_topic(topic_id)
+        await self._decorate_poll_for_user(poll, current_user)
+        return poll
+
+    async def vote_topic_poll(
+        self,
+        topic_id: str,
+        payload: PollVoteRequest,
+        current_user: User,
+    ) -> Poll:
+        await self.get_topic(topic_id, current_user=current_user)
+        poll = await self._get_poll_for_topic(topic_id)
+        if poll.closes_at is not None:
+            closes_at = (
+                poll.closes_at if poll.closes_at.tzinfo else poll.closes_at.replace(tzinfo=UTC)
+            )
+            if closes_at <= utcnow():
+                raise ValidationError("poll_closed", "Poll is closed")
+        option_ids = list(dict.fromkeys(payload.option_ids))
+        if not option_ids:
+            raise ValidationError("poll_option_required", "At least one option is required")
+        if not poll.multiple_choice and len(option_ids) != 1:
+            raise ValidationError("poll_single_choice_required", "Poll requires exactly one option")
+        valid_option_ids = {option.id for option in poll.options}
+        if any(option_id not in valid_option_ids for option_id in option_ids):
+            raise NotFoundError("poll_option_not_found", "Poll option not found")
+
+        existing_votes = list(
+            await self.session.scalars(
+                select(PollVote).where(
+                    PollVote.poll_id == poll.id,
+                    PollVote.user_id == current_user.id,
+                )
+            )
+        )
+        existing_option_ids = {vote.option_id for vote in existing_votes}
+        next_option_ids = set(option_ids)
+        for vote in existing_votes:
+            if vote.option_id not in next_option_ids:
+                await self.session.delete(vote)
+        for option_id in next_option_ids - existing_option_ids:
+            self.session.add(
+                PollVote(poll_id=poll.id, option_id=option_id, user_id=current_user.id)
+            )
+        await self.session.flush()
+        await self._recompute_poll_counts(poll)
+        await self.session.commit()
+        return await self.get_topic_poll(topic_id, current_user=current_user)
 
     async def update_topic_lifecycle(
         self,
@@ -792,19 +1231,30 @@ class ForumService:
             current_user=current_user,
             raw_md=payload.raw_md,
         )
-        filtered = await self._moderate_or_queue_content(
-            {"raw_md": payload.raw_md},
-            current_user=current_user,
-            reviewable_type="queued_post",
-            board=topic.board,
-            topic=topic,
-            data={
-                "raw_md": payload.raw_md,
-                "parent_post_id": payload.parent_post_id,
-                "topic_title": topic.title,
-                "topic_slug": topic.slug,
-            },
-        )
+        try:
+            filtered = await self._moderate_or_queue_content(
+                {"raw_md": payload.raw_md},
+                current_user=current_user,
+                reviewable_type="queued_post",
+                board=topic.board,
+                topic=topic,
+                data={
+                    "raw_md": payload.raw_md,
+                    "parent_post_id": payload.parent_post_id,
+                    "topic_title": topic.title,
+                    "topic_slug": topic.slug,
+                },
+            )
+        except ValidationError as e:
+            if e.code == "content_pending_review":
+                from app.services.draft import DraftService
+
+                await DraftService(self.session).delete_draft(
+                    user_id=current_user.id,
+                    target_type="topic",
+                    target_id=topic_id,
+                )
+            raise e
         raw_md = filtered["raw_md"].strip()
         next_number = (
             await self.session.scalar(
@@ -841,8 +1291,54 @@ class ForumService:
             board=topic.board,
             current_user=current_user,
         )
-        await self._queue_reply_notifications(topic, post, current_user, parent_post)
-        await SearchIndexService(self.session).sync_topic(topic.id)
+        if topic.visibility == "private_message":
+            await self._queue_private_message_reply_notifications(topic, post, current_user)
+        else:
+            await self._queue_reply_notifications(topic, post, current_user, parent_post)
+            await SearchIndexService(self.session).sync_topic(topic.id)
+            await GrowthService(self.session).award(
+                current_user.id,
+                "post_created",
+                source_id=post.id,
+                actor_id=current_user.id,
+                note="回复主题奖励",
+            )
+            badge_service = BadgeTrustService(self.session)
+            await badge_service.grant_badge(
+                user_id=current_user.id,
+                badge_slug="first-reply",
+                source_type="post_created",
+                source_id=post.id,
+                actor_id=current_user.id,
+                note="完成第一次公开回复",
+                idempotency_key=f"badge:first-reply:{current_user.id}",
+            )
+            await badge_service.recompute_trust(
+                current_user,
+                source_type="post_created",
+                source_id=post.id,
+                actor_id=current_user.id,
+                note="回复后重算信任等级",
+            )
+            await IntegrationService(self.session).enqueue_event(
+                "post.created",
+                {
+                    "post_id": post.id,
+                    "topic_id": topic.id,
+                    "topic_slug": topic.slug,
+                    "post_number": post.post_number,
+                    "author_id": current_user.id,
+                    "author_name": current_user.username,
+                    "created_at": post.created_at.isoformat(),
+                },
+            )
+        from app.services.draft import DraftService
+
+        await DraftService(self.session).delete_draft(
+            user_id=current_user.id,
+            target_type="topic",
+            target_id=topic_id,
+        )
         await self.session.commit()
         return await self._get_post(post.id)
 
@@ -1169,12 +1665,45 @@ class ForumService:
                     board_id=invitation.board_id,
                     user_id=current_user.id,
                     role="follower",
-                    notification_level="normal",
+                    notification_level=invitation.board.default_notification_level,
                 )
             )
             invitation.board.follower_count += 1
         invitation.status = "accepted"
         invitation.responded_at = utcnow()
+        growth = GrowthService(self.session)
+        await growth.award(
+            current_user.id,
+            "invite_accepted_invitee",
+            source_id=invitation.id,
+            actor_id=current_user.id,
+            note="接受版块邀请奖励",
+        )
+        badge_service = BadgeTrustService(self.session)
+        await badge_service.recompute_trust(
+            current_user,
+            source_type="invite_accepted",
+            source_id=invitation.id,
+            actor_id=current_user.id,
+            note="接受邀请后重算信任等级",
+        )
+        if invitation.inviter_id != current_user.id:
+            await growth.award(
+                invitation.inviter_id,
+                "invite_accepted_inviter",
+                source_id=invitation.id,
+                actor_id=current_user.id,
+                note="邀请被接受奖励",
+            )
+            inviter = await self.session.get(User, invitation.inviter_id)
+            if inviter is not None:
+                await badge_service.recompute_trust(
+                    inviter,
+                    source_type="invite_accepted",
+                    source_id=invitation.id,
+                    actor_id=current_user.id,
+                    note="邀请被接受后重算信任等级",
+                )
         await self.session.commit()
         return await self._get_board_invitation(invitation.id)
 
@@ -1211,6 +1740,47 @@ class ForumService:
         )
         return or_(Board.visibility == "public", member_exists)
 
+    def _visible_author_condition(self, current_user: User):
+        hidden_author_exists = (
+            select(UserRelationship.id)
+            .where(
+                UserRelationship.actor_user_id == current_user.id,
+                UserRelationship.target_user_id == Topic.user_id,
+                UserRelationship.relationship_type.in_(("ignore", "block")),
+            )
+            .exists()
+        )
+        return not_(hidden_author_exists)
+
+    async def _can_access_topic(self, topic: Topic, current_user: User | None) -> bool:
+        if topic.visibility == "private_message":
+            if current_user is None:
+                return False
+            return await self._is_private_message_participant(topic.id, current_user.id)
+        return await self._can_access_board(topic.board, current_user)
+
+    async def _is_private_message_participant(self, topic_id: str, user_id: str) -> bool:
+        participant_id = await self.session.scalar(
+            select(PrivateMessageParticipant.id).where(
+                PrivateMessageParticipant.topic_id == topic_id,
+                PrivateMessageParticipant.user_id == user_id,
+            )
+        )
+        return participant_id is not None
+
+    async def _mark_private_message_read(self, topic: Topic, current_user: User) -> None:
+        participant = await self.session.scalar(
+            select(PrivateMessageParticipant).where(
+                PrivateMessageParticipant.topic_id == topic.id,
+                PrivateMessageParticipant.user_id == current_user.id,
+            )
+        )
+        if participant is None:
+            return
+        participant.last_read_post_number = topic.reply_count + 1
+        participant.last_read_at = utcnow()
+        await self.session.commit()
+
     async def _can_access_board(self, board: Board, current_user: User | None) -> bool:
         if board.visibility == "public":
             return True
@@ -1225,6 +1795,99 @@ class ForumService:
             )
         )
         return member is not None
+
+    async def _require_can_manage_board_settings(self, current_user: User, board: Board) -> None:
+        if is_admin(current_user) or board.owner_id == current_user.id:
+            return
+        raise PermissionDeniedError(
+            "board_settings_forbidden",
+            "Board owner or admin permission required",
+        )
+
+    async def _resolve_parent_board(
+        self,
+        *,
+        parent_board_id: str | None,
+        parent_board_slug: str | None,
+        current_user: User,
+    ) -> Board | None:
+        if not parent_board_id and not parent_board_slug:
+            return None
+        statement = select(Board).options(selectinload(Board.parent_board))
+        if parent_board_id:
+            statement = statement.where(Board.id == parent_board_id)
+        else:
+            statement = statement.where(Board.slug == parent_board_slug)
+        parent = await self.session.scalar(statement)
+        if not parent or not await self._can_access_board(parent, current_user):
+            raise NotFoundError("board_not_found", "Board not found")
+        return parent
+
+    async def _would_create_board_parent_cycle(
+        self,
+        board_id: str,
+        proposed_parent_id: str,
+    ) -> bool:
+        cursor_id: str | None = proposed_parent_id
+        visited: set[str] = set()
+        while cursor_id:
+            if cursor_id == board_id:
+                return True
+            if cursor_id in visited:
+                return True
+            visited.add(cursor_id)
+            cursor_id = await self.session.scalar(
+                select(Board.parent_board_id).where(Board.id == cursor_id)
+            )
+        return False
+
+    def _normalized_unique_tags(self, tag_names: Iterable[str]) -> list[str]:
+        normalized_names: list[str] = []
+        for tag_name in tag_names:
+            normalized = normalize_tag_name(tag_name)
+            if normalized and normalized not in normalized_names:
+                normalized_names.append(normalized)
+        return normalized_names
+
+    def _validate_board_tag_policy(
+        self,
+        required_tags: list[str],
+        allowed_tags: list[str],
+    ) -> None:
+        if not allowed_tags:
+            return
+        missing_from_allowed = [tag for tag in required_tags if tag not in allowed_tags]
+        if missing_from_allowed:
+            raise ValidationError(
+                "required_tags_not_allowed",
+                "Required tags must be included in allowed tags.",
+                {"tags": missing_from_allowed},
+            )
+
+    def _validate_board_topic_tags(self, board: Board, normalized_tags: list[str]) -> None:
+        required_tags = list(board.required_tags or [])
+        allowed_tags = list(board.allowed_tags or [])
+        missing_tags = [tag for tag in required_tags if tag not in normalized_tags]
+        if missing_tags:
+            raise ValidationError(
+                "required_tags_missing",
+                "Topic is missing required board tags.",
+                {"required_tags": required_tags, "missing_tags": missing_tags},
+            )
+        if allowed_tags:
+            disallowed_tags = [tag for tag in normalized_tags if tag not in allowed_tags]
+            if disallowed_tags:
+                raise ValidationError(
+                    "tag_not_allowed",
+                    "Topic includes tags that are not allowed in this board.",
+                    {"allowed_tags": allowed_tags, "disallowed_tags": disallowed_tags},
+                )
+
+    def _clean_optional_text(self, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
 
     async def _get_board_invitation(self, invite_id: str) -> BoardInvitation:
         invitation = await self.session.scalar(
@@ -1297,6 +1960,218 @@ class ForumService:
     def _require_pending_invite(self, invitation: BoardInvitation) -> None:
         if invitation.status != "pending":
             raise ValidationError("board_invite_not_pending", "Board invite is not pending")
+
+    async def _can_manage_solution(self, topic: Topic, current_user: User) -> bool:
+        if topic.user_id == current_user.id:
+            return True
+        return await self._can_moderate_board(current_user, topic.board_id)
+
+    async def _create_poll(self, topic: Topic, payload) -> Poll:
+        closes_at = self._normalize_poll_closes_at(payload.closes_at)
+        option_labels = self._normalized_poll_options(payload.options)
+        poll = Poll(
+            topic=topic,
+            question=payload.question.strip(),
+            multiple_choice=payload.multiple_choice,
+            closes_at=closes_at,
+        )
+        self.session.add(poll)
+        await self.session.flush()
+        for index, label in enumerate(option_labels, start=1):
+            self.session.add(PollOption(poll_id=poll.id, label=label, position=index))
+        return poll
+
+    def _normalize_poll_closes_at(self, closes_at: datetime | None) -> datetime | None:
+        if closes_at is None:
+            return None
+        normalized = closes_at if closes_at.tzinfo else closes_at.replace(tzinfo=UTC)
+        if normalized <= utcnow():
+            raise ValidationError("poll_closes_at_past", "Poll close time must be in the future")
+        return normalized
+
+    def _normalized_poll_options(self, options: Iterable[str]) -> list[str]:
+        labels: list[str] = []
+        for option in options:
+            label = option.strip()
+            if label and label not in labels:
+                labels.append(label)
+        if len(labels) < 2:
+            raise ValidationError("poll_options_required", "Poll requires at least two options")
+        return labels
+
+    async def _get_poll_for_topic(self, topic_id: str) -> Poll:
+        poll = await self.session.scalar(
+            select(Poll).options(selectinload(Poll.options)).where(Poll.topic_id == topic_id)
+        )
+        if poll is None:
+            raise NotFoundError("poll_not_found", "Poll not found")
+        return poll
+
+    async def _decorate_topics_for_user(
+        self,
+        topics: list[Topic],
+        current_user: User | None,
+    ) -> None:
+        if not topics:
+            return
+        for topic in topics:
+            if topic.poll:
+                await self._decorate_poll_for_user(topic.poll, current_user)
+            topic.liked_by_me = False
+            topic.bookmarked_by_me = False
+            topic.my_vote = 0
+
+        from app.models.interaction import Bookmark, Reaction, Vote
+
+        topic_ids = [topic.id for topic in topics]
+        bookmark_counts = {
+            target_id: int(count)
+            for target_id, count in (
+                await self.session.execute(
+                    select(Bookmark.target_id, func.count(Bookmark.id))
+                    .where(
+                        Bookmark.target_type == "topic",
+                        Bookmark.target_id.in_(topic_ids),
+                    )
+                    .group_by(Bookmark.target_id)
+                )
+            ).all()
+        }
+        for topic in topics:
+            topic.bookmark_count = bookmark_counts.get(topic.id, 0)
+
+        if current_user is None:
+            return
+
+        liked_topic_ids = set(
+            await self.session.scalars(
+                select(Reaction.target_id).where(
+                    Reaction.target_type == "topic",
+                    Reaction.target_id.in_(topic_ids),
+                    Reaction.user_id == current_user.id,
+                    Reaction.type == "like",
+                )
+            )
+        )
+        bookmarked_topic_ids = set(
+            await self.session.scalars(
+                select(Bookmark.target_id).where(
+                    Bookmark.target_type == "topic",
+                    Bookmark.target_id.in_(topic_ids),
+                    Bookmark.user_id == current_user.id,
+                )
+            )
+        )
+        votes = list(
+            await self.session.scalars(
+                select(Vote).where(
+                    Vote.target_type == "topic",
+                    Vote.target_id.in_(topic_ids),
+                    Vote.user_id == current_user.id,
+                )
+            )
+        )
+        vote_by_topic = {vote.target_id: vote.value for vote in votes}
+        for topic in topics:
+            topic.liked_by_me = topic.id in liked_topic_ids
+            topic.bookmarked_by_me = topic.id in bookmarked_topic_ids
+            topic.my_vote = vote_by_topic.get(topic.id, 0)
+
+    async def _decorate_posts_for_user(
+        self,
+        posts: list[Post],
+        current_user: User | None,
+    ) -> None:
+        if not posts:
+            return
+        accepted_ids = {
+            post.topic.accepted_answer_post_id
+            for post in posts
+            if getattr(post, "topic", None) is not None and post.topic.accepted_answer_post_id
+        }
+        for post in posts:
+            post.accepted_answer = post.id in accepted_ids
+            post.liked_by_me = False
+            post.my_vote = 0
+        if current_user is None:
+            return
+        from app.models.interaction import Reaction, Vote
+
+        post_ids = [post.id for post in posts]
+        liked_post_ids = set(
+            await self.session.scalars(
+                select(Reaction.target_id).where(
+                    Reaction.target_type == "post",
+                    Reaction.target_id.in_(post_ids),
+                    Reaction.user_id == current_user.id,
+                    Reaction.type == "like",
+                )
+            )
+        )
+        votes = list(
+            await self.session.scalars(
+                select(Vote).where(
+                    Vote.target_type == "post",
+                    Vote.target_id.in_(post_ids),
+                    Vote.user_id == current_user.id,
+                )
+            )
+        )
+        vote_by_post = {vote.target_id: vote.value for vote in votes}
+        for post in posts:
+            post.liked_by_me = post.id in liked_post_ids
+            post.my_vote = vote_by_post.get(post.id, 0)
+
+    async def _decorate_poll_for_user(self, poll: Poll, current_user: User | None) -> None:
+        if current_user is None:
+            poll.selected_option_ids = []
+            return
+        selected_option_ids = list(
+            await self.session.scalars(
+                select(PollVote.option_id).where(
+                    PollVote.poll_id == poll.id,
+                    PollVote.user_id == current_user.id,
+                )
+            )
+        )
+        poll.selected_option_ids = selected_option_ids
+
+    def _sort_posts_for_qa(
+        self, posts: list[Post], accepted_answer_post_id: str | None
+    ) -> list[Post]:
+        first_posts = [post for post in posts if post.post_number == 1]
+        replies = [post for post in posts if post.post_number != 1]
+        replies.sort(
+            key=lambda post: (
+                post.id != accepted_answer_post_id,
+                -post.vote_score,
+                post.post_number,
+            )
+        )
+        return first_posts + replies
+
+    async def _recompute_poll_counts(self, poll: Poll) -> None:
+        option_counts = {
+            option_id: count
+            for option_id, count in (
+                await self.session.execute(
+                    select(PollVote.option_id, func.count(PollVote.id))
+                    .where(PollVote.poll_id == poll.id)
+                    .group_by(PollVote.option_id)
+                )
+            ).all()
+        }
+        for option in poll.options:
+            option.vote_count = int(option_counts.get(option.id, 0))
+        poll.total_votes = int(
+            await self.session.scalar(
+                select(func.count(func.distinct(PollVote.user_id))).where(
+                    PollVote.poll_id == poll.id
+                )
+            )
+            or 0
+        )
+        poll.updated_at = utcnow()
 
     async def _get_topic_for_lifecycle(self, topic_id: str) -> Topic:
         topic = await self.session.scalar(
@@ -1614,7 +2489,9 @@ class ForumService:
         )
         if read_state:
             read_state.last_read_post_number = post_number
-            read_state.notification_level = "tracking"
+            # Only auto-upgrade to tracking if the user hasn't explicitly set a level
+            if read_state.notification_level == "normal":
+                read_state.notification_level = "tracking"
             return
 
         self.session.add(
@@ -1624,6 +2501,60 @@ class ForumService:
                 last_read_post_number=post_number,
                 notification_level="tracking",
             )
+        )
+
+    async def get_topic_notification_level(
+        self,
+        topic_id: str,
+        current_user: User,
+    ) -> TopicNotificationLevelResponse:
+        await self.get_topic(topic_id, current_user=current_user)
+        read_state = await self.session.scalar(
+            select(TopicRead).where(
+                TopicRead.topic_id == topic_id,
+                TopicRead.user_id == current_user.id,
+            )
+        )
+        if read_state:
+            return TopicNotificationLevelResponse(
+                topic_id=topic_id,
+                notification_level=read_state.notification_level,
+                last_read_post_number=read_state.last_read_post_number,
+            )
+        return TopicNotificationLevelResponse(
+            topic_id=topic_id,
+            notification_level="normal",
+            last_read_post_number=0,
+        )
+
+    async def set_topic_notification_level(
+        self,
+        topic_id: str,
+        level: NotificationLevel,
+        current_user: User,
+    ) -> TopicNotificationLevelResponse:
+        await self.get_topic(topic_id, current_user=current_user)
+        read_state = await self.session.scalar(
+            select(TopicRead).where(
+                TopicRead.topic_id == topic_id,
+                TopicRead.user_id == current_user.id,
+            )
+        )
+        if read_state:
+            read_state.notification_level = level
+        else:
+            read_state = TopicRead(
+                topic_id=topic_id,
+                user_id=current_user.id,
+                last_read_post_number=0,
+                notification_level=level,
+            )
+            self.session.add(read_state)
+        await self.session.commit()
+        return TopicNotificationLevelResponse(
+            topic_id=topic_id,
+            notification_level=read_state.notification_level,
+            last_read_post_number=read_state.last_read_post_number,
         )
 
     def _render_required_markdown(self, raw_md: str) -> str:
@@ -1662,6 +2593,35 @@ class ForumService:
                 },
             )
 
+    async def _queue_followed_user_new_topic_notifications(
+        self,
+        topic: Topic,
+        first_post: Post,
+        current_user: User,
+    ) -> None:
+        followers = await self.session.scalars(
+            select(UserRelationship).where(
+                UserRelationship.target_user_id == current_user.id,
+                UserRelationship.actor_user_id != current_user.id,
+                UserRelationship.relationship_type == "follow",
+            )
+        )
+        for follower in followers:
+            await self._add_notification(
+                user_id=follower.actor_user_id,
+                kind="user_new_topic",
+                topic_id=topic.id,
+                post_id=first_post.id,
+                actor_id=current_user.id,
+                data={
+                    "topic_title": topic.title,
+                    "topic_slug": topic.slug,
+                    "board_slug": topic.board.slug,
+                    "post_number": first_post.post_number,
+                    "actor_name": current_user.username,
+                },
+            )
+
     async def _queue_reply_notifications(
         self,
         topic: Topic,
@@ -1672,16 +2632,18 @@ class ForumService:
         notified_user_ids: set[str] = set()
 
         if topic.user_id != current_user.id:
-            await self._add_reply_notification(topic.user_id, topic, post, current_user)
-            notified_user_ids.add(topic.user_id)
+            if await self._add_reply_notification(topic.user_id, topic, post, current_user):
+                notified_user_ids.add(topic.user_id)
 
         if parent_post and parent_post.user_id != current_user.id:
-            await self._add_reply_notification(parent_post.user_id, topic, post, current_user)
-            notified_user_ids.add(parent_post.user_id)
+            if await self._add_reply_notification(parent_post.user_id, topic, post, current_user):
+                notified_user_ids.add(parent_post.user_id)
 
         mentioned_users = await self._find_mentioned_users(post.raw_md)
         for mentioned_user in mentioned_users:
             if mentioned_user.id == current_user.id:
+                continue
+            if await self._is_topic_muted_for_user(topic.id, mentioned_user.id):
                 continue
             await self._add_notification(
                 user_id=mentioned_user.id,
@@ -1722,13 +2684,43 @@ class ForumService:
                 },
             )
 
+    async def _queue_private_message_reply_notifications(
+        self,
+        topic: Topic,
+        post: Post,
+        current_user: User,
+    ) -> None:
+        participants = await self.session.scalars(
+            select(PrivateMessageParticipant).where(
+                PrivateMessageParticipant.topic_id == topic.id,
+                PrivateMessageParticipant.user_id != current_user.id,
+                PrivateMessageParticipant.muted.is_(False),
+            )
+        )
+        for participant in participants:
+            await self._add_notification(
+                user_id=participant.user_id,
+                kind="private_message",
+                topic_id=topic.id,
+                post_id=post.id,
+                actor_id=current_user.id,
+                data={
+                    "topic_title": topic.title,
+                    "topic_slug": topic.slug,
+                    "post_number": post.post_number,
+                    "actor_name": current_user.username,
+                },
+            )
+
     async def _add_reply_notification(
         self,
         user_id: str,
         topic: Topic,
         post: Post,
         current_user: User,
-    ) -> None:
+    ) -> bool:
+        if await self._is_topic_muted_for_user(topic.id, user_id):
+            return False
         await self._add_notification(
             user_id=user_id,
             kind="replied",
@@ -1742,6 +2734,16 @@ class ForumService:
                 "actor_name": current_user.username,
             },
         )
+        return True
+
+    async def _is_topic_muted_for_user(self, topic_id: str, user_id: str) -> bool:
+        read_state = await self.session.scalar(
+            select(TopicRead.notification_level).where(
+                TopicRead.topic_id == topic_id,
+                TopicRead.user_id == user_id,
+            )
+        )
+        return read_state == "muted"
 
     async def _find_mentioned_users(self, raw_md: str) -> list[User]:
         mentioned_names = {match.group(1) for match in MENTION_PATTERN.finditer(raw_md)}
@@ -1782,6 +2784,8 @@ class ForumService:
         actor_id: str | None,
         data: dict[str, object],
     ) -> None:
+        if actor_id and await self._relationship_blocks_notification(user_id, actor_id):
+            return
         await BackgroundJobService(self.session).enqueue_notification(
             user_id=user_id,
             kind=kind,
@@ -1800,6 +2804,25 @@ class ForumService:
             commit=False,
         )
 
+    async def _relationship_blocks_notification(self, recipient_id: str, actor_id: str) -> bool:
+        relationship_id = await self.session.scalar(
+            select(UserRelationship.id).where(
+                or_(
+                    (
+                        (UserRelationship.actor_user_id == recipient_id)
+                        & (UserRelationship.target_user_id == actor_id)
+                        & (UserRelationship.relationship_type.in_(("ignore", "block")))
+                    ),
+                    (
+                        (UserRelationship.actor_user_id == actor_id)
+                        & (UserRelationship.target_user_id == recipient_id)
+                        & (UserRelationship.relationship_type == "block")
+                    ),
+                )
+            )
+        )
+        return relationship_id is not None
+
     async def publish_queued_topic(self, reviewable: Reviewable) -> Topic:
         board = await self.get_board_by_slug(reviewable.data["board_slug"])
         creator = await self.session.get(User, reviewable.created_by_id)
@@ -1810,7 +2833,9 @@ class ForumService:
         raw_md = str(reviewable.data["raw_md"]).strip()
         cooked_html = self._render_required_markdown(raw_md)
         topic_slug = await self._unique_topic_slug(board.id, title)
-        tags = await self._resolve_tags(reviewable.data["tags"])
+        normalized_tags = self._normalized_unique_tags(reviewable.data["tags"])
+        self._validate_board_topic_tags(board, normalized_tags)
+        tags = await self._resolve_tags(normalized_tags)
         now = utcnow()
         topic = Topic(
             board_id=board.id,

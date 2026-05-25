@@ -14,18 +14,23 @@ import {
   mergeTopic,
   moveTopic,
   searchTopics,
+  setTopicSolution,
   splitTopic,
   updateTopicLifecycle,
+  votePoll,
 } from "./api";
 import type { TopicSearchParams } from "./api";
 import { toTopicCard } from "./model";
 import type {
   CreateTopicRequest,
+  PollResponse,
+  PollVoteRequest,
   TopicLifecycleRequest,
   TopicLifecycleResponse,
   TopicMergeRequest,
   TopicMoveRequest,
   TopicResponse,
+  TopicSolutionRequest,
   TopicSort,
   TopicSplitRequest,
 } from "./model";
@@ -129,6 +134,46 @@ export function useCreateTopic() {
         queryKey: queryKeys.topics(`board:${variables.boardSlug}:latest`),
       });
       void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:votes") });
+    },
+  });
+}
+
+
+export function useSetTopicSolution(topicId: MaybeRefOrGetter<string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<TopicResponse, Error, TopicSolutionRequest>({
+    mutationFn: (payload) => {
+      const id = toValue(topicId);
+      if (!id || !hasAccessToken()) {
+        throw new Error("authentication_required");
+      }
+
+      return setTopicSolution(id, payload);
+    },
+    onSuccess: (topic) => {
+      invalidateTopicLifecycleQueries(queryClient, topic.id, topic.board_slug);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:votes") });
+    },
+  });
+}
+
+export function useVotePoll(topicId: MaybeRefOrGetter<string>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<PollResponse, Error, PollVoteRequest>({
+    mutationFn: (payload) => {
+      const id = toValue(topicId);
+      if (!id || !hasAccessToken()) {
+        throw new Error("authentication_required");
+      }
+
+      return votePoll(id, payload);
+    },
+    onSuccess: () => {
+      const id = toValue(topicId);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.topic(id) });
     },
   });
 }
@@ -234,5 +279,6 @@ function invalidateTopicLifecycleQueries(
   void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topicId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.posts(topicId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:votes") });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topics(`board:${boardSlug}:latest`) });
 }

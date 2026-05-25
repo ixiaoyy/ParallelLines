@@ -1,0 +1,43 @@
+.topic-ai-summary-card {
+  margin-bottom: 1rem;
+}
+
+.ai-card-head {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ai-card-head span {
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ai-card-head h2 {
+  margin: 0.1rem 0 0;
+  color: var(--title);
+}
+
+.summary-body {
+  display: grid;
+  gap: 0.65rem;
+  color: var(--text);
+}
+
+.summary-body p,
+.summary-body ul {
+  margin: 0;
+}
+
+.summary-body ul {
+  padding-left: 1.2rem;
+}
+
+.summary-body small,
+.ai-muted {
+  color: var(--muted);
+}

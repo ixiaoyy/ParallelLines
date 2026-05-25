@@ -3,7 +3,7 @@
   "name": "mobile-push-pwa",
   "title": "移动端适配、PWA 与推送通知",
   "description": "提升移动端论坛体验，支持 PWA 安装、离线页和 Web Push。",
-  "status": "planning",
+  "status": "completed",
   "dev_type": "frontend",
   "scope": "mobile",
   "package": null,
@@ -11,11 +11,11 @@
   "creator": "lijin",
   "assignee": "lijin",
   "createdAt": "2026-05-20",
-  "completedAt": null,
-  "branch": null,
+  "completedAt": "2026-05-25",
+  "branch": "codex/external-integrations",
   "base_branch": "main",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 6,
   "next_action": [
     {
       "phase": 1,
@@ -47,7 +47,17 @@
   "subtasks": [],
   "children": [],
   "parent": "05-20-discourse-parity-roadmap",
-  "relatedFiles": [],
-  "notes": "",
+  "relatedFiles": [
+    "apps/api/app/api/v1/notifications.py",
+    "apps/api/app/models/push.py",
+    "apps/api/app/services/push.py",
+    "apps/api/alembic/versions/0033_push_subscriptions.py",
+    "apps/web/public/manifest.webmanifest",
+    "apps/web/public/service-worker.js",
+    "apps/web/public/offline.html",
+    "apps/web/src/features/pwa/",
+    "apps/api/tests/test_push_pwa.py"
+  ],
+  "notes": "Completed: manifest/offline/service worker, push subscription API, and email preferences push panel.",
   "meta": {}
 }

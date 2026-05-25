@@ -9,6 +9,7 @@ from starlette.requests import Request
 
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
 from app.core.permissions import BOARD_MODERATOR_ROLES, is_admin, is_global_moderator
+from app.core.trust import review_priority_for_trust
 from app.db.base import utcnow
 from app.models.forum import Board, BoardMember, Post, Topic
 from app.models.moderation import AuditLog, Flag, Reviewable, ReviewableEvent
@@ -28,6 +29,7 @@ from app.schemas.moderation import (
     UserStatusUpdateRequest,
 )
 from app.services.background_jobs import BackgroundJobService
+from app.services.integrations import IntegrationService
 from app.services.search import SearchIndexService
 from app.services.spam import SpamPreventionService
 
@@ -138,6 +140,18 @@ class ModerationService:
             target_id=payload.target_id,
             board_id=target.board_id,
             data={"flag_id": flag.id, "reason": payload.reason},
+        )
+        await IntegrationService(self.session).enqueue_event(
+            "moderation.flag_created",
+            {
+                "flag_id": flag.id,
+                "target_type": payload.target_type,
+                "target_id": payload.target_id,
+                "board_id": target.board_id,
+                "reporter_id": current_user.id,
+                "reason": payload.reason,
+                "created_at": flag.created_at.isoformat(),
+            },
         )
         await self.session.commit()
         return await self.get_flag(flag.id, current_user=current_user, allow_reporter=True)
@@ -391,7 +405,7 @@ class ModerationService:
         reviewable = Reviewable(
             type=reviewable_type,
             status="pending",
-            priority=80,
+            priority=review_priority_for_trust(80, current_user.trust_level),
             source="content_safety",
             source_summary="Content matched a pending-review safety rule",
             target_type="post" if post else ("topic" if topic else None),

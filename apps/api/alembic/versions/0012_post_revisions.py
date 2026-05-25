@@ -20,17 +20,17 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "post_revisions",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
-        sa.Column("post_id", sa.String(length=36), nullable=False, comment="被编辑帖子 ID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
+        sa.Column("post_id", sa.BigInteger(), nullable=False, comment="被编辑帖子 ID。"),
         sa.Column(
             "topic_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=False,
             comment="被编辑帖子所属主题 ID，用于历史查询和审计关联。",
         ),
         sa.Column(
             "editor_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="执行该次编辑或恢复操作的用户 ID；用户删除后为空。",
         ),
@@ -61,7 +61,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "restored_from_revision_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="若该版本由恢复操作产生，指向被恢复的历史版本 ID；否则为空。",
         ),

@@ -29,6 +29,7 @@ from app.services.background_jobs import BackgroundJobService
 
 SENSITIVE_COLUMN_NAMES = {
     "hashed_password",
+    "idempotency_key",
     "two_factor_secret",
     "refresh_token_hash",
     "token_hash",
@@ -487,6 +488,12 @@ def public_user_export(user: User) -> dict[str, object]:
         "avatar_url": user.avatar_url,
         "role": user.role,
         "level": user.level,
+        "trust_level": user.trust_level,
+        "trust_level_label": user.trust_level_label,
+        "points_balance": user.points_balance,
+        "experience_total": user.experience_total,
+        "experience_to_next_level": user.experience_to_next_level,
+        "level_progress_percent": user.level_progress_percent,
         "status": user.status,
         "created_at": user.created_at.isoformat(),
         "updated_at": user.updated_at.isoformat(),

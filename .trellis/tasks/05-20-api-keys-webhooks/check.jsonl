@@ -1,0 +1,8 @@
+{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
+{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Downgraded backend quality gate"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Downgraded frontend quality gate"}
+{"file": ".trellis/spec/backend/background-jobs.md", "reason": "Verify webhook retry queue contracts"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Verify API DTO propagation"}
+{"file": ".trellis\\spec\\backend\\api-keys-webhooks.md", "reason": "API Key/Webhook 后端验证合同"}
+{"file": ".trellis\\spec\\frontend\\api-keys-webhooks.md", "reason": "API Key/Webhook 前端验证合同"}

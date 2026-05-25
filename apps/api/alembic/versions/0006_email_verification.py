@@ -20,8 +20,8 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "email_verification_codes",
-        sa.Column("id", sa.String(length=36), primary_key=True, comment="主键 UUID。"),
-        sa.Column("user_id", sa.String(length=36), nullable=False, comment="待验证用户 ID。"),
+        sa.Column("id", sa.BigInteger(), primary_key=True, comment="主键 ID。"),
+        sa.Column("user_id", sa.BigInteger(), nullable=False, comment="待验证用户 ID。"),
         sa.Column("email", sa.String(length=255), nullable=False, comment="接收验证码的邮箱地址。"),
         sa.Column(
             "code_hash",

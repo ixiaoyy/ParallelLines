@@ -22,7 +22,7 @@ def upgrade() -> None:
         batch_op.add_column(
             sa.Column(
                 "merged_into_topic_id",
-                sa.String(length=36),
+                sa.BigInteger(),
                 nullable=True,
                 comment="主题合并后的目标主题 ID；为空表示未合并。",
             )

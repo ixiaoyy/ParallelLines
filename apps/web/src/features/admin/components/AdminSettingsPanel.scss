@@ -11,6 +11,18 @@
   gap: 1rem;
 }
 
+.section-head > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
 .section-head h2,
 .settings-group h3,
 .setting-row strong {
@@ -27,8 +39,13 @@
 }
 
 .panel-state,
-.setting-row span {
+.setting-row span,
+.setting-row small {
   color: var(--muted);
+}
+
+.setting-row small {
+  font-size: 0.75rem;
 }
 
 .panel-state--error {
@@ -57,8 +74,12 @@
   gap: 0.18rem;
 }
 
-.setting-control {
+.setting-control,
+.setting-control-pair {
   width: 100%;
+}
+
+.setting-control {
   border: 1px solid var(--border);
   border-radius: 0.82rem;
   padding: 0.62rem 0.72rem;
@@ -66,6 +87,23 @@
   background: var(--bg-surface);
   font: inherit;
   outline: none;
+}
+
+.setting-control-pair {
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr);
+  gap: 0.45rem;
+}
+
+.setting-control--color {
+  min-height: 2.7rem;
+  padding: 0.2rem;
+}
+
+.setting-control--textarea {
+  min-height: 7rem;
+  resize: vertical;
+  line-height: 1.55;
 }
 
 .setting-control--toggle {
@@ -84,5 +122,9 @@
 
   .setting-row {
     grid-template-columns: 1fr;
+  }
+
+  .settings-actions {
+    justify-content: flex-start;
   }
 }

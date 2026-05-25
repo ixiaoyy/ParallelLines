@@ -11,6 +11,8 @@ export interface EmailPreferenceResponse {
   last_digest_sent_at: string | null;
   delivery_status: string;
   disabled_reason: string | null;
+  quiet_hours_start: number | null;
+  quiet_hours_end: number | null;
   updated_at: string;
 }
 
@@ -22,6 +24,8 @@ export interface EmailPreferenceUpdateRequest {
   notify_topic_new_post?: boolean;
   notify_board_new_topic?: boolean;
   digest_frequency?: DigestFrequency;
+  quiet_hours_start?: number | null;
+  quiet_hours_end?: number | null;
 }
 
 export interface EmailToggleVM {

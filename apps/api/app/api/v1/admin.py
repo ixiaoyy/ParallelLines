@@ -20,10 +20,15 @@ from app.schemas.backups import (
     BackupRestoreRequest,
     BackupRestoreResponse,
 )
+from app.schemas.badges import BadgeGrantRequest, BadgeResponse, BadgeRevokeRequest
 from app.schemas.common import ApiResponse
 from app.schemas.moderation import AuditLogResponse
+from app.schemas.plugins import PluginResponse, PluginUpdateRequest
+from app.schemas.privacy import PrivacyActionRequest, PrivacyActionResponse
 from app.services.admin import AdminService, SiteSettingService
 from app.services.backups import BackupService
+from app.services.plugins import PluginService
+from app.services.privacy import PrivacyService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -96,6 +101,107 @@ async def update_user(
 ) -> ApiResponse[AdminUserResponse]:
     return ApiResponse(
         data=await AdminService(session, settings).update_user(user_id, payload, current_user)
+    )
+
+
+@router.post("/users/{user_id}/anonymize", response_model=ApiResponse[PrivacyActionResponse])
+async def anonymize_user(
+    user_id: str,
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+    payload: PrivacyActionRequest | None = None,
+) -> ApiResponse[PrivacyActionResponse]:
+    result = await PrivacyService(session, settings).anonymize_user(
+        user_id,
+        actor=current_user,
+        reason=payload.reason if payload else None,
+    )
+    return ApiResponse(data=result)
+
+
+@router.delete("/users/{user_id}", response_model=ApiResponse[PrivacyActionResponse])
+async def delete_user_account(
+    user_id: str,
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+    payload: PrivacyActionRequest | None = None,
+) -> ApiResponse[PrivacyActionResponse]:
+    result = await PrivacyService(session, settings).delete_user(
+        user_id,
+        actor=current_user,
+        reason=payload.reason if payload else None,
+    )
+    return ApiResponse(data=result)
+
+
+@router.get("/badges", response_model=ApiResponse[list[BadgeResponse]])
+async def list_badges(
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[list[BadgeResponse]]:
+    return ApiResponse(data=await AdminService(session, settings).list_badges(current_user))
+
+
+@router.get("/plugins", response_model=ApiResponse[list[PluginResponse]])
+async def list_plugins(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[list[PluginResponse]]:
+    return ApiResponse(data=await PluginService(session).list_plugins(current_user))
+
+
+@router.put("/plugins/{plugin_id}", response_model=ApiResponse[PluginResponse])
+async def update_plugin(
+    plugin_id: str,
+    payload: PluginUpdateRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[PluginResponse]:
+    return ApiResponse(
+        data=await PluginService(session).update_plugin(plugin_id, payload, current_user)
+    )
+
+
+@router.post("/users/{user_id}/badges", response_model=ApiResponse[AdminUserResponse])
+async def grant_user_badge(
+    user_id: str,
+    payload: BadgeGrantRequest,
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[AdminUserResponse]:
+    return ApiResponse(
+        data=await AdminService(session, settings).grant_user_badge(
+            user_id,
+            badge_slug=payload.badge_slug,
+            note=payload.note,
+            current_user=current_user,
+        )
+    )
+
+
+@router.post(
+    "/users/{user_id}/badges/{badge_slug}/revoke",
+    response_model=ApiResponse[AdminUserResponse],
+)
+async def revoke_user_badge(
+    user_id: str,
+    badge_slug: str,
+    payload: BadgeRevokeRequest,
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[AdminUserResponse]:
+    return ApiResponse(
+        data=await AdminService(session, settings).revoke_user_badge(
+            user_id,
+            badge_slug=badge_slug,
+            reason=payload.reason,
+            current_user=current_user,
+        )
     )
 
 

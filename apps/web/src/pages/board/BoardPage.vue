@@ -14,17 +14,22 @@ import {
   TeamOutlined,
   BulbOutlined,
 } from "@ant-design/icons-vue";
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import { isAdmin } from "@/features/auth/permissions";
+import { useCurrentUser } from "@/features/auth/queries";
+import BoardSettingsPanel from "@/features/boards/components/BoardSettingsPanel.vue";
 import { useBoardDetail } from "@/features/boards/queries";
 import { setBoardFollow } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
+import type { NotificationLevel } from "@/features/notifications/model";
 import TopicList from "@/features/topics/components/TopicList.vue";
 import { useBoardTopics } from "@/features/topics/queries";
 import { hasAccessToken } from "@/shared/api/client";
 import { compactNumber } from "@/shared/lib/format";
 import { readRouteParam } from "@/shared/router/params";
+import { useSeoMeta } from "@/shared/seo/meta";
 import { boardToneClass } from "@/shared/theme/boardPalette";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -32,6 +37,13 @@ import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
 type BoardSort = "latest" | "hot" | "top";
 type TopicStatusFilter = "all" | "solved" | "unanswered" | "official";
+
+const notificationLevelOptions: Array<{ value: NotificationLevel; label: string }> = [
+  { value: "watching", label: "关注 · 新主题通知" },
+  { value: "tracking", label: "跟踪 · 精简通知" },
+  { value: "normal", label: "普通 · 不主动提醒" },
+  { value: "muted", label: "静音 · 不接收通知" },
+];
 
 const boardIcons: Record<string, string> = {
   engineering: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -99,8 +111,27 @@ const route = useRoute();
 const router = useRouter();
 
 const slug = computed(() => readRouteParam(route.params.slug));
+const currentUserQuery = useCurrentUser();
 const boardQuery = useBoardDetail(slug);
 const board = computed(() => boardQuery.data.value);
+useSeoMeta(
+  computed(() =>
+    board.value
+      ? {
+          title: `${board.value.name} · 平行线`,
+          description: board.value.description,
+          canonicalPath: `/b/${board.value.slug}`,
+        }
+      : null,
+  ),
+);
+const canManageBoard = computed(
+  () =>
+    Boolean(board.value?.ownerId && board.value.ownerId === currentUserQuery.data.value?.id) ||
+    isAdmin(currentUserQuery.data.value),
+);
+const boardNotificationLevel = ref<NotificationLevel>("watching");
+const boardNotificationPending = ref(false);
 const {
   active: followingBoard,
   count: followerCount,
@@ -110,10 +141,22 @@ const {
   active: () => board.value?.isFollowing ?? false,
   count: () => board.value?.followerCount ?? 0,
   enabled: hasAccessToken,
-  commit: (active) => setBoardFollow(slug.value, active),
+  commit: (active) => setBoardFollow(slug.value, active, boardNotificationLevel.value),
   readActive: (response) => response.following,
   readCount: (response) => response.follower_count,
 });
+
+watch(
+  board,
+  (current) => {
+    if (!current || boardNotificationPending.value) {
+      return;
+    }
+
+    boardNotificationLevel.value = toNotificationLevel(current.notificationLevel) ?? "watching";
+  },
+  { immediate: true },
+);
 
 const searchQuery = computed<string>({
   get() {
@@ -127,7 +170,9 @@ const searchQuery = computed<string>({
 const activeSort = computed<BoardSort>({
   get() {
     const querySort = readRouteParam(route.query.sort as string | string[] | undefined);
-    return sortTabs.some((tab) => tab.key === querySort) ? (querySort as BoardSort) : "latest";
+    return sortTabs.some((tab) => tab.key === querySort)
+      ? (querySort as BoardSort)
+      : (board.value?.defaultSort ?? "latest");
   },
   set(value) {
     updateQuery({ sort: value === "latest" ? undefined : value });
@@ -146,6 +191,25 @@ const activeStatus = computed<TopicStatusFilter>({
 
 const activeTab = computed(() => sortTabs.find((tab) => tab.key === activeSort.value) ?? sortTabs[0]);
 const topicsQuery = useBoardTopics(slug, activeSort);
+const boardNotificationCopy = computed(() => {
+  if (!followingBoard.value) {
+    return "关注此版块，不错过任何新主题";
+  }
+
+  if (boardNotificationLevel.value === "muted") {
+    return "已静音此版块，新主题不会打扰你";
+  }
+
+  if (boardNotificationLevel.value === "tracking") {
+    return "已跟踪此版块，只接收精简通知";
+  }
+
+  if (boardNotificationLevel.value === "normal") {
+    return "已加入版块，但不主动推送新主题";
+  }
+
+  return "已开启版块通知，新主题发布时将通知您";
+});
 
 const allBoardTopics = computed(() => topicsQuery.data.value ?? board.value?.latestTopics ?? []);
 
@@ -218,6 +282,43 @@ function updateQuery(patch: Record<string, string | undefined>) {
 
   void router.replace({ name: "board-detail", params: { slug: slug.value }, query });
 }
+
+function toNotificationLevel(value: string | null): NotificationLevel | null {
+  if (
+    value === "watching" ||
+    value === "tracking" ||
+    value === "normal" ||
+    value === "muted"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+async function updateBoardNotificationLevel(event: Event) {
+  const target = event.target as HTMLSelectElement;
+  const nextLevel = target.value as NotificationLevel;
+  const previousLevel = boardNotificationLevel.value;
+  boardNotificationLevel.value = nextLevel;
+
+  if (!hasAccessToken()) {
+    void router.push({ name: "auth", query: { redirect: route.fullPath } });
+    return;
+  }
+
+  boardNotificationPending.value = true;
+  try {
+    const response = await setBoardFollow(slug.value, true, nextLevel);
+    followingBoard.value = response.following;
+    followerCount.value = response.follower_count;
+    boardNotificationLevel.value = response.notification_level ?? nextLevel;
+  } catch {
+    boardNotificationLevel.value = previousLevel;
+  } finally {
+    boardNotificationPending.value = false;
+  }
+}
 </script>
 
 <template>
@@ -252,24 +353,43 @@ function updateQuery(patch: Record<string, string | undefined>) {
             </div>
             <div class="board-title-row">
               <h1 id="board-title">{{ board.name }}</h1>
-              <UiButton
-                class="board-follow-btn"
-                :tone="followingBoard ? 'success' : 'subtle'"
-                :aria-pressed="followingBoard"
-                :disabled="followPending"
-                @click="toggleBoardFollow"
-              >
-                <template #icon>
-                  <StarFilled v-if="followingBoard" />
-                  <StarOutlined v-else />
-                </template>
-                {{ followingBoard ? "已关注版块" : "关注版块" }}
-              </UiButton>
+              <div class="board-follow-controls">
+                <UiButton
+                  class="board-follow-btn"
+                  :tone="followingBoard ? 'success' : 'subtle'"
+                  :aria-pressed="followingBoard"
+                  :disabled="followPending || boardNotificationPending"
+                  @click="toggleBoardFollow"
+                >
+                  <template #icon>
+                    <StarFilled v-if="followingBoard" />
+                    <StarOutlined v-else />
+                  </template>
+                  {{ followingBoard ? "已关注版块" : "关注版块" }}
+                </UiButton>
+                <label class="board-notification-select">
+                  <span>版块通知</span>
+                  <select
+                    :value="boardNotificationLevel"
+                    :disabled="followPending || boardNotificationPending"
+                    aria-label="设置版块通知级别"
+                    @change="updateBoardNotificationLevel"
+                  >
+                    <option
+                      v-for="option in notificationLevelOptions"
+                      :key="option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </option>
+                  </select>
+                </label>
+              </div>
             </div>
             <p class="board-desc">{{ board.description }}</p>
             <p class="board-notice">
               <span class="notice-dot"></span>
-              {{ followingBoard ? "已开启通知，新主题发布时将通知您" : "关注此版块，不错过任何新主题" }}
+              {{ boardNotificationCopy }}
             </p>
           </div>
         </div>
@@ -383,6 +503,9 @@ function updateQuery(patch: Record<string, string | undefined>) {
           <UiCard class="sidebar-panel rules-panel">
             <span class="panel-kicker">提问前自检</span>
             <h2>先让答案更快出现</h2>
+            <p v-if="board.requiredTags.length" class="board-policy-copy">
+              必填标签：{{ board.requiredTags.map((tag) => `#${tag}`).join(" ") }}
+            </p>
             <ol>
               <li>先搜错误码、接口名、日志片段。</li>
               <li>优先阅读“已解决”和“官方回复”。</li>
@@ -390,6 +513,21 @@ function updateQuery(patch: Record<string, string | undefined>) {
             </ol>
             <RouterLink class="ask-link" :to="{ name: 'new-topic', query: { board: slug } }">发布新问题</RouterLink>
           </UiCard>
+
+          <UiCard v-if="board.childBoards.length" class="sidebar-panel child-board-panel">
+            <span class="panel-kicker">子版块</span>
+            <h2>继续细分讨论范围</h2>
+            <RouterLink
+              v-for="child in board.childBoards"
+              :key="child.id"
+              :to="{ name: 'board-detail', params: { slug: child.slug } }"
+            >
+              <strong>{{ child.name }}</strong>
+              <small>{{ child.topicCount }} 主题 · {{ child.description }}</small>
+            </RouterLink>
+          </UiCard>
+
+          <BoardSettingsPanel v-if="canManageBoard" :board="board" />
 
           <UiCard class="sidebar-panel quick-links-panel">
             <h2>快捷入口</h2>

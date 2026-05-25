@@ -1,0 +1,13 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Backend API docs/service placement"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Document public error shape"}
+{"file": ".trellis/spec/backend/deployment-observability.md", "reason": "CI and schema generation contract"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Downgraded backend gates"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Frontend generated client/docs placement"}
+{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "API client wrapper conventions"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Generated DTO type safety"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Downgraded frontend gates"}
+{"file": ".trellis/spec/backend/public-api-openapi-client.md", "reason": "Implemented backend OpenAPI/docs contract"}
+{"file": ".trellis/spec/frontend/public-api-openapi-client.md", "reason": "Implemented frontend generated types contract"}

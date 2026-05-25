@@ -1,0 +1,18 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Backend file placement for routers/services/models"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "DB models, migrations, comments, indexes"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Typed API errors for relationships and PM ACL"}
+{"file": ".trellis/spec/backend/interactions-notifications.md", "reason": "Notification fan-out and suppression rules"}
+{"file": ".trellis/spec/backend/board-visibility-invites.md", "reason": "Visibility and ACL patterns reused by private messages"}
+{"file": ".trellis/spec/backend/user-content-operations.md", "reason": "User profile and authored-topic patterns"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Frontend feature/page placement"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Vue component and SCSS conventions"}
+{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "DTO/API/query mapping conventions"}
+{"file": ".trellis/spec/frontend/auth-user-session.md", "reason": "Current user/profile auth contracts"}
+{"file": ".trellis/spec/frontend/notifications-interactions.md", "reason": "Notification and optimistic interaction patterns"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer DB/API/frontend flow"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Reuse existing user/profile/query patterns"}
+{"file": ".trellis/spec/backend/user-social-relationships-pm.md", "reason": "Executable backend contract for follow ignore block and private messages"}
+{"file": ".trellis/spec/frontend/user-social-relationships-pm.md", "reason": "Executable frontend contract for relationship controls and PM inbox"}

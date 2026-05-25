@@ -1,0 +1,127 @@
+.user-directory-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.directory-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.16);
+  border-radius: 1.4rem;
+  padding: clamp(1.2rem, 2.4vw, 1.8rem);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(var(--primary-rgb), 0.16), transparent 18rem),
+    rgba(255, 255, 255, 0.9);
+}
+
+.directory-hero h1,
+.directory-hero p {
+  margin: 0;
+}
+
+.directory-hero h1 {
+  margin-top: 0.35rem;
+  color: var(--title);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.directory-hero p {
+  max-width: 42rem;
+  margin-top: 0.55rem;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.directory-sort {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.directory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 0.8rem;
+}
+
+.directory-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 1.15rem;
+  padding: 0.95rem;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.86);
+  text-decoration: none;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.directory-card:hover,
+.directory-card:focus-visible {
+  border-color: rgba(var(--primary-rgb), 0.28);
+  box-shadow: var(--shadow-card);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.directory-card__main {
+  display: grid;
+  min-width: 0;
+  gap: 0.18rem;
+}
+
+.directory-card__main strong {
+  overflow: hidden;
+  color: var(--title);
+  font-size: 1.02rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.directory-card__main span,
+.directory-card__main p,
+.directory-card__meta small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.directory-card__main p {
+  margin: 0;
+}
+
+.directory-card__meta {
+  display: grid;
+  justify-items: end;
+  gap: 0.25rem;
+}
+
+.directory-state {
+  padding: 1.2rem;
+  color: var(--text);
+  font-weight: 760;
+}
+
+.directory-state--error {
+  color: var(--danger);
+}
+
+@media (max-width: 620px) {
+  .directory-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .directory-card__meta {
+    grid-column: 1 / -1;
+    justify-items: start;
+  }
+}

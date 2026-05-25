@@ -1,0 +1,14 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Add User trust_level, badge tables, trust events, and Alembic migration contracts"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Typed service errors for badge/admin/trust operations"}
+{"file": ".trellis/spec/backend/user-growth-points-experience.md", "reason": "Build trust/badges on top of points and XP without duplicating level semantics"}
+{"file": ".trellis/spec/backend/spam-prevention-rate-limits.md", "reason": "Trust levels must influence rate/link screening behavior"}
+{"file": ".trellis/spec/backend/admin-site-settings.md", "reason": "Admin badge grants/revokes share admin/audit patterns"}
+{"file": ".trellis/spec/frontend/auth-user-session.md", "reason": "Expose trust/badge metadata in current user/profile DTOs"}
+{"file": ".trellis/spec/frontend/admin-dashboard.md", "reason": "Add admin badge controls through admin feature/API patterns"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "DTO and VM updates for badges/trust"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer badge/trust payload flow"}
+{"file": ".trellis/spec/backend/badges-trust-levels.md", "reason": "Implemented backend badges/trust contracts"}
+{"file": ".trellis/spec/frontend/badges-trust-levels.md", "reason": "Implemented frontend badges/trust contracts"}

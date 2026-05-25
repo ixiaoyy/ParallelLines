@@ -3,10 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Literal
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin, id_column_type
 
 if TYPE_CHECKING:
     from app.models.forum import Post, Topic
@@ -15,17 +15,20 @@ if TYPE_CHECKING:
 ReactionTargetType = Literal["post", "topic"]
 BookmarkTargetType = Literal["post", "topic"]
 ReactionType = Literal["like"]
+VoteTargetType = Literal["post", "topic"]
 NotificationType = Literal[
     "replied",
     "mentioned",
     "liked",
     "topic_new_post",
     "board_new_topic",
+    "user_new_topic",
+    "private_message",
     "moderation",
 ]
 
 
-class Reaction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class Reaction(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "reactions"
     __table_args__ = (
         UniqueConstraint(
@@ -39,14 +42,46 @@ class Reaction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     target_type: Mapped[str] = mapped_column(String(32), nullable=False)
-    target_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    target_id: Mapped[str] = mapped_column(id_column_type(), nullable=False)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     type: Mapped[str] = mapped_column(String(32), nullable=False, default="like")
 
     user: Mapped[User] = relationship("User", lazy="selectin")
 
 
-class Bookmark(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class Vote(IntegerPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "votes"
+    __table_args__ = (
+        UniqueConstraint("target_type", "target_id", "user_id", name="uq_votes_target_user"),
+        Index("ix_votes_target", "target_type", "target_id"),
+        Index("ix_votes_user_created", "user_id", "created_at"),
+    )
+
+    target_type: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        comment="投票目标类型：topic 或 post。",
+    )
+    target_id: Mapped[str] = mapped_column(
+        id_column_type(),
+        nullable=False,
+        comment="投票目标 ID。",
+    )
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="投票用户 ID。",
+    )
+    value: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        comment="投票值：1 表示赞成，-1 表示反对。",
+    )
+
+    user: Mapped[User] = relationship("User", lazy="selectin")
+
+
+class Bookmark(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "bookmarks"
     __table_args__ = (
         UniqueConstraint("target_type", "target_id", "user_id", name="uq_bookmarks_target_user"),
@@ -55,13 +90,13 @@ class Bookmark(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     target_type: Mapped[str] = mapped_column(String(32), nullable=False)
-    target_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    target_id: Mapped[str] = mapped_column(id_column_type(), nullable=False)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     user: Mapped[User] = relationship("User", lazy="selectin")
 
 
-class Notification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class Notification(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "notifications"
     __table_args__ = (
         Index("ix_notifications_user_read_created", "user_id", "read_at", "created_at"),

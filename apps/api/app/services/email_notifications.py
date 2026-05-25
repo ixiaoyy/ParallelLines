@@ -96,6 +96,11 @@ class EmailNotificationService:
                 setattr(preference, field_name, value)
         if payload.digest_frequency is not None:
             preference.digest_frequency = payload.digest_frequency
+        # quiet_hours: None clears, int 0-23 sets
+        if "quiet_hours_start" in payload.model_fields_set:
+            preference.quiet_hours_start = payload.quiet_hours_start
+        if "quiet_hours_end" in payload.model_fields_set:
+            preference.quiet_hours_end = payload.quiet_hours_end
         await self.session.commit()
         await self.session.refresh(preference)
         return EmailPreferenceResponse.from_model(preference)
@@ -367,11 +372,30 @@ class EmailNotificationService:
         if user is None or user.status != "active":
             return False
         preference = await self._get_or_create_preference(user)
-        return (
+        if not (
             preference.email_enabled
             and preference.delivery_status == "ok"
             and bool(getattr(preference, field_name))
-        )
+        ):
+            return False
+        # Quiet hours use UTC hours. Start == end means "quiet all day"; clear either field
+        # to disable quiet hours.
+        if (
+            preference.quiet_hours_start is not None
+            and preference.quiet_hours_end is not None
+        ):
+            current_hour = utcnow().hour
+            start = preference.quiet_hours_start
+            end = preference.quiet_hours_end
+            if start == end:
+                in_quiet = True
+            elif start < end:
+                in_quiet = start <= current_hour < end
+            else:
+                in_quiet = current_hour >= start or current_hour < end
+            if in_quiet:
+                return False
+        return True
 
     def _digest_due(self, preference: UserEmailPreference) -> bool:
         if preference.last_digest_sent_at is None:

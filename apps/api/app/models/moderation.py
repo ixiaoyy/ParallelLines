@@ -16,7 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin, id_column_type
 
 if TYPE_CHECKING:
     from app.models.forum import Board
@@ -67,7 +67,7 @@ ScreenedRuleKind = Literal["email", "ip", "url"]
 ScreenedRuleAction = Literal["block", "silence"]
 
 
-class Flag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class Flag(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "flags"
     __table_args__ = (
         Index("ix_flags_status_created", "status", "created_at"),
@@ -76,7 +76,7 @@ class Flag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     target_type: Mapped[str] = mapped_column(String(32), nullable=False)
-    target_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    target_id: Mapped[str] = mapped_column(id_column_type(), nullable=False)
     board_id: Mapped[str] = mapped_column(
         ForeignKey("boards.id", ondelete="CASCADE"), nullable=False
     )
@@ -97,7 +97,7 @@ class Flag(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
-class Reviewable(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class Reviewable(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "reviewables"
     __table_args__ = (
         Index("ix_reviewables_status_created", "status", "created_at"),
@@ -113,7 +113,7 @@ class Reviewable(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     source: Mapped[str] = mapped_column(String(64), nullable=False)
     source_summary: Mapped[str] = mapped_column(String(500), nullable=False)
     target_type: Mapped[str | None] = mapped_column(String(32))
-    target_id: Mapped[str | None] = mapped_column(String(36))
+    target_id: Mapped[str | None] = mapped_column(id_column_type())
     board_id: Mapped[str | None] = mapped_column(ForeignKey("boards.id", ondelete="SET NULL"))
     topic_id: Mapped[str | None] = mapped_column(ForeignKey("topics.id", ondelete="SET NULL"))
     post_id: Mapped[str | None] = mapped_column(ForeignKey("posts.id", ondelete="SET NULL"))
@@ -148,7 +148,7 @@ class Reviewable(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
 
-class ReviewableEvent(UUIDPrimaryKeyMixin, Base):
+class ReviewableEvent(IntegerPrimaryKeyMixin, Base):
     __tablename__ = "reviewable_events"
     __table_args__ = (
         Index("ix_reviewable_events_reviewable_created", "reviewable_id", "created_at"),
@@ -171,7 +171,7 @@ class ReviewableEvent(UUIDPrimaryKeyMixin, Base):
     actor: Mapped[User | None] = relationship("User", lazy="selectin")
 
 
-class AuditLog(UUIDPrimaryKeyMixin, Base):
+class AuditLog(IntegerPrimaryKeyMixin, Base):
     __tablename__ = "audit_logs"
     __table_args__ = (
         Index("ix_audit_logs_actor_created", "actor_id", "created_at"),
@@ -182,7 +182,7 @@ class AuditLog(UUIDPrimaryKeyMixin, Base):
     actor_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     action: Mapped[str] = mapped_column(String(64), nullable=False)
     target_type: Mapped[str] = mapped_column(String(32), nullable=False)
-    target_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    target_id: Mapped[str] = mapped_column(String(128), nullable=False)
     board_id: Mapped[str | None] = mapped_column(ForeignKey("boards.id", ondelete="SET NULL"))
     data: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime]
@@ -191,7 +191,7 @@ class AuditLog(UUIDPrimaryKeyMixin, Base):
     board: Mapped[Board | None] = relationship("Board", lazy="selectin")
 
 
-class RateLimitEvent(UUIDPrimaryKeyMixin, Base):
+class RateLimitEvent(IntegerPrimaryKeyMixin, Base):
     __tablename__ = "rate_limit_events"
     __table_args__ = (
         Index("ix_rate_limit_events_scope_created", "scope", "identity_key", "created_at"),
@@ -209,7 +209,7 @@ class RateLimitEvent(UUIDPrimaryKeyMixin, Base):
     user: Mapped[User | None] = relationship("User", lazy="selectin")
 
 
-class ScreenedRule(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class ScreenedRule(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "screened_rules"
     __table_args__ = (
         UniqueConstraint("kind", "normalized_value", name="uq_screened_rules_kind_value"),
@@ -227,7 +227,7 @@ class ScreenedRule(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     created_by: Mapped[User | None] = relationship("User", lazy="selectin")
 
 
-class SpamAction(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class SpamAction(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "spam_actions"
     __table_args__ = (
         Index("ix_spam_actions_user_created", "user_id", "created_at"),

@@ -77,7 +77,7 @@ async def test_public_user_profile_does_not_leak_email_and_filters_hidden_topics
         assert profile.status_code == 200
         profile_data = profile.json()["data"]
         assert profile_data["username"] == "author"
-        assert profile_data["level"] == 0
+        assert profile_data["level"] == 1
         assert profile_data["topic_count"] == 1
         assert profile_data["post_count"] == 1
         assert "email" not in profile_data

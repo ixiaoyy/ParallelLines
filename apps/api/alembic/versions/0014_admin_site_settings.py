@@ -20,7 +20,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_table(
         "site_settings",
-        sa.Column("id", sa.String(length=36), nullable=False, comment="主键 UUID。"),
+        sa.Column("id", sa.BigInteger(), nullable=False, comment="主键 ID。"),
         sa.Column(
             "key",
             sa.String(length=96),
@@ -55,7 +55,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "updated_by_id",
-            sa.String(length=36),
+            sa.BigInteger(),
             nullable=True,
             comment="最后修改该设置的管理员 ID；系统默认值为空。",
         ),

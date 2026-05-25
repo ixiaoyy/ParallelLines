@@ -6,12 +6,12 @@ from typing import Literal
 from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
+from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin
 
 BackgroundJobStatus = Literal["queued", "running", "succeeded", "dead"]
 
 
-class BackgroundJob(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+class BackgroundJob(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "background_jobs"
     __table_args__ = (
         UniqueConstraint("idempotency_key", name="uq_background_jobs_idempotency_key"),
@@ -35,7 +35,7 @@ class BackgroundJob(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
-class BackgroundJobLog(UUIDPrimaryKeyMixin, Base):
+class BackgroundJobLog(IntegerPrimaryKeyMixin, Base):
     __tablename__ = "background_job_logs"
     __table_args__ = (Index("ix_background_job_logs_job_created", "job_id", "created_at"),)
 

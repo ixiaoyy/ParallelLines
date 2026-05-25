@@ -6,9 +6,25 @@ from starlette.responses import Response
 from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep, SettingsDep
 from app.schemas.common import ApiResponse
 from app.schemas.forum import TopicResponse
-from app.schemas.users import UserProfileResponse
+from app.schemas.privacy import (
+    PrivacyActionRequest,
+    PrivacyActionResponse,
+    RetentionPolicyResponse,
+)
+from app.schemas.users import (
+    PrivateMessageCreateRequest,
+    PrivateMessageTopicResponse,
+    UserActivityItemResponse,
+    UserDirectoryResponse,
+    UserProfileResponse,
+    UserProfileUpdateRequest,
+    UserRelationshipStateResponse,
+)
 from app.services.backups import BackupService
 from app.services.forum import ForumService
+from app.services.privacy import PrivacyService
+from app.services.social import SocialService
+from app.services.users import UserProfileService
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -30,29 +46,166 @@ async def export_current_user(
     )
 
 
+@router.delete("/me", response_model=ApiResponse[PrivacyActionResponse])
+async def delete_current_user(
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+    payload: PrivacyActionRequest | None = None,
+) -> ApiResponse[PrivacyActionResponse]:
+    result = await PrivacyService(session, settings).delete_current_user(
+        current_user,
+        reason=payload.reason if payload else None,
+    )
+    return ApiResponse(data=result)
+
+
+@router.get("/privacy/retention", response_model=ApiResponse[RetentionPolicyResponse])
+async def privacy_retention_policy(
+    session: SessionDep,
+    settings: SettingsDep,
+) -> ApiResponse[RetentionPolicyResponse]:
+    return ApiResponse(data=await PrivacyService(session, settings).retention_policy())
+
+
+@router.get("/messages", response_model=ApiResponse[list[PrivateMessageTopicResponse]])
+async def list_private_messages(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+) -> ApiResponse[list[PrivateMessageTopicResponse]]:
+    messages = await SocialService(session).list_private_messages(current_user, limit=limit)
+    return ApiResponse(data=messages)
+
+
+@router.post("/messages", response_model=ApiResponse[PrivateMessageTopicResponse], status_code=201)
+async def create_private_message(
+    payload: PrivateMessageCreateRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[PrivateMessageTopicResponse]:
+    message = await SocialService(session).create_private_message(payload, current_user)
+    return ApiResponse(data=message)
+
+
+@router.get("/directory", response_model=ApiResponse[list[UserDirectoryResponse]])
+async def list_user_directory(
+    session: SessionDep,
+    sort: Annotated[str, Query(pattern="^(active|level|contribution)$")] = "active",
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> ApiResponse[list[UserDirectoryResponse]]:
+    users = await UserProfileService(session).list_directory(sort=sort, limit=limit)
+    return ApiResponse(data=users)
+
+
+@router.patch("/me/profile", response_model=ApiResponse[UserProfileResponse])
+async def update_my_profile(
+    payload: UserProfileUpdateRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserProfileResponse]:
+    profile = await UserProfileService(session).update_my_profile(payload, current_user)
+    return ApiResponse(data=profile)
+
+
+@router.get("/{username}/relationship", response_model=ApiResponse[UserRelationshipStateResponse])
+async def get_user_relationship(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).relationship_state(username, current_user)
+    return ApiResponse(data=state)
+
+
+@router.put("/{username}/follow", response_model=ApiResponse[UserRelationshipStateResponse])
+async def follow_user(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).set_relationship(username, "follow", current_user)
+    return ApiResponse(data=state)
+
+
+@router.delete("/{username}/follow", response_model=ApiResponse[UserRelationshipStateResponse])
+async def unfollow_user(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).clear_relationship(username, "follow", current_user)
+    return ApiResponse(data=state)
+
+
+@router.put("/{username}/ignore", response_model=ApiResponse[UserRelationshipStateResponse])
+async def ignore_user(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).set_relationship(username, "ignore", current_user)
+    return ApiResponse(data=state)
+
+
+@router.delete("/{username}/ignore", response_model=ApiResponse[UserRelationshipStateResponse])
+async def unignore_user(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).clear_relationship(username, "ignore", current_user)
+    return ApiResponse(data=state)
+
+
+@router.put("/{username}/block", response_model=ApiResponse[UserRelationshipStateResponse])
+async def block_user(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).set_relationship(username, "block", current_user)
+    return ApiResponse(data=state)
+
+
+@router.delete("/{username}/block", response_model=ApiResponse[UserRelationshipStateResponse])
+async def unblock_user(
+    username: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[UserRelationshipStateResponse]:
+    state = await SocialService(session).clear_relationship(username, "block", current_user)
+    return ApiResponse(data=state)
+
+
 @router.get("/{username}", response_model=ApiResponse[UserProfileResponse])
 async def get_user_profile(
     username: str,
     session: SessionDep,
     current_user: OptionalCurrentUserDep,
 ) -> ApiResponse[UserProfileResponse]:
-    user, topic_count, post_count = await ForumService(session).get_user_content_counts(
+    profile = await UserProfileService(session).get_profile(username, current_user=current_user)
+    return ApiResponse(data=profile)
+
+
+@router.get("/{username}/activity", response_model=ApiResponse[list[UserActivityItemResponse]])
+async def list_user_activity(
+    username: str,
+    session: SessionDep,
+    current_user: OptionalCurrentUserDep,
+    activity_type: Annotated[
+        str,
+        Query(alias="type", pattern="^(posts|likes|bookmarks)$"),
+    ] = "posts",
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+) -> ApiResponse[list[UserActivityItemResponse]]:
+    activity = await UserProfileService(session).list_activity(
         username,
         current_user=current_user,
+        activity_type=activity_type,
+        limit=limit,
     )
-    return ApiResponse(
-        data=UserProfileResponse(
-            id=user.id,
-            username=user.username,
-            avatar_url=user.avatar_url,
-            role=user.role,
-            level=user.level,
-            status=user.status,
-            created_at=user.created_at,
-            topic_count=topic_count,
-            post_count=post_count,
-        )
-    )
+    return ApiResponse(data=activity)
 
 
 @router.get("/{username}/topics", response_model=ApiResponse[list[TopicResponse]])

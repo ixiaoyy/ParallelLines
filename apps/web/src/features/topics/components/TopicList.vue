@@ -11,6 +11,7 @@ defineProps<{ topics: TopicCardVM[] }>();
       <h2 id="topic-list-heading">主题</h2>
       <span>状态</span>
       <span>回复</span>
+      <span>互动</span>
       <span>活动</span>
     </header>
 
