@@ -87,7 +87,6 @@ const EN_SITE_TEXT: Record<string, string> = {
   "auth.logout": "Log out",
   "brand.home_aria": "Parallel Lines home",
   "nav.admin": "Admin",
-  "nav.billing": "Membership",
   "nav.boards": "Boards",
   "nav.chat": "Chat",
   "nav.collapse": "Close",

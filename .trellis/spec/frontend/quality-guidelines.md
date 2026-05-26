@@ -14,7 +14,7 @@
 - Do not add or run broad per-task component/e2e matrices by default; final product-level
   verification will cover the full integrated experience after larger changes settle.
 - Escalate to detailed frontend tests only when the user explicitly requests detailed/full testing,
-  when preparing a commit/release, or when the change is high-risk (auth/security, payments,
+  when preparing a commit/release, or when the change is high-risk (auth/security,
   destructive data actions, or large routing/state rewrites).
 
 ## UX Quality Bar

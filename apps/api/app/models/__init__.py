@@ -40,7 +40,6 @@ from app.models.moderation import (
     ScreenedRule,
     SpamAction,
 )
-from app.models.payment import PaymentEvent, SubscriptionPlan, UserSubscription
 from app.models.push import PushSubscription
 from app.models.search import SearchDocument, SearchLog
 from app.models.social import PrivateMessageParticipant, UserRelationship
@@ -85,7 +84,6 @@ __all__ = [
     "Poll",
     "PollOption",
     "PollVote",
-    "PaymentEvent",
     "Vote",
     "WebhookDelivery",
     "WebhookEndpoint",
@@ -102,7 +100,6 @@ __all__ = [
     "SearchLog",
     "SiteSetting",
     "SpamAction",
-    "SubscriptionPlan",
     "Tag",
     "Topic",
     "TopicRead",
@@ -110,7 +107,6 @@ __all__ = [
     "User",
     "UserBadge",
     "UserRelationship",
-    "UserSubscription",
     "UserPointEvent",
     "UserTrustLevelEvent",
     "UserEmailPreference",

@@ -51,7 +51,6 @@ POLYMORPHIC_TARGET_TABLES: dict[str, dict[str, str]] = {
         "board": "boards",
         "external_integration_event": "external_integration_events",
         "flag": "flags",
-        "payment_event": "payment_events",
         "post": "posts",
         "reviewable": "reviewables",
         "screened_rule": "screened_rules",

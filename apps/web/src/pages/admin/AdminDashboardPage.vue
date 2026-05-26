@@ -10,7 +10,6 @@ import AdminAnalyticsPanel from "@/features/analytics/components/AdminAnalyticsP
 import { isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser } from "@/features/auth/queries";
 import AdminMigrationToolsPanel from "@/features/migrations/components/AdminMigrationToolsPanel.vue";
-import AdminPaymentsPanel from "@/features/payments/components/AdminPaymentsPanel.vue";
 import AdminPluginsPanel from "@/features/plugins/components/AdminPluginsPanel.vue";
 import AdminThemeMarketplacePanel from "@/features/themes/components/AdminThemeMarketplacePanel.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -43,7 +42,6 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
     <template v-else>
       <AdminSystemPanel />
       <AdminAnalyticsPanel />
-      <AdminPaymentsPanel />
       <section class="admin-main-grid">
         <AdminSettingsPanel />
         <AdminUserManagementPanel />

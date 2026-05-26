@@ -39,7 +39,6 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 | [Plugin Extension System](./plugin-extension-system.md) | Safe plugin registry, admin enable/disable, backend event hooks, and public UI extension metadata | Filled |
 | [Chat and Presence](./chat-presence.md) | Realtime chat channels, permissioned history, reconnect-safe SSE, and online/typing presence | Filled |
 | [Analytics and Data Explorer](./analytics-data-explorer.md) | Admin analytics, preset reports, trend/top-list metrics, and audited CSV export | Filled |
-| [Subscriptions and Payments](./subscriptions-payments.md) | Paid membership plans, signed payment webhooks, entitlement state, and billing event tracking | Filled |
 | [Calendar Events](./calendar-events.md) | Community events, RSVP capacity/deadline, local timezone metadata, and iCal feed | Filled |
 | [SEO, Permalinks, and Sitemap](./seo-permalinks-sitemap.md) | Public sitemap/robots, canonical metadata, legacy topic redirects, and private-content filtering | Filled |
 | [Site Theme, Branding, and Text Overrides](./site-theme-i18n-branding.md) | Public/admin branding settings, theme color validation, i18n text overrides, and email templates | Filled |
@@ -85,13 +84,12 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 28. Read `plugin-extension-system.md` before changing plugin definitions, event hook emit points, admin plugin APIs, or public UI extension metadata.
 29. Read `chat-presence.md` before changing chat channels, chat history, SSE streams, or presence.
 30. Read `analytics-data-explorer.md` before changing admin analytics, Data Explorer preset reports, or CSV exports.
-31. Read `subscriptions-payments.md` before changing subscription plans, paid entitlements, payment webhooks, or billing events.
-32. Read `calendar-events.md` before changing community events, RSVP rules, reminders, or iCal feeds.
-33. Read `seo-permalinks-sitemap.md` before changing sitemap, robots, canonical metadata, or legacy public redirects.
-34. Read `site-theme-i18n-branding.md` before changing public/admin branding settings, theme colors, text overrides, or email template keys.
-35. Read `external-integrations.md` before changing external provider configs, inbound webhooks, retries, or unfurling.
-36. Read `ai-forum-assistant.md` before changing summaries, similar-topic recommendations, or moderation advice.
-37. Read `mobile-push-pwa.md` before changing push subscriptions or push delivery contracts.
-38. Read `import-export-migration-tools.md` before changing migration import/export formats or idempotency.
-39. Read `localization-multilingual-content.md` before changing locale validation or localizable content fields.
-40. For cross-layer features, read `../guides/cross-layer-thinking-guide.md`.
+31. Read `calendar-events.md` before changing community events, RSVP rules, reminders, or iCal feeds.
+32. Read `seo-permalinks-sitemap.md` before changing sitemap, robots, canonical metadata, or legacy public redirects.
+33. Read `site-theme-i18n-branding.md` before changing public/admin branding settings, theme colors, text overrides, or email template keys.
+34. Read `external-integrations.md` before changing external provider configs, inbound webhooks, retries, or unfurling.
+35. Read `ai-forum-assistant.md` before changing summaries, similar-topic recommendations, or moderation advice.
+36. Read `mobile-push-pwa.md` before changing push subscriptions or push delivery contracts.
+37. Read `import-export-migration-tools.md` before changing migration import/export formats or idempotency.
+38. Read `localization-multilingual-content.md` before changing locale validation or localizable content fields.
+39. For cross-layer features, read `../guides/cross-layer-thinking-guide.md`.

@@ -17,6 +17,7 @@ import { createApp } from "vue";
 
 import App from "@/app/App.vue";
 import { router } from "@/app/router";
+import { queryClient } from "@/shared/api/queryClient";
 import "@/shared/styles/base.scss";
 import { registerPwaServiceWorker } from "@/shared/pwa/register";
 import { injectBoardPalette } from "@/shared/theme/boardPalette";
@@ -30,7 +31,7 @@ void registerPwaServiceWorker();
 
 createApp(App)
   .use(createPinia())
-  .use(VueQueryPlugin)
+  .use(VueQueryPlugin, { queryClient })
   .use(router)
   .use(ConfigProvider)
   .use(Button)

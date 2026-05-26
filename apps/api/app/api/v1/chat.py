@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import aclosing
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Request
@@ -16,6 +17,7 @@ from app.schemas.chat import (
 )
 from app.schemas.common import ApiResponse
 from app.services.chat import ChatService
+from app.services.chat_realtime import get_chat_realtime_bus
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -69,12 +71,18 @@ async def list_chat_messages(
 )
 async def send_chat_message(
     channel_id: str,
+    request: Request,
     payload: ChatMessageCreateRequest,
     session: SessionDep,
     current_user: CurrentUserDep,
 ) -> ApiResponse[ChatMessageResponse]:
     return ApiResponse(
-        data=await ChatService(session).send_message(channel_id, payload, current_user)
+        data=await ChatService(session).send_message(
+            channel_id,
+            payload,
+            current_user,
+            request=request,
+        )
     )
 
 
@@ -112,17 +120,27 @@ async def stream_chat_channel(
     session: SessionDep,
     current_user: CurrentUserDep,
     after_id: str | None = None,
-    poll_seconds: Annotated[float, Query(ge=1, le=30)] = 3,
+    poll_seconds: Annotated[float, Query(ge=5, le=60)] = 30,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     once: bool = False,
 ) -> StreamingResponse:
-    async def events():
-        last_message_id = after_id
-        while True:
-            if await request.is_disconnected():
-                break
+    service = ChatService(session)
+    initial_snapshot = await service.stream_snapshot(
+        channel_id,
+        current_user,
+        after_id=after_id,
+        limit=limit,
+    )
+    await session.commit()
 
-            snapshot = await ChatService(session).stream_snapshot(
+    async def events():
+        last_message_id = (
+            initial_snapshot.messages[-1].id if initial_snapshot.messages else after_id
+        )
+
+        async def snapshot_frame() -> str:
+            nonlocal last_message_id
+            snapshot = await service.stream_snapshot(
                 channel_id,
                 current_user,
                 after_id=last_message_id,
@@ -130,11 +148,31 @@ async def stream_chat_channel(
             )
             if snapshot.messages:
                 last_message_id = snapshot.messages[-1].id
-            yield f"event: chat\ndata: {snapshot.model_dump_json()}\n\n"
             await session.commit()
-            if once:
-                break
-            await asyncio.sleep(poll_seconds)
+            return f"event: chat\ndata: {snapshot.model_dump_json()}\n\n"
+
+        if await request.is_disconnected():
+            return
+
+        yield f"event: chat\ndata: {initial_snapshot.model_dump_json()}\n\n"
+        if once:
+            return
+
+        async with aclosing(get_chat_realtime_bus().listen(channel_id)) as listener:
+            while True:
+                if await request.is_disconnected():
+                    break
+
+                try:
+                    event = await asyncio.wait_for(anext(listener), timeout=poll_seconds)
+                except TimeoutError:
+                    # Periodic snapshots keep presence TTL and cross-worker missed events safe.
+                    yield await snapshot_frame()
+                    continue
+
+                if event.last_message_id:
+                    last_message_id = event.last_message_id
+                yield f"event: chat\ndata: {event.payload_json}\n\n"
 
     return StreamingResponse(
         events(),

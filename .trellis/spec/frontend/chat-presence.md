@@ -40,6 +40,11 @@ Route:
 - SSE frames must be parsed through runtime validation before updating query caches.
 - `useChatStream()` starts only when a channel is selected and an access token exists, and aborts
   its `AbortController` on channel switch/unmount.
+- Dropped SSE streams should reconnect with bounded backoff and use the latest cached message ID
+  as `after_id` so missed messages are reconciled.
+- Frontend stream requests may use a longer `poll_seconds` interval because backend message and
+  presence writes fan out complete stream payloads through the realtime bus; timed snapshots remain
+  a low-frequency reconciliation fallback.
 - New streamed/sent messages merge by `id` and are sorted by `created_at`.
 - Presence merges by `user.id`; typing users exclude the current user from the “正在输入” line.
 - Message text is rendered as plain text (`{{ message.raw_text }}`), never as raw HTML.
@@ -51,8 +56,9 @@ Route:
 |---|---|
 | No token opens `/chat` | Login CTA; no useful chat query |
 | User has no channels | Empty state with create default public channel action |
+| Default lobby already exists | Default action selects it instead of creating duplicate lobby channels |
 | Selected channel becomes inaccessible | Message panel shows readable permission/error state |
-| SSE drops | Query polling/manual send remains the fallback; no crash |
+| SSE drops | Stream reconnects with bounded backoff; manual send/refetch still reconciles state |
 | Malformed SSE frame | Ignore frame and wait for next valid snapshot |
 | Empty message submit | Client blocks submit; backend remains source of truth |
 | Search text changes | Message query key includes search term and reloads history |
