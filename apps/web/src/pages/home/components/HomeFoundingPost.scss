@@ -65,17 +65,17 @@
   backdrop-filter: blur(10px);
 }
 
-.founding-post__icon {
+.founding-post__author {
   display: grid;
-  width: 3.15rem;
-  height: 3.15rem;
+  width: 3.65rem;
+  min-width: 3.65rem;
   place-items: center;
-  border: 1px solid rgba(var(--accent-geek-rgb), 0.3);
-  border-radius: 1.1rem;
-  color: var(--primary);
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 12px 24px rgba(var(--shadow-rgb), 0.1);
-  font-size: 1.4rem;
+}
+
+.founding-post__author :deep(.avatar) {
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-geek-rgb), 0.24),
+    0 12px 24px rgba(var(--shadow-rgb), 0.12);
 }
 
 .founding-post__copy {
@@ -183,8 +183,9 @@
     align-items: start;
   }
 
-  .founding-post__icon {
-    display: none;
+  .founding-post__author {
+    width: fit-content;
+    min-width: 0;
   }
 
   .founding-post__action {

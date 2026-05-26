@@ -39,6 +39,7 @@ defineProps<{
 
       <div class="topic-author-strip">
         <UiAvatar
+          :src="topic.authorAvatarUrl"
           :name="topic.authorName"
           :role="topic.authorRole"
           :level="topic.authorLevel"

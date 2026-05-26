@@ -138,6 +138,7 @@ function setActionStatus(message: string) {
           <UiAvatar
             v-for="poster in visiblePosterNames"
             :key="poster"
+            :src="poster === topic.authorName ? topic.authorAvatarUrl : null"
             :name="poster"
             :role="poster === topic.authorName ? topic.authorRole : undefined"
             :level="poster === topic.authorName ? topic.authorLevel : undefined"

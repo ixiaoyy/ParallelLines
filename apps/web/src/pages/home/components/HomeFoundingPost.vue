@@ -3,6 +3,7 @@ import { BookOutlined } from "@ant-design/icons-vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
+import UiAvatar from "@/shared/ui/Avatar.vue";
 
 defineProps<{ topics: TopicCardVM[] }>();
 </script>
@@ -15,8 +16,14 @@ defineProps<{ topics: TopicCardVM[] }>();
 
     <div class="founding-post__list">
       <article v-for="topic in topics" :key="topic.id" class="founding-post__item">
-        <div class="founding-post__icon" aria-hidden="true">
-          <BookOutlined />
+        <div class="founding-post__author" :title="topic.authorName">
+          <UiAvatar
+            :src="topic.authorAvatarUrl"
+            :name="topic.authorName"
+            :role="topic.authorRole"
+            :level="topic.authorLevel"
+            size="lg"
+          />
         </div>
         <div class="founding-post__copy">
           <div v-if="topic.featured" class="founding-post__eyebrow">

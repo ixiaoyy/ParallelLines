@@ -9,6 +9,7 @@ export interface TopicCardVM {
   boardColor: string;
   authorId: string;
   authorName: string;
+  authorAvatarUrl: string | null;
   authorRole: string;
   authorLevel: number;
   authorTrustLevel: number;

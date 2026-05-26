@@ -13,6 +13,7 @@ defineProps<{ topic: TopicCardVM }>();
     <div class="topic-main">
       <div class="author-avatar-wrapper" aria-hidden="true">
         <UiAvatar
+          :src="topic.authorAvatarUrl"
           :name="topic.authorName"
           :role="topic.authorRole"
           :level="topic.authorLevel"

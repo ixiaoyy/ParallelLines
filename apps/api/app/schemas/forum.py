@@ -245,6 +245,7 @@ class TopicResponse(BaseModel):
     board_color: str
     author_id: str
     author_name: str
+    author_avatar_url: str | None = None
     author_role: str
     author_level: int
     author_trust_level: int
@@ -299,6 +300,7 @@ class TopicResponse(BaseModel):
             board_color=topic.board.color,
             author_id=topic.user_id,
             author_name=topic.author.username,
+            author_avatar_url=topic.author.avatar_url,
             author_role=topic.author.role,
             author_level=topic.author.level,
             author_trust_level=topic.author.trust_level,

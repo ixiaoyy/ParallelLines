@@ -1979,6 +1979,7 @@ export interface components {
     TopicResponse: {
       accepted_answer_post_id?: string | null;
       answer_mode?: boolean;
+      author_avatar_url?: string | null;
       author_id: string;
       author_level: number;
       author_name: string;
