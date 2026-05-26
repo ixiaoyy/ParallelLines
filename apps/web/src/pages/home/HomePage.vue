@@ -7,6 +7,7 @@ import { useTags } from "@/features/tags/queries";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicFeed } from "@/features/topics/queries";
 import HomeCategoryGrid from "@/pages/home/components/HomeCategoryGrid.vue";
+import HomeFoundingPost from "@/pages/home/components/HomeFoundingPost.vue";
 import HomeHero from "@/pages/home/components/HomeHero.vue";
 import HomeLeftRail from "@/pages/home/components/HomeLeftRail.vue";
 import HomeSectionHead from "@/pages/home/components/HomeSectionHead.vue";
@@ -29,6 +30,19 @@ const tagsQuery = useTags(30);
 
 const boardSummaries = computed(() => boardsQuery.data.value ?? []);
 const feedTopics = computed(() => topicsQuery.data.value ?? []);
+const foundingTopic = computed(
+  () =>
+    feedTopics.value.find(
+      (topic) => topic.title.includes("论坛初衷") || topic.tags.includes("论坛初衷"),
+    ) ??
+    feedTopics.value.find((topic) => topic.pinned && topic.featured) ??
+    null,
+);
+const discoveryTopics = computed(() =>
+  foundingTopic.value
+    ? feedTopics.value.filter((topic) => topic.id !== foundingTopic.value?.id)
+    : feedTopics.value,
+);
 const topBoards = computed(() => boardSummaries.value.slice(0, 4));
 const railBoards = computed(() => boardSummaries.value.slice(0, 8));
 const topTags = computed(() => (tagsQuery.data.value ?? []).slice(0, 10));
@@ -54,11 +68,11 @@ const communitySignals = computed(() => [
 ]);
 
 const hotTopics = computed(() =>
-  [...feedTopics.value].sort((left, right) => right.hotScore - left.hotScore).slice(0, 4),
+  [...discoveryTopics.value].sort((left, right) => right.hotScore - left.hotScore).slice(0, 4),
 );
 
 const visibleTopics = computed(() => {
-  const sorted = [...feedTopics.value];
+  const sorted = [...discoveryTopics.value];
 
   if (activeTab.value === "top") {
     return sorted.sort((left, right) => right.likeCount + right.replyCount - (left.likeCount + left.replyCount));
@@ -132,6 +146,7 @@ function submitHeroSearch() {
           :signals="communitySignals"
           @submit-search="submitHeroSearch"
         />
+        <HomeFoundingPost v-if="foundingTopic" class="founding-post-slot" :topic="foundingTopic" />
 
         <HomeSectionHead
           id="category-title"

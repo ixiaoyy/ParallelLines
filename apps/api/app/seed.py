@@ -183,6 +183,33 @@ async def seed_demo_data(session: AsyncSession) -> None:
 def starter_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dict[str, object]]:
     return [
         {
+            "key": "forum-intent",
+            "board": boards["announcements"],
+            "author": users["admin"],
+            "title": "论坛初衷：记录、连接与共同成长",
+            "raw_md": (
+                "# 论坛初衷：记录、连接与共同成长\n\n"
+                "这个论坛建立的初衷，是希望为每个人提供一个能够长期记录与连接的空间。\n\n"
+                "你可以在这里保存灵感、整理知识、记录生活，也可以与他人交流观点，"
+                "在讨论中不断完善自己的认知体系。\n\n"
+                "在《打造第二大脑》中，作者提到自己曾因疾病导致表达能力退化。后来，"
+                "他通过持续记录、整理信息，以及对生活习惯的不断调整，逐渐让混乱重新变得有序。\n\n"
+                "**记录，本身就是一种力量。**\n\n"
+                "它不仅帮助我们保存信息，更帮助我们理解自己。\n\n"
+                "而成长，也很少是孤立完成的。一个人的坚持或许有限，但一群人的交流与陪伴，"
+                "往往能够让改变发生得更快。\n\n"
+                "## 你可以从这里开始\n\n"
+                "- 保存一个突然出现的灵感，让它以后还能被找回。\n"
+                "- 整理一段新学到的知识，把零散信息变成自己的理解。\n"
+                "- 记录一次生活里的变化，给未来的自己留下线索。\n"
+                "- 发起一个问题或观点，在交流中获得新的角度。\n\n"
+                "希望这里能真正帮助到每一个愿意思考、表达与成长的人。"
+            ),
+            "tags": ["论坛初衷", "第二大脑", "成长"],
+            "pinned": True,
+            "featured": True,
+        },
+        {
             "key": "welcome-guide",
             "board": boards["announcements"],
             "author": users["admin"],
@@ -192,7 +219,7 @@ def starter_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dic
                 "这样后续讨论会留在同一条主题线里，方便检索和复用。"
             ),
             "tags": ["指南", "新手", "社区规则"],
-            "pinned": True,
+            "pinned": False,
             "featured": True,
         },
         {
