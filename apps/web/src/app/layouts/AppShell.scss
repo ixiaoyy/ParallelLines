@@ -315,13 +315,38 @@
     gap: 0.2rem;
   }
 
+  .topbar-actions--guest .topbar-notification {
+    display: none;
+  }
+
+  .auth-link--guest {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.2rem;
+    border: 1px solid var(--btn-primary-border);
+    padding: 0.48rem 0.75rem;
+    color: var(--btn-primary-fg);
+    background: var(--btn-primary-bg);
+    box-shadow: var(--btn-primary-shadow);
+    white-space: nowrap;
+  }
+
+  .auth-link--guest:hover,
+  .auth-link--guest:focus-visible {
+    color: var(--btn-primary-fg-hover);
+    border-color: var(--btn-primary-border-hover);
+    background: var(--btn-primary-bg-hover);
+    box-shadow: var(--btn-primary-shadow-hover);
+  }
+
   .nav-toggle {
     padding: 0.5rem;
   }
 
-  .nav-toggle span,
+  .nav-toggle__label,
   .topbar-actions :deep(.ui-button),
-  .auth-link,
+  .auth-link:not(.auth-link--guest),
   .admin-link,
   .desktop-plugin-slot,
   .logout-button {

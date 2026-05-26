@@ -220,10 +220,10 @@ function isNavItemActive(item: NavItem) {
       >
         <CloseOutlined v-if="isNavOpen" />
         <MenuOutlined v-else />
-        <span>{{ isNavOpen ? t("nav.collapse", "收起") : t("nav.menu", "导航") }}</span>
+        <span class="nav-toggle__label">{{ isNavOpen ? t("nav.collapse", "收起") : t("nav.menu", "导航") }}</span>
       </button>
 
-      <div class="topbar-actions">
+      <div class="topbar-actions" :class="{ 'topbar-actions--guest': !currentUser }">
         <RouterLink
           v-if="canAccessModeration(currentUser)"
           class="admin-link"
@@ -235,9 +235,9 @@ function isNavItemActive(item: NavItem) {
 
         <PluginSlot class="desktop-plugin-slot" slot-name="app.nav" />
 
-        <NotificationBell />
+        <NotificationBell class="topbar-notification" />
 
-        <RouterLink v-if="!currentUser" class="auth-link" :to="{ name: 'auth' }">
+        <RouterLink v-if="!currentUser" class="auth-link auth-link--guest" :to="{ name: 'auth' }">
           {{ t("auth.login_register", "登录/注册") }}
         </RouterLink>
         <template v-else>
