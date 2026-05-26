@@ -17,15 +17,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.api.v1.dependencies import get_session
-from app.db.base import Base
 from app.models.forum import TopicRead
-from tests.helpers import drain_background_jobs, register_and_verify_user
+from tests.helpers import (
+    drain_background_jobs,
+    get_test_database_url,
+    register_and_verify_user,
+    reset_test_database,
+)
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine(get_test_database_url())
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await reset_test_database(conn)
     return async_sessionmaker(engine, expire_on_commit=False), engine
 
 
@@ -48,7 +52,7 @@ async def setup_board_and_topic(
             "slug": "general",
             "name": "综合讨论",
             "description": "通用讨论版块",
-            "color": "#3B82F6",
+            "color": "#409EFF",
         },
     )
     assert board.status_code == 201

@@ -31,24 +31,6 @@
   padding: 0.1rem 0.2rem 0;
 }
 
-.founding-post__head h2,
-.founding-post__head p {
-  margin: 0;
-}
-
-.founding-post__head h2 {
-  color: var(--title);
-  font-size: clamp(1.22rem, 2.1vw, 1.65rem);
-  line-height: 1.25;
-}
-
-.founding-post__head p {
-  max-width: 48rem;
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.7;
-}
-
 .founding-post__pill {
   display: inline-flex;
   width: fit-content;
@@ -119,7 +101,7 @@
 }
 
 .founding-post__eyebrow span:last-child {
-  color: var(--muted);
+  color: var(--accent-geek);
   font-weight: 760;
 }
 
@@ -173,8 +155,8 @@
 .founding-post__action {
   border-radius: var(--radius-pill);
   padding: 0.72rem 1rem;
-  color: var(--bg-surface);
-  background: var(--gradient-brand);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
   box-shadow: 0 14px 30px rgba(var(--primary-rgb), 0.22);
   text-decoration: none;
   font-size: 0.9rem;
@@ -185,7 +167,8 @@
 .founding-post__action:hover,
 .founding-post__action:focus-visible {
   transform: translateY(-1px);
-  color: var(--bg-surface);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg-hover);
   outline: none;
   box-shadow: 0 16px 34px rgba(var(--primary-rgb), 0.28);
 }

@@ -1,6 +1,6 @@
 # Backend Development Guidelines
 
-> Backend stack for 平行线（internal package/project name: ParallelLines）: FastAPI, Python 3.12+, SQLAlchemy 2.x async ORM, Alembic, MySQL/PostgreSQL, Redis, and background workers.
+> Backend stack for 平行线（internal package/project name: ParallelLines）: FastAPI, Python 3.12+, SQLAlchemy 2.x async ORM, Alembic, MySQL, Redis, and background workers.
 
 ## Overview
 

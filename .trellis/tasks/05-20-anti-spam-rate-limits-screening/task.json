@@ -88,6 +88,6 @@
     "apps/api/.env.example",
     "docker-compose.yml"
   ],
-  "notes": "Implemented DB-backed sliding-window rate limits for register/login/topics/replies/uploads/flags, screened email/IP/URL rules, automatic silence actions for high-risk new-user content, admin screened-rule/spam-action APIs, audit logging, env/docs/spec updates, and coverage for rate limits/screening/admin flows. Validation: ruff check passed; full API pytest passed (29 passed); clean SQLite Alembic upgrade through 0011 passed; docker compose config passed; git diff --check passed with CRLF warnings only.",
+  "notes": "Implemented DB-backed sliding-window rate limits for register/login/topics/replies/uploads/flags, screened email/IP/URL rules, automatic silence actions for high-risk new-user content, admin screened-rule/spam-action APIs, audit logging, env/docs/spec updates, and coverage for rate limits/screening/admin flows. Validation: ruff check passed; full API pytest passed (29 passed); clean MySQL Alembic upgrade through 0011 passed; docker compose config passed; git diff --check passed with CRLF warnings only.",
   "meta": {}
 }

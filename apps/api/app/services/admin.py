@@ -321,7 +321,7 @@ class SiteSettingService:
         if setting.key in BRAND_COLOR_SETTING_KEYS and HEX_COLOR_PATTERN.fullmatch(trimmed) is None:
             raise ValidationError(
                 "invalid_site_setting_value",
-                "Expected a hex color such as #005AA8",
+                "Expected a hex color such as #409EFF",
             )
         if setting.key in URL_SETTING_KEYS and not self._is_safe_asset_url(trimmed):
             raise ValidationError(

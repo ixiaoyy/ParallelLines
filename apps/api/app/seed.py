@@ -10,7 +10,8 @@ from app.models.forum import Board, BoardMember, Post, Topic
 from app.models.user import User
 from app.schemas.forum import PostCreateRequest, TopicCreateRequest
 from app.services.forum import ForumService
-from app.services.quality_posts import QUALITY_POST_SPECS
+from app.services.quality_posts import QUALITY_POST_AUTHOR_USERNAME, QUALITY_POST_SPECS
+from app.services.search import SearchIndexService
 
 DEMO_PASSWORD = "parallellines-demo-123"
 
@@ -54,6 +55,12 @@ async def seed_demo_data(session: AsyncSession) -> None:
             email="community_user@example.com",
             role="user",
         ),
+        "quality_author": await upsert_user(
+            session,
+            username=QUALITY_POST_AUTHOR_USERNAME,
+            email="quality_author@example.com",
+            role="user",
+        ),
         # Keep documented local accounts available for manual login and smoke checks.
         "demo_admin": await upsert_user(
             session,
@@ -81,7 +88,7 @@ async def seed_demo_data(session: AsyncSession) -> None:
             slug="announcements",
             name="公告与更新",
             description="版本发布、维护窗口、路线图和社区规则更新。",
-            color="#3B82F6",
+            color="#409EFF",
             owner=users["admin"],
         ),
         "support": await upsert_board(
@@ -97,7 +104,7 @@ async def seed_demo_data(session: AsyncSession) -> None:
             slug="engineering",
             name="工程实践",
             description="接口设计、异步任务、可观测性与工程质量经验沉淀。",
-            color="#3B82F6",
+            color="#409EFF",
             owner=users["admin"],
         ),
         "frontend": await upsert_board(
@@ -187,7 +194,7 @@ def starter_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dic
             {
                 "key": post.key,
                 "board": boards["announcements"],
-                "author": users["admin"],
+                "author": users["quality_author"],
                 "title": post.title,
                 "raw_md": post.raw_md,
                 "tags": post.tags,
@@ -419,8 +426,16 @@ async def create_topic_if_missing(
         select(Topic).where(Topic.board_id == board.id, Topic.title == title)
     )
     if existing:
+        existing.user_id = author.id
         existing.pinned = pinned
         existing.featured = featured
+        first_post = await session.scalar(
+            select(Post).where(Post.topic_id == existing.id, Post.post_number == 1)
+        )
+        if first_post is not None:
+            first_post.user_id = author.id
+        await session.flush()
+        await SearchIndexService(session).sync_topic(existing.id)
         await session.commit()
         return await ForumService(session).get_topic(existing.id)
 
@@ -434,6 +449,7 @@ async def create_topic_if_missing(
             featured=featured,
         ),
         author,
+        skip_spam_checks=True,
     )
 
 
@@ -454,6 +470,7 @@ async def create_reply_if_missing(
         topic.id,
         PostCreateRequest(raw_md=raw_md),
         author,
+        skip_spam_checks=True,
     )
 
 

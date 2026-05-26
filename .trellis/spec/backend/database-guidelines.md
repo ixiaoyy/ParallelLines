@@ -2,7 +2,7 @@
 
 ## Stack
 
-- SQLAlchemy async is the database abstraction. Local development currently uses the MySQL connection imported from `D:\work\ai-\.env`; PostgreSQL remains compatible if `DATABASE_URL` uses `postgresql+asyncpg://`.
+- SQLAlchemy async is the database abstraction. Local development and CI use MySQL via `mysql+asyncmy://`.
 - SQLAlchemy 2.x async ORM is used for models and queries.
 - Alembic is the only migration mechanism.
 - Redis is for cache, rate limiting, ephemeral notification fan-out, and background coordination only.
@@ -48,7 +48,7 @@
 ### Scope / Trigger
 
 - Applies whenever adding or changing database tables/columns in `app/models/` or `alembic/versions/`.
-- Applies to all supported SQL dialects. MySQL must persist comments in `information_schema`; PostgreSQL must use `COMMENT ON`.
+- Applies to the supported MySQL dialect. MySQL must persist comments in `information_schema`.
 
 ### Signatures
 
@@ -70,7 +70,7 @@
 | New table migration | Table and every column have comments before PR is ready |
 | New column on existing table | Migration adds a column comment in the same change |
 | MySQL target | `information_schema.tables.table_comment` and `information_schema.columns.column_comment` are non-empty |
-| SQLite target | Comment migration is safe/no-op because SQLite does not persist comments |
+| Unsupported non-MySQL dialect | Not supported; migrations and runtime contracts must target MySQL only |
 | Revision id longer than 32 chars | Alembic version table can still store the revision id |
 
 ### Tests Required

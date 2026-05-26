@@ -16,6 +16,6 @@ Create the Vue 3 application shell and reusable UI system for a polished forum e
 ## Acceptance Criteria
 
 - App renders a fixture-driven home page without backend.
-- Color tokens include `#F8F9FA`, `#3B82F6`, `#10B981`, `#111827`, `#4B5563`, `#1E1E1E`.
+- Color tokens include `#F8FAFC`, `#409EFF`, `#10B981`, `#334155`, `#475569`, `#1E1E1E`.
 - Components are typed and accessible.
 - No raw API calls outside `shared/api`.

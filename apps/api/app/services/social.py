@@ -310,7 +310,7 @@ class SocialService:
             slug=PRIVATE_MESSAGE_BOARD_SLUG,
             name="私信",
             description="系统私信主题容器，不在公开版块列表展示。",
-            color="#005AA8",
+            color="#409EFF",
             owner_id=None,
             visibility="private",
             topic_count=0,

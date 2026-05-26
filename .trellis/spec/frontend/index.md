@@ -4,7 +4,7 @@
 
 ## Overview
 
-The frontend is a responsive forum interface with a calm tech aesthetic: `#F5F9FB` app background, `#005AA8` primary actions, `#08C7D8` cyan accent, `#172633` titles, `#314A5C` body text, and `#1E1E1E` code blocks.
+The frontend is a responsive forum interface with a calm tech aesthetic: `#F8FAFC` app background, `#409EFF` primary actions, `#10B981` success accent, `#334155` titles, `#475569` body text, and `#1E1E1E` code blocks.
 
 ## Guidelines Index
 

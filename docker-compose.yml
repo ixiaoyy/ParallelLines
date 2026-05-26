@@ -9,17 +9,36 @@ services:
       timeout: 3s
       retries: 20
 
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: parallellines
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
   api:
     build:
       context: ./apps/api
     env_file:
       - ./apps/api/.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-mysql+asyncmy://root:root@mysql:3306/parallellines?charset=utf8mb4}
     ports:
       - "8000:8000"
     volumes:
       - upload-data:/var/lib/parallellines/uploads
       - backup-data:/var/lib/parallellines/backups
     depends_on:
+      mysql:
+        condition: service_healthy
       redis:
         condition: service_healthy
     command: >
@@ -42,6 +61,8 @@ services:
       context: ./apps/api
     env_file:
       - ./apps/api/.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-mysql+asyncmy://root:root@mysql:3306/parallellines?charset=utf8mb4}
     volumes:
       - upload-data:/var/lib/parallellines/uploads
       - backup-data:/var/lib/parallellines/backups
@@ -75,5 +96,6 @@ services:
       - web
 
 volumes:
+  mysql-data:
   upload-data:
   backup-data:

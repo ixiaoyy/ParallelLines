@@ -356,20 +356,8 @@ async def reset_sequences(conn: AsyncConnection, rows_by_table: RowsByTable) -> 
         if max_id <= 0:
             continue
         quoted_table = table.name.replace('"', '""')
-        if dialect.startswith("postgresql"):
-            await conn.execute(
-                text(
-                    "select setval(pg_get_serial_sequence(:table_name, 'id'), :next_value, true)"
-                ),
-                {"table_name": table.name, "next_value": max_id},
-            )
-        elif dialect in {"mysql", "mariadb"}:
+        if dialect in {"mysql", "mariadb"}:
             await conn.execute(text(f"ALTER TABLE `{table.name}` AUTO_INCREMENT = {max_id + 1}"))
-        elif dialect == "sqlite":
-            await conn.execute(
-                text("UPDATE sqlite_sequence SET seq = :seq WHERE name = :name"),
-                {"seq": max_id, "name": table.name},
-            )
         else:
             print(f"Sequence reset skipped for unsupported dialect: {dialect}.{quoted_table}")
 
@@ -378,14 +366,6 @@ async def set_fk_checks(conn: AsyncConnection, *, enabled: bool) -> None:
     dialect = conn.dialect.name
     if dialect in {"mysql", "mariadb"}:
         await conn.execute(text(f"SET FOREIGN_KEY_CHECKS={1 if enabled else 0}"))
-    elif dialect == "sqlite":
-        await conn.execute(text(f"PRAGMA foreign_keys={'ON' if enabled else 'OFF'}"))
-    elif dialect.startswith("postgresql"):
-        role = "origin" if enabled else "replica"
-        try:
-            await conn.execute(text(f"SET session_replication_role = {role}"))
-        except Exception as exc:  # noqa: BLE001
-            print(f"PostgreSQL FK bypass skipped ({exc}); insert order must satisfy constraints.")
 
 
 def foreign_key_targets(table: Table) -> dict[str, str]:

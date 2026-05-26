@@ -79,6 +79,6 @@
     ".trellis/spec/backend/uploads-attachments.md",
     ".trellis/spec/frontend/uploads-attachments.md"
   ],
-  "notes": "Implemented safe multipart uploads, local upload metadata/storage, avatar updates, Markdown attachment binding, private-board attachment ACL, temporary upload cleanup worker, Docker upload volume, frontend composer upload insertion, and own-profile avatar upload. Checks passed: API ruff, full API pytest (22 passed), Alembic clean SQLite upgrade through 0009, web typecheck/lint/build, docker compose config, and git diff --check.",
+  "notes": "Implemented safe multipart uploads, local upload metadata/storage, avatar updates, Markdown attachment binding, private-board attachment ACL, temporary upload cleanup worker, Docker upload volume, frontend composer upload insertion, and own-profile avatar upload. Checks passed: API ruff, full API pytest (22 passed), Alembic clean MySQL upgrade through 0009, web typecheck/lint/build, docker compose config, and git diff --check.",
   "meta": {}
 }

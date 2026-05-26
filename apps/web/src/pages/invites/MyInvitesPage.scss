@@ -9,9 +9,15 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 1.5rem;
-  border: 1px solid rgba(0, 90, 168, 0.12);
+  border: 1px solid var(--theme-soft-border);
   border-radius: 1.5rem;
-  background: linear-gradient(135deg, rgba(0, 90, 168, 0.1), rgba(8, 199, 216, 0.1)), #fff;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--btn-primary-bg) 10%, transparent),
+      rgba(8, 199, 216, 0.1)
+    ),
+    var(--bg-surface);
 
   span {
     color: var(--primary);
@@ -92,7 +98,7 @@
   gap: 0.85rem;
   align-items: center;
   padding: 1rem;
-  border: 1px solid rgba(0, 90, 168, 0.1);
+  border: 1px solid var(--theme-soft-border);
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.8);
 }
@@ -135,7 +141,7 @@
   select,
   textarea {
     width: 100%;
-    border: 1px solid rgba(0, 90, 168, 0.14);
+    border: 1px solid var(--theme-soft-border);
     border-radius: 0.9rem;
     padding: 0.75rem 0.85rem;
     color: var(--text);

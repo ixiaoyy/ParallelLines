@@ -78,7 +78,7 @@ flowchart TD
 flowchart LR
     Web["Vue 3 + Vite + TS + Ant Design Vue"] --> SDK["OpenAPI TS Client"]
     SDK --> API["FastAPI"]
-    API --> DB[("MySQL / PostgreSQL")]
+    API --> DB[("MySQL")]
     API --> Redis[("Redis Cache / Rate Limit")]
     API --> Worker["Background Worker"]
     Worker --> DB
@@ -175,14 +175,14 @@ D:\work\ParallelLines\
 
 ```css
 :root {
-  --bg-app: #F8F9FA;
+  --bg-app: #F8FAFC;
   --bg-surface: #FFFFFF;
   --bg-subtle: #EEF2F7;
-  --primary: #3B82F6;
-  --primary-hover: #2563EB;
+  --primary: #409EFF;
+  --primary-hover: #66B1FF;
   --accent-geek: #10B981;
-  --title: #111827;
-  --text: #4B5563;
+  --title: #334155;
+  --text: #475569;
   --muted: #6B7280;
   --border: #E5E7EB;
   --code-bg: #1E1E1E;

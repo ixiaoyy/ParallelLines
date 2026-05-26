@@ -18,7 +18,7 @@
           <stop offset="100%" stop-color="#f8fafc" stop-opacity="0" />
         </radialGradient>
         <filter id="hc-soft" x="-8%" y="-8%" width="116%" height="116%">
-          <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.08" />
+          <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#94a3b8" flood-opacity="0.08" />
         </filter>
       </defs>
 
@@ -48,8 +48,8 @@
 
       <!-- 交汇点 -->
       <circle cx="188" cy="108" r="22" fill="#ffffff" fill-opacity="0.9" />
-      <circle cx="188" cy="108" r="10" fill="#38bdf8" fill-opacity="0.28" />
-      <circle cx="188" cy="108" r="4" fill="#0ea5e9" />
+      <circle cx="188" cy="108" r="10" fill="#6dd0fa" fill-opacity="0.28" />
+      <circle cx="188" cy="108" r="4" fill="#409eff" />
     </svg>
   </div>
 </template>

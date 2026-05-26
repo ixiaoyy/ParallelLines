@@ -85,6 +85,6 @@
     ".trellis/spec/backend/deployment-observability.md",
     ".trellis/spec/frontend/smoke-tests.md"
   ],
-  "notes": "Implementation complete and verified locally, including Playwright smoke against temporary SQLite API and Vite web server.",
+  "notes": "Implementation complete and verified locally, including Playwright smoke against temporary MySQL API and Vite web server.",
   "meta": {}
 }

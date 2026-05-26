@@ -88,6 +88,6 @@
     ".trellis/spec/frontend/account-security.md",
     ".trellis/spec/backend/deployment-observability.md"
   ],
-  "notes": "Implemented account recovery and login security: password reset without account enumeration, one-time expiring reset/email-change tokens, server-backed session IDs with revocation, TOTP 2FA with one-time recovery codes, OAuth provider discovery, forgot-password and 2FA login UI, and a /security settings page. Checks passed: API ruff, full API pytest (26 passed), clean SQLite Alembic upgrade through 0010, web typecheck/lint/build, docker compose config, git diff --check (CRLF warnings only), and browser preview DOM check for /security.",
+  "notes": "Implemented account recovery and login security: password reset without account enumeration, one-time expiring reset/email-change tokens, server-backed session IDs with revocation, TOTP 2FA with one-time recovery codes, OAuth provider discovery, forgot-password and 2FA login UI, and a /security settings page. Checks passed: API ruff, full API pytest (26 passed), clean MySQL Alembic upgrade through 0010, web typecheck/lint/build, docker compose config, git diff --check (CRLF warnings only), and browser preview DOM check for /security.",
   "meta": {}
 }

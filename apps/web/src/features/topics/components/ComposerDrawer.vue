@@ -75,7 +75,7 @@ const helper = computed(() =>
 );
 const placeholder = computed(() =>
   isReplyMode.value
-    ? "例如：我在 PostgreSQL 15 下复现了，同样会卡在任务状态刷新…"
+    ? "例如：我在 MySQL 8 下复现了，同样会卡在任务状态刷新…"
     : "例如：升级后登录会跳回首页，只有 Edge 复现…",
 );
 const composerPreview = computed(() => buildComposerPreview(draft.value));

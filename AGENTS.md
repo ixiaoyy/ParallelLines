@@ -44,9 +44,9 @@ Keep this managed block so 'trellis update' can refresh the instructions.
 
 ### 已避免的复发点（2026-05 按钮偏深问题）
 
-1. 后台默认曾是 `#005AA8`，`siteBranding` 覆盖 `--primary` → 用 `var(--primary)` 的按钮变深蓝。**现主按钮只用 `--btn-primary-*`，已脱钩。**
-2. `App.vue` 曾用 `#38BDF8` / `#0EA5E9`，与 SCSS 不一致。**现已对齐 `#409EFF`。**
-3. `siteBranding` 曾把 `--primary-hover` 与 `#0f172a` 混色。**已改为与白色混亮。**
+1. 后台默认曾是旧深蓝品牌色，`siteBranding` 覆盖 `--primary` → 用 `var(--primary)` 的按钮变深蓝。**现主按钮只用 `--btn-primary-*`，已脱钩。**
+2. `App.vue` 曾用非规范蓝色，与 SCSS 不一致。**现已对齐 `#409EFF`。**
+3. `siteBranding` 曾把 `--primary-hover` 与深色标题色混色。**已改为与白色混亮。**
 
 ### 仍可能「看起来不像 #409EFF」的情况（非主按钮）
 
@@ -55,7 +55,7 @@ Keep this managed block so 'trellis update' can refresh the instructions.
 | 链接、标签、图标高亮 | 仍用 `--primary`，跟随后台品牌色 | 后台「品牌主色」改为 `#409EFF`，或改 `siteBranding` 默认值 |
 | 新版块页排序 Tab 选中 | 用版块 `--board-mark-bg` 浅底深字 | **设计如此**，不是主按钮 |
 | 新页面手写 `background: var(--primary)` 当按钮 | 未走 `--btn-primary-*` | Code review / 改用 `UiButton` 或 `var(--btn-primary-bg)` |
-| 数据库里仍是旧值 `#005AA8` | 只影响 `--primary`，不影响主按钮 | 可选：管理后台改设置，或跑 SQL 更新 `brand_primary_color` |
+| 数据库里仍是旧深蓝品牌色 | 只影响 `--primary`，不影响主按钮 | 可选：管理后台改设置，或跑 SQL 更新 `brand_primary_color` |
 | 侧栏「本周热议」序号 `.rank` | 曾用 `var(--primary)` + 灰底 | **透底**：浅蓝半透明底 + `#409EFF` 数字（非实心按钮） |
 
 ## 主色与主按钮（禁止擅自改成浅底深字或渐变按钮）
@@ -89,7 +89,7 @@ Keep this managed block so 'trellis update' can refresh the instructions.
 
 - 不要把主按钮改成 **浅蓝底 + 深蓝字**（曾误改，已恢复）。
 - 不要用 **`--gradient-brand`** 做主按钮背景（渐变仅装饰，见下）。
-- 不要把 `--primary` 改成 Tailwind 天蓝 `#0ea5e9` 等，除非产品明确要求。
+- 不要把 `--primary` 改成 非规范蓝色等，除非产品明确要求。
 
 ## 品牌渐变（仅装饰，非按钮）
 

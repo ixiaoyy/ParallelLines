@@ -5,22 +5,12 @@ import type { TopicCardVM } from "@/entities/topic/model";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 
 defineProps<{ topics: TopicCardVM[] }>();
-
-function qualityPostHelper(topic: TopicCardVM) {
-  if (topic.title.includes("社区规范") || topic.tags.includes("社区规范")) {
-    return "理性交流、尊重原创、保护隐私";
-  }
-
-  return "写给每一位愿意思考、表达与成长的人";
-}
 </script>
 
 <template>
-  <section class="home-founding-post" aria-labelledby="quality-posts-title">
+  <section class="home-founding-post" aria-label="置顶">
     <div class="founding-post__head">
-      <span class="founding-post__pill"><PushpinOutlined /> 置顶质量帖</span>
-      <h2 id="quality-posts-title">先读置顶帖，再开始记录和交流</h2>
-      <p>论坛初衷与社区规范会长期置顶，帮助新成员快速理解这里的表达方式和边界。</p>
+      <span class="founding-post__pill"><PushpinOutlined /> 置顶</span>
     </div>
 
     <div class="founding-post__list">
@@ -30,8 +20,8 @@ function qualityPostHelper(topic: TopicCardVM) {
         </div>
         <div class="founding-post__copy">
           <div class="founding-post__eyebrow">
-            <span><PushpinOutlined /> 必读</span>
-            <span>{{ qualityPostHelper(topic) }}</span>
+            <span><PushpinOutlined /> 置顶</span>
+            <span v-if="topic.featured">精华</span>
           </div>
           <h3>
             <RouterLink :to="topicDetailRoute(topic)">{{ topic.title }}</RouterLink>

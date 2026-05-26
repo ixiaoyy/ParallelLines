@@ -9,6 +9,19 @@ jobs:
   backend:
     name: Backend lint and tests
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: parallellines_ci
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     defaults:
       run:
         working-directory: apps/api
@@ -23,9 +36,16 @@ jobs:
         run: uv sync --frozen
       - name: Ruff
         run: uv run ruff check app tests
+      - name: Alembic upgrade on MySQL
+        env:
+          DATABASE_URL: mysql+asyncmy://root:root@127.0.0.1:3306/parallellines_ci?charset=utf8mb4
+          ENVIRONMENT: test
+          JWT_SECRET_KEY: ci-test-secret-change-me-123456
+        run: uv run alembic upgrade head
       - name: Pytest
         env:
-          DATABASE_URL: sqlite+aiosqlite:///./ci-test.db
+          DATABASE_URL: mysql+asyncmy://root:root@127.0.0.1:3306/parallellines_ci?charset=utf8mb4
+          ENVIRONMENT: test
           JWT_SECRET_KEY: ci-test-secret-change-me-123456
         run: uv run pytest -q
       - name: OpenAPI snapshot
@@ -58,6 +78,19 @@ jobs:
     name: Playwright MVP smoke
     runs-on: ubuntu-latest
     needs: [backend, frontend]
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: parallellines_smoke
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -79,14 +112,16 @@ jobs:
       - name: Prepare API database
         working-directory: apps/api
         env:
-          DATABASE_URL: sqlite+aiosqlite:///./smoke.db
+          DATABASE_URL: mysql+asyncmy://root:root@127.0.0.1:3306/parallellines_smoke?charset=utf8mb4
+          ENVIRONMENT: test
           JWT_SECRET_KEY: smoke-test-secret-change-me-123456
         run: |
           uv run alembic upgrade head
           uv run python -m app.seed
       - name: Start API and Web, then run smoke tests
         env:
-          DATABASE_URL: sqlite+aiosqlite:///./apps/api/smoke.db
+          DATABASE_URL: mysql+asyncmy://root:root@127.0.0.1:3306/parallellines_smoke?charset=utf8mb4
+          ENVIRONMENT: test
           JWT_SECRET_KEY: smoke-test-secret-change-me-123456
           VITE_API_BASE_URL: http://127.0.0.1:8000/api/v1
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173

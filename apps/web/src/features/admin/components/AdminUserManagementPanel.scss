@@ -146,7 +146,7 @@
 }
 
 .user-list button.is-active {
-  border-color: rgba(0, 90, 168, 0.4);
+  border-color: var(--theme-soft-border-hover);
   background: var(--bg-selected);
 }
 

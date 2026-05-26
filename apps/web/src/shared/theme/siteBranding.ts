@@ -9,7 +9,7 @@ export function applySiteBranding(settings: PublicSettingMap | undefined, previe
 
   const merged = { ...(settings ?? {}), ...(preview ?? {}) };
   const root = document.documentElement;
-  const primary = settingString(merged, "brand_primary_color", "#409eff");
+  const primary = normalizeLegacyPrimaryColor(settingString(merged, "brand_primary_color", "#409eff"));
   const accent = settingString(merged, "brand_accent_color", "#10b981");
 
   applyColor(root, "--primary", "--primary-rgb", primary);
@@ -77,6 +77,10 @@ function settingString(settings: PublicSettingMap, key: string, fallback: string
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
+function normalizeLegacyPrimaryColor(color: string): string {
+  return parseHexColor(color) === 23208 ? "#409eff" : color;
+}
+
 function safeAssetUrl(url: string): boolean {
   if (Array.from(url).some((char) => /\s/.test(char))) {
     return false;
@@ -90,4 +94,9 @@ function hexToRgb(hex: string): string {
   const green = Number.parseInt(value.slice(2, 4), 16);
   const blue = Number.parseInt(value.slice(4, 6), 16);
   return `${red}, ${green}, ${blue}`;
+}
+
+function parseHexColor(hex: string): number | null {
+  const value = hex.trim().replace("#", "");
+  return /^[0-9a-fA-F]{6}$/.test(value) ? Number.parseInt(value, 16) : null;
 }

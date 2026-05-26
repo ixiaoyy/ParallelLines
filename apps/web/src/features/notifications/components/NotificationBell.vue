@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BellOutlined, CheckCircleOutlined, InboxOutlined } from "@ant-design/icons-vue";
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 import { toNotificationItem } from "@/features/notifications/model";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@/features/notifications/queries";
 
 const open = ref(false);
+const bellRef = ref<HTMLElement | null>(null);
 const notificationsQuery = useNotificationList();
 const markRead = useMarkNotificationsRead();
 useNotificationsStream();
@@ -37,10 +38,31 @@ function markAllRead() {
 function markOneRead(id: string) {
   markRead.mutate([id]);
 }
+
+function handleDocumentPointerDown(event: PointerEvent) {
+  if (!open.value) {
+    return;
+  }
+
+  const target = event.target;
+  if (!(target instanceof Node) || bellRef.value?.contains(target)) {
+    return;
+  }
+
+  closePanel();
+}
+
+onMounted(() => {
+  document.addEventListener("pointerdown", handleDocumentPointerDown, true);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("pointerdown", handleDocumentPointerDown, true);
+});
 </script>
 
 <template>
-  <div class="notification-bell" @keydown.esc="closePanel">
+  <div ref="bellRef" class="notification-bell" @keydown.esc="closePanel">
     <a-badge :count="unreadCount" :number-style="{ backgroundColor: 'var(--btn-primary-bg, #409eff)' }">
       <button
         class="notification-trigger"

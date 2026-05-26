@@ -16,7 +16,7 @@ Runtime services:
 | `api` | `uvicorn app.main:app --host 0.0.0.0 --port 8000` | Runs migrations/seed in Compose before serving |
 | `web` | `pnpm --dir apps/web preview --host 0.0.0.0 --port 5174` | Static Vite preview built with `VITE_API_BASE_URL` |
 | `worker` | `python -m app.workers.background_jobs` | Unified queue worker for mail, notifications, hot ranking, upload cleanup, and session cleanup |
-| `db` | `postgres:16-alpine` | PostgreSQL source of truth |
+| `mysql` | `mysql:8.4` | MySQL source of truth |
 | `redis` | `redis:7-alpine` | Cache/coordination dependency |
 
 Email verification env:
@@ -104,7 +104,7 @@ CI commands:
   volumes; otherwise DB metadata will point at files the cleanup handler, backup
   handler, or API cannot see.
 - `VITE_API_BASE_URL` is a build-time frontend contract; Docker build args and CI env must set it explicitly when not using the default.
-- CI uses SQLite for backend tests/smoke to stay self-contained, while Docker Compose uses PostgreSQL.
+- CI and Docker Compose start MySQL for migration and Playwright smoke gates.
 - Slow API requests log `request_slow` when duration exceeds `SLOW_REQUEST_MS`.
 - Seed data must not log or print passwords; README may document demo credentials for local-only use.
 - Registration creates a pending account, stores only a verification-code hash, and activates the user only after `/auth/verify-email`.

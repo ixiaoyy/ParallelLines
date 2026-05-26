@@ -140,7 +140,7 @@ function isLongTextSetting(setting: SiteSettingResponse) {
 
 function colorInputValue(setting: SiteSettingResponse) {
   const value = String(settingDrafts[setting.key] ?? setting.value ?? "");
-  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#005AA8";
+  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#409EFF";
 }
 </script>
 

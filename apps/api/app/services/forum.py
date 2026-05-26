@@ -637,14 +637,17 @@ class ForumService:
         payload: TopicCreateRequest,
         current_user: User,
         request: Request | None = None,
+        *,
+        skip_spam_checks: bool = False,
     ) -> Topic:
         board = await self.get_board_by_slug(board_slug, current_user=current_user)
-        await SpamPreventionService(self.session).enforce_topic(
-            request,
-            current_user=current_user,
-            title=payload.title,
-            raw_md=payload.raw_md,
-        )
+        if not skip_spam_checks:
+            await SpamPreventionService(self.session).enforce_topic(
+                request,
+                current_user=current_user,
+                title=payload.title,
+                raw_md=payload.raw_md,
+            )
         normalized_tags = self._normalized_unique_tags(payload.tags)
         self._validate_board_topic_tags(board, normalized_tags)
         try:
@@ -1215,6 +1218,8 @@ class ForumService:
         payload: PostCreateRequest,
         current_user: User,
         request: Request | None = None,
+        *,
+        skip_spam_checks: bool = False,
     ) -> Post:
         topic = await self.get_topic(topic_id, current_user=current_user)
         if topic.status != "open":
@@ -1226,11 +1231,12 @@ class ForumService:
             if not parent_post or parent_post.topic_id != topic.id:
                 raise NotFoundError("post_not_found", "Parent post not found")
 
-        await SpamPreventionService(self.session).enforce_reply(
-            request,
-            current_user=current_user,
-            raw_md=payload.raw_md,
-        )
+        if not skip_spam_checks:
+            await SpamPreventionService(self.session).enforce_reply(
+                request,
+                current_user=current_user,
+                raw_md=payload.raw_md,
+            )
         try:
             filtered = await self._moderate_or_queue_content(
                 {"raw_md": payload.raw_md},

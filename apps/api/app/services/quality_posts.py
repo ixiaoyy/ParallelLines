@@ -92,14 +92,16 @@ QUALITY_POST_SPECS = [
     ),
 ]
 
+QUALITY_POST_AUTHOR_USERNAME = "多动脑子z"
+
 
 async def sync_quality_posts(
     session: AsyncSession,
     *,
     board_slug: str = "announcements",
-    author_username: str | None = None,
+    author_username: str | None = QUALITY_POST_AUTHOR_USERNAME,
 ) -> list[Topic]:
-    """Idempotently write pinned quality posts into the current database."""
+    """Idempotently write pinned/featured starter posts into the current database."""
 
     board = await session.scalar(select(Board).where(Board.slug == board_slug))
     if board is None:
@@ -130,7 +132,8 @@ async def _resolve_author(
 
     if author is None:
         raise RuntimeError(
-            "No author is available; pass --author-username or create an admin user."
+            "No quality-post author is available; create user "
+            f"{author_username or QUALITY_POST_AUTHOR_USERNAME!r} or pass --author-username."
         )
     return author
 
@@ -158,19 +161,27 @@ async def _upsert_quality_post(
                 featured=spec.featured,
             ),
             author,
+            skip_spam_checks=True,
         )
 
+    author_changed = topic.user_id != author.id
     topic.pinned = spec.pinned
     topic.featured = spec.featured
+    topic.user_id = author.id
     await _sync_quality_tags(session, topic, spec.tags)
     first_post = await session.scalar(
         select(Post).where(Post.topic_id == topic.id, Post.post_number == 1)
     )
-    if first_post is not None and first_post.raw_md != spec.raw_md.strip():
-        first_post.raw_md = spec.raw_md.strip()
-        first_post.cooked_html = render_markdown(first_post.raw_md)
-        first_post.updated_at = utcnow()
-        topic.updated_at = utcnow()
+    if first_post is not None:
+        first_post.user_id = author.id
+        if first_post.raw_md != spec.raw_md.strip():
+            first_post.raw_md = spec.raw_md.strip()
+            first_post.cooked_html = render_markdown(first_post.raw_md)
+            first_post.updated_at = utcnow()
+            topic.updated_at = utcnow()
+        elif author_changed:
+            first_post.updated_at = utcnow()
+            topic.updated_at = utcnow()
 
     await session.flush()
     await SearchIndexService(session).sync_topic(topic.id)

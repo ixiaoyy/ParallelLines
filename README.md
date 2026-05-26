@@ -5,9 +5,9 @@
 ## Stack Target
 
 - Frontend: Vue 3, Vite, TypeScript, Ant Design Vue, Vue Router, Pinia, TanStack Query
-- Backend: FastAPI, SQLAlchemy 2.x async, Alembic, PostgreSQL/MySQL, Redis
+- Backend: FastAPI, SQLAlchemy 2.x async, Alembic, MySQL, Redis
 - Worker: Python async background job runner for notifications, email digests, hot ranking, and cleanup tasks
-- Palette: `#F8F9FA`, `#3B82F6`, `#10B981`, `#111827`, `#4B5563`, `#1E1E1E`
+- Palette: `#F8FAFC`, `#409EFF`, `#10B981`, `#334155`, `#475569`, `#1E1E1E`
 
 ## Quick Start with Docker
 
@@ -22,10 +22,10 @@ Services:
 - API: <http://localhost:8000>
 - API health: <http://localhost:8000/healthz>
 - API metrics: <http://localhost:8000/metrics>
-- PostgreSQL: `localhost:5432`, database/user/password `parallellines/postgres/postgres`
+- MySQL: `localhost:3306`, database `parallellines`, root password `root`
 - Redis: `localhost:6379`
 
-`docker compose up` runs Alembic migrations, seeds demo data, starts the API, web preview server, PostgreSQL, Redis, and the unified background job worker.
+`docker compose up` runs Alembic migrations, seeds demo data, starts the API, web preview server, MySQL, Redis, and the unified background job worker.
 
 Demo accounts share this local-only password: `parallellines-demo-123`.
 
@@ -54,7 +54,7 @@ Useful commands:
 uv run ruff check app tests
 uv run pytest -q
 uv run python -m app.workers.background_jobs
-# Only synchronize the pinned quality posts into the current database.
+# Only synchronize the pinned/featured starter posts into the current database; default author is 多动脑子z.
 uv run python -m app.sync_quality_posts
 ```
 
@@ -150,7 +150,7 @@ pnpm --dir apps/web test:smoke
 
 1. Backend `uv sync --frozen`, `ruff check`, and `pytest`.
 2. Frontend `pnpm install --frozen-lockfile`, lint, typecheck, and build.
-3. Playwright MVP smoke tests with a SQLite-backed API and Vite dev server.
+3. Playwright MVP smoke tests with a MySQL-backed API and Vite dev server.
 
 ## Operations Checklist
 

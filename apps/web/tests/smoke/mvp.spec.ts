@@ -89,7 +89,7 @@ test("register login create topic reply and interactions", async ({ page, reques
       slug: boardSlug,
       name: boardName,
       description: "Playwright smoke test 自动创建的临时版块。",
-      color: "#3B82F6",
+      color: "#409EFF",
     },
   });
   expect(boardResponse.ok()).toBeTruthy();

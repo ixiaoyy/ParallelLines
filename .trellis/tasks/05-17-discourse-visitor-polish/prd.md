@@ -19,5 +19,5 @@ As a first-time visitor, compare ParallelLines against https://meta.discourse.or
 - [ ] No production page uses fake fallback data.
 
 ## Technical Notes
-- Use local SQLite smoke DB to avoid Docker dependency.
+- Use local MySQL smoke DB to avoid Docker dependency.
 - Compare against Discourse patterns: instantly scannable topic rows, strong side navigation, crisp header, status density, category/tag affordance, and confident whitespace.

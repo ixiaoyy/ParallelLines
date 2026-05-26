@@ -71,7 +71,7 @@
 
 .auth-tabs button.active {
   color: var(--title);
-  border-bottom-color: var(--primary);
+  border-bottom-color: var(--btn-primary-bg);
 }
 
 .auth-form {
@@ -101,8 +101,8 @@
 }
 
 .auth-form input:focus {
-  border-color: var(--primary);
-  outline: 2px solid var(--focus-ring);
+  border-color: var(--btn-primary-border);
+  outline: 2px solid var(--theme-focus-ring);
 }
 
 .auth-error {
@@ -150,7 +150,7 @@
   justify-self: start;
   border: 0;
   padding: 0;
-  color: var(--primary);
+  color: var(--btn-primary-bg);
   background: transparent;
   cursor: pointer;
   font: inherit;
@@ -159,6 +159,7 @@
 
 .auth-link-button:hover,
 .auth-link-button:focus-visible {
+  color: var(--btn-primary-bg-hover);
   text-decoration: underline;
   outline: none;
 }

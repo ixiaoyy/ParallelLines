@@ -58,7 +58,7 @@ async function createPrivateBoard() {
       slug: boardSlug.value.trim(),
       name: boardName.value.trim(),
       description: boardDescription.value.trim() || "仅受邀成员可见的私密讨论空间。",
-      color: "#005AA8",
+      color: "#409EFF",
       visibility: "private",
     });
     boardName.value = "";

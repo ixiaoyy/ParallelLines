@@ -1,13 +1,13 @@
 from datetime import UTC, datetime
 from secrets import token_hex
 
-from sqlalchemy import BigInteger, DateTime, Integer
+from sqlalchemy import BigInteger, DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import TypeDecorator
 
 
 class NumericStringId(TypeDecorator[str]):
-    """Database BIGINT/INTEGER id that keeps API-facing Python values as strings."""
+    """Database BIGINT id that keeps API-facing Python values as strings."""
 
     impl = BigInteger
     cache_ok = True
@@ -17,8 +17,6 @@ class NumericStringId(TypeDecorator[str]):
         return str
 
     def load_dialect_impl(self, dialect):  # type: ignore[no-untyped-def]
-        if dialect.name == "sqlite":
-            return dialect.type_descriptor(Integer())
         return dialect.type_descriptor(BigInteger())
 
     def process_bind_param(self, value: object, dialect):  # type: ignore[no-untyped-def]

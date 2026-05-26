@@ -9,17 +9,17 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.api.v1.dependencies import get_session
 from app.core.config import Settings, get_settings
-from app.db.base import Base, utcnow
+from app.db.base import utcnow
 from app.main import create_app
 from app.models.background_job import BackgroundJob
 from app.models.user import User, UserSecurityToken
-from tests.helpers import register_and_verify_user
+from tests.helpers import get_test_database_url, register_and_verify_user, reset_test_database
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine(get_test_database_url())
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await reset_test_database(conn)
     return async_sessionmaker(engine, expire_on_commit=False), engine
 
 
@@ -53,7 +53,7 @@ async def create_public_topic(client: AsyncClient, auth: str) -> str:
             "slug": "privacy-roadmap",
             "name": "Privacy",
             "description": "Privacy test board",
-            "color": "#3B82F6",
+            "color": "#409EFF",
         },
     )
     assert board.status_code == 201

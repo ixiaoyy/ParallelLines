@@ -28,7 +28,7 @@ class BoardCreateRequest(BaseModel):
     slug: str = Field(min_length=2, max_length=96, pattern=r"^[a-z0-9][a-z0-9-]*$")
     name: str = Field(min_length=2, max_length=80)
     description: str = Field(min_length=2, max_length=2000)
-    color: str = Field(default="#3B82F6", max_length=32)
+    color: str = Field(default="#409EFF", max_length=32)
     visibility: Literal["public", "private", "unlisted"] = "public"
     parent_board_id: str | None = Field(default=None, max_length=36)
     parent_board_slug: str | None = Field(default=None, max_length=96)

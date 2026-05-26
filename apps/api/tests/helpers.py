@@ -1,8 +1,32 @@
+import os
+
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
+from app.db.base import Base
 from app.workers.background_jobs import run_once
+
+DEFAULT_TEST_DATABASE_URL = (
+    "mysql+asyncmy://root:root@127.0.0.1:3306/parallellines_test?charset=utf8mb4"
+)
+
+
+def get_test_database_url() -> str:
+    return os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL") or DEFAULT_TEST_DATABASE_URL
+
+
+async def reset_test_database(conn: AsyncConnection) -> None:
+    uses_foreign_key_checks = conn.dialect.name in {"mysql", "mariadb"}
+    if uses_foreign_key_checks:
+        await conn.execute(text("SET FOREIGN_KEY_CHECKS=0"))
+    try:
+        await conn.run_sync(Base.metadata.drop_all)
+    finally:
+        if uses_foreign_key_checks:
+            await conn.execute(text("SET FOREIGN_KEY_CHECKS=1"))
+    await conn.run_sync(Base.metadata.create_all)
 
 
 async def register_and_verify_user(

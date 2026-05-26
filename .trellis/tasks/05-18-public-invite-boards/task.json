@@ -77,6 +77,6 @@
     ".trellis/spec/backend/board-visibility-invites.md",
     ".trellis/spec/frontend/board-visibility-invites.md"
   ],
-  "notes": "Implemented private/invite-only board visibility guards, invite create/accept/decline/revoke flow, invite center UI, private board creation entry, left-rail public/invite grouping, migration 0008, and backend/frontend specs. Checks passed: alembic upgrade on temp SQLite, API ruff, full API pytest, web typecheck, lint, build, and git diff --check.",
+  "notes": "Implemented private/invite-only board visibility guards, invite create/accept/decline/revoke flow, invite center UI, private board creation entry, left-rail public/invite grouping, migration 0008, and backend/frontend specs. Checks passed: alembic upgrade on temp MySQL, API ruff, full API pytest, web typecheck, lint, build, and git diff --check.",
   "meta": {}
 }

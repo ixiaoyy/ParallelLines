@@ -72,4 +72,4 @@ Request/response fields:
 - API tests for Q&A post ordering.
 - API tests for poll voting, single vs multi-choice replacement, and closed poll rejection.
 - Regression tests: `pytest tests/test_topic_solved_voting_polls.py tests/test_interactions_notifications.py tests/test_topic_lifecycle.py -q` plus full backend suite before finishing.
-- Migration verification on a clean SQLite database URL before release.
+- Migration verification on a clean MySQL database URL before release.

@@ -32,7 +32,7 @@ Validation helpers:
 ### 3. Contracts
 
 - `/api/v1/site/settings` returns only `public=true` rows. Email template settings stay admin-only.
-- Brand color values must be strict 6-digit hex colors (`#005AA8`); unsafe strings such as `red;`
+- Brand color values must be strict 6-digit hex colors (`#409EFF`); unsafe strings such as `red;`
   return `invalid_site_setting_value`.
 - Logo/favicon values must be safe asset URLs: site-relative `/...` or `http(s)://...`, with no
   whitespace.
@@ -80,5 +80,5 @@ DEFAULT_SITE_SETTINGS["brand_primary_color"] = DefaultSiteSetting(..., value="re
 
 ```python
 if setting.key in BRAND_COLOR_SETTING_KEYS and HEX_COLOR_PATTERN.fullmatch(trimmed) is None:
-    raise ValidationError("invalid_site_setting_value", "Expected a hex color such as #005AA8")
+    raise ValidationError("invalid_site_setting_value", "Expected a hex color such as #409EFF")
 ```

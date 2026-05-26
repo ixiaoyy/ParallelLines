@@ -7,16 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.api.v1.dependencies import get_session
 from app.core.config import get_settings
-from app.db.base import Base
 from app.main import create_app
 from app.services.chat_realtime import ChatRealtimeBus, ChatRealtimeEvent
-from tests.helpers import register_and_verify_user
+from tests.helpers import get_test_database_url, register_and_verify_user, reset_test_database
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine(get_test_database_url())
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await reset_test_database(conn)
     return async_sessionmaker(engine, expire_on_commit=False), engine
 
 
@@ -63,7 +62,7 @@ async def test_private_board_chat_acl_presence_and_reconnect_stream(
                 "slug": "ops-room",
                 "name": "运维密室",
                 "description": "只允许成员进入的实时排障频道。",
-                "color": "#0EA5E9",
+                "color": "#409EFF",
                 "visibility": "private",
             },
         )

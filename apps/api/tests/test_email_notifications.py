@@ -3,17 +3,21 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.api.v1.dependencies import get_session
-from app.db.base import Base
 from app.main import create_app
 from app.services.background_jobs import BackgroundJobService
 from app.services.email import EMAIL_OUTBOX, clear_email_outbox
-from tests.helpers import drain_background_jobs, register_and_verify_user
+from tests.helpers import (
+    drain_background_jobs,
+    get_test_database_url,
+    register_and_verify_user,
+    reset_test_database,
+)
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine(get_test_database_url())
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await reset_test_database(conn)
     return async_sessionmaker(engine, expire_on_commit=False), engine
 
 
@@ -34,7 +38,7 @@ async def create_topic(client: AsyncClient, auth: str) -> dict[str, str]:
             "slug": "mail-board",
             "name": "邮件通知",
             "description": "用于验证邮件通知的版块。",
-            "color": "#005AA8",
+            "color": "#409EFF",
         },
     )
     assert board.status_code == 201

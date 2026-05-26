@@ -3,15 +3,14 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.api.v1.dependencies import get_session
-from app.db.base import Base
 from app.main import create_app
-from tests.helpers import register_and_verify_user
+from tests.helpers import get_test_database_url, register_and_verify_user, reset_test_database
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine(get_test_database_url())
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await reset_test_database(conn)
     return async_sessionmaker(engine, expire_on_commit=False), engine
 
 
@@ -49,7 +48,7 @@ async def test_private_board_visibility_and_invite_acceptance_flow() -> None:
                 "slug": "private-lab",
                 "name": "内部排障实验室",
                 "description": "仅受邀成员可见的排障复盘空间。",
-                "color": "#005AA8",
+                "color": "#409EFF",
                 "visibility": "private",
             },
         )
@@ -194,7 +193,7 @@ async def test_only_private_board_owner_can_manage_invites() -> None:
                 "slug": "owner-only",
                 "name": "Owner 私密版块",
                 "description": "用于验证邀请权限边界。",
-                "color": "#005AA8",
+                "color": "#409EFF",
                 "visibility": "private",
             },
         )

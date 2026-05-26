@@ -4,18 +4,17 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.api.v1.dependencies import get_session
-from app.db.base import Base
 from app.main import create_app
 from app.models.forum import Topic
 from app.models.search import SearchDocument, SearchLog
 from app.workers.background_jobs import recompute_hot_scores
-from tests.helpers import register_and_verify_user
+from tests.helpers import get_test_database_url, register_and_verify_user, reset_test_database
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine(get_test_database_url())
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await reset_test_database(conn)
     return async_sessionmaker(engine, expire_on_commit=False), engine
 
 
@@ -32,7 +31,7 @@ async def create_board(client: AsyncClient, auth: str, slug: str, name: str) -> 
             "slug": slug,
             "name": name,
             "description": f"{name} 的可搜索主题。",
-            "color": "#3B82F6",
+            "color": "#409EFF",
         },
     )
     assert response.status_code == 201

@@ -44,7 +44,7 @@ Completed and recorded the ParallelLines forum MVP implementation in commit `ada
 - `pnpm --dir apps/web typecheck` passed.
 - `pnpm --dir apps/web build` passed; only Vite chunk-size warning.
 - `docker compose config` passed.
-- `pnpm --dir apps/web test:smoke` passed locally against temporary SQLite API and Vite web server.
+- `pnpm --dir apps/web test:smoke` passed locally against temporary MySQL API and Vite web server.
 - `git diff --check` passed; only CRLF warnings.
 
 ## Notes for Future Sessions
@@ -82,7 +82,7 @@ Completed and recorded the ParallelLines forum MVP implementation in commit `ada
 
 ### Summary
 
-Completed full text search implementation with SQLite search documents indexing, search logger, relevance ordering, and permissions filtering. Also fixed initials avatar layout centering on board topic lists by setting line-height.
+Completed full text search implementation with database search documents indexing, search logger, relevance ordering, and permissions filtering. Also fixed initials avatar layout centering on board topic lists by setting line-height.
 
 ### Main Changes
 

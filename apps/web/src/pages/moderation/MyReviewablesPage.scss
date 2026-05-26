@@ -12,7 +12,7 @@
   border-radius: 1.35rem;
   padding: clamp(1rem, 3vw, 1.5rem);
   background:
-    radial-gradient(circle at 0% 0%, rgba(0, 90, 168, 0.13), transparent 20rem),
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--btn-primary-bg) 13%, transparent), transparent 20rem),
     linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(238, 242, 247, 0.82));
   box-shadow: var(--shadow-card);
 }

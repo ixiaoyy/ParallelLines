@@ -3429,7 +3429,7 @@
             "type": "array"
           },
           "color": {
-            "default": "#3B82F6",
+            "default": "#409EFF",
             "maxLength": 32,
             "title": "Color",
             "type": "string"
@@ -6460,7 +6460,7 @@
       "MigrationBoardRecord": {
         "properties": {
           "color": {
-            "default": "#3B82F6",
+            "default": "#409EFF",
             "title": "Color",
             "type": "string"
           },

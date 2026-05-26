@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     environment: Literal["local", "test", "staging", "production"] = "local"
     api_v1_prefix: str = "/api/v1"
 
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/parallellines"
+    database_url: str = "mysql+asyncmy://root:root@localhost:3306/parallellines?charset=utf8mb4"
     redis_url: str = "redis://localhost:6379/0"
     slow_request_ms: int = 500
     background_job_poll_seconds: int = 5
@@ -93,7 +93,7 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def sync_database_url(self) -> str:
-        return self.database_url.replace("+asyncpg", "")
+        return self.database_url.replace("+asyncmy", "")
 
 
 @lru_cache

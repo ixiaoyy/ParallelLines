@@ -56,7 +56,7 @@ class Board(IntegerPrimaryKeyMixin, TimestampMixin, Base):
         comment="版块名称本地化映射，键为 BCP47 locale；为空表示使用 name。",
     )
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    color: Mapped[str] = mapped_column(String(32), nullable=False, default="#3B82F6")
+    color: Mapped[str] = mapped_column(String(32), nullable=False, default="#409EFF")
     avatar_url: Mapped[str | None] = mapped_column(String(512))
     owner_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     parent_board_id: Mapped[str | None] = mapped_column(

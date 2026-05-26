@@ -96,7 +96,7 @@ Database signatures:
 - API tests for `GET|PUT /topics/{topic_id}/notification-level`, including default `normal` when no
   `topic_reads` row exists.
 - Mark-read test proving only the current user's unread notifications are updated.
-- Migration check on a clean SQLite/PostgreSQL/MySQL-compatible database URL.
+- Migration check on a clean MySQL database URL.
 
 ### 7. Wrong vs Correct
 

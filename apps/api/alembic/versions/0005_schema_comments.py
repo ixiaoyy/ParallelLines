@@ -33,8 +33,6 @@ def upgrade() -> None:
     dialect_name = connection.dialect.name
     if dialect_name == "mysql":
         _apply_mysql_comments(connection, clear=False)
-    elif dialect_name == "postgresql":
-        _apply_postgresql_comments(connection, clear=False)
 
 
 def downgrade() -> None:
@@ -42,8 +40,6 @@ def downgrade() -> None:
     dialect_name = connection.dialect.name
     if dialect_name == "mysql":
         _apply_mysql_comments(connection, clear=True)
-    elif dialect_name == "postgresql":
-        _apply_postgresql_comments(connection, clear=True)
 
 
 def _table_comments() -> dict[str, str]:
@@ -80,27 +76,6 @@ def _apply_mysql_comments(connection: Connection, *, clear: bool) -> None:
             connection.exec_driver_sql(
                 f"ALTER TABLE {table_identifier} MODIFY COLUMN {column_identifier} "
                 f"{column_definition} COMMENT {_sql_literal(column_comment)}"
-            )
-
-
-def _apply_postgresql_comments(connection: Connection, *, clear: bool) -> None:
-    existing_tables = set(inspect(connection).get_table_names())
-    preparer = connection.dialect.identifier_preparer
-    for table_name, comment in _table_comments().items():
-        if table_name not in existing_tables:
-            continue
-        table_identifier = preparer.quote(table_name)
-        table_comment = "NULL" if clear else _sql_literal(comment)
-        connection.exec_driver_sql(f"COMMENT ON TABLE {table_identifier} IS {table_comment}")
-        column_names = {column["name"] for column in inspect(connection).get_columns(table_name)}
-        for column_name in column_names:
-            comment = _column_comment(table_name, column_name)
-            if comment is None:
-                continue
-            column_comment = "NULL" if clear else _sql_literal(comment)
-            column_identifier = preparer.quote(column_name)
-            connection.exec_driver_sql(
-                f"COMMENT ON COLUMN {table_identifier}.{column_identifier} IS {column_comment}"
             )
 
 

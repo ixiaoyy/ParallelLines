@@ -12,7 +12,7 @@ export const THEME_PACKAGES: ThemePackage[] = [
     id: "parallel-calm",
     name: "Parallel Calm",
     description: "默认蓝青色调，适合技术社区长期阅读。",
-    settings: { brand_primary_color: "#005AA8", brand_accent_color: "#08C7D8" },
+    settings: { brand_primary_color: "#409EFF", brand_accent_color: "#08C7D8" },
     assets: ["/logo-lines.png"],
   },
   {

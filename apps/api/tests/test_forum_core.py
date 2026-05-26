@@ -4,20 +4,23 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.api.v1.dependencies import get_session
-from app.db.base import Base
 from app.main import create_app
 from app.models.forum import Board, Post, Topic, TopicRead
 from app.models.user import User
 from app.schemas.forum import BoardCreateRequest, PostCreateRequest, TopicCreateRequest
 from app.services.forum import ForumService
-from app.services.quality_posts import QUALITY_POST_SPECS, sync_quality_posts
-from tests.helpers import register_and_verify_user
+from app.services.quality_posts import (
+    QUALITY_POST_AUTHOR_USERNAME,
+    QUALITY_POST_SPECS,
+    sync_quality_posts,
+)
+from tests.helpers import get_test_database_url, register_and_verify_user, reset_test_database
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine(get_test_database_url())
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await reset_test_database(conn)
     return async_sessionmaker(engine, expire_on_commit=False), engine
 
 
@@ -167,9 +170,16 @@ async def test_sync_quality_posts_writes_idempotent_pinned_topics() -> None:
             hashed_password="hashed",
             role="admin",
         )
-        session.add(user)
+        quality_author = User(
+            username=QUALITY_POST_AUTHOR_USERNAME,
+            email="quality_author@example.com",
+            hashed_password="hashed",
+            role="user",
+        )
+        session.add_all([user, quality_author])
         await session.commit()
         await session.refresh(user)
+        await session.refresh(quality_author)
 
         service = ForumService(session)
         board = await service.create_board(
@@ -177,17 +187,28 @@ async def test_sync_quality_posts_writes_idempotent_pinned_topics() -> None:
                 slug="announcements",
                 name="公告与更新",
                 description="版本发布、维护窗口、路线图和社区规则更新。",
-                color="#3B82F6",
+                color="#409EFF",
             ),
             user,
         )
 
         first_sync = await sync_quality_posts(session)
+        first_topic_post = await session.scalar(
+            select(Post).where(Post.topic_id == first_sync[0].id, Post.post_number == 1)
+        )
+        assert first_topic_post is not None
+        first_sync[0].user_id = user.id
+        first_topic_post.user_id = user.id
+        await session.commit()
+
         second_sync = await sync_quality_posts(session)
 
         topic_count = await session.scalar(select(func.count(Topic.id)))
         post_count = await session.scalar(select(func.count(Post.id)))
         saved_board = await session.get(Board, board.id)
+        migrated_first_post = await session.scalar(
+            select(Post).where(Post.topic_id == first_sync[0].id, Post.post_number == 1)
+        )
 
         assert len(first_sync) == len(QUALITY_POST_SPECS)
         assert [topic.id for topic in second_sync] == [topic.id for topic in first_sync]
@@ -199,5 +220,8 @@ async def test_sync_quality_posts_writes_idempotent_pinned_topics() -> None:
         for topic in second_sync:
             assert topic.pinned is True
             assert topic.featured is True
+            assert topic.user_id == quality_author.id
+        assert migrated_first_post is not None
+        assert migrated_first_post.user_id == quality_author.id
 
     await engine.dispose()

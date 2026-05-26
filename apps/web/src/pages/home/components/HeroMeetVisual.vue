@@ -12,7 +12,7 @@
 
       <!-- 汇聚路径 -->
       <g class="hero-meet__paths" stroke-linecap="round">
-        <path d="M 58 52 C 95 78, 118 92, 150 102" stroke="#38bdf8" stroke-width="2.2" opacity="0.55" />
+        <path d="M 58 52 C 95 78, 118 92, 150 102" stroke="#6dd0fa" stroke-width="2.2" opacity="0.55" />
         <path d="M 242 52 C 205 78, 182 92, 150 102" stroke="#fb923c" stroke-width="2.2" opacity="0.55" />
         <path d="M 58 148 C 95 122, 118 108, 150 102" stroke="#a3e635" stroke-width="2.2" opacity="0.55" />
         <path d="M 242 148 C 205 122, 182 108, 150 102" stroke="#a78bfa" stroke-width="2.2" opacity="0.55" />
@@ -20,20 +20,20 @@
 
       <!-- 中心：相遇相知 -->
       <circle cx="150" cy="102" r="30" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.2" />
-      <circle cx="138" cy="100" r="14" fill="#38bdf8" fill-opacity="0.82" />
+      <circle cx="138" cy="100" r="14" fill="#6dd0fa" fill-opacity="0.82" />
       <circle cx="162" cy="100" r="14" fill="#a3e635" fill-opacity="0.82" />
-      <circle cx="150" cy="108" r="9" fill="#0ea5e9" fill-opacity="0.35" />
+      <circle cx="150" cy="108" r="9" fill="#409eff" fill-opacity="0.35" />
       <path
         d="M 146 106 C 148 103, 152 103, 154 106 C 152 109, 148 109, 146 106 Z"
-        fill="#0ea5e9"
+        fill="#409eff"
         fill-opacity="0.5"
       />
 
       <!-- 四方人物 -->
       <g class="hero-meet__person hero-meet__person--nw">
         <circle cx="58" cy="52" r="22" fill="#e0f2fe" />
-        <circle cx="58" cy="46" r="7" fill="#0ea5e9" />
-        <path d="M 47 58 Q 58 66 69 58" stroke="#0ea5e9" stroke-width="5" stroke-linecap="round" fill="none" />
+        <circle cx="58" cy="46" r="7" fill="#409eff" />
+        <path d="M 47 58 Q 58 66 69 58" stroke="#409eff" stroke-width="5" stroke-linecap="round" fill="none" />
       </g>
       <g class="hero-meet__person hero-meet__person--ne">
         <circle cx="242" cy="52" r="22" fill="#ffedd5" />
@@ -52,7 +52,7 @@
       </g>
 
       <!-- 方位点缀 -->
-      <circle cx="58" cy="52" r="3" fill="#38bdf8" fill-opacity="0.5" />
+      <circle cx="58" cy="52" r="3" fill="#6dd0fa" fill-opacity="0.5" />
       <circle cx="242" cy="52" r="3" fill="#fb923c" fill-opacity="0.5" />
       <circle cx="58" cy="148" r="3" fill="#a3e635" fill-opacity="0.5" />
       <circle cx="242" cy="148" r="3" fill="#a78bfa" fill-opacity="0.5" />

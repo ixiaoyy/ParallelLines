@@ -88,6 +88,6 @@
     ".trellis/spec/backend/moderation-admin-safety.md",
     ".trellis/spec/frontend/post-actions.md"
   ],
-  "notes": "Implemented post edit history and moderator restore. Every successful first-post edit stores the previous raw/cooked content with editor, version number, optional reason, summary, and audit log. Added author/moderator revision list/detail APIs, moderator-only restore that creates a new revision and updates live post/search content, frontend revision panel and restore action wiring, migration 0012, tests, and executable specs. Validation: ruff check passed; targeted revision/edit tests 6 passed; full API pytest 32 passed; pnpm web lint passed; pnpm web build passed; clean SQLite Alembic upgrade through 0012 passed; docker compose config passed; git diff --check passed with CRLF warnings only.",
+  "notes": "Implemented post edit history and moderator restore. Every successful first-post edit stores the previous raw/cooked content with editor, version number, optional reason, summary, and audit log. Added author/moderator revision list/detail APIs, moderator-only restore that creates a new revision and updates live post/search content, frontend revision panel and restore action wiring, migration 0012, tests, and executable specs. Validation: ruff check passed; targeted revision/edit tests 6 passed; full API pytest 32 passed; pnpm web lint passed; pnpm web build passed; clean MySQL Alembic upgrade through 0012 passed; docker compose config passed; git diff --check passed with CRLF warnings only.",
   "meta": {}
 }

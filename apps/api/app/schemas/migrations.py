@@ -16,7 +16,7 @@ class MigrationBoardRecord(BaseModel):
     slug: str = Field(min_length=2, max_length=96)
     name: str = Field(min_length=2, max_length=80)
     description: str = Field(default="Imported board", max_length=2000)
-    color: str = "#3B82F6"
+    color: str = "#409EFF"
 
 
 class MigrationTopicRecord(BaseModel):

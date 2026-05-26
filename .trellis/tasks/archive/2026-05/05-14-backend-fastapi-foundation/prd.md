@@ -8,7 +8,7 @@ Create the backend skeleton and infrastructure needed by the ParallelLines MVP.
 
 - FastAPI app factory, `/healthz`, `/api/v1` router.
 - Config management, structured logging, request ID middleware.
-- Async SQLAlchemy session, Alembic migrations, MySQL/PostgreSQL setup.
+- Async SQLAlchemy session, Alembic migrations, MySQL setup.
 - Redis client and rate limit adapter.
 - Auth foundation: register, login, refresh, logout, current user.
 - Base Pydantic schemas, error handlers, test setup.

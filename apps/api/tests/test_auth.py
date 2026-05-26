@@ -10,19 +10,23 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.api.v1.dependencies import get_session
 from app.core.config import get_settings
 from app.core.security import create_token
-from app.db.base import Base
 from app.main import create_app
 from app.models.user import User, UserSecurityToken
 from app.services.auth import TOTP_STEP_SECONDS, hotp
 from app.services.email import clear_email_outbox, latest_email_secret, latest_verification_code
-from tests.helpers import drain_background_jobs, register_and_verify_user
+from tests.helpers import (
+    drain_background_jobs,
+    get_test_database_url,
+    register_and_verify_user,
+    reset_test_database,
+)
 
 
 @asynccontextmanager
 async def auth_client():
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine(get_test_database_url())
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await reset_test_database(conn)
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -42,9 +46,9 @@ async def auth_client():
 
 @pytest.mark.anyio
 async def test_register_login_and_me() -> None:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine(get_test_database_url())
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await reset_test_database(conn)
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -121,9 +125,9 @@ async def test_register_login_and_me() -> None:
 
 @pytest.mark.anyio
 async def test_resend_verification_rate_limit() -> None:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine(get_test_database_url())
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await reset_test_database(conn)
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -161,9 +165,9 @@ async def test_resend_verification_rate_limit() -> None:
 
 @pytest.mark.anyio
 async def test_me_rejects_pending_verification_user() -> None:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine(get_test_database_url())
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await reset_test_database(conn)
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     pending_user_id = ""

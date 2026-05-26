@@ -94,7 +94,7 @@ DB tables/columns:
   - 2FA challenge flow and one-time recovery code.
 - Full backend gate: `ruff check apps/api/app apps/api/tests apps/api/alembic` and
   `pytest apps/api/tests -q`.
-- Migration gate: apply Alembic through the account-security revision on a fresh SQLite DB.
+- Migration gate: apply Alembic through the account-security revision on a fresh MySQL DB.
 
 ### 7. Wrong vs Correct
 

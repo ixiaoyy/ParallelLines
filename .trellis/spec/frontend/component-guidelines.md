@@ -61,11 +61,11 @@
 Use CSS variables from `shared/styles/tokens.scss`:
 
 ```scss
---bg-app: #F5F9FB;
---primary: #005AA8;
---accent-geek: #08C7D8;
---title: #172633;
---text: #314A5C;
+--bg-app: #F8FAFC;
+--primary: #409EFF;
+--accent-geek: #10B981;
+--title: #334155;
+--text: #475569;
 --code-bg: #1E1E1E;
 ```
 

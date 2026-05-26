@@ -10,12 +10,12 @@
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
-  border: 1px solid rgba(0, 90, 168, 0.18);
+  border: 1px solid var(--theme-soft-border);
   border-radius: var(--radius-card);
   padding: clamp(1.1rem, 3vw, 1.65rem);
   background:
     radial-gradient(circle at 14% 18%, rgba(8, 199, 216, 0.24), transparent 26%),
-    radial-gradient(circle at 82% 8%, rgba(0, 90, 168, 0.16), transparent 28%),
+    radial-gradient(circle at 82% 8%, color-mix(in srgb, var(--btn-primary-bg) 16%, transparent), transparent 28%),
     linear-gradient(135deg, rgba(245, 249, 251, 0.96), rgba(255, 255, 255, 0.78));
 }
 
@@ -24,12 +24,12 @@
   inset: auto -4rem -5rem auto;
   width: 13rem;
   height: 13rem;
-  border: 1px solid rgba(0, 90, 168, 0.14);
+  border: 1px solid var(--theme-soft-border);
   border-radius: 999px;
   background: repeating-radial-gradient(
     circle,
-    rgba(0, 90, 168, 0.08) 0,
-    rgba(0, 90, 168, 0.08) 1px,
+    color-mix(in srgb, var(--btn-primary-bg) 8%, transparent) 0,
+    color-mix(in srgb, var(--btn-primary-bg) 8%, transparent) 1px,
     transparent 1px,
     transparent 14px
   );
@@ -73,11 +73,11 @@
   place-items: center;
   width: 8.5rem;
   height: 8.5rem;
-  border: 1px solid rgba(0, 90, 168, 0.2);
+  border: 1px solid var(--theme-soft-border-hover);
   border-radius: 999px;
-  color: var(--primary);
+  color: var(--btn-primary-bg);
   background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 24px 60px rgba(0, 90, 168, 0.12);
+  box-shadow: 0 24px 60px color-mix(in srgb, var(--btn-primary-bg) 12%, transparent);
 }
 
 .email-orbit strong {
@@ -163,8 +163,8 @@
 .email-count {
   border-radius: 999px;
   padding: 0.3rem 0.6rem;
-  color: var(--primary);
-  background: rgba(0, 90, 168, 0.08);
+  color: var(--theme-soft-fg);
+  background: var(--theme-soft-bg);
   font-weight: 800;
 }
 
@@ -212,7 +212,7 @@
 }
 
 .toggle-card:hover {
-  border-color: rgba(0, 90, 168, 0.28);
+  border-color: var(--theme-soft-border-hover);
   transform: translateY(-1px);
 }
 
