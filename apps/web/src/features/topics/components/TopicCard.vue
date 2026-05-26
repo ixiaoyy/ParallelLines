@@ -139,6 +139,7 @@ function setActionStatus(message: string) {
             v-for="poster in visiblePosterNames"
             :key="poster"
             :name="poster"
+            :role="poster === topic.authorName ? topic.authorRole : undefined"
             size="sm"
             :title="poster"
           />

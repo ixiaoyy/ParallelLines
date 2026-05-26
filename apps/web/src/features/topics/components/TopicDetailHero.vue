@@ -38,7 +38,7 @@ defineProps<{
       </div>
 
       <div class="topic-author-strip">
-        <UiAvatar :name="topic.authorName" size="lg" />
+        <UiAvatar :name="topic.authorName" :role="topic.authorRole" size="lg" />
         <div>
           <span>发起人</span>
           <strong>{{ topic.authorName }}</strong>

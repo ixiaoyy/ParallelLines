@@ -35,6 +35,7 @@ defineProps<{
           v-for="poster in topic.posterNames"
           :key="poster"
           :name="poster"
+          :role="poster === topic.authorName ? topic.authorRole : undefined"
           size="sm"
           :title="poster"
         />

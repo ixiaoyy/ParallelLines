@@ -3,6 +3,7 @@ import type { TopicCardVM } from "@/entities/topic/model";
 import { boardToneClass, tagToneClass } from "@/shared/theme/boardPalette";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
+import UiAvatar from "@/shared/ui/Avatar.vue";
 
 defineProps<{ topic: TopicCardVM }>();
 </script>
@@ -11,7 +12,7 @@ defineProps<{ topic: TopicCardVM }>();
   <article class="home-topic-row" :class="boardToneClass(topic.boardSlug)">
     <div class="topic-main">
       <div class="author-avatar-wrapper" aria-hidden="true">
-        <div class="author-avatar">{{ topic.authorName.slice(0, 1).toUpperCase() }}</div>
+        <UiAvatar :name="topic.authorName" :role="topic.authorRole" size="sm" />
         <span class="board-badge-dot" :title="topic.boardName"></span>
       </div>
       <div class="topic-copy">

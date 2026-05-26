@@ -7678,6 +7678,10 @@
             "title": "Author Name",
             "type": "string"
           },
+          "author_role": {
+            "title": "Author Role",
+            "type": "string"
+          },
           "author_trust_level": {
             "title": "Author Trust Level",
             "type": "integer"
@@ -7781,6 +7785,7 @@
           "topic_id",
           "user_id",
           "author_name",
+          "author_role",
           "author_level",
           "author_trust_level",
           "author_trust_level_label",
@@ -9931,6 +9936,10 @@
             "title": "Author Name",
             "type": "string"
           },
+          "author_role": {
+            "title": "Author Role",
+            "type": "string"
+          },
           "author_trust_level": {
             "title": "Author Trust Level",
             "type": "integer"
@@ -10125,6 +10134,7 @@
           "board_color",
           "author_id",
           "author_name",
+          "author_role",
           "author_level",
           "author_trust_level",
           "author_trust_level_label",

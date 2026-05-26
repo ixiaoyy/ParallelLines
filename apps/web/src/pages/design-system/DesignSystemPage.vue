@@ -42,6 +42,7 @@ import UiSkeleton from "@/shared/ui/Skeleton.vue";
         <h2>身份与状态</h2>
         <div class="inline">
           <UiAvatar name="Lina" size="lg" />
+          <UiAvatar name="Admin" role="admin" size="lg" />
           <UiBadge tone="green">关注中</UiBadge>
           <UiBadge tone="amber">已置顶</UiBadge>
           <UiBadge>已静音</UiBadge>

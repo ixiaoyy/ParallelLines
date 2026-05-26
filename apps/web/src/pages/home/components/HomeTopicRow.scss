@@ -31,19 +31,14 @@
   height: 2.8rem;
 }
 
-.author-avatar {
-  display: grid;
+.author-avatar-wrapper :deep(.avatar--sm) {
   width: 2.4rem;
   height: 2.4rem;
-  place-items: center;
-  border: 1px solid var(--board-mark-border, var(--border));
-  border-radius: 50%;
-  color: var(--board-mark-fg, var(--primary-hover));
+  border-color: var(--board-mark-border, var(--border));
+  color: var(--board-mark-fg, var(--primary-hover)) !important;
   background: var(--board-mark-bg, var(--cyan-soft));
   box-shadow: 0 2px 6px color-mix(in srgb, var(--board-accent, var(--primary)) 10%, transparent);
   font-size: 0.9rem;
-  font-weight: 900;
-  text-transform: uppercase;
 }
 
 .board-badge-dot {

@@ -245,6 +245,7 @@ class TopicResponse(BaseModel):
     board_color: str
     author_id: str
     author_name: str
+    author_role: str
     author_level: int
     author_trust_level: int
     author_trust_level_label: str
@@ -298,6 +299,7 @@ class TopicResponse(BaseModel):
             board_color=topic.board.color,
             author_id=topic.user_id,
             author_name=topic.author.username,
+            author_role=topic.author.role,
             author_level=topic.author.level,
             author_trust_level=topic.author.trust_level,
             author_trust_level_label=topic.author.trust_level_label,
@@ -340,6 +342,7 @@ class PostResponse(BaseModel):
     topic_id: str
     user_id: str
     author_name: str
+    author_role: str
     author_level: int
     author_trust_level: int
     author_trust_level_label: str
@@ -372,6 +375,7 @@ class PostResponse(BaseModel):
             topic_id=post.topic_id,
             user_id=post.user_id,
             author_name=post.author.username,
+            author_role=post.author.role,
             author_level=post.author.level,
             author_trust_level=post.author.trust_level,
             author_trust_level_label=post.author.trust_level_label,

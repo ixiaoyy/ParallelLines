@@ -51,6 +51,7 @@ export interface TopicResponse {
   board_color: string;
   author_id: string;
   author_name: string;
+  author_role: string;
   author_level: number;
   author_trust_level: number;
   author_trust_level_label: string;
@@ -134,6 +135,7 @@ export function toTopicCard(topic: TopicResponse): TopicCardVM {
     boardColor: topic.board_color,
     authorId: topic.author_id,
     authorName: topic.author_name,
+    authorRole: topic.author_role,
     authorLevel: topic.author_level,
     authorTrustLevel: topic.author_trust_level,
     authorTrustLevelLabel: topic.author_trust_level_label,

@@ -4,6 +4,7 @@ export interface PostItemVM {
   userId: string;
   floor: number;
   authorName: string;
+  authorRole: string;
   authorLevel: number;
   authorTrustLevel: number;
   authorTrustLevelLabel: string;

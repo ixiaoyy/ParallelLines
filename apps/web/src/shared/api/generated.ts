@@ -1599,6 +1599,7 @@ export interface components {
       accepted_answer?: boolean;
       author_level: number;
       author_name: string;
+      author_role: string;
       author_trust_level: number;
       author_trust_level_label: string;
       cooked_html: string;
@@ -1981,6 +1982,7 @@ export interface components {
       author_id: string;
       author_level: number;
       author_name: string;
+      author_role: string;
       author_trust_level: number;
       author_trust_level_label: string;
       board_color: string;
