@@ -15,7 +15,6 @@ import HomeSectionHead from "@/pages/home/components/HomeSectionHead.vue";
 import HomeSidebar from "@/pages/home/components/HomeSidebar.vue";
 import HomeTopicFeed from "@/pages/home/components/HomeTopicFeed.vue";
 import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
-import { compactNumber } from "@/shared/lib/format";
 
 const activeTab = ref<DiscoveryTab["key"]>("latest");
 const heroSearch = ref("");
@@ -64,26 +63,6 @@ const discoveryTopics = computed(() =>
 const topBoards = computed(() => boardSummaries.value.slice(0, 4));
 const railBoards = computed(() => boardSummaries.value.slice(0, 8));
 const topTags = computed(() => (tagsQuery.data.value ?? []).slice(0, 10));
-
-const communitySignals = computed(() => [
-  {
-    label: "本月新讨论",
-    value: compactNumber(feedTopics.value.length),
-    helper: "来自真实 API",
-  },
-  {
-    label: "等待首答",
-    value: compactNumber(feedTopics.value.filter((topic) => topic.replyCount === 0).length),
-    helper: "最值得切入",
-  },
-  {
-    label: "精选信号",
-    value: compactNumber(
-      feedTopics.value.filter((topic) => topic.solved || topic.officialReply || topic.featured || topic.pinned).length,
-    ),
-    helper: "可直接复用",
-  },
-]);
 
 const hotTopics = computed(() =>
   [...discoveryTopics.value].sort((left, right) => right.hotScore - left.hotScore).slice(0, 4),
@@ -161,7 +140,6 @@ function submitHeroSearch() {
         <HomeHero
           v-model:search="heroSearch"
           class="home-hero-slot"
-          :signals="communitySignals"
           @submit-search="submitHeroSearch"
         />
         <HomeFoundingPost

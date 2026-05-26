@@ -217,58 +217,7 @@
   min-height: 11.5rem;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0.65rem;
   padding: 0.25rem 0;
-}
-
-.signal-caption {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.65rem;
-  border-top: 1px solid var(--border);
-  padding-top: 0.95rem;
-}
-
-.signal-caption div {
-  min-width: 0;
-  border-radius: 0.85rem;
-  padding: 0.55rem 0.4rem;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.signal-caption div:nth-child(1) { background: rgba(var(--primary-rgb), 0.08); }
-.signal-caption div:nth-child(2) { background: rgba(var(--accent-coral-rgb), 0.1); }
-.signal-caption div:nth-child(3) { background: rgba(var(--accent-lime-rgb), 0.12); }
-
-.signal-caption strong,
-.signal-caption span,
-.signal-caption small {
-  display: block;
-}
-
-.signal-caption strong {
-  font-size: clamp(1.2rem, 2.6vw, 1.45rem);
-  font-weight: 700;
-  line-height: 1.05;
-}
-
-.signal-caption div:nth-child(1) strong { color: var(--primary-hover); }
-.signal-caption div:nth-child(2) strong { color: var(--accent-coral); }
-.signal-caption div:nth-child(3) strong { color: var(--rail-icon-signal); }
-
-.signal-caption span {
-  margin-top: 0.28rem;
-  color: var(--title);
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.signal-caption small {
-  margin-top: 0.1rem;
-  color: var(--muted);
-  font-size: 0.68rem;
-  font-weight: 600;
 }
 
 @media (max-width: 980px) {
@@ -301,9 +250,6 @@
     width: 100%;
   }
 
-  .signal-caption {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 560px) {

@@ -1,15 +1,8 @@
 <script setup lang="ts">
 import HeroMeetVisual from "@/pages/home/components/HeroMeetVisual.vue";
 
-export interface CommunitySignal {
-  label: string;
-  value: string;
-  helper: string;
-}
-
 const props = defineProps<{
   search: string;
-  signals: CommunitySignal[];
 }>();
 
 const emit = defineEmits<{
@@ -45,16 +38,9 @@ function updateSearch(event: Event) {
         </div>
       </div>
 
-      <div class="signal-card" aria-label="社区实时信号">
+      <div class="signal-card" aria-label="平行线社区图示">
         <div class="signal-visual" aria-hidden="true">
           <HeroMeetVisual />
-        </div>
-        <div class="signal-caption">
-          <div v-for="signal in signals" :key="signal.label">
-            <strong>{{ signal.value }}</strong>
-            <span>{{ signal.label }}</span>
-            <small>{{ signal.helper }}</small>
-          </div>
         </div>
       </div>
     </div>
