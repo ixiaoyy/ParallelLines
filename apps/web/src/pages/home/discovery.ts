@@ -1,5 +1,5 @@
 export interface DiscoveryTab {
-  key: "latest" | "hot" | "top" | "votes" | "categories";
+  key: "latest" | "hot" | "top" | "votes";
   label: string;
   description: string;
 }
@@ -9,5 +9,4 @@ export const discoveryTabs: DiscoveryTab[] = [
   { key: "hot", label: "热榜", description: "按社区热度排序" },
   { key: "top", label: "高信号", description: "优先看高赞和高回复主题" },
   { key: "votes", label: "投票", description: "按赞同数排序当前主题" },
-  { key: "categories", label: "版块", description: "按版块聚合查看" },
 ];

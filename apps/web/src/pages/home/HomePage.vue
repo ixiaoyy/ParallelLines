@@ -77,10 +77,6 @@ const visibleTopics = computed(() => {
     return sortPinnedFirst(sorted, (left, right) => right.likeCount - left.likeCount);
   }
 
-  if (activeTab.value === "categories") {
-    return sortPinnedFirst(sorted, (left, right) => left.boardName.localeCompare(right.boardName));
-  }
-
   return sortPinnedFirst(sorted, (left, right) => right.lastPostedAt.localeCompare(left.lastPostedAt));
 });
 
@@ -165,13 +161,6 @@ function submitHeroSearch() {
           :error="boardsQuery.isError.value"
         />
 
-        <HomeSectionHead
-          id="feed-title"
-          class="feed-head"
-          title="最新讨论"
-          description="列表保持克制：主题、摘要、标签、回复、浏览、动态。"
-          feed
-        />
         <HomeTopicFeed
           class="feed-slot"
           :tabs="discoveryTabs"

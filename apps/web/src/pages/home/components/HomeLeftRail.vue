@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { AppstoreOutlined, FireOutlined, HomeOutlined, StarFilled } from "@ant-design/icons-vue";
 import { computed } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
@@ -23,26 +22,6 @@ const privateBoards = computed(() => props.boards.filter((board) => board.visibi
 <template>
   <aside class="home-left-rail" aria-label="论坛导航">
     <RouterLink class="rail-action" :to="{ name: 'new-topic' }">新建主题</RouterLink>
-
-    <nav class="rail-section rail-section--primary" aria-label="首页导航">
-      <RouterLink class="rail-link rail-link--home rail-link--active" to="/">
-        <span class="rail-icon" aria-hidden="true"><HomeOutlined /></span>
-        <strong>主页</strong>
-        <i aria-hidden="true"></i>
-      </RouterLink>
-      <RouterLink class="rail-link rail-link--topics" :to="{ name: 'home', hash: '#hot' }">
-        <span class="rail-icon" aria-hidden="true"><FireOutlined /></span>
-        <strong>话题</strong>
-      </RouterLink>
-      <RouterLink class="rail-link rail-link--signal" :to="{ name: 'home', hash: '#solved' }">
-        <span class="rail-icon" aria-hidden="true"><StarFilled /></span>
-        <strong>高信号</strong>
-      </RouterLink>
-      <RouterLink class="rail-link rail-link--more" :to="{ name: 'board-directory' }">
-        <span class="rail-icon" aria-hidden="true"><AppstoreOutlined /></span>
-        <strong>更多</strong>
-      </RouterLink>
-    </nav>
 
     <section class="rail-section" aria-labelledby="rail-boards-title">
       <h2 id="rail-boards-title">版块</h2>
