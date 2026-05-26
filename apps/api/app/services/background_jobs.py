@@ -49,7 +49,7 @@ class BackgroundJobService:
             status="queued",
             idempotency_key=idempotency_key,
             priority=priority,
-            run_at=run_at or utcnow(),
+            run_at=_queue_timestamp(run_at or utcnow()),
             attempts=0,
             max_attempts=max_attempts,
         )
@@ -132,7 +132,7 @@ class BackgroundJobService:
         queues: Sequence[str] = ("default",),
         now: datetime | None = None,
     ) -> BackgroundJob | None:
-        run_time = now or utcnow()
+        run_time = _queue_timestamp(now or utcnow())
         statement = select(BackgroundJob).where(
             BackgroundJob.status == "queued",
             BackgroundJob.run_at <= run_time,
@@ -188,7 +188,7 @@ class BackgroundJobService:
                 retry_delay_seconds=retry_delay_seconds,
             )
 
-        finished_at = utcnow()
+        finished_at = _queue_timestamp(utcnow())
         job.status = "succeeded"
         job.result = result or {}
         job.finished_at = finished_at
@@ -249,7 +249,7 @@ class BackgroundJobService:
         background_digest_interval_seconds: int,
         now: datetime | None = None,
     ) -> list[BackgroundJob]:
-        run_time = now or utcnow()
+        run_time = _queue_timestamp(now or utcnow())
         jobs: list[BackgroundJob] = []
         schedules = (
             ("recompute_hot_scores", background_hot_rank_interval_seconds),
@@ -285,13 +285,15 @@ class BackgroundJobService:
         await self.session.rollback()
         job = await self._require_job(job_id)
         error_summary = error[:1000]
-        now = utcnow()
+        now = _queue_timestamp(utcnow())
         job.last_error = error_summary
         job.locked_at = None
         job.locked_by = None
         if job.attempts < job.max_attempts:
             job.status = "queued"
-            job.run_at = now + timedelta(seconds=max(retry_delay_seconds, 0) * max(job.attempts, 1))
+            job.run_at = _queue_timestamp(
+                now + timedelta(seconds=max(retry_delay_seconds, 0) * max(job.attempts, 1))
+            )
             self._add_log(
                 job.id,
                 event="retry",
@@ -319,7 +321,7 @@ class BackgroundJobService:
         job = await self._require_job(job_id)
         job.status = "dead"
         job.last_error = error[:1000]
-        job.finished_at = utcnow()
+        job.finished_at = _queue_timestamp(utcnow())
         job.locked_at = None
         job.locked_by = None
         self._add_log(
@@ -352,9 +354,21 @@ class BackgroundJobService:
                 event=event,
                 message=message,
                 data=data,
-                created_at=utcnow(),
+                created_at=_queue_timestamp(utcnow()),
             )
         )
+
+
+def _queue_timestamp(value: datetime) -> datetime:
+    """Normalize queue timestamps to MySQL DATETIME second precision.
+
+    MySQL DATETIME columns in this schema do not persist fractional seconds. If an immediate
+    `run_at` is inserted with microseconds, MySQL can round it into the next second, making a job
+    appear not due to a worker that polls in the same second. The queue only promises second-level
+    scheduling, so floor values before persisting or comparing them.
+    """
+
+    return value.replace(microsecond=0)
 
 
 def _schedule_bucket(now: datetime, interval_seconds: int) -> datetime:

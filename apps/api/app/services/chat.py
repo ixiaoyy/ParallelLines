@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -43,7 +43,11 @@ class ChatService:
             await self.session.scalars(
                 select(ChatChannel)
                 .options(selectinload(ChatChannel.board))
-                .order_by(ChatChannel.last_message_at.desc().nullslast(), ChatChannel.created_at)
+                .order_by(
+                    case((ChatChannel.last_message_at.is_(None), 1), else_=0),
+                    ChatChannel.last_message_at.desc(),
+                    ChatChannel.created_at,
+                )
             )
         )
         accessible: list[ChatChannel] = []
@@ -292,10 +296,26 @@ class ChatService:
         )
         if before_id:
             anchor = await self._get_message_anchor(before_id, channel.id)
-            statement = statement.where(ChatMessage.created_at < anchor.created_at)
+            statement = statement.where(
+                or_(
+                    ChatMessage.created_at < anchor.created_at,
+                    and_(
+                        ChatMessage.created_at == anchor.created_at,
+                        ChatMessage.id < anchor.id,
+                    ),
+                )
+            )
         if after_id:
             anchor = await self._get_message_anchor(after_id, channel.id)
-            statement = statement.where(ChatMessage.created_at > anchor.created_at)
+            statement = statement.where(
+                or_(
+                    ChatMessage.created_at > anchor.created_at,
+                    and_(
+                        ChatMessage.created_at == anchor.created_at,
+                        ChatMessage.id > anchor.id,
+                    ),
+                )
+            )
         if query:
             statement = statement.where(ChatMessage.raw_text.ilike(f"%{escape_like(query)}%"))
         if after_id:
