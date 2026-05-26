@@ -7,11 +7,9 @@ import { useBoards } from "@/features/boards/queries";
 import { useTags } from "@/features/tags/queries";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicFeed } from "@/features/topics/queries";
-import HomeCategoryGrid from "@/pages/home/components/HomeCategoryGrid.vue";
 import HomeFoundingPost from "@/pages/home/components/HomeFoundingPost.vue";
 import HomeHero from "@/pages/home/components/HomeHero.vue";
 import HomeLeftRail from "@/pages/home/components/HomeLeftRail.vue";
-import HomeSectionHead from "@/pages/home/components/HomeSectionHead.vue";
 import HomeTopicFeed from "@/pages/home/components/HomeTopicFeed.vue";
 import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
 
@@ -50,7 +48,6 @@ const communityGuideTopics = computed(() => {
   });
 });
 const discoveryTopics = computed(() => feedTopics.value);
-const topBoards = computed(() => boardSummaries.value.slice(0, 4));
 const railBoards = computed(() => boardSummaries.value.slice(0, 8));
 const topTags = computed(() => (tagsQuery.data.value ?? []).slice(0, 10));
 
@@ -138,22 +135,6 @@ function submitHeroSearch() {
           v-if="communityGuideTopics.length"
           class="founding-post-slot"
           :topics="communityGuideTopics"
-        />
-
-        <HomeSectionHead
-          id="category-title"
-          class="category-head"
-          title="推荐分类"
-          mobile-title="其他板块"
-          description="用少量、明确的入口降低浏览压力。"
-          link-label="查看全部分类"
-          :link-to="{ name: 'board-directory' }"
-        />
-        <HomeCategoryGrid
-          class="category-grid-slot"
-          :boards="topBoards"
-          :loading="boardsQuery.isLoading.value"
-          :error="boardsQuery.isError.value"
         />
 
         <HomeTopicFeed

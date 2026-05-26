@@ -37,37 +37,4 @@
   .home-hero-slot {
     order: 5;
   }
-
-  .category-head {
-    display: flex;
-    order: 3;
-    align-items: center;
-    flex-direction: row;
-    justify-content: space-between;
-    margin-top: 0.9rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-large);
-    padding: 0.75rem 0.85rem;
-    background: var(--bg-surface);
-    box-shadow: var(--shadow-card);
-  }
-
-  .category-grid-slot {
-    display: none;
-  }
-
-  .category-head :deep(p) {
-    display: none;
-  }
-
-  .category-head :deep(h2) {
-    font-size: 1.05rem;
-    letter-spacing: 0;
-  }
-
-  .category-head :deep(.section-link) {
-    min-height: 2.2rem;
-    padding: 0.48rem 0.72rem;
-    font-size: 0.84rem;
-  }
 }

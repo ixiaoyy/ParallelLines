@@ -85,14 +85,14 @@ Use CSS variables from `shared/styles/tokens.scss`:
 
 ```scss
 .home-grid {
-  grid-template-columns: minmax(13.5rem, 17em) minmax(0, 1fr) minmax(18rem, 19.75rem);
+  grid-template-columns: minmax(13.5rem, 17em) minmax(0, 1fr);
 }
 ```
 
-- Left rail: navigation, board shortcuts, and tags; sticky on desktop.
-- Main column: hero, recommended categories, and topic feed.
-- Right rail: hot topics, community index, and quick board links.
-- At medium widths, the right rail moves below the main column; at small widths the whole page becomes one column.
+- Left rail: board shortcuts and tags; sticky on desktop.
+- Main column: hero, optional community guide posts, and topic feed.
+- Do not duplicate board/tag discovery cards in the main column or add a right rail on the home page.
+- At small widths the page becomes one column and the left rail is hidden.
 
 **Contracts**:
 - `HomePage.vue` owns semantic layout and real API-backed state; it must not render fixture topics/boards/tags in production paths.
