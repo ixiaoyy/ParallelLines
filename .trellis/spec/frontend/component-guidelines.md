@@ -93,6 +93,7 @@ Use CSS variables from `shared/styles/tokens.scss`:
 - Main column: hero, optional community guide posts, and topic feed.
 - Do not duplicate board/tag discovery cards in the main column or add a right rail on the home page.
 - Avoid explanatory intro blocks around the home topic feed; keep only actions, filters, and real content.
+- Home topic feed tabs must use plain community labels (`最新`, `热门`, `精华`) and avoid internal product jargon.
 - At small widths the page becomes one column and the left rail is hidden.
 
 **Contracts**:

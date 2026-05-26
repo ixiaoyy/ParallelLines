@@ -97,7 +97,7 @@ function getSortIcon(key: string) {
 const sortTabs: Array<{ key: BoardSort; label: string; helper: string }> = [
   { key: "latest", label: "最新", helper: "按最后回复时间" },
   { key: "hot", label: "热门", helper: "按热度与讨论" },
-  { key: "top", label: "高信号", helper: "按赞同与回复" },
+  { key: "top", label: "精华", helper: "按赞同与回复" },
 ];
 
 const statusFilters: Array<{ key: TopicStatusFilter; label: string }> = [

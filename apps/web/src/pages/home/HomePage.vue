@@ -65,10 +65,6 @@ const visibleTopics = computed(() => {
     return sortPinnedFirst(sorted, (left, right) => right.hotScore - left.hotScore);
   }
 
-  if (activeTab.value === "votes") {
-    return sortPinnedFirst(sorted, (left, right) => right.likeCount - left.likeCount);
-  }
-
   return sortPinnedFirst(sorted, (left, right) => right.lastPostedAt.localeCompare(left.lastPostedAt));
 });
 
@@ -87,12 +83,7 @@ watch(
       return;
     }
 
-    if (hash === "#votes") {
-      activeTab.value = "votes";
-      return;
-    }
-
-    if (hash === "#solved") {
+    if (hash === "#featured" || hash === "#solved") {
       activeTab.value = "top";
     }
   },

@@ -70,7 +70,7 @@ const answerState = computed(() => {
   }
 
   if (props.topic.featured) {
-    return { tone: "featured", label: "精华", helper: "高信号" };
+    return { tone: "featured", label: "精华", helper: "推荐阅读" };
   }
 
   return { tone: "open", label: "讨论中", helper: "继续跟进" };

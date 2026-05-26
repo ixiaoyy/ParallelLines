@@ -46,7 +46,7 @@ const topics = computed(() => searchQuery.data.value ?? []);
 const sortTabs: Array<{ key: TopicSort; label: string }> = [
   { key: "latest", label: "最新" },
   { key: "hot", label: "热门" },
-  { key: "top", label: "高信号" },
+  { key: "top", label: "精华" },
 ];
 </script>
 

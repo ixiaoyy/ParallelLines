@@ -101,7 +101,7 @@ class SeoService:
                 base_url,
                 "/boards",
                 title=f"全部版块 · {SITE_TITLE_FALLBACK}",
-                description="浏览平行线公开技术版块、最新主题和高信号讨论。",
+                description="浏览平行线公开技术版块、最新主题和精选讨论。",
             )
         if normalized.startswith("/b/"):
             slug = normalized.removeprefix("/b/").split("/", 1)[0]

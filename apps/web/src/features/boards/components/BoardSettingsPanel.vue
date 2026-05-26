@@ -173,7 +173,7 @@ function boardManagementError(error: unknown): string {
         <select v-model="defaultSort">
           <option value="latest">最新</option>
           <option value="hot">热门</option>
-          <option value="top">高信号</option>
+          <option value="top">精华</option>
         </select>
       </label>
 

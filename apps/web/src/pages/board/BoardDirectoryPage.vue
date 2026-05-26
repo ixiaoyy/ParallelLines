@@ -199,7 +199,7 @@ function getTopicsByBoardSlugLocal(slug: string) {
               </div>
             </dl>
 
-            <div class="board-topic-preview" aria-label="高信号主题">
+            <div class="board-topic-preview" aria-label="精选主题">
               <span class="board-topic-preview__label">推荐先看</span>
               <RouterLink
                 v-for="topic in previewTopics(board)"
@@ -212,7 +212,7 @@ function getTopicsByBoardSlugLocal(slug: string) {
                   {{ relativeTime(topic.lastPostedAt) }}
                 </small>
               </RouterLink>
-              <span v-if="previewTopics(board).length === 0" class="empty-preview">暂无高信号主题，进入后查看全部主题</span>
+              <span v-if="previewTopics(board).length === 0" class="empty-preview">暂无精选主题，进入后查看全部主题</span>
             </div>
 
             <footer class="board-actions">
@@ -233,7 +233,7 @@ function getTopicsByBoardSlugLocal(slug: string) {
       <aside class="board-directory-sidebar" aria-label="版块侧边栏">
         <UiCard class="sidebar-panel spotlight-panel">
           <div class="sidebar-panel__head">
-            <span class="panel-kicker">高信号入口</span>
+            <span class="panel-kicker">精选入口</span>
             <h2>优先从这些主题开始</h2>
           </div>
           <ul>
