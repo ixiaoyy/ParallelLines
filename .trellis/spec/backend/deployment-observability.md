@@ -88,6 +88,8 @@ API ops endpoints:
 Seed command:
 
 - `python -m app.seed` idempotently creates demo users, boards, memberships, and starter topics.
+- `python -m app.seed --if-empty` first checks for existing boards or topics and skips seeding
+  when content already exists; Docker Compose uses this guarded mode during API startup.
 
 CI commands:
 
@@ -98,7 +100,7 @@ CI commands:
 ### 3. Contracts
 
 - Docker Compose must start a usable local environment from an empty volume with `docker compose up --build`.
-- API startup in Compose must run `alembic upgrade head` before `python -m app.seed`.
+- API startup in Compose must run `alembic upgrade head` before `python -m app.seed --if-empty`.
 - Worker image reuses the API build and must not run migrations.
 - API and `worker` must share the same `UPLOAD_STORAGE_PATH` and `BACKUP_STORAGE_PATH`
   volumes; otherwise DB metadata will point at files the cleanup handler, backup
@@ -117,7 +119,8 @@ CI commands:
 
 | Case | Expected behavior |
 |---|---|
-| Empty Docker volume | Migrations and seed run before API serves traffic |
+| Empty Docker volume | Migrations and guarded seed run before API serves traffic |
+| Existing content database | Guarded seed logs a skip and does not rewrite demo users, boards, topics, or posts |
 | API dependency down | Compose healthchecks keep dependent services waiting |
 | Frontend built with wrong API URL | README troubleshooting points to `VITE_API_BASE_URL` |
 | Slow request | Structured warning log includes method, path, status, duration, threshold |
@@ -160,5 +163,5 @@ command: python -m app.seed && alembic upgrade head && uvicorn app.main:app
 #### Correct
 
 ```yaml
-command: sh -c "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+command: sh -c "alembic upgrade head && python -m app.seed --if-empty && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 ```

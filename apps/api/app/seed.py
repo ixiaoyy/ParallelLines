@@ -1,6 +1,8 @@
 import asyncio
+from argparse import ArgumentParser
+from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import configure_logging, get_logger
@@ -16,8 +18,12 @@ from app.services.search import SearchIndexService
 DEMO_PASSWORD = "parallellines-demo-123"
 
 
-async def seed_demo_data(session: AsyncSession) -> None:
+async def seed_demo_data(session: AsyncSession, *, only_if_empty: bool = False) -> None:
     logger = get_logger("seed")
+    if only_if_empty and await has_existing_content(session):
+        logger.info("seed_skipped_existing_content")
+        return
+
     users = {
         "admin": await upsert_user(
             session,
@@ -186,6 +192,12 @@ async def seed_demo_data(session: AsyncSession) -> None:
         boards=len(boards),
         topics=len(seeded_topics),
     )
+
+
+async def has_existing_content(session: AsyncSession) -> bool:
+    board_count = await session.scalar(select(func.count()).select_from(Board))
+    topic_count = await session.scalar(select(func.count()).select_from(Topic))
+    return bool((board_count or 0) > 0 or (topic_count or 0) > 0)
 
 
 def starter_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dict[str, object]]:
@@ -474,10 +486,21 @@ async def create_reply_if_missing(
     )
 
 
-async def main() -> None:
+def parse_args(argv: Sequence[str] | None = None) -> bool:
+    parser = ArgumentParser(description="Seed ParallelLines demo data.")
+    parser.add_argument(
+        "--if-empty",
+        action="store_true",
+        help="Only seed when no boards or topics exist.",
+    )
+    return parser.parse_args(argv).if_empty
+
+
+async def main(argv: Sequence[str] | None = None) -> None:
     configure_logging()
+    only_if_empty = parse_args(argv)
     async with AsyncSessionLocal() as session:
-        await seed_demo_data(session)
+        await seed_demo_data(session, only_if_empty=only_if_empty)
 
 
 if __name__ == "__main__":
