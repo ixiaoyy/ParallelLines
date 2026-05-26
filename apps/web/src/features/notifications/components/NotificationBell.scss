@@ -99,16 +99,16 @@
   gap: 0.35rem;
   align-items: center;
   padding: 0.42rem 0.62rem;
-  color: var(--btn-primary-bg, #409eff);
-  background: color-mix(in srgb, var(--btn-primary-bg, #409eff) 12%, #ffffff);
-  border: 1px solid color-mix(in srgb, var(--btn-primary-bg, #409eff) 24%, var(--border));
+  color: var(--theme-soft-fg);
+  background: var(--theme-soft-bg);
+  border: 1px solid var(--theme-soft-border);
 }
 
 .mark-all:hover:not(:disabled),
 .mark-all:focus-visible {
-  color: var(--btn-primary-bg-hover, #66b1ff);
-  border-color: var(--btn-primary-border-hover, #66b1ff);
-  background: color-mix(in srgb, var(--btn-primary-bg, #409eff) 16%, #ffffff);
+  color: var(--theme-soft-fg-hover);
+  border-color: var(--theme-soft-border-hover);
+  background: var(--theme-soft-bg-hover);
 }
 
 .mark-all:disabled {
@@ -221,9 +221,17 @@
 
 .mark-one {
   padding: 0.32rem 0.5rem;
-  color: var(--accent-geek);
-  background: rgba(16, 185, 129, 0.1);
+  color: var(--theme-soft-fg);
+  background: var(--theme-soft-bg);
+  border: 1px solid var(--theme-soft-border);
   font-size: 0.76rem;
+}
+
+.mark-one:hover,
+.mark-one:focus-visible {
+  color: var(--theme-soft-fg-hover);
+  border-color: var(--theme-soft-border-hover);
+  background: var(--theme-soft-bg-hover);
 }
 
 .notification-empty {

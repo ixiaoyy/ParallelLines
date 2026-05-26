@@ -21,7 +21,7 @@ const isNavOpen = ref(false);
 const currentUserQuery = useCurrentUser();
 const siteSettingsQuery = usePublicSiteSettings();
 const logout = useLogout();
-const { locale, supportedLocales, setLocale } = useLocale();
+const { locale } = useLocale();
 const currentUser = computed(() => currentUserQuery.data.value);
 const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
@@ -144,10 +144,6 @@ function t(key: string, fallback: string) {
   return siteText(siteSettingsQuery.data.value, key, fallback, locale.value);
 }
 
-function handleLocaleChange(event: Event) {
-  setLocale((event.target as HTMLSelectElement).value);
-}
-
 function isNavItemActive(item: NavItem) {
   if (item.key === "home") {
     return route.name === "home";
@@ -248,15 +244,6 @@ function isNavItemActive(item: NavItem) {
         </RouterLink>
 
         <PluginSlot class="desktop-plugin-slot" slot-name="app.nav" />
-
-        <label class="locale-select">
-          <span class="sr-only">界面语言</span>
-          <select :value="locale" @change="handleLocaleChange">
-            <option v-for="item in supportedLocales" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </option>
-          </select>
-        </label>
 
         <NotificationBell />
 

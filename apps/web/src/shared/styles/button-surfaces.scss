@@ -1,80 +1,145 @@
-/*
- * 全站主按钮：固定 #409EFF 实心 + 白字（不受后台 brand_primary_color 覆盖）
- */
-:root {
-  --btn-primary-fg: #ffffff;
-  --btn-primary-fg-hover: #ffffff;
-  --btn-primary-bg: #409eff;
-  --btn-primary-bg-hover: #66b1ff;
-  --btn-primary-border: #409eff;
-  --btn-primary-border-hover: #66b1ff;
-  --btn-primary-active: #3a8ee6;
-  --btn-primary-shadow: 0 2px 8px rgba(64, 158, 255, 0.22);
-  --btn-primary-shadow-hover: 0 4px 12px rgba(64, 158, 255, 0.28);
-}
-
-@mixin btn-surface-primary {
-  color: var(--btn-primary-fg);
-  border: 1px solid var(--btn-primary-border);
-  background: var(--btn-primary-bg);
-  box-shadow: var(--btn-primary-shadow);
-}
-
-@mixin btn-surface-primary-hover {
-  color: var(--btn-primary-fg-hover);
-  border-color: var(--btn-primary-border-hover);
-  background: var(--btn-primary-bg-hover);
-  box-shadow: var(--btn-primary-shadow-hover);
-}
-
-/* Ant Design 主按钮 */
-.ant-btn.ant-btn-primary:not(:disabled),
-.ant-btn-primary:not(:disabled) {
-  color: var(--btn-primary-fg) !important;
-  border-color: var(--btn-primary-border) !important;
-  background: var(--btn-primary-bg) !important;
-  box-shadow: var(--btn-primary-shadow) !important;
-}
-
-.ant-btn.ant-btn-primary:not(:disabled):hover,
-.ant-btn.ant-btn-primary:not(:disabled):focus,
-.ant-btn-primary:not(:disabled):hover,
-.ant-btn-primary:not(:disabled):focus {
-  color: var(--btn-primary-fg-hover) !important;
-  border-color: var(--btn-primary-border-hover) !important;
-  background: var(--btn-primary-bg-hover) !important;
-  box-shadow: var(--btn-primary-shadow-hover) !important;
-}
-
-.ant-btn.ant-btn-primary:not(:disabled):active,
-.ant-btn-primary:not(:disabled):active {
-  color: var(--btn-primary-fg) !important;
-  border-color: var(--btn-primary-active) !important;
-  background: var(--btn-primary-active) !important;
-}
-
-/* 链接型主 CTA（RouterLink / a） */
-.btn-surface-primary {
-  @include btn-surface-primary;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  transition:
-    color 160ms ease,
-    border-color 160ms ease,
-    background 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.btn-surface-primary:hover,
-.btn-surface-primary:focus-visible {
-  @include btn-surface-primary-hover;
-  outline: none;
-}
-
-.btn-surface-primary:active {
-  border-color: var(--btn-primary-active);
-  background: var(--btn-primary-active);
-}
-
+/*
+ * 全站主题交互色（#409EFF）
+ * - 实心主按钮：默认 #409EFF，悬停 #66B1FF
+ * - 透底/次要：浅蓝透明底，悬停仅加深底色与描边，勿用实心 #66B1FF 铺底
+ */
+:root {
+  --theme-primary: #409eff;
+  --theme-primary-hover: #66b1ff;
+  --theme-primary-active: #3a8ee6;
+  --theme-primary-rgb: 64, 158, 255;
+
+  --btn-primary-fg: #ffffff;
+  --btn-primary-fg-hover: #ffffff;
+  --btn-primary-bg: var(--theme-primary);
+  --btn-primary-bg-hover: var(--theme-primary-hover);
+  --btn-primary-border: var(--theme-primary);
+  --btn-primary-border-hover: var(--theme-primary-hover);
+  --btn-primary-active: var(--theme-primary-active);
+  --btn-primary-shadow: 0 2px 8px rgba(var(--theme-primary-rgb), 0.22);
+  --btn-primary-shadow-hover: 0 4px 12px rgba(var(--theme-primary-rgb), 0.28);
+
+  --theme-soft-fg: var(--theme-primary);
+  --theme-soft-fg-hover: var(--theme-primary-hover);
+  --theme-soft-bg: color-mix(in srgb, var(--theme-primary) 12%, transparent);
+  --theme-soft-bg-hover: color-mix(in srgb, var(--theme-primary) 18%, transparent);
+  --theme-soft-border: color-mix(in srgb, var(--theme-primary) 22%, var(--border));
+  --theme-soft-border-hover: color-mix(in srgb, var(--theme-primary) 38%, var(--border));
+  --theme-focus-ring: color-mix(in srgb, var(--theme-primary) 48%, #ffffff);
+}
+
+@mixin btn-surface-solid {
+  color: var(--btn-primary-fg);
+  border: 1px solid var(--btn-primary-border);
+  background: var(--btn-primary-bg);
+  box-shadow: var(--btn-primary-shadow);
+}
+
+@mixin btn-surface-solid-hover {
+  color: var(--btn-primary-fg-hover);
+  border-color: var(--btn-primary-border-hover);
+  background: var(--btn-primary-bg-hover);
+  box-shadow: var(--btn-primary-shadow-hover);
+}
+
+@mixin btn-surface-soft {
+  color: var(--theme-soft-fg);
+  border: 1px solid var(--theme-soft-border);
+  background: var(--theme-soft-bg);
+}
+
+@mixin btn-surface-soft-hover {
+  color: var(--theme-soft-fg-hover);
+  border-color: var(--theme-soft-border-hover);
+  background: var(--theme-soft-bg-hover);
+}
+
+/* Ant Design 实心主按钮 */
+.ant-btn.ant-btn-primary:not(:disabled),
+.ant-btn-primary:not(:disabled) {
+  @include btn-surface-solid;
+}
+
+.ant-btn.ant-btn-primary:not(:disabled):hover,
+.ant-btn.ant-btn-primary:not(:disabled):focus,
+.ant-btn-primary:not(:disabled):hover,
+.ant-btn-primary:not(:disabled):focus {
+  @include btn-surface-solid-hover;
+}
+
+.ant-btn.ant-btn-primary:not(:disabled):active,
+.ant-btn-primary:not(:disabled):active {
+  color: var(--btn-primary-fg) !important;
+  border-color: var(--btn-primary-active) !important;
+  background: var(--btn-primary-active) !important;
+}
+
+/* 默认 / 次要按钮悬停 */
+.ant-btn-default:not(:disabled):hover,
+.ant-btn-default:not(:disabled):focus,
+.ant-btn-text:not(:disabled):hover,
+.ant-btn-text:not(:disabled):focus,
+.ant-btn-link:not(:disabled):hover,
+.ant-btn-link:not(:disabled):focus {
+  color: var(--theme-soft-fg-hover) !important;
+  border-color: var(--theme-soft-border-hover) !important;
+  background: var(--theme-soft-bg-hover) !important;
+}
+
+.ant-btn-link:not(:disabled) {
+  color: var(--theme-soft-fg) !important;
+}
+
+/* UiButton 次要 tone（scoped 类名由组件挂上，此处用属性选择器兜底） */
+.ui-button--subtle:not(:disabled):hover,
+.ui-button--subtle:not(:disabled):focus {
+  color: var(--theme-soft-fg-hover) !important;
+  border-color: var(--theme-soft-border-hover) !important;
+  background: var(--theme-soft-bg-hover) !important;
+}
+
+.ui-button--ghost:not(:disabled):hover,
+.ui-button--ghost:not(:disabled):focus {
+  color: var(--theme-soft-fg-hover) !important;
+  background: var(--theme-soft-bg-hover) !important;
+}
+
+/* 链接型实心主 CTA */
+.btn-surface-primary {
+  @include btn-surface-solid;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.btn-surface-primary:hover,
+.btn-surface-primary:focus-visible {
+  @include btn-surface-solid-hover;
+  outline: none;
+}
+
+.btn-surface-primary:active {
+  border-color: var(--btn-primary-active);
+  background: var(--btn-primary-active);
+}
+
+/* 透底标签 / 序号 / 轻按钮 */
+.btn-surface-soft {
+  @include btn-surface-soft;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
+.btn-surface-soft:hover,
+.btn-surface-soft:focus-visible {
+  @include btn-surface-soft-hover;
+  outline: none;
+}

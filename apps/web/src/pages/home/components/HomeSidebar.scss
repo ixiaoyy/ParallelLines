@@ -53,12 +53,22 @@
   width: 1.75rem;
   height: 1.75rem;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--btn-primary-bg, #409eff) 22%, var(--border));
+  border: 1px solid var(--theme-soft-border);
   border-radius: 0.65rem;
-  color: var(--btn-primary-bg, #409eff);
-  background: color-mix(in srgb, var(--btn-primary-bg, #409eff) 12%, transparent);
+  color: var(--theme-soft-fg);
+  background: var(--theme-soft-bg);
   font-size: 0.78rem;
   font-weight: 900;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
+.rank:hover {
+  color: var(--theme-soft-fg-hover);
+  border-color: var(--theme-soft-border-hover);
+  background: var(--theme-soft-bg-hover);
 }
 
 .hot-item a {
@@ -75,7 +85,7 @@
 
 .hot-item a:hover,
 .hot-item a:focus-visible {
-  color: var(--btn-primary-bg, #409eff);
+  color: var(--theme-soft-fg-hover);
   outline: none;
 }
 
@@ -95,26 +105,26 @@
 .tag-cloud a {
   display: inline-flex;
   align-items: center;
+  border: 1px solid var(--theme-soft-border);
   border-radius: var(--radius-pill);
   padding: 0.32rem 0.62rem;
-  color: var(--btn-primary-bg, #409eff);
-  background: color-mix(in srgb, var(--btn-primary-bg, #409eff) 10%, #ffffff);
-  border: 1px solid color-mix(in srgb, var(--btn-primary-bg, #409eff) 18%, var(--border));
+  color: var(--theme-soft-fg);
+  background: var(--theme-soft-bg);
   text-decoration: none;
   font-size: 0.76rem;
   font-weight: 600;
   transition:
     background 140ms ease,
     color 140ms ease,
-    transform 140ms ease;
+    border-color 140ms ease;
 }
 
 .tag-cloud a:hover,
 .tag-cloud a:focus-visible {
-  color: var(--btn-primary-fg-hover);
+  color: var(--theme-soft-fg-hover);
+  border-color: var(--theme-soft-border-hover);
+  background: var(--theme-soft-bg-hover);
   outline: none;
-  border-color: var(--btn-primary-border-hover);
-  background: var(--btn-primary-bg-hover);
 }
 
 @media (max-width: 1320px) {

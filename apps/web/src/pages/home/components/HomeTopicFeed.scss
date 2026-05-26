@@ -36,9 +36,9 @@
 
 .tab:hover,
 .tab:focus-visible {
-  color: var(--primary);
+  color: var(--theme-soft-fg-hover);
   outline: none;
-  background: var(--navy-soft);
+  background: var(--theme-soft-bg-hover);
 }
 
 .tab.active {
@@ -67,8 +67,9 @@
 
 .filter-link:hover,
 .filter-link:focus-visible {
-  border-color: var(--accent-geek);
-  color: var(--primary);
+  border-color: var(--theme-soft-border-hover);
+  color: var(--theme-soft-fg-hover);
+  background: var(--theme-soft-bg-hover);
   outline: none;
 }
 

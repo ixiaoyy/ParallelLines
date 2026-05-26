@@ -37,7 +37,7 @@
   --accent-sky-rgb: 14, 165, 233;
 
   --cyan-soft: #e0f2fe;
-  --tag-text: #0ea5e9;
+  --tag-text: var(--theme-primary, #409eff);
   --navy-soft: #f1f5f9;
   --coral-soft: #fff7ed;
   --lime-soft: #f7fee7;
@@ -46,8 +46,8 @@
   --pink-soft: #fdf2f8;
 
   /* 左侧导航图标色 */
-  --rail-icon-home: #0ea5e9;
-  --rail-icon-home-bg: #f0f9ff;
+  --rail-icon-home: var(--theme-primary, #409eff);
+  --rail-icon-home-bg: color-mix(in srgb, var(--theme-primary, #409eff) 8%, #ffffff);
   /* 话题：明亮红；高信号：明亮绿色 */
   --rail-icon-topics: #ef4444;
   --rail-icon-topics-bg: #fef2f2;
@@ -71,7 +71,7 @@
   --border: #e2e8f0;
   --border-strong: #cbd5e1;
   --input-border: #cbd5e1;
-  --focus-ring: #7dd3fc;
+  --focus-ring: var(--theme-focus-ring, #a3d3ff);
 
   --code-bg: #1e293b;
   --code-text: #e2e8f0;

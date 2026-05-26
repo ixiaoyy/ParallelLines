@@ -144,8 +144,8 @@
 }
 
 .hero-search:focus-within {
-  border-color: var(--accent-geek);
-  box-shadow: var(--shadow-card), 0 0 0 3px var(--focus-ring);
+  border-color: var(--theme-soft-border-hover);
+  box-shadow: var(--shadow-card), 0 0 0 3px var(--theme-focus-ring);
 }
 
 .hero-cta {
@@ -196,8 +196,9 @@
 
 .btn-secondary:hover,
 .btn-secondary:focus-visible {
-  border-color: var(--accent-geek);
-  color: var(--primary);
+  border-color: var(--theme-soft-border-hover);
+  color: var(--theme-soft-fg-hover);
+  background: var(--theme-soft-bg-hover);
   outline: none;
 }
 

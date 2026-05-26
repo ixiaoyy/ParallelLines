@@ -16,17 +16,34 @@ export function applySiteBranding(settings: PublicSettingMap | undefined, previe
   applyColor(root, "--accent-geek", "--accent-geek-rgb", accent);
   if (HEX_COLOR_PATTERN.test(primary)) {
     root.style.setProperty("--brand-blue", primary);
-    /* 悬停略亮，勿与 #0f172a 混色（会把按钮压成深蓝） */
-    root.style.setProperty("--primary-hover", `color-mix(in srgb, ${primary} 88%, #ffffff)`);
-    root.style.setProperty("--primary-active", `color-mix(in srgb, ${primary} 86%, #1e293b)`);
   }
 
-  /* 主按钮色固定 #409EFF，与 AGENTS.md 一致，不随 brand_primary_color 漂移 */
-  root.style.setProperty("--btn-primary-bg", "#409eff");
-  root.style.setProperty("--btn-primary-bg-hover", "#66b1ff");
-  root.style.setProperty("--btn-primary-border", "#409eff");
-  root.style.setProperty("--btn-primary-border-hover", "#66b1ff");
-  root.style.setProperty("--btn-primary-active", "#3a8ee6");
+  /* 链接/点缀悬停与主按钮体系对齐（不随品牌色变深） */
+  root.style.setProperty("--primary-hover", "#66b1ff");
+  root.style.setProperty("--primary-active", "#3a8ee6");
+
+  /* 主题色固定 #409EFF（实心按钮 + --theme-soft-* 透底悬停） */
+  const theme = {
+    "--theme-primary": "#409eff",
+    "--theme-primary-hover": "#66b1ff",
+    "--theme-primary-active": "#3a8ee6",
+    "--theme-primary-rgb": "64, 158, 255",
+    "--btn-primary-bg": "#409eff",
+    "--btn-primary-bg-hover": "#66b1ff",
+    "--btn-primary-border": "#409eff",
+    "--btn-primary-border-hover": "#66b1ff",
+    "--btn-primary-active": "#3a8ee6",
+    "--theme-soft-fg": "#409eff",
+    "--theme-soft-fg-hover": "#66b1ff",
+    "--theme-soft-bg": "color-mix(in srgb, #409eff 12%, transparent)",
+    "--theme-soft-bg-hover": "color-mix(in srgb, #409eff 18%, transparent)",
+    "--theme-soft-border": "color-mix(in srgb, #409eff 22%, #e2e8f0)",
+    "--theme-soft-border-hover": "color-mix(in srgb, #409eff 38%, #e2e8f0)",
+    "--theme-focus-ring": "#a3d3ff",
+  } as const;
+  for (const [key, value] of Object.entries(theme)) {
+    root.style.setProperty(key, value);
+  }
 
   const faviconUrl = settingString(merged, "brand_favicon_url", "/favicon.svg");
   updateFavicon(faviconUrl);

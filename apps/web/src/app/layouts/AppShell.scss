@@ -137,7 +137,12 @@
 
 .auth-link:hover,
 .auth-link:focus-visible,
-.auth-link.is-active,
+.auth-link.is-active {
+  color: var(--theme-soft-fg, #409eff);
+  outline: none;
+  background: var(--theme-soft-bg-hover);
+}
+
 .user-link:hover,
 .user-link:focus-visible,
 .admin-link:hover,
@@ -145,34 +150,13 @@
 .admin-link.is-active,
 .logout-button:hover,
 .logout-button:focus-visible {
-  color: var(--primary);
+  color: var(--theme-soft-fg, #409eff);
   outline: none;
-  background: var(--navy-soft);
+  background: var(--theme-soft-bg-hover);
 }
 
 .logout-button {
   cursor: pointer;
-}
-
-.locale-select {
-  display: inline-flex;
-  align-items: center;
-}
-
-.locale-select select {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  padding: 0.45rem 0.65rem;
-  color: var(--text);
-  background: var(--bg-subtle);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.locale-select select:focus-visible {
-  outline: 2px solid rgba(var(--primary-rgb), 0.35);
-  outline-offset: 2px;
 }
 
 .sr-only {
@@ -339,7 +323,6 @@
   .topbar-actions :deep(.ui-button),
   .auth-link,
   .admin-link,
-  .locale-select,
   .desktop-plugin-slot,
   .logout-button {
     display: none !important;

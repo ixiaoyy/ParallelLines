@@ -69,7 +69,16 @@ Keep this managed block so 'trellis update' can refresh the instructions.
 --btn-primary-fg:  #ffffff   /* 主按钮文字始终白色 */
 ```
 
-- `button-surfaces.scss` 统一覆盖 `ant-btn-primary` 与 `--btn-primary-*` 变量。
+### 悬停两套语义（勿混用）
+
+| 类型 | 默认 | 悬停 | 用于 |
+|------|------|------|------|
+| **实心** `--btn-primary-*` | `#409EFF` 底 + 白字 | `#66B1FF` 底 + 白字 | 发布、登录、实心 Tab 选中 |
+| **透底** `--theme-soft-*` | 12% 透明蓝底 + `#409EFF` 字 | 18% 透明蓝底 + `#66B1FF` 字 | 热议序号、标签、全部已读、次要按钮 |
+
+透底元素 **禁止** 悬停时用 `var(--btn-primary-bg-hover)` 铺实心亮蓝底。
+
+- `button-surfaces.scss` 统一覆盖 `ant-btn-primary` 与 `--btn-primary-*` / `--theme-soft-*` 变量。
 - 各页自定义 CTA（`RouterLink`、`.hero-link`、`.ask-link`、`.open-board-link` 等）应使用 **`var(--btn-primary-*)`**，不要写死渐变或 `var(--gradient-brand)` 当按钮底。
 - **`UiButton tone="primary"`**：蓝底白字（由 `button-surfaces` 驱动）。
 - **`UiButton tone="subtle"`**：浅底 `#e0f2fe`（`--bg-selected`）+ `--primary` 文字，用于次要操作。

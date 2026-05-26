@@ -62,9 +62,9 @@ withDefaults(
 }
 
 .ui-button--subtle {
-  color: var(--primary) !important;
-  border-color: transparent !important;
-  background: var(--bg-selected) !important;
+  color: var(--theme-soft-fg, #409eff) !important;
+  border: 1px solid var(--theme-soft-border, transparent) !important;
+  background: var(--theme-soft-bg, var(--bg-selected)) !important;
 }
 
 .ui-button--ghost {
