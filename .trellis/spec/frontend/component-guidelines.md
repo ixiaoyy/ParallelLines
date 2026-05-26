@@ -92,6 +92,7 @@ Use CSS variables from `shared/styles/tokens.scss`:
 - Left rail: board shortcuts and tags; sticky on desktop.
 - Main column: hero, optional community guide posts, and topic feed.
 - Do not duplicate board/tag discovery cards in the main column or add a right rail on the home page.
+- Avoid explanatory intro blocks around the home topic feed; keep only actions, filters, and real content.
 - At small widths the page becomes one column and the left rail is hidden.
 
 **Contracts**:

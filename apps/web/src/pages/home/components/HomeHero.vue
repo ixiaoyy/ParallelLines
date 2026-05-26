@@ -24,9 +24,6 @@ function updateSearch(event: Event) {
           <span class="hero-title__line">让不同方向的思考，</span>
           <span class="hero-title__line"> 在<em class="hero-brand">平行线</em>上汇合。 </span>
         </h1>
-        <p class="hero-lead">
-          轻盈、安静的技术论坛——优先呈现最新讨论、热门话题与清晰分类，帮你快速找到值得参与的内容。
-        </p>
         <form class="hero-search" role="search" aria-label="搜索平行线主题" @submit.prevent="emit('submitSearch')">
           <span aria-hidden="true">⌕</span>
           <input :value="props.search" type="search" placeholder="搜索主题、标签、成员" @input="updateSearch" />
