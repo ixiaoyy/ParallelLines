@@ -54,6 +54,8 @@ Useful commands:
 uv run ruff check app tests
 uv run pytest -q
 uv run python -m app.workers.background_jobs
+# Only synchronize the pinned quality posts into the current database.
+uv run python -m app.sync_quality_posts
 ```
 
 ### Frontend

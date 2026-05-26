@@ -10,6 +10,7 @@ from app.models.forum import Board, BoardMember, Post, Topic
 from app.models.user import User
 from app.schemas.forum import PostCreateRequest, TopicCreateRequest
 from app.services.forum import ForumService
+from app.services.quality_posts import QUALITY_POST_SPECS
 
 DEMO_PASSWORD = "parallellines-demo-123"
 
@@ -182,78 +183,19 @@ async def seed_demo_data(session: AsyncSession) -> None:
 
 def starter_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dict[str, object]]:
     return [
-        {
-            "key": "forum-intent",
-            "board": boards["announcements"],
-            "author": users["admin"],
-            "title": "论坛初衷：记录、连接与共同成长",
-            "raw_md": (
-                "# 论坛初衷：记录、连接与共同成长\n\n"
-                "这个论坛建立的初衷，是希望为每个人提供一个能够长期记录与连接的空间。\n\n"
-                "你可以在这里保存灵感、整理知识、记录生活，也可以与他人交流观点，"
-                "在讨论中不断完善自己的认知体系。\n\n"
-                "在《打造第二大脑》中，作者提到自己曾因疾病导致表达能力退化。后来，"
-                "他通过持续记录、整理信息，以及对生活习惯的不断调整，逐渐让混乱重新变得有序。\n\n"
-                "**记录，本身就是一种力量。**\n\n"
-                "它不仅帮助我们保存信息，更帮助我们理解自己。\n\n"
-                "而成长，也很少是孤立完成的。一个人的坚持或许有限，但一群人的交流与陪伴，"
-                "往往能够让改变发生得更快。\n\n"
-                "## 你可以从这里开始\n\n"
-                "- 保存一个突然出现的灵感，让它以后还能被找回。\n"
-                "- 整理一段新学到的知识，把零散信息变成自己的理解。\n"
-                "- 记录一次生活里的变化，给未来的自己留下线索。\n"
-                "- 发起一个问题或观点，在交流中获得新的角度。\n\n"
-                "希望这里能真正帮助到每一个愿意思考、表达与成长的人。"
-            ),
-            "tags": ["论坛初衷", "第二大脑", "成长"],
-            "pinned": True,
-            "featured": True,
-        },
-        {
-            "key": "community-guidelines",
-            "board": boards["announcements"],
-            "author": users["admin"],
-            "title": "社区规范：理性交流、尊重原创与保护隐私",
-            "raw_md": (
-                "# 社区规范：理性交流、尊重原创与保护隐私\n\n"
-                "平行线希望长期保存有价值的记录，也希望每一次讨论都能让人更清晰、更安全、"
-                "更愿意继续表达。这份规范来自《论坛规范》文档，用来帮助大家理解什么是被鼓励的"
-                "高质量内容，以及平台如何处理服务责任与隐私保护。\n\n"
-                "## 我们鼓励什么\n\n"
-                "- **开源与分享**：欢迎原创技术文章、开源项目、踩坑记录、行业观察和业务理解。\n"
-                "- **建设性讨论**：指出代码或观点问题时，请聚焦事实，给出可参考的方案、"
-                "资料或文档链接。\n"
-                "- **完整上下文**：提问时尽量补充报错信息、运行环境、复现步骤，"
-                "并使用 Markdown 格式化代码。\n"
-                "- **对事不对人**：讨论技术方案、产品判断和实践路径，不攻击表达者本身。\n\n"
-                "## 我们不接受什么\n\n"
-                "- 人身攻击、地域歧视、技术路线歧视、恶意引战、侮辱性言论或挂人。\n"
-                "- 纯广告、无意义刷屏、重复灌水，以及与社区目标无关的敏感或跑题内容。\n"
-                "- 抄袭、洗稿，或把他人文章、代码、开源成果据为己有；转载必须注明作者和出处。\n\n"
-                "## 服务与责任边界\n\n"
-                "- 请妥善保管账号，不转借、不售卖，并对账号下的行为负责。\n"
-                "- 用户发布的原创内容，著作权仍归原作者所有；发布即表示授权社区在平台内进行展示、"
-                "推荐和合规使用。\n"
-                "- 社区中的代码、教程和架构方案仅供参考。用于生产环境或个人项目之前，"
-                "请自行评估、测试"
-                "和备份；因直接使用导致的数据丢失、系统故障或财产损失，平台与原作者不承担相应责任。\n"
-                "- 对违反规范的内容，站方可进行修改、隐藏或删除；对违规账号可采取提醒、"
-                "禁言、限制使用"
-                "或封禁等措施。\n\n"
-                "## 隐私与数据使用\n\n"
-                "- 平台仅在必要范围内收集注册邮箱等账号信息、登录 IP、登录状态 Cookie、"
-                "夜间模式偏好等信息。\n"
-                "- 这些信息用于维护社区安全、反垃圾内容和优化阅读体验，不会出售给第三方商业机构。\n"
-                "- 若未来接入 GitHub 登录、图片托管等第三方服务，"
-                "相关数据流转将同时遵循第三方隐私政策。\n\n"
-                "## 一起维护这个空间\n\n"
-                "好的社区不是靠规则压出来的，而是靠每个人在发帖、回复、引用和质疑时多做一步确认。"
-                "希望大家在这里既能大胆表达，也能被认真对待。"
-            ),
-            "tags": ["社区规范", "服务条款", "隐私保护"],
-            "pinned": True,
-            "featured": True,
-        },
+        *[
+            {
+                "key": post.key,
+                "board": boards["announcements"],
+                "author": users["admin"],
+                "title": post.title,
+                "raw_md": post.raw_md,
+                "tags": post.tags,
+                "pinned": post.pinned,
+                "featured": post.featured,
+            }
+            for post in QUALITY_POST_SPECS
+        ],
         {
             "key": "welcome-guide",
             "board": boards["announcements"],
