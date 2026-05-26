@@ -1,20 +1,4 @@
 services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: parallellines
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d parallellines"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
   redis:
     image: redis:7-alpine
     ports:
@@ -28,51 +12,18 @@ services:
   api:
     build:
       context: ./apps/api
-    environment:
-      ENVIRONMENT: local
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/parallellines
-      REDIS_URL: redis://redis:6379/0
-      JWT_SECRET_KEY: local-dev-secret-change-before-deploying
-      CORS_ORIGINS: '["http://localhost:5174","http://127.0.0.1:5174"]'
-      SLOW_REQUEST_MS: 500
-      EMAIL_DELIVERY_MODE: memory
-      PASSWORD_RESET_TOKEN_TTL_MINUTES: 30
-      EMAIL_CHANGE_TOKEN_TTL_MINUTES: 30
-      TWO_FACTOR_CHALLENGE_MINUTES: 5
-      TWO_FACTOR_ISSUER: ParallelLines
-      OAUTH_ENABLED_PROVIDERS: "[]"
-      RATE_LIMIT_WINDOW_SECONDS: 60
-      RATE_LIMIT_REGISTER_IP: 5
-      RATE_LIMIT_REGISTER_EMAIL: 3
-      RATE_LIMIT_LOGIN_IP: 10
-      RATE_LIMIT_LOGIN_ACCOUNT: 10
-      RATE_LIMIT_TOPIC_USER: 5
-      RATE_LIMIT_TOPIC_IP: 10
-      RATE_LIMIT_REPLY_USER: 10
-      RATE_LIMIT_REPLY_IP: 20
-      RATE_LIMIT_UPLOAD_USER: 20
-      RATE_LIMIT_UPLOAD_IP: 30
-      RATE_LIMIT_FLAG_USER: 10
-      RATE_LIMIT_FLAG_IP: 20
-      NEW_USER_LINK_LIMIT: 5
-      NEW_USER_SCREENING_DAYS: 7
-      UPLOAD_STORAGE_BACKEND: local
-      UPLOAD_STORAGE_PATH: /var/lib/parallellines/uploads
-      BACKUP_STORAGE_PATH: /var/lib/parallellines/backups
-      UPLOAD_MAX_BYTES: 5242880
-      UPLOAD_MAX_AVATAR_BYTES: 2097152
+    env_file:
+      - ./apps/api/.env
     ports:
       - "8000:8000"
     volumes:
       - upload-data:/var/lib/parallellines/uploads
       - backup-data:/var/lib/parallellines/backups
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
     command: >
-      sh -c "alembic upgrade head && python -m app.seed &&
+      sh -c "alembic upgrade head &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000"
     healthcheck:
       test:
@@ -89,22 +40,8 @@ services:
   worker:
     build:
       context: ./apps/api
-    environment:
-      ENVIRONMENT: local
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/parallellines
-      REDIS_URL: redis://redis:6379/0
-      JWT_SECRET_KEY: local-dev-secret-change-before-deploying
-      BACKGROUND_JOB_POLL_SECONDS: 5
-      BACKGROUND_JOB_BATCH_SIZE: 25
-      BACKGROUND_JOB_RETRY_DELAY_SECONDS: 60
-      BACKGROUND_HOT_RANK_INTERVAL_SECONDS: 300
-      BACKGROUND_UPLOAD_CLEANUP_INTERVAL_SECONDS: 3600
-      BACKGROUND_SESSION_CLEANUP_INTERVAL_SECONDS: 3600
-      BACKGROUND_DIGEST_INTERVAL_SECONDS: 3600
-      EMAIL_DELIVERY_MODE: memory
-      UPLOAD_STORAGE_BACKEND: local
-      UPLOAD_STORAGE_PATH: /var/lib/parallellines/uploads
-      BACKUP_STORAGE_PATH: /var/lib/parallellines/backups
+    env_file:
+      - ./apps/api/.env
     volumes:
       - upload-data:/var/lib/parallellines/uploads
       - backup-data:/var/lib/parallellines/backups
@@ -118,9 +55,9 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
-        VITE_API_BASE_URL: http://localhost:8000/api/v1
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://119.45.0.49:8000/api/v1}
     environment:
-      VITE_API_BASE_URL: http://localhost:8000/api/v1
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://119.45.0.49:8000/api/v1}
     ports:
       - "5174:5174"
     depends_on:
@@ -128,6 +65,5 @@ services:
         condition: service_healthy
 
 volumes:
-  postgres-data:
   upload-data:
   backup-data:
