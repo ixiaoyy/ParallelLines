@@ -12,7 +12,6 @@ import HomeFoundingPost from "@/pages/home/components/HomeFoundingPost.vue";
 import HomeHero from "@/pages/home/components/HomeHero.vue";
 import HomeLeftRail from "@/pages/home/components/HomeLeftRail.vue";
 import HomeSectionHead from "@/pages/home/components/HomeSectionHead.vue";
-import HomeSidebar from "@/pages/home/components/HomeSidebar.vue";
 import HomeTopicFeed from "@/pages/home/components/HomeTopicFeed.vue";
 import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
 
@@ -54,10 +53,6 @@ const discoveryTopics = computed(() => feedTopics.value);
 const topBoards = computed(() => boardSummaries.value.slice(0, 4));
 const railBoards = computed(() => boardSummaries.value.slice(0, 8));
 const topTags = computed(() => (tagsQuery.data.value ?? []).slice(0, 10));
-
-const hotTopics = computed(() =>
-  [...feedTopics.value].sort((left, right) => right.hotScore - left.hotScore).slice(0, 4),
-);
 
 const visibleTopics = computed(() => {
   const sorted = [...discoveryTopics.value];
@@ -172,14 +167,6 @@ function submitHeroSearch() {
         />
       </main>
 
-      <HomeSidebar
-        :hot-topics="hotTopics"
-        :tags="topTags"
-        :topics-loading="topicsQuery.isLoading.value"
-        :topics-error="topicsQuery.isError.value"
-        :tags-loading="tagsQuery.isLoading.value"
-        :tags-error="tagsQuery.isError.value"
-      />
     </div>
   </div>
 </template>

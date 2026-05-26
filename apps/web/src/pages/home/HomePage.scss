@@ -6,7 +6,7 @@
 
 .home-grid {
   display: grid;
-  grid-template-columns: minmax(13.5rem, 17em) minmax(0, 1fr) minmax(18rem, 19.75rem);
+  grid-template-columns: minmax(13.5rem, 17em) minmax(0, 1fr);
   gap: var(--home-gap);
   align-items: start;
 }
@@ -15,12 +15,6 @@
   display: grid;
   gap: 1rem;
   min-width: 0;
-}
-
-@media (max-width: 1320px) {
-  .home-grid {
-    grid-template-columns: minmax(12.5rem, 15rem) minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 980px) {
@@ -34,10 +28,6 @@
 
   .home-left-rail {
     display: none;
-  }
-
-  .home-sidebar {
-    order: 2;
   }
 
   .feed-slot {
