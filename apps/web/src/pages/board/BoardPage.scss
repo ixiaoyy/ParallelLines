@@ -460,10 +460,10 @@
   }
 
   &.active {
-    color: white !important;
-    border-color: var(--primary) !important;
-    background: var(--primary) !important;
-    box-shadow: 0 6px 12px rgba(var(--primary-rgb), 0.16) !important;
+    color: var(--btn-primary-fg) !important;
+    border-color: var(--btn-primary-border) !important;
+    background: var(--btn-primary-bg) !important;
+    box-shadow: var(--btn-primary-shadow) !important;
   }
 }
 
@@ -683,20 +683,25 @@
 
 .ask-link {
   justify-self: start;
+  border: 1px solid var(--btn-primary-border);
   border-radius: 999px;
   padding: 0.5rem 0.8rem;
-  color: var(--bg-surface);
-  background: var(--gradient-brand);
-  box-shadow: var(--shadow-brand);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
+  box-shadow: var(--btn-primary-shadow);
   transition:
+    color 180ms ease,
+    border-color 180ms ease,
     background 180ms ease,
     box-shadow 180ms ease;
 }
 
 .ask-link:hover,
 .ask-link:focus-visible {
-  background: var(--gradient-brand-hover);
-  box-shadow: var(--shadow-brand-hover);
+  border-color: var(--btn-primary-border-hover);
+  color: var(--btn-primary-fg-hover);
+  background: var(--btn-primary-bg-hover);
+  box-shadow: var(--btn-primary-shadow-hover);
 }
 
 @media (max-width: 1120px) {

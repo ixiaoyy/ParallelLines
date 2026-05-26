@@ -40,24 +40,19 @@ withDefaults(
   outline-offset: 2px;
 }
 
-.ui-button--primary {
-  color: white !important;
-  border-color: transparent !important;
-  background: var(--gradient-brand) !important;
-  box-shadow: var(--shadow-brand);
-}
-
 .ui-button--primary:hover {
-  border-color: transparent !important;
-  background: var(--gradient-brand-hover) !important;
-  box-shadow: var(--shadow-brand-hover);
   transform: translateY(-1px);
 }
 
 .ui-button--success {
-  color: white !important;
+  color: #fff !important;
   border-color: var(--accent-geek) !important;
   background: var(--accent-geek) !important;
+}
+
+.ui-button--success:hover {
+  border-color: #059669 !important;
+  background: #059669 !important;
 }
 
 .ui-button--danger {

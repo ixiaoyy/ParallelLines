@@ -41,7 +41,7 @@ function markOneRead(id: string) {
 
 <template>
   <div class="notification-bell" @keydown.esc="closePanel">
-    <a-badge :count="unreadCount" :number-style="{ backgroundColor: 'var(--accent-geek)' }">
+    <a-badge :count="unreadCount" :number-style="{ backgroundColor: 'var(--btn-primary-bg, #409eff)' }">
       <button
         class="notification-trigger"
         type="button"

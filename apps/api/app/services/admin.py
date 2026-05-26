@@ -75,7 +75,7 @@ DEFAULT_SITE_SETTINGS: dict[str, DefaultSiteSetting] = {
     ),
     "brand_primary_color": DefaultSiteSetting(
         key="brand_primary_color",
-        value="#005AA8",
+        value="#409EFF",
         data_type="string",
         category="brand",
         description="主品牌色，供前端主题预览和后续主题能力使用。",

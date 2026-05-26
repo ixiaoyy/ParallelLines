@@ -16,14 +16,17 @@
   min-height: 2.9rem;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--btn-primary-border);
   border-radius: var(--radius-pill);
-  color: var(--bg-surface);
-  background: var(--gradient-brand);
-  box-shadow: var(--shadow-brand);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
+  box-shadow: var(--btn-primary-shadow);
   text-decoration: none;
   font-weight: 800;
   transition:
     transform 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease,
     box-shadow 160ms ease,
     background 160ms ease;
 }
@@ -32,8 +35,10 @@
 .rail-action:focus-visible {
   outline: none;
   transform: translateY(-2px);
-  background: var(--gradient-brand-hover);
-  box-shadow: var(--shadow-brand-hover);
+  border-color: var(--btn-primary-border-hover);
+  color: var(--btn-primary-fg-hover);
+  background: var(--btn-primary-bg-hover);
+  box-shadow: var(--btn-primary-shadow-hover);
 }
 
 .rail-section {

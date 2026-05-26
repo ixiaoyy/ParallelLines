@@ -115,13 +115,6 @@
   min-height: 2.55rem;
   border-radius: var(--radius-pill) !important;
   padding-inline: 1rem !important;
-  background: var(--gradient-brand) !important;
-  box-shadow: var(--shadow-brand) !important;
-}
-
-.publish-link :deep(.ui-button:hover) {
-  background: var(--gradient-brand-hover) !important;
-  box-shadow: var(--shadow-brand-hover) !important;
 }
 
 .auth-link,

@@ -88,23 +88,42 @@
 .migration-actions button,
 .secondary-action,
 .danger-action {
-  border: 0;
+  border: 1px solid var(--btn-primary-border);
   border-radius: var(--radius-pill);
   padding: 0.58rem 0.9rem;
-  color: white;
-  background: var(--primary);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
   cursor: pointer;
   font: inherit;
   font-weight: 800;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.migration-actions button:hover:not(.danger-action),
+.secondary-action:hover {
+  border-color: var(--btn-primary-border-hover);
+  color: var(--btn-primary-fg-hover);
+  background: var(--btn-primary-bg-hover);
 }
 
 .secondary-action {
-  color: var(--primary);
-  background: var(--navy-soft);
+  color: var(--btn-primary-fg);
+  border-color: var(--btn-primary-border);
+  background: var(--btn-primary-bg);
 }
 
 .danger-action {
+  color: #fff !important;
+  border-color: #dc2626 !important;
   background: #dc2626 !important;
+}
+
+.danger-action:hover {
+  border-color: #b91c1c !important;
+  background: #b91c1c !important;
 }
 
 .migration-actions button:disabled,

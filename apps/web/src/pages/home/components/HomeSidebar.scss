@@ -53,9 +53,10 @@
   width: 1.75rem;
   height: 1.75rem;
   place-items: center;
+  border: 1px solid color-mix(in srgb, var(--btn-primary-bg, #409eff) 22%, var(--border));
   border-radius: 0.65rem;
-  color: var(--primary);
-  background: var(--navy-soft);
+  color: var(--btn-primary-bg, #409eff);
+  background: color-mix(in srgb, var(--btn-primary-bg, #409eff) 12%, transparent);
   font-size: 0.78rem;
   font-weight: 900;
 }
@@ -74,7 +75,7 @@
 
 .hot-item a:hover,
 .hot-item a:focus-visible {
-  color: var(--primary);
+  color: var(--btn-primary-bg, #409eff);
   outline: none;
 }
 
@@ -96,8 +97,9 @@
   align-items: center;
   border-radius: var(--radius-pill);
   padding: 0.32rem 0.62rem;
-  color: var(--tag-text);
-  background: var(--cyan-soft);
+  color: var(--btn-primary-bg, #409eff);
+  background: color-mix(in srgb, var(--btn-primary-bg, #409eff) 10%, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--btn-primary-bg, #409eff) 18%, var(--border));
   text-decoration: none;
   font-size: 0.76rem;
   font-weight: 600;
@@ -109,9 +111,10 @@
 
 .tag-cloud a:hover,
 .tag-cloud a:focus-visible {
-  color: var(--bg-surface);
+  color: var(--btn-primary-fg-hover);
   outline: none;
-  background: var(--primary);
+  border-color: var(--btn-primary-border-hover);
+  background: var(--btn-primary-bg-hover);
 }
 
 @media (max-width: 1320px) {

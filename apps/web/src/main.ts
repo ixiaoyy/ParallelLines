@@ -22,6 +22,7 @@ import { registerPwaServiceWorker } from "@/shared/pwa/register";
 import { injectBoardPalette } from "@/shared/theme/boardPalette";
 
 import "@/shared/styles/tokens.scss";
+import "@/shared/styles/button-surfaces.scss";
 import "@/shared/styles/tone-utilities.scss";
 
 injectBoardPalette();

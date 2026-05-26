@@ -12,10 +12,11 @@
   --bg-selected: #e0f2fe;
   --pinned-bg: #fffbeb;
 
-  /* 雅致冰蓝冷光主色 */
-  --primary: #0ea5e9;
-  --primary-rgb: 14, 165, 233;
-  --primary-hover: #0284c7;
+  /* 主色：Element UI 经典蓝 #409EFF */
+  --primary: #409eff;
+  --primary-rgb: 64, 158, 255;
+  --primary-hover: #66b1ff;
+  --primary-active: #3a8ee6;
 
   --accent-geek: #10b981;
   --accent-geek-rgb: 16, 185, 129;
@@ -97,22 +98,11 @@
   --board-palette-5: var(--accent-violet);
   --board-palette-6: var(--accent-pink);
 
-  /* 品牌按钮渐变：清透天蓝、饱和度充足，过渡仍保持柔和 */
-  --gradient-brand: linear-gradient(
-    168deg,
-    #5ecdf9 0%,
-    var(--brand-blue) 34%,
-    var(--primary) 72%,
-    var(--primary-hover) 100%
-  );
-  --gradient-brand-hover: linear-gradient(
-    168deg,
-    var(--brand-blue) 0%,
-    var(--primary) 38%,
-    var(--primary-hover) 100%
-  );
-  --shadow-brand: 0 3px 10px rgba(var(--primary-rgb), 0.22);
-  --shadow-brand-hover: 0 5px 14px rgba(var(--primary-rgb), 0.28);
+  /* 品牌渐变：仅用于标题等装饰；主按钮见 button-surfaces.scss（#409EFF 实心白字） */
+  --gradient-brand: linear-gradient(135deg, #6dd0fa 0%, #5ec4f4 46%, #66d4cb 100%);
+  --gradient-brand-hover: linear-gradient(135deg, #5ec4f4 0%, #4fb8eb 46%, #5cc9c0 100%);
+  --shadow-brand: 0 4px 12px rgba(2, 132, 199, 0.12);
+  --shadow-brand-hover: 0 6px 16px rgba(2, 132, 199, 0.16);
 
   /* 版块色由 boardPalette.ts 注入；以下为无 tone 时的兜底 */
   --gradient-board-mark: linear-gradient(

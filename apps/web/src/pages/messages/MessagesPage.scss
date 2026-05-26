@@ -72,12 +72,28 @@
 
 .messages-state a {
   width: fit-content;
+  border: 1px solid var(--btn-primary-border);
   border-radius: 999px;
   padding: 0.6rem 0.9rem;
-  color: white;
-  background: var(--gradient-brand);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
+  box-shadow: var(--btn-primary-shadow);
   font-weight: 850;
   text-decoration: none;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.messages-state a:hover,
+.messages-state a:focus-visible {
+  border-color: var(--btn-primary-border-hover);
+  color: var(--btn-primary-fg-hover);
+  background: var(--btn-primary-bg-hover);
+  box-shadow: var(--btn-primary-shadow-hover);
+  outline: none;
 }
 
 .messages-state--error {

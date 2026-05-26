@@ -1,0 +1,80 @@
+/*
+ * 全站主按钮：固定 #409EFF 实心 + 白字（不受后台 brand_primary_color 覆盖）
+ */
+:root {
+  --btn-primary-fg: #ffffff;
+  --btn-primary-fg-hover: #ffffff;
+  --btn-primary-bg: #409eff;
+  --btn-primary-bg-hover: #66b1ff;
+  --btn-primary-border: #409eff;
+  --btn-primary-border-hover: #66b1ff;
+  --btn-primary-active: #3a8ee6;
+  --btn-primary-shadow: 0 2px 8px rgba(64, 158, 255, 0.22);
+  --btn-primary-shadow-hover: 0 4px 12px rgba(64, 158, 255, 0.28);
+}
+
+@mixin btn-surface-primary {
+  color: var(--btn-primary-fg);
+  border: 1px solid var(--btn-primary-border);
+  background: var(--btn-primary-bg);
+  box-shadow: var(--btn-primary-shadow);
+}
+
+@mixin btn-surface-primary-hover {
+  color: var(--btn-primary-fg-hover);
+  border-color: var(--btn-primary-border-hover);
+  background: var(--btn-primary-bg-hover);
+  box-shadow: var(--btn-primary-shadow-hover);
+}
+
+/* Ant Design 主按钮 */
+.ant-btn.ant-btn-primary:not(:disabled),
+.ant-btn-primary:not(:disabled) {
+  color: var(--btn-primary-fg) !important;
+  border-color: var(--btn-primary-border) !important;
+  background: var(--btn-primary-bg) !important;
+  box-shadow: var(--btn-primary-shadow) !important;
+}
+
+.ant-btn.ant-btn-primary:not(:disabled):hover,
+.ant-btn.ant-btn-primary:not(:disabled):focus,
+.ant-btn-primary:not(:disabled):hover,
+.ant-btn-primary:not(:disabled):focus {
+  color: var(--btn-primary-fg-hover) !important;
+  border-color: var(--btn-primary-border-hover) !important;
+  background: var(--btn-primary-bg-hover) !important;
+  box-shadow: var(--btn-primary-shadow-hover) !important;
+}
+
+.ant-btn.ant-btn-primary:not(:disabled):active,
+.ant-btn-primary:not(:disabled):active {
+  color: var(--btn-primary-fg) !important;
+  border-color: var(--btn-primary-active) !important;
+  background: var(--btn-primary-active) !important;
+}
+
+/* 链接型主 CTA（RouterLink / a） */
+.btn-surface-primary {
+  @include btn-surface-primary;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.btn-surface-primary:hover,
+.btn-surface-primary:focus-visible {
+  @include btn-surface-primary-hover;
+  outline: none;
+}
+
+.btn-surface-primary:active {
+  border-color: var(--btn-primary-active);
+  background: var(--btn-primary-active);
+}
+

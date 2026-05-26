@@ -42,12 +42,28 @@
 
 .hero-link {
   flex: none;
+  border: 1px solid var(--btn-primary-border);
   border-radius: 999px;
   padding: 0.52rem 0.82rem;
-  color: var(--bg-surface);
-  background: var(--title);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
   font-weight: 820;
   text-decoration: none;
+  box-shadow: var(--btn-primary-shadow);
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.hero-link:hover,
+.hero-link:focus-visible {
+  border-color: var(--btn-primary-border-hover);
+  color: var(--btn-primary-fg-hover);
+  background: var(--btn-primary-bg-hover);
+  box-shadow: var(--btn-primary-shadow-hover);
+  outline: none;
 }
 
 .panel-kicker {

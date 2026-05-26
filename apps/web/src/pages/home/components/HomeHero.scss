@@ -118,20 +118,24 @@
 }
 
 .hero-search button {
-  border: 0;
+  border: 1px solid var(--btn-primary-border);
   padding: 0.42rem 0.85rem;
-  color: var(--bg-surface);
-  background: var(--gradient-brand);
-  box-shadow: var(--shadow-brand);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
+  box-shadow: var(--btn-primary-shadow);
   cursor: pointer;
   transition:
+    color 180ms ease,
+    border-color 180ms ease,
     background 180ms ease,
     box-shadow 180ms ease;
 }
 
 .hero-search button:hover:not(:disabled) {
-  background: var(--gradient-brand-hover);
-  box-shadow: var(--shadow-brand-hover);
+  color: var(--btn-primary-fg-hover);
+  border-color: var(--btn-primary-border-hover);
+  background: var(--btn-primary-bg-hover);
+  box-shadow: var(--btn-primary-shadow-hover);
 }
 
 .hero-search button:disabled {
@@ -168,17 +172,20 @@
 }
 
 .btn-primary {
-  color: var(--bg-surface);
-  background: var(--gradient-brand);
-  box-shadow: var(--shadow-brand);
+  border: 1px solid var(--btn-primary-border);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
+  box-shadow: var(--btn-primary-shadow);
 }
 
 .btn-primary:hover,
 .btn-primary:focus-visible {
   outline: none;
   transform: translateY(-1px);
-  background: var(--gradient-brand-hover);
-  box-shadow: var(--shadow-brand-hover);
+  border-color: var(--btn-primary-border-hover);
+  color: var(--btn-primary-fg-hover);
+  background: var(--btn-primary-bg-hover);
+  box-shadow: var(--btn-primary-shadow-hover);
 }
 
 .btn-secondary {

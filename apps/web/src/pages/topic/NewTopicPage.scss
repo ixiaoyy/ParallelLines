@@ -162,9 +162,10 @@
   width: 2.2rem;
   height: 2.2rem;
   place-items: center;
+  border: 1px solid var(--btn-primary-border);
   border-radius: 0.75rem;
-  color: var(--bg-surface);
-  background: var(--gradient-brand);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
   font-weight: 920;
 }
 

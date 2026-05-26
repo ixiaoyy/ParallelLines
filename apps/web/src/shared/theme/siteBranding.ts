@@ -9,15 +9,24 @@ export function applySiteBranding(settings: PublicSettingMap | undefined, previe
 
   const merged = { ...(settings ?? {}), ...(preview ?? {}) };
   const root = document.documentElement;
-  const primary = settingString(merged, "brand_primary_color", "#0ea5e9");
+  const primary = settingString(merged, "brand_primary_color", "#409eff");
   const accent = settingString(merged, "brand_accent_color", "#10b981");
 
   applyColor(root, "--primary", "--primary-rgb", primary);
   applyColor(root, "--accent-geek", "--accent-geek-rgb", accent);
   if (HEX_COLOR_PATTERN.test(primary)) {
     root.style.setProperty("--brand-blue", primary);
-    root.style.setProperty("--primary-hover", `color-mix(in srgb, ${primary} 82%, #0f172a)`);
+    /* 悬停略亮，勿与 #0f172a 混色（会把按钮压成深蓝） */
+    root.style.setProperty("--primary-hover", `color-mix(in srgb, ${primary} 88%, #ffffff)`);
+    root.style.setProperty("--primary-active", `color-mix(in srgb, ${primary} 86%, #1e293b)`);
   }
+
+  /* 主按钮色固定 #409EFF，与 AGENTS.md 一致，不随 brand_primary_color 漂移 */
+  root.style.setProperty("--btn-primary-bg", "#409eff");
+  root.style.setProperty("--btn-primary-bg-hover", "#66b1ff");
+  root.style.setProperty("--btn-primary-border", "#409eff");
+  root.style.setProperty("--btn-primary-border-hover", "#66b1ff");
+  root.style.setProperty("--btn-primary-active", "#3a8ee6");
 
   const faviconUrl = settingString(merged, "brand_favicon_url", "/favicon.svg");
   updateFavicon(faviconUrl);

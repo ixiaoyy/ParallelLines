@@ -741,9 +741,10 @@
 
 .profile-empty__link:hover,
 .profile-empty__link:focus-visible {
-  color: white;
-  background: var(--primary);
-  box-shadow: 0 12px 24px rgba(var(--primary-rgb), 0.18);
+  color: var(--btn-primary-fg-hover);
+  border-color: var(--btn-primary-border-hover);
+  background: var(--btn-primary-bg-hover);
+  box-shadow: var(--btn-primary-shadow-hover);
   transform: translateY(-1px);
 }
 

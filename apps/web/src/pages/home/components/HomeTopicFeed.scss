@@ -42,9 +42,10 @@
 }
 
 .tab.active {
-  color: var(--bg-surface);
-  background: var(--gradient-brand);
-  box-shadow: var(--shadow-brand);
+  color: var(--btn-primary-fg);
+  border: 1px solid var(--btn-primary-border);
+  background: var(--btn-primary-bg);
+  box-shadow: var(--btn-primary-shadow);
   outline: none;
 }
 

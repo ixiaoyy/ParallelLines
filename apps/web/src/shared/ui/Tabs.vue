@@ -31,10 +31,11 @@ defineEmits<{ "update:modelValue": [value: string] }>();
 }
 
 .tabs :deep(.ant-tabs-tab-active) {
-  background: var(--primary) !important;
+  border-color: var(--btn-primary-border) !important;
+  background: var(--btn-primary-bg) !important;
 }
 
 .tabs :deep(.ant-tabs-tab-active .ant-tabs-tab-btn) {
-  color: #fff !important;
+  color: var(--btn-primary-fg) !important;
 }
 </style>

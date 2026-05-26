@@ -112,10 +112,10 @@
 }
 
 .sort-tabs button.active {
-  color: var(--bg-surface);
-  border-color: transparent;
-  background: var(--gradient-brand);
-  box-shadow: var(--shadow-brand);
+  color: var(--btn-primary-fg);
+  border-color: var(--btn-primary-border);
+  background: var(--btn-primary-bg);
+  box-shadow: var(--btn-primary-shadow);
 }
 
 .search-empty {
