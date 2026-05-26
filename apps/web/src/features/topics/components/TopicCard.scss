@@ -141,6 +141,9 @@
   width: 1.35rem;
   height: 1.35rem;
   margin-left: -0.24rem;
+}
+
+.participant-avatars :deep(.avatar--frame-none) {
   border: 1px solid var(--bg-surface);
   box-shadow: 0 2px 8px rgba(31, 41, 55, 0.1);
 }

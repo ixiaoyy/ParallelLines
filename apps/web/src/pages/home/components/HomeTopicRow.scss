@@ -31,7 +31,7 @@
   height: 2.8rem;
 }
 
-.author-avatar-wrapper :deep(.avatar--sm) {
+.author-avatar-wrapper :deep(.avatar--sm.avatar--frame-none) {
   width: 2.4rem;
   height: 2.4rem;
   border-color: var(--board-mark-border, var(--border));

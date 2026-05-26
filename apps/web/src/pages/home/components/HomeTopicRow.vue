@@ -12,7 +12,12 @@ defineProps<{ topic: TopicCardVM }>();
   <article class="home-topic-row" :class="boardToneClass(topic.boardSlug)">
     <div class="topic-main">
       <div class="author-avatar-wrapper" aria-hidden="true">
-        <UiAvatar :name="topic.authorName" :role="topic.authorRole" size="sm" />
+        <UiAvatar
+          :name="topic.authorName"
+          :role="topic.authorRole"
+          :level="topic.authorLevel"
+          size="sm"
+        />
         <span class="board-badge-dot" :title="topic.boardName"></span>
       </div>
       <div class="topic-copy">

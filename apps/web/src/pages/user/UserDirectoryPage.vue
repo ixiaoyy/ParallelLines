@@ -49,7 +49,12 @@ const sortOptions: { label: string; value: UserDirectorySort; description: strin
     </UiCard>
     <section v-else class="directory-grid" aria-label="公开成员列表">
       <RouterLink v-for="user in users" :key="user.id" class="directory-card" :to="{ name: 'user-profile', params: { username: user.username } }">
-        <UiAvatar :name="user.username" :src="resolveApiAssetUrl(user.avatar_url)" :role="user.role" />
+        <UiAvatar
+          :name="user.username"
+          :src="resolveApiAssetUrl(user.avatar_url)"
+          :role="user.role"
+          :level="user.level"
+        />
         <div class="directory-card__main">
           <strong>{{ profileDisplayName(user) }}</strong>
           <span>@{{ user.username }} · {{ user.role }}</span>

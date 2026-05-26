@@ -38,7 +38,12 @@ defineProps<{
       </div>
 
       <div class="topic-author-strip">
-        <UiAvatar :name="topic.authorName" :role="topic.authorRole" size="lg" />
+        <UiAvatar
+          :name="topic.authorName"
+          :role="topic.authorRole"
+          :level="topic.authorLevel"
+          size="lg"
+        />
         <div>
           <span>发起人</span>
           <strong>{{ topic.authorName }}</strong>

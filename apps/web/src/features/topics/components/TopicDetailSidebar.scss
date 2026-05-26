@@ -75,6 +75,9 @@
 
 .participant-stack :deep(.avatar) {
   margin-left: -0.35rem;
+}
+
+.participant-stack :deep(.avatar--frame-none) {
   box-shadow:
     0 0 0 2px var(--bg-surface),
     0 8px 18px rgba(var(--shadow-rgb), 0.12);

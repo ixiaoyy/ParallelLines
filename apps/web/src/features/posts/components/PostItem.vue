@@ -297,7 +297,7 @@ function setStatus(message: string) {
 <template>
   <UiCard class="post-item" :class="{ deleted: post.deleted }">
     <aside class="post-author">
-      <UiAvatar :name="post.authorName" :role="post.authorRole" />
+      <UiAvatar :name="post.authorName" :role="post.authorRole" :level="post.authorLevel" />
       <strong>{{ post.authorName }}</strong>
       <span class="author-level">Lv.{{ post.authorLevel }}</span>
       <span class="author-trust">TL{{ post.authorTrustLevel }} · {{ post.authorTrustLevelLabel }}</span>

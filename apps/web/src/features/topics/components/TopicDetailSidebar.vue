@@ -36,6 +36,7 @@ defineProps<{
           :key="poster"
           :name="poster"
           :role="poster === topic.authorName ? topic.authorRole : undefined"
+          :level="poster === topic.authorName ? topic.authorLevel : undefined"
           size="sm"
           :title="poster"
         />

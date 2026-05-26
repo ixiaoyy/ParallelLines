@@ -352,6 +352,7 @@ function socialErrorMessage(error: unknown): string {
               :name="profile.username"
               :src="resolveApiAssetUrl(profile.avatar_url)"
               :role="profile.role"
+              :level="profile.level"
               size="lg"
             />
             <div v-if="isOwnProfile" class="avatar-upload">
