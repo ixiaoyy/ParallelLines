@@ -25,6 +25,8 @@ import type {
   ChatStreamSnapshot,
 } from "./model";
 
+const CHAT_STREAM_RETRY_DELAYS_MS = [1_000, 3_000, 5_000, 10_000] as const;
+
 export function useChatChannels(enabled: MaybeRefOrGetter<boolean> = true) {
   return useQuery<ChatChannel[], Error>({
     queryKey: queryKeys.chatChannels,
@@ -115,10 +117,70 @@ export function useChatStream(
 ) {
   const queryClient = useQueryClient();
   let controller: AbortController | null = null;
+  let reconnectTimer: number | null = null;
+  let streamRun = 0;
+
+  function clearReconnectTimer() {
+    if (reconnectTimer) {
+      window.clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+  }
 
   function stop() {
+    streamRun += 1;
+    clearReconnectTimer();
     controller?.abort();
     controller = null;
+  }
+
+  function scheduleReconnect(id: string, attempt: number, run: number) {
+    clearReconnectTimer();
+    const delayIndex = Math.max(
+      0,
+      Math.min(attempt - 1, CHAT_STREAM_RETRY_DELAYS_MS.length - 1),
+    );
+    const delay =
+      CHAT_STREAM_RETRY_DELAYS_MS[delayIndex];
+    reconnectTimer = window.setTimeout(() => {
+      connect(id, attempt, run);
+    }, delay);
+  }
+
+  function connect(id: string, attempt: number, run: number) {
+    if (
+      run !== streamRun ||
+      id !== toValue(channelId) ||
+      !toValue(enabled) ||
+      !hasAccessToken() ||
+      typeof ReadableStream === "undefined"
+    ) {
+      return;
+    }
+
+    controller = new AbortController();
+    const activeController = controller;
+    const cached = queryClient.getQueryData<ChatMessagePage>(queryKeys.chatMessages(id, ""));
+    const afterId = cached?.messages.at(-1)?.id;
+    let receivedSnapshot = false;
+
+    void readChatStream(id, afterId, activeController.signal, (snapshot) => {
+      receivedSnapshot = true;
+      queryClient.setQueryData<ChatMessagePage>(
+        queryKeys.chatMessages(id, ""),
+        (current) => mergeMessagePage(current, snapshot.messages),
+      );
+      queryClient.setQueryData<ChatPresence[]>(
+        queryKeys.chatPresence(id),
+        (current) => mergePresence(current, snapshot.presence),
+      );
+    }).finally(() => {
+      if (run !== streamRun || activeController.signal.aborted) {
+        return;
+      }
+      controller = null;
+      scheduleReconnect(id, receivedSnapshot ? 0 : attempt + 1, run);
+    });
   }
 
   watch(
@@ -128,19 +190,7 @@ export function useChatStream(
       if (!id || !streamEnabled || !hasAccessToken() || typeof ReadableStream === "undefined") {
         return;
       }
-      controller = new AbortController();
-      const cached = queryClient.getQueryData<ChatMessagePage>(queryKeys.chatMessages(id, ""));
-      const afterId = cached?.messages.at(-1)?.id;
-      void readChatStream(id, afterId, controller.signal, (snapshot) => {
-        queryClient.setQueryData<ChatMessagePage>(
-          queryKeys.chatMessages(id, ""),
-          (current) => mergeMessagePage(current, snapshot.messages),
-        );
-        queryClient.setQueryData<ChatPresence[]>(
-          queryKeys.chatPresence(id),
-          (current) => mergePresence(current, snapshot.presence),
-        );
-      });
+      connect(id, 0, streamRun);
     },
     { immediate: true },
   );
@@ -191,7 +241,7 @@ async function readChatStream(
   signal: AbortSignal,
   onSnapshot: (snapshot: ChatStreamSnapshot) => void,
 ) {
-  const query = new URLSearchParams({ poll_seconds: "3", limit: "20" });
+  const query = new URLSearchParams({ poll_seconds: "30", limit: "20" });
   if (afterId) {
     query.set("after_id", afterId);
   }

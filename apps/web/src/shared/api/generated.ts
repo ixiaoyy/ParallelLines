@@ -497,12 +497,6 @@ export interface components {
       [key: string]: unknown;
     };
     };
-    ApiResponse_list_PaymentEventResponse__: {
-      data: Array<components["schemas"]["PaymentEventResponse"]>;
-      meta?: {
-      [key: string]: unknown;
-    };
-    };
     ApiResponse_list_PluginResponse__: {
       data: Array<components["schemas"]["PluginResponse"]>;
       meta?: {
@@ -565,12 +559,6 @@ export interface components {
     };
     ApiResponse_list_SpamActionResponse__: {
       data: Array<components["schemas"]["SpamActionResponse"]>;
-      meta?: {
-      [key: string]: unknown;
-    };
-    };
-    ApiResponse_list_SubscriptionPlanResponse__: {
-      data: Array<components["schemas"]["SubscriptionPlanResponse"]>;
       meta?: {
       [key: string]: unknown;
     };
@@ -667,12 +655,6 @@ export interface components {
     };
     ApiResponse_PasswordResetStartResponse_: {
       data: components["schemas"]["PasswordResetStartResponse"];
-      meta?: {
-      [key: string]: unknown;
-    };
-    };
-    ApiResponse_PaymentWebhookResponse_: {
-      data: components["schemas"]["PaymentWebhookResponse"];
       meta?: {
       [key: string]: unknown;
     };
@@ -847,12 +829,6 @@ export interface components {
     };
     ApiResponse_UserStatusResponse_: {
       data: components["schemas"]["UserStatusResponse"];
-      meta?: {
-      [key: string]: unknown;
-    };
-    };
-    ApiResponse_UserSubscriptionResponse_: {
-      data: components["schemas"]["UserSubscriptionResponse"];
       meta?: {
       [key: string]: unknown;
     };
@@ -1558,23 +1534,6 @@ export interface components {
       expires_in_seconds: number;
       ok?: boolean;
     };
-    PaymentEventResponse: {
-      amount_cents?: number | null;
-      currency?: string | null;
-      event_id: string;
-      event_type: string;
-      id: string;
-      processed_at?: string | null;
-      provider: string;
-      signature_valid: boolean;
-      status: string;
-    };
-    PaymentWebhookResponse: {
-      event_id: string;
-      event_type: string;
-      processed: boolean;
-      subscription_status?: string | null;
-    };
     PluginResponse: {
       config?: {
       [key: string]: unknown;
@@ -1945,17 +1904,6 @@ export interface components {
       user_id?: string | null;
       username?: string | null;
     };
-    SubscriptionPlanResponse: {
-      active: boolean;
-      currency: string;
-      description?: string | null;
-      entitlements?: Array<string>;
-      id: string;
-      interval: string;
-      name: string;
-      price_cents: number;
-      slug: string;
-    };
     TagResponse: {
       id: string;
       name: string;
@@ -2233,16 +2181,6 @@ export interface components {
       note?: string | null;
       status: "active" | "silenced" | "suspended";
     };
-    UserSubscriptionResponse: {
-      cancel_at_period_end?: boolean;
-      current_period_end?: string | null;
-      entitlements?: Array<string>;
-      id?: string | null;
-      plan?: components["schemas"]["SubscriptionPlanResponse"] | null;
-      provider?: string | null;
-      provider_subscription_id?: string | null;
-      status: string;
-    };
     ValidationError: {
       ctx?: Record<string, unknown>;
       input?: unknown;
@@ -2378,9 +2316,6 @@ export interface paths {
     };
     "/api/v1/admin/migrations/import/run": {
       post: { response: components["schemas"]["ApiResponse_MigrationImportResponse_"]; operationId: "run_migration_import_api_v1_admin_migrations_import_run_post" };
-    };
-    "/api/v1/admin/payments/events": {
-      get: { response: components["schemas"]["ApiResponse_list_PaymentEventResponse__"]; operationId: "list_payment_events_api_v1_admin_payments_events_get" };
     };
     "/api/v1/admin/plugins": {
       get: { response: components["schemas"]["ApiResponse_list_PluginResponse__"]; operationId: "list_plugins_api_v1_admin_plugins_get" };
@@ -2656,9 +2591,6 @@ export interface paths {
     "/api/v1/notifications/stream": {
       get: { response: unknown; operationId: "stream_notifications_api_v1_notifications_stream_get" };
     };
-    "/api/v1/payments/webhooks/{provider}": {
-      post: { response: components["schemas"]["ApiResponse_PaymentWebhookResponse_"]; operationId: "payment_webhook_api_v1_payments_webhooks__provider__post" };
-    };
     "/api/v1/posts/{post_id}": {
       delete: { response: components["schemas"]["ApiResponse_PostResponse_"]; operationId: "delete_post_api_v1_posts__post_id__delete" };
       patch: { response: components["schemas"]["ApiResponse_PostResponse_"]; operationId: "update_post_api_v1_posts__post_id__patch" };
@@ -2690,12 +2622,6 @@ export interface paths {
     };
     "/api/v1/site/settings": {
       get: { response: components["schemas"]["ApiResponse_PublicSiteSettingsResponse_"]; operationId: "public_site_settings_api_v1_site_settings_get" };
-    };
-    "/api/v1/subscriptions/me": {
-      get: { response: components["schemas"]["ApiResponse_UserSubscriptionResponse_"]; operationId: "my_subscription_api_v1_subscriptions_me_get" };
-    };
-    "/api/v1/subscriptions/plans": {
-      get: { response: components["schemas"]["ApiResponse_list_SubscriptionPlanResponse__"]; operationId: "list_subscription_plans_api_v1_subscriptions_plans_get" };
     };
     "/api/v1/tags": {
       get: { response: components["schemas"]["ApiResponse_list_TagResponse__"]; operationId: "list_tags_api_v1_tags_get" };

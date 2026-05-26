@@ -1706,23 +1706,6 @@
         "title": "ApiResponse[PasswordResetStartResponse]",
         "type": "object"
       },
-      "ApiResponse_PaymentWebhookResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/PaymentWebhookResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[PaymentWebhookResponse]",
-        "type": "object"
-      },
       "ApiResponse_PluginResponse_": {
         "properties": {
           "data": {
@@ -2223,23 +2206,6 @@
         "title": "ApiResponse[UserStatusResponse]",
         "type": "object"
       },
-      "ApiResponse_UserSubscriptionResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/UserSubscriptionResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[UserSubscriptionResponse]",
-        "type": "object"
-      },
       "ApiResponse_VoteStateResponse_": {
         "properties": {
           "data": {
@@ -2729,27 +2695,6 @@
         "title": "ApiResponse[list[FlagResponse]]",
         "type": "object"
       },
-      "ApiResponse_list_PaymentEventResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/PaymentEventResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[PaymentEventResponse]]",
-        "type": "object"
-      },
       "ApiResponse_list_PluginResponse__": {
         "properties": {
           "data": {
@@ -2979,27 +2924,6 @@
           "data"
         ],
         "title": "ApiResponse[list[SpamActionResponse]]",
-        "type": "object"
-      },
-      "ApiResponse_list_SubscriptionPlanResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/SubscriptionPlanResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[SubscriptionPlanResponse]]",
         "type": "object"
       },
       "ApiResponse_list_TagResponse__": {
@@ -7437,112 +7361,6 @@
         "title": "PasswordResetStartResponse",
         "type": "object"
       },
-      "PaymentEventResponse": {
-        "properties": {
-          "amount_cents": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Amount Cents"
-          },
-          "currency": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Currency"
-          },
-          "event_id": {
-            "title": "Event Id",
-            "type": "string"
-          },
-          "event_type": {
-            "title": "Event Type",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "processed_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Processed At"
-          },
-          "provider": {
-            "title": "Provider",
-            "type": "string"
-          },
-          "signature_valid": {
-            "title": "Signature Valid",
-            "type": "boolean"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "provider",
-          "event_id",
-          "event_type",
-          "status",
-          "signature_valid"
-        ],
-        "title": "PaymentEventResponse",
-        "type": "object"
-      },
-      "PaymentWebhookResponse": {
-        "properties": {
-          "event_id": {
-            "title": "Event Id",
-            "type": "string"
-          },
-          "event_type": {
-            "title": "Event Type",
-            "type": "string"
-          },
-          "processed": {
-            "title": "Processed",
-            "type": "boolean"
-          },
-          "subscription_status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Subscription Status"
-          }
-        },
-        "required": [
-          "event_id",
-          "event_type",
-          "processed"
-        ],
-        "title": "PaymentWebhookResponse",
-        "type": "object"
-      },
       "PluginResponse": {
         "properties": {
           "config": {
@@ -9648,67 +9466,6 @@
         "title": "SpamActionResponse",
         "type": "object"
       },
-      "SubscriptionPlanResponse": {
-        "properties": {
-          "active": {
-            "title": "Active",
-            "type": "boolean"
-          },
-          "currency": {
-            "title": "Currency",
-            "type": "string"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "entitlements": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Entitlements",
-            "type": "array"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "interval": {
-            "title": "Interval",
-            "type": "string"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "price_cents": {
-            "title": "Price Cents",
-            "type": "integer"
-          },
-          "slug": {
-            "title": "Slug",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "slug",
-          "name",
-          "price_cents",
-          "currency",
-          "interval",
-          "active"
-        ],
-        "title": "SubscriptionPlanResponse",
-        "type": "object"
-      },
       "TagResponse": {
         "properties": {
           "id": {
@@ -11420,86 +11177,6 @@
           "status"
         ],
         "title": "UserStatusUpdateRequest",
-        "type": "object"
-      },
-      "UserSubscriptionResponse": {
-        "properties": {
-          "cancel_at_period_end": {
-            "default": false,
-            "title": "Cancel At Period End",
-            "type": "boolean"
-          },
-          "current_period_end": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Current Period End"
-          },
-          "entitlements": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Entitlements",
-            "type": "array"
-          },
-          "id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Id"
-          },
-          "plan": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SubscriptionPlanResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "provider": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Provider"
-          },
-          "provider_subscription_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Provider Subscription Id"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "status"
-        ],
-        "title": "UserSubscriptionResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -13238,32 +12915,6 @@
         "summary": "Run Migration Import",
         "tags": [
           "admin"
-        ]
-      }
-    },
-    "/api/v1/admin/payments/events": {
-      "get": {
-        "operationId": "list_payment_events_api_v1_admin_payments_events_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_list_PaymentEventResponse__"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "summary": "List Payment Events",
-        "tags": [
-          "payments"
         ]
       }
     },
@@ -16024,9 +15675,9 @@
             "name": "poll_seconds",
             "required": false,
             "schema": {
-              "default": 3,
-              "maximum": 30,
-              "minimum": 1,
+              "default": 30,
+              "maximum": 60,
+              "minimum": 5,
               "title": "Poll Seconds",
               "type": "number"
             }
@@ -18435,64 +18086,6 @@
         ]
       }
     },
-    "/api/v1/payments/webhooks/{provider}": {
-      "post": {
-        "operationId": "payment_webhook_api_v1_payments_webhooks__provider__post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "provider",
-            "required": true,
-            "schema": {
-              "title": "Provider",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-ParallelLines-Signature",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Parallellines-Signature"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_PaymentWebhookResponse_"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Payment Webhook",
-        "tags": [
-          "payments"
-        ]
-      }
-    },
     "/api/v1/posts/{post_id}": {
       "delete": {
         "operationId": "delete_post_api_v1_posts__post_id__delete",
@@ -19189,53 +18782,6 @@
         "summary": "Public Site Settings",
         "tags": [
           "site"
-        ]
-      }
-    },
-    "/api/v1/subscriptions/me": {
-      "get": {
-        "operationId": "my_subscription_api_v1_subscriptions_me_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_UserSubscriptionResponse_"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "summary": "My Subscription",
-        "tags": [
-          "payments"
-        ]
-      }
-    },
-    "/api/v1/subscriptions/plans": {
-      "get": {
-        "operationId": "list_subscription_plans_api_v1_subscriptions_plans_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_list_SubscriptionPlanResponse__"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "List Subscription Plans",
-        "tags": [
-          "payments"
         ]
       }
     },

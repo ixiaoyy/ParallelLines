@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,7 +23,12 @@ from app.schemas.chat import (
     ChatPresenceUpdateRequest,
     ChatStreamResponse,
 )
+from app.services.chat_realtime import get_chat_realtime_bus
 from app.services.forum import escape_like, slugify
+from app.services.spam import SpamPreventionService
+
+if TYPE_CHECKING:
+    from starlette.requests import Request
 
 PRESENCE_TTL_SECONDS = 120
 TYPING_TTL_SECONDS = 8
@@ -127,11 +133,18 @@ class ChatService:
         channel_id: str,
         payload: ChatMessageCreateRequest,
         current_user: User,
+        *,
+        request: Request | None = None,
     ) -> ChatMessageResponse:
         channel = await self._get_accessible_channel(channel_id, current_user)
         raw_text = payload.raw_text.strip()
         if not raw_text:
             raise ValidationError("chat_message_empty", "Chat message cannot be empty.")
+        await SpamPreventionService(self.session).enforce_chat_message(
+            request,
+            current_user=current_user,
+            raw_text=raw_text,
+        )
         message = ChatMessage(channel_id=channel.id, user_id=current_user.id, raw_text=raw_text)
         self.session.add(message)
         await self.session.flush()
@@ -140,7 +153,9 @@ class ChatService:
         await self._touch_presence(channel.id, current_user, ChatPresenceUpdateRequest())
         await self.session.commit()
         message = await self._get_message(message.id)
-        return ChatMessageResponse.from_model(message)
+        response = ChatMessageResponse.from_model(message)
+        await get_chat_realtime_bus().publish_message(channel.id, response)
+        return response
 
     async def update_presence(
         self,
@@ -152,11 +167,13 @@ class ChatService:
         presence = await self._touch_presence(channel.id, current_user, payload)
         await self.session.commit()
         now = utcnow()
-        return ChatPresenceResponse.from_model(
+        response = ChatPresenceResponse.from_model(
             presence,
             now=now,
             online_cutoff=now - timedelta(seconds=PRESENCE_TTL_SECONDS),
         )
+        await get_chat_realtime_bus().publish_presence(channel.id, response)
+        return response
 
     async def list_presence(
         self,

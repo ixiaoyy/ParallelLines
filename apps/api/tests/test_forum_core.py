@@ -10,6 +10,7 @@ from app.models.forum import Board, Post, Topic, TopicRead
 from app.models.user import User
 from app.schemas.forum import BoardCreateRequest, PostCreateRequest, TopicCreateRequest
 from app.services.forum import ForumService
+from app.services.quality_posts import QUALITY_POST_SPECS, sync_quality_posts
 from tests.helpers import register_and_verify_user
 
 
@@ -151,5 +152,52 @@ async def test_forum_service_updates_counters_and_read_state() -> None:
         assert post_count == 2
         assert read_state is not None
         assert read_state.last_read_post_number == 2
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_sync_quality_posts_writes_idempotent_pinned_topics() -> None:
+    session_factory, engine = await create_test_session()
+
+    async with session_factory() as session:
+        user = User(
+            username="parallel_admin",
+            email="parallel_admin@example.com",
+            hashed_password="hashed",
+            role="admin",
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+        service = ForumService(session)
+        board = await service.create_board(
+            BoardCreateRequest(
+                slug="announcements",
+                name="公告与更新",
+                description="版本发布、维护窗口、路线图和社区规则更新。",
+                color="#3B82F6",
+            ),
+            user,
+        )
+
+        first_sync = await sync_quality_posts(session)
+        second_sync = await sync_quality_posts(session)
+
+        topic_count = await session.scalar(select(func.count(Topic.id)))
+        post_count = await session.scalar(select(func.count(Post.id)))
+        saved_board = await session.get(Board, board.id)
+
+        assert len(first_sync) == len(QUALITY_POST_SPECS)
+        assert [topic.id for topic in second_sync] == [topic.id for topic in first_sync]
+        assert topic_count == len(QUALITY_POST_SPECS)
+        assert post_count == len(QUALITY_POST_SPECS)
+        assert saved_board is not None
+        assert saved_board.topic_count == len(QUALITY_POST_SPECS)
+
+        for topic in second_sync:
+            assert topic.pinned is True
+            assert topic.featured is True
 
     await engine.dispose()

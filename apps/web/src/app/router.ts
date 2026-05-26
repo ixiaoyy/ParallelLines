@@ -1,4 +1,20 @@
 import { createRouter, createWebHistory } from "vue-router";
+import type { RouteLocationNormalized } from "vue-router";
+
+import { fetchCurrentUser } from "@/features/auth/api";
+import type { UserPublic } from "@/features/auth/model";
+import { canAccessModeration, isAdmin } from "@/features/auth/permissions";
+import { clearAuthTokens, hasAccessToken } from "@/shared/api/client";
+import { queryClient } from "@/shared/api/queryClient";
+import { queryKeys } from "@/shared/api/queryKeys";
+
+type RequiredAccess = "authenticated" | "admin" | "moderation";
+
+declare module "vue-router" {
+  interface RouteMeta {
+    requiredAccess?: RequiredAccess;
+  }
+}
 
 function firstRouteParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) {
@@ -62,26 +78,25 @@ export const router = createRouter({
       path: "/security",
       name: "security",
       component: () => import("@/pages/security/SecurityPage.vue"),
+      meta: { requiredAccess: "authenticated" },
     },
     {
       path: "/email-preferences",
       name: "email-preferences",
       component: () => import("@/pages/email/EmailPreferencesPage.vue"),
+      meta: { requiredAccess: "authenticated" },
     },
     {
       path: "/messages",
       name: "messages",
       component: () => import("@/pages/messages/MessagesPage.vue"),
+      meta: { requiredAccess: "authenticated" },
     },
     {
       path: "/chat",
       name: "chat",
       component: () => import("@/pages/chat/ChatPage.vue"),
-    },
-    {
-      path: "/billing",
-      name: "billing",
-      component: () => import("@/pages/billing/BillingPage.vue"),
+      meta: { requiredAccess: "authenticated" },
     },
     {
       path: "/events",
@@ -92,6 +107,7 @@ export const router = createRouter({
       path: "/moderation/reviewables",
       name: "my-reviewables",
       component: () => import("@/pages/moderation/MyReviewablesPage.vue"),
+      meta: { requiredAccess: "authenticated" },
     },
     {
       path: "/search",
@@ -102,11 +118,13 @@ export const router = createRouter({
       path: "/admin",
       name: "admin-dashboard",
       component: () => import("@/pages/admin/AdminDashboardPage.vue"),
+      meta: { requiredAccess: "admin" },
     },
     {
       path: "/admin/moderation",
       name: "admin-moderation",
       component: () => import("@/pages/admin/ModerationPage.vue"),
+      meta: { requiredAccess: "moderation" },
     },
     {
       path: "/t/:slug/:id",
@@ -132,3 +150,51 @@ export const router = createRouter({
     },
   ],
 });
+
+router.beforeEach(async (to) => {
+  const requiredAccess = to.meta.requiredAccess;
+  if (!requiredAccess) {
+    return true;
+  }
+
+  const currentUser = await loadCurrentUserForRoute();
+  if (!currentUser) {
+    return loginRedirect(to);
+  }
+
+  if (requiredAccess === "admin" && !isAdmin(currentUser)) {
+    return { name: "home" };
+  }
+
+  if (requiredAccess === "moderation" && !canAccessModeration(currentUser)) {
+    return { name: "home" };
+  }
+
+  return true;
+});
+
+async function loadCurrentUserForRoute(): Promise<UserPublic | null> {
+  if (!hasAccessToken()) {
+    return null;
+  }
+
+  try {
+    return await queryClient.fetchQuery({
+      queryKey: queryKeys.currentUser,
+      queryFn: fetchCurrentUser,
+      retry: false,
+      staleTime: 0,
+    });
+  } catch {
+    clearAuthTokens();
+    queryClient.setQueryData(queryKeys.currentUser, null);
+    return null;
+  }
+}
+
+function loginRedirect(to: RouteLocationNormalized) {
+  return {
+    name: "auth",
+    query: { redirect: to.fullPath },
+  };
+}

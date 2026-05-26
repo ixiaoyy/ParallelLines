@@ -2,11 +2,13 @@
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import type { TopicCardVM } from "@/entities/topic/model";
 import { useBoards } from "@/features/boards/queries";
 import { useTags } from "@/features/tags/queries";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicFeed } from "@/features/topics/queries";
 import HomeCategoryGrid from "@/pages/home/components/HomeCategoryGrid.vue";
+import HomeFoundingPost from "@/pages/home/components/HomeFoundingPost.vue";
 import HomeHero from "@/pages/home/components/HomeHero.vue";
 import HomeLeftRail from "@/pages/home/components/HomeLeftRail.vue";
 import HomeSectionHead from "@/pages/home/components/HomeSectionHead.vue";
@@ -29,6 +31,36 @@ const tagsQuery = useTags(30);
 
 const boardSummaries = computed(() => boardsQuery.data.value ?? []);
 const feedTopics = computed(() => topicsQuery.data.value ?? []);
+const qualityPostKeywords = ["论坛初衷", "社区规范"];
+
+const isNamedQualityPost = (topic: TopicCardVM) =>
+  qualityPostKeywords.some(
+    (keyword) => topic.title.includes(keyword) || topic.tags.includes(keyword),
+  );
+
+const qualityPostRank = (topic: TopicCardVM) => {
+  const rank = qualityPostKeywords.findIndex(
+    (keyword) => topic.title.includes(keyword) || topic.tags.includes(keyword),
+  );
+
+  return rank === -1 ? qualityPostKeywords.length : rank;
+};
+
+const pinnedQualityTopics = computed(() => {
+  const preferred = feedTopics.value.filter(isNamedQualityPost).sort((left, right) => {
+    return qualityPostRank(left) - qualityPostRank(right);
+  });
+  const pinnedFeatured = feedTopics.value.filter((topic) => topic.pinned && topic.featured);
+
+  return [...preferred, ...pinnedFeatured].filter(
+    (topic, index, topics) => topics.findIndex((candidate) => candidate.id === topic.id) === index,
+  );
+});
+const discoveryTopics = computed(() =>
+  feedTopics.value.filter(
+    (topic) => !pinnedQualityTopics.value.some((qualityTopic) => qualityTopic.id === topic.id),
+  ),
+);
 const topBoards = computed(() => boardSummaries.value.slice(0, 4));
 const railBoards = computed(() => boardSummaries.value.slice(0, 8));
 const topTags = computed(() => (tagsQuery.data.value ?? []).slice(0, 10));
@@ -54,11 +86,11 @@ const communitySignals = computed(() => [
 ]);
 
 const hotTopics = computed(() =>
-  [...feedTopics.value].sort((left, right) => right.hotScore - left.hotScore).slice(0, 4),
+  [...discoveryTopics.value].sort((left, right) => right.hotScore - left.hotScore).slice(0, 4),
 );
 
 const visibleTopics = computed(() => {
-  const sorted = [...feedTopics.value];
+  const sorted = [...discoveryTopics.value];
 
   if (activeTab.value === "top") {
     return sorted.sort((left, right) => right.likeCount + right.replyCount - (left.likeCount + left.replyCount));
@@ -131,6 +163,11 @@ function submitHeroSearch() {
           class="home-hero-slot"
           :signals="communitySignals"
           @submit-search="submitHeroSearch"
+        />
+        <HomeFoundingPost
+          v-if="pinnedQualityTopics.length"
+          class="founding-post-slot"
+          :topics="pinnedQualityTopics"
         />
 
         <HomeSectionHead

@@ -40,7 +40,6 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F5F9F
 | [Plugin Extension System UI](./plugin-extension-system.md) | Admin plugin toggles, public extension slots, generated plugin DTOs, and safe internal-link rendering | Filled |
 | [Chat and Presence UI](./chat-presence.md) | Realtime chat page, SSE cache reconciliation, channel query keys, and safe message rendering | Filled |
 | [Analytics and Data Explorer UI](./analytics-data-explorer.md) | Admin analytics panel, range-aware report queries, preset Data Explorer, and authenticated CSV export | Filled |
-| [Subscriptions and Payments UI](./subscriptions-payments.md) | Billing page, subscription entitlement display, and admin payment event tracking | Filled |
 | [Calendar Events UI](./calendar-events.md) | Calendar page, local-time display, RSVP mutations, and iCal subscription link | Filled |
 | [External Integrations UI](./external-integrations.md) | Admin provider config, redacted secrets, event retries, and GitHub issue previews | Filled |
 | [AI Forum Assistant UI](./ai-forum-assistant.md) | Topic summaries, similar-topic hints, and advisory AI UX | Filled |
@@ -81,12 +80,11 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F5F9F
 26. Read `plugin-extension-system.md` before changing plugin slots, plugin admin UI, extension query keys, or plugin DTO helpers.
 27. Read `chat-presence.md` before changing chat routes, SSE stream parsing, chat query keys, or presence UI.
 28. Read `analytics-data-explorer.md` before changing admin analytics panels, range-aware report query keys, or CSV export UI.
-29. Read `subscriptions-payments.md` before changing billing pages, subscription query keys, entitlement UI, or payment event panels.
-30. Read `calendar-events.md` before changing event routes, RSVP UI, local time formatting, or calendar query keys.
-31. Read `external-integrations.md` before changing admin external integration UI or GitHub issue preview wiring.
-32. Read `ai-forum-assistant.md` before changing topic AI summary or similar-topic UX.
-33. Read `theme-marketplace.md` before changing theme package validation or admin theme marketplace UI.
-34. Read `mobile-push-pwa.md` before changing manifest, service worker, offline page, or push subscription UI.
-35. Read `import-export-migration-tools.md` before changing admin migration preview/run/export UI.
-36. Read `localization-multilingual-content.md` before changing locale switching, site text fallback, or localized content display.
-37. For cross-layer API work, read `../guides/cross-layer-thinking-guide.md`.
+29. Read `calendar-events.md` before changing event routes, RSVP UI, local time formatting, or calendar query keys.
+30. Read `external-integrations.md` before changing admin external integration UI or GitHub issue preview wiring.
+31. Read `ai-forum-assistant.md` before changing topic AI summary or similar-topic UX.
+32. Read `theme-marketplace.md` before changing theme package validation or admin theme marketplace UI.
+33. Read `mobile-push-pwa.md` before changing manifest, service worker, offline page, or push subscription UI.
+34. Read `import-export-migration-tools.md` before changing admin migration preview/run/export UI.
+35. Read `localization-multilingual-content.md` before changing locale switching, site text fallback, or localized content display.
+36. For cross-layer API work, read `../guides/cross-layer-thinking-guide.md`.

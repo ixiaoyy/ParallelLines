@@ -31,9 +31,16 @@ const isCheckingSession = computed(() => hasStoredToken && currentUserQuery.isPe
 const selectedChannelId = ref(String(route.query.channel ?? ""));
 const draft = ref("");
 const searchTerm = ref("");
+const defaultLobbySlug = "general";
 
 const channelsQuery = useChatChannels(canUseChat);
 const channels = computed(() => channelsQuery.data.value ?? []);
+const defaultLobbyChannel = computed(
+  () =>
+    channels.value.find(
+      (channel) => channel.channel_type === "public" && channel.slug === defaultLobbySlug,
+    ) ?? null,
+);
 const activeChannel = computed(
   () => channels.value.find((channel) => channel.id === selectedChannelId.value) ?? null,
 );
@@ -50,6 +57,9 @@ const typingUsers = computed(() =>
 const createChannel = useCreateChatChannel();
 const sendMessage = useSendChatMessage(activeChannelId);
 const updatePresence = useUpdateChatPresence(activeChannelId);
+const defaultLobbyActionLabel = computed(() =>
+  defaultLobbyChannel.value ? "进入站内大厅" : "创建站内大厅",
+);
 useChatStream(activeChannelId, computed(() => canUseChat.value && Boolean(activeChannelId.value)));
 
 watch(
@@ -82,12 +92,17 @@ function selectChannel(channel: ChatChannel) {
 }
 
 function createDefaultChannel() {
+  if (defaultLobbyChannel.value) {
+    selectChannel(defaultLobbyChannel.value);
+    return;
+  }
+
   createChannel.mutate(
     {
       name: "站内大厅",
       description: "所有成员都可以加入的实时交流频道。",
       channel_type: "public",
-      slug: "general",
+      slug: defaultLobbySlug,
     },
     {
       onSuccess: (channel) => {
@@ -154,7 +169,7 @@ function messageAuthor(message: ChatMessage): string {
             class="icon-action"
             type="button"
             :disabled="createChannel.isPending.value"
-            aria-label="创建默认大厅频道"
+            :aria-label="defaultLobbyActionLabel"
             @click="createDefaultChannel"
           >
             <PlusOutlined />
@@ -167,7 +182,7 @@ function messageAuthor(message: ChatMessage): string {
         </div>
         <div v-else-if="!channels.length" class="channel-state">
           <p>还没有可访问频道。</p>
-          <UiButton tone="primary" @click="createDefaultChannel">创建站内大厅</UiButton>
+          <UiButton tone="primary" @click="createDefaultChannel">{{ defaultLobbyActionLabel }}</UiButton>
         </div>
         <button
           v-for="channel in channels"

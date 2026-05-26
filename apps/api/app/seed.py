@@ -10,6 +10,7 @@ from app.models.forum import Board, BoardMember, Post, Topic
 from app.models.user import User
 from app.schemas.forum import PostCreateRequest, TopicCreateRequest
 from app.services.forum import ForumService
+from app.services.quality_posts import QUALITY_POST_SPECS
 
 DEMO_PASSWORD = "parallellines-demo-123"
 
@@ -182,6 +183,19 @@ async def seed_demo_data(session: AsyncSession) -> None:
 
 def starter_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dict[str, object]]:
     return [
+        *[
+            {
+                "key": post.key,
+                "board": boards["announcements"],
+                "author": users["admin"],
+                "title": post.title,
+                "raw_md": post.raw_md,
+                "tags": post.tags,
+                "pinned": post.pinned,
+                "featured": post.featured,
+            }
+            for post in QUALITY_POST_SPECS
+        ],
         {
             "key": "welcome-guide",
             "board": boards["announcements"],
@@ -192,7 +206,7 @@ def starter_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dic
                 "这样后续讨论会留在同一条主题线里，方便检索和复用。"
             ),
             "tags": ["指南", "新手", "社区规则"],
-            "pinned": True,
+            "pinned": False,
             "featured": True,
         },
         {

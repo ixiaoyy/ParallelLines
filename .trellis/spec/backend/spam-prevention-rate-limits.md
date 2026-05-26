@@ -27,6 +27,7 @@ Write-path service calls:
 | `POST /boards/{slug}/topics` | `enforce_topic(request, current_user, title, raw_md)` |
 | `POST /topics/{id}/posts` | `enforce_reply(request, current_user, raw_md)` |
 | `PATCH /posts/{id}` | `enforce_reply(request, current_user, raw_md)` |
+| `POST /chat/channels/{id}/messages` | `enforce_chat_message(request, current_user, raw_text)` |
 | `POST /uploads` / `/uploads/avatar` | `enforce_upload(request, current_user)` |
 | `POST /moderation/flags` | `enforce_flag(request, current_user)` |
 
@@ -52,6 +53,7 @@ Config/env:
 - `RATE_LIMIT_LOGIN_IP`, `RATE_LIMIT_LOGIN_ACCOUNT`
 - `RATE_LIMIT_TOPIC_USER`, `RATE_LIMIT_TOPIC_IP`
 - `RATE_LIMIT_REPLY_USER`, `RATE_LIMIT_REPLY_IP`
+- `RATE_LIMIT_CHAT_MESSAGE_USER`, `RATE_LIMIT_CHAT_MESSAGE_IP`
 - `RATE_LIMIT_UPLOAD_USER`, `RATE_LIMIT_UPLOAD_IP`
 - `RATE_LIMIT_FLAG_USER`, `RATE_LIMIT_FLAG_IP`
 - `NEW_USER_LINK_LIMIT`, `NEW_USER_SCREENING_DAYS`

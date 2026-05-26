@@ -20,7 +20,6 @@ from app.api.v1 import (
     migrations,
     moderation,
     notifications,
-    payments,
     posts,
     search,
     site,
@@ -46,7 +45,6 @@ api_router.include_router(integrations.router)
 api_router.include_router(localization.router)
 api_router.include_router(invites.router)
 api_router.include_router(notifications.router)
-api_router.include_router(payments.router)
 api_router.include_router(search.router)
 api_router.include_router(tags.router)
 api_router.include_router(moderation.router)

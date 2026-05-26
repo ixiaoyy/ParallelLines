@@ -41,11 +41,19 @@ Database tables:
 - Unauthorized private/direct channel reads return `chat_channel_not_found` / 404 to avoid leaking
   channel existence.
 - `POST /messages` trims `raw_text`; empty text returns `chat_message_empty` / 422.
+- `POST /messages` uses the shared spam/rate-limit guard before persisting; bursts return
+  `rate_limited` / 429 without creating a chat message.
 - Message history:
   - default and `before_id` pagination return ascending messages for display;
   - `after_id` returns messages created after the anchor for reconnect;
   - `q` filters `raw_text` through ORM parameter binding.
 - SSE event name is `chat`, with data `{ "messages": ChatMessageResponse[], "presence": ChatPresenceResponse[] }`.
+- `POST /messages` and `PUT /presence` publish realtime events containing the complete
+  `ChatStreamResponse` payload for direct SSE fan-out; production deployments should use Redis
+  Pub/Sub for cross-worker fan-out.
+- The database remains the source of truth for initial history, search, reconnect `after_id`, and
+  periodic low-frequency reconciliation; new-message delivery must not perform one DB read per
+  connected listener.
 - `presence.typing=true` expires after a short TTL; `online=true` is derived from `last_seen_at`.
 - Account deletion/anonymization removes channel memberships and presence rows; retained messages
   continue pointing at the anonymized user placeholder.
@@ -58,8 +66,10 @@ Database tables:
 | Stranger opens private board channel | `chat_channel_not_found` / 404 |
 | Direct chat across block boundary | `chat_direct_blocked` / 422 |
 | Board channel without `board_slug` | `chat_board_required` / 422 |
+| Message burst exceeds chat limit | `rate_limited` / 429 |
 | `after_id` from another channel | `chat_message_not_found` / 404 |
 | Reconnect with `after_id=last_seen_message` | Stream first frame includes newer messages |
+| Redis Pub/Sub unavailable | Local payload fan-out works in one process; periodic DB snapshots keep stream safe |
 | Typing heartbeat expires | `typing=false` after TTL-derived response |
 | Search query has wildcard characters | Bound ORM query; no raw SQL concatenation |
 
@@ -78,6 +88,8 @@ Database tables:
 - Assertions:
   - private board channel ACL hides channel and messages from outsiders;
   - message send persists and search returns history;
+  - chat message bursts are rate-limited before persistence;
+  - realtime bus fans out message events without using Redis in unit tests;
   - SSE `after_id` returns missed messages;
   - presence heartbeat exposes online/typing user.
 - Run `ruff check` on touched chat, router, model, migration, and test files.
