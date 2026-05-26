@@ -3,6 +3,7 @@ import { BookOutlined } from "@ant-design/icons-vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
+import { tagToneClass } from "@/shared/theme/boardPalette";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 
 defineProps<{ topics: TopicCardVM[] }>();
@@ -34,7 +35,15 @@ defineProps<{ topics: TopicCardVM[] }>();
           </h3>
           <p>{{ topic.excerpt }}</p>
           <div class="founding-post__tags" aria-label="主题标签">
-            <span v-for="tag in topic.tags.slice(0, 3)" :key="tag">#{{ tag }}</span>
+            <RouterLink
+              v-for="tag in topic.tags.slice(0, 3)"
+              :key="tag"
+              class="founding-post__tag tone-chip"
+              :class="tagToneClass(tag)"
+              :to="{ name: 'search', query: { q: tag, tag } }"
+            >
+              #{{ tag }}
+            </RouterLink>
           </div>
         </div>
         <RouterLink class="founding-post__action" :to="topicDetailRoute(topic)">阅读全文</RouterLink>

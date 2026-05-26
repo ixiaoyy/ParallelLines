@@ -125,12 +125,24 @@ function setActionStatus(message: string) {
       <p class="topic-excerpt">{{ topic.excerpt }}</p>
 
       <div class="topic-meta-line">
-        <span class="category-chip tone-chip" :class="boardToneClass(topic.boardSlug)">
+        <RouterLink
+          class="category-chip tone-chip"
+          :class="boardToneClass(topic.boardSlug)"
+          :to="{ name: 'board-detail', params: { slug: topic.boardSlug } }"
+        >
           <span class="category-dot tone-mark-dot" aria-hidden="true"></span>
           {{ topic.boardName }}
-        </span>
+        </RouterLink>
 
-        <span v-for="tag in topic.tags" :key="tag" class="topic-tag tone-chip" :class="tagToneClass(tag)">#{{ tag }}</span>
+        <RouterLink
+          v-for="tag in topic.tags"
+          :key="tag"
+          class="topic-tag tone-chip"
+          :class="tagToneClass(tag)"
+          :to="{ name: 'search', query: { q: tag, tag } }"
+        >
+          #{{ tag }}
+        </RouterLink>
       </div>
 
       <div class="participant-strip" aria-label="参与者">

@@ -144,6 +144,10 @@ const {
   commit: (active) => setBoardFollow(slug.value, active, boardNotificationLevel.value),
   readActive: (response) => response.following,
   readCount: (response) => response.follower_count,
+  onDisabled: () => {
+    void router.push({ name: "auth", query: { redirect: route.fullPath } });
+  },
+  mockWhenDisabled: false,
 });
 
 watch(
@@ -243,6 +247,27 @@ const boardTopics = computed(() => {
     return matchesKeyword && matchesStatus;
   });
 });
+
+const quickLinks = computed(() => [
+  {
+    label: "接口文档",
+    description: "查看接口规范与示例",
+    icon: FileTextOutlined,
+    to: { name: "search", query: { q: "接口文档", board: slug.value } },
+  },
+  {
+    label: "常见问题",
+    description: "汇总高频问题与方案",
+    icon: BulbOutlined,
+    to: { name: "board-detail", params: { slug: slug.value }, query: { sort: "top" } },
+  },
+  {
+    label: "社区指南",
+    description: "了解提问规范与流程",
+    icon: CompassOutlined,
+    to: { name: "search", query: { q: "社区规范", tag: "社区规范" } },
+  },
+]);
 
 const solutionStats = computed(() => {
   const topicsInBoard = allBoardTopics.value;
@@ -532,36 +557,21 @@ async function updateBoardNotificationLevel(event: Event) {
           <UiCard class="sidebar-panel quick-links-panel">
             <h2>快捷入口</h2>
             <div class="quick-links">
-              <a href="#" class="quick-link-item" @click.prevent>
+              <RouterLink
+                v-for="entry in quickLinks"
+                :key="entry.label"
+                class="quick-link-item"
+                :to="entry.to"
+              >
                 <div class="quick-link-icon-wrapper">
-                  <FileTextOutlined class="quick-link-icon" />
+                  <component :is="entry.icon" class="quick-link-icon" />
                 </div>
                 <div class="quick-link-text">
-                  <h3>接口文档</h3>
-                  <p>查看接口规范与示例</p>
+                  <h3>{{ entry.label }}</h3>
+                  <p>{{ entry.description }}</p>
                 </div>
                 <RightOutlined class="quick-link-arrow" />
-              </a>
-              <a href="#" class="quick-link-item" @click.prevent>
-                <div class="quick-link-icon-wrapper">
-                  <BulbOutlined class="quick-link-icon" />
-                </div>
-                <div class="quick-link-text">
-                  <h3>常见问题</h3>
-                  <p>汇总高频问题与方案</p>
-                </div>
-                <RightOutlined class="quick-link-arrow" />
-              </a>
-              <a href="#" class="quick-link-item" @click.prevent>
-                <div class="quick-link-icon-wrapper">
-                  <CompassOutlined class="quick-link-icon" />
-                </div>
-                <div class="quick-link-text">
-                  <h3>社区指南</h3>
-                  <p>了解提问规范与流程</p>
-                </div>
-                <RightOutlined class="quick-link-arrow" />
-              </a>
+              </RouterLink>
             </div>
           </UiCard>
         </aside>
