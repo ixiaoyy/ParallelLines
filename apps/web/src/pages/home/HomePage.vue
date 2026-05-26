@@ -30,65 +30,66 @@ const tagsQuery = useTags(30);
 
 const boardSummaries = computed(() => boardsQuery.data.value ?? []);
 const feedTopics = computed(() => topicsQuery.data.value ?? []);
-const qualityPostKeywords = ["论坛初衷", "社区规范"];
+const communityGuideKeywords = ["论坛初衷", "社区规范"];
 
-const isNamedQualityPost = (topic: TopicCardVM) =>
-  qualityPostKeywords.some(
+const isCommunityGuideTopic = (topic: TopicCardVM) =>
+  communityGuideKeywords.some(
     (keyword) => topic.title.includes(keyword) || topic.tags.includes(keyword),
   );
 
-const qualityPostRank = (topic: TopicCardVM) => {
-  const rank = qualityPostKeywords.findIndex(
+const communityGuideRank = (topic: TopicCardVM) => {
+  const rank = communityGuideKeywords.findIndex(
     (keyword) => topic.title.includes(keyword) || topic.tags.includes(keyword),
   );
 
-  return rank === -1 ? qualityPostKeywords.length : rank;
+  return rank === -1 ? communityGuideKeywords.length : rank;
 };
 
-const pinnedQualityTopics = computed(() => {
-  const preferred = feedTopics.value.filter(isNamedQualityPost).sort((left, right) => {
-    return qualityPostRank(left) - qualityPostRank(right);
+const communityGuideTopics = computed(() => {
+  return feedTopics.value.filter(isCommunityGuideTopic).sort((left, right) => {
+    return communityGuideRank(left) - communityGuideRank(right);
   });
-  const pinnedFeatured = feedTopics.value.filter((topic) => topic.pinned && topic.featured);
-
-  return [...preferred, ...pinnedFeatured].filter(
-    (topic, index, topics) => topics.findIndex((candidate) => candidate.id === topic.id) === index,
-  );
 });
-const discoveryTopics = computed(() =>
-  feedTopics.value.filter(
-    (topic) => !pinnedQualityTopics.value.some((qualityTopic) => qualityTopic.id === topic.id),
-  ),
-);
+const discoveryTopics = computed(() => feedTopics.value);
 const topBoards = computed(() => boardSummaries.value.slice(0, 4));
 const railBoards = computed(() => boardSummaries.value.slice(0, 8));
 const topTags = computed(() => (tagsQuery.data.value ?? []).slice(0, 10));
 
 const hotTopics = computed(() =>
-  [...discoveryTopics.value].sort((left, right) => right.hotScore - left.hotScore).slice(0, 4),
+  [...feedTopics.value].sort((left, right) => right.hotScore - left.hotScore).slice(0, 4),
 );
 
 const visibleTopics = computed(() => {
   const sorted = [...discoveryTopics.value];
 
   if (activeTab.value === "top") {
-    return sorted.sort((left, right) => right.likeCount + right.replyCount - (left.likeCount + left.replyCount));
+    return sortPinnedFirst(
+      sorted,
+      (left, right) => right.likeCount + right.replyCount - (left.likeCount + left.replyCount),
+    );
   }
 
   if (activeTab.value === "hot") {
-    return sorted.sort((left, right) => right.hotScore - left.hotScore);
+    return sortPinnedFirst(sorted, (left, right) => right.hotScore - left.hotScore);
   }
 
   if (activeTab.value === "votes") {
-    return sorted.sort((left, right) => right.likeCount - left.likeCount);
+    return sortPinnedFirst(sorted, (left, right) => right.likeCount - left.likeCount);
   }
 
   if (activeTab.value === "categories") {
-    return sorted.sort((left, right) => left.boardName.localeCompare(right.boardName));
+    return sortPinnedFirst(sorted, (left, right) => left.boardName.localeCompare(right.boardName));
   }
 
-  return sorted;
+  return sortPinnedFirst(sorted, (left, right) => right.lastPostedAt.localeCompare(left.lastPostedAt));
 });
+
+function sortPinnedFirst(
+  topics: TopicCardVM[],
+  compare: (left: TopicCardVM, right: TopicCardVM) => number,
+) {
+  return topics.sort((left, right) => Number(right.pinned) - Number(left.pinned) || compare(left, right));
+}
 
 watch(
   () => route.hash,
@@ -143,9 +144,9 @@ function submitHeroSearch() {
           @submit-search="submitHeroSearch"
         />
         <HomeFoundingPost
-          v-if="pinnedQualityTopics.length"
+          v-if="communityGuideTopics.length"
           class="founding-post-slot"
-          :topics="pinnedQualityTopics"
+          :topics="communityGuideTopics"
         />
 
         <HomeSectionHead

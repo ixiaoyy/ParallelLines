@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BookOutlined, PushpinOutlined } from "@ant-design/icons-vue";
+import { BookOutlined } from "@ant-design/icons-vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
@@ -8,9 +8,9 @@ defineProps<{ topics: TopicCardVM[] }>();
 </script>
 
 <template>
-  <section class="home-founding-post" aria-label="置顶">
+  <section class="home-founding-post" aria-label="社区准则">
     <div class="founding-post__head">
-      <span class="founding-post__pill"><PushpinOutlined /> 置顶</span>
+      <span class="founding-post__pill"><BookOutlined /> 社区准则</span>
     </div>
 
     <div class="founding-post__list">
@@ -19,9 +19,8 @@ defineProps<{ topics: TopicCardVM[] }>();
           <BookOutlined />
         </div>
         <div class="founding-post__copy">
-          <div class="founding-post__eyebrow">
-            <span><PushpinOutlined /> 置顶</span>
-            <span v-if="topic.featured">精华</span>
+          <div v-if="topic.featured" class="founding-post__eyebrow">
+            <span>精选</span>
           </div>
           <h3>
             <RouterLink :to="topicDetailRoute(topic)">{{ topic.title }}</RouterLink>
