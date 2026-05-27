@@ -3557,6 +3557,11 @@
             ],
             "title": "Avatar Url"
           },
+          "can_create_topic": {
+            "default": true,
+            "title": "Can Create Topic",
+            "type": "boolean"
+          },
           "child_boards": {
             "items": {
               "$ref": "#/components/schemas/BoardResponse"
@@ -4065,6 +4070,11 @@
               }
             ],
             "title": "Avatar Url"
+          },
+          "can_create_topic": {
+            "default": true,
+            "title": "Can Create Topic",
+            "type": "boolean"
           },
           "color": {
             "title": "Color",
@@ -7309,6 +7319,18 @@
       },
       "PasswordResetConfirmRequest": {
         "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
           "new_password": {
             "maxLength": 128,
             "minLength": 8,
@@ -7317,7 +7339,7 @@
           },
           "token": {
             "maxLength": 256,
-            "minLength": 20,
+            "minLength": 6,
             "title": "Token",
             "type": "string"
           }

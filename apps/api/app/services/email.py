@@ -90,8 +90,8 @@ class EmailService:
         body = (
             f"{username}，你好：\n\n"
             "你正在重置平行线账号密码。\n"
-            f"重置令牌：{token}\n"
-            f"令牌将在 {self.settings.password_reset_token_ttl_minutes} 分钟后失效。\n\n"
+            f"重置验证码：{token}\n"
+            f"验证码将在 {self.settings.password_reset_token_ttl_minutes} 分钟后失效。\n\n"
             "如果这不是你本人操作，请忽略这封邮件。"
         )
 

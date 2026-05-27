@@ -233,7 +233,7 @@ async def test_password_reset_is_uniform_expiring_and_one_time() -> None:
         assert latest_email_secret("missing-reset@example.com", kind="password_reset") is None
 
         expired_token = latest_email_secret("resetter@example.com", kind="password_reset")
-        assert expired_token
+        assert expired_token and expired_token.isdigit() and len(expired_token) == 6
         async with session_factory() as session:
             reset_row = await session.scalar(
                 select(UserSecurityToken)
@@ -249,7 +249,11 @@ async def test_password_reset_is_uniform_expiring_and_one_time() -> None:
 
         expired = await client.post(
             "/api/v1/auth/password-reset/confirm",
-            json={"token": expired_token, "new_password": "new-pass-123"},
+            json={
+                "email": "resetter@example.com",
+                "token": expired_token,
+                "new_password": "new-pass-123",
+            },
         )
         assert expired.status_code == 422
         assert expired.json()["error"]["code"] == "invalid_reset_token"
@@ -260,17 +264,35 @@ async def test_password_reset_is_uniform_expiring_and_one_time() -> None:
         )
         await drain_background_jobs(session_factory)
         fresh_token = latest_email_secret("resetter@example.com", kind="password_reset")
-        assert fresh_token and fresh_token != expired_token
+        assert fresh_token and fresh_token.isdigit() and len(fresh_token) == 6
+        wrong = await client.post(
+            "/api/v1/auth/password-reset/confirm",
+            json={
+                "email": "resetter@example.com",
+                "token": "000000" if fresh_token != "000000" else "000001",
+                "new_password": "new-pass-123",
+            },
+        )
+        assert wrong.status_code == 422
+        assert wrong.json()["error"]["code"] == "invalid_reset_token"
 
         confirmed = await client.post(
             "/api/v1/auth/password-reset/confirm",
-            json={"token": fresh_token, "new_password": "new-pass-123"},
+            json={
+                "email": "resetter@example.com",
+                "token": fresh_token,
+                "new_password": "new-pass-123",
+            },
         )
         assert confirmed.status_code == 200
 
         reused = await client.post(
             "/api/v1/auth/password-reset/confirm",
-            json={"token": fresh_token, "new_password": "newer-pass-123"},
+            json={
+                "email": "resetter@example.com",
+                "token": fresh_token,
+                "new_password": "newer-pass-123",
+            },
         )
         assert reused.status_code == 422
         assert reused.json()["error"]["code"] == "invalid_reset_token"

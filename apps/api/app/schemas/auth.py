@@ -65,7 +65,8 @@ class PasswordResetStartResponse(BaseModel):
 
 
 class PasswordResetConfirmRequest(BaseModel):
-    token: str = Field(min_length=20, max_length=256)
+    email: EmailStr | None = None
+    token: str = Field(min_length=6, max_length=256)
     new_password: str = Field(min_length=8, max_length=128)
 
 

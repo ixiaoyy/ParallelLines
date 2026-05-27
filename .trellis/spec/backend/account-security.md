@@ -16,7 +16,7 @@ API endpoints under `/api/v1/auth`:
 | Endpoint | Request | Response |
 |---|---|---|
 | `POST /password-reset/request` | `{ email }` | `{ ok, expires_in_seconds }` |
-| `POST /password-reset/confirm` | `{ token, new_password }` | `{ ok }` |
+| `POST /password-reset/confirm` | `{ email, token, new_password }` where `token` is the 6-digit reset code | `{ ok }` |
 | `POST /password/change` | Bearer + `{ current_password, new_password }` | `{ ok }` |
 | `POST /email-change/request` | Bearer + `{ new_email, password }` | `{ email, expires_in_seconds }` |
 | `POST /email-change/confirm` | `{ token }` | `UserPublic` |
@@ -40,12 +40,14 @@ DB tables/columns:
 
 ### 3. Contracts
 
-- Reset/email-change raw tokens are delivered by `send_email` background jobs; `user_security_tokens`
-  stores only HMAC hashes, expiry, and consumption state.
+- Reset codes and email-change raw tokens are delivered by `send_email` background jobs;
+  `user_security_tokens` stores only HMAC hashes, expiry, attempt counts, and consumption state.
 - Request paths enqueue email jobs with `BackgroundJobService(..., commit=False)` and do not perform SMTP work synchronously.
 - `request_password_reset` returns the same success payload for known and unknown emails.
 - Consuming a reset or email-change token sets `consumed_at`; successful confirmation also
   consumes other open tokens of the same purpose for that user.
+- Password reset confirmation scopes the 6-digit code by email and increments
+  `user_security_tokens.attempt_count` on bad codes to prevent brute-force retries.
 - Password reset revokes all sessions; password change revokes all sessions except the current
   access-token `sid`.
 - `TokenPair` includes `session_id`; access and refresh JWTs include `sid`, and

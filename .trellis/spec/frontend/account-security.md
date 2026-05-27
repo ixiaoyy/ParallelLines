@@ -41,8 +41,10 @@ Composables:
   1. password accepted but `two_factor_required=true`: show second-factor form, keep tokens empty;
   2. full token pair: persist tokens and redirect.
 - Forgot-password UI always says "if the email exists" and never displays account existence.
-- Password reset confirm requires the emailed token and new password; successful reset returns the
-  user to login and does not auto-login.
+- Password reset confirm requires the registered email, the emailed 6-digit reset code, and two
+  matching new-password entries; successful reset returns the user to login and does not auto-login.
+- Password creation/change inputs should use a right-side show/hide eye affordance while preserving
+  native autocomplete values.
 - `/security` is visible from topbar/mobile nav only for logged-in users. Logged-out users see a
   clear login CTA.
 - Security page panels:

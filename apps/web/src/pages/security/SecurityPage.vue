@@ -20,6 +20,7 @@ import { ApiError } from "@/shared/api/client";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
+import PasswordField from "@/shared/ui/PasswordField.vue";
 
 const currentUserQuery = useCurrentUser();
 const sessionsQuery = useSessions();
@@ -36,6 +37,7 @@ const revokeOtherSessionsMutation = useRevokeOtherSessions();
 
 const currentPassword = ref("");
 const newPassword = ref("");
+const confirmNewPassword = ref("");
 const passwordNotice = ref("");
 const passwordError = ref("");
 
@@ -78,6 +80,11 @@ async function submitPasswordChange() {
     return;
   }
 
+  if (newPassword.value !== confirmNewPassword.value) {
+    passwordError.value = "两次输入的新密码不一致。";
+    return;
+  }
+
   try {
     await changePasswordMutation.mutateAsync({
       current_password: currentPassword.value,
@@ -85,6 +92,7 @@ async function submitPasswordChange() {
     });
     currentPassword.value = "";
     newPassword.value = "";
+    confirmNewPassword.value = "";
     passwordNotice.value = "密码已更新，其他登录会话已自动撤销。";
   } catch (error) {
     passwordError.value = toSecurityError(error, "密码修改失败，请稍后再试。");
@@ -329,11 +337,15 @@ function toSecurityError(error: unknown, fallback: string): string {
         <form class="security-form" @submit.prevent="submitPasswordChange">
           <label>
             <span>当前密码</span>
-            <input v-model="currentPassword" type="password" autocomplete="current-password" />
+            <PasswordField v-model="currentPassword" autocomplete="current-password" />
           </label>
           <label>
             <span>新密码</span>
-            <input v-model="newPassword" type="password" autocomplete="new-password" />
+            <PasswordField v-model="newPassword" autocomplete="new-password" />
+          </label>
+          <label>
+            <span>确认新密码</span>
+            <PasswordField v-model="confirmNewPassword" autocomplete="new-password" />
           </label>
           <p v-if="passwordError" class="security-error">{{ passwordError }}</p>
           <p v-if="passwordNotice" class="security-success">{{ passwordNotice }}</p>
@@ -353,7 +365,7 @@ function toSecurityError(error: unknown, fallback: string): string {
           </label>
           <label>
             <span>当前密码</span>
-            <input v-model="emailPassword" type="password" autocomplete="current-password" />
+            <PasswordField v-model="emailPassword" autocomplete="current-password" />
           </label>
           <UiButton type="submit" tone="primary" :disabled="isSecurityBusy">发送确认令牌</UiButton>
         </form>
@@ -376,7 +388,7 @@ function toSecurityError(error: unknown, fallback: string): string {
         <div v-if="!currentUser.two_factor_enabled" class="security-form">
           <label>
             <span>当前密码</span>
-            <input v-model="twoFactorPassword" type="password" autocomplete="current-password" />
+            <PasswordField v-model="twoFactorPassword" autocomplete="current-password" />
           </label>
           <UiButton tone="primary" :disabled="isSecurityBusy" @click="setupTwoFactor">生成认证器密钥</UiButton>
           <div v-if="twoFactorSecret" class="totp-secret">
@@ -393,7 +405,7 @@ function toSecurityError(error: unknown, fallback: string): string {
         <div v-else class="security-form">
           <label>
             <span>当前密码</span>
-            <input v-model="twoFactorPassword" type="password" autocomplete="current-password" />
+            <PasswordField v-model="twoFactorPassword" autocomplete="current-password" />
           </label>
           <label>
             <span>验证码或恢复码</span>

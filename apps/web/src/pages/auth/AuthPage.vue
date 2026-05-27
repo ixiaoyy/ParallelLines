@@ -15,6 +15,7 @@ import { ApiError } from "@/shared/api/client";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
+import PasswordField from "@/shared/ui/PasswordField.vue";
 
 type AuthTab = "login" | "register" | "forgot";
 
@@ -39,10 +40,11 @@ const twoFactorCode = ref("");
 const username = ref("");
 const email = ref("");
 const registerPassword = ref("");
+const registerConfirmPassword = ref("");
 const resetEmail = ref("");
 const resetToken = ref("");
 const resetNewPassword = ref("");
-const resetRequestedEmail = ref("");
+const resetConfirmPassword = ref("");
 const pendingVerificationEmail = ref("");
 const verificationCode = ref("");
 const devVerificationCode = ref<string | null>(null);
@@ -130,8 +132,7 @@ async function requestPasswordReset() {
 
   try {
     const response = await requestPasswordResetMutation.mutateAsync({ email: trimmedEmail });
-    resetRequestedEmail.value = trimmedEmail;
-    formNotice.value = `如果邮箱存在，重置令牌已发送，请在 ${
+    formNotice.value = `如果邮箱存在，6 位重置验证码已发送，请在 ${
       Math.floor(response.expires_in_seconds / 60)
     } 分钟内完成。`;
   } catch (error) {
@@ -142,8 +143,15 @@ async function requestPasswordReset() {
 async function confirmPasswordReset() {
   formError.value = "";
   formNotice.value = "";
-  if (!resetToken.value.trim()) {
-    formError.value = "请输入邮件中的重置令牌。";
+  const trimmedEmail = resetEmail.value.trim();
+  const token = resetToken.value.trim();
+  if (!trimmedEmail) {
+    formError.value = "请输入注册邮箱。";
+    return;
+  }
+
+  if (!/^\d{6}$/.test(token)) {
+    formError.value = "请输入邮件中的 6 位重置验证码。";
     return;
   }
 
@@ -152,13 +160,20 @@ async function confirmPasswordReset() {
     return;
   }
 
+  if (resetNewPassword.value !== resetConfirmPassword.value) {
+    formError.value = "两次输入的新密码不一致。";
+    return;
+  }
+
   try {
     await confirmPasswordResetMutation.mutateAsync({
-      token: resetToken.value.trim(),
+      email: trimmedEmail,
+      token,
       new_password: resetNewPassword.value,
     });
     resetToken.value = "";
     resetNewPassword.value = "";
+    resetConfirmPassword.value = "";
     formNotice.value = "密码已重置，请使用新密码登录。";
     activeTab.value = "login";
     const query = { ...route.query };
@@ -189,6 +204,11 @@ async function submitRegister() {
     return;
   }
 
+  if (registerPassword.value !== registerConfirmPassword.value) {
+    formError.value = "两次输入的密码不一致。";
+    return;
+  }
+
   try {
     const registration = await registerMutation.mutateAsync({
       username: trimmedUsername,
@@ -199,6 +219,7 @@ async function submitRegister() {
     verificationCode.value = registration.dev_verification_code ?? "";
     devVerificationCode.value = registration.dev_verification_code;
     registerPassword.value = "";
+    registerConfirmPassword.value = "";
     formNotice.value = `验证码已发送至 ${registration.email}，请在 ${
       Math.floor(registration.expires_in_seconds / 60)
     } 分钟内完成激活。`;
@@ -304,7 +325,7 @@ function toAuthError(error: unknown, fallback: string): string {
     }
 
     if (error.code === "invalid_reset_token") {
-      return "密码重置令牌无效或已过期。";
+      return "重置验证码无效或已过期。";
     }
 
     if (error.code === "verification_code_expired") {
@@ -358,7 +379,7 @@ function toValidationError(details: Record<string, unknown>): string | null {
   }
 
   if (hasFieldError(errors, "token")) {
-    return "令牌格式不正确。";
+    return "请输入邮件中的 6 位重置验证码。";
   }
 
   return null;
@@ -435,7 +456,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
         </label>
         <label>
           <span>密码</span>
-          <input v-model="loginPassword" type="password" autocomplete="current-password" placeholder="请输入密码" />
+          <PasswordField v-model="loginPassword" autocomplete="current-password" placeholder="请输入密码" />
         </label>
         <p v-if="formError" class="auth-error" role="alert">{{ formError }}</p>
         <UiButton type="submit" tone="primary" :disabled="isSubmitting">
@@ -451,19 +472,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
           <input v-model="resetEmail" type="email" autocomplete="email" placeholder="you@example.com" />
         </label>
         <UiButton type="button" tone="primary" :disabled="isSubmitting" @click="requestPasswordReset">
-          {{ requestPasswordResetMutation.isPending.value ? "发送中…" : "发送重置令牌" }}
+          {{ requestPasswordResetMutation.isPending.value ? "发送中…" : "发送重置验证码" }}
         </UiButton>
         <label>
-          <span>重置令牌</span>
-          <input v-model="resetToken" autocomplete="one-time-code" placeholder="粘贴邮件中的令牌" />
+          <span>重置验证码</span>
+          <input
+            v-model="resetToken"
+            autocomplete="one-time-code"
+            inputmode="numeric"
+            maxlength="6"
+            placeholder="请输入 6 位验证码"
+          />
         </label>
         <label>
           <span>新密码</span>
-          <input v-model="resetNewPassword" type="password" autocomplete="new-password" placeholder="至少 8 位" />
+          <PasswordField v-model="resetNewPassword" autocomplete="new-password" placeholder="至少 8 位" />
         </label>
-        <p v-if="resetRequestedEmail" class="auth-helper">
-          已为 <strong>{{ resetRequestedEmail }}</strong> 发起找回流程。为避免泄露账号状态，不会提示邮箱是否存在。
-        </p>
+        <label>
+          <span>确认新密码</span>
+          <PasswordField v-model="resetConfirmPassword" autocomplete="new-password" placeholder="再次输入新密码" />
+        </label>
         <p v-if="formError" class="auth-error" role="alert">{{ formError }}</p>
         <div class="auth-actions">
           <UiButton type="button" tone="primary" :disabled="isSubmitting" @click="confirmPasswordReset">
@@ -491,7 +519,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
         </label>
         <label>
           <span>密码</span>
-          <input v-model="registerPassword" type="password" autocomplete="new-password" placeholder="至少 8 位" />
+          <PasswordField v-model="registerPassword" autocomplete="new-password" placeholder="至少 8 位" />
+        </label>
+        <label>
+          <span>确认密码</span>
+          <PasswordField v-model="registerConfirmPassword" autocomplete="new-password" placeholder="再次输入密码" />
         </label>
         <p v-if="formError" class="auth-error" role="alert">{{ formError }}</p>
         <UiButton type="submit" tone="primary" :disabled="isSubmitting">

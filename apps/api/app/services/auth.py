@@ -265,7 +265,10 @@ class AuthService:
                 to_email=user.email,
                 username=user.username,
                 secret=token,
-                idempotency_key=f"email:{PASSWORD_RESET_PURPOSE}:{self._hash_token(token)}",
+                idempotency_key=(
+                    f"email:{PASSWORD_RESET_PURPOSE}:"
+                    f"{self._hash_user_security_token(user.id, PASSWORD_RESET_PURPOSE, token)}"
+                ),
                 commit=False,
             )
             await self.session.commit()
@@ -274,7 +277,7 @@ class AuthService:
         )
 
     async def confirm_password_reset(self, payload: PasswordResetConfirmRequest) -> None:
-        token = await self._consume_security_token(payload.token, purpose=PASSWORD_RESET_PURPOSE)
+        token = await self._consume_password_reset_token(payload)
         user = await self.session.get(User, token.user_id)
         if not user or user.status != "active":
             raise ValidationError("invalid_reset_token", "Password reset token is invalid")
@@ -568,19 +571,78 @@ class AuthService:
         ttl_minutes: int,
         payload: dict[str, object] | None = None,
     ) -> str:
-        token = secrets.token_urlsafe(32)
+        token, token_hash = await self._new_security_token(user, purpose)
         now = utcnow()
         self.session.add(
             UserSecurityToken(
                 user_id=user.id,
                 purpose=purpose,
-                token_hash=self._hash_token(token),
+                token_hash=token_hash,
                 email=email,
                 payload=json.dumps(payload) if payload else None,
                 sent_at=now,
                 expires_at=now + timedelta(minutes=ttl_minutes),
             )
         )
+        return token
+
+    async def _new_security_token(self, user: User, purpose: str) -> tuple[str, str]:
+        if purpose != PASSWORD_RESET_PURPOSE:
+            token = secrets.token_urlsafe(32)
+            return token, self._hash_token(token)
+
+        for _ in range(20):
+            token = f"{secrets.randbelow(1_000_000):06d}"
+            token_hash = self._hash_user_security_token(user.id, purpose, token)
+            existing = await self.session.scalar(
+                select(UserSecurityToken.id)
+                .where(UserSecurityToken.token_hash == token_hash)
+                .limit(1)
+            )
+            if existing is None:
+                return token, token_hash
+
+        token = secrets.token_urlsafe(32)
+        return token, self._hash_token(token)
+
+    async def _consume_password_reset_token(
+        self, payload: PasswordResetConfirmRequest
+    ) -> UserSecurityToken:
+        raw_token = payload.token.strip()
+        email = str(payload.email).lower() if payload.email else None
+        if email and raw_token.isdigit() and len(raw_token) == 6:
+            return await self._consume_password_reset_code(email=email, code=raw_token)
+        return await self._consume_security_token(raw_token, purpose=PASSWORD_RESET_PURPOSE)
+
+    async def _consume_password_reset_code(
+        self, *, email: str, code: str
+    ) -> UserSecurityToken:
+        token = await self.session.scalar(
+            select(UserSecurityToken)
+            .where(
+                UserSecurityToken.purpose == PASSWORD_RESET_PURPOSE,
+                UserSecurityToken.email == email,
+                UserSecurityToken.consumed_at.is_(None),
+            )
+            .order_by(desc(UserSecurityToken.sent_at))
+            .limit(1)
+        )
+        if not token or _as_utc(token.expires_at) <= utcnow():
+            raise ValidationError("invalid_reset_token", "Password reset token is invalid")
+        if token.attempt_count >= self.settings.password_reset_code_max_attempts:
+            raise ValidationError("invalid_reset_token", "Password reset token is invalid")
+        if not hmac.compare_digest(
+            token.token_hash,
+            self._hash_user_security_token(token.user_id, PASSWORD_RESET_PURPOSE, code),
+        ):
+            token.attempt_count += 1
+            await self.session.commit()
+            raise ValidationError(
+                "invalid_reset_token",
+                "Password reset token is invalid",
+                {"attempts_remaining": self._password_reset_attempts_remaining(token)},
+            )
+        token.consumed_at = utcnow()
         return token
 
     async def _consume_security_token(self, raw_token: str, *, purpose: str) -> UserSecurityToken:
@@ -680,6 +742,9 @@ class AuthService:
     def _hash_token(self, token: str) -> str:
         return hmac.new(self.settings.jwt_secret_key.encode(), token.encode(), sha256).hexdigest()
 
+    def _hash_user_security_token(self, user_id: str, purpose: str, token: str) -> str:
+        return self._hash_security_secret(user_id, purpose, token)
+
     def _hash_verification_code(self, user_id: str, code: str) -> str:
         return self._hash_security_secret(user_id, "email_verification", code)
 
@@ -710,6 +775,9 @@ class AuthService:
 
     def _attempts_remaining(self, verification: EmailVerificationCode) -> int:
         return max(0, self.settings.email_verification_max_attempts - verification.attempt_count)
+
+    def _password_reset_attempts_remaining(self, token: UserSecurityToken) -> int:
+        return max(0, self.settings.password_reset_code_max_attempts - token.attempt_count)
 
     def _request_user_agent(self, request: Request | None) -> str | None:
         if request is None:

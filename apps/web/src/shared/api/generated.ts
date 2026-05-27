@@ -932,6 +932,7 @@ export interface components {
     BoardDetailResponse: {
       allowed_tags?: Array<string>;
       avatar_url?: string | null;
+      can_create_topic?: boolean;
       child_boards?: Array<components["schemas"]["BoardResponse"]>;
       color: string;
       created_at: string;
@@ -1010,6 +1011,7 @@ export interface components {
     BoardResponse: {
       allowed_tags?: Array<string>;
       avatar_url?: string | null;
+      can_create_topic?: boolean;
       color: string;
       created_at: string;
       default_notification_level: "muted" | "normal" | "tracking" | "watching";
@@ -1524,6 +1526,7 @@ export interface components {
       providers: Array<string>;
     };
     PasswordResetConfirmRequest: {
+      email?: string | null;
       new_password: string;
       token: string;
     };
