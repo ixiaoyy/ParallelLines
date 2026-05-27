@@ -18,4 +18,5 @@ apps/web/test-results/
 apps/web/playwright-report/
 apps/api/smoke-local.db
 apps/api/*.db
+apps/api/var/
 参考/

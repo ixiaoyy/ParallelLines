@@ -265,8 +265,8 @@ def upgrade() -> None:
     if not table_exists(bind, "boards") or not table_exists(bind, "topics"):
         return
     if bind.execute(sa.select(sa.func.count()).select_from(boards)).scalar_one() == 0:
-        # Fresh installs are seeded after Alembic runs. Do not create boards here,
-        # otherwise `python -m app.seed --if-empty` would be skipped.
+        # Fresh installs stay empty until an operator creates/imports content.
+        # Do not create boards in this migration.
         return
 
     author = select_migration_author(bind)

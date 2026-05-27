@@ -255,7 +255,7 @@ def upgrade() -> None:
         about_id = ensure_about_topic(bind, int(board.id), board_author_id, spec)
         normalize_board_pins(bind, int(board.id), about_id)
 
-    hide_seed_clutter_topics(bind)
+    hide_clutter_topics(bind)
     recompute_board_counters(bind)
     recompute_tag_counters(bind)
 
@@ -471,7 +471,7 @@ def normalize_board_pins(bind: sa.Connection, board_id: int, about_id: int) -> N
         )
 
 
-def hide_seed_clutter_topics(bind: sa.Connection) -> None:
+def hide_clutter_topics(bind: sa.Connection) -> None:
     current_time = now()
     clutter_ids = bind.execute(
         sa.select(topics.c.id).where(

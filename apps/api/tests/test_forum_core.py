@@ -161,8 +161,8 @@ async def test_sync_quality_posts_writes_official_topics_without_pin() -> None:
 
     async with session_factory() as session:
         user = User(
-            username="parallel_admin",
-            email="parallel_admin@example.com",
+            username="official_author",
+            email="official_author@example.com",
             hashed_password="hashed",
             role="admin",
         )

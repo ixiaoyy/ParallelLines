@@ -22,17 +22,11 @@ Services:
 - API: <http://localhost:8000>
 - API health: <http://localhost:8000/healthz>
 - API metrics: <http://localhost:8000/metrics>
-- MySQL: `localhost:3306`, database `parallellines`, root password `root`
 - Redis: `localhost:6379`
 
-`docker compose up` runs Alembic migrations, seeds demo data, starts the API, web preview server, MySQL, Redis, and the unified background job worker.
-
-Seeded local admin accounts share this local-only password: `parallellines-demo-123`.
-
-| Username | Role |
-|---|---|
-| `多动脑子z` | admin / 默认官方内容作者 |
-| `大脚板` | admin |
+`docker compose up` reads `apps/api/.env`, runs Alembic migrations against the configured
+`DATABASE_URL`, then starts the API, web preview server, Redis, and the unified background job
+worker. Compose uses only that configured database and does not create users/content automatically.
 
 ## Local Development without Docker
 
@@ -43,7 +37,6 @@ cd apps/api
 uv sync
 Copy-Item .env.example .env  # then edit DATABASE_URL / JWT_SECRET_KEY
 uv run alembic upgrade head
-uv run python -m app.seed
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
@@ -172,7 +165,7 @@ Troubleshooting:
 
 - API returns 401 after login: verify `JWT_SECRET_KEY` is stable across API replicas.
 - Frontend cannot call API: verify `VITE_API_BASE_URL` was set at build time and `CORS_ORIGINS` includes the web origin.
-- Docker API cannot connect to DB: wait for `db` healthcheck or inspect `docker compose logs db api`.
+- Docker API cannot connect to DB: verify `apps/api/.env` has the intended `DATABASE_URL`, then inspect `docker compose logs api worker`.
 - Smoke test cannot find new board: confirm the API URL points to the same backend used by the web app.
 
 ## Design Artifacts

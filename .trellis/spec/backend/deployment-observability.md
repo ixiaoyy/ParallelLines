@@ -4,8 +4,8 @@
 
 ### 1. Scope / Trigger
 
-- Trigger: adding Docker Compose, CI, seed data, Playwright smoke tests, API metrics, worker runtime, and operations documentation.
-- Applies to `docker-compose.yml`, `apps/api/Dockerfile`, `apps/web/Dockerfile`, `.github/workflows/ci.yml`, `README.md`, `app/main.py`, `app/seed.py`, and `app/workers/`.
+- Trigger: adding Docker Compose, CI, Playwright smoke tests, API metrics, worker runtime, and operations documentation.
+- Applies to `docker-compose.yml`, `apps/api/Dockerfile`, `apps/web/Dockerfile`, `.github/workflows/ci.yml`, `README.md`, `app/main.py`, and `app/workers/`.
 
 ### 2. Signatures
 
@@ -13,10 +13,9 @@ Runtime services:
 
 | Service | Command / Port | Contract |
 |---|---|---|
-| `api` | `uvicorn app.main:app --host 0.0.0.0 --port 8000` | Runs migrations/seed in Compose before serving |
+| `api` | `uvicorn app.main:app --host 0.0.0.0 --port 8000` | Runs migrations in Compose before serving |
 | `web` | `pnpm --dir apps/web preview --host 0.0.0.0 --port 5174` | Static Vite preview built with `VITE_API_BASE_URL` |
 | `worker` | `python -m app.workers.background_jobs` | Unified queue worker for mail, notifications, hot ranking, upload cleanup, and session cleanup |
-| `mysql` | `mysql:8.4` | MySQL source of truth |
 | `redis` | `redis:7-alpine` | Cache/coordination dependency |
 
 Email verification env:
@@ -85,12 +84,6 @@ API ops endpoints:
   - `parallellines_request_duration_seconds_total`
   - `parallellines_requests_by_status_total{status="..."}`
 
-Seed command:
-
-- `python -m app.seed` idempotently creates demo users, boards, memberships, and starter topics.
-- `python -m app.seed --if-empty` first checks for existing boards or topics and skips seeding
-  when content already exists; Docker Compose uses this guarded mode during API startup.
-
 CI commands:
 
 - Backend: `uv sync --frozen`, `uv run ruff check app tests`, `uv run pytest -q`.
@@ -99,19 +92,22 @@ CI commands:
 
 ### 3. Contracts
 
-- Docker Compose must start a usable local environment from an empty volume with `docker compose up --build`.
-- API startup in Compose must run `alembic upgrade head` before `python -m app.seed --if-empty`.
+- Docker Compose must start a usable environment with the database configured in `apps/api/.env`;
+  it must use only that configured database and must not create users/content automatically.
+- API startup in Compose must run `alembic upgrade head` before serving traffic.
 - Worker image reuses the API build and must not run migrations.
 - API and `worker` must share the same `UPLOAD_STORAGE_PATH` and `BACKUP_STORAGE_PATH`
   volumes; otherwise DB metadata will point at files the cleanup handler, backup
   handler, or API cannot see.
 - `VITE_API_BASE_URL` is a build-time frontend contract; Docker build args and CI env must set it explicitly when not using the default.
-- CI and Docker Compose start MySQL for migration and Playwright smoke gates.
+- CI may start MySQL for isolated migration/smoke gates; Docker Compose deployment uses the
+  configured external `DATABASE_URL`.
 - Compose API and worker services must not override `DATABASE_URL` after `env_file`;
-  otherwise deployment can silently use the internal seed database while operators
+  otherwise deployment can silently use the wrong database while operators
   believe `apps/api/.env` points at the real database.
 - Slow API requests log `request_slow` when duration exceeds `SLOW_REQUEST_MS`.
-- Seed data must not log or print passwords; README may document demo credentials for local-only use.
+- Preloaded users/content must not run automatically in Compose and must not be used against
+  production or shared databases.
 - Registration creates a pending account, stores only a verification-code hash, and activates the user only after `/auth/verify-email`.
 - SMTP delivery failures are recorded on `background_jobs.last_error` and
   `background_job_logs`; logs must not contain passwords or SMTP secrets.
@@ -122,8 +118,8 @@ CI commands:
 
 | Case | Expected behavior |
 |---|---|
-| Empty Docker volume | Migrations and guarded seed run before API serves traffic |
-| Existing content database | Guarded seed logs a skip and does not rewrite demo users, boards, topics, or posts |
+| Empty configured database | Migrations run before API serves traffic; no users/content are inserted automatically |
+| Existing content database | Compose does not rewrite users, boards, topics, or posts |
 | API dependency down | Compose healthchecks keep dependent services waiting |
 | Frontend built with wrong API URL | README troubleshooting points to `VITE_API_BASE_URL` |
 | Slow request | Structured warning log includes method, path, status, duration, threshold |
@@ -139,9 +135,9 @@ CI commands:
 
 ### 5. Good/Base/Bad Cases
 
-- Good: new developer runs `docker compose up --build`, opens web, sees seeded boards, checks `/metrics`, and can run smoke tests.
+- Good: operator runs `docker compose up --build`, opens web against the database configured in `apps/api/.env`, checks `/metrics`, and can run smoke tests.
 - Base: CI runs backend and frontend quality gates, then starts temporary API/web servers and executes Playwright happy path.
-- Bad: a Docker entrypoint seeds data before migrations, or CI runs smoke tests against a frontend build pointing at a different API URL.
+- Bad: a Docker entrypoint creates users/content before migrations, or CI runs smoke tests against a frontend build pointing at a different API URL.
 - Bad: deploying with `EMAIL_DELIVERY_MODE=memory`, which exposes a dev-only verification code in API responses.
 - Bad: adding a second standalone worker service instead of a `JOB_HANDLERS` entry in the unified worker.
 
@@ -160,11 +156,12 @@ CI commands:
 #### Wrong
 
 ```yaml
-command: python -m app.seed && alembic upgrade head && uvicorn app.main:app
+environment:
+  DATABASE_URL: <overrides-apps-api-env>
 ```
 
 #### Correct
 
 ```yaml
-command: sh -c "alembic upgrade head && python -m app.seed --if-empty && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 ```

@@ -9,21 +9,6 @@ services:
       timeout: 3s
       retries: 20
 
-  mysql:
-    image: mysql:8.4
-    environment:
-      MYSQL_DATABASE: parallellines
-      MYSQL_ROOT_PASSWORD: root
-    expose:
-      - "3306"
-    volumes:
-      - mysql-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-
   api:
     build:
       context: ./apps/api
@@ -35,13 +20,10 @@ services:
       - upload-data:/var/lib/parallellines/uploads
       - backup-data:/var/lib/parallellines/backups
     depends_on:
-      mysql:
-        condition: service_healthy
       redis:
         condition: service_healthy
     command: >
       sh -c "alembic upgrade head &&
-      python -m app.seed --if-empty &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000"
     healthcheck:
       test:
@@ -93,6 +75,5 @@ services:
       - web
 
 volumes:
-  mysql-data:
   upload-data:
   backup-data:
