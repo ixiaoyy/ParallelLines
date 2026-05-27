@@ -23,6 +23,15 @@ Keep this managed block so 'trellis update' can refresh the instructions.
 
 ---
 
+# 本地验证与测试约定
+
+- **不要默认运行 `pnpm test:api`**：本地测试数据库并不是默认的 `127.0.0.1:3306/parallellines_test`，直接跑会因 MySQL 连接被拒绝产生无效失败。
+- 只有在用户明确要求，或用户说明测试数据库已按当前环境配置就绪时，才运行 `pnpm test:api`。
+- API 改动默认做轻量验证：`git diff --check`、相关 Python 文件 `python -m py_compile ...`，以及必要的迁移/schema 语法检查。
+- Web 改动可默认运行 `pnpm typecheck:web`。
+
+---
+
 # 前端配色与按钮规范（ParallelLines / apps/web）
 
 **修改配色前必读。** 不要凭感觉改渐变或「更现代」的实心色；全局只改下面列出的源文件，页面里尽量用 CSS 变量。
