@@ -33,6 +33,9 @@ Routes:
 - `/u/:username` must not show relationship controls for own profile.
 - Unauthenticated relationship/PM actions route to `/auth?redirect=<current path>`.
 - Blocking and ignoring update visible helper copy and invalidate profile/user topics/notifications.
+- Topic detail post rows may expose a “屏蔽用户” action for other authors; it must use the
+  relationship API, invalidate topic detail/post queries, and show a visible hidden-post status
+  rather than only hiding posts in local component state.
 - Private-message creation from profile sends `{ participant_usernames, title, raw_md }` and navigates to the returned topic route.
 - `/messages` lists only server-returned PM topics; no fixture fallback.
 - Notification UI recognizes `user_new_topic` and `private_message` types and links PM notifications to the private topic.

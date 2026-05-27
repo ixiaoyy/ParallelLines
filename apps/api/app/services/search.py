@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import case, delete, desc, or_, select
+from sqlalchemy import case, delete, desc, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -12,6 +12,7 @@ from app.core.exceptions import NotFoundError
 from app.db.base import utcnow
 from app.models.forum import Board, BoardMember, Tag, Topic, topic_tags
 from app.models.search import SearchDocument, SearchLog
+from app.models.social import UserRelationship
 from app.models.user import User
 from app.schemas.forum import TopicSort
 
@@ -216,6 +217,8 @@ class SearchService:
                 *search_match_conditions(normalized),
             )
         )
+        if current_user is not None:
+            statement = statement.where(self._visible_author_condition(current_user))
 
         if filters.board_slug:
             board = await self._get_board_by_slug(filters.board_slug, current_user=current_user)
@@ -307,6 +310,18 @@ class SearchService:
             .exists()
         )
         return or_(Board.visibility == "public", member_exists)
+
+    def _visible_author_condition(self, current_user: User):
+        hidden_author_exists = (
+            select(UserRelationship.id)
+            .where(
+                UserRelationship.actor_user_id == current_user.id,
+                UserRelationship.target_user_id == Topic.user_id,
+                UserRelationship.relationship_type.in_(("ignore", "block")),
+            )
+            .exists()
+        )
+        return not_(hidden_author_exists)
 
     async def _get_board_by_slug(
         self,

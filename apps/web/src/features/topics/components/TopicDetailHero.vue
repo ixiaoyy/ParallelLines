@@ -37,7 +37,6 @@ defineProps<{
         size="sm"
       />
       <strong>{{ topic.authorName }}</strong>
-      <span>Lv.{{ topic.authorLevel }}</span>
       <time>{{ relativeTime(topic.lastPostedAt) }}有新动静</time>
     </div>
 

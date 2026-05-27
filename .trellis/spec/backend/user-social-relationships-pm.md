@@ -56,6 +56,9 @@ Relationship response:
 ### 3. Contracts
 
 - Public topic/feed/search/profile lists must exclude `topics.visibility="private_message"`.
+- Public topic/feed/search/profile lists and public topic post streams must exclude authors the
+  current user has ignored or blocked; direct reads of a public topic authored by an ignored/blocked
+  user return `404 topic_not_found`.
 - `GET /topics/{topic_id}` and `/topics/{topic_id}/posts` allow private-message access only when `private_message_participants` contains current user.
 - Stranger access to a private-message topic returns `404 topic_not_found`, not participant metadata.
 - Creating a private message inserts:

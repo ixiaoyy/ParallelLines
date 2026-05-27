@@ -16,6 +16,11 @@
   background: var(--danger-bg);
 }
 
+.topic-state--muted :deep(.ant-card-body) {
+  color: var(--muted);
+  background: rgba(var(--primary-rgb), 0.06);
+}
+
 .empty-link {
   color: var(--primary);
   text-decoration: none;

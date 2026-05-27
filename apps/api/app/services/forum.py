@@ -892,12 +892,15 @@ class ForumService:
         topic = await self.get_topic(topic_id, current_user=current_user)
         if topic.visibility == "private_message" and current_user is not None:
             await self._mark_private_message_read(topic, current_user)
-        result = await self.session.scalars(
+        statement = (
             select(Post)
             .options(selectinload(Post.author), selectinload(Post.topic))
             .where(Post.topic_id == topic_id)
             .order_by(Post.post_number)
         )
+        if current_user is not None:
+            statement = statement.where(self._visible_author_condition(current_user, Post.user_id))
+        result = await self.session.scalars(statement)
         posts = list(result)
         await self._decorate_posts_for_user(posts, current_user)
         if sort == "qa":
@@ -1815,23 +1818,37 @@ class ForumService:
         )
         return or_(Board.visibility == "public", member_exists)
 
-    def _visible_author_condition(self, current_user: User):
+    def _visible_author_condition(self, current_user: User, author_id_column=Topic.user_id):
         hidden_author_exists = (
             select(UserRelationship.id)
             .where(
                 UserRelationship.actor_user_id == current_user.id,
-                UserRelationship.target_user_id == Topic.user_id,
+                UserRelationship.target_user_id == author_id_column,
                 UserRelationship.relationship_type.in_(("ignore", "block")),
             )
             .exists()
         )
         return not_(hidden_author_exists)
 
+    async def _author_visible_to_user(self, author_id: str, current_user: User | None) -> bool:
+        if current_user is None or author_id == current_user.id:
+            return True
+        hidden_relationship_id = await self.session.scalar(
+            select(UserRelationship.id).where(
+                UserRelationship.actor_user_id == current_user.id,
+                UserRelationship.target_user_id == author_id,
+                UserRelationship.relationship_type.in_(("ignore", "block")),
+            )
+        )
+        return hidden_relationship_id is None
+
     async def _can_access_topic(self, topic: Topic, current_user: User | None) -> bool:
         if topic.visibility == "private_message":
             if current_user is None:
                 return False
             return await self._is_private_message_participant(topic.id, current_user.id)
+        if not await self._author_visible_to_user(topic.user_id, current_user):
+            return False
         return await self._can_access_board(topic.board, current_user)
 
     async def _is_private_message_participant(self, topic_id: str, user_id: str) -> bool:

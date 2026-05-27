@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useQueryClient } from "@tanstack/vue-query";
+import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { computed, nextTick, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -17,6 +17,7 @@ import {
 import type { PostSort } from "@/features/posts/api";
 import PostItem from "@/features/posts/components/PostItem.vue";
 import { useCreatePost, useTopicPosts } from "@/features/posts/queries";
+import { setUserRelationship } from "@/features/social/api";
 import ComposerDrawer from "@/features/topics/components/ComposerDrawer.vue";
 import PollPanel from "@/features/topics/components/PollPanel.vue";
 import TopicDetailHero from "@/features/topics/components/TopicDetailHero.vue";
@@ -95,6 +96,10 @@ const displayedPosts = computed(() => {
 });
 const firstPost = computed(() => displayedPosts.value.find((post) => post.floor === 1) ?? displayedPosts.value[0] ?? null);
 const replyPosts = computed(() => displayedPosts.value.filter((post) => post.id !== firstPost.value?.id));
+const hiddenRelationshipPostCount = computed(() => {
+  const expectedPostCount = (topic.value?.replyCount ?? 0) + (topic.value ? 1 : 0);
+  return Math.max(0, expectedPostCount - posts.value.length);
+});
 const relatedTopics = useRelatedTopics(topic);
 const flagTopicMutation = useCreateFlag();
 const topicModerationMutation = useContentModerationMutation();
@@ -104,6 +109,18 @@ const splitTopicMutation = useSplitTopic(topicId);
 const mergeTopicMutation = useMergeTopic(topicId);
 const solutionMutation = useSetTopicSolution(topicId);
 const pollVoteMutation = useVotePoll(topicId);
+const blockAuthorMutation = useMutation({
+  mutationFn: (username: string) => setUserRelationship(username, "block", true),
+  onSuccess: (response) => {
+    queryClient.setQueryData(queryKeys.userRelationship(response.target_username), response);
+    void queryClient.invalidateQueries({ queryKey: queryKeys.posts(topicId.value) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topicId.value) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:hot") });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.userTopics(response.target_username) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+  },
+});
 const canFlagTopic = computed(() => Boolean(topic.value?.id) && hasAccessToken());
 const flagTopicPending = computed(() => flagTopicMutation.isPending.value);
 const deleteTopicPending = computed(() => topicModerationMutation.isPending.value);
@@ -520,6 +537,28 @@ function quotePost(post: PostItemVM) {
   setToolbarStatus(`已引用 ${post.authorName} #${post.floor}`);
 }
 
+function blockPostAuthor(post: PostItemVM) {
+  if (post.userId === currentUserId.value) {
+    setToolbarStatus("不能屏蔽自己。");
+    return;
+  }
+  if (!hasAccessToken()) {
+    requireLogin("请先登录后再屏蔽用户。");
+    return;
+  }
+  if (blockAuthorMutation.isPending.value) {
+    return;
+  }
+  const confirmed = window.confirm(`屏蔽 ${post.authorName}？之后将不再显示该用户的主题和楼层，也不能互发私信。`);
+  if (!confirmed) {
+    return;
+  }
+  blockAuthorMutation.mutate(post.authorName, {
+    onSuccess: () => setToolbarStatus(`已屏蔽 ${post.authorName}，正在隐藏相关楼层。`),
+    onError: () => setToolbarStatus("屏蔽失败，请稍后重试。"),
+  });
+}
+
 function buildQuoteExcerpt(post: PostItemVM) {
   const source = post.rawMd || htmlToPlainText(post.cookedHtml);
   return source.replace(/\s+/g, " ").trim().slice(0, 180) || "（无正文）";
@@ -609,6 +648,7 @@ function flagTopic() {
                 @quote="quotePost"
                 @require-login="requireLogin"
                 @toggle-solution="togglePostSolution"
+                @block-author="blockPostAuthor"
               />
             </div>
 
@@ -655,6 +695,10 @@ function flagTopic() {
               @delete-topic="deleteTopic"
             />
 
+            <UiCard v-if="hiddenRelationshipPostCount > 0" class="topic-state topic-state--muted" role="status">
+              已隐藏 {{ hiddenRelationshipPostCount }} 条来自已屏蔽用户的楼层。
+            </UiCard>
+
             <PollPanel
               v-if="topic.poll"
               :poll="topic.poll"
@@ -681,6 +725,7 @@ function flagTopic() {
                     @quote="quotePost"
                     @require-login="requireLogin"
                     @toggle-solution="togglePostSolution"
+                    @block-author="blockPostAuthor"
                   />
                 </div>
               </div>

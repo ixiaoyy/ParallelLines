@@ -120,6 +120,83 @@ async def test_followed_user_topic_notification_and_block_suppression() -> None:
 
 
 @pytest.mark.asyncio
+async def test_blocked_user_content_is_hidden_from_feed_search_and_topic_posts() -> None:
+    session_factory, engine = await create_test_session()
+
+    async def override_session():
+        async with session_factory() as session:
+            yield session
+
+    app = create_app()
+    app.dependency_overrides[get_session] = override_session
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        owner = await register_user(client, "visible_owner")
+        noisy = await register_user(client, "blocked_author")
+        viewer = await register_user(client, "relationship_viewer")
+        await create_board(client, owner["auth"], "relationship-hidden")
+
+        visible_topic = await client.post(
+            "/api/v1/boards/relationship-hidden/topics",
+            headers={"Authorization": owner["auth"]},
+            json={"title": "可见主题用于承载回复", "raw_md": "这个主题本身不应被隐藏。"},
+        )
+        assert visible_topic.status_code == 201
+        visible_topic_id = visible_topic.json()["data"]["id"]
+
+        noisy_reply = await client.post(
+            f"/api/v1/topics/{visible_topic_id}/posts",
+            headers={"Authorization": noisy["auth"]},
+            json={"raw_md": "这条回复来自被屏蔽用户。"},
+        )
+        assert noisy_reply.status_code == 201
+
+        noisy_topic = await client.post(
+            "/api/v1/boards/relationship-hidden/topics",
+            headers={"Authorization": noisy["auth"]},
+            json={"title": "被屏蔽作者的独立主题", "raw_md": "屏蔽后不应出现在动态或搜索。"},
+        )
+        assert noisy_topic.status_code == 201
+
+        block = await client.put(
+            "/api/v1/users/blocked_author/block",
+            headers={"Authorization": viewer["auth"]},
+        )
+        assert block.status_code == 200
+        assert block.json()["data"]["blocked"] is True
+
+        feed = await client.get("/api/v1/topics", headers={"Authorization": viewer["auth"]})
+        assert feed.status_code == 200
+        feed_titles = {item["title"] for item in feed.json()["data"]}
+        assert "被屏蔽作者的独立主题" not in feed_titles
+        assert "可见主题用于承载回复" in feed_titles
+
+        search = await client.get(
+            "/api/v1/search?q=被屏蔽作者",
+            headers={"Authorization": viewer["auth"]},
+        )
+        assert search.status_code == 200
+        assert search.json()["data"] == []
+
+        posts = await client.get(
+            f"/api/v1/topics/{visible_topic_id}/posts",
+            headers={"Authorization": viewer["auth"]},
+        )
+        assert posts.status_code == 200
+        authors = {item["author_name"] for item in posts.json()["data"]}
+        assert "blocked_author" not in authors
+        assert "visible_owner" in authors
+
+        direct_hidden_topic = await client.get(
+            f"/api/v1/topics/{noisy_topic.json()['data']['id']}",
+            headers={"Authorization": viewer["auth"]},
+        )
+        assert direct_hidden_topic.status_code == 404
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
 async def test_private_message_topic_is_participant_only_and_notifies_replies() -> None:
     session_factory, engine = await create_test_session()
 

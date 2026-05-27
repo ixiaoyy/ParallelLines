@@ -27,12 +27,12 @@
 }
 
 .topic-detail-hero h1 {
-  max-width: 62rem;
+  max-width: 54rem;
   margin: 0;
-  color: #111827;
-  font-size: clamp(2.1rem, 4vw, 4.15rem);
-  line-height: 1.06;
-  letter-spacing: -0.055em;
+  color: var(--title);
+  font-size: clamp(1.85rem, 3vw, 3rem);
+  line-height: 1.14;
+  letter-spacing: -0.038em;
   overflow-wrap: anywhere;
 }
 
@@ -95,6 +95,6 @@
 
 @media (max-width: 680px) {
   .topic-detail-hero h1 {
-    font-size: clamp(1.85rem, 10vw, 2.65rem);
+    font-size: clamp(1.65rem, 8vw, 2.25rem);
   }
 }

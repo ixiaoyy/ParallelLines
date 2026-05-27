@@ -29,6 +29,7 @@ const props = withDefaults(defineProps<{
   variant: "reply",
 });
 const emit = defineEmits<{
+  blockAuthor: [post: PostItemVM];
   quote: [post: PostItemVM];
   requireLogin: [message: string];
   toggleSolution: [post: PostItemVM];
@@ -56,9 +57,12 @@ const canDelete = computed(() =>
   Boolean(!props.post.deleted && props.post.floor > 1 && (isOwnPost.value || canModerateGlobally.value)),
 );
 const canFlag = computed(() => hasAccessToken() && !props.post.deleted);
+const canBlockAuthor = computed(() => Boolean(!props.post.deleted && !isOwnPost.value));
 const canToggleSolution = computed(
   () => Boolean(props.canManageSolution && props.post.floor > 1 && !props.post.deleted),
 );
+const authorRoleBadge = computed(() => roleBadgeLabel(props.post.authorRole));
+const editedAfterPublish = computed(() => isEditedAfterPublish(props.post.createdAt, props.post.updatedAt));
 const canViewHistory = computed(
   () => Boolean(!props.post.deleted && (isOwnPost.value || canModerateGlobally.value)),
 );
@@ -264,6 +268,13 @@ function flagPost() {
   reportModalOpen.value = true;
 }
 
+function blockAuthor() {
+  if (!canBlockAuthor.value) {
+    return;
+  }
+  emit("blockAuthor", props.post);
+}
+
 async function copyPostLink() {
   const fallbackUrl = `${window.location.href.split("#")[0]}#post-${props.post.floor}`;
   const url = props.post.shareUrl
@@ -279,6 +290,23 @@ async function copyPostLink() {
 function requestLogin(message: string) {
   setStatus(message);
   emit("requireLogin", message);
+}
+
+function roleBadgeLabel(role: string) {
+  const labels: Record<string, string> = {
+    admin: "管理员",
+    moderator: "版主",
+  };
+  return labels[role] ?? "";
+}
+
+function isEditedAfterPublish(createdAt: string, updatedAt: string) {
+  const created = Date.parse(createdAt);
+  const updated = Date.parse(updatedAt);
+  if (Number.isNaN(created) || Number.isNaN(updated)) {
+    return createdAt !== updatedAt;
+  }
+  return updated - created > 1000;
 }
 
 function extractFirstCodeText(html: string) {
@@ -335,16 +363,31 @@ function decorateHeadingAnchors() {
       'post-item--reply': variant === 'reply',
     }"
   >
-    <aside class="post-author">
-      <UiAvatar :name="post.authorName" :role="post.authorRole" :level="post.authorLevel" />
-      <strong>{{ post.authorName }}</strong>
-      <span v-if="post.floor === 1" class="author-owner">楼主</span>
-      <span class="author-level">Lv.{{ post.authorLevel }}</span>
-      <span class="author-trust">TL{{ post.authorTrustLevel }} · {{ post.authorTrustLevelLabel }}</span>
-      <span>#{{ post.floor }}</span>
-    </aside>
     <article ref="bodyRef" class="post-body">
-      <time>{{ relativeTime(post.createdAt) }}</time>
+      <header class="post-header">
+        <div class="post-author-line">
+          <UiAvatar :name="post.authorName" :role="post.authorRole" :level="post.authorLevel" size="sm" />
+          <div class="post-author-copy">
+            <div class="post-author-name">
+              <strong>{{ post.authorName }}</strong>
+              <span v-if="post.floor === 1" class="author-badge author-badge--owner">楼主</span>
+              <span v-if="authorRoleBadge" class="author-badge author-badge--role">{{ authorRoleBadge }}</span>
+            </div>
+            <div class="post-meta-line">
+              <time :datetime="post.createdAt">{{ relativeTime(post.createdAt) }}</time>
+              <span aria-hidden="true">·</span>
+              <a class="post-floor-link" :href="`#post-${post.floor}`">#{{ post.floor }}</a>
+              <template v-if="editedAfterPublish">
+                <span aria-hidden="true">·</span>
+                <span>已编辑</span>
+              </template>
+            </div>
+          </div>
+        </div>
+        <div class="post-header-actions">
+          <UiButton v-if="canEdit" class="post-header-edit" tone="subtle" @click="startEdit">编辑</UiButton>
+        </div>
+      </header>
       <div v-if="post.acceptedAnswer" class="accepted-answer-badge">✓ 已采纳解决方案</div>
       <div v-if="post.deleted" class="deleted-copy">该楼层已删除或隐藏。</div>
       <template v-else-if="editing">
@@ -398,6 +441,7 @@ function decorateHeadingAnchors() {
         <UiButton tone="subtle" @click="copyPostLink">复制楼层链接</UiButton>
         <UiButton v-if="hasCodeBlock" tone="subtle" aria-label="复制本楼层代码块" @click="copyCode">复制代码</UiButton>
         <UiButton tone="ghost" :disabled="!canFlag" @click="flagPost">举报</UiButton>
+        <UiButton v-if="canBlockAuthor" tone="ghost" @click="blockAuthor">屏蔽用户</UiButton>
         <UiButton tone="ghost" @click="quotePost">引用</UiButton>
         <UiButton
           v-if="canToggleSolution"
@@ -407,7 +451,6 @@ function decorateHeadingAnchors() {
         >
           {{ post.acceptedAnswer ? "取消采纳" : "采纳为答案" }}
         </UiButton>
-        <UiButton v-if="canEdit" tone="subtle" @click="startEdit">编辑</UiButton>
         <UiButton v-if="canViewHistory" tone="ghost" @click="toggleHistory">
           {{ historyOpen ? "收起历史" : "历史" }}
         </UiButton>
