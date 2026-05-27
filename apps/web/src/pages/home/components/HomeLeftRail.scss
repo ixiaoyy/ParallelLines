@@ -93,15 +93,13 @@
   background: var(--bg-hover);
 }
 
-.rail-board--private {
-  border: 1px solid rgba(var(--primary-rgb), 0.08);
-  background: rgba(var(--primary-rgb), 0.035);
-}
-
 .rail-board-mark {
-  width: 0.78rem;
-  height: 0.78rem;
-  border-radius: 0.22rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--board-accent);
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .rail-board-copy {

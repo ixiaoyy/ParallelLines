@@ -35,7 +35,19 @@ const props = defineProps<{
 }>();
 
 const publicBoards = computed(() => props.boards.filter((board) => board.visibility === "public"));
-const privateBoards = computed(() => props.boards.filter((board) => board.visibility !== "public"));
+
+const boardIcons: Record<string, Component> = {
+  announcements: NotificationOutlined,
+  resources: FolderOpenOutlined,
+  benefits: FireOutlined,
+  reading: ReadOutlined,
+  health: HeartOutlined,
+  news: BulbOutlined,
+  experience: TrophyOutlined,
+  qna: QuestionCircleOutlined,
+  feedback: FlagOutlined,
+  lounge: CoffeeOutlined,
+};
 
 const featuredTagNames = [
   "公告",
@@ -106,6 +118,10 @@ function tagIcon(tagName: string): Component {
   return tagIcons[tagName] ?? TagsOutlined;
 }
 
+function boardIcon(board: BoardSummary): Component {
+  return boardIcons[board.slug] ?? TagsOutlined;
+}
+
 function tagAccentStyle(tagName: string): Record<string, string> {
   return { "--tag-accent": tagAccentColors[tagName] ?? "#409eff" };
 }
@@ -120,7 +136,7 @@ function tagAccentStyle(tagName: string): Record<string, string> {
       <p v-if="boardsLoading" class="rail-state">正在加载版块…</p>
       <p v-else-if="boardsError" class="rail-state rail-state--error">版块暂时不可用</p>
       <template v-else>
-        <p v-if="!publicBoards.length && !privateBoards.length" class="rail-state">暂无可见版块</p>
+        <p v-if="!publicBoards.length" class="rail-state">暂无可见版块</p>
         <h3 v-if="publicBoards.length" class="rail-subtitle">公共版块</h3>
         <RouterLink
           v-for="board in publicBoards"
@@ -129,22 +145,7 @@ function tagAccentStyle(tagName: string): Record<string, string> {
           :class="boardToneClass(board.slug)"
           :to="{ name: 'board-detail', params: { slug: board.slug } }"
         >
-          <span class="rail-board-mark tone-mark-square" aria-hidden="true"></span>
-          <span class="rail-board-copy">
-            <strong>{{ board.name }}</strong>
-            <small>{{ board.description }}</small>
-          </span>
-          <em>{{ compactNumber(board.topicCount) }}</em>
-        </RouterLink>
-        <h3 v-if="privateBoards.length" class="rail-subtitle">邀请版块</h3>
-        <RouterLink
-          v-for="board in privateBoards"
-          :key="board.id"
-          class="rail-board rail-board--private"
-          :class="boardToneClass(board.slug)"
-          :to="{ name: 'board-detail', params: { slug: board.slug } }"
-        >
-          <span class="rail-board-mark tone-mark-square" aria-hidden="true"></span>
+          <component :is="boardIcon(board)" class="rail-board-mark" aria-hidden="true" />
           <span class="rail-board-copy">
             <strong>{{ board.name }}</strong>
             <small>{{ board.description }}</small>
