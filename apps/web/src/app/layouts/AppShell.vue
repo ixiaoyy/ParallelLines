@@ -39,6 +39,7 @@ const adminLinkTarget = computed<RouteLocationRaw>(() =>
 const adminLinkLabel = computed(() =>
   isAdmin(currentUser.value) ? t("nav.admin", "后台") : t("nav.moderation", "审核"),
 );
+const canSubmitGlobalSearch = computed(() => Boolean(globalSearch.value.trim()));
 
 interface NavItem {
   key:
@@ -208,6 +209,18 @@ function isNavItemActive(item: NavItem) {
         <template #prefix>
           <SearchOutlined />
         </template>
+        <template #suffix>
+          <button
+            class="global-search-submit"
+            type="button"
+            :disabled="!canSubmitGlobalSearch"
+            :aria-label="t('search.submit_aria', '搜索')"
+            @click="submitGlobalSearch"
+          >
+            <SearchOutlined />
+            <span class="global-search-submit__label">{{ t("search.submit", "搜索") }}</span>
+          </button>
+        </template>
       </a-input>
 
       <button
@@ -312,6 +325,18 @@ function isNavItemActive(item: NavItem) {
         >
           <template #prefix>
             <SearchOutlined />
+          </template>
+          <template #suffix>
+            <button
+              class="global-search-submit"
+              type="button"
+              :disabled="!canSubmitGlobalSearch"
+              :aria-label="t('search.submit_aria', '搜索')"
+              @click="submitGlobalSearch"
+            >
+              <SearchOutlined />
+              <span class="global-search-submit__label">{{ t("search.submit", "搜索") }}</span>
+            </button>
           </template>
         </a-input>
       </div>

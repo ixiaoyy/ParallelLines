@@ -21,7 +21,7 @@ export type BoardToneDefinition = {
 export const BOARD_PALETTE: BoardToneDefinition[] = [
   {
     tone: 1,
-    slugs: ["engineering", "dev"],
+    slugs: ["resources", "experience", "engineering", "dev"],
     accent: "#ea580c",
     accentRgb: "234, 88, 12",
     tintBg: "color-mix(in srgb, #fff7ed 82%, #ffffff)",
@@ -31,7 +31,7 @@ export const BOARD_PALETTE: BoardToneDefinition[] = [
   },
   {
     tone: 2,
-    slugs: ["support"],
+    slugs: ["health", "qna", "questions", "support"],
     accent: "#65a30d",
     accentRgb: "132, 204, 22",
     tintBg: "color-mix(in srgb, #f7fee7 82%, #ffffff)",
@@ -41,7 +41,7 @@ export const BOARD_PALETTE: BoardToneDefinition[] = [
   },
   {
     tone: 3,
-    slugs: ["frontend"],
+    slugs: ["news", "frontier", "frontend"],
     accent: "#6366f1",
     accentRgb: "99, 102, 241",
     tintBg: "color-mix(in srgb, #f5f3ff 82%, #ffffff)",
@@ -51,7 +51,7 @@ export const BOARD_PALETTE: BoardToneDefinition[] = [
   },
   {
     tone: 4,
-    slugs: ["announcements"],
+    slugs: ["announcements", "official"],
     accent: "#ca8a04",
     accentRgb: "234, 179, 8",
     tintBg: "color-mix(in srgb, #fefce8 84%, #ffffff)",
@@ -61,7 +61,7 @@ export const BOARD_PALETTE: BoardToneDefinition[] = [
   },
   {
     tone: 5,
-    slugs: ["plugins"],
+    slugs: ["reading", "plugins"],
     accent: "#db2777",
     accentRgb: "219, 39, 119",
     tintBg: "color-mix(in srgb, #fdf2f8 82%, #ffffff)",
@@ -71,7 +71,7 @@ export const BOARD_PALETTE: BoardToneDefinition[] = [
   },
   {
     tone: 6,
-    slugs: ["community"],
+    slugs: ["feedback", "lounge", "chat", "community"],
     accent: "#475569",
     accentRgb: "148, 163, 184",
     tintBg: "color-mix(in srgb, #f1f5f9 88%, #ffffff)",

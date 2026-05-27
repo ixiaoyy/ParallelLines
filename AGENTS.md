@@ -108,12 +108,12 @@ Keep this managed block so 'trellis update' can refresh the instructions.
 
 | tone | slug | accent（强调色） |
 |------|------|------------------|
-| 1 | engineering, dev | `#ea580c` 暖橙 |
-| 2 | support | `#65a30d` 柠绿 |
-| 3 | frontend | `#6366f1` 紫 |
-| 4 | announcements | `#ca8a04` 金 |
-| 5 | plugins | `#db2777` 粉 |
-| 6 | community | `#475569` 灰 |
+| 1 | resources, experience, engineering, dev | `#ea580c` 暖橙 |
+| 2 | health, qna, questions, support | `#65a30d` 柠绿 |
+| 3 | news, frontier, frontend | `#6366f1` 紫 |
+| 4 | announcements, official | `#ca8a04` 金 |
+| 5 | reading, plugins | `#db2777` 粉 |
+| 6 | feedback, lounge, chat, community | `#475569` 灰 |
 
 未映射 slug / 标签名：哈希稳定分配到 1–6。修改色值只改 `BOARD_PALETTE`，刷新即全局生效。
 

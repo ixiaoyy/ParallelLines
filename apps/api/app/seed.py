@@ -1,21 +1,129 @@
 import asyncio
 from argparse import ArgumentParser
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import configure_logging, get_logger
 from app.core.security import hash_password
+from app.db.base import utcnow
 from app.db.session import AsyncSessionLocal
 from app.models.forum import Board, BoardMember, Post, Topic
 from app.models.user import User
 from app.schemas.forum import PostCreateRequest, TopicCreateRequest
-from app.services.forum import ForumService
+from app.services.forum import ForumService, render_markdown
 from app.services.quality_posts import QUALITY_POST_AUTHOR_USERNAME, QUALITY_POST_SPECS
 from app.services.search import SearchIndexService
 
 DEMO_PASSWORD = "parallellines-demo-123"
+
+
+@dataclass(frozen=True)
+class BoardSeedSpec:
+    key: str
+    slug: str
+    name: str
+    description: str
+    color: str
+    owner_key: str
+    purpose: str
+    guidance: str
+
+
+BOARD_SEED_SPECS = [
+    BoardSeedSpec(
+        key="announcements",
+        slug="announcements",
+        name="官方动态",
+        description="平台公告、规则说明、活动通知与版本更新。",
+        color="#409EFF",
+        owner_key="admin",
+        purpose="发布社区重要信息、规则变更、活动安排和版本更新，让大家知道这里正在发生什么。",
+        guidance="发布时请写清背景、影响范围、时间节点和需要用户采取的动作。",
+    ),
+    BoardSeedSpec(
+        key="resources",
+        slug="resources",
+        name="资源荟萃",
+        description="收集值得收藏的工具、资料、网站、课程和内容。",
+        color="#F97316",
+        owner_key="ops",
+        purpose="沉淀真正有用的资源清单，方便之后反复查找、补充和复用。",
+        guidance="推荐资源时请附上链接、适合人群、使用场景，以及你为什么觉得它值得收藏。",
+    ),
+    BoardSeedSpec(
+        key="reading",
+        slug="reading",
+        name="读书感悟",
+        description="分享读书摘记、阅读心得、金句摘录与文字感悟。",
+        color="#DB2777",
+        owner_key="member",
+        purpose="记录阅读带来的触动、启发和思考，让一本书、一句话或一段文字继续发酵。",
+        guidance="可以写书名、摘录、你的理解，也可以只分享一段读后感或延伸思考。",
+    ),
+    BoardSeedSpec(
+        key="health",
+        slug="health",
+        name="健康百科",
+        description="交流饮食、运动、睡眠、心理与日常健康知识。",
+        color="#10B981",
+        owner_key="moderator",
+        purpose="分享日常健康知识和个人实践经验，帮助大家更好地照顾身体与情绪。",
+        guidance="请尽量标注信息来源；涉及疾病、用药和诊断时，应提醒大家以专业医生意见为准。",
+    ),
+    BoardSeedSpec(
+        key="news",
+        slug="news",
+        name="前沿快讯",
+        description="关注 AI、科技、行业变化和正在发生的新鲜事。",
+        color="#6366F1",
+        owner_key="frontend",
+        purpose="汇集新技术、新趋势、新产品和行业变化，方便大家快速了解外部世界。",
+        guidance="转发资讯时请补充来源、摘要和你的判断，避免只贴标题或制造焦虑。",
+    ),
+    BoardSeedSpec(
+        key="experience",
+        slug="experience",
+        name="经验分享",
+        description="记录亲身经历、实用方法、踩坑教训和复盘总结。",
+        color="#EA580C",
+        owner_key="admin",
+        purpose="把个人经历变成可参考的经验，让后来者少走弯路，也让自己完成复盘。",
+        guidance="建议写清背景、过程、结果、学到什么，以及如果重来一次你会怎么做。",
+    ),
+    BoardSeedSpec(
+        key="qna",
+        slug="qna",
+        name="有问必答",
+        description="有困惑就提出来，带上背景，大家一起帮你理清。",
+        color="#65A30D",
+        owner_key="moderator",
+        purpose="承接各种求助、疑问和想不明白的问题，让社区成员一起补充线索和思路。",
+        guidance="提问时请说明你想解决什么、已经尝试过什么、卡在哪里，以及希望得到哪类帮助。",
+    ),
+    BoardSeedSpec(
+        key="feedback",
+        slug="feedback",
+        name="社区反馈",
+        description="对网站功能、内容氛围和社区规则提出建议。",
+        color="#64748B",
+        owner_key="moderator",
+        purpose="收集大家对产品功能、内容组织、社区氛围和规则治理的建议。",
+        guidance="反馈时请尽量写清使用场景、遇到的问题、期望变化，以及可接受的替代方案。",
+    ),
+    BoardSeedSpec(
+        key="lounge",
+        slug="lounge",
+        name="闲聊茶馆",
+        description="轻松聊天、日常分享、兴趣交流和不那么严肃的话题。",
+        color="#8B5CF6",
+        owner_key="member",
+        purpose="提供一个轻松的公共客厅，聊近况、兴趣、碎碎念和生活里的小发现。",
+        guidance="欢迎轻松表达，但仍请保持友善、尊重他人，不刷屏、不引战。",
+    ),
+]
 
 
 async def seed_demo_data(session: AsyncSession, *, only_if_empty: bool = False) -> None:
@@ -88,56 +196,16 @@ async def seed_demo_data(session: AsyncSession, *, only_if_empty: bool = False) 
         ),
     }
 
-    boards = {
-        "announcements": await upsert_board(
+    boards: dict[str, Board] = {}
+    for board_spec in BOARD_SEED_SPECS:
+        boards[board_spec.key] = await upsert_board(
             session,
-            slug="announcements",
-            name="公告与更新",
-            description="版本发布、维护窗口、路线图和社区规则更新。",
-            color="#409EFF",
-            owner=users["admin"],
-        ),
-        "support": await upsert_board(
-            session,
-            slug="support",
-            name="支持与排障",
-            description="安装、升级、错误码定位与可复现问题协作排查。",
-            color="#10B981",
-            owner=users["moderator"],
-        ),
-        "engineering": await upsert_board(
-            session,
-            slug="engineering",
-            name="工程实践",
-            description="接口设计、异步任务、可观测性与工程质量经验沉淀。",
-            color="#409EFF",
-            owner=users["admin"],
-        ),
-        "frontend": await upsert_board(
-            session,
-            slug="frontend",
-            name="前端体验",
-            description="Vue、组件、移动端适配、可访问性和交互体验讨论。",
-            color="#8B5CF6",
-            owner=users["frontend"],
-        ),
-        "plugins": await upsert_board(
-            session,
-            slug="plugins",
-            name="插件与扩展",
-            description="插件安装、依赖冲突、扩展能力和集成经验。",
-            color="#F59E0B",
-            owner=users["plugin"],
-        ),
-        "community": await upsert_board(
-            session,
-            slug="community",
-            name="社区反馈",
-            description="站点建议、版务讨论、内容治理和使用反馈。",
-            color="#EF4444",
-            owner=users["moderator"],
-        ),
-    }
+            slug=board_spec.slug,
+            name=board_spec.name,
+            description=board_spec.description,
+            color=board_spec.color,
+            owner=users[board_spec.owner_key],
+        )
 
     for board in boards.values():
         await ensure_board_member(
@@ -157,33 +225,33 @@ async def seed_demo_data(session: AsyncSession, *, only_if_empty: bool = False) 
 
     await create_reply_if_missing(
         session,
-        topic=seeded_topics["oidc-state"],
+        topic=seeded_topics["clear-question"],
         author=users["moderator"],
         raw_md=(
-            "先比对浏览器里的回调域名、Cookie SameSite 设置和服务端时钟。"
-            "如果 state 只在跨域跳转后丢失，优先检查代理层是否改写了协议头。"
+            "可以先把目标、已经尝试过的方法、遇到的阻碍分成三段写。"
+            "别人越容易理解上下文，就越容易给出真正有用的建议。"
         ),
     )
     await create_reply_if_missing(
         session,
-        topic=seeded_topics["queue-import"],
+        topic=seeded_topics["record-month"],
         author=users["ops"],
         raw_md=(
-            "我们通常会拆成上传记录、解析任务和结果通知三段。"
-            "前台只展示任务状态，失败明细放到可下载报告里。"
+            "我会把门槛降到每天三句话：今天发生了什么、我有什么感受、"
+            "明天想做一个什么小动作。先持续，再追求写得漂亮。"
         ),
     )
     await create_reply_if_missing(
         session,
-        topic=seeded_topics["mobile-nav"],
+        topic=seeded_topics["health-break"],
         author=users["frontend"],
-        raw_md="移动端优先保证导航、搜索和发帖入口可达，再补充动画和手势细节。",
+        raw_md="番茄钟结束后站起来活动两分钟，对久坐的人比一次性高强度运动更容易坚持。",
     )
     await create_reply_if_missing(
         session,
-        topic=seeded_topics["plugin-deps"],
+        topic=seeded_topics["resource-toolkit"],
         author=users["plugin"],
-        raw_md="依赖冲突最好贴出包管理器输出、运行时版本和最小复现仓库。",
+        raw_md="推荐资源时可以补一句「我用它解决了什么问题」，比单纯贴链接更有参考价值。",
     )
 
     logger.info(
@@ -215,128 +283,124 @@ def starter_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dic
             }
             for post in QUALITY_POST_SPECS
         ],
+        *board_about_topics(boards, users),
         {
             "key": "welcome-guide",
             "board": boards["announcements"],
             "author": users["admin"],
-            "title": "平行线使用指南：如何发布一个清晰主题？",
+            "title": "新朋友从哪里开始了解平行线？",
             "raw_md": (
-                "发布前先选择版块，再补充背景、复现步骤、日志和期望结果。"
-                "这样后续讨论会留在同一条主题线里，方便检索和复用。"
+                "可以先浏览置顶的社区初衷和各版块说明，再从自己最想记录或提问的内容开始。"
+                "不必追求一次写完整，清楚表达真实想法更重要。"
             ),
-            "tags": ["指南", "新手", "社区规则"],
+            "tags": ["新手指南", "社区说明"],
             "pinned": False,
             "featured": True,
         },
         {
-            "key": "release-checklist",
-            "board": boards["announcements"],
-            "author": users["admin"],
-            "title": "发布前检查清单需要覆盖哪些内容？",
-            "raw_md": "建议覆盖迁移、回滚、健康检查、监控指标、冒烟测试和公告窗口。",
-            "tags": ["发布", "检查清单", "运维"],
-            "featured": True,
-        },
-        {
-            "key": "oidc-state",
-            "board": boards["support"],
-            "author": users["member"],
-            "title": "OIDC 登录回调 state mismatch 如何排查？",
-            "raw_md": (
-                "我们在回调日志中看到 state mismatch，需要确认 Cookie、回调地址、代理头和时钟偏移。"
-            ),
-            "tags": ["oidc", "登录", "已解决"],
-        },
-        {
-            "key": "migration-field",
-            "board": boards["support"],
+            "key": "resource-toolkit",
+            "board": boards["resources"],
             "author": users["ops"],
-            "title": "升级后迁移提示缺少 notification_cursor 字段怎么办？",
-            "raw_md": "升级后启动失败，迁移日志提示字段不存在。需要确认迁移顺序和数据库版本。",
-            "tags": ["升级", "迁移", "数据库"],
-        },
-        {
-            "key": "search-miss",
-            "board": boards["support"],
-            "author": users["member"],
-            "title": "搜索不到刚发布的主题时应该先看哪里？",
-            "raw_md": "主题详情可打开，但搜索结果没有命中。想确认索引延迟和筛选条件是否有关。",
-            "tags": ["搜索", "索引", "排障"],
-        },
-        {
-            "key": "queue-import",
-            "board": boards["engineering"],
-            "author": users["moderator"],
-            "title": "如何把 CSV 导入拆成后台队列？",
-            "raw_md": "同步导入两万行会超时，计划改成任务表、worker 与通知中心联动。",
-            "tags": ["csv", "queue", "接口设计"],
+            "title": "你最近收藏了哪些真正用得上的工具或资料？",
+            "raw_md": "欢迎分享网站、课程、书单、模板或工具，并说明它适合谁、能解决什么问题。",
+            "tags": ["工具资源", "收藏"],
             "featured": True,
         },
         {
-            "key": "observability",
-            "board": boards["engineering"],
-            "author": users["admin"],
-            "title": "上线前需要哪些可观测性检查？",
-            "raw_md": "建议检查 request_id、结构化日志、metrics、健康检查、回滚清单和冒烟测试。",
-            "tags": ["可观测性", "deployment", "日志"],
-        },
-        {
-            "key": "tag-design",
-            "board": boards["engineering"],
-            "author": users["moderator"],
-            "title": "主题标签怎样设计才便于长期检索？",
-            "raw_md": "标签应同时覆盖模块、症状和技术栈，避免把同义词拆成多个孤岛。",
-            "tags": ["标签", "信息架构", "检索"],
-        },
-        {
-            "key": "mobile-nav",
-            "board": boards["frontend"],
-            "author": users["frontend"],
-            "title": "移动端导航如何兼顾搜索、版块和发帖入口？",
-            "raw_md": "小屏幕下顶部空间有限，需要折叠菜单，并保证键盘和读屏器可用。",
-            "tags": ["移动端", "导航", "可访问性"],
-        },
-        {
-            "key": "markdown-copy",
-            "board": boards["frontend"],
-            "author": users["frontend"],
-            "title": "代码块复制按钮在主题详情里放哪里更合适？",
-            "raw_md": "代码块很多时，复制按钮既要容易找到，也不能遮挡代码内容。",
-            "tags": ["Markdown", "代码块", "交互"],
-        },
-        {
-            "key": "plugin-deps",
-            "board": boards["plugins"],
-            "author": users["plugin"],
-            "title": "插件安装失败时如何定位依赖冲突？",
-            "raw_md": "安装时报 peer dependency 冲突，想整理一个最小排查流程。",
-            "tags": ["插件", "依赖", "排障"],
-        },
-        {
-            "key": "theme-extension",
-            "board": boards["plugins"],
-            "author": users["plugin"],
-            "title": "主题扩展应该开放哪些插槽？",
-            "raw_md": "希望在不破坏主布局的前提下，允许扩展侧边栏卡片和主题动作区。",
-            "tags": ["主题", "扩展", "组件"],
-        },
-        {
-            "key": "duplicate-topics",
-            "board": boards["community"],
-            "author": users["moderator"],
-            "title": "重复主题应该合并还是保留？",
-            "raw_md": "同一个错误码出现多个主题时，需要制定合并、引用和保留差异信息的规则。",
-            "tags": ["版务", "治理", "重复主题"],
-        },
-        {
-            "key": "feedback-format",
-            "board": boards["community"],
+            "key": "reading-sentence",
+            "board": boards["reading"],
             "author": users["member"],
-            "title": "站点反馈应该包含哪些信息？",
-            "raw_md": "建议反馈里包含页面地址、操作步骤、预期结果和实际截图。",
-            "tags": ["反馈", "社区规则", "体验"],
+            "title": "最近读到哪句话，让你停下来想了很久？",
+            "raw_md": "可以贴一小段摘录，也可以只写它为什么打动你、让你想到了什么。",
+            "tags": ["读书", "感悟"],
+        },
+        {
+            "key": "health-break",
+            "board": boards["health"],
+            "author": users["moderator"],
+            "title": "久坐之后，怎样用很小的动作照顾身体？",
+            "raw_md": (
+                "想收集一些低门槛、容易坚持的日常活动方式，"
+                "比如拉伸、散步、喝水提醒和睡前放松。"
+            ),
+            "tags": ["健康习惯", "运动"],
+        },
+        {
+            "key": "ai-tools-signal",
+            "board": boards["news"],
+            "author": users["frontend"],
+            "title": "AI 工具更新太快，怎样判断一个新功能值不值得试？",
+            "raw_md": "比起追每一条新闻，我更想知道大家如何判断信息质量、使用成本和真实价值。",
+            "tags": ["AI", "科技前沿"],
+            "featured": True,
+        },
+        {
+            "key": "record-month",
+            "board": boards["experience"],
+            "author": users["admin"],
+            "title": "如何把一个想法坚持记录一个月？",
+            "raw_md": (
+                "从每天几句话开始，记录触发点、行动和反馈。"
+                "等积累到一定数量，再回头整理主题。"
+            ),
+            "tags": ["记录", "复盘"],
+            "featured": True,
+        },
+        {
+            "key": "clear-question",
+            "board": boards["qna"],
+            "author": users["member"],
+            "title": "怎样把一个问题描述清楚，更容易得到帮助？",
+            "raw_md": "我有时只知道自己卡住了，却不知道怎么问。想整理一个更容易被回复的提问格式。",
+            "tags": ["提问", "求助"],
+        },
+        {
+            "key": "feedback-tags",
+            "board": boards["feedback"],
+            "author": users["moderator"],
+            "title": "你希望社区优先补充哪些内容标签？",
+            "raw_md": (
+                "比如读书、健康、AI、工具、生活经验等。"
+                "欢迎说说哪些标签能帮助你更快找到内容。"
+            ),
+            "tags": ["功能建议", "社区共建"],
+        },
+        {
+            "key": "lounge-daily",
+            "board": boards["lounge"],
+            "author": users["member"],
+            "title": "今天有什么想随手分享的小事？",
+            "raw_md": "可以是一张图、一句话、一个小发现，也可以只是今天过得怎么样。",
+            "tags": ["闲聊", "日常"],
         },
     ]
+
+
+def board_about_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dict[str, object]]:
+    topics: list[dict[str, object]] = []
+    for spec in BOARD_SEED_SPECS:
+        topics.append(
+            {
+                "key": f"about-{spec.slug}",
+                "board": boards[spec.key],
+                "author": users[spec.owner_key],
+                "title": f"关于「{spec.name}」",
+                "raw_md": (
+                    f"# 关于「{spec.name}」\n\n"
+                    f"{spec.description}\n\n"
+                    f"这个版块用于{spec.purpose}\n\n"
+                    "## 适合发布\n\n"
+                    f"- {spec.guidance}\n"
+                    "- 尽量写清背景、来源和你希望得到的讨论方向。\n"
+                    "- 如果内容更适合其他版块，也可以在发布前重新选择。\n\n"
+                    "希望这里能成为一个清楚、有用、友善的交流空间。"
+                ),
+                "tags": [],
+                "pinned": True,
+                "featured": False,
+            }
+        )
+    return topics
 
 
 async def upsert_user(
@@ -441,11 +505,17 @@ async def create_topic_if_missing(
         existing.user_id = author.id
         existing.pinned = pinned
         existing.featured = featured
+        stripped_raw_md = raw_md.strip()
         first_post = await session.scalar(
             select(Post).where(Post.topic_id == existing.id, Post.post_number == 1)
         )
         if first_post is not None:
             first_post.user_id = author.id
+            if first_post.raw_md != stripped_raw_md:
+                first_post.raw_md = stripped_raw_md
+                first_post.cooked_html = render_markdown(stripped_raw_md)
+                first_post.updated_at = utcnow()
+                existing.updated_at = utcnow()
         await session.flush()
         await SearchIndexService(session).sync_topic(existing.id)
         await session.commit()
