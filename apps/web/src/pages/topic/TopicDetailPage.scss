@@ -61,15 +61,20 @@
 }
 
 .reply-section__header {
-  display: grid;
-  gap: 0.24rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.7rem;
+  align-items: baseline;
 }
 
 .reply-section__header span {
+  border-radius: 999px;
+  padding: 0.16rem 0.5rem;
   color: var(--primary);
-  font-size: 0.76rem;
-  font-weight: 920;
-  letter-spacing: 0.14em;
+  font-size: 0.78rem;
+  font-weight: 880;
+  letter-spacing: 0.06em;
+  background: rgba(var(--primary-rgb), 0.09);
 }
 
 .reply-section__header h2,
@@ -79,13 +84,13 @@
 
 .reply-section__header h2 {
   color: var(--title);
-  font-size: clamp(1.35rem, 2vw, 1.75rem);
-  letter-spacing: -0.03em;
+  font-size: clamp(1.05rem, 1.18vw, 1.18rem);
+  letter-spacing: -0.015em;
 }
 
 .reply-section__header p {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.84rem;
 }
 
 .reply-status {

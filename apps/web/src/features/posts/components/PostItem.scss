@@ -130,6 +130,10 @@
   letter-spacing: -0.018em;
 }
 
+.post-body :deep(.markdown-body h1) {
+  font-size: clamp(1.34rem, 1.65vw, 1.62rem);
+}
+
 .post-body :deep(.markdown-body h1:first-child),
 .post-body :deep(.markdown-body h2:first-child),
 .post-body :deep(.markdown-body h3:first-child) {
@@ -137,11 +141,11 @@
 }
 
 .post-body :deep(.markdown-body h2) {
-  font-size: clamp(1.28rem, 1.55vw, 1.62rem);
+  font-size: clamp(1.18rem, 1.35vw, 1.38rem);
 }
 
 .post-body :deep(.markdown-body h3) {
-  font-size: clamp(1.12rem, 1.25vw, 1.32rem);
+  font-size: clamp(1.06rem, 1.12vw, 1.18rem);
 }
 
 .post-body :deep(.markdown-body p) {
@@ -238,9 +242,9 @@ footer {
 
 .post-item--article .post-body :deep(.markdown-body) {
   color: var(--text);
-  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", STSong, serif;
-  font-size: clamp(0.94rem, 0.86vw, 1rem);
-  line-height: 1.88;
+  font-family: inherit;
+  font-size: clamp(0.96rem, 0.9vw, 1rem);
+  line-height: 1.78;
 }
 
 .post-item--article .post-body :deep(.markdown-body h1) {
@@ -248,18 +252,18 @@ footer {
   margin-bottom: 0.72rem;
   color: var(--title);
   font-family: inherit;
-  font-size: clamp(1.55rem, 2.15vw, 2.05rem);
+  font-size: clamp(1.38rem, 1.85vw, 1.7rem);
   font-weight: 780;
   line-height: 1.28;
   letter-spacing: -0.025em;
 }
 
 .post-item--article .post-body :deep(.markdown-body h2) {
-  font-size: clamp(1.22rem, 1.45vw, 1.52rem);
+  font-size: clamp(1.16rem, 1.28vw, 1.34rem);
 }
 
 .post-item--article .post-body :deep(.markdown-body h3) {
-  font-size: clamp(1.06rem, 1.15vw, 1.24rem);
+  font-size: clamp(1.04rem, 1.08vw, 1.14rem);
 }
 
 .post-item--article .post-body :deep(.markdown-body p) {

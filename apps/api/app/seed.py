@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.growth import LEVEL_THRESHOLDS, MAX_LEVEL
 from app.core.logging import configure_logging, get_logger
 from app.core.security import hash_password
+from app.core.trust import TRUST_LEVEL_MAX
 from app.db.base import utcnow
 from app.db.session import AsyncSessionLocal
 from app.models.forum import Board, BoardMember, Post, Topic
@@ -18,6 +20,11 @@ from app.services.quality_posts import QUALITY_POST_SPECS
 from app.services.search import SearchIndexService
 
 DEMO_PASSWORD = "parallellines-demo-123"
+PRIMARY_ADMIN_USERNAME = "多动脑子z"
+PRIMARY_ADMIN_EMAIL = "admin@parallellines.local"
+SECONDARY_ADMIN_USERNAME = "大脚板"
+SECONDARY_ADMIN_EMAIL = "coadmin@parallellines.local"
+MAX_LEVEL_EXPERIENCE = LEVEL_THRESHOLDS[MAX_LEVEL]
 
 
 @dataclass(frozen=True)
@@ -49,7 +56,7 @@ BOARD_SEED_SPECS = [
         name="资源荟萃",
         description="收集值得收藏的工具、资料、网站、课程和内容。",
         color="#F97316",
-        owner_key="ops",
+        owner_key="admin",
         purpose="沉淀真正有用的资源清单，方便之后反复查找、补充和复用。",
         guidance="推荐资源时请附上链接、适合人群、使用场景，以及你为什么觉得它值得收藏。",
     ),
@@ -59,7 +66,7 @@ BOARD_SEED_SPECS = [
         name="福利羊毛",
         description="优惠信息、免费资源、限时活动、实用福利与避坑提醒。",
         color="#F59E0B",
-        owner_key="ops",
+        owner_key="admin",
         purpose="集中分享靠谱的福利线索、优惠活动、免费资源和省钱经验，方便大家及时发现也避免踩坑。",
         guidance="发布时请写清领取方式、有效时间、适用条件、风险提醒和是否需要付费或绑定信息。",
     ),
@@ -69,7 +76,7 @@ BOARD_SEED_SPECS = [
         name="读书感悟",
         description="分享读书摘记、阅读心得、金句摘录与文字感悟。",
         color="#DB2777",
-        owner_key="member",
+        owner_key="admin",
         purpose="记录阅读带来的触动、启发和思考，让一本书、一句话或一段文字继续发酵。",
         guidance="可以写书名、摘录、你的理解，也可以只分享一段读后感或延伸思考。",
     ),
@@ -79,7 +86,7 @@ BOARD_SEED_SPECS = [
         name="健康百科",
         description="交流饮食、运动、睡眠、心理与日常健康知识。",
         color="#10B981",
-        owner_key="moderator",
+        owner_key="admin",
         purpose="分享日常健康知识和个人实践经验，帮助大家更好地照顾身体与情绪。",
         guidance="请尽量标注信息来源；涉及疾病、用药和诊断时，应提醒大家以专业医生意见为准。",
     ),
@@ -89,7 +96,7 @@ BOARD_SEED_SPECS = [
         name="前沿快讯",
         description="关注 AI、科技、行业变化和正在发生的新鲜事。",
         color="#6366F1",
-        owner_key="frontend",
+        owner_key="admin",
         purpose="汇集新技术、新趋势、新产品和行业变化，方便大家快速了解外部世界。",
         guidance="转发资讯时请补充来源、摘要和你的判断，避免只贴标题或制造焦虑。",
     ),
@@ -109,7 +116,7 @@ BOARD_SEED_SPECS = [
         name="有问必答",
         description="有困惑就提出来，带上背景，大家一起帮你理清。",
         color="#65A30D",
-        owner_key="moderator",
+        owner_key="admin",
         purpose="承接各种求助、疑问和想不明白的问题，让社区成员一起补充线索和思路。",
         guidance="提问时请说明你想解决什么、已经尝试过什么、卡在哪里，以及希望得到哪类帮助。",
     ),
@@ -119,7 +126,7 @@ BOARD_SEED_SPECS = [
         name="社区反馈",
         description="对网站功能、内容氛围和社区规则提出建议。",
         color="#64748B",
-        owner_key="moderator",
+        owner_key="admin",
         purpose="收集大家对产品功能、内容组织、社区氛围和规则治理的建议。",
         guidance="反馈时请尽量写清使用场景、遇到的问题、期望变化，以及可接受的替代方案。",
     ),
@@ -129,7 +136,7 @@ BOARD_SEED_SPECS = [
         name="闲聊八卦",
         description="轻松聊天、日常分享、兴趣交流、热点八卦和不那么严肃的话题。",
         color="#8B5CF6",
-        owner_key="member",
+        owner_key="admin",
         purpose="提供一个轻松的公共客厅，聊近况、兴趣、碎碎念、热点八卦和生活里的小发现。",
         guidance="欢迎轻松表达，但仍请保持友善、尊重他人，不刷屏、不引战。",
     ),
@@ -145,58 +152,23 @@ async def seed_demo_data(session: AsyncSession, *, only_if_empty: bool = False) 
     users = {
         "admin": await upsert_user(
             session,
-            username="parallel_admin",
-            email="parallel_admin@example.com",
+            username=PRIMARY_ADMIN_USERNAME,
+            email=PRIMARY_ADMIN_EMAIL,
             role="admin",
+            level=MAX_LEVEL,
+            points_balance=MAX_LEVEL_EXPERIENCE,
+            experience_total=MAX_LEVEL_EXPERIENCE,
+            trust_level=TRUST_LEVEL_MAX,
         ),
-        "moderator": await upsert_user(
+        "coadmin": await upsert_user(
             session,
-            username="moderator_lin",
-            email="moderator_lin@example.com",
-            role="moderator",
-        ),
-        "ops": await upsert_user(
-            session,
-            username="ops_writer",
-            email="ops_writer@example.com",
-            role="user",
-        ),
-        "frontend": await upsert_user(
-            session,
-            username="frontend_dev",
-            email="frontend_dev@example.com",
-            role="user",
-        ),
-        "plugin": await upsert_user(
-            session,
-            username="plugin_maker",
-            email="plugin_maker@example.com",
-            role="user",
-        ),
-        "member": await upsert_user(
-            session,
-            username="community_user",
-            email="community_user@example.com",
-            role="user",
-        ),
-        # Keep documented local accounts available for manual login and smoke checks.
-        "demo_admin": await upsert_user(
-            session,
-            username="demo_admin",
-            email="demo_admin@example.com",
+            username=SECONDARY_ADMIN_USERNAME,
+            email=SECONDARY_ADMIN_EMAIL,
             role="admin",
-        ),
-        "demo_moderator": await upsert_user(
-            session,
-            username="demo_moderator",
-            email="demo_moderator@example.com",
-            role="moderator",
-        ),
-        "demo_member": await upsert_user(
-            session,
-            username="demo_member",
-            email="demo_member@example.com",
-            role="user",
+            level=MAX_LEVEL,
+            points_balance=MAX_LEVEL_EXPERIENCE,
+            experience_total=MAX_LEVEL_EXPERIENCE,
+            trust_level=TRUST_LEVEL_MAX,
         ),
     }
 
@@ -215,8 +187,8 @@ async def seed_demo_data(session: AsyncSession, *, only_if_empty: bool = False) 
         await ensure_board_member(
             session,
             board,
-            users["member"],
-            role="follower",
+            users["coadmin"],
+            role="owner",
             notification_level="watching",
         )
     await session.commit()
@@ -294,11 +266,17 @@ async def upsert_user(
     email: str,
     role: str,
     level: int = 0,
+    points_balance: int = 0,
+    experience_total: int = 0,
+    trust_level: int = 0,
 ) -> User:
     user = await session.scalar(select(User).where(User.username == username))
     if user:
         user.role = role
         user.level = level
+        user.points_balance = points_balance
+        user.experience_total = experience_total
+        user.trust_level = trust_level
         user.status = "active"
         return user
     user = User(
@@ -307,6 +285,9 @@ async def upsert_user(
         hashed_password=hash_password(DEMO_PASSWORD),
         role=role,
         level=level,
+        points_balance=points_balance,
+        experience_total=experience_total,
+        trust_level=trust_level,
         status="active",
     )
     session.add(user)

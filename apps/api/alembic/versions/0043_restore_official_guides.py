@@ -183,6 +183,25 @@ def table_exists(bind: sa.Connection, table_name: str) -> bool:
 
 
 def select_admin_author_id(bind: sa.Connection, owner_id: int | None) -> int | None:
+    preferred = bind.execute(
+        sa.select(users.c.id)
+        .where(
+            users.c.status == "active",
+            users.c.username.in_(("多动脑子z", "大脚板")),
+        )
+        .order_by(
+            sa.case(
+                (users.c.username == "多动脑子z", 0),
+                (users.c.username == "大脚板", 1),
+                else_=2,
+            ),
+            users.c.id,
+        )
+        .limit(1)
+    ).first()
+    if preferred:
+        return int(preferred.id)
+
     if owner_id is not None:
         owner = bind.execute(
             sa.select(users.c.id).where(users.c.id == owner_id, users.c.status == "active")
@@ -192,7 +211,7 @@ def select_admin_author_id(bind: sa.Connection, owner_id: int | None) -> int | N
     row = bind.execute(
         sa.select(users.c.id)
         .where(users.c.status == "active", users.c.role == "admin")
-        .order_by(sa.case((users.c.username == "parallel_admin", 0), else_=1), users.c.id)
+        .order_by(users.c.id)
         .limit(1)
     ).first()
     return int(row.id) if row else None

@@ -27,13 +27,12 @@ Services:
 
 `docker compose up` runs Alembic migrations, seeds demo data, starts the API, web preview server, MySQL, Redis, and the unified background job worker.
 
-Demo accounts share this local-only password: `parallellines-demo-123`.
+Seeded local admin accounts share this local-only password: `parallellines-demo-123`.
 
 | Username | Role |
 |---|---|
-| `demo_admin` | admin |
-| `demo_moderator` | moderator |
-| `demo_member` | user |
+| `多动脑子z` | admin / 默认官方内容作者 |
+| `大脚板` | admin |
 
 ## Local Development without Docker
 

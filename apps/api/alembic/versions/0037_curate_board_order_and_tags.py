@@ -301,8 +301,8 @@ def select_migration_author(bind: sa.Connection) -> dict[str, object] | None:
         .where(users.c.status == "active")
         .order_by(
             sa.case(
-                (users.c.username == "parallel_admin", 0),
-                (users.c.username == "demo_admin", 1),
+                (users.c.username == "多动脑子z", 0),
+                (users.c.username == "大脚板", 1),
                 (users.c.role == "admin", 2),
                 (users.c.role == "moderator", 3),
                 else_=4,

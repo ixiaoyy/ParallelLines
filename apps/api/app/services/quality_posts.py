@@ -75,7 +75,7 @@ QUALITY_POST_SPECS = [
     ),
 ]
 
-QUALITY_POST_AUTHOR_USERNAME = "parallel_admin"
+QUALITY_POST_AUTHOR_USERNAME = "多动脑子z"
 
 
 async def sync_quality_posts(
@@ -106,6 +106,13 @@ async def _resolve_author(
 ) -> User:
     if author_username:
         author = await session.scalar(select(User).where(User.username == author_username))
+        if author is not None:
+            return author
+        if author_username != QUALITY_POST_AUTHOR_USERNAME:
+            raise RuntimeError(
+                "No quality-post author is available; create user "
+                f"{author_username!r} or pass --author-username."
+            )
     elif board.owner_id is not None:
         author = await session.scalar(select(User).where(User.id == board.owner_id))
     else:
@@ -113,12 +120,24 @@ async def _resolve_author(
             select(User).where(User.role == "admin", User.status == "active").order_by(User.id)
         )
 
-    if author is None:
-        raise RuntimeError(
-            "No quality-post author is available; create user "
-            f"{author_username or QUALITY_POST_AUTHOR_USERNAME!r} or pass --author-username."
-        )
-    return author
+    if author is not None:
+        return author
+
+    if board.owner_id is not None:
+        author = await session.scalar(select(User).where(User.id == board.owner_id))
+        if author is not None:
+            return author
+
+    author = await session.scalar(
+        select(User).where(User.role == "admin", User.status == "active").order_by(User.id)
+    )
+    if author is not None:
+        return author
+
+    raise RuntimeError(
+        "No quality-post author is available; create user "
+        f"{QUALITY_POST_AUTHOR_USERNAME!r} or pass --author-username."
+    )
 
 
 async def _upsert_quality_post(
