@@ -122,8 +122,13 @@ function boardIcon(board: BoardSummary): Component {
   return boardIcons[board.slug] ?? TagsOutlined;
 }
 
+function boardAccessibleLabel(board: BoardSummary): string {
+  const description = board.description ? `，${board.description}` : "";
+  return `${board.name}${description}，${compactNumber(board.topicCount)} 个主题`;
+}
+
 function tagAccentStyle(tagName: string): Record<string, string> {
-  return { "--tag-accent": tagAccentColors[tagName] ?? "#409eff" };
+  return { "--tag-accent": tagAccentColors[tagName] ?? "var(--primary)" };
 }
 </script>
 
@@ -132,25 +137,24 @@ function tagAccentStyle(tagName: string): Record<string, string> {
     <RouterLink class="rail-action" :to="{ name: 'new-topic' }">新建主题</RouterLink>
 
     <section class="rail-section" aria-labelledby="rail-boards-title">
-      <h2 id="rail-boards-title">版块</h2>
+      <h2 id="rail-boards-title">公共版块</h2>
       <p v-if="boardsLoading" class="rail-state">正在加载版块…</p>
       <p v-else-if="boardsError" class="rail-state rail-state--error">版块暂时不可用</p>
       <template v-else>
         <p v-if="!publicBoards.length" class="rail-state">暂无可见版块</p>
-        <h3 v-if="publicBoards.length" class="rail-subtitle">公共版块</h3>
         <RouterLink
           v-for="board in publicBoards"
           :key="board.id"
           class="rail-board"
           :class="boardToneClass(board.slug)"
           :to="{ name: 'board-detail', params: { slug: board.slug } }"
+          :aria-label="boardAccessibleLabel(board)"
+          :title="board.description || board.name"
         >
           <component :is="boardIcon(board)" class="rail-board-mark" aria-hidden="true" />
           <span class="rail-board-copy">
             <strong>{{ board.name }}</strong>
-            <small>{{ board.description }}</small>
           </span>
-          <em>{{ compactNumber(board.topicCount) }}</em>
         </RouterLink>
       </template>
     </section>
@@ -170,7 +174,6 @@ function tagAccentStyle(tagName: string): Record<string, string> {
           >
             <component :is="tagIcon(tag.name)" aria-hidden="true" />
             <span>{{ tag.name }}</span>
-            <i v-if="tag.topicCount > 0" aria-hidden="true"></i>
           </RouterLink>
           <RouterLink class="rail-tag rail-tag--all" :to="{ name: 'search' }">
             <UnorderedListOutlined aria-hidden="true" />
