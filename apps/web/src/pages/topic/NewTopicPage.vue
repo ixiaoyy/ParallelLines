@@ -170,6 +170,16 @@ const checklist = computed(() => [
 ]);
 
 const completion = computed(() => checklist.value.filter((item) => item.done).length);
+const remainingChecklist = computed(() => checklist.value.filter((item) => !item.done));
+const completionNote = computed(() => {
+  if (!remainingChecklist.value.length) {
+    return "已满足发布条件";
+  }
+
+  const visibleItems = remainingChecklist.value.slice(0, 2).map((item) => item.label);
+  const suffix = remainingChecklist.value.length > visibleItems.length ? "等" : "";
+  return `还差：${visibleItems.join("、")}${suffix}`;
+});
 const canPublish = computed(() => checklist.value.every((item) => item.done));
 const draftStatus = computed(() => {
   if (publishState.value === "submitted") {
@@ -637,8 +647,9 @@ function isTopicIntent(value: unknown): value is TopicIntent {
       </div>
       <dl aria-label="发帖状态">
         <div>
-          <dt>完成度</dt>
-          <dd>{{ completion }}/{{ checklist.length }}</dd>
+          <dt>发布检查</dt>
+          <dd>{{ completion }}/{{ checklist.length }} 项</dd>
+          <small>{{ completionNote }}</small>
         </div>
         <div>
           <dt>当前版块</dt>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CloseOutlined, MenuOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons-vue";
+import { CloseOutlined, EnterOutlined, MenuOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons-vue";
 import { computed, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { RouteLocationRaw } from "vue-router";
@@ -214,11 +214,11 @@ function isNavItemActive(item: NavItem) {
             class="global-search-submit"
             type="button"
             :disabled="!canSubmitGlobalSearch"
-            :aria-label="t('search.submit_aria', '搜索')"
+            :aria-label="t('search.submit_aria', '按回车搜索')"
+            :title="t('search.submit_aria', '按回车搜索')"
             @click="submitGlobalSearch"
           >
-            <SearchOutlined />
-            <span class="global-search-submit__label">{{ t("search.submit", "搜索") }}</span>
+            <EnterOutlined />
           </button>
         </template>
       </a-input>
@@ -331,11 +331,11 @@ function isNavItemActive(item: NavItem) {
               class="global-search-submit"
               type="button"
               :disabled="!canSubmitGlobalSearch"
-              :aria-label="t('search.submit_aria', '搜索')"
+              :aria-label="t('search.submit_aria', '按回车搜索')"
+              :title="t('search.submit_aria', '按回车搜索')"
               @click="submitGlobalSearch"
             >
-              <SearchOutlined />
-              <span class="global-search-submit__label">{{ t("search.submit", "搜索") }}</span>
+              <EnterOutlined />
             </button>
           </template>
         </a-input>
