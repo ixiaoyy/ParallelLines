@@ -28,7 +28,7 @@ const feedTopics = computed(() => topicsQuery.data.value ?? []);
 const discoveryTopics = computed(() =>
   feedTopics.value.filter((topic) => !(topic.pinned && topic.title === `关于「${topic.boardName}」`)),
 );
-const railBoards = computed(() => boardSummaries.value.slice(0, 8));
+const railBoards = computed(() => boardSummaries.value);
 const topTags = computed(() => (tagsQuery.data.value ?? []).slice(0, 10));
 
 const visibleTopics = computed(() => {
