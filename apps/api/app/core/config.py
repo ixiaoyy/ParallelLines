@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     jwt_secret_key: str = "change-me-in-production-with-at-least-32-bytes"
     jwt_algorithm: str = "HS256"
-    access_token_minutes: int = 15
+    access_token_minutes: int = 360
     refresh_token_days: int = 30
 
     email_delivery_mode: Literal["memory", "smtp"] = "memory"

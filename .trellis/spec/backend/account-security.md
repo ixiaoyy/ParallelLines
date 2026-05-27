@@ -54,6 +54,8 @@ DB tables/columns:
   access-token `sid`.
 - `TokenPair` includes `session_id`; access and refresh JWTs include `sid`, and
   `CurrentUserDep` rejects revoked/mismatched sessions.
+- Default access-token TTL is 360 minutes (6 hours); refresh tokens remain long-lived by
+  session policy and default to 30 days.
 - Login with `two_factor_enabled=true` returns `LoginResponse(two_factor_required=true,
   challenge_token=...)` and must not create a session until `/2fa/verify-login` succeeds.
 - TOTP uses 30-second steps, six digits, and a ±1 step validation window. Recovery codes are
