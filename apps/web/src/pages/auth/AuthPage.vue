@@ -218,9 +218,7 @@ async function submitRegister() {
     devVerificationCode.value = registration.dev_verification_code;
     registerPassword.value = "";
     registerConfirmPassword.value = "";
-    formNotice.value = `验证码已发送至 ${registration.email}，请在 ${
-      Math.floor(registration.expires_in_seconds / 60)
-    } 分钟内完成激活。`;
+    formNotice.value = "验证码已发送，请查收邮件。";
   } catch (error) {
     formError.value = toAuthError(error, "注册失败，请换一个用户名/邮箱后重试。");
   }
@@ -255,7 +253,7 @@ async function resendCode() {
     });
     verificationCode.value = registration.dev_verification_code ?? "";
     devVerificationCode.value = registration.dev_verification_code;
-    formNotice.value = `新的验证码已发送至 ${registration.email}。`;
+    formNotice.value = "验证码已重新发送，请查收邮件。";
   } catch (error) {
     formError.value = toAuthError(error, "验证码暂时无法重发，请稍后再试。");
   }
@@ -300,6 +298,10 @@ function toAuthError(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
     if (error.code === "account_exists") {
       return "用户名或邮箱已被注册。";
+    }
+
+    if (error.code === "account_already_active") {
+      return "该邮箱已完成验证，请直接登录。";
     }
 
     if (error.code === "invalid_credentials") {

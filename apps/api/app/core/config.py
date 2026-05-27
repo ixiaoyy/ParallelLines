@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     smtp_use_ssl: bool = False
     smtp_timeout_seconds: float = 10.0
     email_webhook_secret: str | None = None
-    email_verification_code_ttl_minutes: int = 10
+    email_verification_code_ttl_minutes: int = 5
     email_verification_resend_seconds: int = 60
     email_verification_max_attempts: int = 5
     password_reset_token_ttl_minutes: int = 5

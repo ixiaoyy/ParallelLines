@@ -44,6 +44,7 @@ DB tables/columns:
   `user_security_tokens` stores only HMAC hashes, expiry, attempt counts, and consumption state.
 - Password reset codes expire quickly; the default TTL is 5 minutes.
 - Request paths enqueue email jobs with `BackgroundJobService(..., commit=False)` and do not perform SMTP work synchronously.
+- Email verification codes expire quickly; the default TTL is 5 minutes.
 - `request_password_reset` returns the same success payload for known and unknown emails.
 - Consuming a reset or email-change token sets `consumed_at`; successful confirmation also
   consumes other open tokens of the same purpose for that user.

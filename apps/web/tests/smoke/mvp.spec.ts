@@ -40,10 +40,11 @@ test("register login create topic reply and interactions", async ({ page, reques
   const registerForm = page.getByRole("form", { name: "注册表单" });
   await registerForm.getByLabel("用户名").fill(username);
   await registerForm.getByLabel("邮箱").fill(`${username}@example.com`);
-  await registerForm.getByLabel("密码").fill(password);
+  await registerForm.getByLabel("密码", { exact: true }).fill(password);
+  await registerForm.getByLabel("确认密码").fill(password);
   await registerForm.getByRole("button", { name: buttonName("创建账号") }).click();
   const verificationForm = page.getByRole("form", { name: "验证码激活表单" });
-  await expect(verificationForm.getByText(/验证码已发送至/)).toBeVisible();
+  await expect(verificationForm.getByText("验证码已发送，请查收邮件。")).toBeVisible();
   await verificationForm.getByRole("button", { name: buttonName("激活账号") }).click();
   await expect(page.getByRole("banner").getByRole("link", { name: username })).toBeVisible();
 
