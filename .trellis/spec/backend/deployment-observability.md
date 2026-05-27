@@ -107,6 +107,9 @@ CI commands:
   handler, or API cannot see.
 - `VITE_API_BASE_URL` is a build-time frontend contract; Docker build args and CI env must set it explicitly when not using the default.
 - CI and Docker Compose start MySQL for migration and Playwright smoke gates.
+- Compose API and worker services must not override `DATABASE_URL` after `env_file`;
+  otherwise deployment can silently use the internal seed database while operators
+  believe `apps/api/.env` points at the real database.
 - Slow API requests log `request_slow` when duration exceeds `SLOW_REQUEST_MS`.
 - Seed data must not log or print passwords; README may document demo credentials for local-only use.
 - Registration creates a pending account, stores only a verification-code hash, and activates the user only after `/auth/verify-email`.

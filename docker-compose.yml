@@ -29,8 +29,6 @@ services:
       context: ./apps/api
     env_file:
       - ./apps/api/.env
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-mysql+asyncmy://root:root@mysql:3306/parallellines?charset=utf8mb4}
     ports:
       - "8000:8000"
     volumes:
@@ -62,8 +60,6 @@ services:
       context: ./apps/api
     env_file:
       - ./apps/api/.env
-    environment:
-      DATABASE_URL: ${DATABASE_URL:-mysql+asyncmy://root:root@mysql:3306/parallellines?charset=utf8mb4}
     volumes:
       - upload-data:/var/lib/parallellines/uploads
       - backup-data:/var/lib/parallellines/backups
