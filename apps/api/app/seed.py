@@ -14,7 +14,7 @@ from app.models.forum import Board, BoardMember, Post, Topic
 from app.models.user import User
 from app.schemas.forum import PostCreateRequest, TopicCreateRequest
 from app.services.forum import ForumService, render_markdown
-from app.services.quality_posts import QUALITY_POST_AUTHOR_USERNAME, QUALITY_POST_SPECS
+from app.services.quality_posts import QUALITY_POST_SPECS
 from app.services.search import SearchIndexService
 
 DEMO_PASSWORD = "parallellines-demo-123"
@@ -52,6 +52,16 @@ BOARD_SEED_SPECS = [
         owner_key="ops",
         purpose="沉淀真正有用的资源清单，方便之后反复查找、补充和复用。",
         guidance="推荐资源时请附上链接、适合人群、使用场景，以及你为什么觉得它值得收藏。",
+    ),
+    BoardSeedSpec(
+        key="benefits",
+        slug="benefits",
+        name="福利羊毛",
+        description="优惠信息、免费资源、限时活动、实用福利与避坑提醒。",
+        color="#F59E0B",
+        owner_key="ops",
+        purpose="集中分享靠谱的福利线索、优惠活动、免费资源和省钱经验，方便大家及时发现也避免踩坑。",
+        guidance="发布时请写清领取方式、有效时间、适用条件、风险提醒和是否需要付费或绑定信息。",
     ),
     BoardSeedSpec(
         key="reading",
@@ -116,11 +126,11 @@ BOARD_SEED_SPECS = [
     BoardSeedSpec(
         key="lounge",
         slug="lounge",
-        name="闲聊茶馆",
-        description="轻松聊天、日常分享、兴趣交流和不那么严肃的话题。",
+        name="闲聊八卦",
+        description="轻松聊天、日常分享、兴趣交流、热点八卦和不那么严肃的话题。",
         color="#8B5CF6",
         owner_key="member",
-        purpose="提供一个轻松的公共客厅，聊近况、兴趣、碎碎念和生活里的小发现。",
+        purpose="提供一个轻松的公共客厅，聊近况、兴趣、碎碎念、热点八卦和生活里的小发现。",
         guidance="欢迎轻松表达，但仍请保持友善、尊重他人，不刷屏、不引战。",
     ),
 ]
@@ -167,12 +177,6 @@ async def seed_demo_data(session: AsyncSession, *, only_if_empty: bool = False) 
             session,
             username="community_user",
             email="community_user@example.com",
-            role="user",
-        ),
-        "quality_author": await upsert_user(
-            session,
-            username=QUALITY_POST_AUTHOR_USERNAME,
-            email="quality_author@example.com",
             role="user",
         ),
         # Keep documented local accounts available for manual login and smoke checks.
@@ -223,37 +227,6 @@ async def seed_demo_data(session: AsyncSession, *, only_if_empty: bool = False) 
         topic_key = str(topic_payload.pop("key"))
         seeded_topics[topic_key] = await create_topic_if_missing(session, **topic_payload)
 
-    await create_reply_if_missing(
-        session,
-        topic=seeded_topics["clear-question"],
-        author=users["moderator"],
-        raw_md=(
-            "可以先把目标、已经尝试过的方法、遇到的阻碍分成三段写。"
-            "别人越容易理解上下文，就越容易给出真正有用的建议。"
-        ),
-    )
-    await create_reply_if_missing(
-        session,
-        topic=seeded_topics["record-month"],
-        author=users["ops"],
-        raw_md=(
-            "我会把门槛降到每天三句话：今天发生了什么、我有什么感受、"
-            "明天想做一个什么小动作。先持续，再追求写得漂亮。"
-        ),
-    )
-    await create_reply_if_missing(
-        session,
-        topic=seeded_topics["health-break"],
-        author=users["frontend"],
-        raw_md="番茄钟结束后站起来活动两分钟，对久坐的人比一次性高强度运动更容易坚持。",
-    )
-    await create_reply_if_missing(
-        session,
-        topic=seeded_topics["resource-toolkit"],
-        author=users["plugin"],
-        raw_md="推荐资源时可以补一句「我用它解决了什么问题」，比单纯贴链接更有参考价值。",
-    )
-
     logger.info(
         "seed_completed",
         users=len(users),
@@ -270,11 +243,12 @@ async def has_existing_content(session: AsyncSession) -> bool:
 
 def starter_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dict[str, object]]:
     return [
+        *board_about_topics(boards, users),
         *[
             {
                 "key": post.key,
                 "board": boards["announcements"],
-                "author": users["quality_author"],
+                "author": users["admin"],
                 "title": post.title,
                 "raw_md": post.raw_md,
                 "tags": post.tags,
@@ -283,96 +257,6 @@ def starter_topics(boards: dict[str, Board], users: dict[str, User]) -> list[dic
             }
             for post in QUALITY_POST_SPECS
         ],
-        *board_about_topics(boards, users),
-        {
-            "key": "welcome-guide",
-            "board": boards["announcements"],
-            "author": users["admin"],
-            "title": "新朋友从哪里开始了解平行线？",
-            "raw_md": (
-                "可以先浏览置顶的社区初衷和各版块说明，再从自己最想记录或提问的内容开始。"
-                "不必追求一次写完整，清楚表达真实想法更重要。"
-            ),
-            "tags": ["新手指南", "社区说明"],
-            "pinned": False,
-            "featured": True,
-        },
-        {
-            "key": "resource-toolkit",
-            "board": boards["resources"],
-            "author": users["ops"],
-            "title": "你最近收藏了哪些真正用得上的工具或资料？",
-            "raw_md": "欢迎分享网站、课程、书单、模板或工具，并说明它适合谁、能解决什么问题。",
-            "tags": ["工具资源", "收藏"],
-            "featured": True,
-        },
-        {
-            "key": "reading-sentence",
-            "board": boards["reading"],
-            "author": users["member"],
-            "title": "最近读到哪句话，让你停下来想了很久？",
-            "raw_md": "可以贴一小段摘录，也可以只写它为什么打动你、让你想到了什么。",
-            "tags": ["读书", "感悟"],
-        },
-        {
-            "key": "health-break",
-            "board": boards["health"],
-            "author": users["moderator"],
-            "title": "久坐之后，怎样用很小的动作照顾身体？",
-            "raw_md": (
-                "想收集一些低门槛、容易坚持的日常活动方式，"
-                "比如拉伸、散步、喝水提醒和睡前放松。"
-            ),
-            "tags": ["健康习惯", "运动"],
-        },
-        {
-            "key": "ai-tools-signal",
-            "board": boards["news"],
-            "author": users["frontend"],
-            "title": "AI 工具更新太快，怎样判断一个新功能值不值得试？",
-            "raw_md": "比起追每一条新闻，我更想知道大家如何判断信息质量、使用成本和真实价值。",
-            "tags": ["AI", "科技前沿"],
-            "featured": True,
-        },
-        {
-            "key": "record-month",
-            "board": boards["experience"],
-            "author": users["admin"],
-            "title": "如何把一个想法坚持记录一个月？",
-            "raw_md": (
-                "从每天几句话开始，记录触发点、行动和反馈。"
-                "等积累到一定数量，再回头整理主题。"
-            ),
-            "tags": ["记录", "复盘"],
-            "featured": True,
-        },
-        {
-            "key": "clear-question",
-            "board": boards["qna"],
-            "author": users["member"],
-            "title": "怎样把一个问题描述清楚，更容易得到帮助？",
-            "raw_md": "我有时只知道自己卡住了，却不知道怎么问。想整理一个更容易被回复的提问格式。",
-            "tags": ["提问", "求助"],
-        },
-        {
-            "key": "feedback-tags",
-            "board": boards["feedback"],
-            "author": users["moderator"],
-            "title": "你希望社区优先补充哪些内容标签？",
-            "raw_md": (
-                "比如读书、健康、AI、工具、生活经验等。"
-                "欢迎说说哪些标签能帮助你更快找到内容。"
-            ),
-            "tags": ["功能建议", "社区共建"],
-        },
-        {
-            "key": "lounge-daily",
-            "board": boards["lounge"],
-            "author": users["member"],
-            "title": "今天有什么想随手分享的小事？",
-            "raw_md": "可以是一张图、一句话、一个小发现，也可以只是今天过得怎么样。",
-            "tags": ["闲聊", "日常"],
-        },
     ]
 
 

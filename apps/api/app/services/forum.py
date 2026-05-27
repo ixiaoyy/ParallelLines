@@ -7,7 +7,7 @@ from collections.abc import Iterable, Mapping
 from datetime import UTC, datetime
 from hashlib import sha256
 
-from sqlalchemy import desc, func, not_, or_, select, update
+from sqlalchemy import case, desc, func, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.requests import Request
@@ -83,6 +83,40 @@ SAFE_UPLOAD_PATH_PATTERN = re.compile(
     r")/content(?:\?[^<>\"]*)?$"
 )
 
+BOARD_DISPLAY_ORDER = (
+    "announcements",
+    "resources",
+    "benefits",
+    "reading",
+    "health",
+    "news",
+    "experience",
+    "qna",
+    "lounge",
+    "feedback",
+)
+
+ADMIN_ONLY_TOPIC_BOARD_SLUGS = frozenset({"announcements"})
+
+TAG_DISPLAY_ORDER = (
+    "公告",
+    "集中帖",
+    "精华神帖",
+    "快问快答",
+    "人工智能",
+    "原创",
+    "资源分享",
+    "福利羊毛",
+    "教程",
+    "作品集",
+    "读书",
+    "健康",
+    "闲聊",
+    "站务反馈",
+    "活动",
+    "发帖模板",
+)
+
 
 def slugify(value: str, *, fallback_prefix: str = "item") -> str:
     normalized = SLUG_SEPARATOR_PATTERN.sub("-", value.lower()).strip("-")
@@ -91,6 +125,20 @@ def slugify(value: str, *, fallback_prefix: str = "item") -> str:
 
 def normalize_tag_name(value: str) -> str:
     return TAG_SEPARATOR_PATTERN.sub("-", value.strip().lower()).strip("-#")
+
+
+def board_display_order_expression():
+    return case(
+        *((Board.slug == slug, index) for index, slug in enumerate(BOARD_DISPLAY_ORDER)),
+        else_=len(BOARD_DISPLAY_ORDER),
+    )
+
+
+def tag_display_order_expression():
+    return case(
+        *((Tag.name == name, index) for index, name in enumerate(TAG_DISPLAY_ORDER)),
+        else_=len(TAG_DISPLAY_ORDER),
+    )
 
 
 def notification_idempotency_key(
@@ -262,7 +310,13 @@ class ForumService:
             .options(selectinload(Board.parent_board))
             .where(self._board_visible_condition(current_user))
         )
-        result = await self.session.scalars(statement.order_by(desc(Board.topic_count), Board.name))
+        result = await self.session.scalars(
+            statement.order_by(
+                board_display_order_expression(),
+                desc(Board.topic_count),
+                Board.name,
+            )
+        )
         return list(result)
 
     async def board_memberships_for_user(
@@ -328,7 +382,7 @@ class ForumService:
                 Board.parent_board_id == parent_board_id,
                 self._board_visible_condition(current_user),
             )
-            .order_by(desc(Board.topic_count), Board.name)
+            .order_by(board_display_order_expression(), desc(Board.topic_count), Board.name)
         )
         return list(result)
 
@@ -549,17 +603,22 @@ class ForumService:
         limit: int = 30,
         current_user: User | None = None,
     ) -> list[Tag]:
-        result = await self.session.scalars(
-            select(Tag)
+        visible_tag_ids = (
+            select(Tag.id)
             .join(Tag.topics)
             .join(Topic.board)
             .where(
                 Tag.topic_count > 0,
+                Topic.deleted_at.is_(None),
                 Topic.visibility == "public",
                 self._board_visible_condition(current_user),
             )
-            .group_by(Tag.id)
-            .order_by(desc(Tag.topic_count), Tag.name)
+            .distinct()
+        )
+        result = await self.session.scalars(
+            select(Tag)
+            .where(or_(Tag.id.in_(visible_tag_ids), Tag.name.in_(TAG_DISPLAY_ORDER)))
+            .order_by(tag_display_order_expression(), desc(Tag.topic_count), Tag.name)
             .limit(limit)
         )
         return list(result)
@@ -641,6 +700,11 @@ class ForumService:
         skip_spam_checks: bool = False,
     ) -> Topic:
         board = await self.get_board_by_slug(board_slug, current_user=current_user)
+        if not self.can_create_topic_in_board(board, current_user):
+            raise PermissionDeniedError(
+                "board_topic_create_restricted",
+                "Only administrators can create topics in this board.",
+            )
         if not skip_spam_checks:
             await SpamPreventionService(self.session).enforce_topic(
                 request,
@@ -779,6 +843,11 @@ class ForumService:
         )
         await self.session.commit()
         return await self.get_topic(topic.id, current_user=current_user)
+
+    def can_create_topic_in_board(self, board: Board, current_user: User | None) -> bool:
+        if board.slug in ADMIN_ONLY_TOPIC_BOARD_SLUGS:
+            return current_user is not None and is_admin(current_user)
+        return current_user is None or current_user.status == "active"
 
     async def get_topic(self, topic_id: str, *, current_user: User | None = None) -> Topic:
         topic = await self.session.scalar(

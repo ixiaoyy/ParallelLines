@@ -25,6 +25,7 @@ export interface BoardResponse {
   follower_count: number;
   is_following: boolean;
   notification_level: BoardNotificationLevel | null;
+  can_create_topic?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -90,5 +91,6 @@ export function toBoardSummary(board: BoardResponse): BoardSummary {
     followerCount: board.follower_count,
     isFollowing: board.is_following,
     notificationLevel: board.notification_level,
+    canCreateTopic: board.can_create_topic ?? true,
   };
 }

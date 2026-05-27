@@ -1,6 +1,8 @@
 .topic-detail-page {
   display: grid;
-  gap: 1rem;
+  gap: 1.3rem;
+  max-width: 1180px;
+  margin: 0 auto;
 }
 
 .topic-state :deep(.ant-card-body) {
@@ -21,8 +23,8 @@
 
 .topic-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(17rem, 21rem);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
+  gap: clamp(1rem, 2.5vw, 1.8rem);
   align-items: start;
 }
 
@@ -30,6 +32,10 @@
   display: grid;
   gap: 0.9rem;
   min-width: 0;
+}
+
+.topic-original {
+  display: grid;
 }
 
 .post-list {
@@ -41,11 +47,51 @@
   scroll-margin-top: 6.5rem;
 }
 
+.reply-section {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 0.4rem;
+  border-top: 1px solid rgba(var(--muted-rgb), 0.18);
+  padding-top: 1rem;
+}
+
+.reply-section__header {
+  display: grid;
+  gap: 0.24rem;
+}
+
+.reply-section__header span {
+  color: var(--primary);
+  font-size: 0.76rem;
+  font-weight: 920;
+  letter-spacing: 0.14em;
+}
+
+.reply-section__header h2,
+.reply-section__header p {
+  margin: 0;
+}
+
+.reply-section__header h2 {
+  color: var(--title);
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+  letter-spacing: -0.03em;
+}
+
+.reply-section__header p {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .reply-status {
   margin: 0;
   color: var(--primary);
   font-size: 0.9rem;
   font-weight: 820;
+}
+
+.topic-end-anchor {
+  scroll-margin-top: 6.5rem;
 }
 
 @media (max-width: 1120px) {

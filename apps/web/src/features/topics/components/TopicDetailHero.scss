@@ -1,31 +1,24 @@
 .topic-detail-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(13rem, 18rem);
-  gap: clamp(1rem, 2.5vw, 1.5rem);
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  padding: clamp(1.1rem, 2.4vw, 1.75rem);
-  background:
-    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--topic-color) 18%, transparent), transparent 21rem),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.78));
-  box-shadow: var(--shadow-soft);
+  gap: 0.82rem;
+  border-bottom: 1px solid rgba(var(--muted-rgb), 0.18);
+  padding: clamp(0.4rem, 1vw, 0.8rem) 0 clamp(1.1rem, 2vw, 1.55rem);
 }
 
-.topic-detail-hero__main {
-  display: grid;
-  gap: 0.9rem;
-  min-width: 0;
+.topic-breadcrumb,
+.topic-meta-row,
+.topic-taxonomy,
+.topic-stat-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.48rem;
+  align-items: center;
 }
 
 .topic-breadcrumb {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  align-items: center;
   color: var(--muted);
-  font-size: 0.84rem;
-  font-weight: 780;
+  font-size: 0.86rem;
+  font-weight: 760;
 }
 
 .topic-breadcrumb a {
@@ -33,113 +26,75 @@
   text-decoration: none;
 }
 
-.topic-title-block {
-  display: grid;
-  gap: 0.6rem;
-  min-width: 0;
-}
-
-.topic-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-}
-
-.topic-title-block h1,
-.topic-title-block p,
-.topic-stat-grid {
+.topic-detail-hero h1 {
+  max-width: 62rem;
   margin: 0;
-}
-
-.topic-title-block h1 {
-  max-width: 58rem;
-  color: var(--title);
-  font-size: clamp(2rem, 3.2vw, 3.55rem);
-  line-height: 1.08;
-  letter-spacing: -0.045em;
+  color: #111827;
+  font-size: clamp(2.1rem, 4vw, 4.15rem);
+  line-height: 1.06;
+  letter-spacing: -0.055em;
   overflow-wrap: anywhere;
 }
 
-.topic-title-block p {
-  max-width: 48rem;
-  color: var(--text);
-  font-size: 0.98rem;
-  line-height: 1.7;
-}
-
-.topic-author-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  border-top: 1px solid rgba(var(--muted-rgb), 0.22);
-  padding-top: 0.8rem;
-}
-
-.topic-author-strip div {
-  display: grid;
-  gap: 0.1rem;
-}
-
-.topic-author-strip span,
-.topic-author-strip time {
+.topic-meta-row {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.92rem;
 }
 
-.topic-author-strip strong {
+.topic-meta-row strong {
   color: var(--title);
 }
 
-.topic-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.65rem;
-  align-self: end;
+.topic-meta-row span {
+  border-radius: 999px;
+  padding: 0.12rem 0.45rem;
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.09);
+  font-weight: 860;
 }
 
-.topic-stat-grid div {
-  display: grid;
-  gap: 0.16rem;
-  border: 1px solid rgba(var(--muted-rgb), 0.2);
-  border-radius: 1rem;
-  padding: 0.78rem 0.85rem;
-  background: rgba(255, 255, 255, 0.74);
+.topic-taxonomy {
+  gap: 0.52rem;
 }
 
-.topic-stat-grid dt {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 820;
+.board-chip {
+  border: 1px solid color-mix(in srgb, var(--topic-color) 30%, transparent);
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  color: var(--topic-color);
+  background: color-mix(in srgb, var(--topic-color) 10%, white);
+  font-size: 0.86rem;
+  font-weight: 900;
+  text-decoration: none;
 }
 
-.topic-stat-grid dd {
+.topic-stat-line {
+  gap: 0.35rem 0.8rem;
   margin: 0;
-  color: var(--title);
-  font-size: 1.22rem;
+  color: var(--muted);
+}
+
+.topic-stat-line div {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: baseline;
+}
+
+.topic-stat-line dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.topic-stat-line dd {
+  margin: 0;
+  color: var(--primary);
+  font-size: 0.95rem;
   font-weight: 920;
 }
 
-@media (max-width: 1120px) {
-  .topic-detail-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .topic-stat-grid {
-    align-self: stretch;
-  }
-}
-
 @media (max-width: 680px) {
-  .topic-detail-hero {
-    border-radius: 1.15rem;
-  }
-
-  .topic-stat-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .topic-title-block h1 {
-    font-size: clamp(1.75rem, 9vw, 2.35rem);
+  .topic-detail-hero h1 {
+    font-size: clamp(1.85rem, 10vw, 2.65rem);
   }
 }

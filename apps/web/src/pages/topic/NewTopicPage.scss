@@ -242,6 +242,18 @@
   box-shadow: 0 12px 24px rgba(var(--primary-rgb), 0.12);
 }
 
+.board-picker button.locked {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.board-picker button.locked:hover,
+.board-picker button.locked:focus-visible {
+  transform: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
+
 .board-picker button > span {
   width: 0.9rem;
   height: 0.9rem;

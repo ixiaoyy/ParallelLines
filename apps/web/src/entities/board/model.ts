@@ -22,4 +22,5 @@ export interface BoardSummary {
   followerCount: number;
   isFollowing: boolean;
   notificationLevel: BoardNotificationLevel | null;
+  canCreateTopic: boolean;
 }

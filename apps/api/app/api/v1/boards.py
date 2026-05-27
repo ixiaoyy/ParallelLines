@@ -37,7 +37,14 @@ async def list_boards(
         current_user,
     )
     return ApiResponse(
-        data=[BoardResponse.from_board(board, memberships.get(board.id)) for board in boards]
+        data=[
+            BoardResponse.from_board(
+                board,
+                memberships.get(board.id),
+                can_create_topic=service.can_create_topic_in_board(board, current_user),
+            )
+            for board in boards
+        ]
     )
 
 
@@ -54,7 +61,13 @@ async def create_board(
     service = ForumService(session)
     board = await service.create_board(payload, current_user)
     memberships = await service.board_memberships_for_user([board.id], current_user)
-    return ApiResponse(data=BoardResponse.from_board(board, memberships.get(board.id)))
+    return ApiResponse(
+        data=BoardResponse.from_board(
+            board,
+            memberships.get(board.id),
+            can_create_topic=service.can_create_topic_in_board(board, current_user),
+        )
+    )
 
 
 @router.get("/{slug}", response_model=ApiResponse[BoardDetailResponse])
@@ -72,6 +85,9 @@ async def get_board(
         [board.id, *[child.id for child in child_boards]],
         current_user,
     )
+    child_can_create_topics = {
+        child.id: service.can_create_topic_in_board(child, current_user) for child in child_boards
+    }
     return ApiResponse(
         data=BoardDetailResponse.from_board_and_topics(
             board,
@@ -79,6 +95,8 @@ async def get_board(
             memberships.get(board.id),
             child_boards,
             memberships,
+            can_create_topic=service.can_create_topic_in_board(board, current_user),
+            child_can_create_topics=child_can_create_topics,
         )
     )
 
@@ -103,7 +121,13 @@ async def update_board_settings(
     service = ForumService(session)
     board = await service.update_board_settings(slug, payload, current_user)
     memberships = await service.board_memberships_for_user([board.id], current_user)
-    return ApiResponse(data=BoardResponse.from_board(board, memberships.get(board.id)))
+    return ApiResponse(
+        data=BoardResponse.from_board(
+            board,
+            memberships.get(board.id),
+            can_create_topic=service.can_create_topic_in_board(board, current_user),
+        )
+    )
 
 
 @router.put(

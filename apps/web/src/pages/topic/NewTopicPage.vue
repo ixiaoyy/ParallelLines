@@ -97,9 +97,13 @@ const showConflictBanner = ref(false);
 const isSaving = ref(false);
 
 const boardOptions = computed(() => boardsQuery.data.value ?? []);
+const publishableBoardOptions = computed(() =>
+  boardOptions.value.filter((board) => board.canCreateTopic),
+);
 const selectedBoard = computed(
   () => boardOptions.value.find((board) => board.slug === selectedBoardSlug.value) ?? boardOptions.value[0],
 );
+const selectedBoardCanCreateTopic = computed(() => Boolean(selectedBoard.value?.canCreateTopic));
 
 const parsedTags = computed(() =>
   tags.value
@@ -151,6 +155,7 @@ const pollReady = computed(
 
 const checklist = computed(() => [
   { label: "已选择版块", done: Boolean(selectedBoard.value) },
+  { label: "当前版块允许发帖", done: selectedBoardCanCreateTopic.value },
   { label: "标题不少于 12 个字", done: title.value.trim().length >= 12 },
   { label: "正文包含复现/背景", done: body.value.trim().length >= 40 },
   {
@@ -277,13 +282,16 @@ watch(
   boardOptions,
   (options) => {
     const queryBoard = readRouteParam(route.query.board as string | string[] | undefined);
-    if (options.some((board) => board.slug === queryBoard)) {
+    if (options.some((board) => board.slug === queryBoard && board.canCreateTopic)) {
       selectedBoardSlug.value = queryBoard;
       return;
     }
 
-    if (options.length && !options.some((board) => board.slug === selectedBoardSlug.value)) {
-      selectedBoardSlug.value = options[0].slug;
+    if (
+      publishableBoardOptions.value.length &&
+      !publishableBoardOptions.value.some((board) => board.slug === selectedBoardSlug.value)
+    ) {
+      selectedBoardSlug.value = publishableBoardOptions.value[0].slug;
     }
   },
   { immediate: true },
@@ -297,7 +305,13 @@ watch([selectedBoardSlug, selectedIntent, title, body, tags, pollEnabled, pollQu
 });
 
 function chooseBoard(board: BoardSummary) {
+  if (!board.canCreateTopic) {
+    publishError.value = "官方动态仅管理员可以发布主题；普通用户可以浏览、回复、收藏和复制链接。";
+    return;
+  }
+
   selectedBoardSlug.value = board.slug;
+  publishError.value = "";
 }
 
 function chooseIntent(intent: TopicIntent) {
@@ -499,6 +513,10 @@ function insertMarkdownUpload(markdown: string) {
 
 async function handleSubmit() {
   if (!canPublish.value) {
+    if (!selectedBoardCanCreateTopic.value) {
+      publishError.value = "官方动态仅管理员可以发布主题；请选择其他版块。";
+      publishState.value = "submitted";
+    }
     return;
   }
 
@@ -557,6 +575,10 @@ function boardPolicyMessage(error: unknown): string | null {
       ? error.details.disallowed_tags.join("、")
       : "不允许的标签";
     return `该版块不允许使用这些标签：${disallowed}。`;
+  }
+
+  if (error instanceof ApiError && error.code === "board_topic_create_restricted") {
+    return "官方动态仅管理员可以发布主题；普通用户可以浏览、回复、收藏和复制链接。";
   }
 
   return null;
@@ -691,20 +713,25 @@ function isTopicIntent(value: unknown): value is TopicIntent {
               v-for="board in boardOptions"
               :key="board.id"
               type="button"
-              :class="[boardToneClass(board.slug), { active: selectedBoardSlug === board.slug }]"
+              :disabled="!board.canCreateTopic"
+              :class="[
+                boardToneClass(board.slug),
+                { active: selectedBoardSlug === board.slug, locked: !board.canCreateTopic },
+              ]"
               @click="chooseBoard(board)"
             >
               <span class="tone-mark-square" aria-hidden="true"></span>
               <strong>{{ board.name }}</strong>
               <small>{{ board.description }}</small>
               <small v-if="board.parentBoardName">子版块 · {{ board.parentBoardName }}</small>
+              <small v-if="!board.canCreateTopic">仅管理员可发布主题</small>
               <em>{{ compactNumber(board.topicCount) }} 主题</em>
             </button>
           </div>
           <p v-if="boardsQuery.isError.value" class="form-error" role="alert">
             版块列表暂时不可用，发布已暂停；请稍后重试。
           </p>
-          <p v-else-if="!boardOptions.length" class="form-error" role="status">
+          <p v-else-if="!publishableBoardOptions.length" class="form-error" role="status">
             还没有可发布的版块，请先创建版块。
           </p>
         </UiCard>

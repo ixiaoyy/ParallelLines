@@ -62,11 +62,18 @@ class BoardResponse(ORMModel):
     follower_count: int
     is_following: bool = False
     notification_level: NotificationLevel | None = None
+    can_create_topic: bool = True
     created_at: datetime
     updated_at: datetime
 
     @classmethod
-    def from_board(cls, board: Board, member: BoardMember | None = None) -> BoardResponse:
+    def from_board(
+        cls,
+        board: Board,
+        member: BoardMember | None = None,
+        *,
+        can_create_topic: bool = True,
+    ) -> BoardResponse:
         return cls(
             id=board.id,
             slug=board.slug,
@@ -90,6 +97,7 @@ class BoardResponse(ORMModel):
             follower_count=board.follower_count,
             is_following=member is not None,
             notification_level=member.notification_level if member else None,
+            can_create_topic=can_create_topic,
             created_at=board.created_at,
             updated_at=board.updated_at,
         )
@@ -485,8 +493,14 @@ class BoardDetailResponse(BoardResponse):
         member: BoardMember | None = None,
         child_boards: list[Board] | None = None,
         child_memberships: dict[str, BoardMember] | None = None,
+        can_create_topic: bool = True,
+        child_can_create_topics: dict[str, bool] | None = None,
     ) -> BoardDetailResponse:
-        board_data = BoardResponse.from_board(board, member).model_dump()
+        board_data = BoardResponse.from_board(
+            board,
+            member,
+            can_create_topic=can_create_topic,
+        ).model_dump()
         return cls(
             **board_data,
             latest_topics=[TopicResponse.from_model(topic) for topic in topics],
@@ -494,6 +508,7 @@ class BoardDetailResponse(BoardResponse):
                 BoardResponse.from_board(
                     child_board,
                     (child_memberships or {}).get(child_board.id),
+                    can_create_topic=(child_can_create_topics or {}).get(child_board.id, True),
                 )
                 for child_board in (child_boards or [])
             ],

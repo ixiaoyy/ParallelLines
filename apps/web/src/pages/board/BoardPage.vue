@@ -262,10 +262,10 @@ const quickLinks = computed(() => [
     to: { name: "board-detail", params: { slug: slug.value }, query: { sort: "top" } },
   },
   {
-    label: "社区指南",
-    description: "了解提问规范与流程",
+    label: "发帖说明",
+    description: "查看发帖模板与版块说明",
     icon: CompassOutlined,
-    to: { name: "search", query: { q: "社区规范", tag: "社区规范" } },
+    to: { name: "search", query: { q: "发帖模板", tag: "发帖模板" } },
   },
 ]);
 
@@ -534,9 +534,16 @@ async function updateBoardNotificationLevel(event: Event) {
             <ol>
               <li>先搜错误码、接口名、日志片段。</li>
               <li>优先阅读“已解决”和“官方回复”。</li>
-              <li>仍未命中时，发布新问题并附环境、复现步骤、期望结果。</li>
+              <li v-if="board.canCreateTopic">仍未命中时，发布新问题并附环境、复现步骤、期望结果。</li>
+              <li v-else>此版块仅管理员可发布新主题；普通用户可以浏览、回复、收藏和复制链接。</li>
             </ol>
-            <RouterLink class="ask-link" :to="{ name: 'new-topic', query: { board: slug } }">发布新问题</RouterLink>
+            <RouterLink
+              v-if="board.canCreateTopic"
+              class="ask-link"
+              :to="{ name: 'new-topic', query: { board: slug } }"
+            >
+              发布新问题
+            </RouterLink>
           </UiCard>
 
           <UiCard v-if="board.childBoards.length" class="sidebar-panel child-board-panel">

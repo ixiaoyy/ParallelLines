@@ -1,5 +1,7 @@
 .post-item {
   overflow: hidden;
+  border: 1px solid rgba(var(--muted-rgb), 0.16);
+  box-shadow: 0 18px 44px rgba(var(--shadow-rgb), 0.06);
 }
 
 .post-item :deep(.ant-card-body) {
@@ -32,6 +34,15 @@ time {
   color: var(--primary);
   background: rgba(var(--primary-rgb), 0.1);
   font-weight: 860;
+}
+
+.post-author .author-owner {
+  border-radius: 999px;
+  padding: 0.16rem 0.52rem;
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.13);
+  font-size: 0.78rem;
+  font-weight: 920;
 }
 
 .post-author .author-trust {
@@ -70,6 +81,31 @@ time {
   color: var(--text);
   line-height: 1.78;
   overflow-wrap: anywhere;
+}
+
+.post-body :deep(.markdown-body h1),
+.post-body :deep(.markdown-body h2),
+.post-body :deep(.markdown-body h3),
+.post-body :deep(.markdown-body h4) {
+  scroll-margin-top: 6.5rem;
+  margin: 1.55em 0 0.65em;
+  color: var(--title);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.post-body :deep(.markdown-body h1:first-child),
+.post-body :deep(.markdown-body h2:first-child),
+.post-body :deep(.markdown-body h3:first-child) {
+  margin-top: 0;
+}
+
+.post-body :deep(.markdown-body h2) {
+  font-size: clamp(1.45rem, 2vw, 2rem);
+}
+
+.post-body :deep(.markdown-body h3) {
+  font-size: clamp(1.18rem, 1.5vw, 1.45rem);
 }
 
 .post-body :deep(.markdown-body p) {
@@ -144,6 +180,71 @@ footer {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.75rem;
+}
+
+.post-item--article {
+  border-color: rgba(var(--primary-rgb), 0.12);
+  border-radius: 1.45rem;
+  background:
+    linear-gradient(90deg, rgba(var(--primary-rgb), 0.06), transparent 18rem),
+    rgba(255, 255, 255, 0.98);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+}
+
+.post-item--article :deep(.ant-card-body) {
+  grid-template-columns: minmax(6.4rem, 8rem) minmax(0, 1fr);
+  gap: clamp(1rem, 2vw, 1.55rem);
+  padding: clamp(1.1rem, 2.5vw, 1.9rem);
+}
+
+.post-item--article .post-author {
+  position: sticky;
+  top: 6.25rem;
+  border-right: 1px solid rgba(var(--muted-rgb), 0.14);
+  padding-right: 0.85rem;
+}
+
+.post-item--article .post-body {
+  font-size: clamp(1rem, 1.2vw, 1.08rem);
+}
+
+.post-item--article .post-body time {
+  width: fit-content;
+  margin-bottom: 1rem;
+  border-radius: 999px;
+  padding: 0.2rem 0.62rem;
+  background: rgba(var(--primary-rgb), 0.07);
+  color: var(--primary);
+  font-weight: 820;
+}
+
+.post-item--article .post-body :deep(.markdown-body) {
+  color: #1f2937;
+  font-size: clamp(1.02rem, 1.25vw, 1.12rem);
+  line-height: 1.95;
+}
+
+.post-item--article .post-body :deep(.markdown-body p) {
+  margin-bottom: 1rem;
+}
+
+.post-item--article .post-body :deep(.markdown-body blockquote) {
+  margin: 1rem 0;
+  border-left: 4px solid var(--primary);
+  border-radius: 0 0.9rem 0.9rem 0;
+  padding: 0.7rem 1rem;
+  color: var(--text);
+  background: rgba(var(--primary-rgb), 0.06);
+}
+
+.post-item--article footer {
+  justify-content: flex-end;
+  border-top: 1px solid rgba(var(--muted-rgb), 0.15);
+  padding-top: 0.9rem;
+}
+
+.post-item--reply {
+  border-radius: 1.1rem;
 }
 
 .post-delete-button {
@@ -258,5 +359,22 @@ footer {
     grid-template-columns: auto auto 1fr;
     justify-items: start;
     text-align: left;
+  }
+
+  .post-item--article :deep(.ant-card-body) {
+    grid-template-columns: 1fr;
+  }
+
+  .post-item--article .post-author {
+    position: static;
+    grid-template-columns: auto auto auto auto;
+    border-right: 0;
+    border-bottom: 1px solid rgba(var(--muted-rgb), 0.14);
+    padding-right: 0;
+    padding-bottom: 0.8rem;
+  }
+
+  .post-item--article footer {
+    justify-content: flex-start;
   }
 }

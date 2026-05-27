@@ -9,11 +9,7 @@ from app.models.forum import Board, Post, Topic, TopicRead
 from app.models.user import User
 from app.schemas.forum import BoardCreateRequest, PostCreateRequest, TopicCreateRequest
 from app.services.forum import ForumService
-from app.services.quality_posts import (
-    QUALITY_POST_AUTHOR_USERNAME,
-    QUALITY_POST_SPECS,
-    sync_quality_posts,
-)
+from app.services.quality_posts import QUALITY_POST_SPECS, sync_quality_posts
 from tests.helpers import get_test_database_url, register_and_verify_user, reset_test_database
 
 
@@ -160,7 +156,7 @@ async def test_forum_service_updates_counters_and_read_state() -> None:
 
 
 @pytest.mark.asyncio
-async def test_sync_quality_posts_writes_idempotent_pinned_topics() -> None:
+async def test_sync_quality_posts_writes_official_topics_without_pin() -> None:
     session_factory, engine = await create_test_session()
 
     async with session_factory() as session:
@@ -170,16 +166,16 @@ async def test_sync_quality_posts_writes_idempotent_pinned_topics() -> None:
             hashed_password="hashed",
             role="admin",
         )
-        quality_author = User(
-            username=QUALITY_POST_AUTHOR_USERNAME,
-            email="quality_author@example.com",
+        other_user = User(
+            username="other_user",
+            email="other@example.com",
             hashed_password="hashed",
             role="user",
         )
-        session.add_all([user, quality_author])
+        session.add_all([user, other_user])
         await session.commit()
         await session.refresh(user)
-        await session.refresh(quality_author)
+        await session.refresh(other_user)
 
         service = ForumService(session)
         board = await service.create_board(
@@ -197,8 +193,8 @@ async def test_sync_quality_posts_writes_idempotent_pinned_topics() -> None:
             select(Post).where(Post.topic_id == first_sync[0].id, Post.post_number == 1)
         )
         assert first_topic_post is not None
-        first_sync[0].user_id = user.id
-        first_topic_post.user_id = user.id
+        first_sync[0].user_id = other_user.id
+        first_topic_post.user_id = other_user.id
         await session.commit()
 
         second_sync = await sync_quality_posts(session)
@@ -216,12 +212,12 @@ async def test_sync_quality_posts_writes_idempotent_pinned_topics() -> None:
         assert post_count == len(QUALITY_POST_SPECS)
         assert saved_board is not None
         assert saved_board.topic_count == len(QUALITY_POST_SPECS)
+        assert migrated_first_post is not None
+        assert migrated_first_post.user_id == user.id
 
         for topic in second_sync:
-            assert topic.pinned is True
+            assert topic.pinned is False
             assert topic.featured is True
-            assert topic.user_id == quality_author.id
-        assert migrated_first_post is not None
-        assert migrated_first_post.user_id == quality_author.id
+            assert topic.user_id == user.id
 
     await engine.dispose()

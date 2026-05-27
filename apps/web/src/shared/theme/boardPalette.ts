@@ -21,7 +21,7 @@ export type BoardToneDefinition = {
 export const BOARD_PALETTE: BoardToneDefinition[] = [
   {
     tone: 1,
-    slugs: ["resources", "experience", "engineering", "dev"],
+    slugs: ["resources", "benefits", "deals", "experience", "engineering", "dev"],
     accent: "#ea580c",
     accentRgb: "234, 88, 12",
     tintBg: "color-mix(in srgb, #fff7ed 82%, #ffffff)",

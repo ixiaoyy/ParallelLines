@@ -2,12 +2,10 @@
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-import type { TopicCardVM } from "@/entities/topic/model";
 import { useBoards } from "@/features/boards/queries";
 import { useTags } from "@/features/tags/queries";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicFeed } from "@/features/topics/queries";
-import HomeFoundingPost from "@/pages/home/components/HomeFoundingPost.vue";
 import HomeHero from "@/pages/home/components/HomeHero.vue";
 import HomeLeftRail from "@/pages/home/components/HomeLeftRail.vue";
 import HomeTopicFeed from "@/pages/home/components/HomeTopicFeed.vue";
@@ -27,27 +25,9 @@ const tagsQuery = useTags(30);
 
 const boardSummaries = computed(() => boardsQuery.data.value ?? []);
 const feedTopics = computed(() => topicsQuery.data.value ?? []);
-const communityGuideKeywords = ["论坛初衷", "社区规范"];
-
-const isCommunityGuideTopic = (topic: TopicCardVM) =>
-  communityGuideKeywords.some(
-    (keyword) => topic.title.includes(keyword) || topic.tags.includes(keyword),
-  );
-
-const communityGuideRank = (topic: TopicCardVM) => {
-  const rank = communityGuideKeywords.findIndex(
-    (keyword) => topic.title.includes(keyword) || topic.tags.includes(keyword),
-  );
-
-  return rank === -1 ? communityGuideKeywords.length : rank;
-};
-
-const communityGuideTopics = computed(() => {
-  return feedTopics.value.filter(isCommunityGuideTopic).sort((left, right) => {
-    return communityGuideRank(left) - communityGuideRank(right);
-  });
-});
-const discoveryTopics = computed(() => feedTopics.value);
+const discoveryTopics = computed(() =>
+  feedTopics.value.filter((topic) => !(topic.pinned && topic.title === `关于「${topic.boardName}」`)),
+);
 const railBoards = computed(() => boardSummaries.value.slice(0, 8));
 const topTags = computed(() => (tagsQuery.data.value ?? []).slice(0, 10));
 
@@ -55,25 +35,15 @@ const visibleTopics = computed(() => {
   const sorted = [...discoveryTopics.value];
 
   if (activeTab.value === "top") {
-    return sortPinnedFirst(
-      sorted,
-      (left, right) => right.likeCount + right.replyCount - (left.likeCount + left.replyCount),
-    );
+    return sorted.sort((left, right) => right.likeCount + right.replyCount - (left.likeCount + left.replyCount));
   }
 
   if (activeTab.value === "hot") {
-    return sortPinnedFirst(sorted, (left, right) => right.hotScore - left.hotScore);
+    return sorted.sort((left, right) => right.hotScore - left.hotScore);
   }
 
-  return sortPinnedFirst(sorted, (left, right) => right.lastPostedAt.localeCompare(left.lastPostedAt));
+  return sorted.sort((left, right) => right.lastPostedAt.localeCompare(left.lastPostedAt));
 });
-
-function sortPinnedFirst(
-  topics: TopicCardVM[],
-  compare: (left: TopicCardVM, right: TopicCardVM) => number,
-) {
-  return topics.sort((left, right) => Number(right.pinned) - Number(left.pinned) || compare(left, right));
-}
 
 watch(
   () => route.hash,
@@ -121,11 +91,6 @@ function submitHeroSearch() {
           v-model:search="heroSearch"
           class="home-hero-slot"
           @submit-search="submitHeroSearch"
-        />
-        <HomeFoundingPost
-          v-if="communityGuideTopics.length"
-          class="founding-post-slot"
-          :topics="communityGuideTopics"
         />
 
         <HomeTopicFeed

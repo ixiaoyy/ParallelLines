@@ -98,7 +98,7 @@ test("register login create topic reply and interactions", async ({ page, reques
   await expect(page.getByRole("button", { name: boardName })).toBeVisible();
   await page.getByLabel("主题标题").fill(topicTitle);
   await page.getByLabel("正文").fill(topicBody);
-  await page.getByRole("textbox", { name: "标签" }).fill("记录, 分享");
+  await page.getByRole("textbox", { name: "标签" }).fill("原创, 闲聊");
   await page.getByRole("button", { name: buttonName("发布主题") }).last().click();
 
   await expect(page.getByRole("heading", { name: topicTitle })).toBeVisible();
@@ -162,5 +162,5 @@ test("register login create topic reply and interactions", async ({ page, reques
 
   await page.getByRole("link", { name: "平行线首页" }).click();
   await expect(page.getByLabel("主题发现流").getByRole("link", { name: topicTitle })).toBeVisible();
-  await expect(page.getByRole("link", { name: "记录" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "原创" }).first()).toBeVisible();
 });

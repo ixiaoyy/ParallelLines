@@ -10,7 +10,7 @@ from app.services.quality_posts import QUALITY_POST_AUTHOR_USERNAME, sync_qualit
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Synchronize pinned/featured starter posts into the current database."
+        description="Synchronize official guide posts into the announcements board."
     )
     parser.add_argument("--board-slug", default="announcements")
     parser.add_argument("--author-username", default=QUALITY_POST_AUTHOR_USERNAME)

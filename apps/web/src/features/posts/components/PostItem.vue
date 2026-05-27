@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import type { PostItemVM } from "@/entities/post/model";
 import { setPostLike, setPostVote } from "@/features/interactions/api";
@@ -18,13 +18,16 @@ import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   post: PostItemVM;
   currentUserId?: string | null;
   currentUserRole?: string | null;
   canManageSolution?: boolean;
   solutionPending?: boolean;
-}>();
+  variant?: "article" | "reply";
+}>(), {
+  variant: "reply",
+});
 const emit = defineEmits<{
   quote: [post: PostItemVM];
   requireLogin: [message: string];
@@ -37,6 +40,7 @@ const editDraft = ref(props.post.rawMd);
 const editReason = ref("");
 const historyOpen = ref(false);
 const reportModalOpen = ref(false);
+const bodyRef = ref<HTMLElement | null>(null);
 const voteValue = ref(props.post.myVote);
 const voteScore = ref(props.post.voteScore);
 const voteCount = ref(props.post.voteCount);
@@ -48,7 +52,9 @@ const canModerateGlobally = computed(
   () => props.currentUserRole === "admin" || props.currentUserRole === "moderator",
 );
 const canEdit = computed(() => Boolean(isOwnPost.value && props.post.floor === 1 && !props.post.deleted));
-const canDelete = computed(() => Boolean(isOwnPost.value && props.post.floor > 1 && !props.post.deleted));
+const canDelete = computed(() =>
+  Boolean(!props.post.deleted && props.post.floor > 1 && (isOwnPost.value || canModerateGlobally.value)),
+);
 const canFlag = computed(() => hasAccessToken() && !props.post.deleted);
 const canToggleSolution = computed(
   () => Boolean(props.canManageSolution && props.post.floor > 1 && !props.post.deleted),
@@ -91,6 +97,18 @@ watch(
     }
   },
 );
+
+watch(
+  () => props.post.cookedHtml,
+  () => {
+    void nextTick(decorateHeadingAnchors);
+  },
+  { immediate: true },
+);
+
+onMounted(() => {
+  decorateHeadingAnchors();
+});
 
 watch(
   () => [props.post.myVote, props.post.voteScore, props.post.voteCount] as const,
@@ -292,18 +310,40 @@ function setStatus(message: string) {
     }, 2400);
   });
 }
+
+function decorateHeadingAnchors() {
+  const container = bodyRef.value;
+  if (!container) {
+    return;
+  }
+
+  container
+    .querySelectorAll<HTMLElement>(".markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4")
+    .forEach((heading, index) => {
+      heading.id = `post-${props.post.floor}-heading-${index}`;
+      heading.classList.add("markdown-heading-anchor");
+    });
+}
 </script>
 
 <template>
-  <UiCard class="post-item" :class="{ deleted: post.deleted }">
+  <UiCard
+    class="post-item"
+    :class="{
+      deleted: post.deleted,
+      'post-item--article': variant === 'article',
+      'post-item--reply': variant === 'reply',
+    }"
+  >
     <aside class="post-author">
       <UiAvatar :name="post.authorName" :role="post.authorRole" :level="post.authorLevel" />
       <strong>{{ post.authorName }}</strong>
+      <span v-if="post.floor === 1" class="author-owner">楼主</span>
       <span class="author-level">Lv.{{ post.authorLevel }}</span>
       <span class="author-trust">TL{{ post.authorTrustLevel }} · {{ post.authorTrustLevelLabel }}</span>
       <span>#{{ post.floor }}</span>
     </aside>
-    <article class="post-body">
+    <article ref="bodyRef" class="post-body">
       <time>{{ relativeTime(post.createdAt) }}</time>
       <div v-if="post.acceptedAnswer" class="accepted-answer-badge">✓ 已采纳解决方案</div>
       <div v-if="post.deleted" class="deleted-copy">该楼层已删除或隐藏。</div>

@@ -34,6 +34,7 @@ defineProps<{
   topicStatus: TopicStatus;
   topicPinned: boolean;
   lifecyclePending: boolean;
+  deleteTopicPending: boolean;
   notificationLevel: NotificationLevel;
   notificationPending: boolean;
   canSetNotification: boolean;
@@ -53,6 +54,7 @@ const emit = defineEmits<{
   moveTopic: [];
   splitTopic: [];
   mergeTopic: [];
+  deleteTopic: [];
   setNotificationLevel: [level: NotificationLevel];
   voteTopic: [value: -1 | 0 | 1];
 }>();
@@ -66,8 +68,8 @@ function onNotificationChange(event: Event) {
 <template>
   <UiCard class="topic-thread-toolbar">
     <div class="toolbar-summary">
-      <span class="panel-kicker">楼层流</span>
-      <strong>{{ visibleCount }} / {{ totalCount }} 个可见楼层</strong>
+      <span class="panel-kicker">操作</span>
+      <strong>{{ visibleCount }} / {{ totalCount }} 楼</strong>
     </div>
     <div class="toolbar-actions" aria-label="主题操作">
       <UiButton tone="ghost" :aria-pressed="onlyAuthor" @click="emit('toggleOnlyAuthor')">
@@ -114,10 +116,10 @@ function onNotificationChange(event: Event) {
         </UiButton>
         <span>{{ topicVoteCount }} 票</span>
       </div>
-      <UiButton tone="subtle" @click="emit('copyLink')">复制链接</UiButton>
-      <UiButton tone="subtle" @click="emit('openInvites')">邀请成员</UiButton>
+      <UiButton tone="subtle" @click="emit('copyLink')">链接</UiButton>
+      <UiButton tone="subtle" @click="emit('openInvites')">邀请</UiButton>
       <UiButton tone="ghost" :disabled="flagTopicPending || !canFlagTopic" @click="emit('flagTopic')">
-        举报主题
+        举报
       </UiButton>
     </div>
     <label class="notification-control">
@@ -150,6 +152,9 @@ function onNotificationChange(event: Event) {
       <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('moveTopic')">移动</UiButton>
       <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('splitTopic')">拆分</UiButton>
       <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('mergeTopic')">合并</UiButton>
+      <UiButton tone="danger" :disabled="deleteTopicPending" @click="emit('deleteTopic')">
+        {{ deleteTopicPending ? "删除中…" : "删除主题" }}
+      </UiButton>
     </div>
     <p v-if="status" class="toolbar-status" role="status">{{ status }}</p>
   </UiCard>

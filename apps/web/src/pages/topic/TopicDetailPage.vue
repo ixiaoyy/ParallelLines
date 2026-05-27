@@ -8,7 +8,7 @@ import { useCurrentUser } from "@/features/auth/queries";
 import { setTopicBookmark, setTopicLike, setTopicVote } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
 import ReportModal from "@/features/moderation/components/ReportModal.vue";
-import { useCreateFlag } from "@/features/moderation/queries";
+import { useContentModerationMutation, useCreateFlag } from "@/features/moderation/queries";
 import type { NotificationLevel } from "@/features/notifications/model";
 import {
   useTopicNotificationLevel,
@@ -93,8 +93,11 @@ const displayedPosts = computed(() => {
 
   return posts.value.filter((post) => post.userId === topic.value?.authorId);
 });
+const firstPost = computed(() => displayedPosts.value.find((post) => post.floor === 1) ?? displayedPosts.value[0] ?? null);
+const replyPosts = computed(() => displayedPosts.value.filter((post) => post.id !== firstPost.value?.id));
 const relatedTopics = useRelatedTopics(topic);
 const flagTopicMutation = useCreateFlag();
+const topicModerationMutation = useContentModerationMutation();
 const lifecycleMutation = useTopicLifecycle(topicId);
 const moveTopicMutation = useMoveTopic(topicId);
 const splitTopicMutation = useSplitTopic(topicId);
@@ -103,6 +106,7 @@ const solutionMutation = useSetTopicSolution(topicId);
 const pollVoteMutation = useVotePoll(topicId);
 const canFlagTopic = computed(() => Boolean(topic.value?.id) && hasAccessToken());
 const flagTopicPending = computed(() => flagTopicMutation.isPending.value);
+const deleteTopicPending = computed(() => topicModerationMutation.isPending.value);
 const reportModalOpen = ref(false);
 const topicNotificationLevel = computed<NotificationLevel>(
   () => topicNotificationQuery.data.value?.notification_level ?? "normal",
@@ -439,6 +443,38 @@ function mergeTopic() {
   );
 }
 
+function deleteTopic() {
+  if (!topic.value?.id || !canManageTopic.value || deleteTopicPending.value) {
+    return;
+  }
+
+  const confirmed = window.confirm("确定删除这个主题吗？删除后主题会被软隐藏，可在审核后台恢复。");
+  if (!confirmed) {
+    return;
+  }
+
+  topicModerationMutation.mutate(
+    {
+      targetType: "topic",
+      targetId: topic.value.id,
+      hidden: true,
+      note: "从主题详情页删除主题",
+    },
+    {
+      onSuccess: () => {
+        setToolbarStatus("主题已删除");
+        void queryClient.invalidateQueries({ queryKey: queryKeys.boards });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:hot") });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:top") });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topic.value?.id ?? "") });
+        void router.replace({ name: "home" });
+      },
+      onError: () => setToolbarStatus("删除失败，请确认管理员权限"),
+    },
+  );
+}
+
 function parseFloorNumbers(value: string) {
   return [
     ...new Set(
@@ -552,62 +588,20 @@ function flagTopic() {
       <TopicDetailHero :topic="topic" :stats="topicStats" />
 
       <div class="topic-layout">
-        <main class="post-stream" aria-label="楼层流">
-          <TopicThreadToolbar
-            :visible-count="displayedPosts.length"
-            :total-count="posts.length"
-            :only-author="onlyAuthor"
-            :qa-sort="qaSort"
-            :bookmarked="bookmarked"
-            :bookmark-count="bookmarkCount"
-            :bookmark-pending="bookmarkPending"
-            :topic-liked="topicLiked"
-            :topic-like-count="topicLikeCount"
-            :topic-like-pending="topicLikePending"
-            :topic-vote-score="topicVoteScore"
-            :topic-vote-count="topicVoteCount"
-            :topic-vote-value="topicVoteValue"
-            :topic-vote-pending="topicVotePending"
-            :can-flag-topic="canFlagTopic"
-            :flag-topic-pending="flagTopicPending"
-            :can-manage-topic="canManageTopic"
-            :topic-status="topic.status"
-            :topic-pinned="Boolean(topic.pinned)"
-            :lifecycle-pending="lifecyclePending"
-            :notification-level="topicNotificationLevel"
-            :notification-pending="topicNotificationPending"
-            :can-set-notification="canSetTopicNotification"
-            :status="toolbarStatus"
-            @toggle-only-author="toggleOnlyAuthor"
-            @toggle-qa-sort="toggleQaSort"
-            @toggle-bookmark="toggleBookmark"
-            @toggle-topic-like="toggleTopicLike"
-            @vote-topic="voteTopic"
-            @copy-link="copyTopicLink"
-            @open-invites="openInviteCenter"
-            @flag-topic="flagTopic"
-            @set-notification-level="setTopicNotificationLevel"
-            @set-topic-status="setTopicStatus"
-            @toggle-topic-pinned="toggleTopicPinned"
-            @move-topic="moveTopic"
-            @split-topic="splitTopic"
-            @merge-topic="mergeTopic"
-          />
+        <main class="post-stream" aria-label="主题正文与回复">
+          <UiCard v-if="postsQuery.isLoading.value" class="topic-state" role="status">
+            正在加载正文…
+          </UiCard>
 
-          <PollPanel
-            v-if="topic.poll"
-            :poll="topic.poll"
-            :pending="pollVoteMutation.isPending.value"
-            @vote="votePoll"
-          />
+          <UiCard v-else-if="postsQuery.isError.value" class="topic-state topic-state--error" role="alert">
+            楼层暂时加载失败，请稍后刷新。
+          </UiCard>
 
-          <div class="post-list">
-            <UiCard v-if="postsQuery.isError.value" class="topic-state topic-state--error" role="alert">
-              楼层暂时加载失败，请稍后刷新。
-            </UiCard>
-            <div v-for="post in displayedPosts" :id="`post-${post.floor}`" :key="post.id" class="post-anchor">
+          <template v-else>
+            <div v-if="firstPost" :id="`post-${firstPost.floor}`" class="post-anchor topic-original">
               <PostItem
-                :post="post"
+                :post="firstPost"
+                variant="article"
                 :current-user-id="currentUserId"
                 :current-user-role="currentUserRole"
                 :can-manage-solution="canManageSolution"
@@ -617,7 +611,84 @@ function flagTopic() {
                 @toggle-solution="togglePostSolution"
               />
             </div>
-          </div>
+
+            <TopicThreadToolbar
+              :visible-count="displayedPosts.length"
+              :total-count="posts.length"
+              :only-author="onlyAuthor"
+              :qa-sort="qaSort"
+              :bookmarked="bookmarked"
+              :bookmark-count="bookmarkCount"
+              :bookmark-pending="bookmarkPending"
+              :topic-liked="topicLiked"
+              :topic-like-count="topicLikeCount"
+              :topic-like-pending="topicLikePending"
+              :topic-vote-score="topicVoteScore"
+              :topic-vote-count="topicVoteCount"
+              :topic-vote-value="topicVoteValue"
+              :topic-vote-pending="topicVotePending"
+              :can-flag-topic="canFlagTopic"
+              :flag-topic-pending="flagTopicPending"
+              :can-manage-topic="canManageTopic"
+              :topic-status="topic.status"
+              :topic-pinned="Boolean(topic.pinned)"
+              :lifecycle-pending="lifecyclePending"
+              :delete-topic-pending="deleteTopicPending"
+              :notification-level="topicNotificationLevel"
+              :notification-pending="topicNotificationPending"
+              :can-set-notification="canSetTopicNotification"
+              :status="toolbarStatus"
+              @toggle-only-author="toggleOnlyAuthor"
+              @toggle-qa-sort="toggleQaSort"
+              @toggle-bookmark="toggleBookmark"
+              @toggle-topic-like="toggleTopicLike"
+              @vote-topic="voteTopic"
+              @copy-link="copyTopicLink"
+              @open-invites="openInviteCenter"
+              @flag-topic="flagTopic"
+              @set-notification-level="setTopicNotificationLevel"
+              @set-topic-status="setTopicStatus"
+              @toggle-topic-pinned="toggleTopicPinned"
+              @move-topic="moveTopic"
+              @split-topic="splitTopic"
+              @merge-topic="mergeTopic"
+              @delete-topic="deleteTopic"
+            />
+
+            <PollPanel
+              v-if="topic.poll"
+              :poll="topic.poll"
+              :pending="pollVoteMutation.isPending.value"
+              @vote="votePoll"
+            />
+
+            <section id="replies" class="reply-section" aria-labelledby="reply-section-title">
+              <header class="reply-section__header">
+                <span>回复</span>
+                <h2 id="reply-section-title">讨论继续</h2>
+                <p>{{ replyPosts.length }} 条回复 · {{ onlyAuthor ? "只看楼主" : "全部楼层" }}</p>
+              </header>
+
+              <div v-if="replyPosts.length" class="post-list">
+                <div v-for="post in replyPosts" :id="`post-${post.floor}`" :key="post.id" class="post-anchor">
+                  <PostItem
+                    :post="post"
+                    variant="reply"
+                    :current-user-id="currentUserId"
+                    :current-user-role="currentUserRole"
+                    :can-manage-solution="canManageSolution"
+                    :solution-pending="solutionMutation.isPending.value"
+                    @quote="quotePost"
+                    @require-login="requireLogin"
+                    @toggle-solution="togglePostSolution"
+                  />
+                </div>
+              </div>
+              <UiCard v-else class="topic-state" role="status">
+                暂无回复，欢迎补充你的看法。
+              </UiCard>
+            </section>
+          </template>
 
           <ComposerDrawer
             v-if="topic.status === 'open'"
@@ -633,6 +704,7 @@ function flagTopic() {
             主题当前为 {{ topic.status === "closed" ? "已关闭" : "已归档" }} 状态，暂不接受新回复。
           </UiCard>
           <p v-if="replyStatus" class="reply-status" role="status">{{ replyStatus }}</p>
+          <span id="topic-end" class="topic-end-anchor" aria-hidden="true" />
         </main>
 
         <TopicDetailSidebar :topic="topic" :posts="displayedPosts" :related-topics="relatedTopics" />

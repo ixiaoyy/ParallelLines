@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from "vue";
+
 import type { PostItemVM } from "@/entities/post/model";
 import type { TopicCardVM } from "@/entities/topic/model";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
@@ -7,24 +9,89 @@ import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
-defineProps<{
+const props = defineProps<{
   topic: TopicCardVM;
   posts: PostItemVM[];
   relatedTopics: TopicCardVM[];
 }>();
+
+interface TocHeading {
+  id: string;
+  text: string;
+  level: number;
+}
+
+const firstPost = computed(() => props.posts.find((post) => post.floor === 1) ?? props.posts[0] ?? null);
+const tocHeadings = computed(() => extractHeadings(firstPost.value));
+const fallbackFloors = computed(() => props.posts.slice(0, 9));
+
+function extractHeadings(post: PostItemVM | null): TocHeading[] {
+  if (!post?.cookedHtml) {
+    return [];
+  }
+
+  const headings: TocHeading[] = [];
+  const headingPattern = /<h([1-4])(?:\s[^>]*)?>([\s\S]*?)<\/h\1>/gi;
+  let match: RegExpExecArray | null;
+  let index = 0;
+
+  while ((match = headingPattern.exec(post.cookedHtml)) !== null) {
+    const level = Number.parseInt(match[1], 10);
+    const text = toPlainText(match[2]);
+    if (!text) {
+      continue;
+    }
+
+    headings.push({
+      id: `post-${post.floor}-heading-${index}`,
+      text,
+      level,
+    });
+    index += 1;
+  }
+
+  return headings.slice(0, 12);
+}
+
+function toPlainText(value: string) {
+  return value
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
 </script>
 
 <template>
   <aside class="topic-detail-sidebar" aria-label="主题侧边栏">
     <UiCard class="sidebar-panel progress-panel">
-      <span class="panel-kicker">阅读进度</span>
-      <h2>楼层导航</h2>
-      <nav class="floor-nav" aria-label="楼层跳转">
-        <a v-for="post in posts" :key="post.id" :href="`#post-${post.floor}`">
+      <span class="panel-kicker">目录</span>
+      <h2>以嵌套方式查看</h2>
+      <nav v-if="tocHeadings.length" class="toc-nav" aria-label="正文目录">
+        <a
+          v-for="heading in tocHeadings"
+          :key="heading.id"
+          :class="`toc-level-${heading.level}`"
+          :href="`#${heading.id}`"
+        >
+          {{ heading.text }}
+        </a>
+      </nav>
+      <nav v-else class="floor-nav" aria-label="楼层跳转">
+        <a v-for="post in fallbackFloors" :key="post.id" :href="`#post-${post.floor}`">
           #{{ post.floor }}
           <span>{{ post.authorName }}</span>
         </a>
       </nav>
+      <div class="sidebar-jumps">
+        <a href="#replies">查看回复</a>
+        <a href="#topic-end">跳至结尾</a>
+      </div>
     </UiCard>
 
     <UiCard class="sidebar-panel">
