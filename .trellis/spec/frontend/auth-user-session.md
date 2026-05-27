@@ -21,6 +21,8 @@
   - `parallellines.access_token`
   - `parallellines.refresh_token`
   - `parallellines:reply-draft:<topicId>`
+- Refresh API:
+  - `POST /auth/refresh` accepts `{ refresh_token }` and returns `{ access_token, token_type }`.
 - Composables:
   - `useCurrentUser(): UseQueryReturnType<UserPublic | null, Error>`
   - `useLogin()` / `useVerifyEmail()` persist tokens and set `queryKeys.currentUser`.
@@ -44,7 +46,8 @@
 
 ### 3. Contracts
 
-- Auth state is verified by `/auth/me`; if `/auth/me` fails, clear local auth tokens and treat the browser as logged out.
+- Auth state is verified by `/auth/me`; when a request returns 401 and a refresh token exists, the shared API client must call `/auth/refresh`, store the new access token, and retry once before treating the browser as logged out.
+- Clear local auth tokens only after refresh fails with an auth error or when no refresh token exists; transient non-auth failures must not erase stored credentials.
 - Topbar shows `登录/注册` when `useCurrentUser().data` is `null`; it shows username profile link plus `退出` only for verified users.
 - `/auth?mode=register` must render the register form even when reusing the same mounted auth route; route query changes must update the active tab.
 - Register success means "verification email sent", not "authenticated". The UI must show a code entry step and wait for `/auth/verify-email` before redirecting.
@@ -65,7 +68,8 @@
 | Case | Expected behavior |
 |---|---|
 | No token | `useCurrentUser` returns `null`; topbar shows `登录/注册`; reply attempt redirects or prompts for `/auth?redirect=...`. |
-| Expired/invalid token | `/auth/me` failure clears stored tokens; edit controls are not shown. |
+| Expired access token with valid refresh token | Shared API client refreshes access token through `/auth/refresh`, retries `/auth/me`, and keeps the user logged in. |
+| Expired/invalid refresh token | Refresh fails, stored tokens are cleared, and edit controls are not shown. |
 | Register succeeds | Pending verification form is shown; no tokens are stored yet. |
 | Verify email succeeds | Tokens are stored, current-user cache is set, redirect target is pushed. |
 | Login before verification | API returns `email_not_verified`; UI tells the user to finish email activation. |

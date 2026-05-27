@@ -37,7 +37,7 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 | [Privacy, Retention, Anonymization, and Account Deletion](./privacy-data-retention-anonymization.md) | Personal exports, anonymized deletion, retention policy, and sensitive export/log redaction | Filled |
 | [Public API, OpenAPI, and Compatibility](./public-api-openapi-client.md) | Stable OpenAPI snapshots, public docs, versioning/deprecation policy, and CI checks | Filled |
 | [Plugin Extension System](./plugin-extension-system.md) | Safe plugin registry, admin enable/disable, backend event hooks, and public UI extension metadata | Filled |
-| [Chat and Presence](./chat-presence.md) | Realtime chat channels, permissioned history, reconnect-safe SSE, and online/typing presence | Filled |
+| [Chat and Presence](./chat-presence.md) | Retired chat API/storage/realtime bus; do not reintroduce without a new spec | Retired |
 | [Analytics and Data Explorer](./analytics-data-explorer.md) | Admin analytics, preset reports, trend/top-list metrics, and audited CSV export | Filled |
 | [Calendar Events](./calendar-events.md) | Community events, RSVP capacity/deadline, local timezone metadata, and iCal feed | Filled |
 | [SEO, Permalinks, and Sitemap](./seo-permalinks-sitemap.md) | Public sitemap/robots, canonical metadata, legacy topic redirects, and private-content filtering | Filled |
@@ -82,7 +82,7 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 26. Read `privacy-data-retention-anonymization.md` before changing user exports, anonymization, account deletion, retention policy, or sensitive redaction.
 27. Read `public-api-openapi-client.md` before changing OpenAPI metadata/snapshots, generated client contracts, public API docs, versioning, or deprecation policy.
 28. Read `plugin-extension-system.md` before changing plugin definitions, event hook emit points, admin plugin APIs, or public UI extension metadata.
-29. Read `chat-presence.md` before changing chat channels, chat history, SSE streams, or presence.
+29. Read `chat-presence.md` before reintroducing chat channels, chat history, SSE streams, or presence.
 30. Read `analytics-data-explorer.md` before changing admin analytics, Data Explorer preset reports, or CSV exports.
 31. Read `calendar-events.md` before changing community events, RSVP rules, reminders, or iCal feeds.
 32. Read `seo-permalinks-sitemap.md` before changing sitemap, robots, canonical metadata, or legacy public redirects.

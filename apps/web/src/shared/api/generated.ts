@@ -263,30 +263,6 @@ export interface components {
       [key: string]: unknown;
     };
     };
-    ApiResponse_ChatChannelResponse_: {
-      data: components["schemas"]["ChatChannelResponse"];
-      meta?: {
-      [key: string]: unknown;
-    };
-    };
-    ApiResponse_ChatMessagePageResponse_: {
-      data: components["schemas"]["ChatMessagePageResponse"];
-      meta?: {
-      [key: string]: unknown;
-    };
-    };
-    ApiResponse_ChatMessageResponse_: {
-      data: components["schemas"]["ChatMessageResponse"];
-      meta?: {
-      [key: string]: unknown;
-    };
-    };
-    ApiResponse_ChatPresenceResponse_: {
-      data: components["schemas"]["ChatPresenceResponse"];
-      meta?: {
-      [key: string]: unknown;
-    };
-    };
     ApiResponse_DataExplorerReportResponse_: {
       data: components["schemas"]["DataExplorerReportResponse"];
       meta?: {
@@ -445,18 +421,6 @@ export interface components {
     };
     ApiResponse_list_BoardResponse__: {
       data: Array<components["schemas"]["BoardResponse"]>;
-      meta?: {
-      [key: string]: unknown;
-    };
-    };
-    ApiResponse_list_ChatChannelResponse__: {
-      data: Array<components["schemas"]["ChatChannelResponse"]>;
-      meta?: {
-      [key: string]: unknown;
-    };
-    };
-    ApiResponse_list_ChatPresenceResponse__: {
-      data: Array<components["schemas"]["ChatPresenceResponse"]>;
       meta?: {
       [key: string]: unknown;
     };
@@ -1060,61 +1024,6 @@ export interface components {
     ChangePasswordRequest: {
       current_password: string;
       new_password: string;
-    };
-    ChatChannelCreateRequest: {
-      board_slug?: string | null;
-      channel_type?: "public" | "board" | "direct";
-      description?: string | null;
-      name: string;
-      participant_usernames?: Array<string>;
-      slug?: string | null;
-    };
-    ChatChannelResponse: {
-      board_id?: string | null;
-      board_slug?: string | null;
-      channel_type: string;
-      created_at: string;
-      created_by_id?: string | null;
-      description?: string | null;
-      id: string;
-      last_message_at?: string | null;
-      member_count: number;
-      message_count: number;
-      name: string;
-      slug: string;
-    };
-    ChatMessageCreateRequest: {
-      raw_text: string;
-    };
-    ChatMessagePageResponse: {
-      has_more?: boolean;
-      messages: Array<components["schemas"]["ChatMessageResponse"]>;
-      next_before_id?: string | null;
-    };
-    ChatMessageResponse: {
-      channel_id: string;
-      created_at: string;
-      id: string;
-      raw_text: string;
-      user: components["schemas"]["ChatUserResponse"];
-    };
-    ChatPresenceResponse: {
-      channel_id: string;
-      last_seen_at: string;
-      online: boolean;
-      status: string;
-      typing: boolean;
-      typing_until?: string | null;
-      user: components["schemas"]["ChatUserResponse"];
-    };
-    ChatPresenceUpdateRequest: {
-      status?: "online" | "away";
-      typing?: boolean;
-    };
-    ChatUserResponse: {
-      avatar_url?: string | null;
-      id: string;
-      username: string;
     };
     DataExplorerReportResponse: {
       columns?: Array<string>;
@@ -2456,21 +2365,6 @@ export interface paths {
     "/api/v1/boards/{slug}/topics": {
       get: { response: components["schemas"]["ApiResponse_list_TopicResponse__"]; operationId: "list_board_topics_api_v1_boards__slug__topics_get" };
       post: { response: components["schemas"]["ApiResponse_TopicResponse_"]; operationId: "create_topic_api_v1_boards__slug__topics_post" };
-    };
-    "/api/v1/chat/channels": {
-      get: { response: components["schemas"]["ApiResponse_list_ChatChannelResponse__"]; operationId: "list_chat_channels_api_v1_chat_channels_get" };
-      post: { response: components["schemas"]["ApiResponse_ChatChannelResponse_"]; operationId: "create_chat_channel_api_v1_chat_channels_post" };
-    };
-    "/api/v1/chat/channels/{channel_id}/messages": {
-      get: { response: components["schemas"]["ApiResponse_ChatMessagePageResponse_"]; operationId: "list_chat_messages_api_v1_chat_channels__channel_id__messages_get" };
-      post: { response: components["schemas"]["ApiResponse_ChatMessageResponse_"]; operationId: "send_chat_message_api_v1_chat_channels__channel_id__messages_post" };
-    };
-    "/api/v1/chat/channels/{channel_id}/presence": {
-      get: { response: components["schemas"]["ApiResponse_list_ChatPresenceResponse__"]; operationId: "list_chat_presence_api_v1_chat_channels__channel_id__presence_get" };
-      put: { response: components["schemas"]["ApiResponse_ChatPresenceResponse_"]; operationId: "update_chat_presence_api_v1_chat_channels__channel_id__presence_put" };
-    };
-    "/api/v1/chat/channels/{channel_id}/stream": {
-      get: { response: unknown; operationId: "stream_chat_channel_api_v1_chat_channels__channel_id__stream_get" };
     };
     "/api/v1/docs/public": {
       get: { response: components["schemas"]["ApiResponse_PublicApiDocsResponse_"]; operationId: "public_api_docs_api_v1_docs_public_get" };

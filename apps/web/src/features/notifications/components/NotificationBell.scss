@@ -1,31 +1,49 @@
 ﻿.notification-bell {
   position: relative;
-  --notify-rgb: 64, 158, 255;
+  --notify-rgb: var(--primary-rgb);
 }
 
 .notification-trigger {
-  display: grid;
-  width: 2.35rem;
-  height: 2.35rem;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--btn-primary-bg, #409eff) 28%, var(--border));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.42rem;
+  height: 2.42rem;
+  border: 1px solid color-mix(in srgb, var(--btn-primary-bg) 28%, var(--border));
   border-radius: 999px;
-  color: var(--btn-primary-bg, #409eff);
+  padding: 0;
+  color: var(--btn-primary-bg);
   background:
-    radial-gradient(circle at 35% 20%, rgba(var(--notify-rgb), 0.14), transparent 52%),
-    rgba(255, 255, 255, 0.94);
+    radial-gradient(circle at 35% 20%, rgba(var(--notify-rgb), 0.16), transparent 52%),
+    color-mix(in srgb, var(--bg-surface) 92%, var(--btn-primary-bg) 8%);
   box-shadow: 0 10px 22px rgba(var(--notify-rgb), 0.12);
   cursor: pointer;
+  line-height: 1;
   transition:
     transform 160ms ease,
+    color 160ms ease,
     border-color 160ms ease,
+    background 160ms ease,
     box-shadow 160ms ease;
+}
+
+.notification-trigger :deep(.anticon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.notification-trigger :deep(svg) {
+  display: block;
 }
 
 .notification-trigger:hover,
 .notification-trigger:focus-visible {
   transform: translateY(-1px);
-  border-color: var(--btn-primary-border-hover, #66b1ff);
+  color: var(--btn-primary-bg-hover);
+  border-color: var(--btn-primary-border-hover);
   box-shadow:
     0 0 0 4px rgba(var(--notify-rgb), 0.12),
     0 16px 28px rgba(var(--notify-rgb), 0.16);
@@ -79,7 +97,7 @@
 }
 
 .panel-kicker {
-  color: var(--btn-primary-bg, #409eff);
+  color: var(--btn-primary-bg);
   font-size: 0.72rem;
   font-weight: 920;
   letter-spacing: 0.14em;
@@ -166,17 +184,17 @@
   height: 0.62rem;
   margin-top: 0.32rem;
   border-radius: 999px;
-  background: var(--btn-primary-bg, #409eff);
+  background: var(--btn-primary-bg);
   box-shadow: 0 0 0 4px rgba(var(--notify-rgb), 0.12);
 }
 
 .notification-card--blue .notification-dot {
-  background: var(--btn-primary-bg, #409eff);
+  background: var(--btn-primary-bg);
   box-shadow: 0 0 0 4px rgba(var(--notify-rgb), 0.12);
 }
 
 .notification-card--green .notification-dot {
-  background: var(--btn-primary-bg, #409eff);
+  background: var(--btn-primary-bg);
   box-shadow: 0 0 0 4px rgba(var(--notify-rgb), 0.12);
 }
 
@@ -247,7 +265,7 @@
 }
 
 .notification-empty :deep(.anticon) {
-  color: var(--btn-primary-bg, #409eff);
+  color: var(--btn-primary-bg);
   font-size: 1.5rem;
 }
 
@@ -267,8 +285,8 @@
 
 @media (max-width: 560px) {
   .notification-trigger {
-    width: 2.2rem;
-    height: 2.2rem;
+    width: 2.35rem;
+    height: 2.35rem;
   }
 
   .notification-panel {

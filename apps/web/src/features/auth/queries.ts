@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 
-import { clearAuthTokens, hasAccessToken, setAuthTokens } from "@/shared/api/client";
+import {
+  clearAuthTokens,
+  hasAccessToken,
+  isAuthenticationError,
+  setAuthTokens,
+} from "@/shared/api/client";
 import { queryKeys } from "@/shared/api/queryKeys";
 
 import {
@@ -61,9 +66,13 @@ export function useCurrentUser() {
 
       try {
         return await fetchCurrentUser();
-      } catch {
-        clearAuthTokens();
-        return null;
+      } catch (error) {
+        if (isAuthenticationError(error)) {
+          clearAuthTokens();
+          return null;
+        }
+
+        throw error;
       }
     },
     retry: false,

@@ -49,7 +49,6 @@ interface NavItem {
     | "security"
     | "email"
     | "messages"
-    | "chat"
     | "events"
     | "reviewables"
     | "admin"
@@ -65,7 +64,6 @@ const navItems = computed<NavItem[]>(() => [
   { key: "security", label: t("nav.security", "安全"), to: { name: "security" } },
   { key: "email", label: t("nav.email", "邮件"), to: { name: "email-preferences" } },
   { key: "messages", label: t("nav.messages", "私信"), to: { name: "messages" } },
-  { key: "chat", label: t("nav.chat", "Chat"), to: { name: "chat" } },
   { key: "events", label: t("nav.events", "活动"), to: { name: "events" } },
   { key: "reviewables", label: t("nav.reviewables", "申诉"), to: { name: "my-reviewables" } },
   { key: "admin", label: t("nav.admin", "后台"), to: { name: "admin-dashboard" } },
@@ -83,10 +81,6 @@ const visibleNavItems = computed(() =>
     }
 
     if (item.key === "messages") {
-      return Boolean(currentUser.value);
-    }
-
-    if (item.key === "chat") {
       return Boolean(currentUser.value);
     }
 
@@ -162,10 +156,6 @@ function isNavItemActive(item: NavItem) {
 
   if (item.key === "messages") {
     return route.name === "messages";
-  }
-
-  if (item.key === "chat") {
-    return route.name === "chat";
   }
 
   if (item.key === "events") {
@@ -270,9 +260,6 @@ function isNavItemActive(item: NavItem) {
             :class="{ 'is-active': route.name === 'messages' }"
           >
             {{ t("nav.messages", "私信") }}
-          </RouterLink>
-          <RouterLink class="auth-link" :to="{ name: 'chat' }" :class="{ 'is-active': route.name === 'chat' }">
-            {{ t("nav.chat", "Chat") }}
           </RouterLink>
           <RouterLink class="auth-link" :to="{ name: 'events' }" :class="{ 'is-active': route.name === 'events' }">
             {{ t("nav.events", "活动") }}

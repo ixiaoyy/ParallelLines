@@ -38,7 +38,7 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F8FAF
 | [Site Theme, Branding, and i18n Text UI](./site-theme-i18n-branding.md) | Public branding application, top-level i18n fallbacks, and admin theme preview/rollback | Filled |
 | [Public API, OpenAPI, and Generated Types UI](./public-api-openapi-client.md) | OpenAPI-generated DTO types, compile-time drift checks, and CI type generation | Filled |
 | [Plugin Extension System UI](./plugin-extension-system.md) | Admin plugin toggles, public extension slots, generated plugin DTOs, and safe internal-link rendering | Filled |
-| [Chat and Presence UI](./chat-presence.md) | Realtime chat page, SSE cache reconciliation, channel query keys, and safe message rendering | Filled |
+| [Chat and Presence UI](./chat-presence.md) | Retired chat UI; no routes, modules, or query keys should be reintroduced without a new spec | Retired |
 | [Analytics and Data Explorer UI](./analytics-data-explorer.md) | Admin analytics panel, range-aware report queries, preset Data Explorer, and authenticated CSV export | Filled |
 | [Calendar Events UI](./calendar-events.md) | Calendar page, local-time display, RSVP mutations, and iCal subscription link | Filled |
 | [External Integrations UI](./external-integrations.md) | Admin provider config, redacted secrets, event retries, and GitHub issue previews | Filled |
@@ -78,7 +78,7 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F8FAF
 24. Read `site-theme-i18n-branding.md` before changing app shell branding, public text fallbacks, or admin theme preview/rollback.
 25. Read `public-api-openapi-client.md` before changing generated OpenAPI types, frontend DTO contracts, or API drift checks.
 26. Read `plugin-extension-system.md` before changing plugin slots, plugin admin UI, extension query keys, or plugin DTO helpers.
-27. Read `chat-presence.md` before changing chat routes, SSE stream parsing, chat query keys, or presence UI.
+27. Read `chat-presence.md` before reintroducing any chat route, query key, SSE stream, or presence UI.
 28. Read `analytics-data-explorer.md` before changing admin analytics panels, range-aware report query keys, or CSV export UI.
 29. Read `calendar-events.md` before changing event routes, RSVP UI, local time formatting, or calendar query keys.
 30. Read `external-integrations.md` before changing admin external integration UI or GitHub issue preview wiring.

@@ -8,7 +8,6 @@ from app.api.v1 import (
     api_docs,
     auth,
     boards,
-    chat,
     drafts,
     email,
     events,
@@ -36,7 +35,6 @@ api_router.include_router(auth.router)
 api_router.include_router(email.router)
 api_router.include_router(events.router)
 api_router.include_router(boards.router)
-api_router.include_router(chat.router)
 api_router.include_router(topics.router)
 api_router.include_router(users.router)
 api_router.include_router(posts.router)

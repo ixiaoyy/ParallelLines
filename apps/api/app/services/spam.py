@@ -149,36 +149,6 @@ class SpamPreventionService:
             ],
         )
 
-    async def enforce_chat_message(
-        self,
-        request: Request | None,
-        *,
-        current_user: User,
-        raw_text: str,
-    ) -> None:
-        await self._enforce_user_write_state(current_user)
-        await self._enforce_screened_ip(request_ip(request), current_user=current_user)
-        await self._enforce_content_urls(current_user, raw_text, request=request)
-        await self._enforce_new_user_link_boundary(current_user, raw_text, request=request)
-        await self._enforce_rate_limits(
-            request,
-            actor=current_user,
-            policies=[
-                self._policy(
-                    "chat_message:user",
-                    "user",
-                    current_user.id,
-                    self.settings.rate_limit_chat_message_user,
-                ),
-                self._policy(
-                    "chat_message:ip",
-                    "ip",
-                    request_ip(request),
-                    self.settings.rate_limit_chat_message_ip,
-                ),
-            ],
-        )
-
     async def enforce_upload(self, request: Request | None, *, current_user: User) -> None:
         await self._enforce_user_write_state(current_user)
         await self._enforce_screened_ip(request_ip(request), current_user=current_user)

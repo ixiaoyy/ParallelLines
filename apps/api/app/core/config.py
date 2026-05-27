@@ -60,18 +60,12 @@ class Settings(BaseSettings):
     rate_limit_topic_ip: int = 10
     rate_limit_reply_user: int = 10
     rate_limit_reply_ip: int = 20
-    rate_limit_chat_message_user: int = 40
-    rate_limit_chat_message_ip: int = 80
     rate_limit_upload_user: int = 20
     rate_limit_upload_ip: int = 30
     rate_limit_flag_user: int = 10
     rate_limit_flag_ip: int = 20
     new_user_link_limit: int = 5
     new_user_screening_days: int = 7
-    chat_realtime_backend: Literal["auto", "redis", "memory"] = "auto"
-    chat_realtime_redis_prefix: str = "parallellines:chat:channel:"
-    chat_realtime_redis_timeout_seconds: float = 0.5
-    chat_realtime_redis_retry_seconds: float = 5.0
 
     upload_storage_backend: Literal["local", "s3"] = "local"
     upload_storage_path: str = "var/uploads"

@@ -10,10 +10,26 @@ export class ApiError extends Error {
     public code: string,
     message: string,
     public details: Record<string, unknown> = {},
+    public status = 0,
   ) {
     super(message);
   }
 }
+
+interface ApiErrorEnvelope {
+  error?: {
+    code?: string;
+    message?: string;
+    details?: Record<string, unknown>;
+  };
+}
+
+interface RefreshAccessTokenResponse {
+  access_token: string;
+  token_type: string;
+}
+
+let refreshAccessTokenPromise: Promise<string | null> | null = null;
 
 export function getApiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
@@ -41,14 +57,11 @@ export function resolveApiAssetUrl(url: string | null | undefined): string | und
 }
 
 export function getAccessToken(): string | null {
-  try {
-    return (
-      window.localStorage.getItem("parallellines.access_token") ??
-      window.localStorage.getItem("access_token")
-    );
-  } catch {
-    return null;
-  }
+  return getStoredToken("parallellines.access_token", "access_token");
+}
+
+export function getRefreshToken(): string | null {
+  return getStoredToken("parallellines.refresh_token", "refresh_token");
 }
 
 export function hasAccessToken(): boolean {
@@ -61,6 +74,14 @@ export function setAuthTokens(accessToken: string, refreshToken: string): void {
     window.localStorage.setItem("parallellines.refresh_token", refreshToken);
   } catch {
     // Ignore storage failures; callers will still see API errors if auth cannot persist.
+  }
+}
+
+function setAccessToken(accessToken: string): void {
+  try {
+    window.localStorage.setItem("parallellines.access_token", accessToken);
+  } catch {
+    // Ignore storage failures; the retry will surface auth errors if persistence fails.
   }
 }
 
@@ -88,6 +109,30 @@ export function createApiHeaders(init?: HeadersInit): Headers {
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const first = await performApiRequest(path, init);
+  if (first.response.ok) {
+    return unwrapApiResponse<T>(first.payload);
+  }
+
+  const firstError = toApiError(first.response, first.payload);
+  if (shouldRefreshAfterFailure(path, first.response)) {
+    const refreshedToken = await refreshAccessToken();
+    if (refreshedToken) {
+      const retry = await performApiRequest(path, init);
+      if (retry.response.ok) {
+        return unwrapApiResponse<T>(retry.payload);
+      }
+      throw toApiError(retry.response, retry.payload);
+    }
+  }
+
+  throw firstError;
+}
+
+async function performApiRequest(
+  path: string,
+  init?: RequestInit,
+): Promise<{ response: Response; payload: unknown }> {
   const headers = createApiHeaders(init?.headers);
   const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
   if (init?.body && !isFormData && !headers.has("Content-Type")) {
@@ -98,14 +143,115 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     ...init,
     headers,
   });
-  const payload = await response.json();
 
-  if (!response.ok) {
-    const error = payload.error ?? { code: "request_failed", message: "Request failed" };
-    throw new ApiError(error.code, error.message, error.details ?? {});
+  return { response, payload: await readJsonPayload(response) };
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshAccessTokenPromise) {
+    refreshAccessTokenPromise = requestAccessTokenRefresh().finally(() => {
+      refreshAccessTokenPromise = null;
+    });
   }
 
+  return refreshAccessTokenPromise;
+}
+
+async function requestAccessTokenRefresh(): Promise<string | null> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(getApiUrl("/auth/refresh"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    const payload = await readJsonPayload(response);
+    if (!response.ok) {
+      const error = toApiError(response, payload);
+      if (isAuthenticationError(error) || error.code === "invalid_token") {
+        clearAuthTokens();
+        return null;
+      }
+      throw error;
+    }
+
+    const data = unwrapApiResponse<RefreshAccessTokenResponse>(payload);
+    if (!data.access_token) {
+      clearAuthTokens();
+      return null;
+    }
+
+    setAccessToken(data.access_token);
+    return data.access_token;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError("refresh_unavailable", "Session refresh unavailable", {}, 0);
+  }
+}
+
+async function readJsonPayload(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return {};
+  }
+}
+
+function unwrapApiResponse<T>(payload: unknown): T {
   return (payload as ApiEnvelope<T>).data;
+}
+
+function toApiError(response: Response, payload: unknown): ApiError {
+  const error = (payload as ApiErrorEnvelope).error;
+  return new ApiError(
+    error?.code ?? "request_failed",
+    error?.message ?? "Request failed",
+    error?.details ?? {},
+    response.status,
+  );
+}
+
+function shouldRefreshAfterFailure(path: string, response: Response): boolean {
+  return response.status === 401 && Boolean(getRefreshToken()) && !isRefreshExcludedPath(path);
+}
+
+function isRefreshExcludedPath(path: string): boolean {
+  return (
+    path === "/auth/refresh" ||
+    path === "/auth/login" ||
+    path === "/auth/register" ||
+    path === "/auth/verify-email" ||
+    path === "/auth/resend-verification" ||
+    path === "/auth/2fa/verify-login" ||
+    path.startsWith("/auth/password-reset/") ||
+    path === "/auth/oauth/providers"
+  );
+}
+
+function getStoredToken(primaryKey: string, legacyKey: string): string | null {
+  try {
+    return window.localStorage.getItem(primaryKey) ?? window.localStorage.getItem(legacyKey);
+  } catch {
+    return null;
+  }
+}
+
+export function isAuthenticationError(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
 }
 
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {

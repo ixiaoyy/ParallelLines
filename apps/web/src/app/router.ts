@@ -4,7 +4,7 @@ import type { RouteLocationNormalized } from "vue-router";
 import { fetchCurrentUser } from "@/features/auth/api";
 import type { UserPublic } from "@/features/auth/model";
 import { canAccessModeration, isAdmin } from "@/features/auth/permissions";
-import { clearAuthTokens, hasAccessToken } from "@/shared/api/client";
+import { clearAuthTokens, hasAccessToken, isAuthenticationError } from "@/shared/api/client";
 import { queryClient } from "@/shared/api/queryClient";
 import { queryKeys } from "@/shared/api/queryKeys";
 
@@ -94,9 +94,7 @@ export const router = createRouter({
     },
     {
       path: "/chat",
-      name: "chat",
-      component: () => import("@/pages/chat/ChatPage.vue"),
-      meta: { requiredAccess: "authenticated" },
+      redirect: { name: "home" },
     },
     {
       path: "/events",
@@ -185,10 +183,14 @@ async function loadCurrentUserForRoute(): Promise<UserPublic | null> {
       retry: false,
       staleTime: 0,
     });
-  } catch {
-    clearAuthTokens();
-    queryClient.setQueryData(queryKeys.currentUser, null);
-    return null;
+  } catch (error) {
+    if (isAuthenticationError(error)) {
+      clearAuthTokens();
+      queryClient.setQueryData(queryKeys.currentUser, null);
+      return null;
+    }
+
+    return queryClient.getQueryData<UserPublic | null>(queryKeys.currentUser) ?? null;
   }
 }
 

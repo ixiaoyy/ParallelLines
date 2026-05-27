@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BellOutlined, CheckCircleOutlined, InboxOutlined } from "@ant-design/icons-vue";
+import { BellFilled, CheckCircleOutlined, InboxOutlined } from "@ant-design/icons-vue";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 import { toNotificationItem } from "@/features/notifications/model";
@@ -63,7 +63,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="bellRef" class="notification-bell" @keydown.esc="closePanel">
-    <a-badge :count="unreadCount" :number-style="{ backgroundColor: 'var(--btn-primary-bg, #409eff)' }">
+    <a-badge :count="unreadCount" :number-style="{ backgroundColor: 'var(--btn-primary-bg)' }">
       <button
         class="notification-trigger"
         type="button"
@@ -72,7 +72,7 @@ onBeforeUnmount(() => {
         aria-haspopup="dialog"
         @click="togglePanel"
       >
-        <BellOutlined />
+        <BellFilled />
       </button>
     </a-badge>
 

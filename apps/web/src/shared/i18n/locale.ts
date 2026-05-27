@@ -88,7 +88,6 @@ const EN_SITE_TEXT: Record<string, string> = {
   "brand.home_aria": "Parallel Lines home",
   "nav.admin": "Admin",
   "nav.boards": "Boards",
-  "nav.chat": "Chat",
   "nav.collapse": "Close",
   "nav.collapse_aria": "Collapse navigation",
   "nav.email": "Email",

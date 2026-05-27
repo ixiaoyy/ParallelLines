@@ -13,7 +13,6 @@ from app.core.permissions import is_admin
 from app.core.security import hash_password
 from app.db.base import utcnow
 from app.models.background_job import BackgroundJob
-from app.models.chat import ChatChannelMember, ChatPresence
 from app.models.draft import Draft
 from app.models.email import EmailDeliveryEvent, InboundEmail, UserEmailPreference
 from app.models.forum import Board, BoardInvitation, BoardMember
@@ -267,8 +266,6 @@ class PrivacyService:
             PrivateMessageParticipant,
             PrivateMessageParticipant.user_id == user.id,
         )
-        await self._delete_rows(ChatChannelMember, ChatChannelMember.user_id == user.id)
-        await self._delete_rows(ChatPresence, ChatPresence.user_id == user.id)
         disabled_api_keys = await self._disable_api_keys(user.id, actor_id, now)
         disabled_webhooks = await self._disable_webhooks(user.id, actor_id, now)
         deleted_uploads, retained_uploads = await self._process_uploads(user.id, now)
