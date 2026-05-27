@@ -209,38 +209,41 @@ def output_json(repo_root: Path | None = None) -> None:
 # Text Output
 # =============================================================================
 
-def get_context_text(repo_root: Path | None = None) -> str:
-    """Get context as formatted text.
+DONE_STATUSES = {"completed", "done"}
+
+
+def get_context_text(repo_root: Path | None = None, task_limit: int = 10) -> str:
+    """Get compact context as formatted text.
+
+    Default output is intentionally short for `$start`: it avoids dumping the full
+    non-archived task tree, which can grow large and slow every session.
 
     Args:
         repo_root: Repository root path. Defaults to auto-detected.
+        task_limit: Max actionable tasks to print per section.
 
     Returns:
-        Formatted text output.
+        Compact formatted text output.
     """
     if repo_root is None:
         repo_root = get_repo_root()
 
-    lines = []
+    lines: list[str] = []
     lines.append("========================================")
     lines.append("SESSION CONTEXT")
     lines.append("========================================")
     lines.append("")
 
     developer = get_developer(repo_root)
-
-    # Developer section
     lines.append("## DEVELOPER")
     if not developer:
         lines.append(
             f"ERROR: Not initialized. Run: python3 ./{DIR_WORKFLOW}/{DIR_SCRIPTS}/init_developer.py <name>"
         )
         return "\n".join(lines)
-
     lines.append(f"Name: {developer}")
     lines.append("")
 
-    # Git status
     lines.append("## GIT STATUS")
     _, branch_out, _ = run_git(["branch", "--show-current"], cwd=repo_root)
     branch = branch_out.strip() or "unknown"
@@ -248,100 +251,76 @@ def get_context_text(repo_root: Path | None = None) -> str:
 
     _, status_out, _ = run_git(["status", "--porcelain"], cwd=repo_root)
     status_lines = [line for line in status_out.splitlines() if line.strip()]
-    status_count = len(status_lines)
-
-    if status_count == 0:
+    if not status_lines:
         lines.append("Working directory: Clean")
     else:
-        lines.append(f"Working directory: {status_count} uncommitted change(s)")
-        lines.append("")
-        lines.append("Changes:")
+        lines.append(f"Working directory: {len(status_lines)} uncommitted change(s)")
         _, short_out, _ = run_git(["status", "--short"], cwd=repo_root)
         for line in short_out.splitlines()[:10]:
             lines.append(line)
+        if len(status_lines) > 10:
+            lines.append(f"... {len(status_lines) - 10} more change(s)")
     lines.append("")
 
-    # Recent commits
     lines.append("## RECENT COMMITS")
-    _, log_out, _ = run_git(["log", "--oneline", "-5"], cwd=repo_root)
-    if log_out.strip():
-        for line in log_out.splitlines():
-            lines.append(line)
-    else:
-        lines.append("(no commits)")
+    _, log_out, _ = run_git(["log", "--oneline", "-3"], cwd=repo_root)
+    lines.extend(log_out.splitlines() if log_out.strip() else ["(no commits)"])
     lines.append("")
 
-    # Package git repos — independent sub-repositories
     _append_package_git_context(lines, _collect_package_git_info(repo_root))
 
-    # Current task
+    tasks_dir = get_tasks_dir(repo_root)
+    all_tasks = list(iter_active_tasks(tasks_dir))
+    all_statuses = {t.dir_name: t.status for t in all_tasks}
+    open_tasks = [t for t in all_tasks if t.status not in DONE_STATUSES]
+    my_open_tasks = [t for t in open_tasks if t.assignee == developer]
+
     lines.append("## CURRENT TASK")
     current_task = get_current_task(repo_root)
     if current_task:
-        current_task_dir = repo_root / current_task
         lines.append(f"Path: {current_task}")
-
-        ct = load_task(current_task_dir)
+        ct = load_task(repo_root / current_task)
         if ct:
             lines.append(f"Name: {ct.name}")
             lines.append(f"Status: {ct.status}")
-            lines.append(f"Created: {ct.raw.get('createdAt', 'unknown')}")
             if ct.description:
                 lines.append(f"Description: {ct.description}")
-
-        # Check for prd.md
-        prd_file = current_task_dir / "prd.md"
-        if prd_file.is_file():
-            lines.append("")
-            lines.append("[!] This task has prd.md - read it for task details")
+        if (repo_root / current_task / "prd.md").is_file():
+            lines.append("[!] Read this task's prd.md before continuing.")
     else:
         lines.append("(none)")
     lines.append("")
 
-    # Active tasks
-    lines.append("## ACTIVE TASKS")
-    tasks_dir = get_tasks_dir(repo_root)
-    task_count = 0
-
-    # Collect all task data for hierarchy display
-    all_tasks = {t.dir_name: t for t in iter_active_tasks(tasks_dir)}
-    all_statuses = {name: t.status for name, t in all_tasks.items()}
-
-    def _print_task_tree(name: str, indent: int = 0) -> None:
-        nonlocal task_count
-        t = all_tasks[name]
-        progress = children_progress(t.children, all_statuses)
-        prefix = "  " * indent
-        lines.append(f"{prefix}- {name}/ ({t.status}){progress} @{t.assignee or '-'}")
-        task_count += 1
-        for child in t.children:
-            if child in all_tasks:
-                _print_task_tree(child, indent + 1)
-
-    for dir_name in sorted(all_tasks.keys()):
-        if not all_tasks[dir_name].parent:
-            _print_task_tree(dir_name)
-
-    if task_count == 0:
-        lines.append("(no active tasks)")
-    lines.append(f"Total: {task_count} active task(s)")
+    lines.append("## TASK SUMMARY")
+    status_counts: dict[str, int] = {}
+    for task in all_tasks:
+        status_counts[task.status] = status_counts.get(task.status, 0) + 1
+    summary = ", ".join(f"{status}: {count}" for status, count in sorted(status_counts.items()))
+    lines.append(f"Non-archived tasks: {len(all_tasks)}" + (f" ({summary})" if summary else ""))
+    lines.append(f"Open/non-completed tasks: {len(open_tasks)}")
+    lines.append("Completed tasks are summarized, not listed.")
     lines.append("")
 
-    # My tasks
-    lines.append("## MY TASKS (Assigned to me)")
-    my_task_count = 0
-
-    for t in all_tasks.values():
-        if t.assignee == developer and t.status != "done":
-            progress = children_progress(t.children, all_statuses)
-            lines.append(f"- [{t.priority}] {t.title} ({t.status}){progress}")
-            my_task_count += 1
-
-    if my_task_count == 0:
-        lines.append("(no tasks assigned to you)")
+    lines.append(f"## MY OPEN TASKS (Assigned to {developer})")
+    if my_open_tasks:
+        for task in sorted(my_open_tasks, key=lambda t: (t.priority, t.dir_name))[:task_limit]:
+            progress = children_progress(task.children, all_statuses)
+            lines.append(f"- [{task.priority}] {task.title} ({task.status}){progress} — {task.dir_name}")
+        if len(my_open_tasks) > task_limit:
+            lines.append(f"... {len(my_open_tasks) - task_limit} more")
+    else:
+        lines.append("(none)")
     lines.append("")
 
-    # Journal file
+    other_open = [t for t in open_tasks if t.assignee != developer]
+    if other_open:
+        lines.append("## OTHER OPEN TASKS")
+        for task in sorted(other_open, key=lambda t: (t.assignee or "", t.priority, t.dir_name))[:task_limit]:
+            lines.append(f"- [{task.priority}] {task.title} ({task.status}) @{task.assignee or '-'} — {task.dir_name}")
+        if len(other_open) > task_limit:
+            lines.append(f"... {len(other_open) - task_limit} more")
+        lines.append("")
+
     lines.append("## JOURNAL FILE")
     journal_file = get_active_journal_file(repo_root)
     if journal_file:
@@ -355,13 +334,11 @@ def get_context_text(repo_root: Path | None = None) -> str:
         lines.append("No journal file found")
     lines.append("")
 
-    # Packages
     packages_text = get_packages_section(repo_root)
     if packages_text:
         lines.append(packages_text)
         lines.append("")
 
-    # Paths
     lines.append("## PATHS")
     lines.append(f"Workspace: {DIR_WORKFLOW}/{DIR_WORKSPACE}/{developer}/")
     lines.append(f"Tasks: {DIR_WORKFLOW}/{DIR_TASKS}/")
@@ -369,8 +346,8 @@ def get_context_text(repo_root: Path | None = None) -> str:
     lines.append("")
 
     lines.append("========================================")
-
     return "\n".join(lines)
+
 
 
 # =============================================================================
@@ -553,10 +530,11 @@ def get_context_text_record(repo_root: Path | None = None) -> str:
     return "\n".join(lines)
 
 
-def output_text(repo_root: Path | None = None) -> None:
-    """Output context in text format.
+def output_text(repo_root: Path | None = None, task_limit: int = 10) -> None:
+    """Output compact context in text format.
 
     Args:
         repo_root: Repository root path. Defaults to auto-detected.
+        task_limit: Max actionable tasks to show.
     """
-    print(get_context_text(repo_root))
+    print(get_context_text(repo_root, task_limit=task_limit))

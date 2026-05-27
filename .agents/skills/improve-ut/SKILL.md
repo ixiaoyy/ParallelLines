@@ -1,69 +1,34 @@
 ---
 name: improve-ut
-description: "Analyzes changed files and improves unit test coverage using project-specific testing conventions from .trellis/spec/ unit-test specs. Determines test scope (unit vs integration vs regression), adds or updates tests following existing patterns, and runs validation. Use when code changes need test coverage, after implementing a feature, after fixing a bug, or when test gaps are identified."
+description: "Improve tests for changed code: choose unit/integration/regression scope, follow existing patterns, run targeted validation."
 ---
 
-# Improve Unit Tests (UT)
+# Improve Unit Tests
 
-Use this skill to improve test coverage after code changes.
+Use after feature/bug changes or when coverage gaps are found.
 
-## Usage
-
-```text
-$improve-ut
-```
-
-## Source of Truth
-
-Discover and read unit-test specs dynamically:
-
-```bash
-# Discover available packages and their spec layers
-python3 ./.trellis/scripts/get_context.py --mode packages
-```
-
-Look for packages with `unit-test` spec layer in the output. For each discovered `unit-test/` directory, read all relevant spec files inside it (for example `index.md`, `conventions.md`, `integration-patterns.md`, `mock-strategies.md`).
-
-> If this skill conflicts with the unit-test specs, the specs win.
-
----
-
-## Execution Flow
+## Steps
 
 1. Inspect changed files:
-   - `git diff --name-only`
-2. Decide test scope using unit-test specs:
-   - unit vs integration vs regression
-   - mock vs real filesystem flow
-3. Add/update tests using existing project test patterns
-4. Run validation:
+   ```bash
+   git diff --name-only HEAD
+   ```
+2. Read relevant test/spec guidance if present:
+   ```bash
+   python ./.trellis/scripts/get_context.py --mode packages
+   ```
+3. Find existing nearby tests and patterns.
+4. Choose scope:
+   - unit for pure logic
+   - integration for API/service/db flow
+   - regression for fixed bugs
+5. Add/update tests with minimal fixtures/mocks.
+6. Run affected checks: `pnpm test:api`, web test command, lint/typecheck as applicable.
 
-```bash
-pnpm lint
-pnpm typecheck
-pnpm test
-```
+## Output
 
-5. Summarize decisions, updates, and remaining test gaps.
-
----
-
-## Output Format
-
-```markdown
-## UT Coverage Plan
-- Changed areas: ...
-- Test scope (unit/integration/regression): ...
-
-## Test Updates
-- Added: ...
-- Updated: ...
-
-## Validation
-- pnpm lint: pass/fail
-- pnpm typecheck: pass/fail
-- pnpm test: pass/fail
-
-## Gaps / Follow-ups
-- <none or explicit rationale>
-```
+- changed areas
+- test scope
+- tests added/updated
+- validation result
+- remaining gaps

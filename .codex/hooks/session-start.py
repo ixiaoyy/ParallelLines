@@ -183,37 +183,18 @@ Read and follow all instructions below carefully.
     output.write("\n</workflow>\n\n")
 
     output.write("<guidelines>\n")
-    output.write("**Note**: The guidelines below are index files — they list available guideline documents and their locations.\n")
-    output.write("During actual development, you MUST read the specific guideline files listed in each index's Pre-Development Checklist.\n\n")
+    output.write("Spec indexes are NOT preloaded. For real, non-trivial app code edits, read only the target layer index and matching spec files via `$before-dev`.\n")
+    output.write("Skip spec loading for questions, repo inspection, Trellis/skill/tooling edits, and trivial local changes.\n\n")
 
     spec_dir = trellis_dir / "spec"
     if spec_dir.is_dir():
-        for sub in sorted(spec_dir.iterdir()):
-            if not sub.is_dir() or sub.name.startswith("."):
-                continue
-
-            if sub.name == "guides":
-                index_file = sub / "index.md"
-                if index_file.is_file():
-                    output.write(f"## {sub.name}\n")
-                    output.write(read_file(index_file))
-                    output.write("\n\n")
-                continue
-
-            index_file = sub / "index.md"
-            if index_file.is_file():
-                output.write(f"## {sub.name}\n")
-                output.write(read_file(index_file))
-                output.write("\n\n")
-            else:
-                for nested in sorted(sub.iterdir()):
-                    if not nested.is_dir():
-                        continue
-                    nested_index = nested / "index.md"
-                    if nested_index.is_file():
-                        output.write(f"## {sub.name}/{nested.name}\n")
-                        output.write(read_file(nested_index))
-                        output.write("\n\n")
+        output.write("Available spec indexes:\n")
+        for index_file in sorted(spec_dir.glob("*/index.md")):
+            try:
+                rel = index_file.relative_to(project_dir)
+            except ValueError:
+                rel = index_file
+            output.write(f"- {rel}\n")
 
     output.write("</guidelines>\n\n")
 
@@ -221,9 +202,9 @@ Read and follow all instructions below carefully.
     output.write(f"<task-status>\n{task_status}\n</task-status>\n\n")
 
     output.write("""<ready>
-Context loaded. Workflow index, project state, and guidelines are already injected above — do NOT re-read them.
+Context loaded. Workflow index and project state are injected above; spec index paths are listed but not loaded.
 Wait for the user's first message, then handle it following the workflow guide.
-If there is an active task, ask whether to continue it.
+Read targeted specs only when a real code edit needs them. If there is an active task, ask whether to continue it only when the user's request is ambiguous.
 </ready>""")
 
     context = output.getvalue()

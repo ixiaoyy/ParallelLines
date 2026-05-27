@@ -1,30 +1,38 @@
 ---
 name: check
-description: "Validates recently written code against project-specific development guidelines from .trellis/spec/. Identifies changed files via git diff, discovers applicable spec modules, runs lint and typecheck, and reports guideline violations. Use when code is written and needs quality verification, to catch context drift during long sessions, or before committing changes."
+description: "Verify changed code against relevant Trellis specs plus lint/type/test commands for affected frontend/backend areas."
 ---
 
-Check if the code you just wrote follows the development guidelines.
+# Check
 
-Execute these steps:
+Use after code changes or before handoff.
 
-1. **Identify changed files**:
+## Steps
+
+1. Inspect changes:
    ```bash
    git diff --name-only HEAD
+   git status --short
    ```
-
-2. **Determine which spec modules apply** based on the changed file paths:
+2. Pick relevant specs from changed paths:
+   - `apps/web` -> `.trellis/spec/frontend/index.md`
+   - `apps/api` -> `.trellis/spec/backend/index.md`
+   - shared/API/schema -> also `.trellis/spec/guides/index.md`
+3. Read only index checklist files relevant to the changes.
+4. Run affected checks:
    ```bash
-   python3 ./.trellis/scripts/get_context.py --mode packages
+   pnpm lint:web
+   pnpm typecheck:web
+   pnpm lint:api
+   pnpm test:api
+   pnpm test:smoke
    ```
+   Use only commands applicable to touched areas unless user asks for full validation.
+5. Fix violations directly when safe.
 
-3. **Read the spec index** for each relevant module:
-   ```bash
-   cat .trellis/spec/<package>/<layer>/index.md
-   ```
-   Follow the **"Quality Check"** section in the index.
+## Output
 
-4. **Read the specific guideline files** referenced in the Quality Check section (e.g., `quality-guidelines.md`, `conventions.md`). The index is NOT the goal — it points you to the actual guideline files. Read those files and review your code against them.
-
-5. **Run lint and typecheck** for the affected package.
-
-6. **Report any violations** and fix them if found.
+- changed areas
+- specs consulted
+- checks run + pass/fail
+- fixes made or remaining blockers

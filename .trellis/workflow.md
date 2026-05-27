@@ -44,7 +44,7 @@ This creates:
 ### Step 1: Understand Current Context
 
 ```bash
-# Get full context in one command
+# Get compact context in one command
 python3 ./.trellis/scripts/get_context.py
 
 # Or check manually:
@@ -53,36 +53,26 @@ python3 ./.trellis/scripts/task.py list          # Active tasks
 git status && git log --oneline -10              # Git state
 ```
 
-### Step 2: Read Project Guidelines [MANDATORY]
+### Step 2: Load Project Guidelines On Demand
 
-**CRITICAL**: Read guidelines before writing any code:
+Do not load `.trellis/spec/` for every request. Skip spec loading for questions, planning-only discussion, Trellis/skill/tooling edits, trivial copy/comment fixes, and diagnostics with no source changes.
+
+Before real, non-trivial app code edits, load only task-relevant guidance:
 
 ```bash
-# Discover available packages and spec layers
+# Only if paths/scope are unknown
 python3 ./.trellis/scripts/get_context.py --mode packages
 
-# Read the spec index for each relevant module
-cat .trellis/spec/<package>/<layer>/index.md
-
-# Always read shared guides
-cat .trellis/spec/guides/index.md
+# Read exactly the target layer index, then only matching checklist files
+cat .trellis/spec/frontend/index.md
+cat .trellis/spec/backend/index.md
 ```
 
-**Why this matters?**
-- Understand which spec layers apply to your task
-- Know coding standards for the packages you'll modify
-- Learn the overall code quality requirements
+Open shared guides only when triggered: cross-layer data flow/API/schema changes, repeated constants/patterns, or new utility functions.
 
-### Step 3: Before Coding - Read Specific Guidelines (Required)
+### Step 3: Before Coding - Read Specific Guidelines When Triggered
 
-Based on your task, read the **detailed** guideline files listed in each spec index's **Pre-Development Checklist**:
-
-```bash
-# The index points to specific files — read those, not just the index
-cat .trellis/spec/<package>/<layer>/error-handling.md
-cat .trellis/spec/<package>/<layer>/conventions.md
-# etc. — based on what the Pre-Development Checklist lists
-```
+Based on the target files and task domain, read the specific files from the relevant index's checklist. Do not read unrelated specs.
 
 ---
 
@@ -91,7 +81,7 @@ cat .trellis/spec/<package>/<layer>/conventions.md
 ### Core Principles
 
 1. **Read Before Write** - Understand context before starting
-2. **Follow Standards** - [!] **MUST read `.trellis/spec/` guidelines before coding**
+2. **Follow Standards** - read only task-relevant `.trellis/spec/` docs before non-trivial app code edits
 3. **Incremental Development** - Complete one task at a time
 4. **Record Promptly** - Update tracking files immediately after completion
 5. **Document Limits** - [!] **Max 2000 lines per journal document**
@@ -127,7 +117,7 @@ cat .trellis/spec/<package>/<layer>/conventions.md
 |-- tasks/               # Task tracking
 |   +-- {MM}-{DD}-{name}/
 |       +-- task.json
-|-- spec/                # [!] MUST READ before coding
+|-- spec/                # Read targeted docs before non-trivial app code edits
 |   |-- frontend/        # Frontend guidelines (if applicable)
 |   |   |-- index.md               # Start here - guidelines index
 |   |   +-- *.md                   # Topic-specific docs
@@ -157,20 +147,19 @@ python3 ./.trellis/scripts/get_context.py
 python3 ./.trellis/scripts/get_context.py --json
 ```
 
-### Step 2: Read Development Guidelines [!] REQUIRED
+### Step 2: Read Development Guidelines When Needed
 
-**[!] CRITICAL: MUST read guidelines before writing any code**
-
-Based on what you'll develop, read the corresponding guidelines:
+For non-trivial app code edits, read only the target layer index and matching checklist files.
 
 ```bash
-# Discover available packages and spec layers
+# Optional when paths/scope are unknown
 python3 ./.trellis/scripts/get_context.py --mode packages
 
-# Read spec indexes for relevant modules
-cat .trellis/spec/<package>/<layer>/index.md
+# Read only the target layer index
+cat .trellis/spec/frontend/index.md
+cat .trellis/spec/backend/index.md
 
-# For cross-layer features
+# For cross-layer features only
 cat .trellis/spec/guides/cross-layer-thinking-guide.md
 ```
 
@@ -349,8 +338,8 @@ python3 ./.trellis/scripts/task.py list-archive    # List archived tasks
 ### [OK] DO - Should Do
 
 1. **Before session start**:
-   - Run `python3 ./.trellis/scripts/get_context.py` for full context
-   - [!] **MUST read** relevant `.trellis/spec/` docs
+   - Run `python3 ./.trellis/scripts/get_context.py` for compact context
+   - Read `.trellis/spec/` only when a non-trivial app code edit needs it
 
 2. **During development**:
    - [!] **Follow** `.trellis/spec/` guidelines
@@ -366,7 +355,7 @@ python3 ./.trellis/scripts/task.py list-archive    # List archived tasks
 
 ### [X] DON'T - Should Not Do
 
-1. [!] **Don't** skip reading `.trellis/spec/` guidelines
+1. [!] **Don't** skip targeted `.trellis/spec/` reads for non-trivial app code changes
 2. [!] **Don't** let journal single file exceed 2000 lines
 3. **Don't** develop multiple unrelated tasks simultaneously
 4. **Don't** commit code with lint/test errors
@@ -377,13 +366,15 @@ python3 ./.trellis/scripts/task.py list-archive    # List archived tasks
 
 ## Quick Reference
 
-### Must-read Before Development
+### Before-Development Spec Loading
 
-| Task Type | Must-read Document |
-|-----------|-------------------|
-| Frontend work | `frontend/index.md` → relevant docs |
-| Backend work | `backend/index.md` → relevant docs |
-| Cross-Layer Feature | `guides/cross-layer-thinking-guide.md` |
+| Task Type | Read |
+|-----------|------|
+| Question / planning / Trellis tooling | No app specs by default |
+| Trivial local edit | Target file only; spec optional |
+| Frontend app edit | `frontend/index.md` → matching checklist files |
+| Backend app edit | `backend/index.md` → matching checklist files |
+| Cross-layer/API/schema/infra | Target indexes + triggered guide/spec files |
 
 ### Commit Convention
 
@@ -398,7 +389,7 @@ git commit -m "type(scope): description"
 
 ```bash
 # Session management
-python3 ./.trellis/scripts/get_context.py    # Get full context
+python3 ./.trellis/scripts/get_context.py    # Get compact context
 python3 ./.trellis/scripts/add_session.py    # Record session
 
 # Task management

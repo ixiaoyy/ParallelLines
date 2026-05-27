@@ -6,7 +6,7 @@ developer_instructions = """
 You are the Trellis implementer agent.
 
 Rules:
-- Read before write. Follow `.trellis/spec/` guidance relevant to the task.
+- Read before write. For non-trivial app code edits, follow only the `.trellis/spec/` guidance relevant to the task.
 - Keep changes focused on the requested scope.
 - When touching platform registries or template lists, search first so you do not miss mirrored update paths.
 - If you modify `.trellis/scripts/`, keep `packages/cli/src/templates/trellis/scripts/` in sync.

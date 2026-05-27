@@ -1,101 +1,37 @@
 ---
 name: create-command
-description: "Scaffolds a new skill file with proper naming conventions and structure. Analyzes requirements to determine skill type and generates appropriate content. Use when adding a new developer workflow skill, creating a custom skill, or extending the Trellis skill set."
+description: "Create a concise project skill under .agents/skills with frontmatter, triggerable description, and executable steps."
 ---
 
-# Create New Skill
+# Create Command / Skill
 
-Create a new Codex skill in `.agents/skills/<skill-name>/SKILL.md` based on user requirements.
+Create `.agents/skills/<skill-name>/SKILL.md`.
 
-## Usage
+## Steps
 
-```bash
-$create-command <skill-name> <description>
-```
+1. Parse input:
+   - skill name in kebab-case
+   - purpose/trigger
+2. Check existing skills for overlap:
+   ```bash
+   ls .agents/skills .codex/skills 2>/dev/null
+   ```
+3. Generate concise `SKILL.md`:
+   ```markdown
+   ---
+   name: <skill-name>
+   description: "<short trigger-rich description>"
+   ---
 
-**Example**:
-```bash
-$create-command review-pr Check PR code changes against project guidelines
-```
+   # <Title>
 
-## Execution Steps
+   When to use, steps, output format.
+   ```
+4. Keep body under ~100 lines unless the workflow truly needs more.
+5. Confirm path and usage: `$<skill-name>`.
 
-### 1. Parse Input
+## Guidelines
 
-Extract from user input:
-- **Skill name**: Use kebab-case (e.g., `review-pr`)
-- **Description**: What the skill should accomplish
-
-### 2. Analyze Requirements
-
-Determine skill type based on description:
-- **Initialization**: Read docs, establish context
-- **Pre-development**: Read guidelines, check dependencies
-- **Code check**: Validate code quality and guideline compliance
-- **Recording**: Record progress, questions, structure changes
-- **Generation**: Generate docs or code templates
-
-### 3. Generate Skill Content
-
-Minimum `SKILL.md` structure:
-
-```markdown
----
-name: <skill-name>
-description: "<description>"
----
-
-# <Skill Title>
-
-<Instructions for when and how to use this skill>
-```
-
-### 4. Create Files
-
-Create:
-- `.agents/skills/<skill-name>/SKILL.md`
-
-### 5. Confirm Creation
-
-Output result:
-
-```text
-[OK] Created Skill: <skill-name>
-
-File path:
-- .agents/skills/<skill-name>/SKILL.md
-
-Usage:
-- Trigger directly with $<skill-name>
-- Or open /skills and select it
-
-Description:
-<description>
-```
-
-## Skill Content Guidelines
-
-### [OK] Good skill content
-
-1. **Clear and concise**: Immediately understandable
-2. **Executable**: AI can follow steps directly
-3. **Well-scoped**: Clear boundaries of what to do and not do
-4. **Has output**: Specifies expected output format (if needed)
-
-### [X] Avoid
-
-1. **Too vague**: e.g., "optimize code"
-2. **Too complex**: Single skill should not exceed 100 lines
-3. **Duplicate functionality**: Check if similar skill exists first
-
-## Naming Conventions
-
-| Skill Type | Prefix | Example |
-|------------|--------|---------|
-| Session Start | `start` | `start` |
-| Pre-development | `before-` | `before-dev` |
-| Check | `check-` | `check` |
-| Record | `record-` | `record-session` |
-| Generate | `generate-` | `generate-api-doc` |
-| Update | `update-` | `update-changelog` |
-| Other | Verb-first | `review-code`, `sync-data` |
+- Description should include trigger nouns/actions.
+- Prefer commands and checklists over long explanations.
+- Do not duplicate an existing skill.
