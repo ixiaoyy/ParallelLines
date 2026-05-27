@@ -81,8 +81,11 @@ const hasLevelFrame = computed(() => frame.value !== "none");
 }
 
 .avatar :deep(.ant-avatar-string) {
-  position: relative !important;
+  position: absolute !important;
+  inset: 0 !important;
   z-index: 2;
+  display: grid !important;
+  place-items: center !important;
   transform: none !important;
   line-height: 1 !important;
 }
@@ -107,9 +110,10 @@ const hasLevelFrame = computed(() => frame.value !== "none");
 .avatar--level-frame {
   overflow: visible;
   isolation: isolate;
-  border-color: rgba(255, 255, 255, 0.94);
+  border-color: transparent;
+  color: var(--primary) !important;
+  background: transparent !important;
   box-shadow:
-    0 8px 20px rgba(var(--shadow-rgb), 0.12),
     0 0 16px var(--avatar-frame-shadow);
 }
 
