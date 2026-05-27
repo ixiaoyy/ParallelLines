@@ -4,7 +4,6 @@ import { computed, nextTick, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import type { PostItemVM } from "@/entities/post/model";
-import TopicAiSummaryCard from "@/features/ai/components/TopicAiSummaryCard.vue";
 import { useCurrentUser } from "@/features/auth/queries";
 import { setTopicBookmark, setTopicLike, setTopicVote } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
@@ -551,7 +550,6 @@ function flagTopic() {
 
     <template v-else-if="topic">
       <TopicDetailHero :topic="topic" :stats="topicStats" />
-      <TopicAiSummaryCard :topic-id="topic.id" />
 
       <div class="topic-layout">
         <main class="post-stream" aria-label="楼层流">
