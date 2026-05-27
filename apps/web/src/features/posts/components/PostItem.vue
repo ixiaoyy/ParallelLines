@@ -1,4 +1,21 @@
 <script setup lang="ts">
+import {
+  ArrowDownOutlined,
+  ArrowUpOutlined,
+  CheckCircleOutlined,
+  CodeOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EllipsisOutlined,
+  FlagOutlined,
+  HeartFilled,
+  HeartOutlined,
+  HistoryOutlined,
+  LinkOutlined,
+  RocketOutlined,
+  RollbackOutlined,
+  UserDeleteOutlined,
+} from "@ant-design/icons-vue";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import type { PostItemVM } from "@/entities/post/model";
@@ -385,7 +402,10 @@ function decorateHeadingAnchors() {
           </div>
         </div>
         <div class="post-header-actions">
-          <UiButton v-if="canEdit" class="post-header-edit" tone="subtle" @click="startEdit">编辑</UiButton>
+          <UiButton v-if="canEdit" class="post-header-edit" tone="subtle" @click="startEdit">
+            <EditOutlined aria-hidden="true" />
+            编辑
+          </UiButton>
         </div>
       </header>
       <div v-if="post.acceptedAnswer" class="accepted-answer-badge">✓ 已采纳解决方案</div>
@@ -408,55 +428,98 @@ function decorateHeadingAnchors() {
       </template>
       <div v-else class="markdown-body" v-html="post.cookedHtml" />
       <p v-if="statusMessage" class="post-status" role="status">{{ statusMessage }}</p>
-      <footer v-if="!post.deleted">
+      <footer v-if="!post.deleted" class="post-action-bar">
         <div class="score-vote" aria-label="楼层赞成反对投票">
-          <UiButton
-            :tone="voteValue === 1 ? 'success' : 'ghost'"
+          <button
+            class="icon-action icon-action--vote"
+            :class="{ 'is-active': voteValue === 1 }"
+            type="button"
+            title="赞成"
+            aria-label="赞成这个楼层"
             :aria-pressed="voteValue === 1"
             :disabled="votePending"
             @click="votePost(1)"
           >
-            赞成
-          </UiButton>
+            <ArrowUpOutlined aria-hidden="true" />
+          </button>
           <strong>{{ voteScore }}</strong>
-          <UiButton
-            :tone="voteValue === -1 ? 'danger' : 'ghost'"
+          <button
+            class="icon-action icon-action--vote"
+            :class="{ 'is-danger-active': voteValue === -1 }"
+            type="button"
+            title="反对"
+            aria-label="反对这个楼层"
             :aria-pressed="voteValue === -1"
             :disabled="votePending"
             @click="votePost(-1)"
           >
-            反对
-          </UiButton>
-          <span>{{ voteCount }} 票</span>
+            <ArrowDownOutlined aria-hidden="true" />
+          </button>
+          <span v-if="voteCount">{{ voteCount }}</span>
         </div>
-        <UiButton
-          :tone="liked ? 'success' : 'ghost'"
+        <button
+          class="icon-action"
+          :class="{ 'is-active': liked }"
+          type="button"
+          :title="liked ? '取消点赞' : '点赞'"
+          :aria-label="`${liked ? '取消点赞' : '点赞'}，当前 ${optimisticLikeCount}`"
           :aria-pressed="liked"
           :disabled="likePending"
           @click="toggleLike"
         >
-          {{ liked ? "已赞" : "赞" }} {{ optimisticLikeCount }}
-        </UiButton>
-        <UiButton tone="ghost" @click="quotePost">回复 {{ post.replyCount }}</UiButton>
-        <UiButton tone="subtle" @click="copyPostLink">复制楼层链接</UiButton>
-        <UiButton v-if="hasCodeBlock" tone="subtle" aria-label="复制本楼层代码块" @click="copyCode">复制代码</UiButton>
-        <UiButton tone="ghost" :disabled="!canFlag" @click="flagPost">举报</UiButton>
-        <UiButton v-if="canBlockAuthor" tone="ghost" @click="blockAuthor">屏蔽用户</UiButton>
-        <UiButton tone="ghost" @click="quotePost">引用</UiButton>
-        <UiButton
+          <HeartFilled v-if="liked" aria-hidden="true" />
+          <HeartOutlined v-else aria-hidden="true" />
+          <span v-if="optimisticLikeCount" class="action-count">{{ optimisticLikeCount }}</span>
+        </button>
+        <button class="icon-action" type="button" title="复制楼层链接" aria-label="复制楼层链接" @click="copyPostLink">
+          <LinkOutlined aria-hidden="true" />
+        </button>
+        <button
           v-if="canToggleSolution"
-          :tone="post.acceptedAnswer ? 'success' : 'subtle'"
+          class="icon-action"
+          :class="{ 'is-active': post.acceptedAnswer }"
+          type="button"
+          :title="post.acceptedAnswer ? '取消采纳' : '采纳为答案'"
+          :aria-label="post.acceptedAnswer ? '取消采纳这个答案' : '采纳这个楼层为答案'"
+          :aria-pressed="post.acceptedAnswer"
           :disabled="solutionPending"
           @click="toggleSolution"
         >
-          {{ post.acceptedAnswer ? "取消采纳" : "采纳为答案" }}
-        </UiButton>
-        <UiButton v-if="canViewHistory" tone="ghost" @click="toggleHistory">
-          {{ historyOpen ? "收起历史" : "历史" }}
-        </UiButton>
-        <UiButton v-if="canDelete" class="post-delete-button" tone="ghost" :disabled="deletingPost" @click="deleteReply">
-          {{ deletingPost ? "删除中…" : "删除" }}
-        </UiButton>
+          <CheckCircleOutlined v-if="post.acceptedAnswer" aria-hidden="true" />
+          <RocketOutlined v-else aria-hidden="true" />
+        </button>
+        <details class="post-more">
+          <summary title="更多操作" aria-label="更多楼层操作">
+            <EllipsisOutlined aria-hidden="true" />
+          </summary>
+          <div class="post-more-menu">
+            <button v-if="hasCodeBlock" type="button" @click="copyCode">
+              <CodeOutlined aria-hidden="true" />
+              复制代码
+            </button>
+            <button type="button" :disabled="!canFlag" @click="flagPost">
+              <FlagOutlined aria-hidden="true" />
+              举报
+            </button>
+            <button v-if="canBlockAuthor" type="button" @click="blockAuthor">
+              <UserDeleteOutlined aria-hidden="true" />
+              屏蔽用户
+            </button>
+            <button v-if="canViewHistory" type="button" @click="toggleHistory">
+              <HistoryOutlined aria-hidden="true" />
+              {{ historyOpen ? "收起历史" : "编辑历史" }}
+            </button>
+            <button v-if="canDelete" type="button" :disabled="deletingPost" @click="deleteReply">
+              <DeleteOutlined aria-hidden="true" />
+              {{ deletingPost ? "删除中…" : "删除" }}
+            </button>
+          </div>
+        </details>
+        <button class="reply-action" type="button" @click="quotePost">
+          <RollbackOutlined aria-hidden="true" />
+          <span>回复</span>
+          <small v-if="post.replyCount">{{ post.replyCount }}</small>
+        </button>
       </footer>
       <section v-if="historyOpen && canViewHistory" class="revision-panel" aria-label="帖子编辑历史">
         <p v-if="revisionsQuery.isLoading.value" role="status">正在加载编辑历史…</p>

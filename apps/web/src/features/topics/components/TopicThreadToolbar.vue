@@ -1,16 +1,40 @@
 <script setup lang="ts">
+import {
+  ArrowDownOutlined,
+  ArrowUpOutlined,
+  BellOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  CommentOutlined,
+  DeleteOutlined,
+  EllipsisOutlined,
+  FlagOutlined,
+  FolderOpenOutlined,
+  HeartFilled,
+  HeartOutlined,
+  InboxOutlined,
+  LinkOutlined,
+  MergeCellsOutlined,
+  PushpinOutlined,
+  RocketOutlined,
+  ScissorOutlined,
+  StarFilled,
+  StarOutlined,
+  UserOutlined,
+  UserAddOutlined,
+} from "@ant-design/icons-vue";
+
 import type { NotificationLevel } from "@/features/notifications/model";
-import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 type TopicStatus = "open" | "closed" | "archived" | "hidden";
 type TopicLifecycleStatus = "open" | "closed" | "archived";
 
-const notificationOptions: Array<{ value: NotificationLevel; label: string; helper: string }> = [
-  { value: "watching", label: "关注", helper: "所有新楼层通知" },
-  { value: "tracking", label: "跟踪", helper: "重要更新通知" },
-  { value: "normal", label: "普通", helper: "只收回复/提及" },
-  { value: "muted", label: "静音", helper: "不接收主题通知" },
+const notificationOptions: Array<{ value: NotificationLevel; label: string }> = [
+  { value: "watching", label: "关注" },
+  { value: "tracking", label: "跟踪" },
+  { value: "normal", label: "普通" },
+  { value: "muted", label: "静音" },
 ];
 
 defineProps<{
@@ -68,93 +92,153 @@ function onNotificationChange(event: Event) {
 <template>
   <UiCard class="topic-thread-toolbar">
     <div class="toolbar-summary">
-      <span class="panel-kicker">操作</span>
-      <strong>{{ visibleCount }} / {{ totalCount }} 楼</strong>
+      <CommentOutlined aria-hidden="true" />
+      <strong>{{ visibleCount }}/{{ totalCount }} 楼</strong>
     </div>
     <div class="toolbar-actions" aria-label="主题操作">
-      <UiButton tone="ghost" :aria-pressed="onlyAuthor" @click="emit('toggleOnlyAuthor')">
-        {{ onlyAuthor ? "显示全部" : "只看楼主" }}
-      </UiButton>
-      <UiButton tone="ghost" :aria-pressed="qaSort" @click="emit('toggleQaSort')">
-        {{ qaSort ? "按时间排序" : "问答排序" }}
-      </UiButton>
-      <UiButton
-        :tone="topicLiked ? 'success' : 'subtle'"
+      <button
+        class="toolbar-icon-button"
+        :class="{ 'is-active': onlyAuthor }"
+        type="button"
+        :title="onlyAuthor ? '显示全部楼层' : '只看楼主'"
+        :aria-label="onlyAuthor ? '显示全部楼层' : '只看楼主'"
+        :aria-pressed="onlyAuthor"
+        @click="emit('toggleOnlyAuthor')"
+      >
+        <UserOutlined aria-hidden="true" />
+      </button>
+      <button
+        class="toolbar-icon-button"
+        :class="{ 'is-active': qaSort }"
+        type="button"
+        :title="qaSort ? '按时间排序' : '问答排序'"
+        :aria-label="qaSort ? '按时间排序' : '问答排序'"
+        :aria-pressed="qaSort"
+        @click="emit('toggleQaSort')"
+      >
+        <RocketOutlined aria-hidden="true" />
+      </button>
+      <button
+        class="toolbar-icon-button"
+        :class="{ 'is-active': topicLiked }"
+        type="button"
+        :title="topicLiked ? '取消点赞主题' : '点赞主题'"
+        :aria-label="`${topicLiked ? '取消点赞主题' : '点赞主题'}，当前 ${topicLikeCount}`"
         :aria-pressed="topicLiked"
         :disabled="topicLikePending"
         @click="emit('toggleTopicLike')"
       >
-        {{ topicLiked ? "已点赞" : "点赞主题" }}
-        <span v-if="topicLikeCount">· {{ topicLikeCount }}</span>
-      </UiButton>
-      <UiButton
-        :tone="bookmarked ? 'success' : 'subtle'"
+        <HeartFilled v-if="topicLiked" aria-hidden="true" />
+        <HeartOutlined v-else aria-hidden="true" />
+        <span v-if="topicLikeCount" class="toolbar-count">{{ topicLikeCount }}</span>
+      </button>
+      <button
+        class="toolbar-icon-button"
+        :class="{ 'is-active': bookmarked }"
+        type="button"
+        :title="bookmarked ? '取消收藏主题' : '收藏主题'"
+        :aria-label="`${bookmarked ? '取消收藏主题' : '收藏主题'}，当前 ${bookmarkCount}`"
         :aria-pressed="bookmarked"
         :disabled="bookmarkPending"
         @click="emit('toggleBookmark')"
       >
-        {{ bookmarked ? "已收藏" : "收藏主题" }}
-        <span v-if="bookmarkCount">· {{ bookmarkCount }}</span>
-      </UiButton>
-      <div class="topic-score-vote" aria-label="主题赞成反对投票">
-        <UiButton
-          :tone="topicVoteValue === 1 ? 'success' : 'ghost'"
+        <StarFilled v-if="bookmarked" aria-hidden="true" />
+        <StarOutlined v-else aria-hidden="true" />
+        <span v-if="bookmarkCount" class="toolbar-count">{{ bookmarkCount }}</span>
+      </button>
+      <button class="toolbar-icon-button" type="button" title="复制主题链接" aria-label="复制主题链接" @click="emit('copyLink')">
+        <LinkOutlined aria-hidden="true" />
+      </button>
+      <div class="topic-vote-strip" aria-label="主题赞成反对投票">
+        <button
+          class="toolbar-icon-button toolbar-icon-button--vote"
+          :class="{ 'is-active': topicVoteValue === 1 }"
+          type="button"
+          title="赞成主题"
+          aria-label="赞成主题"
           :aria-pressed="topicVoteValue === 1"
           :disabled="topicVotePending"
           @click="emit('voteTopic', topicVoteValue === 1 ? 0 : 1)"
         >
-          赞成
-        </UiButton>
+          <ArrowUpOutlined aria-hidden="true" />
+        </button>
         <strong>{{ topicVoteScore }}</strong>
-        <UiButton
-          :tone="topicVoteValue === -1 ? 'danger' : 'ghost'"
+        <button
+          class="toolbar-icon-button toolbar-icon-button--vote"
+          :class="{ 'is-danger-active': topicVoteValue === -1 }"
+          type="button"
+          title="反对主题"
+          aria-label="反对主题"
           :aria-pressed="topicVoteValue === -1"
           :disabled="topicVotePending"
           @click="emit('voteTopic', topicVoteValue === -1 ? 0 : -1)"
         >
-          反对
-        </UiButton>
-        <span>{{ topicVoteCount }} 票</span>
+          <ArrowDownOutlined aria-hidden="true" />
+        </button>
+        <span v-if="topicVoteCount">{{ topicVoteCount }}</span>
       </div>
-      <UiButton tone="subtle" @click="emit('copyLink')">链接</UiButton>
-      <UiButton tone="subtle" @click="emit('openInvites')">邀请</UiButton>
-      <UiButton tone="ghost" :disabled="flagTopicPending || !canFlagTopic" @click="emit('flagTopic')">
-        举报
-      </UiButton>
-    </div>
-    <label class="notification-control">
-      <span>主题通知</span>
-      <select
-        :value="notificationLevel"
-        :disabled="notificationPending || !canSetNotification"
-        aria-label="设置主题通知级别"
-        @change="onNotificationChange"
-      >
-        <option v-for="option in notificationOptions" :key="option.value" :value="option.value">
-          {{ option.label }} · {{ option.helper }}
-        </option>
-      </select>
-    </label>
-    <div v-if="canManageTopic" class="lifecycle-actions" aria-label="版主主题管理">
-      <UiButton
-        tone="subtle"
-        :disabled="lifecyclePending"
-        @click="emit('setTopicStatus', topicStatus === 'open' ? 'closed' : 'open')"
-      >
-        {{ topicStatus === "open" ? "关闭主题" : "重新打开" }}
-      </UiButton>
-      <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('setTopicStatus', 'archived')">
-        归档
-      </UiButton>
-      <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('toggleTopicPinned')">
-        {{ topicPinned ? "取消置顶" : "置顶" }}
-      </UiButton>
-      <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('moveTopic')">移动</UiButton>
-      <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('splitTopic')">拆分</UiButton>
-      <UiButton tone="subtle" :disabled="lifecyclePending" @click="emit('mergeTopic')">合并</UiButton>
-      <UiButton tone="danger" :disabled="deleteTopicPending" @click="emit('deleteTopic')">
-        {{ deleteTopicPending ? "删除中…" : "删除主题" }}
-      </UiButton>
+      <button class="toolbar-icon-button" type="button" title="邀请成员" aria-label="邀请成员" @click="emit('openInvites')">
+        <UserAddOutlined aria-hidden="true" />
+      </button>
+      <label class="notification-control" title="主题通知">
+        <BellOutlined aria-hidden="true" />
+        <select
+          :value="notificationLevel"
+          :disabled="notificationPending || !canSetNotification"
+          aria-label="设置主题通知级别"
+          @change="onNotificationChange"
+        >
+          <option v-for="option in notificationOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </label>
+      <details class="toolbar-more">
+        <summary title="更多主题操作" aria-label="更多主题操作">
+          <EllipsisOutlined aria-hidden="true" />
+        </summary>
+        <div class="toolbar-more-menu">
+          <button type="button" :disabled="flagTopicPending || !canFlagTopic" @click="emit('flagTopic')">
+            <FlagOutlined aria-hidden="true" />
+            举报
+          </button>
+          <template v-if="canManageTopic">
+            <button
+              type="button"
+              :disabled="lifecyclePending"
+              @click="emit('setTopicStatus', topicStatus === 'open' ? 'closed' : 'open')"
+            >
+              <CloseCircleOutlined v-if="topicStatus === 'open'" aria-hidden="true" />
+              <CheckCircleOutlined v-else aria-hidden="true" />
+              {{ topicStatus === "open" ? "关闭" : "打开" }}
+            </button>
+            <button type="button" :disabled="lifecyclePending" @click="emit('setTopicStatus', 'archived')">
+              <InboxOutlined aria-hidden="true" />
+              归档
+            </button>
+            <button type="button" :disabled="lifecyclePending" @click="emit('toggleTopicPinned')">
+              <PushpinOutlined aria-hidden="true" />
+              {{ topicPinned ? "取消置顶" : "置顶" }}
+            </button>
+            <button type="button" :disabled="lifecyclePending" @click="emit('moveTopic')">
+              <FolderOpenOutlined aria-hidden="true" />
+              移动
+            </button>
+            <button type="button" :disabled="lifecyclePending" @click="emit('splitTopic')">
+              <ScissorOutlined aria-hidden="true" />
+              拆分
+            </button>
+            <button type="button" :disabled="lifecyclePending" @click="emit('mergeTopic')">
+              <MergeCellsOutlined aria-hidden="true" />
+              合并
+            </button>
+            <button type="button" :disabled="deleteTopicPending" @click="emit('deleteTopic')">
+              <DeleteOutlined aria-hidden="true" />
+              {{ deleteTopicPending ? "删除中…" : "删除主题" }}
+            </button>
+          </template>
+        </div>
+      </details>
     </div>
     <p v-if="status" class="toolbar-status" role="status">{{ status }}</p>
   </UiCard>
