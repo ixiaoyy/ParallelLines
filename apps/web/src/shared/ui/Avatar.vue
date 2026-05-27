@@ -9,34 +9,38 @@ const props = defineProps<{
   level?: number | null;
 }>();
 
-type AvatarFrame = "none" | "bronze" | "silver" | "gold" | "diamond" | "crystal" | "admin";
+type AvatarFrame = "none" | "level-1" | "level-2" | "level-3" | "level-4" | "level-5" | "ultimate";
 
 const initials = props.name.slice(0, 2).toUpperCase();
 const frame = computed<AvatarFrame>(() => {
   if (props.role === "admin") {
-    return "admin";
+    return "ultimate";
   }
 
   const level = Math.max(0, props.level ?? 0);
+
+  if (level >= 10) {
+    return "ultimate";
+  }
   if (level >= 9) {
-    return "crystal";
+    return "level-5";
   }
   if (level >= 7) {
-    return "diamond";
+    return "level-4";
   }
   if (level >= 5) {
-    return "gold";
+    return "level-3";
   }
   if (level >= 3) {
-    return "silver";
+    return "level-2";
   }
   if (level >= 1) {
-    return "bronze";
+    return "level-1";
   }
 
   return "none";
 });
-const hasLevelFrame = computed(() => frame.value !== "none" && frame.value !== "admin");
+const hasLevelFrame = computed(() => frame.value !== "none");
 </script>
 
 <template>
@@ -45,7 +49,7 @@ const hasLevelFrame = computed(() => frame.value !== "none" && frame.value !== "
     :class="[
       `avatar--${size ?? 'md'}`,
       `avatar--frame-${frame}`,
-      { 'avatar--admin': frame === 'admin', 'avatar--level-frame': hasLevelFrame },
+      { 'avatar--level-frame': hasLevelFrame },
     ]"
     :src="src || undefined"
   >
@@ -56,8 +60,7 @@ const hasLevelFrame = computed(() => frame.value !== "none" && frame.value !== "
 <style scoped>
 .avatar {
   --avatar-core-bg: var(--btn-primary-bg);
-  --avatar-frame-ring: transparent;
-  --avatar-frame-shadow: rgba(var(--shadow-rgb), 0.12);
+  --avatar-frame-shadow: rgba(80, 220, 255, 0.28);
 
   position: relative;
   display: inline-flex !important;
@@ -72,11 +75,14 @@ const hasLevelFrame = computed(() => frame.value !== "none" && frame.value !== "
 }
 
 .avatar :deep(img) {
+  position: relative;
+  z-index: 2;
   border-radius: inherit;
 }
 
 .avatar :deep(.ant-avatar-string) {
-  position: static !important;
+  position: relative !important;
+  z-index: 2;
   transform: none !important;
   line-height: 1 !important;
 }
@@ -101,93 +107,126 @@ const hasLevelFrame = computed(() => frame.value !== "none" && frame.value !== "
 .avatar--level-frame {
   overflow: visible;
   isolation: isolate;
-  border-color: var(--bg-surface);
+  border-color: rgba(255, 255, 255, 0.94);
   box-shadow:
-    0 0 0 2px var(--avatar-frame-ring),
-    0 8px 20px var(--avatar-frame-shadow);
+    0 8px 20px rgba(var(--shadow-rgb), 0.12),
+    0 0 16px var(--avatar-frame-shadow);
 }
 
-.avatar--frame-bronze {
-  --avatar-frame-ring: color-mix(in srgb, var(--accent-coral) 70%, var(--accent-gold));
-  --avatar-frame-shadow: rgba(var(--accent-coral-rgb), 0.2);
-}
-
-.avatar--frame-silver {
-  --avatar-frame-ring: color-mix(in srgb, var(--muted) 72%, var(--bg-surface));
-  --avatar-frame-shadow: rgba(var(--muted-rgb), 0.24);
-}
-
-.avatar--frame-gold {
-  --avatar-frame-ring: var(--accent-gold);
-  --avatar-frame-shadow: rgba(var(--accent-gold-rgb), 0.26);
-}
-
-.avatar--frame-diamond {
-  --avatar-frame-ring: var(--btn-primary-bg);
-  --avatar-frame-shadow: rgba(var(--primary-rgb), 0.24);
-}
-
-.avatar--frame-crystal {
-  --avatar-frame-ring: color-mix(in srgb, var(--brand-cyan) 76%, var(--bg-surface));
-  --avatar-frame-shadow: rgba(var(--primary-rgb), 0.28);
-}
-
-.avatar--admin {
-  overflow: visible;
-  isolation: isolate;
-  border-color: var(--bg-surface);
-  box-shadow:
-    0 0 0 2px var(--btn-primary-bg),
-    0 0 0 4px rgba(var(--accent-gold-rgb), 0.7),
-    0 10px 24px rgba(var(--primary-rgb), 0.2),
-    0 0 18px rgba(var(--accent-geek-rgb), 0.18);
-}
-
-.avatar--admin::before {
+.avatar--level-frame::after {
   position: absolute;
-  z-index: -1;
-  inset: -0.28rem;
+  z-index: 4;
+  inset: -32%;
+  border-radius: inherit;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  filter:
+    drop-shadow(0 0 4px rgba(160, 245, 255, 0.72))
+    drop-shadow(0 0 12px var(--avatar-frame-shadow));
+  pointer-events: none;
+  animation: ice-frame-pulse 2.6s ease-in-out infinite;
+  content: "";
+}
+
+.avatar--frame-level-1 {
+  --avatar-frame-shadow: rgba(96, 199, 255, 0.24);
+}
+
+.avatar--frame-level-1::after {
+  background-image: url("../assets/avatar-frames/level-1.webp");
+}
+
+.avatar--frame-level-2 {
+  --avatar-frame-shadow: rgba(96, 199, 255, 0.28);
+}
+
+.avatar--frame-level-2::after {
+  background-image: url("../assets/avatar-frames/level-2.webp");
+}
+
+.avatar--frame-level-3 {
+  --avatar-frame-shadow: rgba(80, 220, 255, 0.32);
+}
+
+.avatar--frame-level-3::after {
+  background-image: url("../assets/avatar-frames/level-3.webp");
+}
+
+.avatar--frame-level-4 {
+  --avatar-frame-shadow: rgba(80, 220, 255, 0.36);
+}
+
+.avatar--frame-level-4::after {
+  background-image: url("../assets/avatar-frames/level-4.webp");
+}
+
+.avatar--frame-level-5,
+.avatar--frame-ultimate {
+  --avatar-frame-shadow: rgba(80, 220, 255, 0.46);
+}
+
+.avatar--frame-level-5::before,
+.avatar--frame-ultimate::before {
+  position: absolute;
+  z-index: 1;
+  inset: -34%;
   border-radius: inherit;
   background: conic-gradient(
-    from 120deg,
-    rgba(var(--primary-rgb), 0.85),
-    rgba(var(--accent-gold-rgb), 0.78),
-    rgba(var(--accent-geek-rgb), 0.72),
-    rgba(var(--primary-rgb), 0.85)
+    from 0deg,
+    transparent 0deg,
+    transparent 22deg,
+    rgba(220, 255, 255, 0.9) 30deg,
+    rgba(80, 220, 255, 0.68) 36deg,
+    transparent 48deg,
+    transparent 90deg,
+    rgba(170, 245, 255, 0.7) 104deg,
+    transparent 120deg,
+    transparent 180deg,
+    rgba(255, 255, 255, 0.86) 194deg,
+    transparent 214deg,
+    transparent 360deg
   );
-  opacity: 0.46;
-  filter: blur(6px);
-  animation: admin-avatar-orbit 4.8s linear infinite;
+  opacity: 0.88;
+  pointer-events: none;
+  animation: ice-frame-rotate 3.8s linear infinite;
   content: "";
+  mask: radial-gradient(circle, transparent 0 44%, black 48% 62%, transparent 66% 100%);
+  -webkit-mask: radial-gradient(circle, transparent 0 44%, black 48% 62%, transparent 66% 100%);
 }
 
-.avatar--admin::after {
-  position: absolute;
-  right: -0.16rem;
-  bottom: -0.12rem;
-  width: 0.58rem;
-  height: 0.58rem;
-  border: 2px solid var(--bg-surface);
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at 35% 35%, var(--bg-surface) 0 20%, transparent 22%),
-    linear-gradient(135deg, var(--btn-primary-bg), var(--accent-geek));
-  box-shadow:
-    0 0 0 1px rgba(var(--primary-rgb), 0.24),
-    0 4px 10px rgba(var(--primary-rgb), 0.24);
-  content: "";
+.avatar--frame-level-5::after {
+  background-image: url("../assets/avatar-frames/level-5.webp");
 }
 
-@keyframes admin-avatar-orbit {
+.avatar--frame-ultimate::after {
+  background-image: url("../assets/avatar-frames/ultimate-animated.webp");
+  animation-duration: 2.2s;
+}
+
+@keyframes ice-frame-rotate {
   to {
     transform: rotate(1turn);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .avatar--admin::before {
-    animation: none;
+@keyframes ice-frame-pulse {
+  0%,
+  100% {
+    opacity: 0.96;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.035);
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .avatar--level-frame::before,
+  .avatar--level-frame::after {
+    animation: none;
+  }
+}
 </style>
