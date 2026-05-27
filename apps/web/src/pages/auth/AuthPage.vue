@@ -131,12 +131,10 @@ async function requestPasswordReset() {
   }
 
   try {
-    const response = await requestPasswordResetMutation.mutateAsync({ email: trimmedEmail });
-    formNotice.value = `如果邮箱存在，6 位重置验证码已发送，请在 ${
-      Math.floor(response.expires_in_seconds / 60)
-    } 分钟内完成。`;
+    await requestPasswordResetMutation.mutateAsync({ email: trimmedEmail });
+    formNotice.value = "重置验证码已发送，请查收邮件。";
   } catch (error) {
-    formError.value = toAuthError(error, "密码重置邮件暂时无法发送，请稍后再试。");
+    formError.value = toAuthError(error, "重置验证码发送失败，请稍后再试。");
   }
 }
 

@@ -42,6 +42,7 @@ DB tables/columns:
 
 - Reset codes and email-change raw tokens are delivered by `send_email` background jobs;
   `user_security_tokens` stores only HMAC hashes, expiry, attempt counts, and consumption state.
+- Password reset codes expire quickly; the default TTL is 5 minutes.
 - Request paths enqueue email jobs with `BackgroundJobService(..., commit=False)` and do not perform SMTP work synchronously.
 - `request_password_reset` returns the same success payload for known and unknown emails.
 - Consuming a reset or email-change token sets `consumed_at`; successful confirmation also

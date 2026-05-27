@@ -64,7 +64,7 @@ Composables:
 |---|---|
 | Login returns `two_factor_required` | Show 2FA form; do not write tokens |
 | Bad 2FA code | Show "二次验证码或恢复码不正确"; stay on challenge form |
-| Password-reset request | Show uniform "如果邮箱存在" notice |
+| Password-reset request | Show a uniform success/failure message, e.g. "重置验证码已发送，请查收邮件。" |
 | Invalid reset token | Show invalid/expired token message |
 | Change password succeeds | Clear fields; tell user other sessions were revoked |
 | Email exists | Show "该邮箱已被其他账号使用" |
@@ -122,5 +122,5 @@ setAuthTokens(response.access_token, response.refresh_token);
 #### Correct
 
 ```vue
-<p>如果邮箱存在，重置令牌已发送。</p>
+<p>重置验证码已发送，请查收邮件。</p>
 ```

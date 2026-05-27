@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     email_verification_code_ttl_minutes: int = 10
     email_verification_resend_seconds: int = 60
     email_verification_max_attempts: int = 5
-    password_reset_token_ttl_minutes: int = 30
+    password_reset_token_ttl_minutes: int = 5
     password_reset_code_max_attempts: int = 5
     email_change_token_ttl_minutes: int = 30
     two_factor_challenge_minutes: int = 5
