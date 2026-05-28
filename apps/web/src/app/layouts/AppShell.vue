@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { CloseOutlined, EnterOutlined, MenuOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons-vue";
+import {
+  CloseOutlined,
+  DownOutlined,
+  EnterOutlined,
+  MenuOutlined,
+  PlusOutlined,
+  SearchOutlined,
+} from "@ant-design/icons-vue";
 import { computed, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { RouteLocationRaw } from "vue-router";
@@ -11,6 +18,7 @@ import { useCurrentUser, useLogout } from "@/features/auth/queries";
 import NotificationBell from "@/features/notifications/components/NotificationBell.vue";
 import PluginSlot from "@/features/plugins/components/PluginSlot.vue";
 import { useLocale } from "@/shared/i18n/locale";
+import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
 import UiButton from "@/shared/ui/Button.vue";
 import { applySiteBranding } from "@/shared/theme/siteBranding";
 
@@ -18,6 +26,8 @@ const router = useRouter();
 const route = useRoute();
 const globalSearch = ref("");
 const isNavOpen = ref(false);
+const topbarRef = ref<HTMLElement | null>(null);
+const accountMenuRef = ref<HTMLDetailsElement | null>(null);
 const currentUserQuery = useCurrentUser();
 const siteSettingsQuery = usePublicSiteSettings();
 const logout = useLogout();
@@ -114,10 +124,15 @@ watch(
   () => route.fullPath,
   () => {
     closeNavigation();
+    closeAccountMenu();
   },
 );
 
+useOutsidePointerDown(topbarRef, closeNavigation, () => isNavOpen.value);
+useOutsidePointerDown(accountMenuRef, closeAccountMenu, () => Boolean(accountMenuRef.value?.open));
+
 async function handleLogout() {
+  closeAccountMenu();
   await logout();
 }
 
@@ -137,6 +152,12 @@ function toggleNavigation() {
 
 function closeNavigation() {
   isNavOpen.value = false;
+}
+
+function closeAccountMenu() {
+  if (accountMenuRef.value) {
+    accountMenuRef.value.open = false;
+  }
 }
 
 function t(key: string, fallback: string) {
@@ -188,7 +209,7 @@ function isNavItemActive(item: NavItem) {
 
 <template>
   <div class="app-shell">
-    <header class="topbar">
+    <header ref="topbarRef" class="topbar" @keydown.esc="closeNavigation">
       <RouterLink class="brand" :to="{ name: 'home' }" :aria-label="brandHomeLabel" :title="brandHomeLabel">
         <span class="brand-mark">
           <img class="brand-logo" :src="brandLogoUrl" alt="" aria-hidden="true" />
@@ -237,15 +258,6 @@ function isNavItemActive(item: NavItem) {
       </button>
 
       <div class="topbar-actions" :class="{ 'topbar-actions--guest': !currentUser }">
-        <RouterLink
-          v-if="canAccessModeration(currentUser)"
-          class="admin-link"
-          :to="adminLinkTarget"
-          :class="{ 'is-active': route.name === 'admin-dashboard' || route.name === 'admin-moderation' }"
-        >
-          {{ adminLinkLabel }}
-        </RouterLink>
-
         <PluginSlot class="desktop-plugin-slot" slot-name="app.nav" />
 
         <NotificationBell v-if="currentUser" class="topbar-notification" />
@@ -254,40 +266,82 @@ function isNavItemActive(item: NavItem) {
           {{ t("auth.login_register", "登录/注册") }}
         </RouterLink>
         <template v-else>
-          <RouterLink class="auth-link" :to="{ name: 'security' }" :class="{ 'is-active': route.name === 'security' }">
-            {{ t("nav.security", "安全") }}
-          </RouterLink>
-          <RouterLink
-            class="auth-link"
-            :to="{ name: 'email-preferences' }"
-            :class="{ 'is-active': route.name === 'email-preferences' }"
-          >
-            {{ t("nav.email", "邮件") }}
-          </RouterLink>
-          <RouterLink
-            class="auth-link"
-            :to="{ name: 'messages' }"
-            :class="{ 'is-active': route.name === 'messages' }"
-          >
-            {{ t("nav.messages", "私信") }}
-          </RouterLink>
-          <RouterLink class="auth-link" :to="{ name: 'events' }" :class="{ 'is-active': route.name === 'events' }">
-            {{ t("nav.events", "活动") }}
-          </RouterLink>
-          <RouterLink
-            class="auth-link"
-            :to="{ name: 'my-reviewables' }"
-            :class="{ 'is-active': route.name === 'my-reviewables' }"
-          >
-            {{ t("nav.reviewables", "申诉") }}
-          </RouterLink>
-          <RouterLink class="user-link" :to="{ name: 'my-profile' }" :class="{ 'is-active': isCurrentUserProfileActive }">
-            <span class="user-link__name">{{ t("nav.profile", "个人中心") }}</span>
-            <small>@{{ currentUser.username }} · {{ currentUser.points_balance }} 积分</small>
-          </RouterLink>
-          <button class="logout-button" type="button" @click="handleLogout">
-            {{ t("auth.logout", "退出") }}
-          </button>
+          <details ref="accountMenuRef" class="account-menu" @keydown.esc="closeAccountMenu">
+            <summary
+              class="account-menu__summary"
+              :class="{ 'is-active': isCurrentUserProfileActive }"
+              :aria-label="t('nav.account_menu', '打开账号菜单')"
+            >
+              <span>
+                <strong>{{ t("nav.profile", "个人中心") }}</strong>
+                <small>@{{ currentUser.username }}</small>
+              </span>
+              <DownOutlined class="account-menu__chevron" />
+            </summary>
+            <div class="account-menu__panel">
+              <RouterLink
+                class="account-menu__item account-menu__item--profile"
+                :to="{ name: 'my-profile' }"
+                :class="{ 'is-active': isCurrentUserProfileActive }"
+                @click="closeAccountMenu"
+              >
+                <span>{{ t("nav.profile", "个人中心") }}</span>
+                <small>{{ currentUser.points_balance }} 可用积分</small>
+              </RouterLink>
+              <RouterLink
+                v-if="canAccessModeration(currentUser)"
+                class="account-menu__item"
+                :to="adminLinkTarget"
+                :class="{ 'is-active': route.name === 'admin-dashboard' || route.name === 'admin-moderation' }"
+                @click="closeAccountMenu"
+              >
+                {{ adminLinkLabel }}
+              </RouterLink>
+              <RouterLink
+                class="account-menu__item"
+                :to="{ name: 'security' }"
+                :class="{ 'is-active': route.name === 'security' }"
+                @click="closeAccountMenu"
+              >
+                {{ t("nav.security", "账号安全") }}
+              </RouterLink>
+              <RouterLink
+                class="account-menu__item"
+                :to="{ name: 'email-preferences' }"
+                :class="{ 'is-active': route.name === 'email-preferences' }"
+                @click="closeAccountMenu"
+              >
+                {{ t("nav.email", "邮件偏好") }}
+              </RouterLink>
+              <RouterLink
+                class="account-menu__item"
+                :to="{ name: 'messages' }"
+                :class="{ 'is-active': route.name === 'messages' }"
+                @click="closeAccountMenu"
+              >
+                {{ t("nav.messages", "私信") }}
+              </RouterLink>
+              <RouterLink
+                class="account-menu__item"
+                :to="{ name: 'events' }"
+                :class="{ 'is-active': route.name === 'events' }"
+                @click="closeAccountMenu"
+              >
+                {{ t("nav.events", "活动") }}
+              </RouterLink>
+              <RouterLink
+                class="account-menu__item"
+                :to="{ name: 'my-reviewables' }"
+                :class="{ 'is-active': route.name === 'my-reviewables' }"
+                @click="closeAccountMenu"
+              >
+                {{ t("nav.reviewables", "申诉") }}
+              </RouterLink>
+              <button class="account-menu__item account-menu__item--danger" type="button" @click="handleLogout">
+                {{ t("auth.logout", "退出") }}
+              </button>
+            </div>
+          </details>
         </template>
         <RouterLink class="publish-link" :to="{ name: 'new-topic' }" :aria-label="t('topic.publish_aria', '发布主题')">
           <UiButton tone="primary">

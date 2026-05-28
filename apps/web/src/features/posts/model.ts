@@ -5,6 +5,7 @@ export interface PostResponse {
   topic_id: string;
   user_id: string;
   author_name: string;
+  author_avatar_url?: string | null;
   author_role: string;
   author_level: number;
   author_trust_level: number;
@@ -77,6 +78,7 @@ export function toPostItem(post: PostResponse): PostItemVM {
     userId: post.user_id,
     floor: post.post_number,
     authorName: post.author_name,
+    authorAvatarUrl: post.author_avatar_url ?? null,
     authorRole: post.author_role,
     authorLevel: post.author_level,
     authorTrustLevel: post.author_trust_level,

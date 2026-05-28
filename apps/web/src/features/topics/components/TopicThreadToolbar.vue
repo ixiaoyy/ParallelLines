@@ -20,8 +20,10 @@ import {
   UserOutlined,
   UserAddOutlined,
 } from "@ant-design/icons-vue";
+import { ref } from "vue";
 
 import type { NotificationLevel } from "@/features/notifications/model";
+import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
 import UiCard from "@/shared/ui/Card.vue";
 
 type TopicStatus = "open" | "closed" | "archived" | "hidden";
@@ -78,9 +80,44 @@ const emit = defineEmits<{
   voteTopic: [value: -1 | 0 | 1];
 }>();
 
+const toolbarMoreRef = ref<HTMLDetailsElement | null>(null);
+
+useOutsidePointerDown(toolbarMoreRef, closeMoreMenu, () => Boolean(toolbarMoreRef.value?.open));
+
 function onNotificationChange(event: Event) {
   const target = event.target as HTMLSelectElement;
   emit("setNotificationLevel", target.value as NotificationLevel);
+}
+
+function closeMoreMenu() {
+  if (toolbarMoreRef.value) {
+    toolbarMoreRef.value.open = false;
+  }
+}
+
+function flagTopic() {
+  closeMoreMenu();
+  emit("flagTopic");
+}
+
+function setTopicStatus(status: TopicLifecycleStatus) {
+  closeMoreMenu();
+  emit("setTopicStatus", status);
+}
+
+function toggleTopicPinned() {
+  closeMoreMenu();
+  emit("toggleTopicPinned");
+}
+
+function moveTopic() {
+  closeMoreMenu();
+  emit("moveTopic");
+}
+
+function deleteTopic() {
+  closeMoreMenu();
+  emit("deleteTopic");
 }
 </script>
 
@@ -188,12 +225,12 @@ function onNotificationChange(event: Event) {
           </option>
         </select>
       </label>
-      <details class="toolbar-more">
+      <details ref="toolbarMoreRef" class="toolbar-more" @keydown.esc="closeMoreMenu">
         <summary title="更多主题操作" aria-label="更多主题操作">
           <EllipsisOutlined aria-hidden="true" />
         </summary>
         <div class="toolbar-more-menu">
-          <button type="button" :disabled="flagTopicPending || !canFlagTopic" @click="emit('flagTopic')">
+          <button type="button" :disabled="flagTopicPending || !canFlagTopic" @click="flagTopic">
             <FlagOutlined aria-hidden="true" />
             举报
           </button>
@@ -201,21 +238,21 @@ function onNotificationChange(event: Event) {
             <button
               type="button"
               :disabled="lifecyclePending"
-              @click="emit('setTopicStatus', topicStatus === 'open' ? 'closed' : 'open')"
+              @click="setTopicStatus(topicStatus === 'open' ? 'closed' : 'open')"
             >
               <CloseCircleOutlined v-if="topicStatus === 'open'" aria-hidden="true" />
               <CheckCircleOutlined v-else aria-hidden="true" />
               {{ topicStatus === "open" ? "关闭" : "打开" }}
             </button>
-            <button type="button" :disabled="lifecyclePending" @click="emit('toggleTopicPinned')">
+            <button type="button" :disabled="lifecyclePending" @click="toggleTopicPinned">
               <PushpinOutlined aria-hidden="true" />
               {{ topicPinned ? "取消置顶" : "置顶" }}
             </button>
-            <button type="button" :disabled="lifecyclePending" @click="emit('moveTopic')">
+            <button type="button" :disabled="lifecyclePending" @click="moveTopic">
               <FolderOpenOutlined aria-hidden="true" />
               移动
             </button>
-            <button type="button" :disabled="deleteTopicPending" @click="emit('deleteTopic')">
+            <button type="button" :disabled="deleteTopicPending" @click="deleteTopic">
               <DeleteOutlined aria-hidden="true" />
               {{ deleteTopicPending ? "删除中…" : "删除主题" }}
             </button>

@@ -1509,6 +1509,7 @@ export interface components {
     };
     PostResponse: {
       accepted_answer?: boolean;
+      author_avatar_url?: string | null;
       author_level: number;
       author_name: string;
       author_role: string;

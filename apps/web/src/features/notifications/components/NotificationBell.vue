@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BellFilled, CheckCircleOutlined, InboxOutlined } from "@ant-design/icons-vue";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, ref } from "vue";
 
 import { toNotificationItem } from "@/features/notifications/model";
 import {
@@ -8,6 +8,7 @@ import {
   useNotificationList,
   useNotificationsStream,
 } from "@/features/notifications/queries";
+import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
 
 const open = ref(false);
 const bellRef = ref<HTMLElement | null>(null);
@@ -46,26 +47,7 @@ function openNotification(id: string, unread: boolean) {
   closePanel();
 }
 
-function handleDocumentPointerDown(event: PointerEvent) {
-  if (!open.value) {
-    return;
-  }
-
-  const target = event.target;
-  if (!(target instanceof Node) || bellRef.value?.contains(target)) {
-    return;
-  }
-
-  closePanel();
-}
-
-onMounted(() => {
-  document.addEventListener("pointerdown", handleDocumentPointerDown, true);
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener("pointerdown", handleDocumentPointerDown, true);
-});
+useOutsidePointerDown(bellRef, closePanel, () => open.value);
 </script>
 
 <template>

@@ -31,6 +31,7 @@ import {
 import { hasAccessToken } from "@/shared/api/client";
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { relativeTime } from "@/shared/lib/format";
+import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -59,6 +60,7 @@ const editReason = ref("");
 const historyOpen = ref(false);
 const reportModalOpen = ref(false);
 const bodyRef = ref<HTMLElement | null>(null);
+const postMoreRef = ref<HTMLDetailsElement | null>(null);
 const voteValue = ref(props.post.myVote);
 const voteScore = ref(props.post.voteScore);
 const voteCount = ref(props.post.voteCount);
@@ -131,6 +133,8 @@ onMounted(() => {
   decorateHeadingAnchors();
 });
 
+useOutsidePointerDown(postMoreRef, closeMoreMenu, () => Boolean(postMoreRef.value?.open));
+
 watch(
   () => [props.post.myVote, props.post.voteScore, props.post.voteCount] as const,
   ([myVote, score, count]) => {
@@ -149,6 +153,7 @@ async function copyCode() {
     return;
   }
 
+  closeMoreMenu();
   const copied = await writeClipboard(firstCodeText.value);
   setStatus(copied ? "已复制代码" : "无法访问剪贴板，已保留代码内容");
 }
@@ -234,6 +239,7 @@ function toggleHistory() {
     return;
   }
 
+  closeMoreMenu();
   historyOpen.value = !historyOpen.value;
   if (historyOpen.value) {
     void revisionsQuery.refetch();
@@ -267,6 +273,7 @@ function deleteReply() {
     return;
   }
 
+  closeMoreMenu();
   const confirmed = window.confirm("确定删除这条回复吗？删除后正文会被隐藏。");
   if (!confirmed) {
     return;
@@ -282,6 +289,7 @@ function flagPost() {
   if (!canFlag.value) {
     return;
   }
+  closeMoreMenu();
   reportModalOpen.value = true;
 }
 
@@ -289,6 +297,7 @@ function blockAuthor() {
   if (!canBlockAuthor.value) {
     return;
   }
+  closeMoreMenu();
   emit("blockAuthor", props.post);
 }
 
@@ -356,6 +365,12 @@ function setStatus(message: string) {
   });
 }
 
+function closeMoreMenu() {
+  if (postMoreRef.value) {
+    postMoreRef.value.open = false;
+  }
+}
+
 function decorateHeadingAnchors() {
   const container = bodyRef.value;
   if (!container) {
@@ -383,7 +398,13 @@ function decorateHeadingAnchors() {
     <article ref="bodyRef" class="post-body">
       <header class="post-header">
         <div class="post-author-line">
-          <UiAvatar :name="post.authorName" :role="post.authorRole" :level="post.authorLevel" size="sm" />
+          <UiAvatar
+            :src="post.authorAvatarUrl"
+            :name="post.authorName"
+            :role="post.authorRole"
+            :level="post.authorLevel"
+            size="sm"
+          />
           <div class="post-author-copy">
             <div class="post-author-name">
               <strong>{{ post.authorName }}</strong>
@@ -488,7 +509,7 @@ function decorateHeadingAnchors() {
           <CheckCircleOutlined v-if="post.acceptedAnswer" aria-hidden="true" />
           <RocketOutlined v-else aria-hidden="true" />
         </button>
-        <details class="post-more">
+        <details ref="postMoreRef" class="post-more" @keydown.esc="closeMoreMenu">
           <summary title="更多操作" aria-label="更多楼层操作">
             <EllipsisOutlined aria-hidden="true" />
           </summary>

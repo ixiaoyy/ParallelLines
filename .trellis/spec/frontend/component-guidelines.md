@@ -76,6 +76,10 @@ Use CSS variables from `shared/styles/tokens.scss`:
 - `ComposerDrawer` must support title/category/tags for new topics and compact reply mode for posts.
 - Composer input placeholders should be short and neutral (for example, `输入正文` / `输入回复内容`);
   avoid scenario-specific examples that make posting feel constrained or overly technical.
+- Composer upload controls and Markdown hints must not look like mutually exclusive tabs unless an
+  actual mode switch exists; present them as a tool/action plus explanatory copy.
+- Floating menus/popovers/dropdowns must close when the user clicks outside them or presses Escape;
+  use `shared/lib/useOutsidePointerDown` for custom non-modal overlays instead of hand-rolled document listeners.
 - `MarkdownRenderer` should receive sanitized/cooked HTML from the API, not render unsafe raw HTML in the client.
 
 

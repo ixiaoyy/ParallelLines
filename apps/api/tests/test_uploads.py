@@ -175,6 +175,39 @@ async def test_avatar_upload_updates_current_user_and_public_profile(tmp_path: P
         assert profile.status_code == 200
         assert profile.json()["data"]["avatar_url"] == current_user["avatar_url"]
 
+        board = await client.post(
+            "/api/v1/boards",
+            headers=headers,
+            json={
+                "slug": "avatar-board",
+                "name": "头像版块",
+                "description": "验证主题和楼层列表会返回作者头像。",
+                "color": "#409EFF",
+            },
+        )
+        assert board.status_code == 201
+
+        topic = await client.post(
+            "/api/v1/boards/avatar-board/topics",
+            headers=headers,
+            json={
+                "title": "头像应该在列表中显示",
+                "raw_md": "创建主题后，列表需要拿到作者头像。",
+                "tags": ["avatar"],
+            },
+        )
+        assert topic.status_code == 201
+        topic_data = topic.json()["data"]
+        assert topic_data["author_avatar_url"] == current_user["avatar_url"]
+
+        topics = await client.get("/api/v1/topics")
+        assert topics.status_code == 200
+        assert topics.json()["data"][0]["author_avatar_url"] == current_user["avatar_url"]
+
+        posts = await client.get(f"/api/v1/topics/{topic_data['id']}/posts", headers=headers)
+        assert posts.status_code == 200
+        assert posts.json()["data"][0]["author_avatar_url"] == current_user["avatar_url"]
+
         content = await client.get(f"/api/v1{current_user['avatar_url']}")
         assert content.status_code == 200
         assert content.content == PNG_BYTES

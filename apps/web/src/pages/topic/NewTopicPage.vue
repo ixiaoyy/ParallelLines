@@ -94,6 +94,9 @@ const tagIssue = computed(() => {
 
   return "";
 });
+const titleLength = computed(() => title.value.trim().length);
+const isTitleReady = computed(() => titleLength.value >= 4);
+const titleHint = computed(() => (isTitleReady.value ? "可发布" : `还差 ${4 - titleLength.value} 字`));
 const draftStatus = computed(() => {
   if (isSaving.value) {
     return "保存中";
@@ -530,7 +533,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
             placeholder="标题，或粘贴链接"
             autocomplete="off"
           />
-          <em>{{ title.trim().length }}/4</em>
+          <em :class="{ 'is-ready': isTitleReady }">{{ titleHint }}</em>
         </label>
 
         <div class="composer-meta-row">
@@ -579,15 +582,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
         <div class="editor-box">
           <div class="editor-toolbar">
+            <div class="editor-toolbar__copy">
+              <strong>Markdown 正文</strong>
+              <span>可直接输入；图片拖进正文会自动上传并插入引用。</span>
+            </div>
             <MarkdownUploadButton compact @insert="insertMarkdownUpload" />
-            <span>Markdown</span>
           </div>
           <textarea
             ref="bodyTextarea"
             v-model="body"
             rows="10"
             maxlength="20000"
-            placeholder="正文，拖入图片即可上传。"
+            placeholder="正文，支持 Markdown，可拖入图片上传。"
           ></textarea>
           <span class="body-count">{{ body.length }}/20000</span>
         </div>

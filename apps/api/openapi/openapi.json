@@ -7233,6 +7233,17 @@
             "title": "Accepted Answer",
             "type": "boolean"
           },
+          "author_avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Avatar Url"
+          },
           "author_level": {
             "title": "Author Level",
             "type": "integer"

@@ -1,56 +1,17 @@
 <script setup lang="ts">
-import { CheckCircleOutlined, LockOutlined, MessageOutlined } from "@ant-design/icons-vue";
-import { computed, nextTick, ref } from "vue";
-import { useRouter } from "vue-router";
+import { CheckCircleOutlined, LockOutlined } from "@ant-design/icons-vue";
+import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
-import { setTopicBookmark, setTopicLike } from "@/features/interactions/api";
-import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
-import { hasAccessToken } from "@/shared/api/client";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
+import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import { boardToneClass, tagToneClass } from "@/shared/theme/boardPalette";
-import { topicDetailPath, topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiBadge from "@/shared/ui/Badge.vue";
-import UiButton from "@/shared/ui/Button.vue";
 
 const props = defineProps<{ topic: TopicCardVM }>();
-const router = useRouter();
 
 const topicRoute = computed(() => topicDetailRoute(props.topic));
-const visiblePosterNames = computed(() => props.topic.posterNames.slice(0, 3));
-const extraPosterCount = computed(() => Math.max(props.topic.posterNames.length - visiblePosterNames.value.length, 0));
-const actionStatus = ref("");
-const {
-  active: liked,
-  count: likeCount,
-  pending: likePending,
-  toggle: toggleLike,
-} = useOptimisticToggle({
-  active: () => Boolean(props.topic.likedByMe),
-  count: () => props.topic.likeCount,
-  enabled: hasAccessToken,
-  commit: (active) => setTopicLike(props.topic.id, active),
-  readActive: (response) => response.active,
-  readCount: (response) => response.count,
-  onDisabled: () => requireLogin("请先登录后再点赞主题。"),
-  mockWhenDisabled: false,
-});
-const {
-  active: bookmarked,
-  count: bookmarkCount,
-  pending: bookmarkPending,
-  toggle: toggleBookmark,
-} = useOptimisticToggle({
-  active: () => Boolean(props.topic.bookmarkedByMe),
-  count: () => props.topic.bookmarkCount,
-  enabled: hasAccessToken,
-  commit: (active) => setTopicBookmark(props.topic.id, active),
-  readActive: (response) => response.active,
-  readCount: (response) => response.count,
-  onDisabled: () => requireLogin("请先登录后再收藏主题。"),
-  mockWhenDisabled: false,
-});
 
 const answerState = computed(() => {
   if (props.topic.status === "closed" || props.topic.status === "archived") {
@@ -75,40 +36,6 @@ const answerState = computed(() => {
 
   return { tone: "open", label: "讨论中", helper: "继续跟进" };
 });
-
-async function copyTopicLink() {
-  const fallbackUrl = topicDetailPath(props.topic);
-  const url = props.topic.shareUrl
-    ? new URL(props.topic.shareUrl, window.location.origin).href
-    : new URL(fallbackUrl, window.location.origin).href;
-  const copied = await writeClipboard(url);
-  setActionStatus(copied ? "已复制主题链接" : "无法访问剪贴板，请打开详情页复制");
-}
-
-async function writeClipboard(value: string) {
-  try {
-    await navigator.clipboard.writeText(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function requireLogin(message: string) {
-  setActionStatus(message);
-  void router.push({ name: "auth", query: { redirect: topicDetailPath(props.topic) } });
-}
-
-function setActionStatus(message: string) {
-  actionStatus.value = message;
-  void nextTick(() => {
-    window.setTimeout(() => {
-      if (actionStatus.value === message) {
-        actionStatus.value = "";
-      }
-    }, 2200);
-  });
-}
 </script>
 
 <template>
@@ -145,25 +72,17 @@ function setActionStatus(message: string) {
         </RouterLink>
       </div>
 
-      <div class="participant-strip" aria-label="参与者">
-        <div class="participant-avatars">
-          <UiAvatar
-            v-for="poster in visiblePosterNames"
-            :key="poster"
-            :src="poster === topic.authorName ? topic.authorAvatarUrl : null"
-            :name="poster"
-            :role="poster === topic.authorName ? topic.authorRole : undefined"
-            :level="poster === topic.authorName ? topic.authorLevel : undefined"
-            size="sm"
-            :title="poster"
-          />
-          <span v-if="extraPosterCount" class="posters-more">+{{ extraPosterCount }}</span>
-        </div>
+      <div class="participant-strip" aria-label="发起人">
+        <UiAvatar
+          :src="topic.authorAvatarUrl"
+          :name="topic.authorName"
+          :role="topic.authorRole"
+          :level="topic.authorLevel"
+          size="sm"
+          :title="topic.authorName"
+        />
         <span>
-          {{ topic.authorName }}
-          <em class="author-level">Lv.{{ topic.authorLevel }}</em>
-          <em class="author-trust">TL{{ topic.authorTrustLevel }} · {{ topic.authorTrustLevelLabel }}</em>
-          发起 · {{ relativeTime(topic.lastPostedAt) }}有新动静
+          {{ topic.authorName }} 发起 · {{ relativeTime(topic.lastPostedAt) }}有新动静
         </span>
       </div>
     </div>
@@ -176,32 +95,8 @@ function setActionStatus(message: string) {
     </div>
 
     <div class="topic-stat">
-      <div class="topic-stat__bubble">
-        <MessageOutlined class="stat-icon" />
-        <strong>{{ compactNumber(topic.replyCount) }}</strong>
-      </div>
+      <strong>{{ compactNumber(topic.replyCount) }}</strong>
       <span>回复</span>
-    </div>
-
-    <div class="topic-actions" aria-label="主题互动">
-      <UiButton
-        :tone="liked ? 'success' : 'ghost'"
-        :aria-pressed="liked"
-        :disabled="likePending"
-        @click="toggleLike"
-      >
-        {{ liked ? "已赞" : "赞" }} {{ compactNumber(likeCount) }}
-      </UiButton>
-      <UiButton
-        :tone="bookmarked ? 'success' : 'ghost'"
-        :aria-pressed="bookmarked"
-        :disabled="bookmarkPending"
-        @click="toggleBookmark"
-      >
-        {{ bookmarked ? "已藏" : "收藏" }} {{ bookmarkCount ? compactNumber(bookmarkCount) : "" }}
-      </UiButton>
-      <UiButton tone="subtle" @click="copyTopicLink">分享</UiButton>
-      <small v-if="actionStatus" role="status">{{ actionStatus }}</small>
     </div>
 
     <div class="topic-activity">

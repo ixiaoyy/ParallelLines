@@ -61,6 +61,14 @@ const sessionError = ref("");
 const currentUser = computed(() => currentUserQuery.data.value);
 const sessions = computed(() => sessionsQuery.data.value ?? []);
 const oauthProviders = computed(() => oauthProvidersQuery.data.value?.providers ?? []);
+const twoFactorEnabled = computed(() => Boolean(currentUser.value?.two_factor_enabled));
+const sessionCount = computed(() => sessions.value.length);
+const currentSession = computed(() => sessions.value.find((session) => session.current));
+const securityStatus = computed(() =>
+  twoFactorEnabled.value
+    ? { label: "已加固", helper: "二次验证已开启", tone: "green" as const }
+    : { label: "建议处理", helper: "建议开启二次验证", tone: "amber" as const },
+);
 const isSecurityBusy = computed(
   () =>
     changePasswordMutation.isPending.value ||
@@ -293,36 +301,47 @@ function toSecurityError(error: unknown, fallback: string): string {
 <template>
   <section class="security-page">
     <header class="security-hero">
-      <div>
+      <div class="security-hero__copy">
         <UiBadge tone="blue">安全中心</UiBadge>
-        <h1>管理账号找回、二次验证和登录设备。</h1>
-        <p>关键安全操作都使用短期一次性令牌，登录会话可单独撤销。</p>
+        <h1>账号安全，一页处理。</h1>
+        <p>修改密码、邮箱、二次验证和登录设备都在这里。</p>
+      </div>
+      <div v-if="currentUser" class="security-hero__status">
+        <span>当前状态</span>
+        <strong>{{ securityStatus.label }}</strong>
+        <UiBadge :tone="securityStatus.tone">{{ securityStatus.helper }}</UiBadge>
       </div>
       <RouterLink v-if="!currentUser" class="security-login-link" :to="{ name: 'auth' }">先登录</RouterLink>
     </header>
 
-    <UiCard v-if="currentUser" class="security-summary">
-      <div>
-        <span>当前账号</span>
+    <div v-if="currentUser" class="security-overview" aria-label="账号安全概览">
+      <UiCard class="overview-card">
+        <span>账号</span>
         <strong>{{ currentUser.username }}</strong>
         <small>{{ currentUser.email }}</small>
-      </div>
-      <div>
-        <span>角色/等级</span>
-        <strong>{{ currentUser.role }} · Lv {{ currentUser.level }}</strong>
-        <small>
-          {{ currentUser.status }} · TL{{ currentUser.trust_level }} {{ currentUser.trust_level_label }} ·
-          {{ currentUser.points_balance }} 可用积分
-        </small>
-      </div>
-      <div>
+      </UiCard>
+      <UiCard class="overview-card">
         <span>二次验证</span>
-        <strong>{{ currentUser.two_factor_enabled ? "已启用" : "未启用" }}</strong>
-        <small>{{ currentUser.two_factor_enabled ? "登录需要第二因子" : "建议立即启用" }}</small>
+        <strong>{{ twoFactorEnabled ? "已启用" : "未启用" }}</strong>
+        <small>{{ twoFactorEnabled ? "登录时需要第二步验证" : "建议优先开启" }}</small>
+      </UiCard>
+      <UiCard class="overview-card">
+        <span>登录设备</span>
+        <strong>{{ sessionCount }}</strong>
+        <small>{{ currentSession ? `当前设备 ${formatDate(currentSession.last_seen_at)}` : "暂无当前会话信息" }}</small>
+      </UiCard>
+    </div>
+
+    <UiCard v-if="currentUser && !twoFactorEnabled" class="security-callout">
+      <div>
+        <UiBadge tone="amber">建议</UiBadge>
+        <h2>开启二次验证，账号会更稳。</h2>
+        <p>只需要认证器 App 的 6 位验证码；恢复码可以在手机丢失时找回账号。</p>
       </div>
+      <a href="#two-factor-panel">去开启</a>
     </UiCard>
 
-    <UiCard v-else class="security-empty">
+    <UiCard v-if="!currentUser" class="security-empty">
       <h2>需要登录后查看安全设置</h2>
       <p>登录后可修改密码、邮箱、启用 2FA，并管理活跃会话。</p>
       <RouterLink :to="{ name: 'auth', query: { redirect: '/security' } }">前往登录</RouterLink>
@@ -332,7 +351,7 @@ function toSecurityError(error: unknown, fallback: string): string {
       <UiCard class="security-panel">
         <header>
           <h2>修改密码</h2>
-          <p>更新密码后，除当前设备外的其他会话会被撤销。</p>
+          <p>更新后会保留当前设备，撤销其他会话。</p>
         </header>
         <form class="security-form" @submit.prevent="submitPasswordChange">
           <label>
@@ -356,7 +375,7 @@ function toSecurityError(error: unknown, fallback: string): string {
       <UiCard class="security-panel">
         <header>
           <h2>修改邮箱</h2>
-          <p>确认令牌会发送到新邮箱，令牌只能使用一次。</p>
+          <p>确认码会发送到新邮箱。</p>
         </header>
         <form class="security-form" @submit.prevent="requestEmailChange">
           <label>
@@ -380,10 +399,10 @@ function toSecurityError(error: unknown, fallback: string): string {
         <p v-if="emailNotice" class="security-success">{{ emailNotice }}</p>
       </UiCard>
 
-      <UiCard class="security-panel security-panel--wide">
+      <UiCard id="two-factor-panel" class="security-panel security-panel--wide security-panel--highlight">
         <header>
-          <h2>二次验证（TOTP）</h2>
-          <p>支持认证器 6 位验证码和一次性恢复码；启用后登录必须完成第二步验证。</p>
+          <h2>二次验证</h2>
+          <p>启用后登录需要认证器验证码或恢复码。</p>
         </header>
         <div v-if="!currentUser.two_factor_enabled" class="security-form">
           <label>
@@ -427,7 +446,7 @@ function toSecurityError(error: unknown, fallback: string): string {
         <header class="panel-header-row">
           <div>
             <h2>活跃会话</h2>
-            <p>查看当前登录设备，撤销不认识的设备。</p>
+            <p>看到陌生设备就撤销。</p>
           </div>
           <UiButton tone="subtle" :disabled="revokeOtherSessionsMutation.isPending.value" @click="revokeOthers">
             撤销其他会话
@@ -458,7 +477,7 @@ function toSecurityError(error: unknown, fallback: string): string {
       <UiCard class="security-panel">
         <header>
           <h2>OAuth / SSO</h2>
-          <p>当前后端已暴露基础 provider 适配配置。</p>
+          <p>外部登录提供方。</p>
         </header>
         <div v-if="oauthProviders.length" class="provider-list">
           <UiBadge v-for="provider in oauthProviders" :key="provider" tone="green">{{ provider }}</UiBadge>

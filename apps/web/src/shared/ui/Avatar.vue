@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
+
+import { resolveApiAssetUrl } from "@/shared/api/client";
 
 const props = defineProps<{
   src?: string | null;
@@ -11,7 +13,10 @@ const props = defineProps<{
 
 type AvatarFrame = "none" | "level-1" | "level-2" | "level-3" | "level-4" | "level-5" | "ultimate";
 
-const initials = props.name.slice(0, 2).toUpperCase();
+const imageFailed = ref(false);
+const initials = computed(() => props.name.slice(0, 2).toUpperCase());
+const resolvedSrc = computed(() => resolveApiAssetUrl(props.src));
+const displaySrc = computed(() => (imageFailed.value ? undefined : resolvedSrc.value));
 const frame = computed<AvatarFrame>(() => {
   if (props.role === "admin") {
     return "ultimate";
@@ -41,6 +46,17 @@ const frame = computed<AvatarFrame>(() => {
   return "none";
 });
 const hasLevelFrame = computed(() => frame.value !== "none");
+
+watch(
+  () => props.src,
+  () => {
+    imageFailed.value = false;
+  },
+);
+
+function handleImageError() {
+  imageFailed.value = true;
+}
 </script>
 
 <template>
@@ -51,9 +67,10 @@ const hasLevelFrame = computed(() => frame.value !== "none");
       `avatar--frame-${frame}`,
       { 'avatar--level-frame': hasLevelFrame },
     ]"
-    :src="src || undefined"
+    :src="displaySrc"
+    @error="handleImageError"
   >
-    {{ src ? "" : initials }}
+    {{ displaySrc ? "" : initials }}
   </a-avatar>
 </template>
 
@@ -64,12 +81,15 @@ const hasLevelFrame = computed(() => frame.value !== "none");
 
   position: relative;
   display: inline-flex !important;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
+  aspect-ratio: 1;
   overflow: hidden;
   border: 2px solid var(--bg-surface);
   color: white !important;
   font-weight: 800;
+  line-height: 1 !important;
   background: var(--avatar-core-bg) !important;
   box-shadow: 0 8px 18px rgba(17, 24, 39, 0.12);
 }
@@ -77,7 +97,11 @@ const hasLevelFrame = computed(() => frame.value !== "none");
 .avatar :deep(img) {
   position: relative;
   z-index: 2;
+  display: block;
+  width: 100%;
+  height: 100%;
   border-radius: inherit;
+  object-fit: cover;
 }
 
 .avatar :deep(.ant-avatar-string) {
@@ -115,6 +139,11 @@ const hasLevelFrame = computed(() => frame.value !== "none");
   background: transparent !important;
   box-shadow:
     0 0 16px var(--avatar-frame-shadow);
+}
+
+.avatar--level-frame :deep(img) {
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.86);
 }
 
 .avatar--level-frame::after {

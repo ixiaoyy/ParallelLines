@@ -96,11 +96,15 @@
   position: absolute;
   right: 0.78rem;
   top: 50%;
-  color: #dc2626;
-  font-size: 0.9rem;
+  color: var(--muted);
+  font-size: 0.78rem;
   font-style: normal;
-  font-weight: 860;
+  font-weight: 780;
   transform: translateY(-50%);
+}
+
+.title-field em.is-ready {
+  color: var(--accent-geek);
 }
 
 .composer-meta-row {
@@ -191,12 +195,31 @@
   flex-wrap: wrap;
   gap: 0.42rem;
   align-items: center;
+  justify-content: space-between;
   min-height: 2.65rem;
   border-bottom: 1px solid var(--border);
-  padding: 0.35rem 0.55rem;
+  padding: 0.5rem 0.65rem;
   color: var(--muted);
   font-size: 0.86rem;
   font-weight: 780;
+}
+
+.editor-toolbar__copy {
+  display: grid;
+  gap: 0.12rem;
+  min-width: min(24rem, 100%);
+}
+
+.editor-toolbar__copy strong {
+  color: var(--title);
+  font-size: 0.9rem;
+  font-weight: 860;
+}
+
+.editor-toolbar__copy span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 620;
 }
 
 .editor-toolbar :deep(.markdown-upload) {
@@ -204,14 +227,17 @@
   flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
+  justify-content: flex-end;
+  margin-top: 0;
 }
 
 .editor-toolbar :deep(.ui-button) {
   min-height: 2.1rem !important;
-  border-radius: 0.5rem !important;
+  border: 1px solid rgba(var(--primary-rgb), 0.18) !important;
+  border-radius: var(--radius-pill) !important;
   padding-inline: 0.64rem !important;
-  color: var(--text) !important;
-  background: rgba(var(--primary-rgb), 0.08) !important;
+  color: var(--primary) !important;
+  background: rgba(var(--primary-rgb), 0.06) !important;
   font-size: 0.84rem !important;
 }
 

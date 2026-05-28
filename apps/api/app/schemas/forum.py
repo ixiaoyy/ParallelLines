@@ -352,6 +352,7 @@ class PostResponse(BaseModel):
     topic_id: str
     user_id: str
     author_name: str
+    author_avatar_url: str | None = None
     author_role: str
     author_level: int
     author_trust_level: int
@@ -385,6 +386,7 @@ class PostResponse(BaseModel):
             topic_id=post.topic_id,
             user_id=post.user_id,
             author_name=post.author.username,
+            author_avatar_url=post.author.avatar_url,
             author_role=post.author.role,
             author_level=post.author.level,
             author_trust_level=post.author.trust_level,
