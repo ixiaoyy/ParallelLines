@@ -32,8 +32,20 @@
   gap: 0.7rem;
   align-items: center;
   min-width: 13.5rem;
+  border-radius: 1.1rem;
+  padding: 0.22rem 0.38rem 0.22rem 0.22rem;
   color: var(--title);
   text-decoration: none;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.brand:hover,
+.brand:focus-visible {
+  color: var(--theme-soft-fg, #409eff);
+  outline: none;
+  background: var(--theme-soft-bg-hover);
 }
 
 .brand-mark {

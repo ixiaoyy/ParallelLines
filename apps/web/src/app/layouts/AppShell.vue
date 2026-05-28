@@ -32,7 +32,7 @@ const siteTagline = computed(() =>
 const brandLogoUrl = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "brand_logo_url", "/logo-lines.png"),
 );
-const brandHomeLabel = computed(() => t("brand.home_aria", "平行线首页"));
+const brandHomeLabel = computed(() => t("brand.home_aria", "返回首页"));
 const adminLinkTarget = computed<RouteLocationRaw>(() =>
   isAdmin(currentUser.value) ? { name: "admin-dashboard" } : { name: "admin-moderation" },
 );
@@ -189,7 +189,7 @@ function isNavItemActive(item: NavItem) {
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <RouterLink class="brand" to="/" :aria-label="brandHomeLabel">
+      <RouterLink class="brand" :to="{ name: 'home' }" :aria-label="brandHomeLabel" :title="brandHomeLabel">
         <span class="brand-mark">
           <img class="brand-logo" :src="brandLogoUrl" alt="" aria-hidden="true" />
         </span>

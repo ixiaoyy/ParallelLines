@@ -1,42 +1,42 @@
 .new-topic-page {
   display: grid;
   justify-items: center;
-  padding-block: clamp(0.5rem, 2vw, 1.25rem) 3rem;
+  padding-block: clamp(0.35rem, 1.4vw, 0.9rem) 2.25rem;
 }
 
 .topic-composer {
-  width: min(100%, 82rem);
+  width: min(100%, 64rem);
 }
 
 .composer-card {
-  border-color: rgba(var(--primary-rgb), 0.18);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 44px rgba(var(--shadow-rgb), 0.1);
+  border-color: color-mix(in srgb, var(--border) 78%, var(--primary));
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 12px 32px rgba(var(--shadow-rgb), 0.07);
 }
 
 .composer-card :deep(.ant-card-body) {
   display: grid;
-  gap: 0.9rem;
-  padding: clamp(0.9rem, 2vw, 1.15rem);
+  gap: 0.72rem;
+  padding: clamp(0.72rem, 1.45vw, 0.95rem);
 }
 
 .composer-heading {
   display: flex;
-  gap: 0.85rem;
+  gap: 0.65rem;
   align-items: center;
 }
 
 .composer-plus {
   display: grid;
   flex: 0 0 auto;
-  width: 2.9rem;
-  height: 2.9rem;
+  width: 2.25rem;
+  height: 2.25rem;
   place-items: center;
   border: 1px solid var(--border-strong, var(--border));
-  border-radius: 0.55rem;
+  border-radius: 0.65rem;
   color: var(--text);
   background: var(--bg-surface);
-  font-size: 1.85rem;
+  font-size: 1.35rem;
   line-height: 1;
 }
 
@@ -47,16 +47,16 @@
 
 .composer-heading h1 {
   color: var(--title);
-  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  font-size: clamp(1.04rem, 1.55vw, 1.25rem);
   font-weight: 860;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.025em;
 }
 
 .composer-heading p {
-  margin-top: 0.1rem;
+  margin-top: 0.02rem;
   color: var(--muted);
-  font-size: 0.86rem;
-  font-weight: 760;
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .title-field {
@@ -79,11 +79,11 @@
 }
 
 .title-field input {
-  min-height: 4.1rem;
-  border-radius: 0.42rem;
-  padding: 0 4.5rem 0 1rem;
-  font-size: clamp(1.2rem, 2vw, 1.55rem);
-  font-weight: 780;
+  min-height: 3rem;
+  border-radius: 0.55rem;
+  padding: 0 3.8rem 0 0.8rem;
+  font-size: clamp(1rem, 1.35vw, 1.16rem);
+  font-weight: 760;
 }
 
 .title-field input::placeholder,
@@ -94,10 +94,10 @@
 
 .title-field em {
   position: absolute;
-  right: 0.9rem;
+  right: 0.78rem;
   top: 50%;
   color: #dc2626;
-  font-size: 1.15rem;
+  font-size: 0.9rem;
   font-style: normal;
   font-weight: 860;
   transform: translateY(-50%);
@@ -106,7 +106,7 @@
 .composer-meta-row {
   display: grid;
   grid-template-columns: minmax(13rem, 1fr) minmax(13rem, 1fr);
-  gap: 0.7rem;
+  gap: 0.55rem;
 }
 
 .select-field,
@@ -117,11 +117,11 @@
 
 .select-field select,
 .tag-field input {
-  min-height: 3.4rem;
-  border-radius: 0.42rem;
-  padding: 0 0.9rem;
-  font-size: 1rem;
-  font-weight: 780;
+  min-height: 2.7rem;
+  border-radius: 0.55rem;
+  padding: 0 0.78rem;
+  font-size: 0.93rem;
+  font-weight: 760;
 }
 
 .select-field select {
@@ -134,7 +134,7 @@
 .editor-box textarea:focus {
   border-color: var(--primary);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.16);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.14);
 }
 
 .tag-strip {
@@ -142,16 +142,16 @@
   flex-wrap: wrap;
   gap: 0.45rem;
   align-items: center;
-  min-height: 1.8rem;
+  min-height: 1.35rem;
 }
 
 .tag-suggestion,
 .tag-chip {
   border: 1px solid rgba(var(--primary-rgb), 0.18);
   border-radius: var(--radius-pill);
-  padding: 0.32rem 0.62rem;
+  padding: 0.22rem 0.5rem;
   font: inherit;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 820;
   cursor: pointer;
 }
@@ -168,28 +168,35 @@
 
 .tag-issue {
   color: #dc2626;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   font-weight: 820;
 }
 
 .editor-box {
   position: relative;
   display: grid;
-  border: 2px solid var(--primary);
-  border-radius: 0.42rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 58%, var(--primary));
+  border-radius: 0.65rem;
   background: var(--bg-surface);
+}
+
+.editor-box:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.13);
 }
 
 .editor-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 0.42rem;
   align-items: center;
-  min-height: 3.25rem;
+  min-height: 2.65rem;
   border-bottom: 1px solid var(--border);
-  padding: 0.45rem 0.65rem;
+  padding: 0.35rem 0.55rem;
   color: var(--muted);
-  font-weight: 820;
+  font-size: 0.86rem;
+  font-weight: 780;
 }
 
 .editor-toolbar :deep(.markdown-upload) {
@@ -200,9 +207,12 @@
 }
 
 .editor-toolbar :deep(.ui-button) {
+  min-height: 2.1rem !important;
   border-radius: 0.5rem !important;
+  padding-inline: 0.64rem !important;
   color: var(--text) !important;
   background: rgba(var(--primary-rgb), 0.08) !important;
+  font-size: 0.84rem !important;
 }
 
 .editor-toolbar :deep(.markdown-upload__status) {
@@ -212,12 +222,13 @@
 }
 
 .editor-box textarea {
-  min-height: clamp(19rem, 44vh, 35rem);
+  min-height: clamp(12rem, 31vh, 20rem);
   border: 0;
   border-radius: 0;
-  padding: 1rem;
+  padding: 0.85rem 0.9rem 2.1rem;
   resize: vertical;
-  line-height: 1.72;
+  line-height: 1.64;
+  font-size: 0.95rem;
 }
 
 .editor-box textarea:focus {
@@ -226,11 +237,11 @@
 
 .body-count {
   position: absolute;
-  right: 0.8rem;
-  bottom: 0.65rem;
+  right: 0.72rem;
+  bottom: 0.5rem;
   color: #dc2626;
   background: rgba(255, 255, 255, 0.86);
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   font-weight: 860;
 }
 
@@ -238,7 +249,7 @@
 .conflict-banner {
   margin: 0;
   border-radius: 0.5rem;
-  padding: 0.65rem 0.78rem;
+  padding: 0.55rem 0.68rem;
   font-weight: 820;
 }
 
@@ -255,27 +266,27 @@
 .composer-footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.7rem;
+  gap: 0.5rem;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
 }
 
 .composer-footer :deep(.ui-button) {
-  min-height: 3rem;
+  min-height: 2.55rem;
   border-radius: 0.5rem !important;
-  padding-inline: 1rem !important;
-  font-size: 1rem;
+  padding-inline: 0.9rem !important;
+  font-size: 0.92rem;
   font-weight: 860;
 }
 
 .discard-link {
   display: inline-flex;
   align-items: center;
-  min-height: 3rem;
+  min-height: 2.55rem;
   border-radius: 0.5rem;
-  padding-inline: 1rem;
+  padding-inline: 0.8rem;
   color: var(--text);
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 820;
   text-decoration: none;
 }
@@ -311,19 +322,19 @@
   }
 
   .composer-plus {
-    width: 2.5rem;
-    height: 2.5rem;
-    font-size: 1.55rem;
+    width: 2.15rem;
+    height: 2.15rem;
+    font-size: 1.35rem;
   }
 
   .title-field input {
-    min-height: 3.6rem;
+    min-height: 2.9rem;
     padding-right: 3.8rem;
-    font-size: 1.08rem;
+    font-size: 1rem;
   }
 
   .editor-box textarea {
-    min-height: 22rem;
+    min-height: 16rem;
   }
 
   .composer-footer :deep(.ui-button),

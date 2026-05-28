@@ -105,8 +105,6 @@ const draftStatus = computed(() => {
 
   return "正在编辑";
 });
-const canPublish = computed(() => validationMessage() === "");
-
 let isRestoring = false;
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -529,7 +527,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
           <input
             v-model="title"
             maxlength="180"
-            placeholder="输入标题，或在此处粘贴链接"
+            placeholder="标题，或粘贴链接"
             autocomplete="off"
           />
           <em>{{ title.trim().length }}/4</em>
@@ -553,7 +551,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
           <label class="tag-field">
             <span class="sr-only">标签</span>
-            <input v-model="tags" placeholder="可选标签，用逗号分隔" />
+            <input v-model="tags" placeholder="标签，可选" />
           </label>
         </div>
 
@@ -587,9 +585,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
           <textarea
             ref="bodyTextarea"
             v-model="body"
-            rows="16"
+            rows="10"
             maxlength="20000"
-            placeholder="在此处输入。可拖放或上传图片。"
+            placeholder="正文，拖入图片即可上传。"
           ></textarea>
           <span class="body-count">{{ body.length }}/20000</span>
         </div>
@@ -600,7 +598,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
           <RouterLink class="discard-link" to="/boards">舍弃</RouterLink>
           <UiButton type="button" tone="ghost" @click="handleSaveDraft">保存草稿</UiButton>
           <UiButton type="submit" tone="primary" :disabled="createTopic.isPending.value || boardsQuery.isLoading.value">
-            {{ createTopic.isPending.value ? "发布中…" : canPublish ? "创建话题" : "创建话题" }}
+            {{ createTopic.isPending.value ? "发布中…" : "发布" }}
           </UiButton>
         </footer>
       </UiCard>
