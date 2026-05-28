@@ -54,6 +54,9 @@ Database signatures:
 - Topic muted state is authoritative for all topic-scoped notification fan-out. If a recipient has
   `topic_reads.notification_level="muted"`, suppress `replied`, `mentioned`, `liked`, and
   `topic_new_post` notifications for that topic.
+- First-time non-self likes/bookmarks may award the content owner through `GrowthService`; duplicate
+  like/bookmark calls must not create duplicate reward events, and unlike/unbookmark does not revoke
+  already-earned points.
 - `watching` and `tracking` topic read states receive `topic_new_post` fan-out when they were not
   already notified by a direct reply/mention notification.
 - Board members with `notification_level in ("watching", "tracking")` receive `board_new_topic`

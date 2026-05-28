@@ -74,9 +74,7 @@ const helper = computed(() =>
     : "把现象、环境和你试过的方法写清楚，在线的人更容易接上。",
 );
 const placeholder = computed(() =>
-  isReplyMode.value
-    ? "例如：我在 MySQL 8 下复现了，同样会卡在任务状态刷新…"
-    : "例如：升级后登录会跳回首页，只有 Edge 复现…",
+  isReplyMode.value ? "输入回复内容" : "输入正文",
 );
 const composerPreview = computed(() => buildComposerPreview(draft.value));
 const previewHtml = computed(() => composerPreview.value.html);

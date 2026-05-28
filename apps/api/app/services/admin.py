@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import Settings, get_settings
 from app.core.exceptions import NotFoundError, PermissionDeniedError, ValidationError
+from app.core.growth import clamp_display_level
 from app.core.permissions import is_admin
 from app.db.base import utcnow
 from app.models.admin import SiteSetting
@@ -457,7 +458,7 @@ class AdminService:
         if payload.status is not None:
             user.status = payload.status
         if payload.level is not None:
-            user.level = payload.level
+            user.level = clamp_display_level(payload.level)
         await GrowthService(self.session).adjust_user(
             user,
             points_delta=payload.points_delta or 0,

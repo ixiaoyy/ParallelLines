@@ -194,7 +194,7 @@ function revokeBadge(badge: UserBadgeResponse) {
         </div>
         <div>
           <dt>成长</dt>
-          <dd>Lv.{{ selectedUser.level }} · {{ selectedUser.experience_total }} XP</dd>
+          <dd>Lv.{{ selectedUser.level }} · {{ selectedUser.experience_total }} 成长值</dd>
         </div>
         <div>
           <dt>信任</dt>
@@ -202,7 +202,7 @@ function revokeBadge(badge: UserBadgeResponse) {
         </div>
         <div>
           <dt>积分</dt>
-          <dd>{{ selectedUser.points_balance }} 分 · 进度 {{ selectedUser.level_progress_percent }}%</dd>
+          <dd>{{ selectedUser.points_balance }} 可用 · 进度 {{ selectedUser.level_progress_percent }}%</dd>
         </div>
         <div>
           <dt>最后活跃</dt>
@@ -228,7 +228,7 @@ function revokeBadge(badge: UserBadgeResponse) {
       </label>
       <label>
         <span>等级</span>
-        <input v-model.number="userDraft.level" type="number" min="0" max="100" />
+        <input v-model.number="userDraft.level" type="number" min="0" max="5" />
       </label>
       <div class="growth-adjust-grid">
         <label>
@@ -236,7 +236,7 @@ function revokeBadge(badge: UserBadgeResponse) {
           <input v-model.number="userDraft.pointsDelta" type="number" min="-100000" max="100000" />
         </label>
         <label>
-          <span>经验调整</span>
+          <span>成长值调整</span>
           <input v-model.number="userDraft.experienceDelta" type="number" min="-100000" max="100000" />
         </label>
       </div>
@@ -245,7 +245,7 @@ function revokeBadge(badge: UserBadgeResponse) {
         <input v-model="userDraft.adjustmentReason" type="text" maxlength="500" placeholder="人工调整原因（可选）" />
       </label>
       <p class="growth-adjust-note">
-        经验调整会按集中成长规则重算等级，并触发信任等级重算；信任等级不等同于管理员权限。
+        可用积分可用于后续兑换/解锁；成长值只用于等级进度，兑换不会导致等级倒退。
       </p>
       <UiButton :disabled="updateUserMutation.isPending.value" @click="saveUser">保存用户变更</UiButton>
 

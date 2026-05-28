@@ -53,7 +53,7 @@ class PublicSiteSettingsResponse(BaseModel):
 class AdminUserUpdateRequest(BaseModel):
     role: Literal["user", "moderator", "admin"] | None = None
     status: Literal["active", "silenced", "suspended", "deleted"] | None = None
-    level: int | None = Field(default=None, ge=0, le=100)
+    level: int | None = Field(default=None, ge=0, le=5)
     points_delta: int | None = Field(default=None, ge=-100_000, le=100_000)
     experience_delta: int | None = Field(default=None, ge=-100_000, le=100_000)
     adjustment_reason: str | None = Field(default=None, max_length=500)

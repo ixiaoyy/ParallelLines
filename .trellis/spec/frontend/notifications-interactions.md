@@ -39,6 +39,8 @@ Backend endpoints consumed:
 
 - Keep notification server state in TanStack Query under `queryKeys.notifications`; do not mirror the list in Pinia.
 - `NotificationBell` owns panel open/close UI and delegates data loading/mutation to notification composables.
+- The app shell only renders `NotificationBell` for authenticated users; guests should not see notification badges or an empty bell.
+- Opening a notification link marks that single notification as read optimistically before navigation, so the topbar unread count does not persist after the user visits the item.
 - SSE is parsed through runtime validation (`parseNotificationStreamPayload`) before updating query cache.
 - Optimistic interactions must update local UI immediately, then reconcile with API response when `hasAccessToken()` is true.
 - `useOptimisticToggle()` supports two unauthenticated modes: default local mock state for static
@@ -63,6 +65,8 @@ Backend endpoints consumed:
 | Missing access token on prototype-only toggle | Show mock notifications and keep optimistic toggles local |
 | Missing access token on real like/bookmark controls | Show visible login guidance, route to auth when page context is available, and do not change persisted-looking state |
 | Notification fetch fails | Fall back to mock list; do not crash the app shell |
+| Guest session | Notification bell is hidden |
+| User opens an unread notification link | Notification is marked read optimistically and unread count drops |
 | Malformed SSE frame | Ignore the frame; wait for the next valid `notifications` event |
 | Stream unmount/navigation | Abort the fetch stream via `AbortController` |
 | Optimistic API failure | Revert the toggled active/count values |

@@ -16,7 +16,7 @@ const users = computed(() => directoryQuery.data.value ?? []);
 
 const sortOptions: { label: string; value: UserDirectorySort; description: string }[] = [
   { label: "最近活跃", value: "active", description: "按最近访问与加入时间排序" },
-  { label: "等级", value: "level", description: "优先展示等级和经验更高的成员" },
+  { label: "等级", value: "level", description: "优先展示等级和成长值更高的成员" },
   { label: "贡献", value: "contribution", description: "按公开主题和回复总数排序" },
 ];
 </script>
@@ -58,7 +58,7 @@ const sortOptions: { label: string; value: UserDirectorySort; description: strin
         <div class="directory-card__main">
           <strong>{{ profileDisplayName(user) }}</strong>
           <span>@{{ user.username }} · {{ user.role }}</span>
-          <p>主题 {{ user.topic_count }} · 回复 {{ user.post_count }} · {{ user.points_balance }} 分</p>
+          <p>主题 {{ user.topic_count }} · 回复 {{ user.post_count }} · {{ user.points_balance }} 可用积分</p>
         </div>
         <div class="directory-card__meta">
           <UiBadge tone="green">Lv.{{ user.level }}</UiBadge>

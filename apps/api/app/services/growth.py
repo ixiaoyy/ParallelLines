@@ -6,7 +6,7 @@ from datetime import UTC, datetime, time, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.growth import level_for_experience
+from app.core.growth import REVIEW_ONLY_LEVEL, clamp_display_level, level_for_experience
 from app.db.base import new_random_suffix, utcnow
 from app.models.user import User, UserPointEvent
 
@@ -21,35 +21,53 @@ class GrowthRule:
 
 GROWTH_RULES: dict[str, GrowthRule] = {
     "email_verified": GrowthRule(points=20, experience=20),
+    "daily_login": GrowthRule(
+        points=5,
+        experience=5,
+        daily_points_cap=5,
+        daily_experience_cap=5,
+    ),
     "topic_created": GrowthRule(
         points=5,
-        experience=15,
+        experience=5,
         daily_points_cap=25,
-        daily_experience_cap=75,
+        daily_experience_cap=25,
     ),
     "post_created": GrowthRule(
-        points=2,
-        experience=8,
+        points=1,
+        experience=1,
         daily_points_cap=20,
         daily_experience_cap=80,
     ),
     "content_liked": GrowthRule(
         points=1,
-        experience=4,
+        experience=1,
         daily_points_cap=20,
-        daily_experience_cap=80,
+        daily_experience_cap=20,
+    ),
+    "content_bookmarked": GrowthRule(
+        points=1,
+        experience=1,
+        daily_points_cap=20,
+        daily_experience_cap=20,
+    ),
+    "topic_replied": GrowthRule(
+        points=1,
+        experience=1,
+        daily_points_cap=20,
+        daily_experience_cap=20,
     ),
     "invite_accepted_inviter": GrowthRule(
         points=10,
-        experience=25,
+        experience=10,
         daily_points_cap=50,
-        daily_experience_cap=125,
+        daily_experience_cap=50,
     ),
     "invite_accepted_invitee": GrowthRule(
         points=5,
-        experience=10,
+        experience=5,
         daily_points_cap=25,
-        daily_experience_cap=50,
+        daily_experience_cap=25,
     ),
 }
 
@@ -160,7 +178,7 @@ class GrowthService:
 
         user.points_balance = next_points
         user.experience_total = next_experience
-        user.level = level_for_experience(next_experience)
+        user.level = self._next_display_level(user.level, next_experience)
 
         event = UserPointEvent(
             user_id=user.id,
@@ -178,6 +196,11 @@ class GrowthService:
         self.session.add(event)
         await self.session.flush()
         return event
+
+    def _next_display_level(self, current_level: int | None, next_experience: int) -> int:
+        if clamp_display_level(current_level) >= REVIEW_ONLY_LEVEL:
+            return REVIEW_ONLY_LEVEL
+        return level_for_experience(next_experience)
 
     async def _cap_positive_delta(
         self,

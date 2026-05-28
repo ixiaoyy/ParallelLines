@@ -260,6 +260,15 @@ class InteractionService:
             self.session.add(
                 Bookmark(target_type="topic", target_id=topic.id, user_id=current_user.id)
             )
+            if topic.user_id != current_user.id:
+                await GrowthService(self.session).award(
+                    topic.user_id,
+                    "content_bookmarked",
+                    source_id=topic.id,
+                    actor_id=current_user.id,
+                    note="主题被收藏奖励",
+                    idempotency_key=f"content_bookmarked:topic:{topic.id}:{current_user.id}",
+                )
         await self.session.flush()
         count = await self._bookmark_count("topic", topic.id)
         await self.session.commit()

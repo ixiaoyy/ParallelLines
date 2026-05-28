@@ -54,7 +54,7 @@ Routes:
   `queryKeys.siteSettingsPublic` so public branding refreshes.
 - User management changes role/status/level and optional `points_delta` / `experience_delta`
   through `updateAdminUser`; pages must not infer admin powers from `level`.
-- Admin growth adjustments display current points/XP/progress from `AdminUserResponse` and send
+- Admin growth adjustments display current usable points/growth value/progress from `AdminUserResponse` and send
   only delta values plus an optional audit reason, never client-computed absolute balances.
 
 ### 4. Validation & Error Matrix
@@ -66,7 +66,7 @@ Routes:
 | Admin updates `site_title` | Public settings query invalidates and app shell title updates |
 | Backend returns cache degraded in system overview | Dashboard shows degraded badge, not a hard failure |
 | User list is empty for filters | User detail is not submitted without a selected user |
-| Admin enters growth deltas | Payload uses `points_delta` / `experience_delta` and keeps backend as source of truth for recalculated level |
+| Admin enters growth deltas | Payload uses `points_delta` / `experience_delta` and keeps backend as source of truth for recalculated level; usable points and growth value stay separate |
 | Setting save is pending | Save buttons are disabled to prevent duplicate writes |
 
 ### 5. Good/Base/Bad Cases

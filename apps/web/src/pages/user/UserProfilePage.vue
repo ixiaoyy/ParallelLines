@@ -111,7 +111,7 @@ const growthProgress = computed(() => profile.value?.level_progress_percent ?? 0
 const profileBadges = computed(() => profile.value?.badges ?? []);
 const growthNextText = computed(() => {
   const next = profile.value?.experience_to_next_level ?? 0;
-  return next > 0 ? `距离下一级还差 ${next} XP` : "已到达当前最高等级";
+  return next > 0 ? `距离下一级还差 ${next} 成长值` : "已到达当前最高等级";
 });
 
 const profileSummary = computed(() => {
@@ -427,14 +427,14 @@ function socialErrorMessage(error: unknown): string {
           <div class="profile-growth-card">
             <div>
               <span>成长轨迹</span>
-              <strong>Lv.{{ profile.level }} · {{ profile.experience_total }} XP</strong>
+              <strong>Lv.{{ profile.level }} · {{ profile.experience_total }} 成长值</strong>
               <p>{{ growthNextText }}</p>
             </div>
             <div class="profile-growth-card__points">
-              <span>积分余额</span>
+              <span>可用积分</span>
               <strong>{{ profile.points_balance }}</strong>
             </div>
-            <div class="profile-growth-meter" aria-label="当前等级经验进度">
+            <div class="profile-growth-meter" aria-label="当前等级成长进度">
               <span :style="{ width: `${growthProgress}%` }"></span>
             </div>
           </div>

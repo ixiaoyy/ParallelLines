@@ -52,6 +52,7 @@
 .filter-link {
   display: inline-flex;
   flex: 0 0 auto;
+  gap: 0.42rem;
   min-height: 2.35rem;
   align-items: center;
   justify-content: center;
@@ -60,17 +61,99 @@
   padding: 0.55rem 0.85rem;
   color: color-mix(in srgb, var(--primary) 32%, var(--text));
   background: var(--bg-surface);
+  cursor: pointer;
   text-decoration: none;
   font-size: 0.86rem;
   font-weight: 800;
 }
 
+.filter-link span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 760;
+}
+
 .filter-link:hover,
-.filter-link:focus-visible {
+.filter-link:focus-visible,
+.filter-link.active {
   border-color: var(--theme-soft-border-hover);
   color: var(--theme-soft-fg-hover);
   background: var(--theme-soft-bg-hover);
   outline: none;
+}
+
+.topic-filter-panel {
+  display: grid;
+  grid-template-columns: minmax(13rem, 1.4fr) minmax(9rem, 1fr) minmax(9rem, 1fr) auto;
+  gap: 0.65rem;
+  align-items: end;
+  border-bottom: 1px solid var(--border);
+  padding: 0.85rem 1rem;
+  background: color-mix(in srgb, var(--bg-subtle) 68%, var(--bg-surface));
+}
+
+.topic-filter-field {
+  display: grid;
+  gap: 0.32rem;
+  min-width: 0;
+}
+
+.topic-filter-field span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 840;
+}
+
+.topic-filter-field input,
+.topic-filter-field select {
+  width: 100%;
+  min-height: 2.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.72rem;
+  padding: 0 0.75rem;
+  color: var(--title);
+  background: var(--bg-surface);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 720;
+}
+
+.topic-filter-field input::placeholder {
+  color: var(--muted);
+}
+
+.topic-filter-field input:focus,
+.topic-filter-field select:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.14);
+}
+
+.filter-clear-button {
+  min-height: 2.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 0 0.8rem;
+  color: var(--text);
+  background: var(--bg-surface);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 820;
+}
+
+.filter-clear-button:hover:not(:disabled),
+.filter-clear-button:focus-visible:not(:disabled) {
+  border-color: var(--theme-soft-border-hover);
+  color: var(--theme-soft-fg-hover);
+  outline: none;
+  background: var(--theme-soft-bg-hover);
+}
+
+.filter-clear-button:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.56;
 }
 
 .feed-header {
@@ -188,6 +271,10 @@
   .tabs {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .topic-filter-panel {
+    grid-template-columns: 1fr;
   }
 
   .feed-header {

@@ -27,7 +27,7 @@
 - Public profile and admin user payloads include active `badges: UserBadgeResponse[]`.
 - Topic/post responses include `author_trust_level` and `author_trust_level_label`.
 - Auto badges use stable idempotency keys, e.g. `badge:verified-member:{user_id}`.
-- Default trust rules: TL1 at verified/20 XP, TL2 at 150 XP + public topic/reply participation, TL3 at 600 XP + stronger participation/likes; TL4 is preserved for manual/core users and is not auto-granted.
+- Default trust rules: TL1 at verified/20 growth value, TL2 at 150 growth value + public topic/reply participation, TL3 at 600 growth value + stronger participation/likes; TL4 is preserved for manual/core users and is not auto-granted.
 
 ### 4. Validation & Error Matrix
 | Case | Behavior |
@@ -39,7 +39,7 @@
 | Rate limits | user-scoped write limits use `trust_adjusted_limit`; IP/account limits stay unchanged |
 
 ### 5. Good/Base/Bad Cases
-- Good: email verification grants `verified-member`, awards XP, recomputes TL1, and writes a trust event.
+- Good: email verification grants `verified-member`, awards growth value, recomputes TL1, and writes a trust event.
 - Good: first public topic/reply/received-like grants behavior badge once even if the action is retried.
 - Base: TL1 users keep default write limits.
 - Bad: do not infer admin/moderator rights from TL3/TL4.

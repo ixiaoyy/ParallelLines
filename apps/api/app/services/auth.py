@@ -149,6 +149,7 @@ class AuthService:
                     expires_delta=timedelta(minutes=self.settings.two_factor_challenge_minutes),
                 ),
             )
+        await self._award_daily_login(user)
         token_pair = await self._token_pair(user, request)
         return LoginResponse(**token_pair.model_dump(), two_factor_required=False)
 
@@ -163,6 +164,7 @@ class AuthService:
             raise AuthenticationError("invalid_token", "Invalid or expired token")
         if not await self._verify_two_factor_code(user, payload.code):
             raise AuthenticationError("invalid_two_factor_code", "Invalid two-factor code")
+        await self._award_daily_login(user)
         return await self._token_pair(user, request)
 
     async def verify_email(
@@ -513,6 +515,17 @@ class AuthService:
             refresh_token=refresh_token,
             session_id=session.id,
             user=UserPublic.model_validate(user),
+        )
+
+    async def _award_daily_login(self, user: User) -> None:
+        login_day = utcnow().date().isoformat()
+        await GrowthService(self.session).award(
+            user.id,
+            "daily_login",
+            source_id=login_day,
+            actor_id=user.id,
+            note="每日登录奖励",
+            idempotency_key=f"daily_login:{user.id}:{login_day}",
         )
 
     async def _pending_user_by_email(self, email: str) -> User:

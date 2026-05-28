@@ -1381,6 +1381,15 @@ class ForumService:
                 actor_id=current_user.id,
                 note="回复主题奖励",
             )
+            if topic.user_id != current_user.id:
+                await GrowthService(self.session).award(
+                    topic.user_id,
+                    "topic_replied",
+                    source_id=post.id,
+                    actor_id=current_user.id,
+                    note="主题收到回复奖励",
+                    idempotency_key=f"topic_replied:topic:{topic.id}:post:{post.id}:{current_user.id}",
+                )
             badge_service = BadgeTrustService(self.session)
             await badge_service.grant_badge(
                 user_id=current_user.id,

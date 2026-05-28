@@ -248,7 +248,7 @@ function isNavItemActive(item: NavItem) {
 
         <PluginSlot class="desktop-plugin-slot" slot-name="app.nav" />
 
-        <NotificationBell class="topbar-notification" />
+        <NotificationBell v-if="currentUser" class="topbar-notification" />
 
         <RouterLink v-if="!currentUser" class="auth-link auth-link--guest" :to="{ name: 'auth' }">
           {{ t("auth.login_register", "登录/注册") }}
@@ -283,7 +283,7 @@ function isNavItemActive(item: NavItem) {
           </RouterLink>
           <RouterLink class="user-link" :to="{ name: 'my-profile' }" :class="{ 'is-active': isCurrentUserProfileActive }">
             <span class="user-link__name">{{ t("nav.profile", "个人中心") }}</span>
-            <small>@{{ currentUser.username }} · Lv.{{ currentUser.level }} · {{ currentUser.points_balance }} 分</small>
+            <small>@{{ currentUser.username }}</small>
           </RouterLink>
           <button class="logout-button" type="button" @click="handleLogout">
             {{ t("auth.logout", "退出") }}

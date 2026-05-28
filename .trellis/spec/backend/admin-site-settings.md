@@ -61,7 +61,7 @@ Settings with request-path effects:
   `site_setting_updated` for setting changes and `user_admin_updated` for user changes.
 - User `role` remains the permission source of truth. `level` is display/growth metadata.
 - User growth adjustments must call `GrowthService.adjust_user()` so
-  `points_delta` / `experience_delta` write `user_point_events` and recompute level from XP.
+  `points_delta` / `experience_delta` write `user_point_events` and recompute level from growth value.
 - Admins cannot disable their own account or remove their own admin role through
   `/admin/users/{self}`.
 - Email logs exposed by the admin API must mask recipient local parts and must not
@@ -84,7 +84,7 @@ Settings with request-path effects:
 | `registration_enabled=false` and visitor registers | `registration_disabled` / 403 |
 | Admin updates site title | Public `/site/settings` returns new title and audit row is written |
 | Admin updates another user's role/status/level | User response reflects changes and `user_admin_updated` audit row exists |
-| Admin sends points/experience deltas | Response reflects floored balance/XP, growth ledger row exists, and audit row includes before/after |
+| Admin sends points/growth deltas | Response reflects floored usable points/growth value, growth ledger row exists, and audit row includes before/after |
 | Admin tries to suspend self | `cannot_moderate_self` / 422 |
 | Redis unavailable during `/admin/system` | Endpoint still returns 200 with cache `degraded` |
 | Admin queries missing background job logs | `404 background_job_not_found` |

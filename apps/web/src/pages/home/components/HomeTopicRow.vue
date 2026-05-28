@@ -19,7 +19,6 @@ defineProps<{ topic: TopicCardVM }>();
           :level="topic.authorLevel"
           size="sm"
         />
-        <span class="board-badge-dot" :title="topic.boardName"></span>
       </div>
       <div class="topic-copy">
         <div class="topic-title-line">

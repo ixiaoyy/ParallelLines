@@ -487,7 +487,7 @@
           "level": {
             "anyOf": [
               {
-                "maximum": 100.0,
+                "maximum": 5.0,
                 "minimum": 0.0,
                 "type": "integer"
               },

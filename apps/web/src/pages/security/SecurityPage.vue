@@ -312,7 +312,7 @@ function toSecurityError(error: unknown, fallback: string): string {
         <strong>{{ currentUser.role }} · Lv {{ currentUser.level }}</strong>
         <small>
           {{ currentUser.status }} · TL{{ currentUser.trust_level }} {{ currentUser.trust_level_label }} ·
-          {{ currentUser.points_balance }} 积分 · {{ currentUser.experience_total }} XP
+          {{ currentUser.points_balance }} 可用积分
         </small>
       </div>
       <div>

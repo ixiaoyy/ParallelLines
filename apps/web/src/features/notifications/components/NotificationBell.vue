@@ -39,6 +39,13 @@ function markOneRead(id: string) {
   markRead.mutate([id]);
 }
 
+function openNotification(id: string, unread: boolean) {
+  if (unread) {
+    markOneRead(id);
+  }
+  closePanel();
+}
+
 function handleDocumentPointerDown(event: PointerEvent) {
   if (!open.value) {
     return;
@@ -106,7 +113,7 @@ onBeforeUnmount(() => {
           class="notification-card"
           :class="[`notification-card--${item.tone}`, { unread: item.unread }]"
         >
-          <RouterLink class="notification-link" :to="item.targetUrl" @click="closePanel">
+          <RouterLink class="notification-link" :to="item.targetUrl" @click="openNotification(item.id, item.unread)">
             <span class="notification-dot" aria-hidden="true"></span>
             <span class="notification-copy">
               <strong>{{ item.title }}</strong>
