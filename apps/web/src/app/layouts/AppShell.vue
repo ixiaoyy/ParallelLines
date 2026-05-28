@@ -283,7 +283,7 @@ function isNavItemActive(item: NavItem) {
           </RouterLink>
           <RouterLink class="user-link" :to="{ name: 'my-profile' }" :class="{ 'is-active': isCurrentUserProfileActive }">
             <span class="user-link__name">{{ t("nav.profile", "个人中心") }}</span>
-            <small>@{{ currentUser.username }}</small>
+            <small>@{{ currentUser.username }} · {{ currentUser.points_balance }} 积分</small>
           </RouterLink>
           <button class="logout-button" type="button" @click="handleLogout">
             {{ t("auth.logout", "退出") }}

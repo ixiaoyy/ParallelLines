@@ -58,9 +58,11 @@
 - Public profile pages call `/users/{username}` and `/users/{username}/topics`; they show content counts from the public profile payload.
 - User role helpers live in `features/auth/permissions.ts`; do not scatter string checks like `role === 'admin'` across page components.
 - User `level` defaults to `0` and is display/session metadata; admin permissions remain role-based.
-- Profile/security growth displays use API-provided level, usable-points, and growth-value fields and must not
-  duplicate backend level threshold rules. The topbar keeps the profile link compact and should not
-  show point balances or detailed growth numbers.
+- User-facing growth displays should prioritize `points_balance` as "可用积分" for future exchange
+  and unlock flows. Raw growth value (`experience_total`) is backend/admin metadata for level
+  progress and should not be emphasized in ordinary user surfaces.
+- The topbar keeps the profile link compact; it may show the current user's usable points but must
+  not show raw growth value or detailed level progress.
 - Login may return a 2FA challenge instead of a token pair; only `/auth/2fa/verify-login`
   may persist tokens after `two_factor_required=true`.
 
@@ -78,7 +80,7 @@
 | Resend too soon | API returns `verification_resend_limited`; UI does not clear the existing code input. |
 | Logout | Tokens are removed, current-user cache becomes `null`, no page reload required. |
 | Public profile payload omits email | UI still renders and shows `topic_count` / `post_count`. |
-| Public profile/current user includes growth fields | UI renders level/usable points/growth value as metadata and does not infer permissions from it. |
+| Public profile/current user includes growth fields | UI renders level/usable points as metadata, hides raw growth value from ordinary user surfaces, and does not infer permissions from it. |
 | Reply mutation fails | Draft remains in textarea/storage and an error status is visible. |
 | Reply mutation succeeds | Draft textarea and `parallellines:reply-draft:<topicId>` are cleared. |
 

@@ -405,8 +405,8 @@
 .profile-growth-card strong {
   display: block;
   margin-top: 0.28rem;
-  color: var(--title);
-  font-size: 1.05rem;
+  color: var(--accent-geek);
+  font-size: 1.45rem;
   font-weight: 920;
 }
 
@@ -425,23 +425,8 @@
 }
 
 .profile-growth-card__points strong {
-  color: var(--accent-geek);
-  font-size: 1.35rem;
-}
-
-.profile-growth-meter {
-  grid-column: 1 / -1;
-  height: 0.52rem;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(var(--primary-rgb), 0.12);
-}
-
-.profile-growth-meter span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--primary), var(--accent-geek), var(--accent-gold));
+  color: var(--title);
+  font-size: 1.05rem;
 }
 
 .profile-badges-card {
