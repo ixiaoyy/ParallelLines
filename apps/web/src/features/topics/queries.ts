@@ -11,11 +11,9 @@ import {
   fetchBoardTopics,
   fetchTopic,
   fetchTopics,
-  mergeTopic,
   moveTopic,
   searchTopics,
   setTopicSolution,
-  splitTopic,
   updateTopicLifecycle,
   votePoll,
 } from "./api";
@@ -26,13 +24,10 @@ import type {
   PollResponse,
   PollVoteRequest,
   TopicLifecycleRequest,
-  TopicLifecycleResponse,
-  TopicMergeRequest,
   TopicMoveRequest,
   TopicResponse,
   TopicSolutionRequest,
   TopicSort,
-  TopicSplitRequest,
 } from "./model";
 
 export function useTopicFeed(sort: MaybeRefOrGetter<TopicSort> = "latest") {
@@ -210,62 +205,6 @@ export function useMoveTopic(topicId: MaybeRefOrGetter<string>) {
     },
     onSuccess: (topic) => {
       invalidateTopicLifecycleQueries(queryClient, topic.id, topic.board_slug);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.boards });
-    },
-  });
-}
-
-export function useSplitTopic(topicId: MaybeRefOrGetter<string>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<TopicLifecycleResponse, Error, TopicSplitRequest>({
-    mutationFn: (payload) => {
-      const id = toValue(topicId);
-      if (!id || !hasAccessToken()) {
-        throw new Error("authentication_required");
-      }
-
-      return splitTopic(id, payload);
-    },
-    onSuccess: (response) => {
-      if (response.source_topic) {
-        invalidateTopicLifecycleQueries(
-          queryClient,
-          response.source_topic.id,
-          response.source_topic.board_slug,
-        );
-      }
-      invalidateTopicLifecycleQueries(
-        queryClient,
-        response.target_topic.id,
-        response.target_topic.board_slug,
-      );
-      void queryClient.invalidateQueries({ queryKey: queryKeys.boards });
-    },
-  });
-}
-
-export function useMergeTopic(topicId: MaybeRefOrGetter<string>) {
-  const queryClient = useQueryClient();
-
-  return useMutation<TopicLifecycleResponse, Error, TopicMergeRequest>({
-    mutationFn: (payload) => {
-      const id = toValue(topicId);
-      if (!id || !hasAccessToken()) {
-        throw new Error("authentication_required");
-      }
-
-      return mergeTopic(id, payload);
-    },
-    onSuccess: (response) => {
-      const sourceId = toValue(topicId);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.topic(sourceId) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.posts(sourceId) });
-      invalidateTopicLifecycleQueries(
-        queryClient,
-        response.target_topic.id,
-        response.target_topic.board_slug,
-      );
       void queryClient.invalidateQueries({ queryKey: queryKeys.boards });
     },
   });

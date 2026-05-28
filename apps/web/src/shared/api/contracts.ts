@@ -1,12 +1,7 @@
 import type { UserPublic as AuthUserPublic, LoginResponse } from "@/features/auth/model";
 import type { BoardResponse } from "@/features/boards/model";
 import type { PostResponse } from "@/features/posts/model";
-import type {
-  CreateTopicRequest,
-  PollResponse,
-  TopicLifecycleResponse,
-  TopicResponse,
-} from "@/features/topics/model";
+import type { CreateTopicRequest, PollResponse, TopicResponse } from "@/features/topics/model";
 import type { UserDirectoryEntry, UserProfile } from "@/features/users/model";
 import type { components } from "@/shared/api/generated";
 
@@ -28,9 +23,6 @@ export type ApiContractChecks = {
   >;
   createTopicRequest: AssertApiCompatible<
     IsApiCompatible<CreateTopicRequest, components["schemas"]["TopicCreateRequest"]>
-  >;
-  topicLifecycleResponse: AssertApiCompatible<
-    IsApiCompatible<TopicLifecycleResponse, components["schemas"]["TopicLifecycleResponse"]>
   >;
   userPublic: AssertApiCompatible<
     IsApiCompatible<AuthUserPublic, components["schemas"]["UserPublic"]>

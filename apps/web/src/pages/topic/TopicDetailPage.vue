@@ -24,11 +24,9 @@ import TopicDetailHero from "@/features/topics/components/TopicDetailHero.vue";
 import TopicDetailSidebar from "@/features/topics/components/TopicDetailSidebar.vue";
 import TopicThreadToolbar from "@/features/topics/components/TopicThreadToolbar.vue";
 import {
-  useMergeTopic,
   useMoveTopic,
   useRelatedTopics,
   useSetTopicSolution,
-  useSplitTopic,
   useTopicDetail,
   useTopicLifecycle,
   useVotePoll,
@@ -105,8 +103,6 @@ const flagTopicMutation = useCreateFlag();
 const topicModerationMutation = useContentModerationMutation();
 const lifecycleMutation = useTopicLifecycle(topicId);
 const moveTopicMutation = useMoveTopic(topicId);
-const splitTopicMutation = useSplitTopic(topicId);
-const mergeTopicMutation = useMergeTopic(topicId);
 const solutionMutation = useSetTopicSolution(topicId);
 const pollVoteMutation = useVotePoll(topicId);
 const blockAuthorMutation = useMutation({
@@ -135,9 +131,7 @@ const canSetTopicNotification = computed(() => Boolean(topic.value?.id) && hasAc
 const lifecyclePending = computed(
   () =>
     lifecycleMutation.isPending.value ||
-    moveTopicMutation.isPending.value ||
-    splitTopicMutation.isPending.value ||
-    mergeTopicMutation.isPending.value,
+    moveTopicMutation.isPending.value,
 );
 const {
   active: bookmarked,
@@ -262,11 +256,11 @@ function requireLogin(message: string) {
   void router.push({ name: "auth", query: { redirect: route.fullPath } });
 }
 
-function setTopicStatus(status: "open" | "closed" | "archived") {
+function setTopicStatus(status: "open" | "closed") {
   lifecycleMutation.mutate(
     { status, note: "从主题页工具栏更新状态" },
     {
-      onSuccess: () => setToolbarStatus(status === "open" ? "主题已重新打开" : "主题状态已更新"),
+      onSuccess: () => setToolbarStatus(status === "open" ? "主题已重新打开" : "主题已关闭"),
       onError: () => setToolbarStatus("主题状态更新失败，请确认权限"),
     },
   );
@@ -409,57 +403,6 @@ function moveTopic() {
   );
 }
 
-function splitTopic() {
-  const floors = window.prompt("输入要拆分的楼层号，多个用英文逗号分隔（不能包含 1 楼）：");
-  const floorNumbers = parseFloorNumbers(floors ?? "");
-  if (!floorNumbers.length) {
-    return;
-  }
-  const selectedPosts = posts.value.filter((post) => floorNumbers.includes(post.floor));
-  if (selectedPosts.length !== floorNumbers.length || selectedPosts.some((post) => post.floor === 1)) {
-    setToolbarStatus("拆分楼层无效，请确认楼层存在且不包含 1 楼");
-    return;
-  }
-  const title = window.prompt("输入新主题标题：", `${topic.value?.title ?? "新主题"}（拆分）`);
-  const normalizedTitle = title?.trim();
-  if (!normalizedTitle) {
-    return;
-  }
-
-  splitTopicMutation.mutate(
-    {
-      title: normalizedTitle,
-      post_ids: selectedPosts.map((post) => post.id),
-      note: "从主题页工具栏拆分回复",
-    },
-    {
-      onSuccess: (response) => {
-        setToolbarStatus(`已拆分 ${response.moved_post_count} 个楼层为新主题`);
-      },
-      onError: () => setToolbarStatus("拆分失败，请确认楼层和权限"),
-    },
-  );
-}
-
-function mergeTopic() {
-  const targetTopicId = window.prompt("输入要合并到的目标主题 ID：");
-  const normalized = targetTopicId?.trim();
-  if (!normalized || normalized === topic.value?.id) {
-    return;
-  }
-
-  mergeTopicMutation.mutate(
-    { target_topic_id: normalized, note: "从主题页工具栏合并主题" },
-    {
-      onSuccess: (response) => {
-        setToolbarStatus(`已合并 ${response.moved_post_count} 个楼层`);
-        void router.replace(topicDetailRoute(response.target_topic));
-      },
-      onError: () => setToolbarStatus("合并失败，请确认目标主题和权限"),
-    },
-  );
-}
-
 function deleteTopic() {
   if (!topic.value?.id || !canManageTopic.value || deleteTopicPending.value) {
     return;
@@ -490,17 +433,6 @@ function deleteTopic() {
       onError: () => setToolbarStatus("删除失败，请确认管理员权限"),
     },
   );
-}
-
-function parseFloorNumbers(value: string) {
-  return [
-    ...new Set(
-      value
-        .split(",")
-        .map((item) => Number.parseInt(item.trim(), 10))
-        .filter((item) => Number.isInteger(item) && item > 0),
-    ),
-  ];
 }
 
 async function copyTopicLink() {
@@ -690,8 +622,6 @@ function flagTopic() {
               @set-topic-status="setTopicStatus"
               @toggle-topic-pinned="toggleTopicPinned"
               @move-topic="moveTopic"
-              @split-topic="splitTopic"
-              @merge-topic="mergeTopic"
               @delete-topic="deleteTopic"
             />
 
@@ -746,7 +676,7 @@ function flagTopic() {
             @submit="handleReply"
           />
           <UiCard v-else class="topic-state" role="status">
-            主题当前为 {{ topic.status === "closed" ? "已关闭" : "已归档" }} 状态，暂不接受新回复。
+            主题当前为已关闭状态，暂不接受新回复。
           </UiCard>
           <p v-if="replyStatus" class="reply-status" role="status">{{ replyStatus }}</p>
           <span id="topic-end" class="topic-end-anchor" aria-hidden="true" />
@@ -764,7 +694,7 @@ function flagTopic() {
       />
     </template>
 
-    <UiEmptyState v-else title="没有找到这个主题" description="主题可能已被合并或隐藏，回到首页继续浏览。">
+    <UiEmptyState v-else title="没有找到这个主题" description="主题可能已被移动、隐藏或不存在，回到首页继续浏览。">
       <RouterLink class="empty-link" to="/">返回首页</RouterLink>
     </UiEmptyState>
   </div>

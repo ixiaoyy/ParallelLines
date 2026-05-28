@@ -12,12 +12,9 @@ import {
   FolderOpenOutlined,
   HeartFilled,
   HeartOutlined,
-  InboxOutlined,
   LinkOutlined,
-  MergeCellsOutlined,
   PushpinOutlined,
   RocketOutlined,
-  ScissorOutlined,
   StarFilled,
   StarOutlined,
   UserOutlined,
@@ -28,7 +25,7 @@ import type { NotificationLevel } from "@/features/notifications/model";
 import UiCard from "@/shared/ui/Card.vue";
 
 type TopicStatus = "open" | "closed" | "archived" | "hidden";
-type TopicLifecycleStatus = "open" | "closed" | "archived";
+type TopicLifecycleStatus = "open" | "closed";
 
 const notificationOptions: Array<{ value: NotificationLevel; label: string }> = [
   { value: "watching", label: "关注" },
@@ -76,8 +73,6 @@ const emit = defineEmits<{
   setTopicStatus: [status: TopicLifecycleStatus];
   toggleTopicPinned: [];
   moveTopic: [];
-  splitTopic: [];
-  mergeTopic: [];
   deleteTopic: [];
   setNotificationLevel: [level: NotificationLevel];
   voteTopic: [value: -1 | 0 | 1];
@@ -212,10 +207,6 @@ function onNotificationChange(event: Event) {
               <CheckCircleOutlined v-else aria-hidden="true" />
               {{ topicStatus === "open" ? "关闭" : "打开" }}
             </button>
-            <button type="button" :disabled="lifecyclePending" @click="emit('setTopicStatus', 'archived')">
-              <InboxOutlined aria-hidden="true" />
-              归档
-            </button>
             <button type="button" :disabled="lifecyclePending" @click="emit('toggleTopicPinned')">
               <PushpinOutlined aria-hidden="true" />
               {{ topicPinned ? "取消置顶" : "置顶" }}
@@ -223,14 +214,6 @@ function onNotificationChange(event: Event) {
             <button type="button" :disabled="lifecyclePending" @click="emit('moveTopic')">
               <FolderOpenOutlined aria-hidden="true" />
               移动
-            </button>
-            <button type="button" :disabled="lifecyclePending" @click="emit('splitTopic')">
-              <ScissorOutlined aria-hidden="true" />
-              拆分
-            </button>
-            <button type="button" :disabled="lifecyclePending" @click="emit('mergeTopic')">
-              <MergeCellsOutlined aria-hidden="true" />
-              合并
             </button>
             <button type="button" :disabled="deleteTopicPending" @click="emit('deleteTopic')">
               <DeleteOutlined aria-hidden="true" />

@@ -53,8 +53,8 @@ const {
 });
 
 const answerState = computed(() => {
-  if (props.topic.status === "closed") {
-    return { tone: "closed", label: "已关闭", helper: "只读归档" };
+  if (props.topic.status === "closed" || props.topic.status === "archived") {
+    return { tone: "closed", label: "已关闭", helper: "暂停回复" };
   }
 
   if (props.topic.solved) {

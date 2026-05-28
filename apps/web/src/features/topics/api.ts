@@ -5,13 +5,10 @@ import type {
   PollResponse,
   PollVoteRequest,
   TopicLifecycleRequest,
-  TopicLifecycleResponse,
-  TopicMergeRequest,
   TopicMoveRequest,
   TopicResponse,
   TopicSolutionRequest,
   TopicSort,
-  TopicSplitRequest,
 } from "./model";
 
 export function fetchTopics(sort: TopicSort = "latest", limit = 50): Promise<TopicResponse[]> {
@@ -72,20 +69,6 @@ export function updateTopicLifecycle(
 
 export function moveTopic(topicId: string, payload: TopicMoveRequest): Promise<TopicResponse> {
   return apiPost<TopicResponse, TopicMoveRequest>(`/topics/${topicId}/move`, payload);
-}
-
-export function splitTopic(
-  topicId: string,
-  payload: TopicSplitRequest,
-): Promise<TopicLifecycleResponse> {
-  return apiPost<TopicLifecycleResponse, TopicSplitRequest>(`/topics/${topicId}/split`, payload);
-}
-
-export function mergeTopic(
-  topicId: string,
-  payload: TopicMergeRequest,
-): Promise<TopicLifecycleResponse> {
-  return apiPost<TopicLifecycleResponse, TopicMergeRequest>(`/topics/${topicId}/merge`, payload);
 }
 
 export function setTopicSolution(

@@ -106,26 +106,6 @@ export interface TopicMoveRequest {
   note?: string | null;
 }
 
-export interface TopicSplitRequest {
-  title: string;
-  post_ids: string[];
-  board_id?: string | null;
-  board_slug?: string | null;
-  note?: string | null;
-}
-
-export interface TopicMergeRequest {
-  target_topic_id: string;
-  note?: string | null;
-}
-
-export interface TopicLifecycleResponse {
-  source_topic: TopicResponse | null;
-  target_topic: TopicResponse;
-  moved_post_count: number;
-  audit_action: string;
-}
-
 export function toTopicCard(topic: TopicResponse): TopicCardVM {
   return {
     id: topic.id,
