@@ -97,6 +97,7 @@ const EN_SITE_TEXT: Record<string, string> = {
   "nav.menu": "Menu",
   "nav.messages": "Messages",
   "nav.moderation": "Moderation",
+  "nav.profile": "Profile",
   "nav.reviewables": "Appeals",
   "nav.security": "Security",
   "nav.users": "Members",

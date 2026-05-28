@@ -40,6 +40,16 @@ const adminLinkLabel = computed(() =>
   isAdmin(currentUser.value) ? t("nav.admin", "后台") : t("nav.moderation", "审核"),
 );
 const canSubmitGlobalSearch = computed(() => Boolean(globalSearch.value.trim()));
+const isCurrentUserProfileActive = computed(() => {
+  if (!currentUser.value) {
+    return false;
+  }
+
+  return (
+    route.name === "my-profile" ||
+    (route.name === "user-profile" && String(route.params.username ?? "") === currentUser.value.username)
+  );
+});
 
 interface NavItem {
   key:
@@ -271,9 +281,9 @@ function isNavItemActive(item: NavItem) {
           >
             {{ t("nav.reviewables", "申诉") }}
           </RouterLink>
-          <RouterLink class="user-link" :to="{ name: 'user-profile', params: { username: currentUser.username } }">
-            <span class="user-link__name">{{ currentUser.username }}</span>
-            <small>Lv.{{ currentUser.level }} · TL{{ currentUser.trust_level }} · {{ currentUser.points_balance }} 分</small>
+          <RouterLink class="user-link" :to="{ name: 'my-profile' }" :class="{ 'is-active': isCurrentUserProfileActive }">
+            <span class="user-link__name">{{ t("nav.profile", "个人中心") }}</span>
+            <small>@{{ currentUser.username }} · Lv.{{ currentUser.level }} · {{ currentUser.points_balance }} 分</small>
           </RouterLink>
           <button class="logout-button" type="button" @click="handleLogout">
             {{ t("auth.logout", "退出") }}

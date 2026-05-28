@@ -36,6 +36,9 @@ Board VM fields:
 - Board settings panel appears only for current board owner or admin; unauthorized users do not fire settings queries.
 - Settings form preserves existing values while mutations are pending and shows typed backend errors.
 - New-topic page:
+  - stays as a compact single composer: title, board selector, optional tags, body, upload, publish;
+    do not reintroduce multi-step explainer cards, side rails, preview checklists, or intent questionnaires
+    unless product explicitly asks for a guided flow.
   - preloads `selectedBoard.postTemplate` only when the editor body is empty;
   - shows required and allowed tag chips;
   - blocks publish when required tags are missing or allowed-tags policy is violated;

@@ -1,0 +1,6 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/frontend/user-profile-settings-directory.md", "reason": "Profile page layout and edit controls contract"}
+{"file": ".trellis/spec/frontend/uploads-attachments.md", "reason": "Avatar upload UI contract"}
+{"file": ".trellis/spec/frontend/badges-trust-levels.md", "reason": "Badge and trust display contract"}
+{"file": ".trellis/spec/frontend/auth-user-session.md", "reason": "Current user/profile route contract"}

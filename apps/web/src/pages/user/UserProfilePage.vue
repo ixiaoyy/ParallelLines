@@ -48,6 +48,9 @@ const currentUserQuery = useCurrentUser();
 const profileQuery = useUserProfile(username);
 const topicsQuery = useUserTopics(username);
 const profile = computed(() => profileQuery.data.value ?? null);
+const isOwnProfile = computed(
+  () => currentUserQuery.data.value?.username === profile.value?.username,
+);
 const profileDraft = reactive({
   display_name: "",
   bio: "",
@@ -62,8 +65,12 @@ useSeoMeta(
   computed(() =>
     profile.value
       ? {
-          title: `${profileDisplayName(profile.value)} 的公开档案 · 平行线`,
-          description: `${profileDisplayName(profile.value)} 在平行线发布了 ${profile.value.topic_count} 个公开主题、${profile.value.post_count} 条公开回复。`,
+          title: isOwnProfile.value
+            ? `${profileDisplayName(profile.value)} 的个人中心 · 平行线`
+            : `${profileDisplayName(profile.value)} 的公开档案 · 平行线`,
+          description: isOwnProfile.value
+            ? "管理头像、公开资料、成长轨迹、积分与徽章。"
+            : `${profileDisplayName(profile.value)} 在平行线发布了 ${profile.value.topic_count} 个公开主题、${profile.value.post_count} 条公开回复。`,
           canonicalPath: `/u/${profile.value.username}`,
         }
       : null,
@@ -71,9 +78,6 @@ useSeoMeta(
 );
 const avatarMutation = useUploadAvatar(() => profile.value?.username ?? username.value);
 const updateProfileMutation = useUpdateMyProfile(username);
-const isOwnProfile = computed(
-  () => currentUserQuery.data.value?.username === profile.value?.username,
-);
 const canUseSocialActions = computed(
   () => Boolean(currentUserQuery.data.value && profile.value && !isOwnProfile.value),
 );
@@ -347,22 +351,25 @@ function socialErrorMessage(error: unknown): string {
       </div>
       <template v-else-if="profile">
         <div class="profile-identity">
-          <div class="profile-avatar-frame">
-            <UiAvatar
-              :name="profile.username"
-              :src="resolveApiAssetUrl(profile.avatar_url)"
-              :role="profile.role"
-              :level="profile.level"
-              size="lg"
-            />
-            <div v-if="isOwnProfile" class="avatar-upload">
+          <div class="profile-avatar-stack">
+            <div class="profile-avatar-frame">
+              <UiAvatar
+                :name="profile.username"
+                :src="resolveApiAssetUrl(profile.avatar_url)"
+                :role="profile.role"
+                :level="profile.level"
+                size="lg"
+              />
               <input
+                v-if="isOwnProfile"
                 ref="avatarInput"
                 class="avatar-upload__input"
                 type="file"
                 accept="image/png,image/jpeg,image/gif,image/webp"
                 @change="handleAvatarChange"
               />
+            </div>
+            <div v-if="isOwnProfile" class="avatar-upload">
               <UiButton type="button" tone="ghost" @click="openAvatarPicker">
                 {{ avatarMutation.isPending.value ? "上传中…" : "更换头像" }}
               </UiButton>
@@ -372,6 +379,7 @@ function socialErrorMessage(error: unknown): string {
 
           <div class="profile-copy">
             <div class="profile-kicker">
+              <UiBadge tone="blue">{{ isOwnProfile ? "个人中心" : "公开资料" }}</UiBadge>
               <UiBadge tone="green">{{ roleLabel(profile.role) }}</UiBadge>
               <UiBadge tone="blue">Lv.{{ profile.level }}</UiBadge>
               <UiBadge tone="amber">TL{{ profile.trust_level }} · {{ profile.trust_level_label }}</UiBadge>
@@ -390,6 +398,13 @@ function socialErrorMessage(error: unknown): string {
                 {{ profile.website_url }}
               </a>
               <span v-if="profile.location">{{ profile.location }}</span>
+            </div>
+            <div v-if="isOwnProfile" class="profile-primary-actions" aria-label="个人中心快捷操作">
+              <UiButton type="button" tone="primary" @click="profileFormOpen = !profileFormOpen">
+                {{ profileFormOpen ? "收起资料编辑" : "编辑个人资料" }}
+              </UiButton>
+              <RouterLink class="profile-action-link" :to="{ name: 'security' }">账号安全</RouterLink>
+              <RouterLink class="profile-action-link" :to="{ name: 'email-preferences' }">邮件偏好</RouterLink>
             </div>
           </div>
         </div>

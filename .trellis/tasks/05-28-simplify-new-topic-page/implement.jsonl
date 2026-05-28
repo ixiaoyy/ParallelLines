@@ -1,0 +1,5 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/frontend/rich-composer-onebox-emoji.md", "reason": "Composer upload/draft contract"}
+{"file": ".trellis/spec/frontend/board-management-required-tags.md", "reason": "New-topic board tag policy contract"}
+{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "Create-topic API wiring contract"}

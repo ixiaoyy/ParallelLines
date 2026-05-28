@@ -23,6 +23,8 @@ Frontend APIs/composables:
 
 Routes:
 
+- `/me` → authenticated convenience entry that loads `/auth/me` and redirects to `/u/{currentUser.username}`;
+  unauthenticated users are sent through the normal login redirect.
 - `/users` → member directory.
 - `/u/:username` → profile, edit form for self, public topics and activity sections.
 
@@ -30,6 +32,8 @@ Routes:
 
 - User directory cards must not render email and must use API-provided public fields only.
 - Own profile may show the edit form; other profiles must not show edit controls.
+- App shell current-user navigation should label the own profile entry as “个人中心” and link through
+  `/me`/`my-profile`, while public member links continue to use `/u/:username`.
 - Profile save errors preserve form fields and show visible zh-CN copy, especially invalid URL.
 - Avatar display still uses `resolveApiAssetUrl()`.
 - Activity tabs should query `posts`, `likes`, and `bookmarks`; if privacy hides the feed, show an honest state.

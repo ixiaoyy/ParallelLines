@@ -50,6 +50,22 @@ export const router = createRouter({
       component: () => import("@/pages/auth/AuthPage.vue"),
     },
     {
+      path: "/me",
+      name: "my-profile",
+      component: () => import("@/pages/user/UserProfilePage.vue"),
+      beforeEnter: async (to) => {
+        const currentUser = await loadCurrentUserForRoute();
+        if (!currentUser) {
+          return loginRedirect(to);
+        }
+
+        return {
+          name: "user-profile",
+          params: { username: currentUser.username },
+        };
+      },
+    },
+    {
       path: "/u/:username",
       name: "user-profile",
       component: () => import("@/pages/user/UserProfilePage.vue"),
