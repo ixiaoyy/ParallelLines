@@ -7,6 +7,7 @@ from app.api.v1.dependencies import OptionalCurrentUserDep, SessionDep
 from app.schemas.common import ApiResponse
 from app.schemas.forum import TopicResponse, TopicSort
 from app.services.search import SearchFilters, SearchService
+from app.services.topic_cursor import encode_topic_cursor
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -23,7 +24,7 @@ async def search_topics(
     created_after: datetime | None = None,
     created_before: datetime | None = None,
     sort: TopicSort = "relevance",
-    cursor: datetime | None = None,
+    cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> ApiResponse[list[TopicResponse]]:
     topics = await SearchService(session).search_topics(
@@ -44,6 +45,6 @@ async def search_topics(
     return ApiResponse(
         data=[TopicResponse.from_model(topic) for topic in topics],
         meta={
-            "next_cursor": topics[-1].last_posted_at.isoformat() if len(topics) == limit else None
+            "next_cursor": encode_topic_cursor(topics[-1]) if len(topics) == limit else None
         },
     )

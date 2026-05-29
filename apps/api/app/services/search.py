@@ -15,6 +15,7 @@ from app.models.search import SearchDocument, SearchLog
 from app.models.social import UserRelationship
 from app.models.user import User
 from app.schemas.forum import TopicSort
+from app.services.topic_cursor import apply_latest_topic_cursor, parse_topic_cursor
 
 LIKE_ESCAPE_PATTERN = re.compile(r"([%_\\])")
 TAG_SEPARATOR_PATTERN = re.compile(r"[^a-z0-9一-鿿_.-]+")
@@ -185,7 +186,7 @@ class SearchService:
         query: str,
         filters: SearchFilters,
         sort: TopicSort = "relevance",
-        cursor: datetime | None = None,
+        cursor: str | datetime | None = None,
         limit: int = 30,
         current_user: User | None = None,
     ) -> list[Topic]:
@@ -250,8 +251,8 @@ class SearchService:
         if filters.status:
             statement = statement.where(Topic.status == filters.status)
 
-        if cursor:
-            statement = statement.where(Topic.last_posted_at < cursor)
+        topic_cursor = parse_topic_cursor(cursor)
+        statement = apply_latest_topic_cursor(statement, topic_cursor)
 
         if sort == "hot":
             statement = statement.order_by(desc(Topic.hot_score), desc(Topic.last_posted_at))

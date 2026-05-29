@@ -630,17 +630,19 @@ class AuthService:
     async def _consume_password_reset_code(
         self, *, email: str, code: str
     ) -> UserSecurityToken:
+        now = utcnow()
         token = await self.session.scalar(
             select(UserSecurityToken)
             .where(
                 UserSecurityToken.purpose == PASSWORD_RESET_PURPOSE,
                 UserSecurityToken.email == email,
                 UserSecurityToken.consumed_at.is_(None),
+                UserSecurityToken.expires_at > now,
             )
-            .order_by(desc(UserSecurityToken.sent_at))
+            .order_by(desc(UserSecurityToken.sent_at), desc(UserSecurityToken.id))
             .limit(1)
         )
-        if not token or _as_utc(token.expires_at) <= utcnow():
+        if not token:
             raise ValidationError("invalid_reset_token", "Password reset token is invalid")
         if token.attempt_count >= self.settings.password_reset_code_max_attempts:
             raise ValidationError("invalid_reset_token", "Password reset token is invalid")

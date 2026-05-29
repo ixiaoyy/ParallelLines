@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, status
@@ -25,6 +24,7 @@ from app.schemas.interactions import (
     TopicNotificationLevelResponse,
 )
 from app.services.forum import ForumService
+from app.services.topic_cursor import encode_topic_cursor
 
 router = APIRouter(prefix="/topics", tags=["topics"])
 
@@ -38,7 +38,7 @@ async def list_topics(
     tag: str | None = None,
     author: str | None = None,
     sort: TopicSort = "latest",
-    cursor: datetime | None = None,
+    cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> ApiResponse[list[TopicResponse]]:
     topics = await ForumService(session).list_topics(
@@ -54,7 +54,7 @@ async def list_topics(
     return ApiResponse(
         data=[TopicResponse.from_model(topic) for topic in topics],
         meta={
-            "next_cursor": topics[-1].last_posted_at.isoformat() if len(topics) == limit else None
+            "next_cursor": encode_topic_cursor(topics[-1]) if len(topics) == limit else None
         },
     )
 

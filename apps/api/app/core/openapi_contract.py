@@ -56,8 +56,8 @@ AUTH_EXAMPLE: dict[str, str] = {
 }
 
 PAGINATION_EXAMPLE: dict[str, Any] = {
-    "request": "GET /api/v1/topics?sort=latest&limit=30&cursor=<iso datetime>",
-    "response_meta": {"next_cursor": "2026-05-25T12:00:00+00:00"},
+    "request": "GET /api/v1/topics?sort=latest&limit=30&cursor=<opaque cursor>",
+    "response_meta": {"next_cursor": "2026-05-25T12:00:00+00:00|123"},
 }
 
 REQUEST_EXAMPLES: list[dict[str, Any]] = [

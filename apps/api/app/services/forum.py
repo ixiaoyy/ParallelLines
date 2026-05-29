@@ -66,6 +66,7 @@ from app.services.search import (
     search_relevance_expression,
 )
 from app.services.spam import SpamPreventionService
+from app.services.topic_cursor import apply_latest_topic_cursor, parse_topic_cursor
 from app.services.uploads import UploadService
 
 SLUG_SEPARATOR_PATTERN = re.compile(r"[^a-z0-9]+")
@@ -525,7 +526,7 @@ class ForumService:
         query: str | None = None,
         tag: str | None = None,
         author: str | None = None,
-        cursor: datetime | None = None,
+        cursor: str | datetime | None = None,
         current_user: User | None = None,
     ) -> list[Topic]:
         statement = (
@@ -564,8 +565,8 @@ class ForumService:
         if author:
             statement = statement.join(Topic.author).where(User.username == author)
 
-        if cursor:
-            statement = statement.where(Topic.last_posted_at < cursor)
+        topic_cursor = parse_topic_cursor(cursor)
+        statement = apply_latest_topic_cursor(statement, topic_cursor)
 
         if sort == "relevance" and relevance is not None:
             statement = statement.order_by(
@@ -584,7 +585,7 @@ class ForumService:
                 desc(Topic.last_posted_at),
             )
         else:
-            statement = statement.order_by(desc(Topic.last_posted_at))
+            statement = statement.order_by(desc(Topic.last_posted_at), desc(Topic.id))
 
         result = await self.session.scalars(statement.distinct().limit(limit))
         topics = list(result)
