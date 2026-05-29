@@ -88,9 +88,14 @@ SMTP_USE_TLS=true
 
 ### 上传、头像与附件
 
-本地默认使用 `UPLOAD_STORAGE_BACKEND=local`，文件保存到 `UPLOAD_STORAGE_PATH=var/uploads`，
+本地默认使用 `UPLOAD_STORAGE_BACKEND=local`，文件保存到 `UPLOAD_STORAGE_PATH=var/uploads`。
+Docker Compose 部署会覆盖容器内路径为 `/var/lib/parallellines/uploads`，并把宿主机固定目录
+`/opt/parallellines/var/uploads` 绑定到该路径，避免镜像重建或命名卷变化导致上传文件不可见。
 发帖上传会返回 `/uploads/{id}/content` 引用，创建/编辑帖子后自动绑定到对应楼层。头像通过
 `POST /api/v1/uploads/avatar` 更新，并会同步到 `/auth/me` 和公开用户资料。
+
+新上传文件按 UTC 年/月切目录，例如 `2026/05/{upload_id}.jpeg`；旧记录中的历史
+`storage_key` 仍按数据库原值读取。
 
 关键限制：
 
@@ -121,8 +126,16 @@ SMTP_USE_TLS=true
 - 配置 `EMAIL_WEBHOOK_SECRET` 后，邮件服务商回调必须传入 `X-Email-Webhook-Secret`。
 - 本地可运行 `uv run python -m app.workers.background_jobs` 处理 `mail`、`notifications` 和 `maintenance` 队列。
 
-当前已预留 `UPLOAD_CDN_BASE_URL` 和 S3 相关配置项；生产本地存储需把
-`UPLOAD_STORAGE_PATH` 挂载到持久化卷。
+当前已预留 `UPLOAD_CDN_BASE_URL` 和 S3 相关配置项；生产本地存储由
+`docker-compose.yml` 固定挂载：
+
+```text
+/opt/parallellines/var/uploads  -> /var/lib/parallellines/uploads
+/opt/parallellines/var/backups  -> /var/lib/parallellines/backups
+```
+
+部署脚本会先创建目录并赋予读写权限；不要执行 `docker-compose down -v` 或
+`docker system prune --volumes` 清理历史命名卷，除非已确认没有待迁移的旧上传文件。
 
 ## Smoke Tests
 

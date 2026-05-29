@@ -1,6 +1,7 @@
 .theme-marketplace-panel {
   display: grid;
   gap: 1rem;
+  min-width: 0;
 }
 
 .section-head {
@@ -8,6 +9,11 @@
   gap: 1rem;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
+}
+
+.section-head > * {
+  min-width: 0;
 }
 
 .panel-kicker {
@@ -37,13 +43,15 @@
 
 .theme-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
   gap: 0.85rem;
+  min-width: 0;
 }
 
 .theme-grid article {
   display: grid;
   gap: 0.65rem;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 0.9rem;
@@ -82,5 +90,15 @@
   .section-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .theme-actions,
+  .marketplace-actions {
+    width: 100%;
+  }
+
+  .theme-actions :deep(.ui-button),
+  .marketplace-actions :deep(.ui-button) {
+    flex: 1 1 9rem;
   }
 }

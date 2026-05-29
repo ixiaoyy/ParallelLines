@@ -1,6 +1,7 @@
 .admin-dashboard-page {
   display: grid;
   gap: 1rem;
+  min-width: 0;
 }
 
 .admin-hero {
@@ -18,6 +19,10 @@
   box-shadow: var(--shadow-card);
 }
 
+.admin-hero > div {
+  min-width: 0;
+}
+
 .admin-hero h1,
 .admin-hero p {
   margin: 0;
@@ -28,6 +33,7 @@
   font-size: clamp(2rem, 4.6vw, 3.8rem);
   line-height: 0.98;
   letter-spacing: -0.065em;
+  overflow-wrap: anywhere;
 }
 
 .admin-hero p {
@@ -35,6 +41,7 @@
   margin-top: 0.55rem;
   color: var(--text);
   line-height: 1.7;
+  overflow-wrap: anywhere;
 }
 
 .hero-link {
@@ -90,6 +97,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
   gap: 1rem;
   align-items: start;
+  min-width: 0;
 }
 
 @media (max-width: 1120px) {
@@ -99,8 +107,31 @@
 }
 
 @media (max-width: 720px) {
+  .admin-dashboard-page {
+    gap: 0.75rem;
+  }
+
   .admin-hero {
     flex-direction: column;
     align-items: flex-start;
+    border-radius: 1.05rem;
+    padding: 1rem;
+  }
+
+  .admin-hero h1 {
+    font-size: clamp(2.05rem, 13vw, 3.1rem);
+    line-height: 1.05;
+    letter-spacing: -0.045em;
+  }
+
+  .admin-hero p {
+    font-size: 0.96rem;
+    line-height: 1.65;
+  }
+
+  .hero-link {
+    display: inline-flex;
+    width: 100%;
+    justify-content: center;
   }
 }

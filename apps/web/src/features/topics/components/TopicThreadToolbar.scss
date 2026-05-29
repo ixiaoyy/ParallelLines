@@ -198,7 +198,8 @@
   right: 0;
   z-index: 12;
   display: grid;
-  min-width: 9.8rem;
+  min-width: 10.8rem;
+  max-width: calc(100vw - 2rem);
   overflow: hidden;
   border: 1px solid rgba(var(--muted-rgb), 0.14);
   border-radius: 0.9rem;
@@ -265,5 +266,9 @@
 
   .toolbar-more {
     margin-left: auto;
+  }
+
+  .toolbar-more-menu {
+    right: -0.2rem;
   }
 }

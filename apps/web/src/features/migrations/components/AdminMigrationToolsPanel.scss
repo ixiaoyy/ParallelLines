@@ -1,6 +1,7 @@
 .admin-migration-tools-panel {
   display: grid;
   gap: 1rem;
+  min-width: 0;
 }
 
 .panel-heading {
@@ -8,6 +9,11 @@
   gap: 1rem;
   align-items: flex-start;
   justify-content: space-between;
+  min-width: 0;
+}
+
+.panel-heading > * {
+  min-width: 0;
 }
 
 .panel-heading h2 {
@@ -32,6 +38,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(16rem, 0.6fr);
   gap: 1rem;
+  min-width: 0;
 }
 
 .json-editor {
@@ -43,6 +50,7 @@
 
 .json-editor textarea {
   width: 100%;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 1rem;
   padding: 0.85rem;
@@ -164,5 +172,13 @@
 
   .panel-heading {
     display: grid;
+  }
+}
+
+@media (max-width: 640px) {
+  .migration-actions button,
+  .secondary-action,
+  .danger-action {
+    width: 100%;
   }
 }

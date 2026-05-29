@@ -250,7 +250,7 @@ function deleteTopic() {
             </button>
             <button type="button" :disabled="lifecyclePending" @click="moveTopic">
               <FolderOpenOutlined aria-hidden="true" />
-              移动
+              更换版块
             </button>
             <button type="button" :disabled="deleteTopicPending" @click="deleteTopic">
               <DeleteOutlined aria-hidden="true" />

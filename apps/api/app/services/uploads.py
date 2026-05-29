@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import quote
 
@@ -329,10 +329,10 @@ def sanitize_filename(filename: str) -> str:
     return sanitized or "upload"
 
 
-def storage_key_for(upload_id: str, extension: str) -> str:
+def storage_key_for(upload_id: str, extension: str, now: datetime | None = None) -> str:
     safe_extension = extension if extension.startswith(".") else f".{extension}"
-    bucket = upload_id[-2:].zfill(2)
-    return f"{bucket}/{upload_id}{safe_extension}"
+    stored_at = now or utcnow()
+    return f"{stored_at:%Y/%m}/{upload_id}{safe_extension}"
 
 
 def sniff_media_type(

@@ -26,5 +26,7 @@ jobs:
             cd /opt/parallellines
             git fetch origin
             git reset --hard origin/main
+            sudo install -d -m 0775 -o root -g root /opt/parallellines/var/uploads /opt/parallellines/var/backups
+            sudo chmod -R u+rwX,g+rwX,o+rX /opt/parallellines/var/uploads /opt/parallellines/var/backups
             sudo docker-compose up -d --build
             sudo docker image prune -f

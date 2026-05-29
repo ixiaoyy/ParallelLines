@@ -51,7 +51,7 @@ Upload storage env:
 | Env | Contract |
 |---|---|
 | `UPLOAD_STORAGE_BACKEND` | `local` for current MVP; `s3` is reserved config and must not be silently treated as local in production docs. |
-| `UPLOAD_STORAGE_PATH` | Local storage root; Docker Compose mounts it as a persistent `upload-data` volume. |
+| `UPLOAD_STORAGE_PATH` | Local storage root; Docker Compose overrides the container path to `/var/lib/parallellines/uploads` and bind-mounts host `/opt/parallellines/var/uploads`. |
 | `UPLOAD_CDN_BASE_URL` | Optional future CDN base URL for public objects. |
 | `UPLOAD_S3_BUCKET` / `UPLOAD_S3_REGION` / `UPLOAD_S3_ENDPOINT_URL` | Reserved S3-compatible object storage config. |
 | `UPLOAD_MAX_BYTES` / `UPLOAD_MAX_AVATAR_BYTES` | Single-file limits for post attachments and avatars. |
@@ -62,7 +62,7 @@ Backup storage env:
 
 | Env | Contract |
 |---|---|
-| `BACKUP_STORAGE_PATH` | Local backup/export archive directory; API and worker must share the same persistent volume. |
+| `BACKUP_STORAGE_PATH` | Local backup/export archive directory; Docker Compose overrides the container path to `/var/lib/parallellines/backups` and bind-mounts host `/opt/parallellines/var/backups`. |
 
 Background worker env:
 
@@ -97,7 +97,7 @@ CI commands:
 - API startup in Compose must run `alembic upgrade head` before serving traffic.
 - Worker image reuses the API build and must not run migrations.
 - API and `worker` must share the same `UPLOAD_STORAGE_PATH` and `BACKUP_STORAGE_PATH`
-  volumes; otherwise DB metadata will point at files the cleanup handler, backup
+  bind-mounted host directories; otherwise DB metadata will point at files the cleanup handler, backup
   handler, or API cannot see.
 - `VITE_API_BASE_URL` is a build-time frontend contract; Docker build args and CI env must set it explicitly when not using the default.
 - CI may start MySQL for isolated migration/smoke gates; Docker Compose deployment uses the
@@ -130,8 +130,8 @@ CI commands:
 | Password-reset unknown email | API still returns `200` with the same shape as known emails; no account existence leak. |
 | Rate-limited write path | API returns `429 rate_limited`; admin-only `spam_actions` records context. |
 | Screened email/IP/URL hit | API returns `403 screening_blocked`; public response does not include matched rule value. |
-| Upload volume missing/mismatched | Uploaded metadata may exist but content route returns `upload_not_found`; Compose must mount shared `upload-data`. |
-| Backup volume missing/mismatched | Backup metadata may be succeeded but download returns `backup_file_not_found`; Compose must mount shared `backup-data`. |
+| Upload volume missing/mismatched | Uploaded metadata may exist but content route returns `upload_not_found`; Compose must mount `/opt/parallellines/var/uploads` into API and worker. |
+| Backup volume missing/mismatched | Backup metadata may be succeeded but download returns `backup_file_not_found`; Compose must mount `/opt/parallellines/var/backups` into API and worker. |
 
 ### 5. Good/Base/Bad Cases
 

@@ -385,14 +385,14 @@ function notificationLevelLabel(level: NotificationLevel): string {
 }
 
 function moveTopic() {
-  const boardSlug = window.prompt("输入目标版块 slug：");
+  const boardSlug = window.prompt("输入目标版块 slug，用于把主题更换到另一个版块：");
   const normalized = boardSlug?.trim();
   if (!normalized) {
     return;
   }
 
   moveTopicMutation.mutate(
-    { board_slug: normalized, note: "从主题页工具栏移动主题" },
+    { board_slug: normalized, note: "从主题页工具栏更换主题版块" },
     {
       onSuccess: (movedTopic) => {
         setToolbarStatus(`主题已移动到 ${movedTopic.board_name}`);

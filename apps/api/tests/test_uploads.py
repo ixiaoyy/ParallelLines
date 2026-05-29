@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import pytest
@@ -211,6 +212,13 @@ async def test_avatar_upload_updates_current_user_and_public_profile(tmp_path: P
         content = await client.get(f"/api/v1{current_user['avatar_url']}")
         assert content.status_code == 200
         assert content.content == PNG_BYTES
+
+    avatar_upload_id = current_user["avatar_url"].split("/")[2]
+    async with session_factory() as session:
+        saved_avatar = await session.get(Upload, avatar_upload_id)
+        assert saved_avatar is not None
+        assert re.fullmatch(r"\d{4}/\d{2}/\d+\.png", saved_avatar.storage_key)
+        assert (tmp_path / saved_avatar.storage_key).is_file()
 
     await engine.dispose()
 
