@@ -12,6 +12,12 @@ import HomeHero from "@/pages/home/components/HomeHero.vue";
 import HomeLeftRail from "@/pages/home/components/HomeLeftRail.vue";
 import HomeTopicFeed from "@/pages/home/components/HomeTopicFeed.vue";
 import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
+import {
+  cacheHomeRailBoards,
+  cacheHomeRailTags,
+  readCachedHomeRailBoards,
+  readCachedHomeRailTags,
+} from "@/pages/home/homeRailCache";
 import { readRouteParam } from "@/shared/router/params";
 
 const activeTab = ref<DiscoveryTab["key"]>("latest");
@@ -25,6 +31,8 @@ const feedSort = computed<TopicSort>(() =>
 const boardsQuery = useBoards();
 const topicsQuery = useTopicFeed(feedSort);
 const tagsQuery = useTags(30);
+const cachedRailBoards = ref(readCachedHomeRailBoards());
+const cachedRailTags = ref(readCachedHomeRailTags());
 
 const titleFilter = computed({
   get: () => readRouteParam(route.query.title as string | string[] | undefined),
@@ -48,8 +56,27 @@ const filteredTopics = computed(() =>
     matchesTitleFilter(topic) && matchesBoardFilter(topic) && matchesTagFilter(topic),
   ),
 );
-const railBoards = computed(() => boardSummaries.value);
-const topTags = computed(() => (tagsQuery.data.value ?? []).slice(0, 10));
+const railBoards = computed(() => {
+  if (boardsQuery.data.value) {
+    return boardSummaries.value;
+  }
+
+  return boardsQuery.isLoading.value ? cachedRailBoards.value : [];
+});
+const topTags = computed(() => {
+  const tags = tagsQuery.data.value;
+  if (tags) {
+    return tags.slice(0, 10);
+  }
+
+  return tagsQuery.isLoading.value ? cachedRailTags.value : [];
+});
+const railBoardsLoading = computed(
+  () => boardsQuery.isLoading.value && cachedRailBoards.value.length === 0,
+);
+const railTagsLoading = computed(
+  () => tagsQuery.isLoading.value && cachedRailTags.value.length === 0,
+);
 
 const visibleTopics = computed(() => {
   const sorted = [...filteredTopics.value];
@@ -75,6 +102,26 @@ watch(
 
     if (hash === "#featured" || hash === "#solved") {
       activeTab.value = "top";
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => boardsQuery.data.value,
+  (boards) => {
+    if (boards) {
+      cachedRailBoards.value = cacheHomeRailBoards(boards);
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => tagsQuery.data.value,
+  (tags) => {
+    if (tags) {
+      cachedRailTags.value = cacheHomeRailTags(tags);
     }
   },
   { immediate: true },
@@ -165,9 +212,9 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
       <HomeLeftRail
         :boards="railBoards"
         :tags="topTags"
-        :boards-loading="boardsQuery.isLoading.value"
+        :boards-loading="railBoardsLoading"
         :boards-error="boardsQuery.isError.value"
-        :tags-loading="tagsQuery.isLoading.value"
+        :tags-loading="railTagsLoading"
         :tags-error="tagsQuery.isError.value"
       />
 

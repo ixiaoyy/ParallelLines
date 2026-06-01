@@ -113,6 +113,7 @@ const blockAuthorMutation = useMutation({
     void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topicId.value) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
     void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:hot") });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:top") });
     void queryClient.invalidateQueries({ queryKey: queryKeys.userTopics(response.target_username) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
   },
@@ -165,6 +166,7 @@ const {
     const response = await setTopicLike(topic.value?.id ?? "", active);
     void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topic.value?.id ?? "") });
     void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:hot") });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:top") });
     return response;
   },
   readActive: (response) => response.active,
@@ -323,6 +325,7 @@ async function voteTopic(nextValue: -1 | 0 | 1) {
     topicVoteCount.value = response.count;
     setToolbarStatus(nextValue === 0 ? "已撤销主题投票" : "主题投票已记录");
     void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topic.value.id) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:top") });
     void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:votes") });
   } catch {
     setToolbarStatus("主题投票失败，请稍后重试");
@@ -427,6 +430,7 @@ function deleteTopic() {
         void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
         void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:hot") });
         void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:top") });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.tagsRoot });
         void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topic.value?.id ?? "") });
         void router.replace({ name: "home" });
       },

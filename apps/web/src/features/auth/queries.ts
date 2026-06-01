@@ -57,6 +57,8 @@ import type {
 } from "./model";
 
 export function useCurrentUser() {
+  const queryClient = useQueryClient();
+
   return useQuery<UserPublic | null, Error>({
     queryKey: queryKeys.currentUser,
     queryFn: async () => {
@@ -69,6 +71,7 @@ export function useCurrentUser() {
       } catch (error) {
         if (isAuthenticationError(error)) {
           clearAuthTokens();
+          resetQueryCacheForAuthChange(queryClient, null);
           return null;
         }
 
@@ -92,7 +95,7 @@ export function useLogin() {
 
       if (response.access_token && response.refresh_token && response.user) {
         setAuthTokens(response.access_token, response.refresh_token);
-        queryClient.setQueryData(queryKeys.currentUser, response.user);
+        resetQueryCacheForAuthChange(queryClient, response.user);
         await queryClient.invalidateQueries({ queryKey: queryKeys.auth });
       }
     },
@@ -132,7 +135,7 @@ export function useLogout() {
     }
 
     clearAuthTokens();
-    queryClient.setQueryData(queryKeys.currentUser, null);
+    resetQueryCacheForAuthChange(queryClient, null);
     await queryClient.invalidateQueries({ queryKey: queryKeys.auth });
   };
 }
@@ -259,8 +262,22 @@ function useTokenPairMutation<TPayload>(
     mutationFn,
     onSuccess: async (tokenPair) => {
       setAuthTokens(tokenPair.access_token, tokenPair.refresh_token);
-      queryClient.setQueryData(queryKeys.currentUser, tokenPair.user);
+      resetQueryCacheForAuthChange(queryClient, tokenPair.user);
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth });
     },
   });
+}
+
+function resetQueryCacheForAuthChange(
+  queryClient: ReturnType<typeof useQueryClient>,
+  currentUser: UserPublic | null,
+) {
+  queryClient.removeQueries({
+    predicate: (query) => !isCurrentUserQuery(query.queryKey),
+  });
+  queryClient.setQueryData(queryKeys.currentUser, currentUser);
+}
+
+function isCurrentUserQuery(queryKey: readonly unknown[]): boolean {
+  return queryKey.length === 2 && queryKey[0] === "auth" && queryKey[1] === "me";
 }

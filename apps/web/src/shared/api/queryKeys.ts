@@ -22,6 +22,7 @@ export const queryKeys = {
   postRevisions: (postId: string) => ["posts", postId, "revisions"] as const,
   postRevision: (postId: string, revisionId: string) =>
     ["posts", postId, "revisions", revisionId] as const,
+  tagsRoot: ["tags"] as const,
   tags: (limit: number) => ["tags", limit] as const,
   invites: ["invites"] as const,
   notifications: ["notifications"] as const,

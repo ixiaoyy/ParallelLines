@@ -5,6 +5,7 @@ import type { MaybeRefOrGetter } from "vue";
 import type { BoardSummary } from "@/entities/board/model";
 import type { TopicCardVM } from "@/entities/topic/model";
 import { toTopicCard } from "@/features/topics/model";
+import { TAXONOMY_QUERY_GC_TIME_MS, TAXONOMY_QUERY_STALE_TIME_MS } from "@/shared/api/queryClient";
 import { queryKeys } from "@/shared/api/queryKeys";
 
 import {
@@ -35,7 +36,8 @@ export function useBoards() {
   return useQuery({
     queryKey: queryKeys.boards,
     queryFn: async () => (await fetchBoards()).map(toBoardSummary),
-    staleTime: 30_000,
+    staleTime: TAXONOMY_QUERY_STALE_TIME_MS,
+    gcTime: TAXONOMY_QUERY_GC_TIME_MS,
   });
 }
 
@@ -52,7 +54,8 @@ export function useBoardDetail(slug: MaybeRefOrGetter<string>) {
       } satisfies BoardDetailVM;
     },
     enabled: computed(() => Boolean(toValue(slug))),
-    staleTime: 30_000,
+    staleTime: TAXONOMY_QUERY_STALE_TIME_MS,
+    gcTime: TAXONOMY_QUERY_GC_TIME_MS,
   });
 }
 
@@ -83,7 +86,8 @@ export function useBoardSettings(
     },
     enabled: computed(() => Boolean(toValue(slug)) && toValue(enabled)),
     retry: false,
-    staleTime: 30_000,
+    staleTime: TAXONOMY_QUERY_STALE_TIME_MS,
+    gcTime: TAXONOMY_QUERY_GC_TIME_MS,
   });
 }
 

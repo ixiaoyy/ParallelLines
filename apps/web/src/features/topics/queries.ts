@@ -125,11 +125,11 @@ export function useCreateTopic() {
     },
     onSuccess: (_topic, variables) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.boards });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tagsRoot });
       void queryClient.invalidateQueries({
         queryKey: queryKeys.topics(`board:${variables.boardSlug}:latest`),
       });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:votes") });
+      invalidateTopicFeedQueries(queryClient);
     },
   });
 }
@@ -149,7 +149,6 @@ export function useSetTopicSolution(topicId: MaybeRefOrGetter<string>) {
     },
     onSuccess: (topic) => {
       invalidateTopicLifecycleQueries(queryClient, topic.id, topic.board_slug);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:votes") });
     },
   });
 }
@@ -217,7 +216,14 @@ function invalidateTopicLifecycleQueries(
 ) {
   void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topicId) });
   void queryClient.invalidateQueries({ queryKey: queryKeys.posts(topicId) });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:votes") });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topics(`board:${boardSlug}:latest`) });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.tagsRoot });
+  invalidateTopicFeedQueries(queryClient);
+}
+
+function invalidateTopicFeedQueries(queryClient: ReturnType<typeof useQueryClient>) {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:hot") });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:top") });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:votes") });
 }
