@@ -13,6 +13,7 @@ import type { RouteLocationRaw } from "vue-router";
 
 import { publicSettingString, siteText } from "@/features/admin/model";
 import { usePublicSiteSettings } from "@/features/admin/queries";
+import type { UserPublic } from "@/features/auth/model";
 import { canAccessModeration, isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser, useLogout } from "@/features/auth/queries";
 import NotificationBell from "@/features/notifications/components/NotificationBell.vue";
@@ -32,6 +33,9 @@ const currentUserQuery = useCurrentUser();
 const siteSettingsQuery = usePublicSiteSettings();
 const logout = useLogout();
 const { locale } = useLocale();
+let profileRoutePrefetched = false;
+let adminRoutePrefetched = false;
+let moderationRoutePrefetched = false;
 const currentUser = computed(() => currentUserQuery.data.value);
 const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
@@ -128,6 +132,16 @@ watch(
   },
 );
 
+watch(
+  currentUser,
+  (user) => {
+    if (user) {
+      scheduleAccountRoutePrefetch(user);
+    }
+  },
+  { immediate: true },
+);
+
 useOutsidePointerDown(topbarRef, closeNavigation, () => isNavOpen.value);
 useOutsidePointerDown(accountMenuRef, closeAccountMenu, () => Boolean(accountMenuRef.value?.open));
 
@@ -158,6 +172,35 @@ function closeAccountMenu() {
   if (accountMenuRef.value) {
     accountMenuRef.value.open = false;
   }
+}
+
+function scheduleAccountRoutePrefetch(user: UserPublic) {
+  scheduleIdleTask(() => {
+    if (!profileRoutePrefetched) {
+      profileRoutePrefetched = true;
+      void import("@/pages/user/UserProfilePage.vue");
+    }
+
+    if (isAdmin(user) && !adminRoutePrefetched) {
+      adminRoutePrefetched = true;
+      void import("@/pages/admin/AdminDashboardPage.vue");
+      return;
+    }
+
+    if (canAccessModeration(user) && !moderationRoutePrefetched) {
+      moderationRoutePrefetched = true;
+      void import("@/pages/admin/ModerationPage.vue");
+    }
+  });
+}
+
+function scheduleIdleTask(callback: () => void) {
+  if (window.requestIdleCallback) {
+    window.requestIdleCallback(callback, { timeout: 2_000 });
+    return;
+  }
+
+  window.setTimeout(callback, 400);
 }
 
 function t(key: string, fallback: string) {

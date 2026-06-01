@@ -30,6 +30,7 @@ import {
   verifyEmail,
   verifyTwoFactorLogin,
 } from "./api";
+import { CURRENT_USER_STALE_TIME_MS } from "./model";
 import type {
   ChangePasswordRequest,
   EmailChangeConfirmRequest,
@@ -79,7 +80,7 @@ export function useCurrentUser() {
       }
     },
     retry: false,
-    staleTime: 60_000,
+    staleTime: CURRENT_USER_STALE_TIME_MS,
   });
 }
 

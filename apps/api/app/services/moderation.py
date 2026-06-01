@@ -397,6 +397,8 @@ class ModerationService:
         data: dict[str, object],
         topic: Topic | None = None,
         post: Post | None = None,
+        source: str = "content_safety",
+        source_summary: str = "Content matched a pending-review safety rule",
     ) -> Reviewable:
         title = str(data.get("title") or data.get("topic_title") or "Content pending review")
         excerpt = str(sanitized_fields.get("raw_md") or sanitized_fields.get("title") or title)[
@@ -406,8 +408,8 @@ class ModerationService:
             type=reviewable_type,
             status="pending",
             priority=review_priority_for_trust(80, current_user.trust_level),
-            source="content_safety",
-            source_summary="Content matched a pending-review safety rule",
+            source=source,
+            source_summary=source_summary,
             target_type="post" if post else ("topic" if topic else None),
             target_id=post.id if post else (topic.id if topic else None),
             board_id=board.id,

@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import type { RouteLocationNormalized } from "vue-router";
 
 import { fetchCurrentUser } from "@/features/auth/api";
-import type { UserPublic } from "@/features/auth/model";
+import { CURRENT_USER_STALE_TIME_MS, type UserPublic } from "@/features/auth/model";
 import { canAccessModeration, isAdmin } from "@/features/auth/permissions";
 import { clearAuthTokens, hasAccessToken, isAuthenticationError } from "@/shared/api/client";
 import { queryClient } from "@/shared/api/queryClient";
@@ -192,12 +192,22 @@ async function loadCurrentUserForRoute(): Promise<UserPublic | null> {
     return null;
   }
 
+  const cachedUser = queryClient.getQueryData<UserPublic | null>(queryKeys.currentUser);
+  const cachedUserState = queryClient.getQueryState(queryKeys.currentUser);
+  if (
+    cachedUser &&
+    cachedUserState?.dataUpdatedAt &&
+    Date.now() - cachedUserState.dataUpdatedAt < CURRENT_USER_STALE_TIME_MS
+  ) {
+    return cachedUser;
+  }
+
   try {
     return await queryClient.fetchQuery({
       queryKey: queryKeys.currentUser,
       queryFn: fetchCurrentUser,
       retry: false,
-      staleTime: 0,
+      staleTime: CURRENT_USER_STALE_TIME_MS,
     });
   } catch (error) {
     if (isAuthenticationError(error)) {

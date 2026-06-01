@@ -1,6 +1,8 @@
 export type UserRole = "user" | "moderator" | "admin" | string;
 export type UserStatus = "active" | "silenced" | "suspended" | "deleted" | string;
 
+export const CURRENT_USER_STALE_TIME_MS = 5 * 60_000;
+
 export interface UserPublic {
   id: string;
   username: string;
