@@ -51,7 +51,7 @@ export const BOARD_PALETTE: BoardToneDefinition[] = [
   },
   {
     tone: 4,
-    slugs: ["announcements", "official"],
+    slugs: ["announcements", "official", "memory-notes"],
     accent: "#ca8a04",
     accentRgb: "234, 179, 8",
     tintBg: "color-mix(in srgb, #fefce8 84%, #ffffff)",

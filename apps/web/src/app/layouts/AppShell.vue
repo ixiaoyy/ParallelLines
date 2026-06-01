@@ -20,6 +20,7 @@ import NotificationBell from "@/features/notifications/components/NotificationBe
 import PluginSlot from "@/features/plugins/components/PluginSlot.vue";
 import { useLocale } from "@/shared/i18n/locale";
 import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
+import { readRouteParam } from "@/shared/router/params";
 import UiButton from "@/shared/ui/Button.vue";
 import { applySiteBranding } from "@/shared/theme/siteBranding";
 
@@ -50,6 +51,11 @@ const brandHomeLabel = computed(() => t("brand.home_aria", "返回首页"));
 const adminLinkTarget = computed<RouteLocationRaw>(() =>
   isAdmin(currentUser.value) ? { name: "admin-dashboard" } : { name: "admin-moderation" },
 );
+// publishLinkTarget 用途：顶部发布入口在版块页携带当前版块 slug；无参数，返回 Vue Router 目标对象且无副作用。
+const publishLinkTarget = computed<RouteLocationRaw>(() => {
+  const boardSlug = route.name === "board-detail" ? readRouteParam(route.params.slug) : "";
+  return boardSlug ? { name: "new-topic", query: { board: boardSlug } } : { name: "new-topic" };
+});
 const adminLinkLabel = computed(() =>
   isAdmin(currentUser.value) ? t("nav.admin", "后台") : t("nav.moderation", "审核"),
 );
@@ -378,7 +384,7 @@ function isNavItemActive(item: NavItem) {
             </div>
           </details>
         </template>
-        <RouterLink class="publish-link" :to="{ name: 'new-topic' }" :aria-label="t('topic.publish_aria', '发布主题')">
+        <RouterLink class="publish-link" :to="publishLinkTarget" :aria-label="t('topic.publish_aria', '发布主题')">
           <UiButton tone="primary">
             <template #icon>
               <PlusOutlined />

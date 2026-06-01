@@ -2,17 +2,10 @@
 import {
   SearchOutlined,
   CheckCircleOutlined,
-  CompassOutlined,
-  FileTextOutlined,
   FireOutlined,
-  HeartOutlined,
   HistoryOutlined,
-  QuestionCircleOutlined,
-  RightOutlined,
   StarFilled,
   StarOutlined,
-  TeamOutlined,
-  BulbOutlined,
 } from "@ant-design/icons-vue";
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -27,7 +20,6 @@ import type { NotificationLevel } from "@/features/notifications/model";
 import TopicList from "@/features/topics/components/TopicList.vue";
 import { useBoardTopics } from "@/features/topics/queries";
 import { hasAccessToken } from "@/shared/api/client";
-import { compactNumber } from "@/shared/lib/format";
 import { readRouteParam } from "@/shared/router/params";
 import { useSeoMeta } from "@/shared/seo/meta";
 import { boardToneClass } from "@/shared/theme/boardPalette";
@@ -94,10 +86,10 @@ function getSortIcon(key: string) {
   return CheckCircleOutlined;
 }
 
-const sortTabs: Array<{ key: BoardSort; label: string; helper: string }> = [
-  { key: "latest", label: "最新", helper: "按最后回复时间" },
-  { key: "hot", label: "热门", helper: "按热度与讨论" },
-  { key: "top", label: "精华", helper: "按赞同与回复" },
+const sortTabs: Array<{ key: BoardSort; label: string }> = [
+  { key: "latest", label: "最新" },
+  { key: "hot", label: "热门" },
+  { key: "top", label: "精华" },
 ];
 
 const statusFilters: Array<{ key: TopicStatusFilter; label: string }> = [
@@ -106,6 +98,7 @@ const statusFilters: Array<{ key: TopicStatusFilter; label: string }> = [
   { key: "unanswered", label: "未回复" },
   { key: "official", label: "官方回复" },
 ];
+const answerFilterBoardSlugs = new Set(["qna", "questions", "support"]);
 
 const route = useRoute();
 const router = useRouter();
@@ -194,26 +187,11 @@ const activeStatus = computed<TopicStatusFilter>({
 });
 
 const activeTab = computed(() => sortTabs.find((tab) => tab.key === activeSort.value) ?? sortTabs[0]);
+// showAnswerFilters 用途：仅问答/支持类版块显示解答状态筛选；无参数，返回布尔值且无副作用。
+const showAnswerFilters = computed(() => answerFilterBoardSlugs.has(slug.value));
 const topicsQuery = useBoardTopics(slug, activeSort);
-const boardNotificationCopy = computed(() => {
-  if (!followingBoard.value) {
-    return "关注此版块，不错过任何新主题";
-  }
-
-  if (boardNotificationLevel.value === "muted") {
-    return "已静音此版块，新主题不会打扰你";
-  }
-
-  if (boardNotificationLevel.value === "tracking") {
-    return "已跟踪此版块，只接收精简通知";
-  }
-
-  if (boardNotificationLevel.value === "normal") {
-    return "已加入版块，但不主动推送新主题";
-  }
-
-  return "已开启版块通知，新主题发布时将通知您";
-});
+// hasSidebar 用途：判断当前版块页是否需要右侧管理/子版块栏；无参数，返回布尔值且无副作用。
+const hasSidebar = computed(() => Boolean(board.value?.childBoards.length) || canManageBoard.value);
 
 const allBoardTopics = computed(() => topicsQuery.data.value ?? board.value?.latestTopics ?? []);
 
@@ -239,6 +217,7 @@ const boardTopics = computed(() => {
       ? `${topic.title} ${topic.excerpt} ${topic.tags.join(" ")}`.toLocaleLowerCase().includes(keyword)
       : true;
     const matchesStatus =
+      !showAnswerFilters.value ||
       activeStatus.value === "all" ||
       (activeStatus.value === "solved" && topic.solved) ||
       (activeStatus.value === "unanswered" && topic.replyCount === 0) ||
@@ -248,44 +227,21 @@ const boardTopics = computed(() => {
   });
 });
 
-const quickLinks = computed(() => [
-  {
-    label: "接口文档",
-    description: "查看接口规范与示例",
-    icon: FileTextOutlined,
-    to: { name: "search", query: { q: "接口文档", board: slug.value } },
-  },
-  {
-    label: "常见问题",
-    description: "汇总高频问题与方案",
-    icon: BulbOutlined,
-    to: { name: "board-detail", params: { slug: slug.value }, query: { sort: "top" } },
-  },
-  {
-    label: "发帖说明",
-    description: "查看发帖模板与版块说明",
-    icon: CompassOutlined,
-    to: { name: "search", query: { q: "发帖模板", tag: "发帖模板" } },
-  },
-]);
-
-const solutionStats = computed(() => {
-  const topicsInBoard = allBoardTopics.value;
-
-  return [
-    { label: "已解决", value: compactNumber(topicsInBoard.filter((topic) => topic.solved).length), helper: "可直接比对" },
-    { label: "未回复", value: compactNumber(topicsInBoard.filter((topic) => topic.replyCount === 0).length), helper: "等待解答" },
-    { label: "官方回复", value: compactNumber(topicsInBoard.filter((topic) => topic.officialReply).length), helper: "团队已介入" },
-    { label: "关注者", value: compactNumber(followerCount.value), helper: followingBoard.value ? "正在接收通知" : "可一键关注" },
-  ];
-});
-
+// searchPlaceholder 用途：根据版块类型生成主题搜索框提示；无参数，返回展示文案且无副作用。
 const searchPlaceholder = computed(() => {
-  if (slug.value === "support") {
-    return "搜索错误码、日志、OIDC、升级失败……";
+  if (showAnswerFilters.value) {
+    return "搜索问题、错误码或日志片段";
   }
 
-  return "搜索主题、标签、接口名或问题现象";
+  return "搜索帖子标题或标签";
+});
+// emptyTopicDescription 用途：根据搜索和发帖权限生成空列表提示；无参数，返回展示文案且无副作用。
+const emptyTopicDescription = computed(() => {
+  if (searchQuery.value) {
+    return "换个关键词再搜，或清除搜索查看全部帖子。";
+  }
+
+  return board.value?.canCreateTopic ? "发布第一篇帖子，或稍后再来看看。" : "稍后再来看看。";
 });
 
 function boardMark(name: string) {
@@ -411,59 +367,12 @@ async function updateBoardNotificationLevel(event: Event) {
                 </label>
               </div>
             </div>
-            <p class="board-desc">{{ board.description }}</p>
-            <p class="board-notice">
-              <span class="notice-dot"></span>
-              {{ boardNotificationCopy }}
-            </p>
           </div>
         </div>
 
-        <div class="board-hero__signals" aria-label="解答信号">
-          <div class="signal-card signal-card--solved">
-            <div class="signal-icon-wrapper">
-              <CheckCircleOutlined />
-            </div>
-            <div class="signal-info">
-              <span class="signal-label">已解决</span>
-              <strong class="signal-value">{{ solutionStats[0].value }}</strong>
-              <span class="signal-helper">可直接比对</span>
-            </div>
-          </div>
-          <div class="signal-card signal-card--unanswered">
-            <div class="signal-icon-wrapper">
-              <QuestionCircleOutlined />
-            </div>
-            <div class="signal-info">
-              <span class="signal-label">未回复</span>
-              <strong class="signal-value">{{ solutionStats[1].value }}</strong>
-              <span class="signal-helper">等待解答</span>
-            </div>
-          </div>
-          <div class="signal-card signal-card--official">
-            <div class="signal-icon-wrapper">
-              <TeamOutlined />
-            </div>
-            <div class="signal-info">
-              <span class="signal-label">官方回复</span>
-              <strong class="signal-value">{{ solutionStats[2].value }}</strong>
-              <span class="signal-helper">团队已介入</span>
-            </div>
-          </div>
-          <div class="signal-card signal-card--followers">
-            <div class="signal-icon-wrapper">
-              <HeartOutlined />
-            </div>
-            <div class="signal-info">
-              <span class="signal-label">关注者</span>
-              <strong class="signal-value">{{ solutionStats[3].value }}</strong>
-              <span class="signal-helper">{{ followingBoard ? '正在接收通知' : '可一键关注' }}</span>
-            </div>
-          </div>
-        </div>
       </section>
 
-      <div class="board-layout" :class="boardToneClass(board.slug)">
+      <div class="board-layout" :class="[boardToneClass(board.slug), { 'board-layout--single': !hasSidebar }]">
         <main class="board-main" aria-label="版块主题列表">
           <section class="board-toolbar" aria-label="主题筛选">
             <div class="board-tabs" aria-label="排序方式">
@@ -478,7 +387,6 @@ async function updateBoardNotificationLevel(event: Event) {
                   <component :is="getSortIcon(tab.key)" class="tab-icon" />
                   <div class="tab-text">
                     <strong>{{ tab.label }}</strong>
-                    <span>{{ tab.helper }}</span>
                   </div>
                 </div>
               </button>
@@ -496,7 +404,7 @@ async function updateBoardNotificationLevel(event: Event) {
                 />
               </div>
 
-              <div class="status-filters" aria-label="解答状态">
+              <div v-if="showAnswerFilters" class="status-filters" aria-label="解答状态">
                 <button
                   v-for="filter in statusFilters"
                   :key="filter.key"
@@ -511,9 +419,9 @@ async function updateBoardNotificationLevel(event: Event) {
           </section>
 
           <div class="board-feed-heading">
-            <h2>{{ board.name }}主题</h2>
+            <h2>{{ board.name }}帖子</h2>
             <span>
-              {{ activeTab.label }} · {{ activeTab.helper }} · {{ boardTopics.length }} / {{ allBoardTopics.length }} 条
+              {{ activeTab.label }}
               {{ searchQuery ? `· 搜索 “${searchQuery}”` : "" }}
             </span>
           </div>
@@ -521,34 +429,17 @@ async function updateBoardNotificationLevel(event: Event) {
           <UiCard v-if="topicsQuery.isError.value" class="board-state board-state--error" role="alert">
             主题列表暂时加载失败，请稍后刷新。
           </UiCard>
-          <TopicList :topics="boardTopics" />
+          <TopicList
+            :topics="boardTopics"
+            empty-title="还没有帖子"
+            :empty-description="emptyTopicDescription"
+          />
         </main>
 
-        <aside class="board-sidebar" aria-label="版块信息">
-          <UiCard class="sidebar-panel rules-panel">
-            <span class="panel-kicker">提问前自检</span>
-            <h2>先让答案更快出现</h2>
-            <p v-if="board.requiredTags.length" class="board-policy-copy">
-              必填标签：{{ board.requiredTags.map((tag) => `#${tag}`).join(" ") }}
-            </p>
-            <ol>
-              <li>先搜错误码、接口名、日志片段。</li>
-              <li>优先阅读“已解决”和“官方回复”。</li>
-              <li v-if="board.canCreateTopic">仍未命中时，发布新问题并附环境、复现步骤、期望结果。</li>
-              <li v-else>此版块仅管理员可发布新主题；普通用户可以浏览、回复、收藏和复制链接。</li>
-            </ol>
-            <RouterLink
-              v-if="board.canCreateTopic"
-              class="ask-link"
-              :to="{ name: 'new-topic', query: { board: slug } }"
-            >
-              发布新问题
-            </RouterLink>
-          </UiCard>
-
+        <aside v-if="hasSidebar" class="board-sidebar" aria-label="版块信息">
           <UiCard v-if="board.childBoards.length" class="sidebar-panel child-board-panel">
             <span class="panel-kicker">子版块</span>
-            <h2>继续细分讨论范围</h2>
+            <h2>相关版块</h2>
             <RouterLink
               v-for="child in board.childBoards"
               :key="child.id"
@@ -560,27 +451,6 @@ async function updateBoardNotificationLevel(event: Event) {
           </UiCard>
 
           <BoardSettingsPanel v-if="canManageBoard" :board="board" />
-
-          <UiCard class="sidebar-panel quick-links-panel">
-            <h2>快捷入口</h2>
-            <div class="quick-links">
-              <RouterLink
-                v-for="entry in quickLinks"
-                :key="entry.label"
-                class="quick-link-item"
-                :to="entry.to"
-              >
-                <div class="quick-link-icon-wrapper">
-                  <component :is="entry.icon" class="quick-link-icon" />
-                </div>
-                <div class="quick-link-text">
-                  <h3>{{ entry.label }}</h3>
-                  <p>{{ entry.description }}</p>
-                </div>
-                <RightOutlined class="quick-link-arrow" />
-              </RouterLink>
-            </div>
-          </UiCard>
         </aside>
       </div>
     </template>

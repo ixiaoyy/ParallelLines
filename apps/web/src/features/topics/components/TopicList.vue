@@ -2,7 +2,17 @@
 import type { TopicCardVM } from "@/entities/topic/model";
 import TopicCard from "@/features/topics/components/TopicCard.vue";
 
-defineProps<{ topics: TopicCardVM[] }>();
+withDefaults(
+  defineProps<{
+    topics: TopicCardVM[];
+    emptyTitle?: string;
+    emptyDescription?: string;
+  }>(),
+  {
+    emptyTitle: "还没有帖子",
+    emptyDescription: "可以稍后再来看看。",
+  },
+);
 </script>
 
 <template>
@@ -20,8 +30,8 @@ defineProps<{ topics: TopicCardVM[] }>();
     </div>
 
     <div v-else class="topic-list-empty">
-      <strong>没有符合条件的主题</strong>
-      <span>清除筛选或换一个错误码、接口名再试。</span>
+      <strong>{{ emptyTitle }}</strong>
+      <span>{{ emptyDescription }}</span>
     </div>
 
     <footer v-if="topics.length" class="topic-list-footer">
