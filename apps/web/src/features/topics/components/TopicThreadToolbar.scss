@@ -114,36 +114,6 @@
   line-height: 1;
 }
 
-.topic-vote-strip {
-  display: inline-flex;
-  gap: 0.1rem;
-  align-items: center;
-  border: 1px solid rgba(var(--primary-rgb), 0.12);
-  border-radius: 999px;
-  padding: 0.18rem 0.3rem;
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.topic-vote-strip strong {
-  min-width: 1.45rem;
-  color: var(--title);
-  font-size: 0.82rem;
-  font-weight: 880;
-  text-align: center;
-}
-
-.topic-vote-strip span {
-  color: var(--muted);
-  font-size: 0.7rem;
-  font-weight: 820;
-}
-
-.toolbar-icon-button--vote {
-  min-width: 1.72rem;
-  min-height: 1.72rem;
-  padding: 0;
-}
-
 .notification-control {
   display: inline-flex;
   gap: 0.28rem;

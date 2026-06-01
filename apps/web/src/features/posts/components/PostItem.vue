@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import {
-  ArrowDownOutlined,
-  ArrowUpOutlined,
   CheckCircleOutlined,
   CodeOutlined,
   DeleteOutlined,
@@ -19,7 +17,7 @@ import {
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import type { PostItemVM } from "@/entities/post/model";
-import { setPostLike, setPostVote } from "@/features/interactions/api";
+import { setPostLike } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
 import ReportModal from "@/features/moderation/components/ReportModal.vue";
 import {
@@ -61,10 +59,6 @@ const historyOpen = ref(false);
 const reportModalOpen = ref(false);
 const bodyRef = ref<HTMLElement | null>(null);
 const postMoreRef = ref<HTMLDetailsElement | null>(null);
-const voteValue = ref(props.post.myVote);
-const voteScore = ref(props.post.voteScore);
-const voteCount = ref(props.post.voteCount);
-const votePending = ref(false);
 const firstCodeText = computed(() => extractFirstCodeText(props.post.cookedHtml));
 const hasCodeBlock = computed(() => firstCodeText.value.length > 0);
 const isOwnPost = computed(() => Boolean(props.currentUserId && props.currentUserId === props.post.userId));
@@ -135,19 +129,6 @@ onMounted(() => {
 
 useOutsidePointerDown(postMoreRef, closeMoreMenu, () => Boolean(postMoreRef.value?.open));
 
-watch(
-  () => [props.post.myVote, props.post.voteScore, props.post.voteCount] as const,
-  ([myVote, score, count]) => {
-    if (votePending.value) {
-      return;
-    }
-
-    voteValue.value = myVote;
-    voteScore.value = score;
-    voteCount.value = count;
-  },
-);
-
 async function copyCode() {
   if (!firstCodeText.value) {
     return;
@@ -161,29 +142,6 @@ async function copyCode() {
 function quotePost() {
   emit("quote", props.post);
   setStatus("已插入引用");
-}
-
-async function votePost(nextValue: -1 | 0 | 1) {
-  if (votePending.value) {
-    return;
-  }
-  if (!hasAccessToken()) {
-    requestLogin("请先登录后再投票。");
-    return;
-  }
-  const value = voteValue.value === nextValue ? 0 : nextValue;
-  votePending.value = true;
-  try {
-    const response = await setPostVote(props.post.id, value);
-    voteValue.value = response.value;
-    voteScore.value = response.score;
-    voteCount.value = response.count;
-    setStatus(value === 0 ? "已撤销投票" : "投票已记录");
-  } catch {
-    setStatus("投票失败，请稍后重试");
-  } finally {
-    votePending.value = false;
-  }
 }
 
 function toggleSolution() {
@@ -450,34 +408,6 @@ function decorateHeadingAnchors() {
       <div v-else class="markdown-body" v-html="post.cookedHtml" />
       <p v-if="statusMessage" class="post-status" role="status">{{ statusMessage }}</p>
       <footer v-if="!post.deleted" class="post-action-bar">
-        <div class="score-vote" aria-label="楼层赞成反对投票">
-          <button
-            class="icon-action icon-action--vote"
-            :class="{ 'is-active': voteValue === 1 }"
-            type="button"
-            title="赞成"
-            aria-label="赞成这个楼层"
-            :aria-pressed="voteValue === 1"
-            :disabled="votePending"
-            @click="votePost(1)"
-          >
-            <ArrowUpOutlined aria-hidden="true" />
-          </button>
-          <strong>{{ voteScore }}</strong>
-          <button
-            class="icon-action icon-action--vote"
-            :class="{ 'is-danger-active': voteValue === -1 }"
-            type="button"
-            title="反对"
-            aria-label="反对这个楼层"
-            :aria-pressed="voteValue === -1"
-            :disabled="votePending"
-            @click="votePost(-1)"
-          >
-            <ArrowDownOutlined aria-hidden="true" />
-          </button>
-          <span v-if="voteCount">{{ voteCount }}</span>
-        </div>
         <button
           class="icon-action"
           :class="{ 'is-active': liked }"

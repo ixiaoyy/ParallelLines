@@ -47,7 +47,7 @@ async function handleFileChange(event: Event) {
   try {
     const upload = await uploadMutation.mutateAsync({ file, kind: "post_attachment" });
     emit("insert", toMarkdownUpload(upload, getApiUrl(upload.url)));
-    statusMessage.value = `${upload.original_filename} 已上传，引用已插入正文。`;
+    statusMessage.value = `${upload.original_filename} 已上传`;
   } catch (error) {
     statusMessage.value = uploadErrorMessage(error);
   }

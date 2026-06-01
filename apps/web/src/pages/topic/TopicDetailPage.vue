@@ -5,7 +5,7 @@ import { useRoute, useRouter } from "vue-router";
 
 import type { PostItemVM } from "@/entities/post/model";
 import { useCurrentUser } from "@/features/auth/queries";
-import { setTopicBookmark, setTopicLike, setTopicVote } from "@/features/interactions/api";
+import { setTopicBookmark, setTopicLike } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
 import ReportModal from "@/features/moderation/components/ReportModal.vue";
 import { useContentModerationMutation, useCreateFlag } from "@/features/moderation/queries";
@@ -72,10 +72,6 @@ const onlyAuthor = ref(false);
 const toolbarStatus = ref("");
 const replyStatus = ref("");
 const replyResetToken = ref(0);
-const topicVoteValue = ref(0);
-const topicVoteScore = ref(0);
-const topicVoteCount = ref(0);
-const topicVotePending = ref(false);
 const currentUserId = computed(() => currentUserQuery.data.value?.id ?? null);
 const currentUserRole = computed(() => currentUserQuery.data.value?.role ?? null);
 const canManageTopic = computed(
@@ -184,24 +180,9 @@ const topicStats = computed(() => {
     { label: "回复", value: compactNumber(topic.value.replyCount) },
     { label: "浏览", value: compactNumber(topic.value.viewCount) },
     { label: "赞同", value: compactNumber(topicLikeCount.value) },
-    { label: "投票", value: compactNumber(topicVoteScore.value) },
     { label: "热度", value: String(topic.value.hotScore) },
   ];
 });
-
-watch(
-  topic,
-  (current) => {
-    if (!current || topicVotePending.value) {
-      return;
-    }
-
-    topicVoteValue.value = current.myVote;
-    topicVoteScore.value = current.voteScore;
-    topicVoteCount.value = current.voteCount;
-  },
-  { immediate: true },
-);
 
 watch(
   topic,
@@ -304,34 +285,6 @@ function setTopicNotificationLevel(level: NotificationLevel) {
 function toggleQaSort() {
   postSort.value = postSort.value === "qa" ? "chronological" : "qa";
   setToolbarStatus(postSort.value === "qa" ? "已切换为问答排序" : "已按发布时间排序");
-}
-
-async function voteTopic(nextValue: -1 | 0 | 1) {
-  if (!topic.value?.id || topicVotePending.value) {
-    return;
-  }
-
-  if (!hasAccessToken()) {
-    setToolbarStatus("请先登录后再给主题投票。");
-    void router.push({ name: "auth", query: { redirect: route.fullPath } });
-    return;
-  }
-
-  topicVotePending.value = true;
-  try {
-    const response = await setTopicVote(topic.value.id, nextValue);
-    topicVoteValue.value = response.value;
-    topicVoteScore.value = response.score;
-    topicVoteCount.value = response.count;
-    setToolbarStatus(nextValue === 0 ? "已撤销主题投票" : "主题投票已记录");
-    void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topic.value.id) });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:top") });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:votes") });
-  } catch {
-    setToolbarStatus("主题投票失败，请稍后重试");
-  } finally {
-    topicVotePending.value = false;
-  }
 }
 
 function togglePostSolution(post: PostItemVM) {
@@ -599,10 +552,6 @@ function flagTopic() {
               :topic-liked="topicLiked"
               :topic-like-count="topicLikeCount"
               :topic-like-pending="topicLikePending"
-              :topic-vote-score="topicVoteScore"
-              :topic-vote-count="topicVoteCount"
-              :topic-vote-value="topicVoteValue"
-              :topic-vote-pending="topicVotePending"
               :can-flag-topic="canFlagTopic"
               :flag-topic-pending="flagTopicPending"
               :can-manage-topic="canManageTopic"
@@ -618,7 +567,6 @@ function flagTopic() {
               @toggle-qa-sort="toggleQaSort"
               @toggle-bookmark="toggleBookmark"
               @toggle-topic-like="toggleTopicLike"
-              @vote-topic="voteTopic"
               @copy-link="copyTopicLink"
               @open-invites="openInviteCenter"
               @flag-topic="flagTopic"

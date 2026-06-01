@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { MdEditor } from "md-editor-v3";
+import type { ToolbarNames } from "md-editor-v3";
+import "md-editor-v3/lib/style.css";
+import DOMPurify from "dompurify";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import { lookupDraft } from "@/features/drafts/api";
@@ -13,17 +17,12 @@ import { isApiErrorCode } from "@/shared/api/errors";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
-import {
-  buildComposerPreview,
-  CODE_LANGUAGE_OPTIONS,
-  COMPOSER_EMOJI_OPTIONS,
-  type ComposerCodeBlock,
-} from "../composerRichText";
-
 interface ReplyDraft {
   body: string;
   version: number;
 }
+
+type UploadImageCallback = (images: Array<{ url: string; alt: string; title: string }>) => void;
 
 const props = withDefaults(
   defineProps<{
@@ -54,54 +53,38 @@ const uploadMutation = useUploadFile();
 const draft = ref("");
 const title = ref("");
 const tags = ref("fastapi, 排障");
-const draftTextarea = ref<HTMLTextAreaElement | null>(null);
-const selectedCodeLanguage = ref("ts");
-const showEmojiPicker = ref(false);
 const isDragActive = ref(false);
 const uploadStatusMessage = ref("");
-const codeCopyStatus = ref("");
 
 const currentVersion = ref(1);
 const showConflictBanner = ref(false);
 const isSaving = ref(false);
 let isRestoring = false;
 
+const editorToolbars: ToolbarNames[] = [
+  "bold",
+  "italic",
+  "strikeThrough",
+  "quote",
+  "unorderedList",
+  "orderedList",
+  "codeRow",
+  "code",
+  "link",
+  "image",
+  "table",
+  "revoke",
+  "next",
+  "preview",
+  "fullscreen",
+];
+const editorFooters: [] = [];
+
 const isReplyMode = computed(() => props.mode === "reply");
 const heading = computed(() => (isReplyMode.value ? "回复这个主题" : "发一条新主题"));
-const helper = computed(() =>
-  isReplyMode.value
-    ? "引用具体楼层、补充环境和验证结果，帮助后来者读懂脉络。"
-    : "把现象、环境和你试过的方法写清楚，在线的人更容易接上。",
-);
 const placeholder = computed(() =>
   isReplyMode.value ? "输入回复内容" : "输入正文",
 );
-const composerPreview = computed(() => buildComposerPreview(draft.value));
-const previewHtml = computed(() => composerPreview.value.html);
-const previewFallback = computed(() =>
-  isReplyMode.value ? "回复预览会显示在这里。" : "支持 Markdown、拖拽上传、链接预览和代码高亮。",
-);
-const previewStats = computed(() => {
-  const preview = composerPreview.value;
-  const parts = [`${preview.characterCount} 字符`];
-  if (preview.oneboxes.length) {
-    parts.push(`${preview.oneboxes.length} 个链接预览`);
-  }
-  if (preview.codeBlocks.length) {
-    parts.push(`${preview.codeBlocks.length} 段代码`);
-  }
-  return parts.join(" · ");
-});
-const autosaveStatus = computed(() => {
-  if (isSaving.value || saveDraftMutation.isPending.value) {
-    return "草稿同步中…";
-  }
-  if (hasAccessToken() && targetId.value) {
-    return `服务端草稿 v${currentVersion.value}`;
-  }
-  return "本地草稿已启用";
-});
-
 const canSubmit = computed(() => draft.value.trim().length > 0 && !props.submitting);
 
 const targetId = computed(() => {
@@ -149,92 +132,8 @@ function handleSubmit() {
 }
 
 function insertMarkdownUpload(markdown: string) {
-  insertMarkdownBlock(markdown);
-}
-
-function insertEmoji(value: string) {
-  insertMarkdownInline(value, value.length);
-  showEmojiPicker.value = false;
-}
-
-function wrapSelection(prefix: string, suffix: string, fallback: string) {
-  const textarea = draftTextarea.value;
-  const start = textarea?.selectionStart ?? draft.value.length;
-  const end = textarea?.selectionEnd ?? start;
-  const selected = draft.value.slice(start, end) || fallback;
-  const replacement = `${prefix}${selected}${suffix}`;
-  replaceSelection(replacement, prefix.length, prefix.length + selected.length, start, end);
-}
-
-function insertLink() {
-  wrapSelection("[", "](https://example.com)", "链接文字");
-}
-
-function insertQuote() {
-  const selected = selectedText() || "引用文字";
-  const quoted = selected
-    .split("\n")
-    .map((line) => `> ${line || "引用文字"}`)
-    .join("\n");
-  insertMarkdownBlock(quoted);
-}
-
-function insertList() {
-  const selected = selectedText();
-  const list = selected
-    ? selected
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => `- ${line}`)
-        .join("\n")
-    : "- 第一项\n- 第二项";
-  insertMarkdownBlock(list);
-}
-
-function insertCodeBlock() {
-  const selected = selectedText() || "console.log('hello parallellines')";
-  const language = selectedCodeLanguage.value || "text";
-  insertMarkdownBlock(`\`\`\`${language}\n${selected}\n\`\`\``);
-}
-
-function insertMarkdownInline(markdown: string, cursorOffset = markdown.length) {
-  const textarea = draftTextarea.value;
-  const start = textarea?.selectionStart ?? draft.value.length;
-  const end = textarea?.selectionEnd ?? start;
-  replaceSelection(markdown, cursorOffset, cursorOffset, start, end);
-}
-
-function insertMarkdownBlock(markdown: string) {
-  const textarea = draftTextarea.value;
-  const start = textarea?.selectionStart ?? draft.value.length;
-  const end = textarea?.selectionEnd ?? start;
-  const before = draft.value.slice(0, start);
-  const after = draft.value.slice(end);
-  const leadingBreak = before && !before.endsWith("\n") ? "\n\n" : "";
-  const trailingBreak = after && !after.startsWith("\n") ? "\n\n" : "";
-  const insert = `${leadingBreak}${markdown}${trailingBreak}`;
-  replaceSelection(insert, insert.length, insert.length, start, end);
-}
-
-function replaceSelection(markdown: string, cursorStartOffset: number, cursorEndOffset: number, start: number, end: number) {
-  const textarea = draftTextarea.value;
-  const before = draft.value.slice(0, start);
-  const after = draft.value.slice(end);
-  draft.value = `${before}${markdown}${after}`;
-  const cursorStart = before.length + cursorStartOffset;
-  const cursorEnd = before.length + cursorEndOffset;
-  void nextTick(() => {
-    textarea?.focus();
-    textarea?.setSelectionRange(cursorStart, cursorEnd);
-  });
-}
-
-function selectedText() {
-  const textarea = draftTextarea.value;
-  if (!textarea) {
-    return "";
-  }
-  return draft.value.slice(textarea.selectionStart, textarea.selectionEnd);
+  const before = draft.value.trimEnd();
+  draft.value = before ? `${before}\n\n${markdown}` : markdown;
 }
 
 function handleDragEnter(event: DragEvent) {
@@ -268,15 +167,6 @@ function handleDrop(event: DragEvent) {
   void uploadFiles(files);
 }
 
-function handlePaste(event: ClipboardEvent) {
-  const files = Array.from(event.clipboardData?.files ?? []).filter((file) => file.type.startsWith("image/"));
-  if (!files.length) {
-    return;
-  }
-  event.preventDefault();
-  void uploadFiles(files);
-}
-
 function eventHasFiles(event: DragEvent) {
   return Array.from(event.dataTransfer?.types ?? []).includes("Files");
 }
@@ -297,20 +187,51 @@ async function uploadFiles(files: File[]) {
       insertMarkdownUpload(toMarkdownUpload(upload, getApiUrl(upload.url)));
       uploadedCount += 1;
     }
-    uploadStatusMessage.value = `${uploadedCount} 个文件已上传，Markdown 引用已插入正文。`;
+    uploadStatusMessage.value = `${uploadedCount} 个文件已上传`;
   } catch (error) {
     uploadStatusMessage.value = uploadErrorMessage(error);
   }
 }
 
-async function copyPreviewCode(block: ComposerCodeBlock) {
-  codeCopyStatus.value = "";
-  try {
-    await navigator.clipboard.writeText(block.code);
-    codeCopyStatus.value = `${block.language.toUpperCase()} 代码已复制。`;
-  } catch {
-    codeCopyStatus.value = "无法访问剪贴板，请手动复制预览代码块。";
+/**
+ * Uploads images selected from md-editor-v3 and returns absolute image URLs to its callback.
+ * `files` comes from the editor image toolbar; `callback` inserts the uploaded images into the current Markdown draft.
+ * Side effect: updates the upload status and reuses the authenticated post-attachment upload mutation.
+ */
+async function handleEditorImageUpload(files: File[], callback: UploadImageCallback) {
+  const uploadableFiles = files.filter((file) => file.size > 0);
+  if (!uploadableFiles.length) {
+    return;
   }
+
+  uploadStatusMessage.value = `正在上传 ${uploadableFiles.length} 个文件…`;
+
+  try {
+    const images = [];
+    for (const file of uploadableFiles) {
+      const upload = await uploadMutation.mutateAsync({ file, kind: "post_attachment" });
+      images.push({
+        url: getApiUrl(upload.url),
+        alt: upload.original_filename,
+        title: upload.original_filename,
+      });
+    }
+    callback(images);
+    uploadStatusMessage.value = "";
+  } catch (error) {
+    uploadStatusMessage.value = uploadErrorMessage(error);
+  }
+}
+
+/**
+ * Sanitizes md-editor-v3 preview HTML before it is rendered inside the editor preview pane.
+ * `html` is generated from the current Markdown draft; the returned string strips unsafe markup while keeping safe link attrs.
+ * Side effect: none.
+ */
+function sanitizeEditorHtml(html: string) {
+  return DOMPurify.sanitize(html, {
+    ADD_ATTR: ["target", "rel"],
+  });
 }
 
 async function initDraft() {
@@ -554,19 +475,12 @@ async function handleSaveDraft() {
 
     <div class="composer-heading">
       <strong>{{ heading }}</strong>
-      <p>{{ helper }}</p>
-      <span class="composer-draft-state" role="status">{{ autosaveStatus }}</span>
     </div>
 
     <label v-if="!isReplyMode" class="composer-field">
       <span>标题</span>
-      <input v-model="title" placeholder="一句话说明问题或提案" />
+      <input v-model="title" placeholder="输入标题" />
     </label>
-
-    <div class="composer-context">
-      <span>{{ isReplyMode ? "回复主题" : "发布到" }}</span>
-      <strong>{{ isReplyMode ? topicTitle : boardName }}</strong>
-    </div>
 
     <section
       class="composer-editor"
@@ -577,48 +491,29 @@ async function handleSaveDraft() {
       @dragleave.prevent="handleDragLeave"
       @drop.prevent="handleDrop"
     >
-      <div class="composer-toolbar" role="toolbar" aria-label="Markdown 快捷工具栏">
-        <UiButton tone="ghost" type="button" @click="wrapSelection('**', '**', '重点内容')">粗体</UiButton>
-        <UiButton tone="ghost" type="button" @click="wrapSelection('*', '*', '强调内容')">斜体</UiButton>
-        <UiButton tone="ghost" type="button" @click="insertLink">链接</UiButton>
-        <UiButton tone="ghost" type="button" @click="insertQuote">引用</UiButton>
-        <UiButton tone="ghost" type="button" @click="insertList">列表</UiButton>
-        <label class="composer-code-language">
-          <span>代码语言</span>
-          <select v-model="selectedCodeLanguage" aria-label="代码语言">
-            <option v-for="language in CODE_LANGUAGE_OPTIONS" :key="language.value" :value="language.value">
-              {{ language.label }}
-            </option>
-          </select>
-        </label>
-        <UiButton tone="ghost" type="button" @click="insertCodeBlock">代码块</UiButton>
-        <UiButton tone="ghost" type="button" @click="showEmojiPicker = !showEmojiPicker">表情</UiButton>
-      </div>
-
-      <div v-if="showEmojiPicker" class="composer-emoji-grid" aria-label="自定义表情">
-        <button
-          v-for="emoji in COMPOSER_EMOJI_OPTIONS"
-          :key="emoji.value"
-          type="button"
-          :title="emoji.description"
-          @click="insertEmoji(emoji.value)"
-        >
-          <span>{{ emoji.preview }}</span>
-          <small>{{ emoji.label }}</small>
-        </button>
-      </div>
-
-      <textarea
-        ref="draftTextarea"
+      <MdEditor
         v-model="draft"
-        :aria-label="isReplyMode ? '回复正文' : '正文'"
+        class="composer-md-editor"
+        :id="isReplyMode ? 'reply-composer-editor' : 'topic-composer-editor'"
+        language="zh-CN"
+        theme="light"
+        preview-theme="github"
+        code-theme="atom"
+        :preview="false"
+        :footers="editorFooters"
+        :toolbars="editorToolbars"
+        :sanitize="sanitizeEditorHtml"
+        :disabled="submitting"
+        :no-katex="true"
+        :no-mermaid="true"
+        :no-img-zoom-in="true"
+        :show-code-row-number="false"
         :placeholder="placeholder"
-        rows="6"
-        @paste="handlePaste"
+        @onUploadImg="handleEditorImageUpload"
       />
 
       <div v-if="isDragActive" class="composer-drop-hint" aria-hidden="true">
-        松开即可上传图片或附件，并自动插入 Markdown 引用
+        松开上传
       </div>
     </section>
 
@@ -629,41 +524,8 @@ async function handleSaveDraft() {
 
     <label v-if="!isReplyMode" class="composer-field composer-field--tags">
       <span>标签</span>
-      <input v-model="tags" placeholder="用逗号分隔标签" />
+      <input v-model="tags" placeholder="输入标签" />
     </label>
-
-    <div class="composer-preview">
-      <header>
-        <span>实时预览</span>
-        <small>{{ previewStats }}</small>
-      </header>
-      <div v-if="previewHtml" class="composer-preview__body" v-html="previewHtml"></div>
-      <p v-else class="composer-preview__placeholder">{{ previewFallback }}</p>
-
-      <div v-if="composerPreview.oneboxes.length" class="composer-oneboxes" aria-label="链接预览">
-        <article v-for="onebox in composerPreview.oneboxes" :key="onebox.id" class="composer-onebox-card">
-          <div class="composer-onebox-card__image" aria-hidden="true">{{ onebox.initial }}</div>
-          <div>
-            <strong>{{ onebox.title }}</strong>
-            <p>{{ onebox.summary }}</p>
-            <a :href="onebox.url" target="_blank" rel="noopener noreferrer">{{ onebox.host }}</a>
-          </div>
-        </article>
-      </div>
-
-      <div v-if="composerPreview.codeBlocks.length" class="composer-code-copy">
-        <UiButton
-          v-for="block in composerPreview.codeBlocks"
-          :key="`${block.language}-${block.index}`"
-          tone="ghost"
-          type="button"
-          @click="copyPreviewCode(block)"
-        >
-          复制 {{ block.language.toUpperCase() }} 代码
-        </UiButton>
-        <span v-if="codeCopyStatus" role="status">{{ codeCopyStatus }}</span>
-      </div>
-    </div>
 
     <footer>
       <UiButton tone="ghost" @click="handleSaveDraft">保存草稿</UiButton>

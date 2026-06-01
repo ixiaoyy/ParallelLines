@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { MdEditor } from "md-editor-v3";
+import type { ToolbarNames } from "md-editor-v3";
+import "md-editor-v3/lib/style.css";
+import DOMPurify from "dompurify";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -9,8 +13,10 @@ import type { DraftResponse } from "@/features/drafts/model";
 import { useDeleteDraft, useSaveDraft } from "@/features/drafts/queries";
 import { useCreateTopic } from "@/features/topics/queries";
 import MarkdownUploadButton from "@/features/uploads/components/MarkdownUploadButton.vue";
+import { uploadErrorMessage } from "@/features/uploads/errors";
+import { useUploadFile } from "@/features/uploads/queries";
 import { contentPolicyMessage, isApiErrorCode } from "@/shared/api/errors";
-import { ApiError, hasAccessToken } from "@/shared/api/client";
+import { ApiError, getApiUrl, hasAccessToken } from "@/shared/api/client";
 import { readRouteParam } from "@/shared/router/params";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiButton from "@/shared/ui/Button.vue";
@@ -24,7 +30,7 @@ interface NewTopicDraft {
   version: number;
 }
 
-type PublishState = "idle" | "saved" | "submitted";
+type UploadImageCallback = (images: Array<{ url: string; alt: string; title: string }>) => void;
 
 const DRAFT_STORAGE_KEY = "parallellines:new-topic-draft";
 
@@ -34,6 +40,7 @@ const boardsQuery = useBoards();
 const createTopic = useCreateTopic();
 const saveDraftMutation = useSaveDraft();
 const deleteDraftMutation = useDeleteDraft();
+const uploadMutation = useUploadFile();
 
 const selectedBoardSlug = ref("support");
 const title = ref("");
@@ -41,9 +48,8 @@ const body = ref("");
 const tags = ref("");
 const currentVersion = ref(1);
 
-const bodyTextarea = ref<HTMLTextAreaElement | null>(null);
-const publishState = ref<PublishState>("idle");
 const publishError = ref("");
+const uploadStatusMessage = ref("");
 const showConflictBanner = ref(false);
 const isSaving = ref(false);
 
@@ -94,20 +100,25 @@ const tagIssue = computed(() => {
 
   return "";
 });
-const titleLength = computed(() => title.value.trim().length);
-const isTitleReady = computed(() => titleLength.value >= 4);
-const titleHint = computed(() => (isTitleReady.value ? "可发布" : `还差 ${4 - titleLength.value} 字`));
-const draftStatus = computed(() => {
-  if (isSaving.value) {
-    return "保存中";
-  }
-
-  if (publishState.value === "saved") {
-    return "草稿已保存";
-  }
-
-  return "正在编辑";
-});
+const isBodyTooLong = computed(() => body.value.length > 20000);
+const editorToolbars: ToolbarNames[] = [
+  "bold",
+  "italic",
+  "strikeThrough",
+  "quote",
+  "unorderedList",
+  "orderedList",
+  "codeRow",
+  "code",
+  "link",
+  "image",
+  "table",
+  "revoke",
+  "next",
+  "preview",
+  "fullscreen",
+];
+const editorFooters: [] = [];
 let isRestoring = false;
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -221,24 +232,48 @@ function ensureRequiredTags(board: BoardSummary) {
 }
 
 function insertMarkdownUpload(markdown: string) {
-  const textarea = bodyTextarea.value;
-  if (!textarea) {
-    body.value = [body.value.trimEnd(), markdown].filter(Boolean).join("\n\n");
+  const before = body.value.trimEnd();
+  body.value = before ? `${before}\n\n${markdown}` : markdown;
+}
+
+/**
+ * Uploads images selected from md-editor-v3 and returns absolute image URLs to its callback.
+ * `files` comes from the editor image toolbar; `callback` inserts the uploaded images into the Markdown body.
+ * Side effect: updates the upload status and reuses the authenticated post-attachment upload mutation.
+ */
+async function handleEditorImageUpload(files: File[], callback: UploadImageCallback) {
+  const uploadableFiles = files.filter((file) => file.size > 0);
+  if (!uploadableFiles.length) {
     return;
   }
 
-  const start = textarea.selectionStart ?? body.value.length;
-  const end = textarea.selectionEnd ?? start;
-  const before = body.value.slice(0, start);
-  const after = body.value.slice(end);
-  const leadingBreak = before && !before.endsWith("\n") ? "\n\n" : "";
-  const trailingBreak = after && !after.startsWith("\n") ? "\n\n" : "";
-  const insert = `${leadingBreak}${markdown}${trailingBreak}`;
-  body.value = `${before}${insert}${after}`;
-  const cursor = before.length + insert.length;
-  void nextTick(() => {
-    textarea.focus();
-    textarea.setSelectionRange(cursor, cursor);
+  uploadStatusMessage.value = `正在上传 ${uploadableFiles.length} 个文件…`;
+
+  try {
+    const images = [];
+    for (const file of uploadableFiles) {
+      const upload = await uploadMutation.mutateAsync({ file, kind: "post_attachment" });
+      images.push({
+        url: getApiUrl(upload.url),
+        alt: upload.original_filename,
+        title: upload.original_filename,
+      });
+    }
+    callback(images);
+    uploadStatusMessage.value = "";
+  } catch (error) {
+    uploadStatusMessage.value = uploadErrorMessage(error);
+  }
+}
+
+/**
+ * Sanitizes md-editor-v3 preview HTML before it is rendered inside the editor preview pane.
+ * `html` is generated from the current Markdown body; the returned string strips unsafe markup while keeping safe link attrs.
+ * Side effect: none.
+ */
+function sanitizeEditorHtml(html: string) {
+  return DOMPurify.sanitize(html, {
+    ADD_ATTR: ["target", "rel"],
   });
 }
 
@@ -246,7 +281,6 @@ async function handleSubmit() {
   const validation = validationMessage();
   if (validation) {
     publishError.value = validation;
-    publishState.value = "submitted";
     return;
   }
 
@@ -277,7 +311,6 @@ async function handleSubmit() {
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
     await router.push(topicDetailRoute(topic));
   } catch (error) {
-    publishState.value = "submitted";
     publishError.value =
       boardPolicyMessage(error) ?? contentPolicyMessage(error, "未登录或服务暂时不可用，内容已保留。");
   }
@@ -289,10 +322,7 @@ async function handleSaveDraft() {
     if (saveTimeout) {
       clearTimeout(saveTimeout);
     }
-    publishState.value = "idle";
     await performServerSave();
-  } else {
-    publishState.value = "saved";
   }
 }
 
@@ -317,6 +347,10 @@ function validationMessage(): string {
     return "正文不能为空。";
   }
 
+  if (isBodyTooLong.value) {
+    return "正文不能超过 20000 字。";
+  }
+
   if (missingRequiredTags.value.length) {
     return `请补齐标签：${missingRequiredTags.value.map((tag) => `#${tag}`).join(" ")}`;
   }
@@ -338,8 +372,6 @@ function triggerAutosave() {
   if (saveTimeout) {
     clearTimeout(saveTimeout);
   }
-
-  publishState.value = "idle";
 
   saveTimeout = setTimeout(async () => {
     await performServerSave();
@@ -373,7 +405,6 @@ async function performServerSave() {
     });
 
     currentVersion.value = result.version;
-    publishState.value = "saved";
     saveLocalDraft();
   } catch (error: unknown) {
     if (isApiErrorCode(error, "draft_conflict")) {
@@ -515,10 +546,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       <UiCard class="composer-card">
         <header class="composer-heading">
           <span class="composer-plus" aria-hidden="true">＋</span>
-          <div>
-            <h1>创建新话题</h1>
-            <p>{{ draftStatus }}</p>
-          </div>
+          <h1>创建新话题</h1>
         </header>
 
         <div v-if="showConflictBanner" class="conflict-banner" role="alert">
@@ -530,10 +558,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
           <input
             v-model="title"
             maxlength="180"
-            placeholder="标题，或粘贴链接"
+            placeholder="标题"
             autocomplete="off"
           />
-          <em :class="{ 'is-ready': isTitleReady }">{{ titleHint }}</em>
         </label>
 
         <div class="composer-meta-row">
@@ -582,20 +609,30 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
         <div class="editor-box">
           <div class="editor-toolbar">
-            <div class="editor-toolbar__copy">
-              <strong>Markdown 正文</strong>
-              <span>可直接输入；图片拖进正文会自动上传并插入引用。</span>
-            </div>
             <MarkdownUploadButton compact @insert="insertMarkdownUpload" />
+            <span v-if="uploadStatusMessage" class="editor-upload-status" role="status">{{ uploadStatusMessage }}</span>
           </div>
-          <textarea
-            ref="bodyTextarea"
+          <MdEditor
             v-model="body"
-            rows="10"
-            maxlength="20000"
-            placeholder="正文，支持 Markdown，可拖入图片上传。"
-          ></textarea>
-          <span class="body-count">{{ body.length }}/20000</span>
+            id="new-topic-editor"
+            class="topic-md-editor"
+            language="zh-CN"
+            theme="light"
+            preview-theme="github"
+            code-theme="atom"
+            :preview="false"
+            :footers="editorFooters"
+            :toolbars="editorToolbars"
+            :sanitize="sanitizeEditorHtml"
+            :disabled="createTopic.isPending.value"
+            :no-katex="true"
+            :no-mermaid="true"
+            :no-img-zoom-in="true"
+            :show-code-row-number="false"
+            placeholder="正文"
+            @onUploadImg="handleEditorImageUpload"
+          />
+          <span class="body-count" :class="{ 'is-over-limit': isBodyTooLong }">{{ body.length }}/20000</span>
         </div>
 
         <p v-if="publishError" class="form-error" role="alert">{{ publishError }}</p>
@@ -603,7 +640,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
         <footer class="composer-footer">
           <RouterLink class="discard-link" to="/boards">舍弃</RouterLink>
           <UiButton type="button" tone="ghost" @click="handleSaveDraft">保存草稿</UiButton>
-          <UiButton type="submit" tone="primary" :disabled="createTopic.isPending.value || boardsQuery.isLoading.value">
+          <UiButton type="submit" tone="primary" :disabled="createTopic.isPending.value || boardsQuery.isLoading.value || isBodyTooLong">
             {{ createTopic.isPending.value ? "发布中…" : "发布" }}
           </UiButton>
         </footer>

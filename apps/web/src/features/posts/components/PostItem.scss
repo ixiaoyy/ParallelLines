@@ -193,29 +193,6 @@
   background: var(--bg-subtle);
 }
 
-.score-vote {
-  display: inline-flex;
-  gap: 0.14rem;
-  align-items: center;
-  border: 1px solid rgba(var(--primary-rgb), 0.12);
-  border-radius: 999px;
-  padding: 0.18rem 0.32rem;
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.score-vote strong {
-  min-width: 1.55rem;
-  color: var(--title);
-  font-size: 0.86rem;
-  text-align: center;
-}
-
-.score-vote span {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 760;
-}
-
 .post-action-bar {
   position: relative;
   display: flex;
@@ -281,12 +258,6 @@
 .icon-action.is-danger-active {
   color: var(--danger);
   background: var(--danger-bg);
-}
-
-.icon-action--vote {
-  min-width: 1.8rem;
-  min-height: 1.8rem;
-  padding: 0;
 }
 
 .action-count {

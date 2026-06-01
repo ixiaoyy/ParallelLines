@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import {
-  ArrowDownOutlined,
-  ArrowUpOutlined,
   BellOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -47,10 +45,6 @@ defineProps<{
   topicLiked: boolean;
   topicLikeCount: number;
   topicLikePending: boolean;
-  topicVoteScore: number;
-  topicVoteCount: number;
-  topicVoteValue: number;
-  topicVotePending: boolean;
   canFlagTopic: boolean;
   flagTopicPending: boolean;
   canManageTopic: boolean;
@@ -77,7 +71,6 @@ const emit = defineEmits<{
   moveTopic: [];
   deleteTopic: [];
   setNotificationLevel: [level: NotificationLevel];
-  voteTopic: [value: -1 | 0 | 1];
 }>();
 
 const toolbarMoreRef = ref<HTMLDetailsElement | null>(null);
@@ -181,34 +174,6 @@ function deleteTopic() {
       <button class="toolbar-icon-button" type="button" title="复制主题链接" aria-label="复制主题链接" @click="emit('copyLink')">
         <LinkOutlined aria-hidden="true" />
       </button>
-      <div class="topic-vote-strip" aria-label="主题赞成反对投票">
-        <button
-          class="toolbar-icon-button toolbar-icon-button--vote"
-          :class="{ 'is-active': topicVoteValue === 1 }"
-          type="button"
-          title="赞成主题"
-          aria-label="赞成主题"
-          :aria-pressed="topicVoteValue === 1"
-          :disabled="topicVotePending"
-          @click="emit('voteTopic', topicVoteValue === 1 ? 0 : 1)"
-        >
-          <ArrowUpOutlined aria-hidden="true" />
-        </button>
-        <strong>{{ topicVoteScore }}</strong>
-        <button
-          class="toolbar-icon-button toolbar-icon-button--vote"
-          :class="{ 'is-danger-active': topicVoteValue === -1 }"
-          type="button"
-          title="反对主题"
-          aria-label="反对主题"
-          :aria-pressed="topicVoteValue === -1"
-          :disabled="topicVotePending"
-          @click="emit('voteTopic', topicVoteValue === -1 ? 0 : -1)"
-        >
-          <ArrowDownOutlined aria-hidden="true" />
-        </button>
-        <span v-if="topicVoteCount">{{ topicVoteCount }}</span>
-      </div>
       <button class="toolbar-icon-button" type="button" title="邀请成员" aria-label="邀请成员" @click="emit('openInvites')">
         <UserAddOutlined aria-hidden="true" />
       </button>

@@ -40,8 +40,7 @@
   line-height: 1;
 }
 
-.composer-heading h1,
-.composer-heading p {
+.composer-heading h1 {
   margin: 0;
 }
 
@@ -52,13 +51,6 @@
   letter-spacing: -0.025em;
 }
 
-.composer-heading p {
-  margin-top: 0.02rem;
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 700;
-}
-
 .title-field {
   position: relative;
   display: block;
@@ -66,8 +58,7 @@
 
 .title-field input,
 .tag-field input,
-.select-field select,
-.editor-box textarea {
+.select-field select {
   width: 100%;
   border: 1px solid var(--border-strong, var(--border));
   color: var(--title);
@@ -81,30 +72,14 @@
 .title-field input {
   min-height: 3rem;
   border-radius: 0.55rem;
-  padding: 0 3.8rem 0 0.8rem;
+  padding: 0 0.8rem;
   font-size: clamp(1rem, 1.35vw, 1.16rem);
   font-weight: 760;
 }
 
 .title-field input::placeholder,
-.tag-field input::placeholder,
-.editor-box textarea::placeholder {
+.tag-field input::placeholder {
   color: color-mix(in srgb, var(--muted) 82%, var(--text));
-}
-
-.title-field em {
-  position: absolute;
-  right: 0.78rem;
-  top: 50%;
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-style: normal;
-  font-weight: 780;
-  transform: translateY(-50%);
-}
-
-.title-field em.is-ready {
-  color: var(--accent-geek);
 }
 
 .composer-meta-row {
@@ -134,8 +109,7 @@
 
 .title-field input:focus,
 .tag-field input:focus,
-.select-field select:focus,
-.editor-box textarea:focus {
+.select-field select:focus {
   border-color: var(--primary);
   outline: none;
   box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.14);
@@ -195,31 +169,13 @@
   flex-wrap: wrap;
   gap: 0.42rem;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   min-height: 2.65rem;
   border-bottom: 1px solid var(--border);
   padding: 0.5rem 0.65rem;
   color: var(--muted);
   font-size: 0.86rem;
   font-weight: 780;
-}
-
-.editor-toolbar__copy {
-  display: grid;
-  gap: 0.12rem;
-  min-width: min(24rem, 100%);
-}
-
-.editor-toolbar__copy strong {
-  color: var(--title);
-  font-size: 0.9rem;
-  font-weight: 860;
-}
-
-.editor-toolbar__copy span {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 620;
 }
 
 .editor-toolbar :deep(.markdown-upload) {
@@ -247,18 +203,58 @@
   font-weight: 760;
 }
 
-.editor-box textarea {
-  min-height: clamp(12rem, 31vh, 20rem);
-  border: 0;
-  border-radius: 0;
-  padding: 0.85rem 0.9rem 2.1rem;
-  resize: vertical;
-  line-height: 1.64;
-  font-size: 0.95rem;
+.editor-upload-status {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 760;
 }
 
-.editor-box textarea:focus {
-  box-shadow: none;
+.topic-md-editor {
+  height: clamp(16rem, 36vh, 25rem);
+  border: 0;
+  border-radius: 0;
+  background: var(--bg-surface);
+}
+
+.topic-md-editor :deep(.md-editor-toolbar-wrapper) {
+  border-bottom-color: var(--border);
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.topic-md-editor :deep(.md-editor-toolbar-item) {
+  color: var(--text);
+}
+
+.topic-md-editor :deep(.md-editor-toolbar-item:hover),
+.topic-md-editor :deep(.md-editor-toolbar-item.active) {
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.09);
+}
+
+.topic-md-editor :deep(.cm-editor),
+.topic-md-editor :deep(.md-editor-input-wrapper) {
+  color: var(--title);
+  background: var(--bg-surface);
+  font-family: inherit;
+}
+
+.topic-md-editor :deep(.cm-content) {
+  min-height: 12rem;
+  padding-bottom: 2.1rem;
+  font-family: inherit;
+  line-height: 1.65;
+}
+
+.topic-md-editor :deep(.md-editor-preview-wrapper) {
+  background: var(--bg-surface);
+}
+
+.topic-md-editor :deep(.md-editor-preview) {
+  color: var(--text);
+}
+
+.topic-md-editor :deep(.md-editor-preview pre) {
+  background: var(--code-bg);
 }
 
 .body-count {
@@ -269,6 +265,10 @@
   background: rgba(255, 255, 255, 0.86);
   font-size: 0.82rem;
   font-weight: 860;
+}
+
+.body-count.is-over-limit {
+  color: #b91c1c;
 }
 
 .form-error,
@@ -355,12 +355,12 @@
 
   .title-field input {
     min-height: 2.9rem;
-    padding-right: 3.8rem;
+    padding-right: 0.8rem;
     font-size: 1rem;
   }
 
-  .editor-box textarea {
-    min-height: 16rem;
+  .topic-md-editor {
+    height: 20rem;
   }
 
   .composer-footer :deep(.ui-button),
