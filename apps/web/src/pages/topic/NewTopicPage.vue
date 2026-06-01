@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MdEditor } from "md-editor-v3";
-import type { ToolbarNames } from "md-editor-v3";
+import type { ExposeParam, ToolbarNames } from "md-editor-v3";
 import "md-editor-v3/lib/style.css";
 import DOMPurify from "dompurify";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
@@ -16,7 +16,7 @@ import MarkdownUploadButton from "@/features/uploads/components/MarkdownUploadBu
 import { uploadErrorMessage } from "@/features/uploads/errors";
 import { useUploadFile } from "@/features/uploads/queries";
 import { contentPolicyMessage, isApiErrorCode } from "@/shared/api/errors";
-import { ApiError, getApiUrl, hasAccessToken } from "@/shared/api/client";
+import { ApiError, hasAccessToken, resolveApiAssetUrl } from "@/shared/api/client";
 import { readRouteParam } from "@/shared/router/params";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiButton from "@/shared/ui/Button.vue";
@@ -30,7 +30,7 @@ interface NewTopicDraft {
   version: number;
 }
 
-type UploadImageCallback = (images: Array<{ url: string; alt: string; title: string }>) => void;
+type UploadImageCallback = (images: string[]) => void;
 
 const DRAFT_STORAGE_KEY = "parallellines:new-topic-draft";
 
@@ -47,6 +47,7 @@ const title = ref("");
 const body = ref("");
 const tags = ref("");
 const currentVersion = ref(1);
+const topicEditorRef = ref<ExposeParam | null>(null);
 
 const publishError = ref("");
 const uploadStatusMessage = ref("");
@@ -234,6 +235,7 @@ function ensureRequiredTags(board: BoardSummary) {
 function insertMarkdownUpload(markdown: string) {
   const before = body.value.trimEnd();
   body.value = before ? `${before}\n\n${markdown}` : markdown;
+  topicEditorRef.value?.togglePreview(true);
 }
 
 /**
@@ -250,16 +252,13 @@ async function handleEditorImageUpload(files: File[], callback: UploadImageCallb
   uploadStatusMessage.value = `正在上传 ${uploadableFiles.length} 个文件…`;
 
   try {
-    const images = [];
+    const images: string[] = [];
     for (const file of uploadableFiles) {
       const upload = await uploadMutation.mutateAsync({ file, kind: "post_attachment" });
-      images.push({
-        url: getApiUrl(upload.url),
-        alt: upload.original_filename,
-        title: upload.original_filename,
-      });
+      images.push(resolveApiAssetUrl(upload.url) ?? upload.url);
     }
     callback(images);
+    topicEditorRef.value?.togglePreview(true);
     uploadStatusMessage.value = "";
   } catch (error) {
     uploadStatusMessage.value = uploadErrorMessage(error);
@@ -608,11 +607,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
         </div>
 
         <div class="editor-box">
-          <div class="editor-toolbar">
-            <MarkdownUploadButton compact @insert="insertMarkdownUpload" />
-            <span v-if="uploadStatusMessage" class="editor-upload-status" role="status">{{ uploadStatusMessage }}</span>
-          </div>
           <MdEditor
+            ref="topicEditorRef"
             v-model="body"
             id="new-topic-editor"
             class="topic-md-editor"
@@ -624,6 +620,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
             :footers="editorFooters"
             :toolbars="editorToolbars"
             :sanitize="sanitizeEditorHtml"
+            :transform-img-url="resolveApiAssetUrl"
             :disabled="createTopic.isPending.value"
             :no-katex="true"
             :no-mermaid="true"
@@ -633,6 +630,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
             @onUploadImg="handleEditorImageUpload"
           />
           <span class="body-count" :class="{ 'is-over-limit': isBodyTooLong }">{{ body.length }}/20000</span>
+        </div>
+
+        <div class="composer-upload-row">
+          <MarkdownUploadButton compact @insert="insertMarkdownUpload" />
+          <span v-if="uploadStatusMessage" class="editor-upload-status" role="status">{{ uploadStatusMessage }}</span>
         </div>
 
         <p v-if="publishError" class="form-error" role="alert">{{ publishError }}</p>

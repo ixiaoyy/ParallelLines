@@ -164,30 +164,28 @@
   box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.13);
 }
 
-.editor-toolbar {
+.composer-upload-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.42rem;
   align-items: center;
-  justify-content: flex-end;
-  min-height: 2.65rem;
-  border-bottom: 1px solid var(--border);
-  padding: 0.5rem 0.65rem;
+  justify-content: flex-start;
+  min-height: 2.35rem;
   color: var(--muted);
   font-size: 0.86rem;
   font-weight: 780;
 }
 
-.editor-toolbar :deep(.markdown-upload) {
+.composer-upload-row :deep(.markdown-upload) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   margin-top: 0;
 }
 
-.editor-toolbar :deep(.ui-button) {
+.composer-upload-row :deep(.ui-button) {
   min-height: 2.1rem !important;
   border: 1px solid rgba(var(--primary-rgb), 0.18) !important;
   border-radius: var(--radius-pill) !important;
@@ -197,7 +195,7 @@
   font-size: 0.84rem !important;
 }
 
-.editor-toolbar :deep(.markdown-upload__status) {
+.composer-upload-row :deep(.markdown-upload__status) {
   color: var(--accent-geek);
   font-size: 0.82rem;
   font-weight: 760;

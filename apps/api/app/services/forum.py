@@ -74,7 +74,10 @@ TAG_SEPARATOR_PATTERN = re.compile(r"[^a-z0-9一-鿿_.-]+")
 MENTION_PATTERN = re.compile(r"(?<![A-Za-z0-9_.-])@([A-Za-z0-9_.-]{3,32})")
 LIKE_ESCAPE_PATTERN = re.compile(r"([%_\\])")
 INLINE_MARKDOWN_LINK_PATTERN = re.compile(
-    r"(!?)\[([^\]\n]{0,160})\]\((https?://[^)\s]+|/[^\s)]+)\)"
+    r"(!?)\[([^\]\n]{0,160})\]\("
+    r"(https?://[^)\s]+|/[^\s)]+)"
+    r"(?:\s+['\"][^'\"\n)]{0,255}['\"])?"
+    r"\)"
 )
 SAFE_UPLOAD_PATH_PATTERN = re.compile(
     r"^/(?:api/v1/)?uploads/(?:"

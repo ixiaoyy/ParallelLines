@@ -113,7 +113,7 @@ function toPlainText(value: string) {
 
     <UiCard class="sidebar-panel">
       <span class="panel-kicker">标签</span>
-      <h2>检索线索</h2>
+      <h2>主题标签</h2>
       <div class="tag-list">
         <RouterLink
           v-for="tag in topic.tags"

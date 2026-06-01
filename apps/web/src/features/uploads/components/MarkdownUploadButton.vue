@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
-import { getApiUrl } from "@/shared/api/client";
+import { resolveApiAssetUrl } from "@/shared/api/client";
 import UiButton from "@/shared/ui/Button.vue";
 
 import { uploadErrorMessage } from "../errors";
@@ -46,7 +46,7 @@ async function handleFileChange(event: Event) {
   statusMessage.value = "";
   try {
     const upload = await uploadMutation.mutateAsync({ file, kind: "post_attachment" });
-    emit("insert", toMarkdownUpload(upload, getApiUrl(upload.url)));
+    emit("insert", toMarkdownUpload(upload, resolveApiAssetUrl(upload.url) ?? upload.url));
     statusMessage.value = `${upload.original_filename} 已上传`;
   } catch (error) {
     statusMessage.value = uploadErrorMessage(error);

@@ -14,6 +14,10 @@ import {
   RollbackOutlined,
   UserDeleteOutlined,
 } from "@ant-design/icons-vue";
+import { MdEditor } from "md-editor-v3";
+import type { ExposeParam, ToolbarNames } from "md-editor-v3";
+import "md-editor-v3/lib/style.css";
+import DOMPurify from "dompurify";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 
 import type { PostItemVM } from "@/entities/post/model";
@@ -26,7 +30,10 @@ import {
   useRestorePostRevision,
   useUpdatePost,
 } from "@/features/posts/queries";
-import { hasAccessToken } from "@/shared/api/client";
+import MarkdownUploadButton from "@/features/uploads/components/MarkdownUploadButton.vue";
+import { uploadErrorMessage } from "@/features/uploads/errors";
+import { useUploadFile } from "@/features/uploads/queries";
+import { hasAccessToken, resolveApiAssetUrl } from "@/shared/api/client";
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { relativeTime } from "@/shared/lib/format";
 import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
@@ -54,7 +61,7 @@ const emit = defineEmits<{
 const statusMessage = ref("");
 const editing = ref(false);
 const editDraft = ref(props.post.rawMd);
-const editReason = ref("");
+const editEditorRef = ref<ExposeParam | null>(null);
 const historyOpen = ref(false);
 const reportModalOpen = ref(false);
 const bodyRef = ref<HTMLElement | null>(null);
@@ -82,6 +89,7 @@ const canViewHistory = computed(
 const canRestoreHistory = computed(() => Boolean(!props.post.deleted && canModerateGlobally.value));
 const updatePostMutation = useUpdatePost(() => props.post.topicId);
 const deletePostMutation = useDeletePost(() => props.post.topicId);
+const uploadMutation = useUploadFile();
 const revisionsQuery = usePostRevisions(
   () => props.post.id,
   () => historyOpen.value && canViewHistory.value,
@@ -90,6 +98,26 @@ const restoreRevisionMutation = useRestorePostRevision(() => props.post.topicId)
 const savingEdit = computed(() => updatePostMutation.isPending.value);
 const deletingPost = computed(() => deletePostMutation.isPending.value);
 const restoringRevision = computed(() => restoreRevisionMutation.isPending.value);
+const editEditorToolbars: ToolbarNames[] = [
+  "bold",
+  "italic",
+  "strikeThrough",
+  "quote",
+  "unorderedList",
+  "orderedList",
+  "codeRow",
+  "code",
+  "link",
+  "image",
+  "table",
+  "revoke",
+  "next",
+  "preview",
+  "fullscreen",
+];
+const editEditorFooters: [] = [];
+
+type UploadImageCallback = (images: string[]) => void;
 const {
   active: liked,
   count: optimisticLikeCount,
@@ -157,7 +185,6 @@ function startEdit() {
   }
 
   editDraft.value = props.post.rawMd;
-  editReason.value = "";
   editing.value = true;
   statusMessage.value = "";
 }
@@ -165,7 +192,52 @@ function startEdit() {
 function cancelEdit() {
   editing.value = false;
   editDraft.value = props.post.rawMd;
-  editReason.value = "";
+}
+
+/**
+ * Appends Markdown emitted by the attachment upload button into the edit draft.
+ * `markdown` is the already-formatted image/file link; side effect: enables editor preview so uploads are visible immediately.
+ */
+function insertEditMarkdownUpload(markdown: string) {
+  const before = editDraft.value.trimEnd();
+  editDraft.value = before ? `${before}\n\n${markdown}` : markdown;
+  editEditorRef.value?.togglePreview(true);
+}
+
+/**
+ * Uploads images selected from the edit editor toolbar and hands absolute image URLs back to md-editor-v3.
+ * `files` comes from the editor image picker; side effect: updates the visible edit status message.
+ */
+async function handleEditImageUpload(files: File[], callback: UploadImageCallback) {
+  const uploadableFiles = files.filter((file) => file.size > 0);
+  if (!uploadableFiles.length) {
+    return;
+  }
+
+  statusMessage.value = `正在上传 ${uploadableFiles.length} 个文件…`;
+
+  try {
+    const images: string[] = [];
+    for (const file of uploadableFiles) {
+      const upload = await uploadMutation.mutateAsync({ file, kind: "post_attachment" });
+      images.push(resolveApiAssetUrl(upload.url) ?? upload.url);
+    }
+    callback(images);
+    editEditorRef.value?.togglePreview(true);
+    setStatus("图片已上传");
+  } catch (error) {
+    setStatus(uploadErrorMessage(error));
+  }
+}
+
+/**
+ * Sanitizes the edit editor preview HTML before rendering.
+ * `html` is md-editor-v3 preview output; return value strips unsafe markup without mutating the draft.
+ */
+function sanitizeEditHtml(html: string) {
+  return DOMPurify.sanitize(html, {
+    ADD_ATTR: ["target", "rel"],
+  });
 }
 
 function saveEdit() {
@@ -177,12 +249,11 @@ function saveEdit() {
   updatePostMutation.mutate(
     {
       postId: props.post.id,
-      payload: { raw_md: rawMd, edit_reason: editReason.value.trim() || null },
+      payload: { raw_md: rawMd },
     },
     {
       onSuccess: () => {
         editing.value = false;
-        editReason.value = "";
         setStatus("已保存编辑");
       },
       onError: (error) => {
@@ -390,14 +461,36 @@ function decorateHeadingAnchors() {
       <div v-if="post.acceptedAnswer" class="accepted-answer-badge">✓ 已采纳解决方案</div>
       <div v-if="post.deleted" class="deleted-copy">该楼层已删除或隐藏。</div>
       <template v-else-if="editing">
-        <label class="edit-field">
+        <div class="edit-field">
           <span>编辑本楼层</span>
-          <textarea v-model="editDraft" rows="6" aria-label="编辑回复内容" />
-        </label>
-        <label class="edit-field edit-field--compact">
-          <span>编辑原因（可选）</span>
-          <input v-model="editReason" maxlength="500" placeholder="例如：补充复现步骤、修正错别字" />
-        </label>
+          <div class="edit-editor-box">
+            <MdEditor
+              ref="editEditorRef"
+              v-model="editDraft"
+              :id="`post-edit-editor-${post.id}`"
+              class="edit-md-editor"
+              language="zh-CN"
+              theme="light"
+              preview-theme="github"
+              code-theme="atom"
+              :preview="false"
+              :footers="editEditorFooters"
+              :toolbars="editEditorToolbars"
+              :sanitize="sanitizeEditHtml"
+              :transform-img-url="resolveApiAssetUrl"
+              :disabled="savingEdit"
+              :no-katex="true"
+              :no-mermaid="true"
+              :no-img-zoom-in="true"
+              :show-code-row-number="false"
+              placeholder="编辑内容"
+              @onUploadImg="handleEditImageUpload"
+            />
+          </div>
+        </div>
+        <div class="edit-upload-row">
+          <MarkdownUploadButton compact :disabled="savingEdit" @insert="insertEditMarkdownUpload" />
+        </div>
         <div class="edit-actions">
           <UiButton tone="primary" :disabled="!editDraft.trim() || savingEdit" @click="saveEdit">
             {{ savingEdit ? "保存中…" : "保存编辑" }}

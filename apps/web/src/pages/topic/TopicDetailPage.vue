@@ -588,13 +588,7 @@ function flagTopic() {
               @vote="votePoll"
             />
 
-            <section id="replies" class="reply-section" aria-labelledby="reply-section-title">
-              <header class="reply-section__header">
-                <span>回复</span>
-                <h2 id="reply-section-title">讨论继续</h2>
-                <p>{{ replyPosts.length }} 条回复 · {{ onlyAuthor ? "只看楼主" : "全部楼层" }}</p>
-              </header>
-
+            <section id="replies" class="reply-section" aria-label="回复列表">
               <div v-if="replyPosts.length" class="post-list">
                 <div v-for="post in replyPosts" :id="`post-${post.floor}`" :key="post.id" class="post-anchor">
                   <PostItem
@@ -611,9 +605,6 @@ function flagTopic() {
                   />
                 </div>
               </div>
-              <UiCard v-else class="topic-state" role="status">
-                暂无回复，欢迎补充你的看法。
-              </UiCard>
             </section>
           </template>
 

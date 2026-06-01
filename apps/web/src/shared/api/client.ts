@@ -35,6 +35,9 @@ export function getApiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
 
+export function resolveApiAssetUrl(url: string): string;
+export function resolveApiAssetUrl(url: null | undefined): undefined;
+export function resolveApiAssetUrl(url: string | null | undefined): string | undefined;
 export function resolveApiAssetUrl(url: string | null | undefined): string | undefined {
   if (!url) {
     return undefined;

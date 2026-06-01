@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MdEditor } from "md-editor-v3";
-import type { ToolbarNames } from "md-editor-v3";
+import type { ExposeParam, ToolbarNames } from "md-editor-v3";
 import "md-editor-v3/lib/style.css";
 import DOMPurify from "dompurify";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
@@ -12,7 +12,7 @@ import MarkdownUploadButton from "@/features/uploads/components/MarkdownUploadBu
 import { uploadErrorMessage } from "@/features/uploads/errors";
 import { toMarkdownUpload } from "@/features/uploads/model";
 import { useUploadFile } from "@/features/uploads/queries";
-import { getApiUrl, hasAccessToken } from "@/shared/api/client";
+import { hasAccessToken, resolveApiAssetUrl } from "@/shared/api/client";
 import { isApiErrorCode } from "@/shared/api/errors";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -22,7 +22,7 @@ interface ReplyDraft {
   version: number;
 }
 
-type UploadImageCallback = (images: Array<{ url: string; alt: string; title: string }>) => void;
+type UploadImageCallback = (images: string[]) => void;
 
 const props = withDefaults(
   defineProps<{
@@ -53,6 +53,7 @@ const uploadMutation = useUploadFile();
 const draft = ref("");
 const title = ref("");
 const tags = ref("fastapi, 排障");
+const composerEditorRef = ref<ExposeParam | null>(null);
 const isDragActive = ref(false);
 const uploadStatusMessage = ref("");
 
@@ -81,7 +82,7 @@ const editorToolbars: ToolbarNames[] = [
 const editorFooters: [] = [];
 
 const isReplyMode = computed(() => props.mode === "reply");
-const heading = computed(() => (isReplyMode.value ? "回复这个主题" : "发一条新主题"));
+const heading = computed(() => (isReplyMode.value ? "回复" : "发一条新主题"));
 const placeholder = computed(() =>
   isReplyMode.value ? "输入回复内容" : "输入正文",
 );
@@ -134,6 +135,7 @@ function handleSubmit() {
 function insertMarkdownUpload(markdown: string) {
   const before = draft.value.trimEnd();
   draft.value = before ? `${before}\n\n${markdown}` : markdown;
+  composerEditorRef.value?.togglePreview(true);
 }
 
 function handleDragEnter(event: DragEvent) {
@@ -184,7 +186,7 @@ async function uploadFiles(files: File[]) {
   try {
     for (const file of uploadableFiles) {
       const upload = await uploadMutation.mutateAsync({ file, kind: "post_attachment" });
-      insertMarkdownUpload(toMarkdownUpload(upload, getApiUrl(upload.url)));
+      insertMarkdownUpload(toMarkdownUpload(upload, resolveApiAssetUrl(upload.url) ?? upload.url));
       uploadedCount += 1;
     }
     uploadStatusMessage.value = `${uploadedCount} 个文件已上传`;
@@ -207,16 +209,13 @@ async function handleEditorImageUpload(files: File[], callback: UploadImageCallb
   uploadStatusMessage.value = `正在上传 ${uploadableFiles.length} 个文件…`;
 
   try {
-    const images = [];
+    const images: string[] = [];
     for (const file of uploadableFiles) {
       const upload = await uploadMutation.mutateAsync({ file, kind: "post_attachment" });
-      images.push({
-        url: getApiUrl(upload.url),
-        alt: upload.original_filename,
-        title: upload.original_filename,
-      });
+      images.push(resolveApiAssetUrl(upload.url) ?? upload.url);
     }
     callback(images);
+    composerEditorRef.value?.togglePreview(true);
     uploadStatusMessage.value = "";
   } catch (error) {
     uploadStatusMessage.value = uploadErrorMessage(error);
@@ -492,6 +491,7 @@ async function handleSaveDraft() {
       @drop.prevent="handleDrop"
     >
       <MdEditor
+        ref="composerEditorRef"
         v-model="draft"
         class="composer-md-editor"
         :id="isReplyMode ? 'reply-composer-editor' : 'topic-composer-editor'"
@@ -503,6 +503,7 @@ async function handleSaveDraft() {
         :footers="editorFooters"
         :toolbars="editorToolbars"
         :sanitize="sanitizeEditorHtml"
+        :transform-img-url="resolveApiAssetUrl"
         :disabled="submitting"
         :no-katex="true"
         :no-mermaid="true"
