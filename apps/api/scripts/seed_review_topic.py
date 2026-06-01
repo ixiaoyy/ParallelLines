@@ -146,7 +146,7 @@ async def queue_seed_topic(session: AsyncSession, args: argparse.Namespace) -> d
             "seed_author": True,
         },
         source=SEED_REVIEW_SOURCE,
-        source_summary="Seed author content is queued for moderator review",
+        source_summary="种子作者提交的内容，需要审核通过后才会公开。",
     )
     await session.commit()
     return reviewable_result(

@@ -53,6 +53,8 @@ export const queryKeys = {
   moderationRoot: ["moderation"] as const,
   moderationQueue: (status: string) => ["moderation", "queue", status] as const,
   moderationReviewables: (status: string) => ["moderation", "reviewables", status] as const,
+  moderationPublishReviewables: (status: string) =>
+    ["moderation", "reviewables", "publish", status] as const,
   moderationMyReviewables: ["moderation", "reviewables", "me"] as const,
   moderationAudit: ["moderation", "audit"] as const,
   drafts: ["drafts"] as const,

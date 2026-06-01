@@ -30,9 +30,12 @@ import type {
   ReviewableDecisionRequest,
   ReviewableResponse,
   ReviewableStatus,
+  ReviewableType,
   UserStatusResponse,
   UserStatusUpdateRequest,
 } from "./model";
+
+const PUBLISH_REVIEWABLE_TYPES: ReviewableType[] = ["queued_topic", "queued_post", "queued_edit"];
 
 export function useCreateFlag() {
   return useMutation<FlagResponse, Error, FlagCreateRequest>({
@@ -71,6 +74,26 @@ export function useReviewableQueue(status: MaybeRefOrGetter<ReviewableStatus | "
     queryFn: () => {
       const value = toValue(status);
       return fetchReviewables(value === "all" ? undefined : value);
+    },
+    enabled: computed(() => hasAccessToken()),
+    retry: false,
+    staleTime: 15_000,
+  });
+}
+
+export function usePublishReviewableQueue(status: MaybeRefOrGetter<ReviewableStatus | "all">) {
+  return useQuery({
+    queryKey: computed(() => queryKeys.moderationPublishReviewables(toValue(status))),
+    queryFn: async () => {
+      const value = toValue(status);
+      const normalizedStatus = value === "all" ? undefined : value;
+      const batches = await Promise.all(
+        PUBLISH_REVIEWABLE_TYPES.map((type) => fetchReviewables(normalizedStatus, type)),
+      );
+
+      return batches
+        .flat()
+        .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at));
     },
     enabled: computed(() => hasAccessToken()),
     retry: false,

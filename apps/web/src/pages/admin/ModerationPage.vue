@@ -29,9 +29,7 @@ import {
   useFlagStatusMutation,
   useModerationQueue,
   useUserStatusMutation,
-  useReviewableQueue,
-  useClaimReviewableMutation,
-  useReleaseReviewableMutation,
+  usePublishReviewableQueue,
   useReviewableDecisionMutation,
 } from "@/features/moderation/queries";
 import { hasAccessToken } from "@/shared/api/client";
@@ -51,7 +49,7 @@ const queueQuery = useModerationQueue(selectedQueueStatus);
 
 // Reviewable filter & query
 const reviewableStatusFilter = ref<ReviewableStatus | "all">("pending");
-const reviewablesQuery = useReviewableQueue(reviewableStatusFilter);
+const reviewablesQuery = usePublishReviewableQueue(reviewableStatusFilter);
 
 const auditQuery = useAuditLogs();
 const flagStatusMutation = useFlagStatusMutation();
@@ -59,8 +57,6 @@ const contentMutation = useContentModerationMutation();
 const userStatusMutation = useUserStatusMutation();
 const currentUserQuery = useCurrentUser();
 
-const claimMutation = useClaimReviewableMutation();
-const releaseMutation = useReleaseReviewableMutation();
 const decisionMutation = useReviewableDecisionMutation();
 
 const userId = ref("");
@@ -85,8 +81,6 @@ const pendingAction = computed(
     flagStatusMutation.isPending.value ||
     contentMutation.isPending.value ||
     userStatusMutation.isPending.value ||
-    claimMutation.isPending.value ||
-    releaseMutation.isPending.value ||
     decisionMutation.isPending.value,
 );
 
@@ -108,20 +102,7 @@ function closeDrawer() {
 
 function submitDecision() {
   if (!selectedReviewable.value) return;
-  decisionMutation.mutate(
-    {
-      reviewableId: selectedReviewable.value.id,
-      payload: {
-        action: decisionAction.value,
-        note: decisionNote.value.trim() || null,
-      },
-    },
-    {
-      onSuccess: () => {
-        closeDrawer();
-      },
-    },
-  );
+  decideReviewable(selectedReviewable.value, decisionAction.value, decisionNote.value, closeDrawer);
 }
 
 function hasReviewableTarget(reviewable: ReviewableResponse) {
@@ -132,12 +113,78 @@ function canSilenceReviewable(reviewable: ReviewableResponse) {
   return Boolean(reviewable.target_user_id);
 }
 
-function handleClaim(reviewableId: string) {
-  claimMutation.mutate(reviewableId);
+function canDecideReviewable(reviewable: ReviewableResponse) {
+  if (!["pending", "appealed", "claimed"].includes(reviewable.status)) {
+    return false;
+  }
+
+  return !isClaimedByOther(reviewable);
 }
 
-function handleRelease(reviewableId: string) {
-  releaseMutation.mutate(reviewableId);
+function isClaimedByOther(reviewable: ReviewableResponse) {
+  return Boolean(
+    reviewable.status === "claimed" &&
+      reviewable.assigned_to_id &&
+      reviewable.assigned_to_id !== currentUserId.value,
+  );
+}
+
+function textField(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function reviewableTitle(reviewable: ReviewableResponse) {
+  return textField(reviewable.data.title) || reviewable.source_summary || "待审核内容";
+}
+
+function reviewableReason(reviewable: ReviewableResponse) {
+  if (reviewable.source === "seed_content" || reviewable.data.seed_author === true) {
+    return "种子作者提交的内容，需要审核通过后才会公开。";
+  }
+
+  if (reviewable.source === "content_safety") {
+    return "命中内容安全规则，需要人工确认。";
+  }
+
+  if (String(reviewable.type).startsWith("queued_")) {
+    return "内容需要审核通过后才会公开。";
+  }
+
+  return reviewable.source_summary || "需要人工审核。";
+}
+
+function reviewablePreview(reviewable: ReviewableResponse) {
+  return (
+    textField(reviewable.data.raw_md) ||
+    textField(reviewable.data.excerpt) ||
+    reviewableReason(reviewable)
+  );
+}
+
+function decideReviewable(
+  reviewable: ReviewableResponse,
+  action: ReviewableDecisionAction,
+  note: string,
+  onSuccess?: () => void,
+) {
+  decisionMutation.mutate(
+    {
+      reviewableId: reviewable.id,
+      payload: {
+        action,
+        note: note.trim() || null,
+      },
+    },
+    { onSuccess },
+  );
+}
+
+function approveReviewable(reviewable: ReviewableResponse) {
+  decideReviewable(reviewable, "approve", "审核通过，允许发布。");
+}
+
+function rejectReviewable(reviewable: ReviewableResponse) {
+  decideReviewable(reviewable, "reject", "审核拒绝，不予发布。");
 }
 
 function resolveFlag(flag: FlagResponse) {
@@ -184,17 +231,25 @@ function targetRoute(flag: FlagResponse) {
     hash: flag.target.post_number ? `post-${flag.target.post_number}` : null,
   });
 }
+
+function flagDetail(flag: FlagResponse) {
+  return flag.detail?.trim() || "举报人未填写补充说明。";
+}
+
+function flagTargetExcerpt(flag: FlagResponse) {
+  return flag.target.excerpt?.trim() || "暂无内容摘要，请打开上下文查看原帖。";
+}
 </script>
 
 <template>
   <div class="moderation-page">
     <section class="moderation-hero" aria-labelledby="moderation-title">
       <div>
-        <span class="panel-kicker">Safety Console</span>
-        <h1 id="moderation-title">审核与社区安全</h1>
-        <p>集中处理举报、审核待审内容、查看审计日志，并为管理员提供基础用户状态调整。</p>
+        <span class="panel-kicker">审核台</span>
+        <h1 id="moderation-title">内容审核</h1>
+        <p>这里分两件事：审核帖子是否发布；查看用户举报原因，并处理被举报的帖子或回复。</p>
       </div>
-      <RouterLink class="hero-link" to="/boards">返回社区</RouterLink>
+      <RouterLink class="hero-link" to="/admin">返回后台</RouterLink>
     </section>
 
     <UiCard v-if="!hasToken" class="moderation-empty">
@@ -211,38 +266,38 @@ function targetRoute(flag: FlagResponse) {
       <!-- Navigation Tabs -->
       <nav class="moderation-tabs" aria-label="审核台导航">
         <button :class="{ active: activeTab === 'reviewables' }" @click="activeTab = 'reviewables'">
-          <EyeOutlined /> 审核队列
+          <EyeOutlined /> 帖子发布审核
         </button>
         <button :class="{ active: activeTab === 'flags' }" @click="activeTab = 'flags'">
-          <FlagOutlined /> 举报队列
+          <FlagOutlined /> 用户举报审核
         </button>
         <button :class="{ active: activeTab === 'audit' }" @click="activeTab = 'audit'">
-          <HistoryOutlined /> 操作审计
+          <HistoryOutlined /> 日志
         </button>
       </nav>
 
-      <section class="moderation-layout">
+      <section class="moderation-layout" :class="{ 'moderation-layout--single': activeTab !== 'audit' }">
         <!-- Main Column -->
         <main class="queue-column">
           <!-- Tab 1: Reviewables -->
           <div v-if="activeTab === 'reviewables'">
             <div class="section-toolbar">
               <div>
-                <span class="panel-kicker">Reviewables queue</span>
-                <h2>待审内容队列</h2>
+                <span class="panel-kicker">帖子发布审核</span>
+                <h2>审核待发布的帖子</h2>
               </div>
               <label>
-                <span>状态筛选</span>
+                <span>查看状态</span>
                 <select v-model="reviewableStatusFilter">
                   <option value="pending">待处理</option>
-                  <option value="claimed">已认领</option>
+                  <option value="claimed">处理中</option>
                   <option value="approved">已通过</option>
                   <option value="rejected">已拒绝</option>
                   <option value="hidden">已隐藏</option>
                   <option value="deleted">已删除</option>
                   <option value="silenced">已禁言</option>
                   <option value="escalated">已升级</option>
-                  <option value="appealed">申诉中</option>
+                  <option value="appealed">复核中</option>
                   <option value="all">全部</option>
                 </select>
               </label>
@@ -256,57 +311,53 @@ function targetRoute(flag: FlagResponse) {
                       {{ reviewableTypeLabel(rev.type) }} · {{ reviewableStatusLabel(rev.status) }} ·
                       {{ relativeTime(rev.created_at) }}
                     </span>
-                    <h3>{{ rev.data.title || rev.source_summary }}</h3>
+                    <h3>{{ reviewableTitle(rev) }}</h3>
                   </div>
                   <button class="detail-link-btn" @click="openReviewableDetails(rev)">
-                    查看详情与处理
+                    查看全文
                   </button>
                 </header>
 
-                <p class="reviewable-excerpt">{{ rev.source_summary || rev.data.raw_md || '无正文内容' }}</p>
+                <p class="reviewable-reason">{{ reviewableReason(rev) }}</p>
+                <p class="reviewable-excerpt">{{ reviewablePreview(rev) }}</p>
 
                 <dl>
                   <div>
-                    <dt>来源类型</dt>
+                    <dt>类型</dt>
                     <dd>{{ reviewableTypeLabel(rev.type) }}</dd>
                   </div>
                   <div>
-                    <dt>发帖用户</dt>
+                    <dt>作者</dt>
                     <dd>{{ rev.target_user_name || rev.created_by_name || '系统' }}</dd>
                   </div>
                   <div>
-                    <dt>所属版块</dt>
+                    <dt>版块</dt>
                     <dd>{{ rev.board_name || '全局' }}</dd>
                   </div>
                   <div>
-                    <dt>认领人</dt>
-                    <dd>{{ rev.assigned_to_name || '未认领' }}</dd>
+                    <dt>状态</dt>
+                    <dd>{{ reviewableStatusLabel(rev.status) }}</dd>
                   </div>
                 </dl>
 
                 <footer>
-                  <!-- Claim/Release Actions -->
                   <div class="footer-actions">
-                    <template v-if="rev.status === 'pending' || rev.status === 'appealed'">
-                      <UiButton tone="success" :disabled="pendingAction" @click="handleClaim(rev.id)">
-                        认领任务
+                    <template v-if="canDecideReviewable(rev)">
+                      <UiButton tone="success" :disabled="pendingAction" @click="approveReviewable(rev)">
+                        通过发布
+                      </UiButton>
+                      <UiButton tone="ghost" :disabled="pendingAction" @click="rejectReviewable(rev)">
+                        拒绝
+                      </UiButton>
+                      <UiButton tone="subtle" :disabled="pendingAction" @click="openReviewableDetails(rev)">
+                        更多处理
                       </UiButton>
                     </template>
-                    <template v-else-if="rev.status === 'claimed'">
-                      <template v-if="rev.assigned_to_id === currentUserId">
-                        <UiButton tone="subtle" :disabled="pendingAction" @click="handleRelease(rev.id)">
-                          释放任务
-                        </UiButton>
-                        <UiButton tone="success" :disabled="pendingAction" @click="openReviewableDetails(rev)">
-                          立即处理
-                        </UiButton>
-                      </template>
-                      <template v-else>
-                        <span class="assignee-warn">已由 {{ rev.assigned_to_name }} 认领</span>
-                      </template>
+                    <template v-else-if="isClaimedByOther(rev)">
+                      <span class="assignee-warn">其他审核员正在处理：{{ rev.assigned_to_name }}</span>
                     </template>
                     <template v-else>
-                      <span class="resolved-note">处理人: {{ rev.resolved_by_name || '系统' }}</span>
+                      <span class="resolved-note">已处理：{{ rev.resolved_by_name || '系统' }}</span>
                     </template>
                   </div>
                 </footer>
@@ -315,7 +366,7 @@ function targetRoute(flag: FlagResponse) {
 
             <UiCard v-else class="moderation-empty">
               <strong>当前筛选下没有审核任务</strong>
-              <span>满足敏感规则的内容或被限制的用户发帖将在此等待审核。</span>
+              <span>需要人工确认的帖子会出现在这里。</span>
             </UiCard>
           </div>
 
@@ -323,8 +374,8 @@ function targetRoute(flag: FlagResponse) {
           <div v-if="activeTab === 'flags'">
             <div class="section-toolbar">
               <div>
-                <span class="panel-kicker">Flag queue</span>
-                <h2>举报队列</h2>
+                <span class="panel-kicker">用户举报审核</span>
+                <h2>查看举报原因并处理帖子</h2>
               </div>
               <label>
                 <span>状态</span>
@@ -352,7 +403,14 @@ function targetRoute(flag: FlagResponse) {
                   </RouterLink>
                 </header>
 
-                <p>{{ flag.detail || flag.target.excerpt }}</p>
+                <div class="report-reason-box">
+                  <strong>举报原因：{{ flagReasonLabel(flag.reason) }}</strong>
+                  <span>补充说明：{{ flagDetail(flag) }}</span>
+                </div>
+                <div class="reported-content-box">
+                  <strong>被举报内容摘要</strong>
+                  <p>{{ flagTargetExcerpt(flag) }}</p>
+                </div>
                 <dl>
                   <div>
                     <dt>举报人</dt>
@@ -384,7 +442,7 @@ function targetRoute(flag: FlagResponse) {
 
             <UiCard v-else class="moderation-empty">
               <strong>当前筛选下没有举报</strong>
-              <span>用户从主题或楼层操作发起的举报会进入这里。</span>
+              <span>用户举报主题或回复后，会在这里显示举报原因、说明和被举报内容。</span>
             </UiCard>
           </div>
 
@@ -420,9 +478,9 @@ function targetRoute(flag: FlagResponse) {
         </main>
 
         <!-- Sidebar Column (User Management, quick stats) -->
-        <aside class="side-column" aria-label="管理工具">
+        <aside v-if="activeTab === 'audit'" class="side-column" aria-label="管理工具">
           <UiCard v-if="canUpdateUserStatus" class="user-tool">
-            <span class="panel-kicker">Admin action</span>
+            <span class="panel-kicker">管理员操作</span>
             <h2>用户状态调整</h2>
             <label>
               <span>用户 ID</span>
@@ -444,21 +502,9 @@ function targetRoute(flag: FlagResponse) {
           </UiCard>
 
           <UiCard v-else class="user-tool">
-            <span class="panel-kicker">Admin action</span>
+            <span class="panel-kicker">管理员操作</span>
             <h2>用户状态</h2>
-            <p>只有全站管理员可以调整用户状态；版主可以处理举报、审核队列和内容可见性。</p>
-          </UiCard>
-
-          <UiCard v-if="activeTab !== 'audit'" class="audit-panel mini-audit-panel">
-            <span class="panel-kicker">Audit log</span>
-            <h2>最近审计</h2>
-            <ol v-if="auditLogs.length">
-              <li v-for="log in auditLogs.slice(0, 5)" :key="log.id">
-                <strong>{{ auditActionLabel(log.action) }}</strong>
-                <span>{{ log.actor_name || "系统" }} · {{ relativeTime(log.created_at) }}</span>
-              </li>
-            </ol>
-            <p v-else>暂无审计记录。</p>
+            <p>只有全站管理员可以调整用户状态；版主可以处理帖子发布审核、用户举报和内容可见性。</p>
           </UiCard>
         </aside>
       </section>
@@ -469,39 +515,38 @@ function targetRoute(flag: FlagResponse) {
       <div class="drawer-panel" :class="{ 'drawer-panel--open': isDrawerOpen }" @click.stop>
         <!-- Header -->
         <header class="drawer-header">
-          <h3>审核任务详情</h3>
+          <h3>审核详情</h3>
           <button class="close-btn" @click="closeDrawer">&times;</button>
         </header>
 
         <!-- Body -->
         <div class="drawer-body" v-if="selectedReviewable">
           <div class="drawer-section">
-            <span class="panel-kicker">Metadata</span>
+            <span class="panel-kicker">基本信息</span>
             <div class="meta-grid">
               <div><strong>类型:</strong> {{ reviewableTypeLabel(selectedReviewable.type) }}</div>
               <div><strong>状态:</strong> {{ reviewableStatusLabel(selectedReviewable.status) }}</div>
               <div><strong>时间:</strong> {{ relativeTime(selectedReviewable.created_at) }}</div>
               <div><strong>版块:</strong> {{ selectedReviewable.board_name || '全局' }}</div>
               <div><strong>创建者:</strong> {{ selectedReviewable.created_by_name || '系统' }}</div>
-              <div><strong>认领人:</strong> {{ selectedReviewable.assigned_to_name || '暂无' }}</div>
+              <div><strong>处理人:</strong> {{ selectedReviewable.assigned_to_name || selectedReviewable.resolved_by_name || '暂无' }}</div>
             </div>
           </div>
 
           <div class="drawer-section content-preview">
-            <span class="panel-kicker">Content Preview</span>
-            <h4 class="preview-title" v-if="selectedReviewable.data.title">{{ selectedReviewable.data.title }}</h4>
+            <span class="panel-kicker">内容预览</span>
+            <h4 class="preview-title">{{ reviewableTitle(selectedReviewable) }}</h4>
             <div class="preview-body-box">
-              <p v-if="selectedReviewable.data.raw_md" class="raw-markdown-view">{{ selectedReviewable.data.raw_md }}</p>
-              <p v-else class="source-summary-view">{{ selectedReviewable.source_summary || '（无具体正文，仅包含元数据或已隐藏）' }}</p>
+              <p class="raw-markdown-view">{{ reviewablePreview(selectedReviewable) }}</p>
             </div>
             <div class="content-appeal-note" v-if="selectedReviewable.data.appeal_reason || selectedReviewable.data.note">
-              <strong>申诉理由 / 备注:</strong> {{ selectedReviewable.data.appeal_reason || selectedReviewable.data.note }}
+              <strong>复核理由 / 备注:</strong> {{ selectedReviewable.data.appeal_reason || selectedReviewable.data.note }}
             </div>
           </div>
 
           <!-- History Events -->
           <div class="drawer-section event-history-section">
-            <span class="panel-kicker">Workflow History</span>
+            <span class="panel-kicker">处理记录</span>
             <div v-if="selectedReviewable.events && selectedReviewable.events.length" class="drawer-events-list">
               <div v-for="event in selectedReviewable.events" :key="event.id" class="drawer-event-item">
                 <div class="event-meta">
@@ -517,40 +562,34 @@ function targetRoute(flag: FlagResponse) {
                 <div v-if="event.note" class="event-note-quote">“{{ event.note }}”</div>
               </div>
             </div>
-            <p v-else class="no-events-desc">暂无工作流事件流。</p>
+            <p v-else class="no-events-desc">暂无处理记录。</p>
           </div>
 
-          <!-- Operations Form (only if claimed by current user, or user is admin and wants to decide) -->
-          <div class="drawer-section operations-form" v-if="selectedReviewable.status === 'claimed' && selectedReviewable.assigned_to_id === currentUserId">
-            <span class="panel-kicker">Moderator Decision</span>
+          <div class="drawer-section operations-form" v-if="canDecideReviewable(selectedReviewable)">
+            <span class="panel-kicker">处理决定</span>
             <label class="form-label">
               <span>处理动作</span>
               <select v-model="decisionAction">
-                <option value="approve">通过发布 (Approve)</option>
-                <option value="reject">拒绝并驳回 (Reject)</option>
-                <option value="hide" :disabled="!hasReviewableTarget(selectedReviewable)">隐藏内容 (Hide)</option>
-                <option value="delete" :disabled="!hasReviewableTarget(selectedReviewable)">彻底删除 (Delete)</option>
-                <option value="silence" :disabled="!canSilenceReviewable(selectedReviewable)">禁言作者 (Silence Author)</option>
-                <option value="escalate">升级审核 (Escalate)</option>
+                <option value="approve">通过发布</option>
+                <option value="reject">拒绝，不发布</option>
+                <option value="hide" :disabled="!hasReviewableTarget(selectedReviewable)">隐藏已发布内容</option>
+                <option value="delete" :disabled="!hasReviewableTarget(selectedReviewable)">删除已发布内容</option>
+                <option value="silence" :disabled="!canSilenceReviewable(selectedReviewable)">禁言作者</option>
+                <option value="escalate">暂不处理，升级审核</option>
               </select>
             </label>
             <label class="form-label">
               <span>处理备注 / 决议理由</span>
-              <textarea v-model="decisionNote" rows="3" placeholder="写下处理原因（会通知该用户并记入审计）" />
+              <textarea v-model="decisionNote" rows="3" placeholder="可选：写下处理原因，会进入审计记录" />
             </label>
             <div class="form-actions">
-              <UiButton tone="success" :disabled="pendingAction" @click="submitDecision">提交处理决定</UiButton>
-              <UiButton tone="subtle" :disabled="pendingAction" @click="handleRelease(selectedReviewable.id)">释放认领</UiButton>
+              <UiButton tone="success" :disabled="pendingAction" @click="submitDecision">提交处理</UiButton>
+              <UiButton tone="subtle" :disabled="pendingAction" @click="closeDrawer">先不处理</UiButton>
             </div>
           </div>
-          <div class="drawer-section operations-form-readonly" v-else-if="selectedReviewable.status === 'claimed'">
-            <span class="panel-kicker">Moderator Decision</span>
-            <p class="action-locked-desc">此任务当前已被 <strong>{{ selectedReviewable.assigned_to_name }}</strong> 认领。您需要先认领此任务才能提交处理决定。</p>
-          </div>
-          <div class="drawer-section operations-form-readonly" v-else-if="selectedReviewable.status === 'pending' || selectedReviewable.status === 'appealed'">
-            <span class="panel-kicker">Moderator Decision</span>
-            <p class="action-locked-desc">此任务处于 <strong>{{ reviewableStatusLabel(selectedReviewable.status) }}</strong> 状态。认领后即可在此进行审批处理。</p>
-            <UiButton tone="success" :disabled="pendingAction" @click="handleClaim(selectedReviewable.id)">认领任务</UiButton>
+          <div class="drawer-section operations-form-readonly" v-else-if="isClaimedByOther(selectedReviewable)">
+            <span class="panel-kicker">处理决定</span>
+            <p class="action-locked-desc">这条内容正在由 <strong>{{ selectedReviewable.assigned_to_name }}</strong> 处理。</p>
           </div>
         </div>
       </div>

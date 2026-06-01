@@ -53,6 +53,7 @@ const adminLinkTarget = computed<RouteLocationRaw>(() =>
 const adminLinkLabel = computed(() =>
   isAdmin(currentUser.value) ? t("nav.admin", "后台") : t("nav.moderation", "审核"),
 );
+const showSeparateModerationLink = computed(() => isAdmin(currentUser.value));
 const canSubmitGlobalSearch = computed(() => Boolean(globalSearch.value.trim()));
 const isCurrentUserProfileActive = computed(() => {
   if (!currentUser.value) {
@@ -74,7 +75,6 @@ interface NavItem {
     | "email"
     | "messages"
     | "events"
-    | "reviewables"
     | "admin"
     | "moderation";
   label: string;
@@ -89,7 +89,6 @@ const navItems = computed<NavItem[]>(() => [
   { key: "email", label: t("nav.email", "邮件"), to: { name: "email-preferences" } },
   { key: "messages", label: t("nav.messages", "私信"), to: { name: "messages" } },
   { key: "events", label: t("nav.events", "活动"), to: { name: "events" } },
-  { key: "reviewables", label: t("nav.reviewables", "申诉"), to: { name: "my-reviewables" } },
   { key: "admin", label: t("nav.admin", "后台"), to: { name: "admin-dashboard" } },
   { key: "moderation", label: t("nav.moderation", "审核"), to: { name: "admin-moderation" } },
 ]);
@@ -105,10 +104,6 @@ const visibleNavItems = computed(() =>
     }
 
     if (item.key === "messages") {
-      return Boolean(currentUser.value);
-    }
-
-    if (item.key === "reviewables") {
       return Boolean(currentUser.value);
     }
 
@@ -236,10 +231,6 @@ function isNavItemActive(item: NavItem) {
     return route.name === "events";
   }
 
-  if (item.key === "reviewables") {
-    return route.name === "my-reviewables";
-  }
-
   if (item.key === "admin") {
     return route.name === "admin-dashboard";
   }
@@ -335,10 +326,19 @@ function isNavItemActive(item: NavItem) {
                 v-if="canAccessModeration(currentUser)"
                 class="account-menu__item"
                 :to="adminLinkTarget"
-                :class="{ 'is-active': route.name === 'admin-dashboard' || route.name === 'admin-moderation' }"
+                :class="{ 'is-active': route.name === (isAdmin(currentUser) ? 'admin-dashboard' : 'admin-moderation') }"
                 @click="closeAccountMenu"
               >
                 {{ adminLinkLabel }}
+              </RouterLink>
+              <RouterLink
+                v-if="showSeparateModerationLink"
+                class="account-menu__item"
+                :to="{ name: 'admin-moderation' }"
+                :class="{ 'is-active': route.name === 'admin-moderation' }"
+                @click="closeAccountMenu"
+              >
+                {{ t("nav.moderation", "审核") }}
               </RouterLink>
               <RouterLink
                 class="account-menu__item"
@@ -371,14 +371,6 @@ function isNavItemActive(item: NavItem) {
                 @click="closeAccountMenu"
               >
                 {{ t("nav.events", "活动") }}
-              </RouterLink>
-              <RouterLink
-                class="account-menu__item"
-                :to="{ name: 'my-reviewables' }"
-                :class="{ 'is-active': route.name === 'my-reviewables' }"
-                @click="closeAccountMenu"
-              >
-                {{ t("nav.reviewables", "申诉") }}
               </RouterLink>
               <button class="account-menu__item account-menu__item--danger" type="button" @click="handleLogout">
                 {{ t("auth.logout", "退出") }}

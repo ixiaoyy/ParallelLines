@@ -35,6 +35,8 @@ Query composables:
 - `useUserStatusMutation()`
 - `useAuditLogs()`
 - `useReviewableQueue(status)`
+- `usePublishReviewableQueue(status)` for the publish-review tab; it fetches
+  `queued_topic`, `queued_post`, and `queued_edit` reviewables only.
 - `useMyReviewables()`
 - `useClaimReviewableMutation()`
 - `useReleaseReviewableMutation()`
@@ -51,11 +53,18 @@ Query composables:
 - Reviewable DTOs also keep backend snake_case and use literal unions for
   `ReviewableStatus`, `ReviewableType`, and `ReviewableDecisionAction`. UI labels must go
   through `reviewableStatusLabel` and `reviewableTypeLabel`.
-- The admin moderation page should treat reviewables as the primary queue and keep legacy
-  flags/audit views available. Claim/release/decision mutations must invalidate
-  `queryKeys.moderationRoot` and topic feed queries.
-- User-facing appeal entry lives at `/moderation/reviewables` and consumes
-  `/moderation/reviewables/me`; it must not call staff queue endpoints.
+- The admin moderation page must expose two explicit staff functions:
+  - `帖子发布审核`: reviewables for queued topic/post/edit publishing only; do not mix
+    user reports into this tab.
+  - `用户举报审核`: flags from `/moderation/queue`, with the report reason, optional
+    reporter detail, target excerpt/context link, and hide/restore/resolve/reject actions.
+- The staff UI must not require a visible “claim task” step before approving/rejecting
+  queued content; decision mutations still invalidate `queryKeys.moderationRoot` and topic
+  feed queries. Claim/release endpoints may exist for workflow compatibility, but the main
+  UI should label assigned states as “处理中” rather than exposing a separate task-claim step.
+- User-facing content review entry lives at `/moderation/reviewables` and consumes
+  `/moderation/reviewables/me`; it must not call staff queue endpoints. Keep this separate
+  from user-created reports unless a dedicated “my reports” endpoint exists.
 - Moderation notifications with `data.reviewable_id` should link to `/moderation/reviewables`
   so affected users can find the appeal entry even when no topic URL exists.
 - If no access token is present, moderation queries stay disabled and the console shows a login/permission message.
@@ -68,9 +77,9 @@ Query composables:
 | Anonymous user clicks report | Mutation throws `authentication_required`; UI remains unchanged |
 | Logged-in user repeats a report on the same target | Mutation succeeds with the existing flag id; queue is not spammed |
 | Moderator queue returns 403 | Console renders permission guidance |
-| Empty queue for selected status | Empty state explains that no flags match |
-| Empty reviewable queue | Empty state explains that flags, pending content, auto-rules, and appeals appear there |
-| Reviewable already claimed by another moderator | Mutation surfaces 409; UI must not imply force-claim unless backend supports it |
+| Empty queue for selected status | Empty state explains that no user reports match |
+| Empty reviewable queue | Empty state explains that pending publish-review content appears there |
+| Reviewable already assigned to another moderator | UI shows it as “处理中” and must not imply force-claim unless backend supports it |
 | User opens `/moderation/reviewables` | Shows only own reviewables from `/reviewables/me` |
 | Reviewable `appeal_available=true` | Show appeal form and post `reason`; invalidate my-reviewables after success |
 | Moderation notification lacks topic fields | Link falls back to `/moderation/reviewables` when `reviewable_id` exists |
@@ -82,8 +91,11 @@ Query composables:
 
 - Good: `PostItem.vue` emits a report through `useCreateFlag()` with `target_type='post'` and the post id.
 - Base: moderator opens `/admin/moderation`, filters pending flags, hides content, resolves flag, and audit panel refreshes.
-- Good: moderator opens the reviewable tab, claims a pending queued topic, approves it, and
+- Good: moderator opens the `帖子发布审核` tab, sees only queued publish-review items,
+  approves a pending queued topic without a separate visible claim step, and
   sees the queue plus public topic feed refresh through query invalidation.
+- Good: moderator opens the `用户举报审核` tab, sees the举报原因和补充说明, opens target
+  context, hides/restores content, then resolves or rejects the report.
 - Good: affected user opens `/moderation/reviewables` from a moderation notification and
   submits an appeal without gaining access to staff-only queue data.
 - Bad: page component imports `apiPut` directly or stores the moderation queue in Pinia.

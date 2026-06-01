@@ -81,6 +81,10 @@
   align-items: start;
 }
 
+.moderation-layout--single {
+  grid-template-columns: 1fr;
+}
+
 .queue-column,
 .side-column {
   display: grid;
@@ -327,6 +331,44 @@
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+}
+
+.reviewable-reason {
+  border-left: 3px solid var(--btn-primary-bg);
+  padding-left: 0.7rem;
+  color: var(--title) !important;
+  font-weight: 760;
+}
+
+.report-reason-box,
+.reported-content-box {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--bg-subtle);
+
+  strong {
+    color: var(--title);
+    font-weight: 860;
+  }
+
+  span,
+  p {
+    margin: 0;
+    color: var(--text);
+    line-height: 1.65;
+  }
+}
+
+.report-reason-box {
+  border-left: 3px solid var(--danger);
+  background: rgba(239, 68, 68, 0.055);
+}
+
+.reported-content-box {
+  border-left: 3px solid var(--btn-primary-bg);
 }
 
 .footer-actions {

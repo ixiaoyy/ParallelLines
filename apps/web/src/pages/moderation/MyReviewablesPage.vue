@@ -47,7 +47,7 @@ function cancelAppeal() {
 function submitAppeal(reviewable: ReviewableResponse) {
   const reason = appealReason.value.trim();
   if (reason.length < 4) {
-    appealError.value = "请补充至少 4 个字符的申诉理由。";
+    appealError.value = "请补充至少 4 个字符的复核理由。";
     return;
   }
 
@@ -57,11 +57,11 @@ function submitAppeal(reviewable: ReviewableResponse) {
       onSuccess: () => {
         activeAppealId.value = null;
         appealReason.value = "";
-        appealNotice.value = "申诉已提交，审核员会重新查看此项。";
+        appealNotice.value = "复核申请已提交，审核员会重新查看此项。";
         appealError.value = "";
       },
       onError: (error) => {
-        appealError.value = error.message || "申诉提交失败，请稍后重试。";
+        appealError.value = error.message || "复核申请提交失败，请稍后重试。";
       },
     },
   );
@@ -104,19 +104,19 @@ function readNumber(value: unknown): number | null {
     <section class="reviewables-hero" aria-labelledby="my-reviewables-title">
       <div>
         <span class="panel-kicker">My moderation cases</span>
-        <h1 id="my-reviewables-title">我的审核与申诉</h1>
-        <p>查看你提交或与你相关的待审内容、处理结果，并在可申诉时补充说明。</p>
+        <h1 id="my-reviewables-title">我的内容复核</h1>
+        <p>查看你提交或与你相关的待审内容、处理结果，并在可申请复核时补充说明。</p>
       </div>
       <RouterLink class="hero-link" to="/boards">返回社区</RouterLink>
     </section>
 
     <UiCard v-if="!hasToken" class="reviewables-empty">
       <strong>需要登录后查看</strong>
-      <span>登录后可以看到与你相关的审核项和申诉入口。</span>
+      <span>登录后可以看到与你相关的审核项和复核入口。</span>
     </UiCard>
 
     <UiCard v-else-if="reviewablesQuery.isError.value" class="reviewables-empty">
-      <strong>暂时无法加载审核记录</strong>
+      <strong>暂时无法加载复核记录</strong>
       <span>请稍后重试，或通过通知中心重新进入。</span>
     </UiCard>
 
@@ -159,7 +159,7 @@ function readNumber(value: unknown): number | null {
             @submit.prevent="submitAppeal(item)"
           >
             <label>
-              <span>申诉理由</span>
+              <span>复核理由</span>
               <textarea
                 v-model="appealReason"
                 rows="4"
@@ -168,7 +168,7 @@ function readNumber(value: unknown): number | null {
             </label>
             <div class="appeal-actions">
               <UiButton type="submit" tone="success" :disabled="isAppealPending">
-                提交申诉
+                提交复核
               </UiButton>
               <UiButton tone="ghost" :disabled="isAppealPending" @click="cancelAppeal">
                 取消
@@ -183,9 +183,9 @@ function readNumber(value: unknown): number | null {
               :disabled="isAppealPending"
               @click="openAppeal(item)"
             >
-              发起申诉
+              申请复核
             </UiButton>
-            <span v-else>当前状态暂不可申诉。</span>
+            <span v-else>当前状态暂不可申请复核。</span>
           </footer>
         </article>
       </div>
