@@ -59,6 +59,12 @@ DB tables:
   - `hot`: `hot_score desc`, then `last_posted_at desc`
   - `top`: `like_count desc`, then `reply_count desc`
 - `/tags` returns `ApiResponse[list[TagResponse]]` and must include only tags with `topic_count > 0`, ordered by `topic_count desc`, then `name`.
+- Hot feed/tag list routes may use a short-lived response cache for perceived
+  speed. Cache keys must include the full filter/sort/cursor/limit set and a
+  visibility scope (`anonymous` or the authenticated user id) so private-board
+  visibility and per-user reaction state never leak across users. `/search`
+  must not skip execution through a response cache because each search request
+  writes a `search_logs` row.
 - Hot score recompute is idempotent and uses `calculate_hot_score(reply_count, like_count, view_count)`.
 - `SearchIndexService.sync_topic` must run in the same transaction for topic
   create, reply, first-post edit, revision restore, reply delete, topic status

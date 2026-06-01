@@ -1,8 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Request, status
+from fastapi import APIRouter, Query, Request, Response, status
 
 from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep
+from app.core.response_cache import ResponseHotCache, scoped_cache_control, user_cache_scope
 from app.schemas.common import ApiResponse
 from app.schemas.forum import (
     PollResponse,
@@ -28,11 +29,19 @@ from app.services.topic_cursor import encode_topic_cursor
 
 router = APIRouter(prefix="/topics", tags=["topics"])
 
+TOPIC_LIST_CACHE_TTL_SECONDS = 15
+
+_TOPIC_LIST_RESPONSE_CACHE = ResponseHotCache[ApiResponse[list[TopicResponse]]](
+    ttl_seconds=TOPIC_LIST_CACHE_TTL_SECONDS,
+    max_entries=256,
+)
+
 
 @router.get("", response_model=ApiResponse[list[TopicResponse]])
 async def list_topics(
     session: SessionDep,
     current_user: OptionalCurrentUserDep,
+    response: Response,
     board: str | None = None,
     q: str | None = None,
     tag: str | None = None,
@@ -41,6 +50,26 @@ async def list_topics(
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> ApiResponse[list[TopicResponse]]:
+    response.headers["Cache-Control"] = scoped_cache_control(
+        current_user,
+        max_age=TOPIC_LIST_CACHE_TTL_SECONDS,
+        stale_while_revalidate=60,
+    )
+    cache_key = _topic_list_cache_key(
+        current_user=current_user,
+        board=board,
+        q=q,
+        tag=tag,
+        author=author,
+        sort=sort,
+        cursor=cursor,
+        limit=limit,
+    )
+    cached = _TOPIC_LIST_RESPONSE_CACHE.get(cache_key)
+    if cached is not None:
+        response.headers["X-ParallelLines-Cache"] = "hit"
+        return cached
+
     topics = await ForumService(session).list_topics(
         board_slug=board,
         sort=sort,
@@ -51,12 +80,55 @@ async def list_topics(
         cursor=cursor,
         current_user=current_user,
     )
-    return ApiResponse(
+    payload = ApiResponse(
         data=[TopicResponse.from_model(topic) for topic in topics],
         meta={
             "next_cursor": encode_topic_cursor(topics[-1]) if len(topics) == limit else None
         },
     )
+    _TOPIC_LIST_RESPONSE_CACHE.set(cache_key, payload)
+    response.headers["X-ParallelLines-Cache"] = "miss"
+    return payload
+
+
+# Build an auth-scoped cache key for global topic feed/filter responses.
+def _topic_list_cache_key(
+    *,
+    current_user: object | None,
+    board: str | None,
+    q: str | None,
+    tag: str | None,
+    author: str | None,
+    sort: TopicSort,
+    cursor: str | None,
+    limit: int,
+) -> tuple[object, ...]:
+    """Return the hot-cache key for a topic list request.
+
+    Key parameters mirror the route filters and cursor. Return value includes
+    the current user scope, so private-board visibility and per-user state do
+    not leak across sessions; the function has no side effects.
+    """
+    return (
+        user_cache_scope(current_user),
+        _normalized_cache_part(board),
+        _normalized_cache_part(q),
+        _normalized_cache_part(tag),
+        _normalized_cache_part(author),
+        sort,
+        cursor or "",
+        limit,
+    )
+
+
+# Normalize optional string filters before they become cache key parts.
+def _normalized_cache_part(value: str | None) -> str:
+    """Return a trimmed cache-key string for an optional route filter.
+
+    Key parameter `value` may be `None`; return value is always a string. The
+    function has no side effects.
+    """
+    return value.strip() if value else ""
 
 
 @router.get("/{topic_id}", response_model=ApiResponse[TopicResponse])

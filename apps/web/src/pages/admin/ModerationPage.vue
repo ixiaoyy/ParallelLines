@@ -138,8 +138,13 @@ function reviewableTitle(reviewable: ReviewableResponse) {
 }
 
 function reviewableReason(reviewable: ReviewableResponse) {
-  if (reviewable.source === "seed_content" || reviewable.data.seed_author === true) {
-    return "种子作者提交的内容，需要审核通过后才会公开。";
+  if (
+    reviewable.source === "seed_content" ||
+    reviewable.source === "persona_content" ||
+    reviewable.data.seed_author === true ||
+    reviewable.data.persona_seed === true
+  ) {
+    return "新用户发帖，发布前需要审核通过。";
   }
 
   if (reviewable.source === "content_safety") {

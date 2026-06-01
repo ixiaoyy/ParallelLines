@@ -27,22 +27,19 @@ from app.services.forum import (
 )
 from app.services.moderation import ModerationService
 
-DEFAULT_SEED_KEY = "seed-review-topic-v1"
-DEFAULT_SEED_USERNAME = "seed_writer"
-DEFAULT_SEED_EMAIL = "seed_writer@parallellines.local"
-DEFAULT_DISPLAY_NAME = "种子作者"
-DEFAULT_TITLE = "【种子审核测试】一个适合检查审核流的示例主题"
-DEFAULT_BODY = """这是一篇由种子作者提交的示例内容，用来验证
-「提交 → 进入审核队列 → 管理员批准 → 正式发布」流程。
+DEFAULT_SEED_KEY = "seed-real-lounge-v1"
+DEFAULT_SEED_USERNAME = "今天也想早睡"
+DEFAULT_SEED_EMAIL = "sleepy_today@parallellines.local"
+DEFAULT_DISPLAY_NAME = "今天也想早睡"
+DEFAULT_TITLE = "今天把手机通知关了，舒服多了"
+DEFAULT_BODY = """这几天有点烦，总觉得一会儿就想摸手机。昨晚干脆把几个 App 的通知关了，只留电话和必要消息。
 
-## 预期检查点
+今天明显安静很多，做事没那么碎，也不会刚坐下就被提示音打断。
 
-- 执行脚本后，主题不会立刻出现在公开列表。
-- 审核后台会出现一条待处理内容。
-- 管理员批准后，主题会进入所选版块，并同步搜索索引和计数。
+不知道大家有没有这种感觉：不是手机多好玩，是它老在提醒你。后面我想试试晚上固定半小时再看消息，看看能不能坚持下来。
 """
-DEFAULT_TAG = "种子内容"
-SEED_REVIEW_SOURCE = "seed_content"
+DEFAULT_TAG = "日常"
+SEED_REVIEW_SOURCE = "persona_content"
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -103,7 +100,7 @@ async def queue_seed_topic(session: AsyncSession, args: argparse.Namespace) -> d
                 "board_name": board.name,
                 "title": args.title,
                 "tags": tags,
-                "review_source": SEED_REVIEW_SOURCE,
+            "review_source": SEED_REVIEW_SOURCE,
             },
         }
 
@@ -143,10 +140,10 @@ async def queue_seed_topic(session: AsyncSession, args: argparse.Namespace) -> d
             "featured": False,
             "board_slug": board.slug,
             "seed_key": args.seed_key,
-            "seed_author": True,
+            "persona_seed": True,
         },
         source=SEED_REVIEW_SOURCE,
-        source_summary="种子作者提交的内容，需要审核通过后才会公开。",
+        source_summary="新用户发帖，发布前需要审核通过。",
     )
     await session.commit()
     return reviewable_result(
@@ -209,7 +206,7 @@ async def upsert_seed_author(
         email=normalized_email,
         hashed_password=hash_password(secrets.token_urlsafe(32)),
         display_name=display_name,
-        bio="用于内容填充和审核流验证的种子作者。",
+        bio="喜欢记录一点日常，也会偶尔分享读到和用到的东西。",
         role="user",
         status="active",
     )
@@ -300,8 +297,7 @@ def reviewable_result(
             "tags": reviewable.data.get("tags"),
         },
         "next_step": (
-            "Open the moderation reviewables queue, then approve this reviewable to publish "
-            "the queued topic."
+            "打开后台的帖子发布审核，通过后这篇帖子会正式发布。"
         ),
     }
 

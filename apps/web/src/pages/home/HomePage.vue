@@ -15,8 +15,10 @@ import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
 import {
   cacheHomeRailBoards,
   cacheHomeRailTags,
+  cacheHomeFeedTopics,
   readCachedHomeRailBoards,
   readCachedHomeRailTags,
+  readCachedHomeFeedTopics,
 } from "@/pages/home/homeRailCache";
 import { readRouteParam } from "@/shared/router/params";
 
@@ -33,6 +35,12 @@ const topicsQuery = useTopicFeed(feedSort);
 const tagsQuery = useTags(30);
 const cachedRailBoards = ref(readCachedHomeRailBoards());
 const cachedRailTags = ref(readCachedHomeRailTags());
+const cachedFeedTopics = ref<Record<TopicSort, TopicCardVM[]>>({
+  latest: readCachedHomeFeedTopics("latest"),
+  hot: readCachedHomeFeedTopics("hot"),
+  top: readCachedHomeFeedTopics("top"),
+  votes: readCachedHomeFeedTopics("votes"),
+});
 
 const titleFilter = computed({
   get: () => readRouteParam(route.query.title as string | string[] | undefined),
@@ -47,7 +55,13 @@ const tagFilter = computed({
   set: (value: string) => updateFilterQuery("tag", value),
 });
 const boardSummaries = computed(() => boardsQuery.data.value ?? []);
-const feedTopics = computed(() => topicsQuery.data.value ?? []);
+const feedTopics = computed(() => {
+  if (topicsQuery.data.value) {
+    return topicsQuery.data.value;
+  }
+
+  return topicsQuery.isLoading.value ? cachedFeedTopics.value[feedSort.value] : [];
+});
 const discoveryTopics = computed(() =>
   feedTopics.value.filter((topic) => !(topic.pinned && topic.title === `关于「${topic.boardName}」`)),
 );
@@ -76,6 +90,9 @@ const railBoardsLoading = computed(
 );
 const railTagsLoading = computed(
   () => tagsQuery.isLoading.value && cachedRailTags.value.length === 0,
+);
+const topicFeedLoading = computed(
+  () => topicsQuery.isLoading.value && cachedFeedTopics.value[feedSort.value].length === 0,
 );
 
 const visibleTopics = computed(() => {
@@ -122,6 +139,19 @@ watch(
   (tags) => {
     if (tags) {
       cachedRailTags.value = cacheHomeRailTags(tags);
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => [feedSort.value, topicsQuery.data.value] as const,
+  ([sort, topics]) => {
+    if (topics) {
+      cachedFeedTopics.value = {
+        ...cachedFeedTopics.value,
+        [sort]: cacheHomeFeedTopics(sort, topics),
+      };
     }
   },
   { immediate: true },
@@ -236,7 +266,7 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
           :title-filter="titleFilter"
           :board-filter="boardFilter"
           :tag-filter="tagFilter"
-          :loading="topicsQuery.isLoading.value"
+          :loading="topicFeedLoading"
           :error="topicsQuery.isError.value"
           @select-tab="setActiveTab"
           @update-title-filter="setTitleFilter"

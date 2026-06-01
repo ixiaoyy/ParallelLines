@@ -40,6 +40,10 @@ Validation helpers:
   `^[a-z0-9_.-]{1,80}$`; values are non-empty strings up to 500 characters after trimming.
 - Email template body settings may be up to 4000 characters; other string settings are capped at 512.
 - Admin writes still require admin role and write `site_setting_updated` audit logs.
+- Public site settings and public plugin UI extensions may use short-lived
+  public response caches. Admin update flows must still invalidate frontend
+  query caches; backend TTLs must stay short enough that branding/text changes
+  settle without manual intervention.
 
 ### 4. Validation & Error Matrix
 
