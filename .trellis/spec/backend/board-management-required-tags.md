@@ -50,6 +50,7 @@ class BoardMemberUpdateRequest(BaseModel):
 - Board moderators are scoped by `BoardMember(board_id, user_id, role="moderator")`; they may moderate only topics in that board unless they also have global moderator/admin role.
 - `BoardResponse` and `BoardDetailResponse` must expose hierarchy/default/tag/template fields needed by the frontend.
 - `BoardDetailResponse.child_boards` contains visible direct children only; list endpoints still rely on server-side visibility filtering.
+- `ForumService.list_boards()` must keep the `feedback` board last; unknown/future public boards should sort before `feedback` rather than after it.
 - Board list/detail/topic-list responses may use short-lived hot caches for
   loading speed, but cache keys must include the visibility scope (`anonymous`
   or authenticated user id) and all route filters. Cached board data must never

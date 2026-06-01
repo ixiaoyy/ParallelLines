@@ -32,6 +32,7 @@ Route:
   - `公共版块`: `visibility === "public"`
   - `邀请版块`: `visibility !== "public"`
 - The frontend must trust backend filtering for privacy; do not render client-side fixtures for private boards.
+- Public board list renderers and filter options must keep `feedback` / 社区反馈 as the final visible board, even when applying activity or name sorting.
 - Invite write actions must use `features/invites/queries.ts`; components must not call `fetch` directly.
 - Unauthenticated users visiting `/invites` see a login guidance state and are redirected to `/auth?redirect=/invites` for writes.
 - Accepting or revoking an invite invalidates both `queryKeys.invites` and `queryKeys.boards`.

@@ -61,7 +61,7 @@ export const BOARD_PALETTE: BoardToneDefinition[] = [
   },
   {
     tone: 5,
-    slugs: ["reading", "plugins"],
+    slugs: ["reading", "comics", "manga", "plugins"],
     accent: "#db2777",
     accentRgb: "219, 39, 119",
     tintBg: "color-mix(in srgb, #fdf2f8 82%, #ffffff)",

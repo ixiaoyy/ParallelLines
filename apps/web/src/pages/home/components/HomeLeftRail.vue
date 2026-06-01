@@ -21,6 +21,7 @@ import type { Component } from "vue";
 import { computed } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
+import { sortBoardsWithFeedbackLast } from "@/entities/board/order";
 import type { TagItemVM } from "@/features/tags/model";
 import { compactNumber } from "@/shared/lib/format";
 import { boardToneClass } from "@/shared/theme/boardPalette";
@@ -34,13 +35,14 @@ const props = defineProps<{
   tagsError: boolean;
 }>();
 
-const publicBoards = computed(() => props.boards.filter((board) => board.visibility === "public"));
+const publicBoards = computed(() => sortBoardsWithFeedbackLast(props.boards.filter((board) => board.visibility === "public")));
 
 const boardIcons: Record<string, Component> = {
   announcements: NotificationOutlined,
   resources: FolderOpenOutlined,
   benefits: FireOutlined,
   reading: ReadOutlined,
+  comics: ReadOutlined,
   health: HeartOutlined,
   news: BulbOutlined,
   experience: TrophyOutlined,
@@ -61,6 +63,7 @@ const featuredTagNames = [
   "教程",
   "作品集",
   "读书",
+  "漫画",
   "健康",
   "闲聊",
   "站务反馈",
@@ -80,6 +83,7 @@ const tagIcons: Record<string, Component> = {
   教程: FileTextOutlined,
   作品集: TrophyOutlined,
   读书: ReadOutlined,
+  漫画: ReadOutlined,
   健康: HeartOutlined,
   闲聊: CoffeeOutlined,
   站务反馈: FlagOutlined,
@@ -99,6 +103,7 @@ const tagAccentColors: Record<string, string> = {
   教程: "#6366f1",
   作品集: "#db2777",
   读书: "#be185d",
+  漫画: "#db2777",
   健康: "#10b981",
   闲聊: "#64748b",
   站务反馈: "#475569",

@@ -84,17 +84,19 @@ SAFE_UPLOAD_PATH_PATTERN = re.compile(
     r")/content(?:\?[^<>\"]*)?$"
 )
 
+FEEDBACK_BOARD_SLUG = "feedback"
+
 BOARD_DISPLAY_ORDER = (
     "announcements",
     "resources",
     "benefits",
     "reading",
+    "comics",
     "health",
     "news",
     "experience",
     "qna",
     "lounge",
-    "feedback",
 )
 
 ADMIN_ONLY_TOPIC_BOARD_SLUGS = frozenset({"announcements"})
@@ -111,6 +113,7 @@ TAG_DISPLAY_ORDER = (
     "教程",
     "作品集",
     "读书",
+    "漫画",
     "健康",
     "闲聊",
     "站务反馈",
@@ -129,8 +132,10 @@ def normalize_tag_name(value: str) -> str:
 
 
 def board_display_order_expression():
+    # Keep unlisted public boards before the feedback board so 社区反馈 remains the final board.
     return case(
         *((Board.slug == slug, index) for index, slug in enumerate(BOARD_DISPLAY_ORDER)),
+        (Board.slug == FEEDBACK_BOARD_SLUG, len(BOARD_DISPLAY_ORDER) + 1),
         else_=len(BOARD_DISPLAY_ORDER),
     )
 

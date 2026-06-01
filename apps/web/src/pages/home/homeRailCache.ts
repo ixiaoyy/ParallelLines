@@ -1,4 +1,5 @@
 import type { BoardSummary } from "@/entities/board/model";
+import { sortBoardsWithFeedbackLast } from "@/entities/board/order";
 import type { TopicCardVM } from "@/entities/topic/model";
 import type { TagItemVM } from "@/features/tags/model";
 import type { TopicSort } from "@/features/topics/model";
@@ -35,9 +36,9 @@ export function readCachedHomeFeedTopics(sort: TopicSort): TopicCardVM[] {
 }
 
 export function cacheHomeRailBoards(boards: BoardSummary[]): BoardSummary[] {
-  const publicBoards = boards
-    .filter((board) => board.visibility === "public")
-    .map(toPublicRailBoard);
+  const publicBoards = sortBoardsWithFeedbackLast(
+    boards.filter((board) => board.visibility === "public").map(toPublicRailBoard),
+  );
 
   if (publicBoards.length) {
     writePersistentCache(PUBLIC_BOARDS_CACHE_KEY, publicBoards);

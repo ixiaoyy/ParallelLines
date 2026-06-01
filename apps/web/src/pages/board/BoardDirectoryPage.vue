@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
+import { sortBoardsWithFeedbackLast } from "@/entities/board/order";
 import { useBoards } from "@/features/boards/queries";
 import { useTopicFeed } from "@/features/topics/queries";
 import { boardToneClass } from "@/shared/theme/boardPalette";
@@ -16,7 +17,10 @@ const topicsQuery = useTopicFeed("latest");
 
 const boardItems = computed(() => {
   const boards = boardsQuery.data.value ?? [];
-  return [...boards].sort((left, right) => right.topicCount + right.postCount - (left.topicCount + left.postCount));
+  return sortBoardsWithFeedbackLast(
+    boards,
+    (left, right) => right.topicCount + right.postCount - (left.topicCount + left.postCount),
+  );
 });
 
 const topicItems = computed(() => topicsQuery.data.value ?? []);
@@ -82,6 +86,7 @@ function previewTopics(board: BoardSummary) {
 function boardMark(board: BoardSummary) {
   const labels: Record<string, string> = {
     announcements: "公告",
+    comics: "漫画",
     support: "支持",
     dev: "开发",
     plugins: "插件",
@@ -98,6 +103,7 @@ function boardIntent(board: BoardSummary) {
 
   const labels: Record<string, string> = {
     announcements: "版本通知 / 维护窗口",
+    comics: "每日漫画 / 连载推荐",
     support: "报错定位 / 可复现排查",
     dev: "接口设计 / 架构方案",
     plugins: "主题组件 / 编辑器体验",

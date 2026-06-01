@@ -2,6 +2,7 @@
 import { computed, onUnmounted, ref, watch } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
+import { sortBoardsWithFeedbackLast } from "@/entities/board/order";
 import type { TopicCardVM } from "@/entities/topic/model";
 import type { TagItemVM } from "@/features/tags/model";
 import HomeTopicRow from "@/pages/home/components/HomeTopicRow.vue";
@@ -45,7 +46,7 @@ const filteredSummary = computed(() => {
   return `${props.topics.length}/${props.totalTopics} 个主题`;
 });
 const boardOptions = computed(() =>
-  [...props.boards].sort((left, right) => left.name.localeCompare(right.name, "zh-Hans-CN")),
+  sortBoardsWithFeedbackLast(props.boards, (left, right) => left.name.localeCompare(right.name, "zh-Hans-CN")),
 );
 const tagOptions = computed(() => props.tags.map((tag) => tag.name));
 let observer: IntersectionObserver | null = null;
