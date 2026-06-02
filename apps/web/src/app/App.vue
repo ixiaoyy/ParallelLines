@@ -2,6 +2,7 @@
 import zhCN from "ant-design-vue/es/locale/zh_CN";
 
 import AppShell from "@/app/layouts/AppShell.vue";
+import GlobalLoadingIndicator from "@/shared/ui/GlobalLoadingIndicator.vue";
 
 /** 须与 tokens.scss / button-surfaces.scss 一致，见 AGENTS.md */
 const theme = {
@@ -46,5 +47,6 @@ const theme = {
     <AppShell>
       <RouterView />
     </AppShell>
+    <GlobalLoadingIndicator />
   </a-config-provider>
 </template>

@@ -41,6 +41,8 @@ import { useSeoMeta } from "@/shared/seo/meta";
 import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
+const COMIC_READER_TAG = "漫画阅读";
+
 const route = useRoute();
 const router = useRouter();
 const queryClient = useQueryClient();
@@ -74,6 +76,7 @@ const replyStatus = ref("");
 const replyResetToken = ref(0);
 const currentUserId = computed(() => currentUserQuery.data.value?.id ?? null);
 const currentUserRole = computed(() => currentUserQuery.data.value?.role ?? null);
+const comicReader = computed(() => topic.value?.tags.includes(COMIC_READER_TAG) ?? false);
 const canManageTopic = computed(
   () => currentUserRole.value === "admin" || currentUserRole.value === "moderator",
 );
@@ -530,6 +533,7 @@ function flagTopic() {
               <PostItem
                 :post="firstPost"
                 variant="article"
+                :comic-reader="comicReader"
                 :current-user-id="currentUserId"
                 :current-user-role="currentUserRole"
                 :can-manage-solution="canManageSolution"
@@ -594,6 +598,7 @@ function flagTopic() {
                   <PostItem
                     :post="post"
                     variant="reply"
+                    :comic-reader="comicReader"
                     :current-user-id="currentUserId"
                     :current-user-role="currentUserRole"
                     :can-manage-solution="canManageSolution"

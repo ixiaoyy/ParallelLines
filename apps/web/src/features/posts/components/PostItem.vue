@@ -47,8 +47,10 @@ const props = withDefaults(defineProps<{
   currentUserRole?: string | null;
   canManageSolution?: boolean;
   solutionPending?: boolean;
+  comicReader?: boolean;
   variant?: "article" | "reply";
 }>(), {
+  comicReader: false,
   variant: "reply",
 });
 const emit = defineEmits<{
@@ -144,15 +146,15 @@ watch(
 );
 
 watch(
-  () => props.post.cookedHtml,
+  () => [props.post.cookedHtml, props.comicReader] as const,
   () => {
-    void nextTick(decorateHeadingAnchors);
+    void nextTick(decorateRenderedContent);
   },
   { immediate: true },
 );
 
 onMounted(() => {
-  decorateHeadingAnchors();
+  decorateRenderedContent();
 });
 
 useOutsidePointerDown(postMoreRef, closeMoreMenu, () => Boolean(postMoreRef.value?.open));
@@ -400,6 +402,21 @@ function closeMoreMenu() {
   }
 }
 
+/**
+ * Decorates the already-sanitized rendered Markdown after Vue mounts or refreshes it.
+ * Key parameters: none; it reads `bodyRef` and current props. Return value: none.
+ * Side effect: adds heading anchors and, when enabled, comic-reader image classes.
+ */
+function decorateRenderedContent() {
+  decorateHeadingAnchors();
+  decorateComicReaderImages();
+}
+
+/**
+ * Adds stable anchor IDs to Markdown headings inside this post only.
+ * Key parameters: none; it reads `bodyRef` and `post.floor`. Return value: none.
+ * Side effect: mutates rendered heading IDs/classes for in-page navigation.
+ */
 function decorateHeadingAnchors() {
   const container = bodyRef.value;
   if (!container) {
@@ -413,6 +430,60 @@ function decorateHeadingAnchors() {
       heading.classList.add("markdown-heading-anchor");
     });
 }
+
+/**
+ * Marks image-only Markdown paragraphs as comic pages when the topic uses comic-reader mode.
+ * Key parameters: none; it reads `bodyRef` and `comicReader`. Return value: none.
+ * Side effect: adds lazy-loading attributes and CSS classes to rendered image nodes.
+ */
+function decorateComicReaderImages() {
+  const container = bodyRef.value;
+  if (!container) {
+    return;
+  }
+
+  const markdownBody = container.querySelector<HTMLElement>(".markdown-body");
+  if (!markdownBody) {
+    return;
+  }
+
+  markdownBody.classList.toggle("markdown-body--comic-reader", props.comicReader);
+  markdownBody.querySelectorAll<HTMLElement>(".comic-reader-page").forEach((paragraph) => {
+    paragraph.classList.remove("comic-reader-page");
+  });
+  markdownBody.querySelectorAll<HTMLImageElement>("img.comic-reader-image").forEach((image) => {
+    image.classList.remove("comic-reader-image");
+  });
+
+  if (!props.comicReader) {
+    return;
+  }
+
+  markdownBody.querySelectorAll<HTMLImageElement>("img").forEach((image, index) => {
+    image.loading = "lazy";
+    image.decoding = "async";
+    image.classList.add("comic-reader-image");
+    if (!image.alt) {
+      image.alt = `漫画第 ${index + 1} 页`;
+    }
+
+    const paragraph = image.closest("p");
+    if (paragraph && paragraphContainsOnlyImages(paragraph)) {
+      paragraph.classList.add("comic-reader-page");
+    }
+  });
+}
+
+/**
+ * Checks whether a rendered Markdown paragraph contains only image content.
+ * Key parameter: `paragraph` is a DOM node from sanitized Markdown. Return value:
+ * true when non-image text is empty, so CSS can treat it as a comic page.
+ */
+function paragraphContainsOnlyImages(paragraph: HTMLElement) {
+  const clone = paragraph.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll("img").forEach((image) => image.remove());
+  return Boolean(paragraph.querySelector("img")) && clone.textContent?.trim() === "";
+}
 </script>
 
 <template>
@@ -421,6 +492,7 @@ function decorateHeadingAnchors() {
     :class="{
       deleted: post.deleted,
       'post-item--article': variant === 'article',
+      'post-item--comic-reader': comicReader,
       'post-item--reply': variant === 'reply',
     }"
   >

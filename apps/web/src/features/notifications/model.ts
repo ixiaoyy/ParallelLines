@@ -113,17 +113,21 @@ export function markNotificationListRead(
 
   const targetIds = ids ? new Set(ids) : null;
   const now = new Date().toISOString();
+  let markedUnreadCount = 0;
   const notifications = current.notifications.map((notification) => {
     if (notification.read_at || (targetIds && !targetIds.has(notification.id))) {
       return notification;
     }
 
+    markedUnreadCount += 1;
     return { ...notification, read_at: now };
   });
 
   return {
     notifications,
-    unread_count: notifications.filter((notification) => notification.read_at === null).length,
+    // `unread_count` is the backend total, while `notifications` only contains the loaded page.
+    // Keep the badge optimistic count aligned with the total instead of recomputing from the page.
+    unread_count: targetIds ? Math.max(0, current.unread_count - markedUnreadCount) : 0,
   };
 }
 

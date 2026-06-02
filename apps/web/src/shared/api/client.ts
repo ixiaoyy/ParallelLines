@@ -1,3 +1,5 @@
+import { readonly, ref } from "vue";
+
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
 export interface ApiEnvelope<T> {
@@ -30,7 +32,15 @@ interface RefreshAccessTokenResponse {
 }
 
 let refreshAccessTokenPromise: Promise<string | null> | null = null;
+const activeApiRequestCount = ref(0);
 const VISITOR_ID_STORAGE_KEY = "parallellines.visitor_id";
+
+// Expose global API request activity for app-level pending feedback.
+// Key parameters: none. Return value is a readonly ref with the active request
+// count. Side effect: none; `apiRequest` mutates the backing counter.
+export function useApiRequestActivity() {
+  return readonly(activeApiRequestCount);
+}
 
 export function getApiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
@@ -145,24 +155,29 @@ function createVisitorId(): string {
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const first = await performApiRequest(path, init);
-  if (first.response.ok) {
-    return unwrapApiResponse<T>(first.payload);
-  }
-
-  const firstError = toApiError(first.response, first.payload);
-  if (shouldRefreshAfterFailure(path, first.response)) {
-    const refreshedToken = await refreshAccessToken();
-    if (refreshedToken) {
-      const retry = await performApiRequest(path, init);
-      if (retry.response.ok) {
-        return unwrapApiResponse<T>(retry.payload);
-      }
-      throw toApiError(retry.response, retry.payload);
+  activeApiRequestCount.value += 1;
+  try {
+    const first = await performApiRequest(path, init);
+    if (first.response.ok) {
+      return unwrapApiResponse<T>(first.payload);
     }
-  }
 
-  throw firstError;
+    const firstError = toApiError(first.response, first.payload);
+    if (shouldRefreshAfterFailure(path, first.response)) {
+      const refreshedToken = await refreshAccessToken();
+      if (refreshedToken) {
+        const retry = await performApiRequest(path, init);
+        if (retry.response.ok) {
+          return unwrapApiResponse<T>(retry.payload);
+        }
+        throw toApiError(retry.response, retry.payload);
+      }
+    }
+
+    throw firstError;
+  } finally {
+    activeApiRequestCount.value = Math.max(0, activeApiRequestCount.value - 1);
+  }
 }
 
 async function performApiRequest(

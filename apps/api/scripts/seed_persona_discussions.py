@@ -46,9 +46,21 @@ class ArticleSpec:
 
 
 PERSONAS: tuple[PersonaSpec, ...] = (
-    PersonaSpec("不吃香菜的猫", "no_coriander_cat@parallellines.local", "不太会写长篇，想到什么说什么。"),
-    PersonaSpec("一杯冰美式续命", "iced_americano@parallellines.local", "靠咖啡和一点点好心情撑住工作日。"),
-    PersonaSpec("外卖备注写错了", "waimai_note@parallellines.local", "经常在小事上翻车，也经常被小事治好。"),
+    PersonaSpec(
+        "不吃香菜的猫",
+        "no_coriander_cat@parallellines.local",
+        "不太会写长篇，想到什么说什么。",
+    ),
+    PersonaSpec(
+        "一杯冰美式续命",
+        "iced_americano@parallellines.local",
+        "靠咖啡和一点点好心情撑住工作日。",
+    ),
+    PersonaSpec(
+        "外卖备注写错了",
+        "waimai_note@parallellines.local",
+        "经常在小事上翻车，也经常被小事治好。",
+    ),
     PersonaSpec("冰箱里还有半瓶可乐", "half_cola@parallellines.local", "普通生活记录员。"),
     PersonaSpec("刚下班别催", "offwork_no_push@parallellines.local", "下班后慢半拍回复。"),
     PersonaSpec("雾里看山", "fog_mountain@parallellines.local", "喜欢慢慢读、慢慢走。"),
@@ -66,6 +78,11 @@ PERSONAS: tuple[PersonaSpec, ...] = (
     PersonaSpec("beta路人", "beta_passer@parallellines.local", "偶尔捡到一些省钱小提醒。"),
     PersonaSpec("loop_一下", "loop_once@parallellines.local", "喜欢把问题绕回来再看一遍。"),
     PersonaSpec("穿猫的靴子", "cat_boots@parallellines.local", "写点看到的变化和小趋势。"),
+    PersonaSpec(
+        "小漫家",
+        "xiaomanjia@parallellines.cn",
+        "每天翻几页漫画，看到好玩的分镜就想分享。",
+    ),
 )
 
 LEGACY_PERSONA_RENAMES: tuple[tuple[str, str], ...] = (
@@ -232,13 +249,20 @@ ARTICLES: tuple[ArticleSpec, ...] = (
         "最近看到几个写作和笔记工具都在讲离线可用。以前大家默认一直联网，现在好像又开始重视本地保存。\n\n我挺喜欢这个方向。网络不好时还能写，地铁上也不会卡住。同步可以慢一点，但正在写的东西不能丢。",
         ("趋势", "工具"),
     ),
+    ArticleSpec(
+        "comics",
+        "小漫家",
+        "每日一格：雨停后的便利店门口",
+        "今天翻到一话很短的日常漫画，最喜欢的是中间那一格：角色站在便利店门口，雨刚停，手里还攥着没拆开的饭团。\n\n画面没有台词，但前后两格一接，就能看出他其实是在给自己一点缓冲。漫画好看的地方有时候不是剧情很大，而是这种小停顿。以后我想在这个板块多贴一些这类让我停下来的分镜和短漫推荐。",
+        ("漫画", "漫画阅读", "推荐", "分镜"),
+    ),
 )
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     """Parse CLI options for a pending-only persona article seed run."""
     parser = argparse.ArgumentParser(
-        description="Seed 20 persona-written topic reviewables without publishing them."
+        description="Seed configured persona-written topic reviewables without publishing them."
     )
     parser.add_argument("--dry-run", action="store_true", help="Only print the plan.")
     parser.add_argument("--seed-key-prefix", default=BATCH_KEY)
@@ -324,7 +348,9 @@ async def rename_legacy_personas(session: AsyncSession, *, dry_run: bool) -> int
     target_emails = [persona_by_name[name].email for name in new_names]
     users = list(
         await session.scalars(
-            select(User).where(or_(User.username.in_(old_names + new_names), User.email.in_(target_emails)))
+            select(User).where(
+                or_(User.username.in_(old_names + new_names), User.email.in_(target_emails))
+            )
         )
     )
     by_username = {user.username: user for user in users}
@@ -429,7 +455,10 @@ async def find_reviewable_by_seed_key(session: AsyncSession, seed_key: str) -> R
             select(Reviewable).where(Reviewable.source.in_((SOURCE, "seed_content"))).limit(5000)
         )
     )
-    return next((reviewable for reviewable in reviewables if reviewable.data.get("seed_key") == seed_key), None)
+    return next(
+        (reviewable for reviewable in reviewables if reviewable.data.get("seed_key") == seed_key),
+        None,
+    )
 
 
 # Create a queued-topic reviewable and intentionally leave it pending.
