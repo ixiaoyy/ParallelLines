@@ -11,11 +11,12 @@ from alembic import context
 from app.core.config import get_settings
 from app.db.base import Base
 from app.models import (  # noqa: F401
+    ApiKey,
     AuditLog,
-    BadgeDefinition,
     BackgroundJob,
     BackgroundJobLog,
     BackupArtifact,
+    BadgeDefinition,
     Board,
     BoardMember,
     Bookmark,
@@ -25,7 +26,6 @@ from app.models import (  # noqa: F401
     Flag,
     InboundEmail,
     Notification,
-    ApiKey,
     Poll,
     PollOption,
     PollVote,
@@ -44,6 +44,7 @@ from app.models import (  # noqa: F401
     Tag,
     Topic,
     TopicRead,
+    TopicView,
     User,
     UserBadge,
     UserEmailPreference,

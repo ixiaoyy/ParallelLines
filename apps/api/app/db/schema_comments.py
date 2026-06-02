@@ -45,6 +45,7 @@ TABLE_COMMENTS: dict[str, str] = {
     "posts": "主题内帖子/楼层内容，保存原始 Markdown 与安全 HTML。",
     "post_revisions": "帖子编辑历史版本，保存编辑前正文、编辑人、原因和恢复来源。",
     "topic_reads": "用户对主题的阅读进度与主题通知级别。",
+    "topic_views": "主题浏览去重记录，用于保证同一浏览者只增加一次浏览数。",
     "reactions": "用户对主题或帖子的点赞等表态记录。",
     "bookmarks": "用户收藏的主题或帖子。",
     "notifications": "通知中心消息及阅读状态。",
@@ -344,6 +345,11 @@ COLUMN_COMMENTS: dict[str, dict[str, str]] = {
         "user_id": "用户 ID。",
         "last_read_post_number": "用户已读到的最高楼层编号。",
         "notification_level": "用户对该主题的通知级别。",
+    },
+    "topic_views": {
+        "topic_id": "被浏览主题 ID。",
+        "viewer_key": "浏览者去重键；保存登录用户或匿名访客标识的哈希，不保存原始访客 ID。",
+        "first_viewed_at": "该浏览者首次计入主题浏览数的时间（UTC）。",
     },
     "reactions": {
         "target_type": "表态目标类型：主题或帖子。",

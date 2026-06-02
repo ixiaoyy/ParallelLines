@@ -30,6 +30,7 @@ interface RefreshAccessTokenResponse {
 }
 
 let refreshAccessTokenPromise: Promise<string | null> | null = null;
+const VISITOR_ID_STORAGE_KEY = "parallellines.visitor_id";
 
 export function getApiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
@@ -103,12 +104,44 @@ export function createApiHeaders(init?: HeadersInit): Headers {
   const headers = new Headers(init);
   headers.set("Accept", "application/json");
 
+  const visitorId = getVisitorId();
+  if (visitorId) {
+    headers.set("X-ParallelLines-Visitor", visitorId);
+  }
+
   const token = getAccessToken();
   if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
   return headers;
+}
+
+// Return the stable anonymous visitor id used by backend topic-view dedupe.
+// Side effect: creates and persists the id in localStorage on first use.
+function getVisitorId(): string | null {
+  try {
+    const existing = window.localStorage.getItem(VISITOR_ID_STORAGE_KEY);
+    if (existing) {
+      return existing;
+    }
+
+    const nextVisitorId = createVisitorId();
+    window.localStorage.setItem(VISITOR_ID_STORAGE_KEY, nextVisitorId);
+    return nextVisitorId;
+  } catch {
+    return null;
+  }
+}
+
+// Create a browser-local visitor id; return value is safe to send as a header.
+// Side effects: none.
+function createVisitorId(): string {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `v-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {

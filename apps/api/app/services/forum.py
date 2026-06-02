@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from hashlib import sha256
 
 from sqlalchemy import case, desc, func, not_, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.requests import Request
@@ -28,6 +29,7 @@ from app.models.forum import (
     Tag,
     Topic,
     TopicRead,
+    TopicView,
 )
 from app.models.interaction import Notification
 from app.models.moderation import AuditLog, Reviewable
@@ -73,6 +75,7 @@ SLUG_SEPARATOR_PATTERN = re.compile(r"[^a-z0-9]+")
 TAG_SEPARATOR_PATTERN = re.compile(r"[^a-z0-9一-鿿_.-]+")
 MENTION_PATTERN = re.compile(r"(?<![A-Za-z0-9_.-])@([A-Za-z0-9_.-]{3,32})")
 LIKE_ESCAPE_PATTERN = re.compile(r"([%_\\])")
+VISITOR_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.:-]{8,128}$")
 INLINE_MARKDOWN_LINK_PATTERN = re.compile(
     r"(!?)\[([^\]\n]{0,160})\]\("
     r"(https?://[^)\s]+|/[^\s)]+)"
@@ -890,6 +893,79 @@ class ForumService:
             raise NotFoundError("topic_not_found", "Topic not found")
         await self._decorate_topics_for_user([topic], current_user)
         return topic
+
+    # Record a user-visible topic detail view without affecting internal service reads.
+    async def view_topic(
+        self,
+        topic_id: str,
+        *,
+        current_user: User | None = None,
+        visitor_id: str | None = None,
+    ) -> Topic:
+        """Return a topic and increment its view count only for a first-time viewer.
+
+        Key parameters: `topic_id` identifies the topic, `current_user` is used
+        for logged-in dedupe, and `visitor_id` is the frontend anonymous visitor
+        identifier. Return value is the decorated `Topic`. Side effect: inserts
+        one `topic_views` row and updates `topics.view_count`/`hot_score` when
+        this viewer has not already been counted.
+        """
+
+        topic = await self.get_topic(topic_id, current_user=current_user)
+        viewer_key = self._topic_viewer_key(current_user=current_user, visitor_id=visitor_id)
+        if viewer_key is None:
+            return topic
+
+        existing_view_id = await self.session.scalar(
+            select(TopicView.id).where(
+                TopicView.topic_id == topic.id,
+                TopicView.viewer_key == viewer_key,
+            )
+        )
+        if existing_view_id is not None:
+            return topic
+
+        self.session.add(TopicView(topic_id=topic.id, viewer_key=viewer_key))
+        try:
+            await self.session.flush()
+        except IntegrityError:
+            await self.session.rollback()
+            return await self.get_topic(topic_id, current_user=current_user)
+
+        topic.view_count += 1
+        topic.hot_score = calculate_hot_score(
+            reply_count=topic.reply_count,
+            like_count=topic.like_count,
+            view_count=topic.view_count,
+        )
+        await self.session.commit()
+        return await self.get_topic(topic.id, current_user=current_user)
+
+    # Build the stable, privacy-preserving identity used by topic view dedupe.
+    @staticmethod
+    def _topic_viewer_key(
+        *,
+        current_user: User | None,
+        visitor_id: str | None,
+    ) -> str | None:
+        """Return the hashed viewer key for a logged-in user or anonymous visitor.
+
+        Key parameters are mutually prioritized: authenticated users use their
+        account id, otherwise a frontend-generated visitor id is accepted when
+        it matches the allowed stable-id shape. Return value is a prefixed hash,
+        or `None` when no reliable viewer identity is available. Side effect:
+        none.
+        """
+
+        if current_user is not None:
+            digest = sha256(str(current_user.id).encode("utf-8")).hexdigest()
+            return f"user:{digest}"
+
+        normalized_visitor_id = (visitor_id or "").strip()
+        if not VISITOR_ID_PATTERN.fullmatch(normalized_visitor_id):
+            return None
+        digest = sha256(normalized_visitor_id.encode("utf-8")).hexdigest()
+        return f"anon:{digest}"
 
     async def list_posts(
         self,

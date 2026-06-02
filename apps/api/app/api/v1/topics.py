@@ -134,10 +134,15 @@ def _normalized_cache_part(value: str | None) -> str:
 @router.get("/{topic_id}", response_model=ApiResponse[TopicResponse])
 async def get_topic(
     topic_id: str,
+    request: Request,
     session: SessionDep,
     current_user: OptionalCurrentUserDep,
 ) -> ApiResponse[TopicResponse]:
-    topic = await ForumService(session).get_topic(topic_id, current_user=current_user)
+    topic = await ForumService(session).view_topic(
+        topic_id,
+        current_user=current_user,
+        visitor_id=request.headers.get("X-ParallelLines-Visitor"),
+    )
     return ApiResponse(data=TopicResponse.from_model(topic))
 
 

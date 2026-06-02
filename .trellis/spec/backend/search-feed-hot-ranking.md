@@ -41,6 +41,7 @@ DB tables:
 |---|---|---|
 | `search_documents` | `topic_id`, `board_id`, `author_id`, `author_username`, `topic_status`, `title`, `body`, `tags_text`, `indexed_at` | One materialized searchable document per non-hidden topic. `body` contains only visible post Markdown. |
 | `search_logs` | `user_id`, `query`, `normalized_query`, `filters`, `result_count`, `has_results`, `created_at` | Append-only query log for no-result analysis and hot terms. |
+| `topic_views` | `topic_id`, `viewer_key`, `first_viewed_at` | One row per counted topic viewer. `viewer_key` is a prefixed hash for either the authenticated user id or the anonymous visitor id. |
 
 ### 3. Contracts
 
@@ -73,6 +74,16 @@ DB tables:
   from `body`; they must not make a topic discoverable.
 - Every `/search` request writes a `search_logs` row with normalized query,
   safe filter snapshot, result count, and anonymous/authenticated user id.
+- `GET /api/v1/topics/{topic_id}` is the only public topic-read route that
+  records a view. Internal service reads and `GET /topics/{topic_id}/posts`
+  must call the plain topic lookup and must not increment `view_count`.
+- View counting is deduplicated through `topic_views(topic_id, viewer_key)`.
+  Authenticated users dedupe by account id hash. Anonymous visitors dedupe by
+  `X-ParallelLines-Visitor`; if that stable header is absent or invalid, do not
+  increment rather than counting every request as a different person.
+- When a first-time view is recorded, update both `topics.view_count` and
+  `topics.hot_score = calculate_hot_score(reply_count, like_count, view_count)`
+  in the same transaction.
 
 ### 4. Validation & Error Matrix
 
@@ -91,6 +102,9 @@ DB tables:
 | Tag with no topics | Excluded from `/tags` |
 | Invalid tag limit (`0` or `>100`) | FastAPI validation error in project error envelope |
 | Invalid search `status` | FastAPI validation error in project error envelope |
+| Same authenticated user opens a topic twice | One `topic_views` row; `view_count` increases once |
+| Same anonymous visitor header opens a topic twice | One `topic_views` row; `view_count` increases once |
+| Anonymous request has no stable visitor header | Topic is returned, but `view_count` does not increment |
 
 ### 5. Good/Base/Bad Cases
 
@@ -98,6 +112,8 @@ DB tables:
 - Good: `GET /search?q=callback` ranks a title match above a body-only match,
   then uses latest activity and id as stable tie-breakers.
 - Good: `GET /tags?limit=5` returns real `TagResponse` rows sorted by `topic_count`, for home tag cloud.
+- Good: topic detail increments views once per authenticated user or stable
+  anonymous visitor id, and repeated opens return the same `view_count`.
 - Good: `ForumService.update_post` updates `posts.raw_md` and then calls
   `SearchIndexService(session).sync_topic(post.topic_id)` before commit.
 - Base: `GET /topics?tag=csv&sort=latest` returns only topics with normalized CSV tag.
@@ -111,6 +127,9 @@ DB tables:
 - API test for relevance order, special-character escaping, status/date/board/tag/author filters, and search logging.
 - API test for tag filter and cursor meta.
 - API test for `GET /tags` returning persisted tag names and `topic_count`.
+- API test for `GET /topics/{id}` counting one view per authenticated user and
+  per stable anonymous visitor, while `/topics/{id}/posts` and unidentified
+  anonymous requests do not increment.
 - Feed ordering test for latest/hot/top when counters differ.
 - Index sync tests for create, reply, first-post edit, revision restore,
   hide/restore post, hide/restore topic, move/split/merge.

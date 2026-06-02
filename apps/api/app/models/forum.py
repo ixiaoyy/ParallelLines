@@ -353,6 +353,33 @@ class TopicRead(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     notification_level: Mapped[str] = mapped_column(String(32), nullable=False, default="normal")
 
 
+class TopicView(IntegerPrimaryKeyMixin, TimestampMixin, Base):
+    """Persist one counted view identity per topic for deduplicated view counts."""
+
+    __tablename__ = "topic_views"
+    __table_args__ = (
+        UniqueConstraint("topic_id", "viewer_key", name="uq_topic_views_topic_viewer"),
+        Index("ix_topic_views_viewer_key", "viewer_key"),
+    )
+
+    topic_id: Mapped[str] = mapped_column(
+        ForeignKey("topics.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="被浏览主题 ID。",
+    )
+    viewer_key: Mapped[str] = mapped_column(
+        String(96),
+        nullable=False,
+        comment="浏览者去重键；保存登录用户或匿名访客标识的哈希，不保存原始访客 ID。",
+    )
+    first_viewed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utcnow,
+        nullable=False,
+        comment="该浏览者首次计入主题浏览数的时间（UTC）。",
+    )
+
+
 class Poll(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "polls"
     __table_args__ = (Index("ix_polls_topic", "topic_id"),)

@@ -20,6 +20,7 @@ from app.models.forum import (
     Tag,
     Topic,
     TopicRead,
+    TopicView,
     topic_tags,
 )
 from app.models.integration import (
@@ -98,6 +99,7 @@ __all__ = [
     "Tag",
     "Topic",
     "TopicRead",
+    "TopicView",
     "Upload",
     "User",
     "UserBadge",

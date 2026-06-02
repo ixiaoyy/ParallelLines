@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.api.v1.dependencies import get_session
 from app.main import create_app
-from app.models.forum import Board, Post, Topic, TopicRead
+from app.models.forum import Board, Post, Topic, TopicRead, TopicView
 from app.models.user import User
 from app.schemas.forum import BoardCreateRequest, PostCreateRequest, TopicCreateRequest
 from app.services.forum import ForumService
@@ -93,6 +93,101 @@ print('<script>')
         assert board_data["topic_count"] == 1
         assert board_data["post_count"] == 2
         assert board_data["latest_topics"][0]["id"] == topic_data["id"]
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_topic_detail_counts_one_view_per_viewer() -> None:
+    """Verify topic detail views are counted once per logged-in or anonymous viewer."""
+
+    session_factory, engine = await create_test_session()
+
+    async def override_session():
+        """Yield isolated test DB sessions for this ASGI app instance."""
+
+        async with session_factory() as session:
+            yield session
+
+    app = create_app()
+    app.dependency_overrides[get_session] = override_session
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        user = await register_and_verify_user(client, "viewer", email="viewer@example.com")
+        headers = {"Authorization": f"Bearer {user['access_token']}"}
+
+        board = await client.post(
+            "/api/v1/boards",
+            headers=headers,
+            json={
+                "slug": "views",
+                "name": "浏览计数",
+                "description": "用于验证主题浏览数去重。",
+                "color": "#409EFF",
+            },
+        )
+        assert board.status_code == 201
+
+        topic = await client.post(
+            "/api/v1/boards/views/topics",
+            headers=headers,
+            json={"title": "浏览数只应按人计一次", "raw_md": "重复打开详情页不应重复累加。"},
+        )
+        assert topic.status_code == 201
+        topic_id = topic.json()["data"]["id"]
+
+        posts = await client.get(f"/api/v1/topics/{topic_id}/posts", headers=headers)
+        assert posts.status_code == 200
+        async with session_factory() as session:
+            saved_topic = await session.get(Topic, topic_id)
+            assert saved_topic is not None
+            assert saved_topic.view_count == 0
+
+        first_view = await client.get(f"/api/v1/topics/{topic_id}", headers=headers)
+        assert first_view.status_code == 200
+        assert first_view.json()["data"]["view_count"] == 1
+
+        repeated_view = await client.get(f"/api/v1/topics/{topic_id}", headers=headers)
+        assert repeated_view.status_code == 200
+        assert repeated_view.json()["data"]["view_count"] == 1
+
+        other_user = await register_and_verify_user(client, "other_viewer")
+        other_headers = {"Authorization": f"Bearer {other_user['access_token']}"}
+        other_view = await client.get(f"/api/v1/topics/{topic_id}", headers=other_headers)
+        assert other_view.status_code == 200
+        assert other_view.json()["data"]["view_count"] == 2
+
+        anonymous_headers = {"X-ParallelLines-Visitor": "visitor-browser-a"}
+        anonymous_view = await client.get(f"/api/v1/topics/{topic_id}", headers=anonymous_headers)
+        assert anonymous_view.status_code == 200
+        assert anonymous_view.json()["data"]["view_count"] == 3
+
+        repeated_anonymous_view = await client.get(
+            f"/api/v1/topics/{topic_id}",
+            headers=anonymous_headers,
+        )
+        assert repeated_anonymous_view.status_code == 200
+        assert repeated_anonymous_view.json()["data"]["view_count"] == 3
+
+        second_anonymous_view = await client.get(
+            f"/api/v1/topics/{topic_id}",
+            headers={"X-ParallelLines-Visitor": "visitor-browser-b"},
+        )
+        assert second_anonymous_view.status_code == 200
+        assert second_anonymous_view.json()["data"]["view_count"] == 4
+
+        unidentified_anonymous_view = await client.get(f"/api/v1/topics/{topic_id}")
+        assert unidentified_anonymous_view.status_code == 200
+        assert unidentified_anonymous_view.json()["data"]["view_count"] == 4
+
+        async with session_factory() as session:
+            saved_topic = await session.get(Topic, topic_id)
+            view_rows = await session.scalar(
+                select(func.count(TopicView.id)).where(TopicView.topic_id == topic_id)
+            )
+            assert saved_topic is not None
+            assert saved_topic.view_count == 4
+            assert view_rows == 4
 
     await engine.dispose()
 

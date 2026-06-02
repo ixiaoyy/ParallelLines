@@ -64,6 +64,10 @@ Query composables:
 - Frontend topic-detail action menus expose close/open, pin, move, report, and delete. Archived backend records are also shown as “已关闭”. Split/merge remain intentionally hidden from frontend menus unless product explicitly asks for those moderator power tools.
 - Search route state belongs in URL query parameters (`q`, `sort`, `board`, `tag`, `author`) so result pages are shareable.
 - Static fixture/sample data is allowed only in explicitly named design-system, story, or test modules. Production page/query paths must not import `shared/api/mockForum.ts` or notification mocks.
+- `shared/api/client.ts` attaches `X-ParallelLines-Visitor` from a stable
+  `parallellines.visitor_id` localStorage value so anonymous topic detail views
+  can be deduplicated by the backend. If localStorage is unavailable, omit the
+  header instead of generating a per-request id that would inflate view counts.
 
 ### 4. Validation & Error Matrix
 
@@ -78,6 +82,8 @@ Query composables:
 | Backend DTO dates are ISO strings | UI formatting happens via `relativeTime` only after mapping |
 | Search query empty | Search page shows guidance instead of firing an empty API request |
 | Tag API unavailable | Home tag cloud shows a tag API error/empty state and does not render static tags |
+| Same browser opens topic detail twice while anonymous | Same `X-ParallelLines-Visitor`; backend view count increases only once |
+| Browser storage unavailable | API requests omit visitor header; backend returns topic but does not count anonymous view |
 
 ### 5. Good/Base/Bad Cases
 
