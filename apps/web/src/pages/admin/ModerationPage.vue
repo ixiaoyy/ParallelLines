@@ -39,19 +39,22 @@ import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 const activeTab = ref<"reviewables" | "flags" | "audit">("reviewables");
+const reviewablesTabActive = computed(() => activeTab.value === "reviewables");
+const flagsTabActive = computed(() => activeTab.value === "flags");
+const auditTabActive = computed(() => activeTab.value === "audit");
 
 // Flag filter & query
 const statusFilter = ref<FlagStatus | "all">("pending");
 const selectedQueueStatus = computed<FlagStatus | undefined>(() =>
   statusFilter.value === "all" ? undefined : statusFilter.value,
 );
-const queueQuery = useModerationQueue(selectedQueueStatus);
+const queueQuery = useModerationQueue(selectedQueueStatus, flagsTabActive);
 
 // Reviewable filter & query
 const reviewableStatusFilter = ref<ReviewableStatus | "all">("pending");
-const reviewablesQuery = usePublishReviewableQueue(reviewableStatusFilter);
+const reviewablesQuery = usePublishReviewableQueue(reviewableStatusFilter, reviewablesTabActive);
 
-const auditQuery = useAuditLogs();
+const auditQuery = useAuditLogs(auditTabActive);
 const flagStatusMutation = useFlagStatusMutation();
 const contentMutation = useContentModerationMutation();
 const userStatusMutation = useUserStatusMutation();
@@ -62,6 +65,12 @@ const decisionMutation = useReviewableDecisionMutation();
 const userId = ref("");
 const userStatus = ref<UserModerationStatus>("silenced");
 const userNote = ref("");
+const actionNotice = ref("");
+const actionError = ref("");
+const activeReviewableId = ref<string | null>(null);
+const activeFlagId = ref<string | null>(null);
+const activeContentFlagId = ref<string | null>(null);
+const userStatusUpdating = ref(false);
 const hasToken = computed(() => hasAccessToken());
 const canUpdateUserStatus = computed(() => isAdmin(currentUserQuery.data.value));
 const currentUserId = computed(() => currentUserQuery.data.value?.id);
@@ -71,9 +80,9 @@ const reviewables = computed(() => reviewablesQuery.data.value ?? []);
 const auditLogs = computed(() => auditQuery.data.value ?? []);
 
 const queueError = computed(() =>
-  queueQuery.isError.value ||
-  reviewablesQuery.isError.value ||
-  auditQuery.isError.value,
+  (flagsTabActive.value && queueQuery.isError.value) ||
+  (reviewablesTabActive.value && reviewablesQuery.isError.value) ||
+  (auditTabActive.value && auditQuery.isError.value),
 );
 
 const pendingAction = computed(
@@ -83,6 +92,58 @@ const pendingAction = computed(
     userStatusMutation.isPending.value ||
     decisionMutation.isPending.value,
 );
+const activeReviewablePendingId = computed(() =>
+  decisionMutation.isPending.value ? activeReviewableId.value : null,
+);
+const activeFlagPendingId = computed(() =>
+  flagStatusMutation.isPending.value ? activeFlagId.value : null,
+);
+const activeContentPendingFlagId = computed(() =>
+  contentMutation.isPending.value ? activeContentFlagId.value : null,
+);
+const activeFeedback = computed<{
+  tone: "working" | "success" | "error";
+  title: string;
+  detail: string;
+} | null>(() => {
+  if (actionError.value) {
+    return {
+      tone: "error",
+      title: "操作失败",
+      detail: actionError.value,
+    };
+  }
+
+  if (pendingAction.value) {
+    return {
+      tone: "working",
+      title: "正在处理",
+      detail: "接口正在响应，完成后会自动刷新审核队列。",
+    };
+  }
+
+  if (
+    reviewablesQuery.isFetching.value ||
+    queueQuery.isFetching.value ||
+    auditQuery.isFetching.value
+  ) {
+    return {
+      tone: "working",
+      title: "正在刷新",
+      detail: "正在同步最新审核数据。",
+    };
+  }
+
+  if (actionNotice.value) {
+    return {
+      tone: "success",
+      title: "已完成",
+      detail: actionNotice.value,
+    };
+  }
+
+  return null;
+});
 
 // Drawer state
 const selectedReviewable = ref<ReviewableResponse | null>(null);
@@ -172,6 +233,8 @@ function decideReviewable(
   note: string,
   onSuccess?: () => void,
 ) {
+  resetActionFeedback();
+  activeReviewableId.value = reviewable.id;
   decisionMutation.mutate(
     {
       reviewableId: reviewable.id,
@@ -180,7 +243,21 @@ function decideReviewable(
         note: note.trim() || null,
       },
     },
-    { onSuccess },
+    {
+      onSuccess: (updatedReviewable) => {
+        selectedReviewable.value = updatedReviewable;
+        actionNotice.value = `${reviewableTitle(updatedReviewable)}：${reviewableStatusLabel(
+          updatedReviewable.status,
+        )}`;
+        onSuccess?.();
+      },
+      onError: (error) => {
+        actionError.value = mutationErrorMessage(error);
+      },
+      onSettled: () => {
+        activeReviewableId.value = null;
+      },
+    },
   );
 }
 
@@ -193,25 +270,61 @@ function rejectReviewable(reviewable: ReviewableResponse) {
 }
 
 function resolveFlag(flag: FlagResponse) {
+  resetActionFeedback();
+  activeFlagId.value = flag.id;
   flagStatusMutation.mutate({
     flagId: flag.id,
     payload: { status: "resolved", resolution_note: "已由审核台处理。" },
+  }, {
+    onSuccess: () => {
+      actionNotice.value = `${flag.target.title}：已标记处理。`;
+    },
+    onError: (error) => {
+      actionError.value = mutationErrorMessage(error);
+    },
+    onSettled: () => {
+      activeFlagId.value = null;
+    },
   });
 }
 
 function rejectFlag(flag: FlagResponse) {
+  resetActionFeedback();
+  activeFlagId.value = flag.id;
   flagStatusMutation.mutate({
     flagId: flag.id,
     payload: { status: "rejected", resolution_note: "未发现违规或证据不足。" },
+  }, {
+    onSuccess: () => {
+      actionNotice.value = `${flag.target.title}：已驳回举报。`;
+    },
+    onError: (error) => {
+      actionError.value = mutationErrorMessage(error);
+    },
+    onSettled: () => {
+      activeFlagId.value = null;
+    },
   });
 }
 
 function toggleHidden(flag: FlagResponse) {
+  resetActionFeedback();
+  activeContentFlagId.value = flag.id;
   contentMutation.mutate({
     targetType: flag.target.target_type,
     targetId: flag.target.target_id,
     hidden: !flag.target.hidden,
     note: flag.target.hidden ? "审核台恢复内容。" : "审核台隐藏内容。",
+  }, {
+    onSuccess: (response) => {
+      actionNotice.value = `${flag.target.title}：${response.hidden ? "已隐藏" : "已恢复"}。`;
+    },
+    onError: (error) => {
+      actionError.value = mutationErrorMessage(error);
+    },
+    onSettled: () => {
+      activeContentFlagId.value = null;
+    },
   });
 }
 
@@ -221,10 +334,25 @@ function updateUser() {
     return;
   }
 
-  userStatusMutation.mutate({
-    userId: trimmedUserId,
-    payload: { status: userStatus.value, note: userNote.value.trim() || null },
-  });
+  resetActionFeedback();
+  userStatusUpdating.value = true;
+  userStatusMutation.mutate(
+    {
+      userId: trimmedUserId,
+      payload: { status: userStatus.value, note: userNote.value.trim() || null },
+    },
+    {
+      onSuccess: (response) => {
+        actionNotice.value = `${response.username}：状态已更新为 ${response.status}。`;
+      },
+      onError: (error) => {
+        actionError.value = mutationErrorMessage(error);
+      },
+      onSettled: () => {
+        userStatusUpdating.value = false;
+      },
+    },
+  );
 }
 
 function targetRoute(flag: FlagResponse) {
@@ -243,6 +371,26 @@ function flagDetail(flag: FlagResponse) {
 
 function flagTargetExcerpt(flag: FlagResponse) {
   return flag.target.excerpt?.trim() || "暂无内容摘要，请打开上下文查看原帖。";
+}
+
+/**
+ * Clears stale operation messages before starting a moderation mutation.
+ *
+ * Side effect: removes previous success/error copy so the new pending state is unambiguous.
+ */
+function resetActionFeedback() {
+  actionNotice.value = "";
+  actionError.value = "";
+}
+
+/**
+ * Converts mutation failures into short operator-facing text.
+ *
+ * @param error - Unknown error object returned by TanStack Query mutation callbacks.
+ * @returns Human-readable error message that can be displayed in the moderation console.
+ */
+function mutationErrorMessage(error: unknown) {
+  return error instanceof Error && error.message ? error.message : "接口请求失败，请稍后重试。";
 }
 </script>
 
@@ -281,6 +429,18 @@ function flagTargetExcerpt(flag: FlagResponse) {
         </button>
       </nav>
 
+      <div
+        v-if="activeFeedback"
+        class="moderation-feedback"
+        :class="`moderation-feedback--${activeFeedback.tone}`"
+        :role="activeFeedback.tone === 'error' ? 'alert' : 'status'"
+        aria-live="polite"
+      >
+        <span v-if="activeFeedback.tone === 'working'" class="moderation-feedback__spinner" aria-hidden="true"></span>
+        <strong>{{ activeFeedback.title }}</strong>
+        <span>{{ activeFeedback.detail }}</span>
+      </div>
+
       <section class="moderation-layout" :class="{ 'moderation-layout--single': activeTab !== 'audit' }">
         <!-- Main Column -->
         <main class="queue-column">
@@ -308,7 +468,12 @@ function flagTargetExcerpt(flag: FlagResponse) {
               </label>
             </div>
 
-            <div v-if="reviewables.length" class="flag-list">
+            <UiCard v-if="reviewablesQuery.isPending.value" class="moderation-empty moderation-empty--loading">
+              <strong>正在加载审核队列</strong>
+              <span>请稍候，待发布内容加载完成后会显示在这里。</span>
+            </UiCard>
+
+            <div v-else-if="reviewables.length" class="flag-list">
               <article v-for="rev in reviewables" :key="rev.id" class="flag-card reviewable-card">
                 <header>
                   <div>
@@ -349,13 +514,13 @@ function flagTargetExcerpt(flag: FlagResponse) {
                   <div class="footer-actions">
                     <template v-if="canDecideReviewable(rev)">
                       <UiButton tone="success" :disabled="pendingAction" @click="approveReviewable(rev)">
-                        通过发布
+                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "通过发布" }}
                       </UiButton>
                       <UiButton tone="ghost" :disabled="pendingAction" @click="rejectReviewable(rev)">
-                        拒绝
+                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "拒绝" }}
                       </UiButton>
                       <UiButton tone="subtle" :disabled="pendingAction" @click="openReviewableDetails(rev)">
-                        更多处理
+                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "更多处理" }}
                       </UiButton>
                     </template>
                     <template v-else-if="isClaimedByOther(rev)">
@@ -393,7 +558,12 @@ function flagTargetExcerpt(flag: FlagResponse) {
               </label>
             </div>
 
-            <div v-if="flags.length" class="flag-list">
+            <UiCard v-if="queueQuery.isPending.value" class="moderation-empty moderation-empty--loading">
+              <strong>正在加载举报队列</strong>
+              <span>请稍候，用户举报加载完成后会显示在这里。</span>
+            </UiCard>
+
+            <div v-else-if="flags.length" class="flag-list">
               <article v-for="flag in flags" :key="flag.id" class="flag-card">
                 <header>
                   <div>
@@ -437,10 +607,20 @@ function flagTargetExcerpt(flag: FlagResponse) {
 
                 <footer>
                   <UiButton tone="subtle" :disabled="pendingAction" @click="toggleHidden(flag)">
-                    {{ flag.target.hidden ? "恢复内容" : "隐藏内容" }}
+                    {{
+                      activeContentPendingFlagId === flag.id
+                        ? "处理中…"
+                        : flag.target.hidden
+                          ? "恢复内容"
+                          : "隐藏内容"
+                    }}
                   </UiButton>
-                  <UiButton tone="success" :disabled="pendingAction" @click="resolveFlag(flag)">标记已处理</UiButton>
-                  <UiButton tone="ghost" :disabled="pendingAction" @click="rejectFlag(flag)">驳回举报</UiButton>
+                  <UiButton tone="success" :disabled="pendingAction" @click="resolveFlag(flag)">
+                    {{ activeFlagPendingId === flag.id ? "处理中…" : "标记已处理" }}
+                  </UiButton>
+                  <UiButton tone="ghost" :disabled="pendingAction" @click="rejectFlag(flag)">
+                    {{ activeFlagPendingId === flag.id ? "处理中…" : "驳回举报" }}
+                  </UiButton>
                 </footer>
               </article>
             </div>
@@ -460,7 +640,12 @@ function flagTargetExcerpt(flag: FlagResponse) {
               </div>
             </div>
 
-            <UiCard class="audit-panel main-audit-panel">
+            <UiCard v-if="auditQuery.isPending.value" class="moderation-empty moderation-empty--loading">
+              <strong>正在加载审计日志</strong>
+              <span>请稍候，日志同步完成后会显示在这里。</span>
+            </UiCard>
+
+            <UiCard v-else class="audit-panel main-audit-panel">
               <ol v-if="auditLogs.length">
                 <li v-for="log in auditLogs" :key="log.id" class="audit-log-item">
                   <div class="log-meta">
@@ -503,7 +688,9 @@ function flagTargetExcerpt(flag: FlagResponse) {
               <span>备注</span>
               <textarea v-model="userNote" rows="3" placeholder="记录调整原因" />
             </label>
-            <UiButton :disabled="pendingAction || !userId.trim()" @click="updateUser">更新用户状态</UiButton>
+            <UiButton :disabled="pendingAction || !userId.trim()" @click="updateUser">
+              {{ userStatusUpdating ? "更新中…" : "更新用户状态" }}
+            </UiButton>
           </UiCard>
 
           <UiCard v-else class="user-tool">
@@ -588,7 +775,9 @@ function flagTargetExcerpt(flag: FlagResponse) {
               <textarea v-model="decisionNote" rows="3" placeholder="可选：写下处理原因，会进入审计记录" />
             </label>
             <div class="form-actions">
-              <UiButton tone="success" :disabled="pendingAction" @click="submitDecision">提交处理</UiButton>
+              <UiButton tone="success" :disabled="pendingAction" @click="submitDecision">
+                {{ activeReviewablePendingId === selectedReviewable.id ? "提交中…" : "提交处理" }}
+              </UiButton>
               <UiButton tone="subtle" :disabled="pendingAction" @click="closeDrawer">先不处理</UiButton>
             </div>
           </div>

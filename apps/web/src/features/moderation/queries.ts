@@ -48,40 +48,49 @@ export function useCreateFlag() {
   });
 }
 
-export function useModerationQueue(status: MaybeRefOrGetter<FlagStatus | undefined>) {
+export function useModerationQueue(
+  status: MaybeRefOrGetter<FlagStatus | undefined>,
+  enabled: MaybeRefOrGetter<boolean> = true,
+) {
   return useQuery({
     queryKey: computed(() => queryKeys.moderationQueue(toValue(status) ?? "all")),
     queryFn: () => fetchModerationQueue(toValue(status)),
-    enabled: computed(() => hasAccessToken()),
+    enabled: computed(() => hasAccessToken() && toValue(enabled)),
     retry: false,
     staleTime: 15_000,
   });
 }
 
-export function useAuditLogs() {
+export function useAuditLogs(enabled: MaybeRefOrGetter<boolean> = true) {
   return useQuery({
     queryKey: queryKeys.moderationAudit,
     queryFn: () => fetchAuditLogs(),
-    enabled: computed(() => hasAccessToken()),
+    enabled: computed(() => hasAccessToken() && toValue(enabled)),
     retry: false,
     staleTime: 15_000,
   });
 }
 
-export function useReviewableQueue(status: MaybeRefOrGetter<ReviewableStatus | "all">) {
+export function useReviewableQueue(
+  status: MaybeRefOrGetter<ReviewableStatus | "all">,
+  enabled: MaybeRefOrGetter<boolean> = true,
+) {
   return useQuery({
     queryKey: computed(() => queryKeys.moderationReviewables(toValue(status))),
     queryFn: () => {
       const value = toValue(status);
       return fetchReviewables(value === "all" ? undefined : value);
     },
-    enabled: computed(() => hasAccessToken()),
+    enabled: computed(() => hasAccessToken() && toValue(enabled)),
     retry: false,
     staleTime: 15_000,
   });
 }
 
-export function usePublishReviewableQueue(status: MaybeRefOrGetter<ReviewableStatus | "all">) {
+export function usePublishReviewableQueue(
+  status: MaybeRefOrGetter<ReviewableStatus | "all">,
+  enabled: MaybeRefOrGetter<boolean> = true,
+) {
   return useQuery({
     queryKey: computed(() => queryKeys.moderationPublishReviewables(toValue(status))),
     queryFn: async () => {
@@ -95,7 +104,7 @@ export function usePublishReviewableQueue(status: MaybeRefOrGetter<ReviewableSta
         .flat()
         .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at));
     },
-    enabled: computed(() => hasAccessToken()),
+    enabled: computed(() => hasAccessToken() && toValue(enabled)),
     retry: false,
     staleTime: 15_000,
   });
@@ -180,8 +189,16 @@ export function useAppealReviewableMutation() {
   });
 }
 
-function invalidateModeration(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: queryKeys.moderationRoot });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.moderationMyReviewables });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
+/**
+ * Invalidates moderation-related caches and resolves only after active refetches finish.
+ *
+ * @param queryClient - TanStack Query client that owns the current moderation caches.
+ * @returns Promise that keeps the mutation pending while the visible queue and feed refresh.
+ */
+async function invalidateModeration(queryClient: ReturnType<typeof useQueryClient>) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.moderationRoot }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.moderationMyReviewables }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") }),
+  ]);
 }
