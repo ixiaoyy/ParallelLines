@@ -99,7 +99,6 @@ const canRestoreHistory = computed(() => Boolean(!props.post.deleted && canModer
 const renderedPostHtml = computed(() => withResolvedImageHtml(props.post.cookedHtml, props.comicReader));
 const comicPages = computed(() => (props.comicReader ? extractComicPages(props.post.cookedHtml) : []));
 const hasComicPages = computed(() => props.comicReader && comicPages.value.length > 0);
-const comicIntroHtml = computed(() => (hasComicPages.value ? extractComicIntroHtml(props.post.cookedHtml) : ""));
 const activeComicPage = computed(() => comicPages.value[activeComicPageIndex.value] ?? null);
 const updatePostMutation = useUpdatePost(() => props.post.topicId);
 const deletePostMutation = useDeletePost(() => props.post.topicId);
@@ -488,23 +487,6 @@ function extractComicPages(html: string): ComicPage[] {
 }
 
 /**
- * Builds a text-only intro from rendered Markdown so the comic reader does not duplicate page images.
- * Key parameter: `html` is backend-rendered Markdown. Return value: HTML with images and empty wrappers removed.
- * Side effect: none.
- */
-function extractComicIntroHtml(html: string) {
-  const template = document.createElement("template");
-  template.innerHTML = withResolvedImageHtml(html, false);
-  template.content.querySelectorAll("img").forEach((image) => image.remove());
-  template.content.querySelectorAll<HTMLElement>("p, figure").forEach((element) => {
-    if (!element.textContent?.trim() && !element.querySelector("video, iframe, table, pre, code")) {
-      element.remove();
-    }
-  });
-  return template.innerHTML.trim();
-}
-
-/**
  * Moves the comic reader to a specific page while keeping only that page mounted.
  * Key parameter: `index` is zero-based and will be clamped. Return value: none.
  * Side effect: updates active page state so the browser requests only the selected image.
@@ -516,18 +498,6 @@ function goToComicPage(index: number) {
 
   const clampedIndex = Math.min(Math.max(index, 0), comicPages.value.length - 1);
   activeComicPageIndex.value = clampedIndex;
-}
-
-/**
- * Handles the comic page slider without coupling the template to DOM parsing.
- * Key parameter: `event` comes from the range input. Return value: none.
- * Side effect: changes the active comic page.
- */
-function handleComicSliderInput(event: Event) {
-  const input = event.target;
-  if (input instanceof HTMLInputElement) {
-    goToComicPage(Number.parseInt(input.value, 10) - 1);
-  }
 }
 
 /**
@@ -740,20 +710,6 @@ function decorateRenderedImageSources() {
           </div>
         </header>
 
-        <div v-if="comicIntroHtml" class="comic-reader__intro markdown-body" v-html="comicIntroHtml" />
-
-        <label class="comic-reader__progress">
-          <span>页码</span>
-          <input
-            type="range"
-            min="1"
-            :max="comicPages.length"
-            :value="activeComicPageIndex + 1"
-            aria-label="漫画页码"
-            @input="handleComicSliderInput"
-          />
-        </label>
-
         <figure v-if="activeComicPage" class="comic-reader__single-page">
           <div class="comic-reader__page-frame">
             <button
@@ -783,9 +739,6 @@ function decorateRenderedImageSources() {
               ›
             </button>
           </div>
-          <figcaption>
-            {{ activeComicPage.alt }} · 可用键盘 ← / → 翻页，下一页会在后台预加载。
-          </figcaption>
         </figure>
       </section>
       <div v-else class="markdown-body" v-html="renderedPostHtml" />

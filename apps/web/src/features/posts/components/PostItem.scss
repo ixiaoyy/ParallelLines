@@ -479,35 +479,8 @@
   transform: none;
 }
 
-.comic-reader__intro {
-  width: min(100%, 62rem);
-  margin-inline: auto;
-  border: 1px solid rgba(var(--muted-rgb), 0.14);
-  border-radius: 1rem;
-  padding: 0.85rem 1rem;
-  background: rgba(255, 255, 255, 0.82);
-}
-
-.comic-reader__progress {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.7rem;
-  align-items: center;
-  width: min(100%, 62rem);
-  margin-inline: auto;
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 850;
-}
-
-.comic-reader__progress input {
-  width: 100%;
-  accent-color: var(--primary);
-}
-
 .comic-reader__single-page {
   display: grid;
-  gap: 0.45rem;
   width: 100%;
   margin: 0 auto;
 }
@@ -537,13 +510,6 @@
   object-fit: contain;
   background: #fff;
   box-shadow: 0 18px 52px rgba(var(--shadow-rgb), 0.22);
-}
-
-.comic-reader__single-page figcaption {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 820;
-  text-align: center;
 }
 
 .comic-reader__page-hit {
@@ -793,11 +759,6 @@
 
   .comic-reader__nav button {
     flex: 1;
-  }
-
-  .comic-reader__progress {
-    grid-template-columns: 1fr;
-    gap: 0.35rem;
   }
 
   .reply-action {
