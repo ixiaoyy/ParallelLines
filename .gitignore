@@ -21,3 +21,5 @@ apps/api/*.db
 apps/api/var/
 var/
 参考/
+
+.tmp/
