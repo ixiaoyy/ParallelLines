@@ -45,6 +45,13 @@ const filteredSummary = computed(() => {
 
   return `${props.topics.length}/${props.totalTopics} 个主题`;
 });
+// Builds visitor-facing empty-state copy from the current filters; returns display text only and has no side effects.
+const emptyTitle = computed(() => (hasActiveFilters.value ? "没有符合筛选的主题" : "还没有公开主题"));
+const emptyDescription = computed(() =>
+  hasActiveFilters.value
+    ? "换一个标题、版块或标签条件，通常能更快找到相关线索。"
+    : "从第一个真实问题开始，标题写清现象、环境和期望结果。",
+);
 const boardOptions = computed(() =>
   sortBoardsWithFeedbackLast(props.boards, (left, right) => left.name.localeCompare(right.name, "zh-Hans-CN")),
 );
@@ -180,9 +187,28 @@ onUnmounted(() => observer?.disconnect());
       <span>活动</span>
     </div>
 
-    <p v-if="loading" class="panel-state" role="status">正在加载主题…</p>
+    <div v-if="loading" class="feed-skeleton" role="status" aria-label="正在加载主题">
+      <div v-for="item in 4" :key="item" class="skeleton-row" aria-hidden="true">
+        <span class="skeleton-avatar"></span>
+        <span class="skeleton-copy">
+          <i></i>
+          <b></b>
+        </span>
+        <span class="skeleton-metric"></span>
+        <span class="skeleton-metric"></span>
+        <span class="skeleton-activity"></span>
+      </div>
+    </div>
     <p v-else-if="error" class="panel-state panel-state--error" role="alert">暂时无法加载主题，请稍后刷新。</p>
-    <p v-else-if="!topics.length" class="panel-state">暂无主题。</p>
+    <div v-else-if="!topics.length" class="feed-empty">
+      <strong>{{ emptyTitle }}</strong>
+      <p>{{ emptyDescription }}</p>
+      <div class="feed-empty__actions">
+        <button v-if="hasActiveFilters" type="button" @click="emit('clearFilters')">清空筛选</button>
+        <RouterLink :to="{ name: 'new-topic' }">发布主题</RouterLink>
+        <RouterLink :to="{ name: 'board-directory' }">浏览版块</RouterLink>
+      </div>
+    </div>
     <template v-else>
       <HomeTopicRow v-for="topic in slicedTopics" :key="topic.id" :topic="topic" />
 

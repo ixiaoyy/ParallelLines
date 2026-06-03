@@ -143,7 +143,9 @@ function tagAccentStyle(tagName: string): Record<string, string> {
 
     <section class="rail-section" aria-labelledby="rail-boards-title">
       <h2 id="rail-boards-title">公共版块</h2>
-      <p v-if="boardsLoading" class="rail-state">正在加载版块…</p>
+      <div v-if="boardsLoading" class="rail-skeleton" role="status" aria-label="正在加载版块">
+        <span v-for="item in 5" :key="item" class="rail-skeleton-line" aria-hidden="true"></span>
+      </div>
       <p v-else-if="boardsError" class="rail-state rail-state--error">版块暂时不可用</p>
       <template v-else>
         <p v-if="!publicBoards.length" class="rail-state">暂无可见版块</p>
@@ -166,7 +168,9 @@ function tagAccentStyle(tagName: string): Record<string, string> {
 
     <section class="rail-section rail-section--tags" aria-labelledby="rail-tags-title">
       <h2 id="rail-tags-title">标签</h2>
-      <p v-if="tagsLoading" class="rail-state">正在加载标签…</p>
+      <div v-if="tagsLoading" class="rail-skeleton rail-skeleton--tags" role="status" aria-label="正在加载标签">
+        <span v-for="item in 4" :key="item" class="rail-skeleton-line" aria-hidden="true"></span>
+      </div>
       <p v-else-if="tagsError" class="rail-state rail-state--error">标签暂时不可用</p>
       <template v-else>
         <div class="rail-tag-list">

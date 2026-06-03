@@ -9,5 +9,9 @@ export function contentPolicyMessage(error: unknown, fallback: string): string {
     return "内容命中社区安全规则，请修改后再发布。";
   }
 
+  if (isApiErrorCode(error, "content_pending_review")) {
+    return "内容已提交审核，暂未公开发布；你可以在“我的内容复核”查看进度。";
+  }
+
   return fallback;
 }

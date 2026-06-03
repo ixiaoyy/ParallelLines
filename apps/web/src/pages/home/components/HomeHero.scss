@@ -147,6 +147,38 @@
   margin-top: 0.45rem;
 }
 
+.hero-proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.46rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hero-proof li {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--theme-soft-border);
+  border-radius: var(--radius-pill);
+  padding: 0.34rem 0.66rem;
+  color: var(--theme-soft-fg);
+  background: var(--theme-soft-bg);
+  font-size: 0.78rem;
+  font-weight: 820;
+}
+
+.hero-proof li::before {
+  content: "";
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: var(--accent-geek);
+  box-shadow: 0 0 0 0.18rem rgba(var(--accent-geek-rgb), 0.14);
+}
+
 .btn {
   display: inline-flex;
   min-height: 2.8rem;
@@ -249,7 +281,7 @@
   }
 
   .signal-card {
-    padding: 1rem;
+    display: none;
   }
 
   .hero-title {
