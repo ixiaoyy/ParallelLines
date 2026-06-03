@@ -238,8 +238,9 @@
 .board-mark {
   display: flex;
   flex: 0 0 auto;
-  min-width: 3.35rem;
-  max-width: 4.6rem;
+  width: 3.05rem;
+  min-width: 3.05rem;
+  max-width: 3.05rem;
   min-height: 3.05rem;
   max-height: 3.05rem;
   align-items: center;
@@ -253,20 +254,17 @@
 }
 
 .board-mark__text {
-  display: -webkit-box;
+  display: block;
   max-width: 100%;
   overflow: hidden;
   color: var(--board-mark-fg);
-  font-size: 0.78rem;
-  font-weight: 800;
-  line-height: 1.12;
+  font-size: 1.42rem;
+  font-weight: 920;
+  line-height: 1;
   text-align: center;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   text-overflow: ellipsis;
-  word-break: break-word;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  white-space: nowrap;
 }
 
 .board-copy {

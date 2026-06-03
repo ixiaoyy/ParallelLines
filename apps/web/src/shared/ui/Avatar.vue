@@ -14,7 +14,8 @@ const props = defineProps<{
 type AvatarFrame = "none" | "level-1" | "level-2" | "level-3" | "level-4" | "level-5" | "ultimate";
 
 const imageFailed = ref(false);
-const initials = computed(() => props.name.slice(0, 2).toUpperCase());
+// initials 用途：头像图片缺失时显示单字兜底，避免中文双字在小头像里挤压溢出；无副作用。
+const initials = computed(() => props.name.trim().slice(0, 1).toUpperCase() || "?");
 const resolvedSrc = computed(() => resolveApiAssetUrl(props.src));
 const displaySrc = computed(() => (imageFailed.value ? undefined : resolvedSrc.value));
 const frame = computed<AvatarFrame>(() => {

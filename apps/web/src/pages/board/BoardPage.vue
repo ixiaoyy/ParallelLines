@@ -244,9 +244,9 @@ const emptyTopicDescription = computed(() => {
   return board.value?.canCreateTopic ? "发布第一篇帖子，或稍后再来看看。" : "稍后再来看看。";
 });
 
+// boardMark 用途：生成单字版块徽标兜底，避免多字在方形标记中换行溢出；无副作用。
 function boardMark(name: string) {
-  const base = name.includes("与") ? name.split("与")[0] : name;
-  return base.slice(0, 2);
+  return name.trim().slice(0, 1) || "版";
 }
 
 function updateQuery(patch: Record<string, string | undefined>) {

@@ -83,17 +83,30 @@ function previewTopics(board: BoardSummary) {
     .slice(0, 2);
 }
 
+// boardMark 用途：生成单字版块徽标，避免多字在方形标记中换行溢出；无副作用。
 function boardMark(board: BoardSummary) {
   const labels: Record<string, string> = {
-    announcements: "公告",
-    comics: "漫画",
-    support: "支持",
-    dev: "开发",
-    plugins: "插件",
-    community: "社区",
+    announcements: "公",
+    comics: "漫",
+    community: "社",
+    dev: "开",
+    engineering: "工",
+    experience: "验",
+    feedback: "馈",
+    frontier: "前",
+    frontend: "前",
+    health: "健",
+    lounge: "聊",
+    news: "新",
+    plugins: "插",
+    qna: "问",
+    questions: "问",
+    reading: "读",
+    resources: "资",
+    support: "问",
   };
 
-  return labels[board.slug] ?? board.name;
+  return (labels[board.slug] ?? board.name.trim().slice(0, 1)) || "版";
 }
 
 function boardIntent(board: BoardSummary) {

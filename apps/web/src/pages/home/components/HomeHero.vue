@@ -34,9 +34,9 @@ function updateSearch(event: Event) {
           <RouterLink class="btn btn-secondary" :to="{ name: 'board-directory' }">浏览分类</RouterLink>
         </div>
         <ul class="hero-proof" aria-label="社区能力">
-          <li>公开浏览无需登录</li>
-          <li>发帖草稿自动保存</li>
-          <li>审核与举报闭环</li>
+          <li>让思考发光</li>
+          <li>让善意回响</li>
+          <li>让答案相遇</li>
         </ul>
       </div>
 
