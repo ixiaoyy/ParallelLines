@@ -1,6 +1,6 @@
 .app-shell {
   min-height: 100vh;
-  overflow-x: clip;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at 4% 10%, rgba(var(--accent-coral-rgb), 0.12), transparent 20rem),
     radial-gradient(circle at 96% 8%, rgba(var(--accent-lime-rgb), 0.12), transparent 18rem),
@@ -412,8 +412,10 @@
 
 .shell-main {
   width: min(1520px, calc(100% - 1.5rem));
+  min-width: 0;
   margin: 0 auto;
   padding: 1.25rem 0 4rem;
+  box-sizing: border-box;
 }
 
 @media (max-width: 920px) {
@@ -461,8 +463,17 @@
 
 @media (max-width: 620px) {
   .topbar {
+    top: 0;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     gap: 0.5rem;
+    width: 100%;
+    min-height: 3.85rem;
+    margin-top: 0;
+    border-top: 0;
+    border-inline: 0;
+    border-radius: 0 0 1.15rem 1.15rem;
     padding: 0.55rem 0.65rem;
+    box-shadow: 0 12px 28px rgba(var(--shadow-rgb), 0.1);
   }
 
   .brand {
@@ -488,15 +499,7 @@
   }
 
   .search-box {
-    min-height: 2.2rem;
-  }
-
-  .search-box :deep(input) {
-    font-size: 0.9rem;
-  }
-
-  .search-box :deep(input::placeholder) {
-    color: transparent;
+    display: none !important;
   }
 
   .global-search-submit {
@@ -535,6 +538,7 @@
   }
 
   .nav-toggle {
+    justify-self: end;
     padding: 0.5rem;
   }
 
@@ -548,8 +552,9 @@
   }
 
   .account-menu__summary {
-    max-width: 7.2rem;
-    padding-inline: 0.58rem;
+    max-width: 6.8rem;
+    padding-inline: 0.52rem;
+    font-size: 0.84rem;
   }
 
   .account-menu__summary small {
@@ -558,6 +563,11 @@
 
   .mobile-nav-links {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shell-main {
+    width: 100%;
+    padding: 0.85rem 0.5rem 4rem;
   }
 }
 

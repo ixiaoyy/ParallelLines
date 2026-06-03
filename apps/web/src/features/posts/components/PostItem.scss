@@ -1,4 +1,5 @@
 .post-item {
+  min-width: 0;
   overflow: hidden;
   border: 1px solid rgba(var(--muted-rgb), 0.16);
   box-shadow: 0 18px 44px rgba(var(--shadow-rgb), 0.06);
@@ -112,11 +113,18 @@
 }
 
 .post-body :deep(.markdown-body) {
+  width: 100%;
   min-width: 0;
   color: var(--text);
   font-size: 0.98rem;
   line-height: 1.74;
   overflow-wrap: anywhere;
+}
+
+.post-body :deep(.markdown-body img) {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 .post-body :deep(.markdown-body h1),
@@ -405,6 +413,7 @@
 .comic-reader {
   display: grid;
   gap: clamp(0.65rem, 1.2vw, 1rem);
+  width: 100%;
   min-width: 0;
 }
 
@@ -427,6 +436,7 @@
 .comic-reader__title {
   display: grid;
   gap: 0.12rem;
+  min-width: 0;
 }
 
 .comic-reader__title span {
@@ -446,9 +456,11 @@
   display: inline-flex;
   gap: 0.35rem;
   align-items: center;
+  min-width: 0;
 }
 
 .comic-reader__nav button {
+  min-width: 0;
   border: 1px solid rgba(var(--primary-rgb), 0.16);
   border-radius: var(--radius-pill);
   padding: 0.42rem 0.72rem;
@@ -456,6 +468,7 @@
   background: rgba(255, 255, 255, 0.84);
   font-size: 0.82rem;
   font-weight: 850;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     color 160ms ease,
@@ -484,6 +497,7 @@
   grid-template-columns: minmax(0, 1fr) clamp(8.5rem, 14vw, 12rem);
   gap: clamp(0.75rem, 1.4vw, 1.15rem);
   align-items: start;
+  min-width: 0;
 }
 
 .comic-reader__single-page {
@@ -839,10 +853,9 @@
 
 @media (max-width: 900px) {
   .post-item--comic-reader {
-    width: 100vw;
-    margin-inline: calc(50% - 50vw);
-    border-inline: 0;
-    border-radius: 0;
+    width: 100%;
+    margin-inline: 0;
+    border-radius: 0.95rem;
     background: #fff;
   }
 
@@ -864,8 +877,7 @@
 
   .comic-reader__toolbar {
     top: 0;
-    border-inline: 0;
-    border-radius: 0;
+    border-radius: 0.9rem 0.9rem 0 0;
     background: rgba(255, 255, 255, 0.94);
   }
 
@@ -887,11 +899,26 @@
   }
 
   .comic-reader__page-hit {
-    width: clamp(2.25rem, 10vw, 3rem);
-    height: min(34vh, 9rem);
-    min-height: 4.5rem;
-    border-color: rgba(var(--primary-rgb), 0.12);
-    background: rgba(255, 255, 255, 0.64);
-    box-shadow: 0 8px 20px rgba(var(--shadow-rgb), 0.1);
+    display: none;
+  }
+}
+
+@media (max-width: 680px) {
+  .post-item :deep(.ant-card-body) {
+    padding: 0.82rem;
+  }
+
+  .post-item--article :deep(.ant-card-body),
+  .post-item--reply :deep(.ant-card-body) {
+    gap: 0.7rem;
+  }
+
+  .post-body :deep(.markdown-body) {
+    font-size: 0.94rem;
+    line-height: 1.68;
+  }
+
+  .post-item--comic-reader :deep(.ant-card-body) {
+    padding: 0;
   }
 }

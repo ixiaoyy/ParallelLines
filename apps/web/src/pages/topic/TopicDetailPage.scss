@@ -1,6 +1,8 @@
 .topic-detail-page {
   display: grid;
   gap: 1.3rem;
+  width: 100%;
+  min-width: 0;
   max-width: 1180px;
   margin: 0 auto;
 }
@@ -35,6 +37,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
   gap: clamp(1rem, 2.5vw, 1.8rem);
   align-items: start;
+  min-width: 0;
 }
 
 .topic-detail-page--comic-reader .topic-layout {
@@ -91,5 +94,25 @@
 @media (max-width: 1120px) {
   .topic-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .topic-detail-page {
+    gap: 0.8rem;
+    max-width: 100%;
+  }
+
+  .topic-layout,
+  .post-stream,
+  .post-list,
+  .reply-section {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .post-anchor {
+    min-width: 0;
+    scroll-margin-top: 4.5rem;
   }
 }
