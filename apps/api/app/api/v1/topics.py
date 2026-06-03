@@ -83,7 +83,9 @@ async def list_topics(
     payload = ApiResponse(
         data=[TopicResponse.from_model(topic) for topic in topics],
         meta={
-            "next_cursor": encode_topic_cursor(topics[-1]) if len(topics) == limit else None
+            "next_cursor": encode_topic_cursor(topics[-1], include_pinned=sort == "latest")
+            if len(topics) == limit
+            else None
         },
     )
     _TOPIC_LIST_RESPONSE_CACHE.set(cache_key, payload)

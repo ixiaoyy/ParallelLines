@@ -46,7 +46,7 @@ DB tables:
 ### 3. Contracts
 
 - All routes return `ApiResponse[list[TopicResponse]]`.
-- Cursor is an ISO datetime string based on `Topic.last_posted_at`; response meta includes `next_cursor` when `len(topics) == limit`.
+- Cursor is an opaque string based on `Topic.last_posted_at` plus `Topic.id`; latest topic-list cursors also include the current `Topic.pinned` rank so pinned-first pagination does not skip or duplicate rows. Response meta includes `next_cursor` when `len(topics) == limit`.
 - Search query matches `search_documents.title`, visible aggregated `body`,
   `tags_text`, or `author_username`; `LIKE` wildcards must be escaped before
   DB matching.
@@ -56,7 +56,7 @@ DB tables:
 - `author` matches `User.username`.
 - `sort` values:
   - `relevance`: weighted search rank, then latest activity
-  - `latest`: `last_posted_at desc`
+  - `latest`: `pinned desc`, then `last_posted_at desc`, then `id desc`
   - `hot`: `hot_score desc`, then `last_posted_at desc`
   - `top`: `like_count desc`, then `reply_count desc`
 - `/tags` returns `ApiResponse[list[TagResponse]]` and must include only tags with `topic_count > 0`, ordered by `topic_count desc`, then `name`.
@@ -111,6 +111,7 @@ DB tables:
 - Good: `GET /search?q=callback` finds a topic whose first post contains `callback` even when title does not.
 - Good: `GET /search?q=callback` ranks a title match above a body-only match,
   then uses latest activity and id as stable tie-breakers.
+- Good: `GET /boards/{slug}/topics?sort=latest` lists pinned topics before regular topics, and the next cursor continues after the pinned row without duplicating it.
 - Good: `GET /tags?limit=5` returns real `TagResponse` rows sorted by `topic_count`, for home tag cloud.
 - Good: topic detail increments views once per authenticated user or stable
   anonymous visitor id, and repeated opens return the same `view_count`.
@@ -130,7 +131,7 @@ DB tables:
 - API test for `GET /topics/{id}` counting one view per authenticated user and
   per stable anonymous visitor, while `/topics/{id}/posts` and unidentified
   anonymous requests do not increment.
-- Feed ordering test for latest/hot/top when counters differ.
+- Feed ordering test for latest/hot/top when counters differ, including latest pinned-first ordering and cursor continuation.
 - Index sync tests for create, reply, first-post edit, revision restore,
   hide/restore post, hide/restore topic, move/split/merge.
 - Privacy tests proving indexed private-board content remains filtered by board

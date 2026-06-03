@@ -127,8 +127,22 @@ async def test_search_filters_cursor_and_hot_recompute() -> None:
         assert tag_filter.status_code == 200
         assert [item["id"] for item in tag_filter.json()["data"]] == [timeout_topic_id]
 
+        pinned = await client.put(
+            f"/api/v1/topics/{oidc_topic_id}/lifecycle",
+            headers=headers,
+            json={"pinned": True},
+        )
+        assert pinned.status_code == 200
+        board_latest = await client.get(
+            "/api/v1/boards/support/topics", params={"sort": "latest"}
+        )
+        assert board_latest.status_code == 200
+        assert board_latest.json()["data"][0]["id"] == oidc_topic_id
+        assert board_latest.json()["data"][0]["pinned"] is True
+
         first_page = await client.get("/api/v1/topics?limit=1")
         assert first_page.status_code == 200
+        assert first_page.json()["data"][0]["id"] == oidc_topic_id
         assert first_page.json()["meta"]["next_cursor"] is not None
 
         second_page = await client.get(
@@ -137,6 +151,7 @@ async def test_search_filters_cursor_and_hot_recompute() -> None:
         )
         assert second_page.status_code == 200
         assert second_page.json()["data"][0]["id"] != first_page.json()["data"][0]["id"]
+        assert second_page.json()["data"][0]["pinned"] is False
 
         reply = await client.post(
             f"/api/v1/topics/{oidc_topic_id}/posts",

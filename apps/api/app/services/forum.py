@@ -577,26 +577,37 @@ class ForumService:
             statement = statement.join(Topic.author).where(User.username == author)
 
         topic_cursor = parse_topic_cursor(cursor)
-        statement = apply_latest_topic_cursor(statement, topic_cursor)
 
         if sort == "relevance" and relevance is not None:
+            statement = apply_latest_topic_cursor(statement, topic_cursor)
             statement = statement.order_by(
                 relevance.desc(),
                 desc(Topic.last_posted_at),
                 desc(Topic.id),
             )
         elif sort == "hot":
+            statement = apply_latest_topic_cursor(statement, topic_cursor)
             statement = statement.order_by(desc(Topic.hot_score), desc(Topic.last_posted_at))
         elif sort == "top":
+            statement = apply_latest_topic_cursor(statement, topic_cursor)
             statement = statement.order_by(desc(Topic.like_count), desc(Topic.reply_count))
         elif sort == "votes":
+            statement = apply_latest_topic_cursor(statement, topic_cursor)
             statement = statement.order_by(
                 desc(Topic.vote_score),
                 desc(Topic.vote_count),
                 desc(Topic.last_posted_at),
             )
         else:
-            statement = statement.order_by(desc(Topic.last_posted_at), desc(Topic.id))
+            pinned_rank = case((Topic.pinned.is_(True), 1), else_=0)
+            statement = apply_latest_topic_cursor(
+                statement, topic_cursor, include_pinned=True
+            )
+            statement = statement.order_by(
+                desc(pinned_rank),
+                desc(Topic.last_posted_at),
+                desc(Topic.id),
+            )
 
         result = await self.session.scalars(statement.distinct().limit(limit))
         topics = list(result)
