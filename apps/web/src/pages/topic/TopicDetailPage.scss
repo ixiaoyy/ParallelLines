@@ -59,8 +59,16 @@
   min-width: 0;
 }
 
+.post-stream > *,
+.post-list > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .topic-original {
   display: grid;
+  width: 100%;
+  max-width: 100%;
 }
 
 .post-list {
@@ -69,6 +77,8 @@
 }
 
 .post-anchor {
+  width: 100%;
+  max-width: 100%;
   scroll-margin-top: 6.5rem;
 }
 
@@ -87,6 +97,32 @@
   font-weight: 820;
 }
 
+.reply-compose-prompt :deep(.ant-card-body) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  padding: 1rem;
+}
+
+.reply-compose-prompt div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.reply-compose-prompt strong {
+  color: var(--title);
+  font-size: 1rem;
+  font-weight: 880;
+}
+
+.reply-compose-prompt span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
 .topic-end-anchor {
   scroll-margin-top: 6.5rem;
 }
@@ -99,8 +135,12 @@
 
 @media (max-width: 720px) {
   .topic-detail-page {
-    gap: 0.8rem;
+    gap: 0.65rem;
     max-width: 100%;
+  }
+
+  .topic-layout {
+    gap: 0.68rem;
   }
 
   .topic-layout,
@@ -109,6 +149,21 @@
   .reply-section {
     width: 100%;
     min-width: 0;
+  }
+
+  .post-stream,
+  .post-list {
+    gap: 0.68rem;
+  }
+
+  .reply-section {
+    padding-top: 0.68rem;
+  }
+
+  .reply-compose-prompt :deep(.ant-card-body) {
+    display: grid;
+    justify-items: start;
+    padding: 0.95rem;
   }
 
   .post-anchor {

@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import HeroMeetVisual from "@/pages/home/components/HeroMeetVisual.vue";
+import { defineAsyncComponent } from "vue";
+
+import { useMediaQuery } from "@/shared/lib/useMediaQuery";
+
+// Loads the decorative desktop/tablet hero visual only when it can actually be shown.
+// Key parameters: none. Return value is the HeroMeetVisual component; side effect is deferred visual chunk loading.
+const HeroMeetVisual = defineAsyncComponent(() => import("@/pages/home/components/HeroMeetVisual.vue"));
 
 const props = defineProps<{
   search: string;
@@ -9,6 +15,8 @@ const emit = defineEmits<{
   "update:search": [value: string];
   submitSearch: [];
 }>();
+
+const shouldShowHeroVisual = useMediaQuery("(min-width: 561px)", true);
 
 function updateSearch(event: Event) {
   emit("update:search", (event.target as HTMLInputElement).value);
@@ -40,7 +48,7 @@ function updateSearch(event: Event) {
         </ul>
       </div>
 
-      <div class="signal-card" aria-label="平行线社区图示">
+      <div v-if="shouldShowHeroVisual" class="signal-card" aria-label="平行线社区图示">
         <div class="signal-visual" aria-hidden="true">
           <HeroMeetVisual />
         </div>

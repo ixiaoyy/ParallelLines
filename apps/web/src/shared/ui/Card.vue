@@ -1,7 +1,9 @@
 <template>
-  <a-card class="ui-card" :bordered="false">
-    <slot />
-  </a-card>
+  <div class="ui-card">
+    <div class="ant-card-body ui-card__body">
+      <slot />
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -12,7 +14,7 @@
   box-shadow: var(--shadow-card);
 }
 
-.ui-card :deep(.ant-card-body) {
+.ui-card__body {
   padding: 0;
 }
 </style>

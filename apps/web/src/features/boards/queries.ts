@@ -32,10 +32,13 @@ export interface BoardDetailVM extends BoardSummary {
   childBoards: BoardSummary[];
 }
 
-export function useBoards() {
+// Fetches public board taxonomy for visible navigation/filter surfaces.
+// Key parameter: `enabled` gates non-critical hidden consumers; return value is the Vue Query board list state.
+export function useBoards(enabled: MaybeRefOrGetter<boolean> = true) {
   return useQuery({
     queryKey: queryKeys.boards,
     queryFn: async () => (await fetchBoards()).map(toBoardSummary),
+    enabled: computed(() => Boolean(toValue(enabled))),
     staleTime: TAXONOMY_QUERY_STALE_TIME_MS,
     gcTime: TAXONOMY_QUERY_GC_TIME_MS,
   });

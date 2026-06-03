@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { Tag as ATag } from "ant-design-vue";
 withDefaults(defineProps<{ tone?: "blue" | "green" | "gray" | "amber" | "coral" }>(), { tone: "gray" });
 </script>
 
 <template>
-  <a-tag class="badge" :class="`badge--${tone}`" :bordered="false">
+  <ATag class="badge" :class="`badge--${tone}`" :bordered="false">
     <slot />
-  </a-tag>
+  </ATag>
 </template>
 
 <style scoped>

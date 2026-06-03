@@ -27,6 +27,7 @@ const emit = defineEmits<{
   updateTitleFilter: [value: string];
   updateBoardFilter: [value: string];
   updateTagFilter: [value: string];
+  filtersVisibilityChange: [open: boolean];
   clearFilters: [];
 }>();
 
@@ -107,6 +108,14 @@ watch(
   { immediate: true },
 );
 
+watch(
+  filtersOpen,
+  (open) => {
+    emit("filtersVisibilityChange", open);
+  },
+  { immediate: true },
+);
+
 onUnmounted(() => observer?.disconnect());
 </script>
 
@@ -139,7 +148,7 @@ onUnmounted(() => observer?.disconnect());
       </button>
     </div>
 
-    <div v-show="filtersOpen" id="topic-feed-filters" class="topic-filter-panel" aria-label="帖子过滤">
+    <div v-if="filtersOpen" id="topic-feed-filters" class="topic-filter-panel" aria-label="帖子过滤">
       <label class="topic-filter-field topic-filter-field--title">
         <span>标题关键词</span>
         <input

@@ -61,18 +61,18 @@ function handleImageError() {
 </script>
 
 <template>
-  <a-avatar
+  <span
     class="avatar"
     :class="[
       `avatar--${size ?? 'md'}`,
       `avatar--frame-${frame}`,
       { 'avatar--level-frame': hasLevelFrame },
     ]"
-    :src="displaySrc"
-    @error="handleImageError"
+    :title="name"
   >
-    {{ displaySrc ? "" : initials }}
-  </a-avatar>
+    <img v-if="displaySrc" :src="displaySrc" alt="" aria-hidden="true" @error="handleImageError" />
+    <span v-else class="ant-avatar-string">{{ initials }}</span>
+  </span>
 </template>
 
 <style scoped>
@@ -95,7 +95,7 @@ function handleImageError() {
   box-shadow: 0 8px 18px rgba(17, 24, 39, 0.12);
 }
 
-.avatar :deep(img) {
+.avatar img {
   position: relative;
   z-index: 2;
   display: block;
@@ -105,7 +105,7 @@ function handleImageError() {
   object-fit: cover;
 }
 
-.avatar :deep(.ant-avatar-string) {
+.avatar .ant-avatar-string {
   position: absolute !important;
   inset: 0 !important;
   z-index: 2;
@@ -142,7 +142,7 @@ function handleImageError() {
     0 0 16px var(--avatar-frame-shadow);
 }
 
-.avatar--level-frame :deep(img) {
+.avatar--level-frame img {
   background: var(--bg-surface);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.86);
 }

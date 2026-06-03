@@ -10,6 +10,13 @@ defineProps<{ topic: TopicCardVM }>();
 
 <template>
   <article class="home-topic-row" :class="boardToneClass(topic.boardSlug)">
+    <RouterLink
+      class="home-topic-hit"
+      :to="topicDetailRoute(topic)"
+      :aria-label="`打开主题：${topic.title}`"
+      tabindex="-1"
+      aria-hidden="true"
+    />
     <div class="topic-main">
       <div class="author-avatar-wrapper" aria-hidden="true">
         <UiAvatar

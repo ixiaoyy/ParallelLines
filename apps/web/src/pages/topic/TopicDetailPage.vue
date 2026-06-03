@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, defineAsyncComponent, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import type { PostItemVM } from "@/entities/post/model";
 import { useCurrentUser } from "@/features/auth/queries";
 import { setTopicBookmark, setTopicLike } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
-import ReportModal from "@/features/moderation/components/ReportModal.vue";
 import { useContentModerationMutation, useCreateFlag } from "@/features/moderation/queries";
 import type { NotificationLevel } from "@/features/notifications/model";
 import {
@@ -18,10 +17,7 @@ import type { PostSort } from "@/features/posts/api";
 import PostItem from "@/features/posts/components/PostItem.vue";
 import { useCreatePost, useTopicPosts } from "@/features/posts/queries";
 import { setUserRelationship } from "@/features/social/api";
-import ComposerDrawer from "@/features/topics/components/ComposerDrawer.vue";
-import PollPanel from "@/features/topics/components/PollPanel.vue";
 import TopicDetailHero from "@/features/topics/components/TopicDetailHero.vue";
-import TopicDetailSidebar from "@/features/topics/components/TopicDetailSidebar.vue";
 import TopicThreadToolbar from "@/features/topics/components/TopicThreadToolbar.vue";
 import {
   useMoveTopic,
@@ -35,13 +31,31 @@ import { hasAccessToken } from "@/shared/api/client";
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { queryKeys } from "@/shared/api/queryKeys";
 import { compactNumber } from "@/shared/lib/format";
+import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import { readRouteParam } from "@/shared/router/params";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import { useSeoMeta } from "@/shared/seo/meta";
+import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
 const COMIC_READER_TAG = "漫画阅读";
+
+// Loads the reply composer only when the desktop bottom composer is visible or a mobile user opens it.
+// Key parameters: none. Return value is the ComposerDrawer component; side effect is deferred editor-shell loading.
+const ComposerDrawer = defineAsyncComponent(() => import("@/features/topics/components/ComposerDrawer.vue"));
+
+// Loads poll UI only for topics that actually contain a poll.
+// Key parameters: none. Return value is the PollPanel component; side effect is deferred poll chunk loading.
+const PollPanel = defineAsyncComponent(() => import("@/features/topics/components/PollPanel.vue"));
+
+// Loads report dialog only when the user opens the report flow.
+// Key parameters: none. Return value is the ReportModal component; side effect is deferred moderation dialog loading.
+const ReportModal = defineAsyncComponent(() => import("@/features/moderation/components/ReportModal.vue"));
+
+// Loads the desktop/tablet side rail only when it can be shown.
+// Key parameters: none. Return value is the TopicDetailSidebar component; side effect is deferred side-rail loading.
+const TopicDetailSidebar = defineAsyncComponent(() => import("@/features/topics/components/TopicDetailSidebar.vue"));
 
 const route = useRoute();
 const router = useRouter();
@@ -56,6 +70,8 @@ const currentUserQuery = useCurrentUser();
 const topicNotificationQuery = useTopicNotificationLevel(topicId);
 const updateTopicNotificationMutation = useUpdateTopicNotificationLevel(topicId);
 const topic = computed(() => topicQuery.data.value);
+const isDesktopReplyComposer = useMediaQuery("(min-width: 721px)", true);
+const isDetailSidebarVisible = useMediaQuery("(min-width: 1121px)", true);
 useSeoMeta(
   computed(() =>
     topic.value
@@ -74,6 +90,9 @@ const onlyAuthor = ref(false);
 const toolbarStatus = ref("");
 const replyStatus = ref("");
 const replyResetToken = ref(0);
+const replyComposerOpen = ref(false);
+const replyInsertText = ref("");
+const replyInsertToken = ref(0);
 const currentUserId = computed(() => currentUserQuery.data.value?.id ?? null);
 const currentUserRole = computed(() => currentUserQuery.data.value?.role ?? null);
 const comicReader = computed(() => topic.value?.tags.includes(COMIC_READER_TAG) ?? false);
@@ -97,7 +116,11 @@ const hiddenRelationshipPostCount = computed(() => {
   const expectedPostCount = (topic.value?.replyCount ?? 0) + (topic.value ? 1 : 0);
   return Math.max(0, expectedPostCount - posts.value.length);
 });
-const relatedTopics = useRelatedTopics(topic);
+const shouldRenderReplyComposer = computed(() =>
+  topic.value?.status === "open" && (isDesktopReplyComposer.value || replyComposerOpen.value),
+);
+const sidebarTopic = computed(() => (isDetailSidebarVisible.value ? topic.value : null));
+const relatedTopics = useRelatedTopics(sidebarTopic);
 const flagTopicMutation = useCreateFlag();
 const topicModerationMutation = useContentModerationMutation();
 const lifecycleMutation = useTopicLifecycle(topicId);
@@ -425,7 +448,8 @@ function toggleOnlyAuthor() {
 function quotePost(post: PostItemVM) {
   const excerpt = buildQuoteExcerpt(post);
   const quoteText = `> ${post.authorName} #${post.floor}\n> ${excerpt}\n\n`;
-  injectReplyDraft(quoteText);
+  openReplyComposer();
+  insertReplyDraft(quoteText);
   setToolbarStatus(`已引用 ${post.authorName} #${post.floor}`);
 }
 
@@ -462,17 +486,17 @@ function htmlToPlainText(html: string) {
   return template.content.textContent ?? "";
 }
 
-function injectReplyDraft(prefix: string) {
-  void nextTick(() => {
-    const textarea = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="回复正文"]');
-    if (!textarea) {
-      return;
-    }
+// Opens the mobile reply composer on demand so entering a topic does not download the editor bundle.
+// Key parameters: none. Return value is none. Side effect: flips the local composer-open state.
+function openReplyComposer() {
+  replyComposerOpen.value = true;
+}
 
-    textarea.focus();
-    textarea.value = `${prefix}${textarea.value}`;
-    textarea.dispatchEvent(new Event("input", { bubbles: true }));
-  });
+// Sends quoted text into ComposerDrawer after it has been opened.
+// Key parameter: `prefix` is Markdown to prepend. Side effect: updates insert props and focuses any mounted editor input.
+function insertReplyDraft(prefix: string) {
+  replyInsertText.value = prefix;
+  replyInsertToken.value += 1;
 }
 
 async function writeClipboard(value: string) {
@@ -612,16 +636,27 @@ function flagTopic() {
             </section>
           </template>
 
-          <ComposerDrawer
-            v-if="topic.status === 'open'"
-            mode="reply"
-            :topic-title="topic.title"
-            :board-name="topic.boardName"
-            :submitting="createPost.isPending.value"
-            :reset-token="replyResetToken"
-            :draft-storage-key="`parallellines:reply-draft:${topic.id}`"
-            @submit="handleReply"
-          />
+          <template v-if="topic.status === 'open'">
+            <ComposerDrawer
+              v-if="shouldRenderReplyComposer"
+              mode="reply"
+              :topic-title="topic.title"
+              :board-name="topic.boardName"
+              :submitting="createPost.isPending.value"
+              :reset-token="replyResetToken"
+              :draft-storage-key="`parallellines:reply-draft:${topic.id}`"
+              :insert-text="replyInsertText"
+              :insert-token="replyInsertToken"
+              @submit="handleReply"
+            />
+            <UiCard v-else class="reply-compose-prompt">
+              <div>
+                <strong>想补充一句？</strong>
+                <span>点开后再加载编辑器，先把阅读速度留给正文。</span>
+              </div>
+              <UiButton tone="primary" @click="openReplyComposer">参与回复</UiButton>
+            </UiCard>
+          </template>
           <UiCard v-else class="topic-state" role="status">
             主题当前为已关闭状态，暂不接受新回复。
           </UiCard>
@@ -629,10 +664,15 @@ function flagTopic() {
           <span id="topic-end" class="topic-end-anchor" aria-hidden="true" />
         </main>
 
-        <TopicDetailSidebar :topic="topic" :posts="displayedPosts" :related-topics="relatedTopics" />
+        <TopicDetailSidebar
+          v-if="isDetailSidebarVisible"
+          :topic="topic"
+          :posts="displayedPosts"
+          :related-topics="relatedTopics"
+        />
       </div>
       <ReportModal
-        v-if="topic"
+        v-if="topic && reportModalOpen"
         :open="reportModalOpen"
         target-type="topic"
         :target-id="topic.id"

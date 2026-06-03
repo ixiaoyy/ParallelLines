@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ConfigProvider } from "ant-design-vue";
 import zhCN from "ant-design-vue/es/locale/zh_CN";
 
 import AppShell from "@/app/layouts/AppShell.vue";
@@ -43,10 +44,10 @@ const theme = {
 </script>
 
 <template>
-  <a-config-provider :locale="zhCN" :theme="theme">
+  <ConfigProvider :locale="zhCN" :theme="theme">
     <AppShell>
       <RouterView />
     </AppShell>
     <GlobalLoadingIndicator />
-  </a-config-provider>
+  </ConfigProvider>
 </template>

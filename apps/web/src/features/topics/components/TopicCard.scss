@@ -1,4 +1,5 @@
 .topic-row {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 6.4rem 4.4rem 6.8rem;
   gap: 0.75rem;
@@ -8,11 +9,19 @@
   border-radius: 0.88rem;
   background: var(--bg-surface);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.03);
+  cursor: pointer;
   transition:
     border-color 0.18s ease,
     box-shadow 0.18s ease,
     transform 0.18s ease;
   margin-bottom: 0.75rem;
+}
+
+.topic-row-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
 }
 
 .topic-row:hover {
@@ -29,6 +38,7 @@
 }
 
 .topic-main {
+  position: relative;
   min-width: 0;
 }
 
@@ -47,6 +57,8 @@
 }
 
 .topic-title {
+  position: relative;
+  z-index: 2;
   color: var(--title);
   font-size: 1.05rem;
   font-weight: 750;
@@ -78,6 +90,7 @@
 }
 
 .topic-meta-line {
+  position: relative;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -86,6 +99,8 @@
 }
 
 .category-chip {
+  position: relative;
+  z-index: 2;
   gap: 0.35rem;
   font-size: 0.72rem;
 }
@@ -97,10 +112,13 @@
 }
 
 .topic-tag {
+  position: relative;
+  z-index: 2;
   font-size: 0.72rem;
 }
 
 .participant-strip {
+  position: relative;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -131,6 +149,7 @@
 }
 
 .answer-state {
+  position: relative;
   justify-content: flex-end;
   gap: 0.12rem 0.25rem;
   justify-self: end;
@@ -174,6 +193,7 @@
 }
 
 .topic-stat {
+  position: relative;
   display: grid;
   align-items: center;
   gap: 0.15rem;
@@ -195,6 +215,7 @@
 }
 
 .topic-activity {
+  position: relative;
   display: grid;
   gap: 0.12rem;
   justify-items: end;

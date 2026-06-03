@@ -1,4 +1,6 @@
 .topic-thread-toolbar {
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid rgba(var(--muted-rgb), 0.14);
   border-radius: 1.05rem;
   background:

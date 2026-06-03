@@ -21,7 +21,6 @@ import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, r
 import type { PostItemVM } from "@/entities/post/model";
 import { setPostLike } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
-import ReportModal from "@/features/moderation/components/ReportModal.vue";
 import {
   useDeletePost,
   usePostRevisions,
@@ -40,9 +39,21 @@ import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
+// Loads the edit-mode markdown editor and styles only after a post enters edit mode.
+// Key parameters: none. Return value is the MdEditor component; side effect is deferred editor asset loading.
 const MdEditor = defineAsyncComponent(() =>
-  runWhenBrowserIdle().then(() => import("md-editor-v3").then((module) => module.MdEditor)),
+  runWhenBrowserIdle().then(async () => {
+    const [module] = await Promise.all([
+      import("md-editor-v3"),
+      import("md-editor-v3/lib/style.css"),
+    ]);
+    return module.MdEditor;
+  }),
 );
+
+// Loads the report dialog only when the post report flow is opened.
+// Key parameters: none. Return value is the ReportModal component; side effect is deferred dialog chunk loading.
+const ReportModal = defineAsyncComponent(() => import("@/features/moderation/components/ReportModal.vue"));
 
 interface ComicPage {
   src: string;
@@ -935,6 +946,7 @@ function decorateRenderedImageSources() {
       </section>
     </article>
     <ReportModal
+      v-if="reportModalOpen"
       :open="reportModalOpen"
       target-type="post"
       :target-id="post.id"

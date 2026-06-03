@@ -1,5 +1,9 @@
+<script setup lang="ts">
+import { Skeleton as ASkeleton } from "ant-design-vue";
+</script>
+
 <template>
-  <a-skeleton class="skeleton" active :paragraph="{ rows: 2 }" />
+  <ASkeleton class="skeleton" active :paragraph="{ rows: 2 }" />
 </template>
 
 <style scoped>

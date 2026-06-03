@@ -7,7 +7,7 @@ import {
   PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons-vue";
-import { computed, ref, watch, watchEffect } from "vue";
+import { computed, defineAsyncComponent, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { RouteLocationRaw } from "vue-router";
 
@@ -16,18 +16,29 @@ import { usePublicSiteSettings } from "@/features/admin/queries";
 import type { UserPublic } from "@/features/auth/model";
 import { canAccessModeration, isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser, useLogout } from "@/features/auth/queries";
-import NotificationBell from "@/features/notifications/components/NotificationBell.vue";
-import PluginSlot from "@/features/plugins/components/PluginSlot.vue";
 import { useLocale } from "@/shared/i18n/locale";
+import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
+import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
 import { readRouteParam } from "@/shared/router/params";
 import UiButton from "@/shared/ui/Button.vue";
 import { applySiteBranding } from "@/shared/theme/siteBranding";
 
+// Defers the notification widget so logged-in mobile first paint is not blocked by notification CSS/API setup.
+// Key parameters: none. Return value is the NotificationBell component; side effect is idle-time chunk loading.
+const NotificationBell = defineAsyncComponent(() =>
+  runWhenBrowserIdle(2_000).then(() => import("@/features/notifications/components/NotificationBell.vue")),
+);
+
+// Loads optional plugin navigation only when the visible desktop bar or opened mobile menu needs it.
+// Key parameters: none. Return value is the PluginSlot component; side effect is deferred chunk loading.
+const PluginSlot = defineAsyncComponent(() => import("@/features/plugins/components/PluginSlot.vue"));
+
 const router = useRouter();
 const route = useRoute();
 const globalSearch = ref("");
 const isNavOpen = ref(false);
+const isDesktopViewport = useMediaQuery("(min-width: 621px)", true);
 const topbarRef = ref<HTMLElement | null>(null);
 const accountMenuRef = ref<HTMLDetailsElement | null>(null);
 const currentUserQuery = useCurrentUser();
@@ -134,9 +145,9 @@ watch(
 );
 
 watch(
-  currentUser,
-  (user) => {
-    if (user) {
+  [currentUser, isDesktopViewport],
+  ([user, isDesktop]) => {
+    if (user && isDesktop) {
       scheduleAccountRoutePrefetch(user);
     }
   },
@@ -175,6 +186,8 @@ function closeAccountMenu() {
   }
 }
 
+// Prefetches account-only routes after the desktop shell is stable; mobile loads them on demand.
+// Key parameter: `user` decides which privileged route can be prefetched. Side effect: starts idle-time imports.
 function scheduleAccountRoutePrefetch(user: UserPublic) {
   scheduleIdleTask(() => {
     if (!profileRoutePrefetched) {
@@ -195,6 +208,8 @@ function scheduleAccountRoutePrefetch(user: UserPublic) {
   });
 }
 
+// Schedules non-critical work during browser idle time; falls back to a short timeout on older browsers.
+// Key parameter: `callback` is invoked once. Side effect: registers one idle callback or timeout.
 function scheduleIdleTask(callback: () => void) {
   if (window.requestIdleCallback) {
     window.requestIdleCallback(callback, { timeout: 2_000 });
@@ -260,29 +275,29 @@ function isNavItemActive(item: NavItem) {
         </span>
       </RouterLink>
 
-      <a-input
+      <form
+        v-if="isDesktopViewport"
         class="search-box"
-        v-model:value="globalSearch"
-        :placeholder="t('search.placeholder', '搜索主题、标签、作者')"
+        role="search"
         :aria-label="t('search.aria', '搜索平行线')"
-        @press-enter="submitGlobalSearch"
+        @submit.prevent="submitGlobalSearch"
       >
-        <template #prefix>
-          <SearchOutlined />
-        </template>
-        <template #suffix>
-          <button
-            class="global-search-submit"
-            type="button"
-            :disabled="!canSubmitGlobalSearch"
-            :aria-label="t('search.submit_aria', '按回车搜索')"
-            :title="t('search.submit_aria', '按回车搜索')"
-            @click="submitGlobalSearch"
-          >
-            <EnterOutlined />
-          </button>
-        </template>
-      </a-input>
+        <SearchOutlined class="search-box__icon" aria-hidden="true" />
+        <input
+          v-model="globalSearch"
+          type="search"
+          :placeholder="t('search.placeholder', '搜索主题、标签、作者')"
+        />
+        <button
+          class="global-search-submit"
+          type="submit"
+          :disabled="!canSubmitGlobalSearch"
+          :aria-label="t('search.submit_aria', '按回车搜索')"
+          :title="t('search.submit_aria', '按回车搜索')"
+        >
+          <EnterOutlined />
+        </button>
+      </form>
 
       <button
         class="nav-toggle"
@@ -298,7 +313,7 @@ function isNavItemActive(item: NavItem) {
       </button>
 
       <div class="topbar-actions" :class="{ 'topbar-actions--guest': !currentUser }">
-        <PluginSlot class="desktop-plugin-slot" slot-name="app.nav" />
+        <PluginSlot v-if="isDesktopViewport" class="desktop-plugin-slot" slot-name="app.nav" />
 
         <NotificationBell v-if="currentUser" class="topbar-notification" />
 
@@ -394,7 +409,7 @@ function isNavItemActive(item: NavItem) {
         </RouterLink>
       </div>
 
-      <div v-show="isNavOpen" id="mobile-navigation" class="mobile-nav-panel">
+      <div v-if="isNavOpen" id="mobile-navigation" class="mobile-nav-panel">
         <nav class="mobile-nav-links" aria-label="移动主导航">
           <RouterLink
             v-for="item in visibleNavItems"
@@ -408,29 +423,28 @@ function isNavItemActive(item: NavItem) {
           <PluginSlot slot-name="app.nav" compact />
         </nav>
 
-        <a-input
-          v-model:value="globalSearch"
+        <form
           class="mobile-search-box"
-          :placeholder="t('search.placeholder', '搜索主题、标签、作者')"
+          role="search"
           :aria-label="t('search.mobile_aria', '移动端搜索平行线')"
-          @press-enter="submitGlobalSearch"
+          @submit.prevent="submitGlobalSearch"
         >
-          <template #prefix>
-            <SearchOutlined />
-          </template>
-          <template #suffix>
-            <button
-              class="global-search-submit"
-              type="button"
-              :disabled="!canSubmitGlobalSearch"
-              :aria-label="t('search.submit_aria', '按回车搜索')"
-              :title="t('search.submit_aria', '按回车搜索')"
-              @click="submitGlobalSearch"
-            >
-              <EnterOutlined />
-            </button>
-          </template>
-        </a-input>
+          <SearchOutlined class="search-box__icon" aria-hidden="true" />
+          <input
+            v-model="globalSearch"
+            type="search"
+            :placeholder="t('search.placeholder', '搜索主题、标签、作者')"
+          />
+          <button
+            class="global-search-submit"
+            type="submit"
+            :disabled="!canSubmitGlobalSearch"
+            :aria-label="t('search.submit_aria', '按回车搜索')"
+            :title="t('search.submit_aria', '按回车搜索')"
+          >
+            <EnterOutlined />
+          </button>
+        </form>
       </div>
     </header>
 

@@ -40,6 +40,13 @@ const answerState = computed(() => {
 
 <template>
   <article class="topic-row" :class="[boardToneClass(topic.boardSlug), { 'topic-row--pinned': topic.pinned }]">
+    <RouterLink
+      class="topic-row-hit"
+      :to="topicRoute"
+      :aria-label="`打开主题：${topic.title}`"
+      tabindex="-1"
+      aria-hidden="true"
+    />
     <div class="topic-main">
       <div class="topic-title-line">
         <UiBadge v-if="topic.pinned" tone="amber">置顶</UiBadge>

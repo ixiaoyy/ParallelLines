@@ -1,7 +1,17 @@
 .composer {
   display: grid;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
   gap: 0.85rem;
   padding: 1rem;
+}
+
+.composer :deep(.ant-card-body) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .composer-heading strong,
@@ -54,6 +64,9 @@ footer {
 
 .composer-editor {
   position: relative;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
   border: 1px solid rgba(var(--primary-rgb), 0.12);
   border-radius: 1.1rem;
   padding: 0.45rem;
@@ -71,6 +84,9 @@ footer {
 }
 
 .composer-md-editor {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: 24rem;
   overflow: hidden;
   border: 0;
@@ -79,8 +95,26 @@ footer {
 }
 
 .composer-md-editor :deep(.md-editor-toolbar-wrapper) {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
   border-bottom-color: var(--border);
   background: rgba(248, 250, 252, 0.92);
+}
+
+.composer-md-editor :deep(.md-editor-toolbar) {
+  width: max-content;
+  min-width: 100%;
+}
+
+.composer-md-editor :deep(.md-editor-content),
+.composer-md-editor :deep(.md-editor-content-wrapper),
+.composer-md-editor :deep(.md-editor-input-wrapper),
+.composer-md-editor :deep(.cm-editor),
+.composer-md-editor :deep(.cm-scroller),
+.composer-md-editor :deep(.cm-content) {
+  max-width: 100%;
+  min-width: 0;
 }
 
 .composer-md-editor :deep(.md-editor-toolbar-item) {

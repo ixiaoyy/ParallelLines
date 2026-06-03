@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, defineAsyncComponent, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { LocationQueryRaw } from "vue-router";
 
@@ -9,7 +9,6 @@ import { useTags } from "@/features/tags/queries";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicFeed } from "@/features/topics/queries";
 import HomeHero from "@/pages/home/components/HomeHero.vue";
-import HomeLeftRail from "@/pages/home/components/HomeLeftRail.vue";
 import HomeTopicFeed from "@/pages/home/components/HomeTopicFeed.vue";
 import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
 import {
@@ -21,18 +20,23 @@ import {
   readCachedHomeFeedTopics,
 } from "@/pages/home/homeRailCache";
 import { readRouteParam } from "@/shared/router/params";
+import { useMediaQuery } from "@/shared/lib/useMediaQuery";
+
+// Defers desktop-only rail icons and markup so mobile first paint does not download hidden navigation.
+// Key parameters: none. Return value is the HomeLeftRail component; side effect is lazy chunk loading on desktop.
+const HomeLeftRail = defineAsyncComponent(() => import("@/pages/home/components/HomeLeftRail.vue"));
 
 const activeTab = ref<DiscoveryTab["key"]>("latest");
 const heroSearch = ref("");
 const router = useRouter();
 const route = useRoute();
+const isDesktopRailVisible = useMediaQuery("(min-width: 981px)", true);
+const filtersDataRequested = ref(false);
 
 const feedSort = computed<TopicSort>(() =>
   activeTab.value === "hot" ? "hot" : activeTab.value === "top" ? "top" : "latest",
 );
-const boardsQuery = useBoards();
 const topicsQuery = useTopicFeed(feedSort);
-const tagsQuery = useTags(30);
 const cachedRailBoards = ref(readCachedHomeRailBoards());
 const cachedRailTags = ref(readCachedHomeRailTags());
 const cachedFeedTopics = ref<Record<TopicSort, TopicCardVM[]>>({
@@ -54,6 +58,13 @@ const tagFilter = computed({
   get: () => readRouteParam(route.query.tag as string | string[] | undefined),
   set: (value: string) => updateFilterQuery("tag", value),
 });
+const shouldLoadTaxonomy = computed(() =>
+  isDesktopRailVisible.value ||
+  filtersDataRequested.value ||
+  Boolean(titleFilter.value.trim() || boardFilter.value.trim() || tagFilter.value.trim()),
+);
+const boardsQuery = useBoards(shouldLoadTaxonomy);
+const tagsQuery = useTags(30, shouldLoadTaxonomy);
 const boardSummaries = computed(() => boardsQuery.data.value ?? []);
 const feedTopics = computed(() => {
   if (topicsQuery.data.value) {
@@ -240,6 +251,7 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
   <div id="top" class="forum-home">
     <div class="home-grid">
       <HomeLeftRail
+        v-if="isDesktopRailVisible"
         :boards="railBoards"
         :tags="topTags"
         :boards-loading="railBoardsLoading"
@@ -272,6 +284,7 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
           @update-title-filter="setTitleFilter"
           @update-board-filter="setBoardFilter"
           @update-tag-filter="setTagFilter"
+          @filters-visibility-change="filtersDataRequested = filtersDataRequested || $event"
           @clear-filters="clearTopicFilters"
         />
       </main>

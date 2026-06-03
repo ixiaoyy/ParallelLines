@@ -1,4 +1,6 @@
 .post-item {
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   overflow: hidden;
   border: 1px solid rgba(var(--muted-rgb), 0.16);
@@ -905,18 +907,48 @@
 }
 
 @media (max-width: 680px) {
+  .post-item {
+    border-radius: 1rem;
+  }
+
   .post-item :deep(.ant-card-body) {
-    padding: 0.82rem;
+    padding: 0.86rem;
   }
 
   .post-item--article :deep(.ant-card-body),
   .post-item--reply :deep(.ant-card-body) {
-    gap: 0.7rem;
+    gap: 0.66rem;
+  }
+
+  .post-header {
+    gap: 0.55rem;
+    margin-bottom: 0.58rem;
+  }
+
+  .post-author-line {
+    gap: 0.55rem;
   }
 
   .post-body :deep(.markdown-body) {
-    font-size: 0.94rem;
-    line-height: 1.68;
+    font-size: 0.92rem;
+    line-height: 1.66;
+  }
+
+  .post-item--article .post-body :deep(.markdown-body h1) {
+    font-size: clamp(1.18rem, 5.4vw, 1.42rem);
+    line-height: 1.32;
+  }
+
+  .post-action-bar {
+    margin-top: 0.58rem;
+  }
+
+  .icon-action,
+  .reply-action,
+  .post-more summary {
+    min-width: 2.15rem;
+    min-height: 2.15rem;
+    padding-inline: 0.52rem;
   }
 
   .post-item--comic-reader :deep(.ant-card-body) {

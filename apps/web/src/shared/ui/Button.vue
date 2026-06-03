@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button as AButton } from "ant-design-vue";
 withDefaults(
   defineProps<{
     tone?: "primary" | "ghost" | "subtle" | "success" | "danger";
@@ -9,7 +10,7 @@ withDefaults(
 </script>
 
 <template>
-  <a-button
+  <AButton
     class="ui-button"
     :class="`ui-button--${tone}`"
     :type="tone === 'primary' ? 'primary' : 'default'"
@@ -17,7 +18,7 @@ withDefaults(
   >
     <slot name="icon" />
     <slot />
-  </a-button>
+  </AButton>
 </template>
 
 <style scoped>

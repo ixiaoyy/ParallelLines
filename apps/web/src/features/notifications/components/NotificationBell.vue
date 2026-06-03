@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Badge as ABadge } from "ant-design-vue";
 import { BellFilled, CheckCircleOutlined, InboxOutlined } from "@ant-design/icons-vue";
 import { computed, ref } from "vue";
 
@@ -52,7 +53,7 @@ useOutsidePointerDown(bellRef, closePanel, () => open.value);
 
 <template>
   <div ref="bellRef" class="notification-bell" @keydown.esc="closePanel">
-    <a-badge :count="unreadCount" :number-style="{ backgroundColor: 'var(--btn-primary-bg)' }">
+    <ABadge :count="unreadCount" :number-style="{ backgroundColor: 'var(--btn-primary-bg)' }">
       <button
         class="notification-trigger"
         type="button"
@@ -63,7 +64,7 @@ useOutsidePointerDown(bellRef, closePanel, () => open.value);
       >
         <BellFilled />
       </button>
-    </a-badge>
+    </ABadge>
 
     <section v-if="open" class="notification-panel" role="dialog" aria-label="通知中心">
       <header class="notification-panel__header">

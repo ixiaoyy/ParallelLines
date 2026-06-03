@@ -1,17 +1,18 @@
 <script setup lang="ts">
+import { Tabs as ATabs, TabPane as ATabPane } from "ant-design-vue";
 defineProps<{ tabs: Array<{ key: string; label: string }>; modelValue: string }>();
 defineEmits<{ "update:modelValue": [value: string] }>();
 </script>
 
 <template>
-  <a-tabs
+  <ATabs
     class="tabs"
     :active-key="modelValue"
     type="card"
     @change="(key: string | number) => $emit('update:modelValue', String(key))"
   >
-    <a-tab-pane v-for="tab in tabs" :key="tab.key" :tab="tab.label" />
-  </a-tabs>
+    <ATabPane v-for="tab in tabs" :key="tab.key" :tab="tab.label" />
+  </ATabs>
 </template>
 
 <style scoped>

@@ -1,14 +1,15 @@
 ﻿<script setup lang="ts">
+import { Empty as AEmpty } from "ant-design-vue";
 defineProps<{ title: string; description: string }>();
 </script>
 
 <template>
-  <a-empty class="empty-state" :description="null">
+  <AEmpty class="empty-state" :description="null">
     <div class="orb" aria-hidden="true" />
     <h3>{{ title }}</h3>
     <p>{{ description }}</p>
     <slot />
-  </a-empty>
+  </AEmpty>
 </template>
 
 <style scoped>

@@ -1,10 +1,17 @@
 .topic-detail-hero {
   display: grid;
-  gap: 0.82rem;
+  grid-template-areas:
+    "crumb stats"
+    "title stats"
+    "meta stats"
+    "tax stats";
+  grid-template-columns: minmax(0, 1fr) minmax(13.5rem, 18rem);
+  gap: 0.72rem clamp(1rem, 2vw, 1.5rem);
+  align-items: start;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--topic-color) 16%, var(--border));
   border-radius: 1.35rem;
-  padding: clamp(1rem, 2.3vw, 1.55rem);
+  padding: clamp(0.9rem, 1.8vw, 1.28rem);
   background:
     radial-gradient(circle at 9% 0%, color-mix(in srgb, var(--topic-color) 15%, transparent), transparent 18rem),
     linear-gradient(135deg, rgba(255, 255, 255, 0.96), color-mix(in srgb, var(--topic-color) 5%, var(--bg-surface)));
@@ -22,6 +29,7 @@
 }
 
 .topic-breadcrumb {
+  grid-area: crumb;
   color: var(--muted);
   font-size: 0.86rem;
   font-weight: 760;
@@ -33,16 +41,18 @@
 }
 
 .topic-detail-hero h1 {
+  grid-area: title;
   max-width: min(58rem, 100%);
   margin: 0;
   color: var(--title);
-  font-size: clamp(1.85rem, 3vw, 3rem);
+  font-size: clamp(1.75rem, 2.55vw, 2.6rem);
   line-height: 1.14;
   letter-spacing: -0.038em;
   overflow-wrap: anywhere;
 }
 
 .topic-meta-row {
+  grid-area: meta;
   color: var(--muted);
   font-size: 0.92rem;
 }
@@ -60,6 +70,7 @@
 }
 
 .topic-taxonomy {
+  grid-area: tax;
   gap: 0.52rem;
 }
 
@@ -75,42 +86,114 @@
 }
 
 .topic-stat-line {
+  grid-area: stats;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.48rem;
+  align-self: center;
   margin: 0;
+  border-left: 1px solid rgba(var(--muted-rgb), 0.12);
+  padding-left: clamp(0.85rem, 1.5vw, 1.15rem);
   color: var(--muted);
 }
 
 .topic-stat-line div {
-  display: inline-flex;
+  display: grid;
   min-height: 2.16rem;
-  align-items: baseline;
-  gap: 0.32rem;
+  align-content: center;
+  gap: 0.12rem;
   border: 1px solid rgba(var(--muted-rgb), 0.12);
-  border-radius: var(--radius-pill);
-  padding: 0.36rem 0.68rem;
+  border-radius: 0.88rem;
+  padding: 0.5rem 0.62rem;
   background: rgba(255, 255, 255, 0.72);
 }
 
 .topic-stat-line dt {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 760;
 }
 
 .topic-stat-line dd {
   margin: 0;
   color: var(--primary);
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 920;
 }
 
+@media (max-width: 860px) {
+  .topic-detail-hero {
+    grid-template-areas:
+      "crumb"
+      "title"
+      "meta"
+      "tax"
+      "stats";
+    grid-template-columns: 1fr;
+  }
+
+  .topic-stat-line {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-self: auto;
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+
 @media (max-width: 680px) {
+  .topic-detail-hero {
+    gap: 0.56rem;
+    border-radius: 1.05rem;
+    padding: 0.86rem;
+  }
+
+  .topic-breadcrumb {
+    font-size: 0.78rem;
+  }
+
   .topic-detail-hero h1 {
-    font-size: clamp(1.65rem, 8vw, 2.25rem);
+    font-size: clamp(1.38rem, 6.3vw, 1.78rem);
+    line-height: 1.2;
+    letter-spacing: -0.026em;
+  }
+
+  .topic-meta-row {
+    gap: 0.4rem;
+    font-size: 0.82rem;
+  }
+
+  .topic-taxonomy {
+    gap: 0.38rem;
+  }
+
+  .board-chip {
+    padding: 0.22rem 0.56rem;
+    font-size: 0.78rem;
+  }
+
+  .topic-stat-line {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.38rem;
   }
 
   .topic-stat-line div {
-    flex: 1 1 calc(50% - 0.5rem);
+    min-height: 1.82rem;
+    border-radius: 0.75rem;
+    padding: 0.34rem 0.45rem;
     justify-content: center;
+  }
+
+  .topic-stat-line dt {
+    font-size: 0.66rem;
+  }
+
+  .topic-stat-line dd {
+    font-size: 0.94rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .topic-detail-hero h1 {
+    font-size: clamp(1.32rem, 6vw, 1.6rem);
   }
 }

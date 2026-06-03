@@ -16,8 +16,16 @@ import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
+// Loads the heavy markdown editor and its CSS only when the composer is actually rendered.
+// Key parameters: none. Return value is the async MdEditor component; side effect is downloading editor assets after idle.
 const MdEditor = defineAsyncComponent(() =>
-  runWhenBrowserIdle().then(() => import("md-editor-v3").then((module) => module.MdEditor)),
+  runWhenBrowserIdle().then(async () => {
+    const [module] = await Promise.all([
+      import("md-editor-v3"),
+      import("md-editor-v3/lib/style.css"),
+    ]);
+    return module.MdEditor;
+  }),
 );
 
 interface ReplyDraft {
@@ -36,6 +44,8 @@ const props = withDefaults(
     submitting?: boolean;
     resetToken?: number;
     draftStorageKey?: string;
+    insertText?: string;
+    insertToken?: number;
   }>(),
   {
     mode: "topic",
@@ -45,6 +55,8 @@ const props = withDefaults(
     submitting: false,
     resetToken: 0,
     draftStorageKey: "",
+    insertText: "",
+    insertToken: 0,
   },
 );
 const emit = defineEmits<{ submit: [rawMd: string] }>();
@@ -64,6 +76,7 @@ const currentVersion = ref(1);
 const showConflictBanner = ref(false);
 const isSaving = ref(false);
 let isRestoring = false;
+let lastAppliedInsertToken = 0;
 
 const editorToolbars: ToolbarNames[] = [
   "bold",
@@ -101,8 +114,9 @@ const targetId = computed(() => {
   return "";
 });
 
-onMounted(() => {
-  void initDraft();
+onMounted(async () => {
+  await initDraft();
+  applyExternalInsert(props.insertText, props.insertToken);
 });
 
 watch(
@@ -116,6 +130,13 @@ watch(
   () => props.draftStorageKey,
   () => {
     void initDraft();
+  },
+);
+
+watch(
+  () => props.insertToken,
+  () => {
+    applyExternalInsert(props.insertText, props.insertToken);
   },
 );
 
@@ -136,9 +157,26 @@ function handleSubmit() {
 }
 
 function insertMarkdownUpload(markdown: string) {
+  insertDraftText(markdown);
+  composerEditorRef.value?.togglePreview(true);
+}
+
+// Inserts Markdown into the current draft without depending on the editor bundle being loaded.
+// Key parameter: `markdown` is appended after existing content. Side effect: mutates the local draft ref.
+function insertDraftText(markdown: string) {
   const before = draft.value.trimEnd();
   draft.value = before ? `${before}\n\n${markdown}` : markdown;
-  composerEditorRef.value?.togglePreview(true);
+}
+
+// Applies text requested by the parent, such as quote insertion after opening the mobile composer.
+// Key parameters: `markdown` is inserted once per `token`. Side effect: updates the draft and dedupe token.
+function applyExternalInsert(markdown: string, token: number) {
+  if (!markdown || token === lastAppliedInsertToken) {
+    return;
+  }
+
+  lastAppliedInsertToken = token;
+  insertDraftText(markdown);
 }
 
 function handleDragEnter(event: DragEvent) {

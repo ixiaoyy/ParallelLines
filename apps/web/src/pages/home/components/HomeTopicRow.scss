@@ -1,11 +1,20 @@
 .home-topic-row {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 4.5rem 4.5rem 6.25rem;
   gap: 1rem;
   align-items: center;
   border-bottom: 1px solid var(--border);
   padding: 1.05rem 1.25rem;
+  cursor: pointer;
   transition: background 150ms ease;
+}
+
+.home-topic-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
 }
 
 .home-topic-row:last-child {
@@ -17,6 +26,7 @@
 }
 
 .topic-main {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 0.8rem;
@@ -50,6 +60,8 @@
 }
 
 .topic-title {
+  position: relative;
+  z-index: 2;
   min-width: 0;
   overflow: hidden;
   color: var(--title);
@@ -101,6 +113,7 @@
 }
 
 .topic-tags {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: 0.38rem;
@@ -111,8 +124,14 @@
   align-items: center;
 }
 
+.topic-tags a {
+  position: relative;
+  z-index: 2;
+}
+
 .metric,
 .activity {
+  position: relative;
   color: var(--text);
   text-align: right;
   font-weight: 850;
@@ -126,12 +145,14 @@
 @media (max-width: 720px) {
   .home-topic-row {
     grid-template-columns: 1fr auto;
-    gap: 0.65rem;
-    padding: 1rem;
+    gap: 0.58rem 0.65rem;
+    padding: 0.9rem 0.88rem;
   }
 
   .topic-main {
     grid-column: 1 / -1;
+    grid-template-columns: 2.35rem minmax(0, 1fr);
+    gap: 0.65rem;
   }
 
   .metric {
@@ -145,11 +166,34 @@
 
   .topic-copy p {
     white-space: normal;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
   }
 }
 
 @media (max-width: 560px) {
   .topic-main {
-    grid-template-columns: 1fr;
+    grid-template-columns: 2.35rem minmax(0, 1fr);
+  }
+
+  .topic-title {
+    display: -webkit-box;
+    overflow: hidden;
+    text-overflow: clip;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .author-avatar-wrapper {
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+
+  .author-avatar-wrapper :deep(.avatar--sm) {
+    width: 2.15rem;
+    height: 2.15rem;
+    font-size: 0.82rem;
   }
 }
