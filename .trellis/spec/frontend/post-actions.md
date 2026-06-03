@@ -22,7 +22,11 @@ Applies to `TopicDetailPage`, `PostItem`, and post feature API/query modules. Po
 - Topics tagged `漫画阅读` enable comic-reader mode for the first/original post only; replies remain normal posts so comment images are not pulled into the reader.
 - Comic-reader mode extracts image pages from sanitized `cookedHtml` and keeps only the active page image mounted. The reader chrome must stay minimal: show page count plus previous/next controls only; do not render intro/explanatory post text, a range/progress slider, captions, or instructional copy such as preload/keyboard hints.
 - Comic-reader mode may preload only the immediate next page as a delayed low-priority background image request; it must not eagerly mount or request every page at once.
-- Desktop comic-reader layouts may use a right-side page rail to reduce empty space, but the rail must not mount every page image at once; render real thumbnail images only for the active/neighbor pages and lightweight placeholders for distant pages unless a dedicated thumbnail API exists.
+- Desktop comic-reader layouts may use a right-side page rail to reduce empty space. For upload-backed
+  pages, the rail must use the dedicated `/uploads/{id}/thumbnail` API and may warm those thumbnails
+  in the background; full-size page images remain limited to the active page plus delayed next-page
+  preload. For non-upload images without a thumbnail API, render real rail images only for the
+  active/neighbor pages and placeholders for distant pages.
 - On small screens, comic-reader images must prioritize full viewport width and vertical scrolling; do not cap page height in a way that shrinks a tall manga page into a small centered thumbnail.
 - Read-only topic detail rendering must not statically import `md-editor-v3`; edit/reply editors should load asynchronously after browser idle time so first image rendering is not blocked by the editor bundle.
 - Code copy copies the first `<pre><code>` text from sanitized `cookedHtml` and shows visible status.

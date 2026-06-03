@@ -70,6 +70,21 @@ export function resolveApiAssetUrl(url: string | null | undefined): string | und
   return url;
 }
 
+// Convert an upload content URL to its cached thumbnail URL before resolving the API origin.
+// Key parameter: `url` can be API-relative or absolute; return value is display-ready for upload URLs only.
+// Side effects: none.
+export function resolveApiThumbnailUrl(url: string | null | undefined): string | undefined {
+  if (!url) {
+    return undefined;
+  }
+
+  const thumbnailUrl = url.replace(/\/uploads\/([^/?#]+)\/content(\?.*)?$/, "/uploads/$1/thumbnail$2");
+  if (thumbnailUrl === url) {
+    return undefined;
+  }
+  return resolveApiAssetUrl(thumbnailUrl);
+}
+
 export function getAccessToken(): string | null {
   return getStoredToken("parallellines.access_token", "access_token");
 }

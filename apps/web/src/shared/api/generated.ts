@@ -2589,6 +2589,9 @@ export interface paths {
     "/api/v1/uploads/{upload_id}/content": {
       get: { response: unknown; operationId: "get_upload_content_api_v1_uploads__upload_id__content_get" };
     };
+    "/api/v1/uploads/{upload_id}/thumbnail": {
+      get: { response: unknown; operationId: "get_upload_thumbnail_api_v1_uploads__upload_id__thumbnail_get" };
+    };
     "/api/v1/uploads/avatar": {
       post: { response: components["schemas"]["ApiResponse_UserPublic_"]; operationId: "upload_avatar_api_v1_uploads_avatar_post" };
     };

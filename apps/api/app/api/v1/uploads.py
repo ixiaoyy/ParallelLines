@@ -64,21 +64,59 @@ async def get_upload_content(
 ) -> FileResponse:
     content = await UploadService(session, settings).get_upload_content(upload_id, current_user)
     inline = content.upload.is_image and not download
-    headers = {
-        "Cache-Control": scoped_cache_control(
-            current_user,
-            max_age=86_400,
-            stale_while_revalidate=604_800,
-        ),
-        "Content-Disposition": content_disposition(
+    headers = upload_file_headers(
+        current_user,
+        content_disposition=content_disposition(
             content.upload.original_filename,
             inline=inline,
         ),
-        "X-Content-Type-Options": "nosniff",
-    }
+    )
     return FileResponse(
         content.path,
         media_type=content.upload.media_type,
         filename=content.upload.original_filename,
         headers=headers,
     )
+
+
+@router.get("/{upload_id}/thumbnail")
+async def get_upload_thumbnail(
+    upload_id: str,
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: OptionalCurrentUserDep,
+) -> FileResponse:
+    thumbnail = await UploadService(session, settings).get_upload_thumbnail(
+        upload_id,
+        current_user,
+    )
+    headers = upload_file_headers(
+        current_user,
+        content_disposition=content_disposition(
+            f"{thumbnail.upload.id}-thumbnail.webp",
+            inline=True,
+        ),
+    )
+    return FileResponse(
+        thumbnail.path,
+        media_type=thumbnail.media_type,
+        filename=f"{thumbnail.upload.id}-thumbnail.webp",
+        headers=headers,
+    )
+
+
+def upload_file_headers(current_user: object | None, *, content_disposition: str) -> dict[str, str]:
+    """Build safe cache and disposition headers for upload file responses.
+
+    Key parameters are the optional current user and final Content-Disposition
+    value. Return value is a response header dict. Side effect: none.
+    """
+    return {
+        "Cache-Control": scoped_cache_control(
+            current_user,
+            max_age=86_400,
+            stale_while_revalidate=604_800,
+        ),
+        "Content-Disposition": content_disposition,
+        "X-Content-Type-Options": "nosniff",
+    }

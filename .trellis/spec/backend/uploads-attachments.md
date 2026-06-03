@@ -18,6 +18,7 @@ API endpoints:
 | `POST /api/v1/uploads` multipart `file`, form `kind=post_attachment|avatar` | active user | Save one upload and return metadata/URL. |
 | `POST /api/v1/uploads/avatar` multipart `file` | active user | Save avatar image, update `User.avatar_url`, return `UserPublic`. |
 | `GET /api/v1/uploads/{upload_id}/content?download=false` | optional | Stream file content after avatar/public/private ACL checks. |
+| `GET /api/v1/uploads/{upload_id}/thumbnail` | optional | Stream a cached WebP thumbnail after the same ACL checks as content. |
 
 DB table:
 
@@ -40,6 +41,7 @@ Service methods:
 - `UploadService.update_avatar(file, current_user) -> Upload`
 - `UploadService.attach_uploads_to_post(raw_md, post, topic, board, current_user) -> None`
 - `UploadService.get_upload_content(upload_id, current_user) -> UploadContent`
+- `UploadService.get_upload_thumbnail(upload_id, current_user) -> UploadThumbnail`
 - `UploadService.cleanup_expired_temporary_uploads() -> int`
 
 ### 3. Contracts
@@ -64,6 +66,9 @@ Service methods:
 - `GET /uploads/{id}/content` should set long-lived browser cache headers after ACL checks:
   anonymous-readable content uses public cache, authenticated reads use private cache, and
   `X-Content-Type-Options: nosniff` is sent with streamed files.
+- `GET /uploads/{id}/thumbnail` follows the same privacy behavior as content, generates missing/stale
+  thumbnails under `_thumbnails/` from the source image, returns WebP, and keeps thumbnail bounds small
+  enough for page rails so clients do not preload full comic pages.
 - Validation is based on server-side signature sniffing, not only browser MIME headers.
   Disallowed active types include `svg`, `html`, `js`, shell/PowerShell/batch scripts,
   PHP, DLL, COM, and EXE.
@@ -104,6 +109,7 @@ Service methods:
 - `tests/test_uploads.py` must assert:
   - image upload attaches to topic first post and renders `<img>`;
   - content route returns original bytes for public attached uploads;
+  - thumbnail route returns a cached WebP after ACL checks for public/private uploads;
   - disallowed extension, MIME mismatch, and oversize files return project error shape;
   - avatar upload updates `/auth/me` and public profile consistently;
   - private-board attachments are hidden from anonymous/stranger and visible after invite accept.

@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import UploadFile
+from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -31,6 +32,9 @@ UPLOAD_REFERENCE_PATTERN = re.compile(
 )
 SAFE_FILENAME_PATTERN = re.compile(r"[^A-Za-z0-9._-]+")
 IMAGE_MEDIA_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
+THUMBNAIL_DIRECTORY = "_thumbnails"
+THUMBNAIL_MAX_SIZE = (360, 520)
+THUMBNAIL_MEDIA_TYPE = "image/webp"
 ALLOWED_BINARY_SIGNATURES: dict[str, tuple[str, tuple[bytes, ...]]] = {
     ".png": ("image/png", (b"\x89PNG\r\n\x1a\n",)),
     ".jpg": ("image/jpeg", (b"\xff\xd8\xff",)),
@@ -68,6 +72,13 @@ DISALLOWED_EXTENSIONS = {
 class UploadContent:
     upload: Upload
     path: Path
+
+
+@dataclass(frozen=True)
+class UploadThumbnail:
+    upload: Upload
+    path: Path
+    media_type: str = THUMBNAIL_MEDIA_TYPE
 
 
 class UploadService:
@@ -165,6 +176,26 @@ class UploadService:
             raise NotFoundError("upload_not_found", "Upload not found")
         return UploadContent(upload=upload, path=path)
 
+    async def get_upload_thumbnail(
+        self,
+        upload_id: str,
+        current_user: User | None,
+    ) -> UploadThumbnail:
+        """Return or lazily generate a small WebP thumbnail for an uploaded image.
+
+        Key parameters mirror `get_upload_content`, including ACL checks. Return value
+        is a local thumbnail path plus upload metadata. Side effect: writes a cached
+        thumbnail file under the upload root when missing or stale.
+        """
+        content = await self.get_upload_content(upload_id, current_user)
+        if not content.upload.is_image:
+            raise NotFoundError("upload_not_found", "Upload not found")
+
+        thumbnail_path = self.thumbnail_path_for(content.upload)
+        if self._thumbnail_needs_refresh(thumbnail_path, content.path):
+            self._generate_thumbnail(content.path, thumbnail_path)
+        return UploadThumbnail(upload=content.upload, path=thumbnail_path)
+
     async def cleanup_expired_temporary_uploads(self) -> int:
         now = utcnow()
         result = await self.session.scalars(
@@ -181,12 +212,34 @@ class UploadService:
             path = self.local_path_for(upload)
             if path.exists():
                 path.unlink()
+            thumbnail_path = self.thumbnail_path_for(upload)
+            if thumbnail_path.exists():
+                thumbnail_path.unlink()
         await self.session.commit()
         return len(uploads)
 
     def local_path_for(self, upload: Upload) -> Path:
+        """Return the absolute local path for an upload storage key.
+
+        Key parameter: `upload` supplies the stored relative key. Return value is an
+        absolute path inside the configured upload root. Side effect: validates path
+        containment and raises `upload_not_found` on traversal.
+        """
         root = self._storage_root()
         path = (root / upload.storage_key).resolve()
+        if root not in path.parents:
+            raise NotFoundError("upload_not_found", "Upload not found")
+        return path
+
+    def thumbnail_path_for(self, upload: Upload) -> Path:
+        """Return the absolute cached thumbnail path for an upload.
+
+        Key parameter: `upload` supplies the stored relative key. Return value is a
+        WebP sidecar path under `_thumbnails/`. Side effect: validates containment
+        before callers create or read the file.
+        """
+        root = self._storage_root()
+        path = (root / THUMBNAIL_DIRECTORY / f"{upload.storage_key}.webp").resolve()
         if root not in path.parents:
             raise NotFoundError("upload_not_found", "Upload not found")
         return path
@@ -287,6 +340,47 @@ class UploadService:
         if not root.is_absolute():
             root = Path.cwd() / root
         return root.resolve()
+
+    def _thumbnail_needs_refresh(self, thumbnail_path: Path, source_path: Path) -> bool:
+        """Check whether a thumbnail is missing or older than its source image.
+
+        Key parameters are the thumbnail and source paths. Return value is true when
+        regeneration is required. Side effect: none.
+        """
+        return (
+            not thumbnail_path.is_file()
+            or thumbnail_path.stat().st_mtime < source_path.stat().st_mtime
+        )
+
+    def _generate_thumbnail(self, source_path: Path, thumbnail_path: Path) -> None:
+        """Generate a constrained WebP thumbnail for a stored image.
+
+        Key parameters are the source and destination paths. Return value is none.
+        Side effect: creates parent directories and writes/replaces the thumbnail file.
+        """
+        try:
+            with Image.open(source_path) as source_image:
+                image = ImageOps.exif_transpose(source_image)
+                image.thumbnail(THUMBNAIL_MAX_SIZE, Image.Resampling.LANCZOS)
+                thumbnail_path.parent.mkdir(parents=True, exist_ok=True)
+                image = self._to_thumbnail_rgb(image)
+                image.save(thumbnail_path, "WEBP", quality=82, method=4)
+        except (OSError, UnidentifiedImageError) as exc:
+            raise NotFoundError("upload_not_found", "Upload not found") from exc
+
+    def _to_thumbnail_rgb(self, image: Image.Image) -> Image.Image:
+        """Convert an image to a WebP-safe RGB thumbnail canvas.
+
+        Key parameter: `image` is a PIL image already resized for thumbnail use.
+        Return value: RGB image with transparent pixels composited on white.
+        Side effect: none.
+        """
+        if image.mode in {"RGBA", "LA"} or "transparency" in image.info:
+            rgba = image.convert("RGBA")
+            background = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+            background.alpha_composite(rgba)
+            return background.convert("RGB")
+        return image.convert("RGB")
 
     async def _can_access_board(self, board: Board, current_user: User | None) -> bool:
         if board.visibility == "public":

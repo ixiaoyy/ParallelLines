@@ -31,7 +31,7 @@ import {
 import MarkdownUploadButton from "@/features/uploads/components/MarkdownUploadButton.vue";
 import { uploadErrorMessage } from "@/features/uploads/errors";
 import { useUploadFile } from "@/features/uploads/queries";
-import { hasAccessToken, resolveApiAssetUrl } from "@/shared/api/client";
+import { hasAccessToken, resolveApiAssetUrl, resolveApiThumbnailUrl } from "@/shared/api/client";
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { relativeTime } from "@/shared/lib/format";
 import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
@@ -46,6 +46,8 @@ const MdEditor = defineAsyncComponent(() =>
 
 interface ComicPage {
   src: string;
+  thumbSrc: string;
+  usesDedicatedThumbnail: boolean;
   alt: string;
 }
 
@@ -78,7 +80,10 @@ const bodyRef = ref<HTMLElement | null>(null);
 const postMoreRef = ref<HTMLDetailsElement | null>(null);
 const activeComicPageIndex = ref(0);
 const prefetchedComicImageUrls = new Set<string>();
+const prefetchedComicThumbnailUrls = new Set<string>();
 let nextComicPreloadTimer: number | null = null;
+let comicThumbnailPreloadTimer: number | null = null;
+let comicThumbnailPreloadToken = 0;
 const firstCodeText = computed(() => extractFirstCodeText(props.post.cookedHtml));
 const hasCodeBlock = computed(() => firstCodeText.value.length > 0);
 const isOwnPost = computed(() => Boolean(props.currentUserId && props.currentUserId === props.post.userId));
@@ -169,6 +174,7 @@ watch(
       activeComicPageIndex.value = Math.max(0, pages.length - 1);
     }
     scheduleNextComicPagePreload();
+    scheduleComicThumbnailPreload();
   },
   { immediate: true },
 );
@@ -186,6 +192,11 @@ onBeforeUnmount(() => {
     window.clearTimeout(nextComicPreloadTimer);
     nextComicPreloadTimer = null;
   }
+  if (comicThumbnailPreloadTimer !== null) {
+    window.clearTimeout(comicThumbnailPreloadTimer);
+    comicThumbnailPreloadTimer = null;
+  }
+  comicThumbnailPreloadToken += 1;
 });
 
 watch(
@@ -482,8 +493,11 @@ function extractComicPages(html: string): ComicPage[] {
     .map((image, index) => {
       const originalSource = image.getAttribute("src")?.trim();
       const src = resolveApiAssetUrl(originalSource) ?? originalSource ?? "";
+      const dedicatedThumbnail = resolveApiThumbnailUrl(originalSource);
       return {
         src,
+        thumbSrc: dedicatedThumbnail ?? src,
+        usesDedicatedThumbnail: Boolean(dedicatedThumbnail),
         alt: image.alt || `漫画第 ${index + 1} 页`,
       };
     })
@@ -505,12 +519,12 @@ function goToComicPage(index: number) {
 }
 
 /**
- * Limits thumbnail image mounting so the desktop page rail does not download every comic page at once.
- * Key parameter: `index` is the zero-based page position. Return value: true for active/neighbor pages only.
- * Side effect: none; the template uses this to keep distant pages as lightweight placeholders.
+ * Limits full-size thumbnail fallbacks to nearby pages when a dedicated thumbnail URL is unavailable.
+ * Key parameter: `page` carries thumbnail metadata and `index` is its zero-based position. Return value:
+ * true when the template can mount an image safely. Side effect: none.
  */
-function shouldRenderComicThumbnail(index: number) {
-  return Math.abs(index - activeComicPageIndex.value) <= 1;
+function shouldRenderComicThumbnail(page: ComicPage, index: number) {
+  return page.usesDedicatedThumbnail || Math.abs(index - activeComicPageIndex.value) <= 1;
 }
 
 /**
@@ -552,6 +566,55 @@ function scheduleNextComicPagePreload() {
     image.src = nextPage.src;
     nextComicPreloadTimer = null;
   }, 350);
+}
+
+/**
+ * Schedules background thumbnail requests for the page rail using the dedicated thumbnail endpoint.
+ * Key parameters: none; it reads current comic page metadata. Return value: none.
+ * Side effect: starts low-priority thumbnail image requests after the main page has had time to render.
+ */
+function scheduleComicThumbnailPreload() {
+  if (comicThumbnailPreloadTimer !== null) {
+    window.clearTimeout(comicThumbnailPreloadTimer);
+    comicThumbnailPreloadTimer = null;
+  }
+
+  if (!props.comicReader || !comicPages.value.length) {
+    return;
+  }
+
+  const preloadToken = ++comicThumbnailPreloadToken;
+  comicThumbnailPreloadTimer = window.setTimeout(() => {
+    comicThumbnailPreloadTimer = null;
+    void preloadComicThumbnails(preloadToken);
+  }, 600);
+}
+
+/**
+ * Gradually preloads dedicated page-rail thumbnails after browser idle time.
+ * Key parameter: `preloadToken` cancels stale runs after page changes/unmount. Return value: none.
+ * Side effect: starts low-priority thumbnail image requests in small gaps instead of a single burst.
+ */
+async function preloadComicThumbnails(preloadToken: number) {
+  await runWhenBrowserIdle(1600);
+
+  for (const page of comicPages.value) {
+    if (preloadToken !== comicThumbnailPreloadToken) {
+      return;
+    }
+    if (!page.usesDedicatedThumbnail || prefetchedComicThumbnailUrls.has(page.thumbSrc)) {
+      continue;
+    }
+
+    prefetchedComicThumbnailUrls.add(page.thumbSrc);
+    const image = new Image();
+    image.decoding = "async";
+    image.setAttribute("fetchpriority", "low");
+    image.src = page.thumbSrc;
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 70);
+    });
+  }
 }
 
 /**
@@ -768,8 +831,8 @@ function decorateRenderedImageSources() {
             >
               <span>第 {{ index + 1 }} 页</span>
               <img
-                v-if="shouldRenderComicThumbnail(index)"
-                :src="page.src"
+                v-if="shouldRenderComicThumbnail(page, index)"
+                :src="page.thumbSrc"
                 :alt="page.alt"
                 loading="lazy"
                 decoding="async"

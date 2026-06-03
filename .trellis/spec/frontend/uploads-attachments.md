@@ -32,6 +32,8 @@ Helpers:
 - `apiRequest` must not set `Content-Type: application/json` for `FormData`.
 - `resolveApiAssetUrl(url)` converts `/uploads/...` and `/api/v1/...` to the configured
   `VITE_API_BASE_URL` origin for `<img>`/avatar display.
+- `resolveApiThumbnailUrl(url)` converts upload content URLs to `/uploads/{id}/thumbnail` and returns
+  undefined for non-upload URLs so callers do not accidentally preload full remote images as thumbnails.
 - Rendered post Markdown (`cooked_html`) must also resolve API-relative `<img src>` values
   before display; server-rendered `/uploads/...` paths cannot rely on the web host proxy.
 - Post attachment image uploads may downscale large JPEG/PNG files client-side before `POST /uploads`,

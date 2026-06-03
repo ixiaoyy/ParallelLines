@@ -19397,6 +19397,51 @@
         ]
       }
     },
+    "/api/v1/uploads/{upload_id}/thumbnail": {
+      "get": {
+        "operationId": "get_upload_thumbnail_api_v1_uploads__upload_id__thumbnail_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "title": "Upload Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Upload Thumbnail",
+        "tags": [
+          "uploads"
+        ]
+      }
+    },
     "/api/v1/users/directory": {
       "get": {
         "operationId": "list_user_directory_api_v1_users_directory_get",

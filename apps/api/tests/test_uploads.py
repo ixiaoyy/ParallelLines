@@ -1,3 +1,4 @@
+import base64
 import re
 from pathlib import Path
 
@@ -11,7 +12,9 @@ from app.main import create_app
 from app.models.upload import Upload
 from tests.helpers import get_test_database_url, register_and_verify_user, reset_test_database
 
-PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 24
+PNG_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+)
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:
@@ -104,6 +107,13 @@ async def test_post_image_upload_attaches_and_renders_after_refresh(tmp_path: Pa
         assert "max-age=86400" in content.headers["cache-control"]
         assert content.headers["content-type"].startswith("image/png")
         assert content.content == PNG_BYTES
+
+        thumbnail = await client.get(f"/api/v1/uploads/{upload_data['id']}/thumbnail")
+        assert thumbnail.status_code == 200
+        assert "max-age=86400" in thumbnail.headers["cache-control"]
+        assert thumbnail.headers["content-type"].startswith("image/webp")
+        assert thumbnail.content[:4] == b"RIFF"
+        assert thumbnail.content[8:12] == b"WEBP"
 
     async with session_factory() as session:
         saved_upload = await session.get(Upload, upload_data["id"])
@@ -273,16 +283,28 @@ async def test_private_board_attachment_requires_board_access(tmp_path: Path) ->
 
         anonymous_content = await client.get(f"/api/v1/uploads/{upload_data['id']}/content")
         assert anonymous_content.status_code == 404
+        anonymous_thumbnail = await client.get(f"/api/v1/uploads/{upload_data['id']}/thumbnail")
+        assert anonymous_thumbnail.status_code == 404
         stranger_content = await client.get(
             f"/api/v1/uploads/{upload_data['id']}/content",
             headers=stranger_headers,
         )
         assert stranger_content.status_code == 404
+        stranger_thumbnail = await client.get(
+            f"/api/v1/uploads/{upload_data['id']}/thumbnail",
+            headers=stranger_headers,
+        )
+        assert stranger_thumbnail.status_code == 404
         owner_content = await client.get(
             f"/api/v1/uploads/{upload_data['id']}/content",
             headers=owner_headers,
         )
         assert owner_content.status_code == 200
+        owner_thumbnail = await client.get(
+            f"/api/v1/uploads/{upload_data['id']}/thumbnail",
+            headers=owner_headers,
+        )
+        assert owner_thumbnail.status_code == 200
 
         invite = await client.post(
             "/api/v1/invites",
@@ -308,5 +330,10 @@ async def test_private_board_attachment_requires_board_access(tmp_path: Path) ->
         )
         assert after_accept.status_code == 200
         assert after_accept.content == PNG_BYTES
+        invitee_thumbnail = await client.get(
+            f"/api/v1/uploads/{upload_data['id']}/thumbnail",
+            headers=invitee_headers,
+        )
+        assert invitee_thumbnail.status_code == 200
 
     await engine.dispose()
