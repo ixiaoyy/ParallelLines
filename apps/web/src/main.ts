@@ -18,6 +18,7 @@ import { createApp } from "vue";
 import App from "@/app/App.vue";
 import { router } from "@/app/router";
 import { queryClient } from "@/shared/api/queryClient";
+import "md-editor-v3/lib/style.css";
 import "@/shared/styles/base.scss";
 import { registerPwaServiceWorker } from "@/shared/pwa/register";
 import { injectBoardPalette } from "@/shared/theme/boardPalette";
