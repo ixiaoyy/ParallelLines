@@ -17,7 +17,7 @@ import {
 import { MdEditor } from "md-editor-v3";
 import type { ExposeParam, ToolbarNames } from "md-editor-v3";
 import DOMPurify from "dompurify";
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import type { PostItemVM } from "@/entities/post/model";
 import { setPostLike } from "@/features/interactions/api";
@@ -39,6 +39,11 @@ import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
+
+interface ComicPage {
+  src: string;
+  alt: string;
+}
 
 const props = withDefaults(defineProps<{
   post: PostItemVM;
@@ -67,6 +72,9 @@ const historyOpen = ref(false);
 const reportModalOpen = ref(false);
 const bodyRef = ref<HTMLElement | null>(null);
 const postMoreRef = ref<HTMLDetailsElement | null>(null);
+const activeComicPageIndex = ref(0);
+const prefetchedComicImageUrls = new Set<string>();
+let nextComicPreloadTimer: number | null = null;
 const firstCodeText = computed(() => extractFirstCodeText(props.post.cookedHtml));
 const hasCodeBlock = computed(() => firstCodeText.value.length > 0);
 const isOwnPost = computed(() => Boolean(props.currentUserId && props.currentUserId === props.post.userId));
@@ -88,6 +96,11 @@ const canViewHistory = computed(
   () => Boolean(!props.post.deleted && (isOwnPost.value || canModerateGlobally.value)),
 );
 const canRestoreHistory = computed(() => Boolean(!props.post.deleted && canModerateGlobally.value));
+const renderedPostHtml = computed(() => withResolvedImageHtml(props.post.cookedHtml, props.comicReader));
+const comicPages = computed(() => (props.comicReader ? extractComicPages(props.post.cookedHtml) : []));
+const hasComicPages = computed(() => props.comicReader && comicPages.value.length > 0);
+const comicIntroHtml = computed(() => (hasComicPages.value ? extractComicIntroHtml(props.post.cookedHtml) : ""));
+const activeComicPage = computed(() => comicPages.value[activeComicPageIndex.value] ?? null);
 const updatePostMutation = useUpdatePost(() => props.post.topicId);
 const deletePostMutation = useDeletePost(() => props.post.topicId);
 const uploadMutation = useUploadFile();
@@ -143,6 +156,34 @@ watch(
     }
   },
 );
+
+// Purpose: keeps the active comic page valid when rendered Markdown images change.
+// Key parameters: `pages` is the extracted page list. Return value: none; side effect: may reset active page and schedule preload.
+watch(
+  comicPages,
+  (pages) => {
+    if (activeComicPageIndex.value >= pages.length) {
+      activeComicPageIndex.value = Math.max(0, pages.length - 1);
+    }
+    scheduleNextComicPagePreload();
+  },
+  { immediate: true },
+);
+
+// Purpose: starts the next-page background preload only after the visible comic page changes.
+// Key parameters: none. Return value: none; side effect: may schedule a delayed low-priority image request.
+watch(activeComicPageIndex, () => {
+  scheduleNextComicPagePreload();
+});
+
+// Purpose: prevents delayed comic preloads from firing after this post item is destroyed.
+// Key parameters: none. Return value: none; side effect: clears any pending preload timer.
+onBeforeUnmount(() => {
+  if (nextComicPreloadTimer !== null) {
+    window.clearTimeout(nextComicPreloadTimer);
+    nextComicPreloadTimer = null;
+  }
+});
 
 watch(
   () => [props.post.cookedHtml, props.comicReader] as const,
@@ -402,14 +443,145 @@ function closeMoreMenu() {
 }
 
 /**
+ * Resolves rendered Markdown image sources before `v-html` inserts them into the DOM.
+ * Key parameters: `html` is backend-rendered Markdown and `prioritizeFirstImage` controls the first image load priority.
+ * Return value: HTML with absolute image URLs plus loading/decoding/fetchpriority attributes; side effect: none.
+ */
+function withResolvedImageHtml(html: string, prioritizeFirstImage: boolean) {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  template.content.querySelectorAll<HTMLImageElement>("img").forEach((image, index) => {
+    const originalSource = image.getAttribute("src")?.trim();
+    const resolvedSource = resolveApiAssetUrl(originalSource) ?? originalSource;
+    if (resolvedSource) {
+      image.setAttribute("src", resolvedSource);
+    }
+
+    image.loading = prioritizeFirstImage && index === 0 ? "eager" : "lazy";
+    image.decoding = "async";
+    image.setAttribute("fetchpriority", prioritizeFirstImage && index === 0 ? "high" : "low");
+  });
+
+  return template.innerHTML;
+}
+
+/**
+ * Extracts ordered comic page images from rendered Markdown for the dedicated reader.
+ * Key parameter: `html` is backend-rendered Markdown. Return value: image page metadata with API-absolute URLs.
+ * Side effect: none.
+ */
+function extractComicPages(html: string): ComicPage[] {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+
+  return Array.from(template.content.querySelectorAll<HTMLImageElement>("img"))
+    .map((image, index) => {
+      const originalSource = image.getAttribute("src")?.trim();
+      const src = resolveApiAssetUrl(originalSource) ?? originalSource ?? "";
+      return {
+        src,
+        alt: image.alt || `漫画第 ${index + 1} 页`,
+      };
+    })
+    .filter((page) => page.src.length > 0);
+}
+
+/**
+ * Builds a text-only intro from rendered Markdown so the comic reader does not duplicate page images.
+ * Key parameter: `html` is backend-rendered Markdown. Return value: HTML with images and empty wrappers removed.
+ * Side effect: none.
+ */
+function extractComicIntroHtml(html: string) {
+  const template = document.createElement("template");
+  template.innerHTML = withResolvedImageHtml(html, false);
+  template.content.querySelectorAll("img").forEach((image) => image.remove());
+  template.content.querySelectorAll<HTMLElement>("p, figure").forEach((element) => {
+    if (!element.textContent?.trim() && !element.querySelector("video, iframe, table, pre, code")) {
+      element.remove();
+    }
+  });
+  return template.innerHTML.trim();
+}
+
+/**
+ * Moves the comic reader to a specific page while keeping only that page mounted.
+ * Key parameter: `index` is zero-based and will be clamped. Return value: none.
+ * Side effect: updates active page state so the browser requests only the selected image.
+ */
+function goToComicPage(index: number) {
+  if (!comicPages.value.length) {
+    return;
+  }
+
+  const clampedIndex = Math.min(Math.max(index, 0), comicPages.value.length - 1);
+  activeComicPageIndex.value = clampedIndex;
+}
+
+/**
+ * Handles the comic page slider without coupling the template to DOM parsing.
+ * Key parameter: `event` comes from the range input. Return value: none.
+ * Side effect: changes the active comic page.
+ */
+function handleComicSliderInput(event: Event) {
+  const input = event.target;
+  if (input instanceof HTMLInputElement) {
+    goToComicPage(Number.parseInt(input.value, 10) - 1);
+  }
+}
+
+/**
+ * Handles left/right keyboard pagination for the comic reader shell.
+ * Key parameter: `event` is a keyboard event from the focused reader. Return value: none.
+ * Side effect: changes the active comic page for ArrowLeft/ArrowRight only.
+ */
+function handleComicReaderKeydown(event: KeyboardEvent) {
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    goToComicPage(activeComicPageIndex.value - 1);
+  } else if (event.key === "ArrowRight") {
+    event.preventDefault();
+    goToComicPage(activeComicPageIndex.value + 1);
+  }
+}
+
+/**
+ * Schedules a low-priority background preload for only the next comic page.
+ * Key parameters: none; it reads active page state. Return value: none.
+ * Side effect: starts one delayed image request, leaving the rendered DOM to the current page only.
+ */
+function scheduleNextComicPagePreload() {
+  if (nextComicPreloadTimer !== null) {
+    window.clearTimeout(nextComicPreloadTimer);
+    nextComicPreloadTimer = null;
+  }
+
+  const nextPage = comicPages.value[activeComicPageIndex.value + 1];
+  if (!props.comicReader || !nextPage || prefetchedComicImageUrls.has(nextPage.src)) {
+    return;
+  }
+
+  nextComicPreloadTimer = window.setTimeout(() => {
+    prefetchedComicImageUrls.add(nextPage.src);
+    const image = new Image();
+    image.decoding = "async";
+    image.setAttribute("fetchpriority", "low");
+    image.src = nextPage.src;
+    nextComicPreloadTimer = null;
+  }, 350);
+}
+
+/**
  * Decorates the already-sanitized rendered Markdown after Vue mounts or refreshes it.
  * Key parameters: none; it reads `bodyRef` and current props. Return value: none.
- * Side effect: adds heading anchors, resolves API image sources, and adds comic-reader image classes.
+ * Side effect: adds heading anchors and resolves API image sources for regular Markdown rendering.
  */
 function decorateRenderedContent() {
   decorateHeadingAnchors();
+  if (hasComicPages.value) {
+    return;
+  }
   decorateRenderedImageSources();
-  decorateComicReaderImages();
 }
 
 /**
@@ -451,59 +623,6 @@ function decorateRenderedImageSources() {
   });
 }
 
-/**
- * Marks image-only Markdown paragraphs as comic pages when the topic uses comic-reader mode.
- * Key parameters: none; it reads `bodyRef` and `comicReader`. Return value: none.
- * Side effect: adds lazy-loading attributes and CSS classes to rendered image nodes.
- */
-function decorateComicReaderImages() {
-  const container = bodyRef.value;
-  if (!container) {
-    return;
-  }
-
-  const markdownBody = container.querySelector<HTMLElement>(".markdown-body");
-  if (!markdownBody) {
-    return;
-  }
-
-  markdownBody.classList.toggle("markdown-body--comic-reader", props.comicReader);
-  markdownBody.querySelectorAll<HTMLElement>(".comic-reader-page").forEach((paragraph) => {
-    paragraph.classList.remove("comic-reader-page");
-  });
-  markdownBody.querySelectorAll<HTMLImageElement>("img.comic-reader-image").forEach((image) => {
-    image.classList.remove("comic-reader-image");
-  });
-
-  if (!props.comicReader) {
-    return;
-  }
-
-  markdownBody.querySelectorAll<HTMLImageElement>("img").forEach((image, index) => {
-    image.loading = "lazy";
-    image.decoding = "async";
-    image.classList.add("comic-reader-image");
-    if (!image.alt) {
-      image.alt = `漫画第 ${index + 1} 页`;
-    }
-
-    const paragraph = image.closest("p");
-    if (paragraph && paragraphContainsOnlyImages(paragraph)) {
-      paragraph.classList.add("comic-reader-page");
-    }
-  });
-}
-
-/**
- * Checks whether a rendered Markdown paragraph contains only image content.
- * Key parameter: `paragraph` is a DOM node from sanitized Markdown. Return value:
- * true when non-image text is empty, so CSS can treat it as a comic page.
- */
-function paragraphContainsOnlyImages(paragraph: HTMLElement) {
-  const clone = paragraph.cloneNode(true) as HTMLElement;
-  clone.querySelectorAll("img").forEach((image) => image.remove());
-  return Boolean(paragraph.querySelector("img")) && clone.textContent?.trim() === "";
-}
 </script>
 
 <template>
@@ -590,7 +709,86 @@ function paragraphContainsOnlyImages(paragraph: HTMLElement) {
           <UiButton tone="ghost" :disabled="savingEdit" @click="cancelEdit">取消编辑</UiButton>
         </div>
       </template>
-      <div v-else class="markdown-body" v-html="post.cookedHtml" />
+      <section
+        v-else-if="hasComicPages"
+        class="comic-reader"
+        aria-label="漫画阅读器"
+        tabindex="0"
+        @keydown="handleComicReaderKeydown"
+      >
+        <header class="comic-reader__toolbar">
+          <div class="comic-reader__title">
+            <span>漫画阅读</span>
+            <strong>第 {{ activeComicPageIndex + 1 }} / {{ comicPages.length }} 页</strong>
+          </div>
+
+          <div class="comic-reader__nav">
+            <button
+              type="button"
+              :disabled="activeComicPageIndex === 0"
+              @click="goToComicPage(activeComicPageIndex - 1)"
+            >
+              上一页
+            </button>
+            <button
+              type="button"
+              :disabled="activeComicPageIndex >= comicPages.length - 1"
+              @click="goToComicPage(activeComicPageIndex + 1)"
+            >
+              下一页
+            </button>
+          </div>
+        </header>
+
+        <div v-if="comicIntroHtml" class="comic-reader__intro markdown-body" v-html="comicIntroHtml" />
+
+        <label class="comic-reader__progress">
+          <span>页码</span>
+          <input
+            type="range"
+            min="1"
+            :max="comicPages.length"
+            :value="activeComicPageIndex + 1"
+            aria-label="漫画页码"
+            @input="handleComicSliderInput"
+          />
+        </label>
+
+        <figure v-if="activeComicPage" class="comic-reader__single-page">
+          <div class="comic-reader__page-frame">
+            <button
+              class="comic-reader__page-hit comic-reader__page-hit--prev"
+              type="button"
+              aria-label="上一页"
+              :disabled="activeComicPageIndex === 0"
+              @click="goToComicPage(activeComicPageIndex - 1)"
+            >
+              ‹
+            </button>
+            <img
+              :key="activeComicPage.src"
+              :src="activeComicPage.src"
+              :alt="activeComicPage.alt"
+              loading="eager"
+              decoding="async"
+              fetchpriority="high"
+            />
+            <button
+              class="comic-reader__page-hit comic-reader__page-hit--next"
+              type="button"
+              aria-label="下一页"
+              :disabled="activeComicPageIndex >= comicPages.length - 1"
+              @click="goToComicPage(activeComicPageIndex + 1)"
+            >
+              ›
+            </button>
+          </div>
+          <figcaption>
+            {{ activeComicPage.alt }} · 可用键盘 ← / → 翻页，下一页会在后台预加载。
+          </figcaption>
+        </figure>
+      </section>
+      <div v-else class="markdown-body" v-html="renderedPostHtml" />
       <p v-if="statusMessage" class="post-status" role="status">{{ statusMessage }}</p>
       <footer v-if="!post.deleted" class="post-action-bar">
         <button

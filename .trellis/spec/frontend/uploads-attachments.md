@@ -34,6 +34,10 @@ Helpers:
   `VITE_API_BASE_URL` origin for `<img>`/avatar display.
 - Rendered post Markdown (`cooked_html`) must also resolve API-relative `<img src>` values
   before display; server-rendered `/uploads/...` paths cannot rely on the web host proxy.
+- Post attachment image uploads may downscale large JPEG/PNG files client-side before `POST /uploads`,
+  using a browser canvas and WebP output, but must fall back to the original file if encoding fails
+  or the encoded blob is not smaller. GIF/WebP files are not transcoded so animation is not silently
+  flattened.
 
 Components/composables:
 

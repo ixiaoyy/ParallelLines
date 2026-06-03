@@ -502,7 +502,7 @@ function flagTopic() {
 </script>
 
 <template>
-  <div class="topic-detail-page">
+  <div class="topic-detail-page" :class="{ 'topic-detail-page--comic-reader': comicReader }">
     <UiCard v-if="topicQuery.isLoading.value" class="topic-state" role="status">
       正在加载主题…
     </UiCard>
@@ -598,7 +598,6 @@ function flagTopic() {
                   <PostItem
                     :post="post"
                     variant="reply"
-                    :comic-reader="comicReader"
                     :current-user-id="currentUserId"
                     :current-user-role="currentUserRole"
                     :can-manage-solution="canManageSolution"

@@ -19,6 +19,9 @@ Applies to `TopicDetailPage`, `PostItem`, and post feature API/query modules. Po
 - Post copy-link writes `PostItemVM.shareUrl` as an absolute URL including `#post-{floor}`; if the
   clipboard is blocked, update the address hash and show a visible status.
 - Only-author filtering is page-local state and filters displayed floors to the topic author's posts; it must not mutate server state.
+- Topics tagged `漫画阅读` enable comic-reader mode for the first/original post only; replies remain normal posts so comment images are not pulled into the reader.
+- Comic-reader mode extracts image pages from sanitized `cookedHtml`, renders non-image intro content separately, and keeps only the active page image mounted. Left/right controls, the range slider, and ArrowLeft/ArrowRight must paginate without creating a long image strip.
+- Comic-reader mode may preload only the immediate next page as a delayed low-priority background image request; it must not eagerly mount or request every page at once.
 - Code copy copies the first `<pre><code>` text from sanitized `cookedHtml` and shows visible status.
 - Quote emits the full `PostItemVM`; topic detail inserts `> author #floor` plus a raw Markdown/plain-text excerpt into the reply composer.
 - Edit controls are shown only when a verified logged-in current user id from `useCurrentUser().data.id` matches `post.userId`; do not decode a local token as an ownership fallback after `/auth/me` fails.

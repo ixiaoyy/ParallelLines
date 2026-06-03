@@ -5,6 +5,10 @@
   margin: 0 auto;
 }
 
+.topic-detail-page--comic-reader {
+  max-width: min(100%, 1480px);
+}
+
 .topic-state :deep(.ant-card-body) {
   padding: 1rem;
   color: var(--text);
@@ -31,6 +35,19 @@
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
   gap: clamp(1rem, 2.5vw, 1.8rem);
   align-items: start;
+}
+
+.topic-detail-page--comic-reader .topic-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.topic-detail-page--comic-reader :deep(.topic-detail-sidebar) {
+  position: static;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.topic-detail-page--comic-reader :deep(.progress-panel) {
+  order: -1;
 }
 
 .post-stream {
