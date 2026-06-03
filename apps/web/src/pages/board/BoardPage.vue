@@ -195,18 +195,19 @@ const hasSidebar = computed(() => Boolean(board.value?.childBoards.length) || ca
 
 const allBoardTopics = computed(() => topicsQuery.data.value ?? board.value?.latestTopics ?? []);
 
+// sortedBoardTopics 用途：按当前排序组织版块主题，并始终让置顶帖优先展示；无参数，返回排序后的列表且不修改源数据。
 const sortedBoardTopics = computed(() => {
   const list = [...allBoardTopics.value];
 
   if (activeSort.value === "hot") {
-    return list.sort((left, right) => right.hotScore - left.hotScore);
+    list.sort((left, right) => right.hotScore - left.hotScore);
+  } else if (activeSort.value === "top") {
+    list.sort((left, right) => right.likeCount + right.replyCount - (left.likeCount + left.replyCount));
+  } else {
+    list.sort((left, right) => Date.parse(right.lastPostedAt) - Date.parse(left.lastPostedAt));
   }
 
-  if (activeSort.value === "top") {
-    return list.sort((left, right) => right.likeCount + right.replyCount - (left.likeCount + left.replyCount));
-  }
-
-  return list.sort((left, right) => Date.parse(right.lastPostedAt) - Date.parse(left.lastPostedAt));
+  return list.sort((left, right) => Number(right.pinned) - Number(left.pinned));
 });
 
 const boardTopics = computed(() => {
