@@ -61,6 +61,9 @@ Service methods:
   - attached upload: readable only when the parent post/topic is visible and the current
     user can access the board;
   - deleted/hidden post or deleted upload: always `upload_not_found`.
+- `GET /uploads/{id}/content` should set long-lived browser cache headers after ACL checks:
+  anonymous-readable content uses public cache, authenticated reads use private cache, and
+  `X-Content-Type-Options: nosniff` is sent with streamed files.
 - Validation is based on server-side signature sniffing, not only browser MIME headers.
   Disallowed active types include `svg`, `html`, `js`, shell/PowerShell/batch scripts,
   PHP, DLL, COM, and EXE.

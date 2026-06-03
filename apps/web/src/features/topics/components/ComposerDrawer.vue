@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { MdEditor } from "md-editor-v3";
 import type { ExposeParam, ToolbarNames } from "md-editor-v3";
 import DOMPurify from "dompurify";
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, onMounted, ref, watch } from "vue";
 
 import { lookupDraft } from "@/features/drafts/api";
 import type { DraftResponse } from "@/features/drafts/model";
@@ -13,8 +12,13 @@ import { toMarkdownUpload } from "@/features/uploads/model";
 import { useUploadFile } from "@/features/uploads/queries";
 import { hasAccessToken, resolveApiAssetUrl } from "@/shared/api/client";
 import { isApiErrorCode } from "@/shared/api/errors";
+import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
+
+const MdEditor = defineAsyncComponent(() =>
+  runWhenBrowserIdle().then(() => import("md-editor-v3").then((module) => module.MdEditor)),
+);
 
 interface ReplyDraft {
   body: string;

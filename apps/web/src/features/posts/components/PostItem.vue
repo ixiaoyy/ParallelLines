@@ -14,10 +14,9 @@ import {
   RollbackOutlined,
   UserDeleteOutlined,
 } from "@ant-design/icons-vue";
-import { MdEditor } from "md-editor-v3";
 import type { ExposeParam, ToolbarNames } from "md-editor-v3";
 import DOMPurify from "dompurify";
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import type { PostItemVM } from "@/entities/post/model";
 import { setPostLike } from "@/features/interactions/api";
@@ -35,10 +34,15 @@ import { useUploadFile } from "@/features/uploads/queries";
 import { hasAccessToken, resolveApiAssetUrl } from "@/shared/api/client";
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { relativeTime } from "@/shared/lib/format";
+import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
 import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
+
+const MdEditor = defineAsyncComponent(() =>
+  runWhenBrowserIdle().then(() => import("md-editor-v3").then((module) => module.MdEditor)),
+);
 
 interface ComicPage {
   src: string;
@@ -501,6 +505,15 @@ function goToComicPage(index: number) {
 }
 
 /**
+ * Limits thumbnail image mounting so the desktop page rail does not download every comic page at once.
+ * Key parameter: `index` is the zero-based page position. Return value: true for active/neighbor pages only.
+ * Side effect: none; the template uses this to keep distant pages as lightweight placeholders.
+ */
+function shouldRenderComicThumbnail(index: number) {
+  return Math.abs(index - activeComicPageIndex.value) <= 1;
+}
+
+/**
  * Handles left/right keyboard pagination for the comic reader shell.
  * Key parameter: `event` is a keyboard event from the focused reader. Return value: none.
  * Side effect: changes the active comic page for ArrowLeft/ArrowRight only.
@@ -710,36 +723,62 @@ function decorateRenderedImageSources() {
           </div>
         </header>
 
-        <figure v-if="activeComicPage" class="comic-reader__single-page">
-          <div class="comic-reader__page-frame">
+        <div class="comic-reader__stage">
+          <figure v-if="activeComicPage" class="comic-reader__single-page">
+            <div class="comic-reader__page-frame">
+              <button
+                class="comic-reader__page-hit comic-reader__page-hit--prev"
+                type="button"
+                aria-label="上一页"
+                :disabled="activeComicPageIndex === 0"
+                @click="goToComicPage(activeComicPageIndex - 1)"
+              >
+                ‹
+              </button>
+              <img
+                :key="activeComicPage.src"
+                :src="activeComicPage.src"
+                :alt="activeComicPage.alt"
+                loading="eager"
+                decoding="async"
+                fetchpriority="high"
+              />
+              <button
+                class="comic-reader__page-hit comic-reader__page-hit--next"
+                type="button"
+                aria-label="下一页"
+                :disabled="activeComicPageIndex >= comicPages.length - 1"
+                @click="goToComicPage(activeComicPageIndex + 1)"
+              >
+                ›
+              </button>
+            </div>
+          </figure>
+
+          <aside v-if="comicPages.length > 1" class="comic-reader__thumbs" aria-label="漫画页列表">
             <button
-              class="comic-reader__page-hit comic-reader__page-hit--prev"
+              v-for="(page, index) in comicPages"
+              :key="page.src"
+              class="comic-reader__thumb"
+              :class="{ 'comic-reader__thumb--active': index === activeComicPageIndex }"
               type="button"
-              aria-label="上一页"
-              :disabled="activeComicPageIndex === 0"
-              @click="goToComicPage(activeComicPageIndex - 1)"
+              :aria-label="`跳到第 ${index + 1} 页`"
+              :aria-current="index === activeComicPageIndex ? 'page' : undefined"
+              @click="goToComicPage(index)"
             >
-              ‹
+              <span>第 {{ index + 1 }} 页</span>
+              <img
+                v-if="shouldRenderComicThumbnail(index)"
+                :src="page.src"
+                :alt="page.alt"
+                loading="lazy"
+                decoding="async"
+                fetchpriority="low"
+              />
+              <span v-else class="comic-reader__thumb-placeholder">{{ index + 1 }}</span>
             </button>
-            <img
-              :key="activeComicPage.src"
-              :src="activeComicPage.src"
-              :alt="activeComicPage.alt"
-              loading="eager"
-              decoding="async"
-              fetchpriority="high"
-            />
-            <button
-              class="comic-reader__page-hit comic-reader__page-hit--next"
-              type="button"
-              aria-label="下一页"
-              :disabled="activeComicPageIndex >= comicPages.length - 1"
-              @click="goToComicPage(activeComicPageIndex + 1)"
-            >
-              ›
-            </button>
-          </div>
-        </figure>
+          </aside>
+        </div>
       </section>
       <div v-else class="markdown-body" v-html="renderedPostHtml" />
       <p v-if="statusMessage" class="post-status" role="status">{{ statusMessage }}</p>

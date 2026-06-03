@@ -4,6 +4,7 @@ from fastapi import APIRouter, File, Form, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse
 
 from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep, SettingsDep
+from app.core.response_cache import scoped_cache_control
 from app.schemas.common import ApiResponse
 from app.schemas.uploads import UploadKind, UploadResponse
 from app.schemas.users import UserPublic
@@ -64,10 +65,16 @@ async def get_upload_content(
     content = await UploadService(session, settings).get_upload_content(upload_id, current_user)
     inline = content.upload.is_image and not download
     headers = {
+        "Cache-Control": scoped_cache_control(
+            current_user,
+            max_age=86_400,
+            stale_while_revalidate=604_800,
+        ),
         "Content-Disposition": content_disposition(
             content.upload.original_filename,
             inline=inline,
-        )
+        ),
+        "X-Content-Type-Options": "nosniff",
     }
     return FileResponse(
         content.path,

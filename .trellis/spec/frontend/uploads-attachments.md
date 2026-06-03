@@ -38,6 +38,8 @@ Helpers:
   using a browser canvas and WebP output, but must fall back to the original file if encoding fails
   or the encoded blob is not smaller. GIF/WebP files are not transcoded so animation is not silently
   flattened.
+- Client-side post image compression must preserve readable detail for comics and text-heavy images;
+  avoid overly aggressive one-size-fits-all downscaling that makes speech bubbles or UI screenshots blurry.
 
 Components/composables:
 

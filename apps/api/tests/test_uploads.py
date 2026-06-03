@@ -101,6 +101,7 @@ async def test_post_image_upload_attaches_and_renders_after_refresh(tmp_path: Pa
 
         content = await client.get(f"/api/v1/uploads/{upload_data['id']}/content")
         assert content.status_code == 200
+        assert "max-age=86400" in content.headers["cache-control"]
         assert content.headers["content-type"].startswith("image/png")
         assert content.content == PNG_BYTES
 
