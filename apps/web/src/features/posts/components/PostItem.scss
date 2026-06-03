@@ -355,6 +355,7 @@
 }
 
 .post-item--article .post-body :deep(.markdown-body) {
+  max-width: min(100%, 72ch);
   color: var(--text);
   font-family: inherit;
   font-size: clamp(0.96rem, 0.9vw, 1rem);

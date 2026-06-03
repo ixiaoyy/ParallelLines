@@ -1,9 +1,9 @@
 .topic-detail-page {
   display: grid;
-  gap: 1.3rem;
+  gap: 1rem;
   width: 100%;
   min-width: 0;
-  max-width: 1180px;
+  max-width: min(100%, 1220px);
   margin: 0 auto;
 }
 
@@ -34,8 +34,8 @@
 
 .topic-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 19rem);
-  gap: clamp(1rem, 2.5vw, 1.8rem);
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 18rem);
+  gap: clamp(0.9rem, 2vw, 1.35rem);
   align-items: start;
   min-width: 0;
 }

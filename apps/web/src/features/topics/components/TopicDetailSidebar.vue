@@ -70,8 +70,8 @@ function toPlainText(value: string) {
 <template>
   <aside class="topic-detail-sidebar" aria-label="主题侧边栏">
     <UiCard class="sidebar-panel progress-panel">
-      <span class="panel-kicker">目录</span>
-      <h2>以嵌套方式查看</h2>
+      <span class="panel-kicker">楼层</span>
+      <h2>快速跳转</h2>
       <nav v-if="tocHeadings.length" class="toc-nav" aria-label="正文目录">
         <a
           v-for="heading in tocHeadings"
@@ -89,8 +89,8 @@ function toPlainText(value: string) {
         </a>
       </nav>
       <div class="sidebar-jumps">
-        <a href="#replies">查看回复</a>
-        <a href="#topic-end">跳至结尾</a>
+        <a href="#replies">看回复</a>
+        <a href="#topic-end">到结尾</a>
       </div>
     </UiCard>
 

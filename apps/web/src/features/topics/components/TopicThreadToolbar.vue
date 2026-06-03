@@ -118,11 +118,11 @@ function deleteTopic() {
   <UiCard class="topic-thread-toolbar">
     <div class="toolbar-summary">
       <CommentOutlined aria-hidden="true" />
-      <strong>{{ visibleCount }}/{{ totalCount }} 楼</strong>
+      <strong>{{ visibleCount }}/{{ totalCount }} 楼层</strong>
     </div>
     <div class="toolbar-actions" aria-label="主题操作">
       <button
-        class="toolbar-icon-button"
+        class="toolbar-icon-button toolbar-filter-button"
         :class="{ 'is-active': onlyAuthor }"
         type="button"
         :title="onlyAuthor ? '显示全部楼层' : '只看楼主'"
@@ -131,9 +131,10 @@ function deleteTopic() {
         @click="emit('toggleOnlyAuthor')"
       >
         <UserOutlined aria-hidden="true" />
+        <span class="toolbar-button-label">只看楼主</span>
       </button>
       <button
-        class="toolbar-icon-button"
+        class="toolbar-icon-button toolbar-filter-button"
         :class="{ 'is-active': qaSort }"
         type="button"
         :title="qaSort ? '按时间排序' : '问答排序'"
@@ -142,6 +143,7 @@ function deleteTopic() {
         @click="emit('toggleQaSort')"
       >
         <RocketOutlined aria-hidden="true" />
+        <span class="toolbar-button-label">问答排序</span>
       </button>
       <button
         class="toolbar-icon-button"

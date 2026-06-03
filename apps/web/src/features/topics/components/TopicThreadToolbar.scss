@@ -71,6 +71,20 @@
     transform 160ms ease;
 }
 
+.toolbar-filter-button {
+  gap: 0.4rem;
+  min-width: auto;
+  padding-inline: 0.72rem;
+}
+
+.toolbar-button-label {
+  color: currentColor;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .toolbar-icon-button:hover,
 .toolbar-icon-button:focus-visible,
 .toolbar-more summary:hover,
@@ -240,5 +254,15 @@
 
   .toolbar-more-menu {
     right: -0.2rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .toolbar-filter-button {
+    padding-inline: 0.56rem;
+  }
+
+  .toolbar-button-label {
+    display: none;
   }
 }
