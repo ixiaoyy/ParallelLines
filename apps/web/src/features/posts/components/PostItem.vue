@@ -16,7 +16,6 @@ import {
 } from "@ant-design/icons-vue";
 import { MdEditor } from "md-editor-v3";
 import type { ExposeParam, ToolbarNames } from "md-editor-v3";
-import "md-editor-v3/lib/style.css";
 import DOMPurify from "dompurify";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 
@@ -405,10 +404,11 @@ function closeMoreMenu() {
 /**
  * Decorates the already-sanitized rendered Markdown after Vue mounts or refreshes it.
  * Key parameters: none; it reads `bodyRef` and current props. Return value: none.
- * Side effect: adds heading anchors and, when enabled, comic-reader image classes.
+ * Side effect: adds heading anchors, resolves API image sources, and adds comic-reader image classes.
  */
 function decorateRenderedContent() {
   decorateHeadingAnchors();
+  decorateRenderedImageSources();
   decorateComicReaderImages();
 }
 
@@ -429,6 +429,26 @@ function decorateHeadingAnchors() {
       heading.id = `post-${props.post.floor}-heading-${index}`;
       heading.classList.add("markdown-heading-anchor");
     });
+}
+
+/**
+ * Rewrites API-relative image paths inside server-rendered Markdown to the configured API origin.
+ * Key parameters: none; it reads rendered Markdown under `bodyRef`. Return value: none.
+ * Side effect: mutates `<img src>` attributes so `/uploads/...` content loads outside dev proxy contexts.
+ */
+function decorateRenderedImageSources() {
+  const container = bodyRef.value;
+  if (!container) {
+    return;
+  }
+
+  container.querySelectorAll<HTMLImageElement>(".markdown-body img").forEach((image) => {
+    const originalSource = image.getAttribute("src")?.trim();
+    const resolvedSource = resolveApiAssetUrl(originalSource);
+    if (resolvedSource && resolvedSource !== originalSource) {
+      image.setAttribute("src", resolvedSource);
+    }
+  });
 }
 
 /**

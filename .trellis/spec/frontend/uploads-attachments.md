@@ -32,6 +32,8 @@ Helpers:
 - `apiRequest` must not set `Content-Type: application/json` for `FormData`.
 - `resolveApiAssetUrl(url)` converts `/uploads/...` and `/api/v1/...` to the configured
   `VITE_API_BASE_URL` origin for `<img>`/avatar display.
+- Rendered post Markdown (`cooked_html`) must also resolve API-relative `<img src>` values
+  before display; server-rendered `/uploads/...` paths cannot rely on the web host proxy.
 
 Components/composables:
 
