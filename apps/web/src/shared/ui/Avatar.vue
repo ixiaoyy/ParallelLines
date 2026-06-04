@@ -88,6 +88,7 @@ function handleImageError() {
   aspect-ratio: 1;
   overflow: hidden;
   border: 2px solid var(--bg-surface);
+  border-radius: 50%;
   color: white !important;
   font-weight: 800;
   line-height: 1 !important;
