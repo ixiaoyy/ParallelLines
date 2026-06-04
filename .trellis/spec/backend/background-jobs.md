@@ -50,6 +50,16 @@ Runtime env:
 | `BACKGROUND_UPLOAD_CLEANUP_INTERVAL_SECONDS` | Scheduled temporary upload cleanup bucket size |
 | `BACKGROUND_SESSION_CLEANUP_INTERVAL_SECONDS` | Scheduled expired session cleanup bucket size |
 | `BACKGROUND_DIGEST_INTERVAL_SECONDS` | Scheduled email digest dispatcher bucket size |
+| `FRONTIER_NEWS_REQUEST_TIMEOUT_SECONDS` | Per-request timeout for frontier upstream RSS/API fetches |
+
+Frontier source `config` keys:
+
+| Key | Purpose |
+|---|---|
+| `max_items` | Candidate window fetched from the upstream source before de-duplication |
+| `review_batch_size` | Maximum new `frontier_news` reviewables to enqueue per source in one collection pass; default is 3 |
+| `candidate_items` | Hacker News top-story scan window before AI keyword filtering |
+| `arxiv_category_items` | Optional per-category arXiv result count; absent values are derived from `max_items` |
 
 ### 3. Contracts
 
@@ -62,6 +72,10 @@ Runtime env:
 - Worker handlers must be idempotent or protected by an idempotency key because a side effect can happen before final job status commit.
 - Failed jobs return to `queued` while `attempts < max_attempts`; after the final attempt they move to `dead` with `finished_at` and `last_error`.
 - Scheduled jobs use time-bucketed idempotency keys: repeated worker loops in the same bucket must produce one queue row.
+- Frontier news collection enqueues only a small per-source review batch per pass, so one noisy
+  source cannot flood the unified moderation queue. Failed source fetches keep their previous
+  `last_checked_at` and set `last_error`, allowing the next scheduled bucket to retry instead of
+  waiting the full source interval.
 
 ### 4. Validation & Error Matrix
 

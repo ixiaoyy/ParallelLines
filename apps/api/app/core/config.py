@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     frontier_news_bot_email: str = "frontier-news-bot@parallellines.local"
     frontier_news_ai_provider: str = "local"
     frontier_news_ai_model: str = "local-deterministic-v1"
-    frontier_news_request_timeout_seconds: float = 8.0
+    frontier_news_request_timeout_seconds: float = 15.0
 
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5174", "http://127.0.0.1:5174"]

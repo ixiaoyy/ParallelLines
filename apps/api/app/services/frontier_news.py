@@ -37,6 +37,7 @@ from app.schemas.news import (
 from app.services.moderation import ModerationService
 
 FRONTIER_NEWS_PROMPT_VERSION = "frontier-v1"
+DEFAULT_REVIEW_BATCH_SIZE = 3
 OPEN_REVIEW_STATUSES = {"pending", "claimed", "appealed"}
 TERMINAL_ITEM_STATUSES = {"published", "rejected", "duplicate"}
 AI_KEYWORDS = (
@@ -103,7 +104,8 @@ DEFAULT_FRONTIER_SOURCES: tuple[DefaultFrontierSource, ...] = (
         url="https://export.arxiv.org/api/query",
         config={
             "categories": ["cs.AI", "cs.CL", "cs.LG"],
-            "max_items": 8,
+            "max_items": 12,
+            "review_batch_size": DEFAULT_REVIEW_BATCH_SIZE,
             "keywords": list(AI_KEYWORDS),
         },
         trust_level=90,
@@ -114,7 +116,12 @@ DEFAULT_FRONTIER_SOURCES: tuple[DefaultFrontierSource, ...] = (
         name="Hacker News AI 热点",
         kind="hacker_news",
         url="https://hacker-news.firebaseio.com/v0/topstories.json",
-        config={"max_items": 12, "candidate_items": 60, "keywords": list(AI_KEYWORDS)},
+        config={
+            "max_items": 18,
+            "candidate_items": 80,
+            "review_batch_size": DEFAULT_REVIEW_BATCH_SIZE,
+            "keywords": list(AI_KEYWORDS),
+        },
         trust_level=65,
         fetch_interval_minutes=120,
     ),
@@ -127,7 +134,8 @@ DEFAULT_FRONTIER_SOURCES: tuple[DefaultFrontierSource, ...] = (
             "query": "topic:llm stars:>100",
             "sort": "updated",
             "order": "desc",
-            "max_items": 10,
+            "max_items": 15,
+            "review_batch_size": DEFAULT_REVIEW_BATCH_SIZE,
             "keywords": list(AI_KEYWORDS),
         },
         trust_level=70,
@@ -138,7 +146,11 @@ DEFAULT_FRONTIER_SOURCES: tuple[DefaultFrontierSource, ...] = (
         name="Hugging Face Blog",
         kind="rss",
         url="https://huggingface.co/blog/feed.xml",
-        config={"max_items": 8, "keywords": list(AI_KEYWORDS)},
+        config={
+            "max_items": 12,
+            "review_batch_size": DEFAULT_REVIEW_BATCH_SIZE,
+            "keywords": list(AI_KEYWORDS),
+        },
         trust_level=80,
         fetch_interval_minutes=240,
     ),
@@ -475,12 +487,12 @@ class FrontierNewsService:
         """Fetch one source, persist new materials, and queue AI-ready reviewables."""
 
         del force
+        review_batch_size = self._review_batch_size(source)
         source_count = 1
         created_count = 0
         queued_count = 0
         skipped_count = 0
         error_count = 0
-        source.last_checked_at = utcnow()
         try:
             entries = await self._fetch_source_entries(source)
         except Exception as exc:
@@ -492,8 +504,11 @@ class FrontierNewsService:
                 skipped_count=0,
                 error_count=1,
             )
+        source.last_checked_at = utcnow()
         source.last_error = None
         for entry in entries:
+            if queued_count >= review_batch_size:
+                break
             item, created = await self._upsert_entry(source, entry)
             if not created:
                 skipped_count += 1
@@ -571,40 +586,52 @@ class FrontierNewsService:
         """Query arXiv Atom API for configured AI categories."""
 
         categories = [str(item) for item in source.config.get("categories", []) if str(item)]
-        query = " OR ".join(f"cat:{category}" for category in categories) or "cat:cs.AI"
-        params = urllib.parse.urlencode(
-            {
-                "search_query": query,
-                "sortBy": "submittedDate",
-                "sortOrder": "descending",
-                "max_results": str(self._max_items(source)),
-            }
-        )
-        root = ET.fromstring(await self._read_url(f"{source.url}?{params}"))
         entries: list[FetchedNewsEntry] = []
-        for node in [child for child in root if _local_name(child.tag) == "entry"]:
-            title = _clean_text(_child_text(node, "title"))
-            link = _entry_link(node) or _clean_text(_child_text(node, "id"))
-            if not title or not link:
-                continue
-            authors = [
-                _clean_text(_child_text(author, "name"))
-                for author in node
-                if _local_name(author.tag) == "author"
-            ]
-            entries.append(
-                FetchedNewsEntry(
-                    external_id=_clean_text(_child_text(node, "id")) or link,
-                    title=title,
-                    url=link,
-                    summary=_clean_text(_child_text(node, "summary")) or None,
-                    author_names=[author for author in authors if author],
-                    published_at=_parse_datetime(
-                        _child_text(node, "published") or _child_text(node, "updated")
-                    ),
-                    raw_payload=_safe_payload(_element_to_dict(node)),
-                )
+        failed_queries: list[str] = []
+        max_items = self._max_items(source)
+        for category in categories or ["cs.AI"]:
+            if len(entries) >= max_items:
+                break
+            params = urllib.parse.urlencode(
+                {
+                    "search_query": f"cat:{category}",
+                    "sortBy": "submittedDate",
+                    "sortOrder": "descending",
+                    "max_results": str(self._arxiv_category_limit(source, len(categories) or 1)),
+                }
             )
+            try:
+                root = ET.fromstring(await self._read_url(f"{source.url}?{params}"))
+            except (TimeoutError, OSError, ET.ParseError) as exc:
+                failed_queries.append(f"{category}: {exc}")
+                continue
+            for node in [child for child in root if _local_name(child.tag) == "entry"]:
+                title = _clean_text(_child_text(node, "title"))
+                link = _entry_link(node) or _clean_text(_child_text(node, "id"))
+                if not title or not link:
+                    continue
+                authors = [
+                    _clean_text(_child_text(author, "name"))
+                    for author in node
+                    if _local_name(author.tag) == "author"
+                ]
+                entries.append(
+                    FetchedNewsEntry(
+                        external_id=_clean_text(_child_text(node, "id")) or link,
+                        title=title,
+                        url=link,
+                        summary=_clean_text(_child_text(node, "summary")) or None,
+                        author_names=[author for author in authors if author],
+                        published_at=_parse_datetime(
+                            _child_text(node, "published") or _child_text(node, "updated")
+                        ),
+                        raw_payload=_safe_payload(_element_to_dict(node)),
+                    ),
+                )
+                if len(entries) >= max_items:
+                    break
+        if not entries and failed_queries:
+            raise OSError("; ".join(failed_queries)[:1000])
         return self._filter_entries(source, entries)
 
     async def _fetch_hacker_news_entries(
@@ -821,7 +848,7 @@ class FrontierNewsService:
         """Produce a deterministic Chinese draft replaceable by a real AI provider."""
 
         text = f"{item.title}\n{item.summary or ''}"
-        item_type = self._classify_item(text)
+        item_type = self._classify_item(item, text)
         tags = self._suggest_tags(text, item_type)
         title = self._chinese_title(item.title, item_type)
         summary = self._chinese_summary(item)
@@ -942,9 +969,16 @@ class FrontierNewsService:
             return True
         return source.last_checked_at <= utcnow() - timedelta(minutes=source.fetch_interval_minutes)
 
-    def _classify_item(self, text: str) -> str:
-        """Classify material into broad content buckets for tags and title prefixing."""
+    def _classify_item(self, item: FrontierNewsItem, text: str) -> str:
+        """Classify material from source kind first, then text keywords for safe fallbacks."""
 
+        source_kind = item.source.kind if item.source else None
+        if source_kind == "arxiv":
+            return "paper"
+        if source_kind == "github_search":
+            return "tool"
+        if source_kind == "hacker_news":
+            return "discussion"
         lowered = text.lower()
         if "arxiv" in lowered or "paper" in lowered or "论文" in lowered:
             return "paper"
@@ -1127,6 +1161,36 @@ class FrontierNewsService:
         except (TypeError, ValueError):
             value = 10
         return max(1, min(25, value))
+
+    def _review_batch_size(self, source: FrontierNewsSource) -> int:
+        """Read the per-source count of new reviewables to enqueue during one collect pass."""
+
+        raw_value = (
+            source.config.get("review_batch_size") if isinstance(source.config, dict) else None
+        )
+        try:
+            value = int(raw_value or DEFAULT_REVIEW_BATCH_SIZE)
+        except (TypeError, ValueError):
+            value = DEFAULT_REVIEW_BATCH_SIZE
+        return max(1, min(10, value))
+
+    def _arxiv_category_limit(self, source: FrontierNewsSource, category_count: int) -> int:
+        """Return the bounded per-category arXiv request size used to avoid slow broad queries."""
+
+        raw_value = (
+            source.config.get("arxiv_category_items") if isinstance(source.config, dict) else None
+        )
+        try:
+            configured = int(raw_value) if raw_value is not None else None
+        except (TypeError, ValueError):
+            configured = None
+        if configured:
+            return max(1, min(10, configured))
+        safe_category_count = max(1, category_count)
+        return max(
+            2,
+            min(6, (self._max_items(source) + safe_category_count - 1) // safe_category_count),
+        )
 
     async def _get_source(self, source_id: str) -> FrontierNewsSource:
         """Load one source or raise a typed not-found error."""
