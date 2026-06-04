@@ -1,0 +1,156 @@
+.frontier-news-panel {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.frontier-news-panel__head {
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.frontier-news-panel__actions,
+.source-card__actions,
+.item-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.review-link,
+.item-card__actions a {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.review-link:hover,
+.item-card__actions a:hover {
+  color: var(--primary-hover);
+}
+
+.frontier-news-panel__notice {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--theme-soft-bg);
+  color: var(--text);
+}
+
+.frontier-news-panel__sources,
+.frontier-news-panel__items {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.frontier-news-panel h3 {
+  margin: 0;
+  color: var(--title);
+  font-size: 1.02rem;
+}
+
+.source-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.9rem;
+}
+
+.source-card,
+.item-card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg-surface);
+}
+
+.source-card > div:first-child {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.source-card strong,
+.item-card h4 {
+  color: var(--title);
+}
+
+.source-card span,
+.item-card__meta,
+.source-url {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.source-url {
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+.source-error {
+  margin: 0;
+  color: var(--danger, #ef4444);
+  font-size: 0.86rem;
+}
+
+.items-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.items-head select {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  color: var(--text);
+  background: var(--bg-surface);
+}
+
+.item-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.item-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.item-card h4,
+.item-card p {
+  margin: 0;
+}
+
+.item-card p {
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag-row span {
+  border-radius: 999px;
+  padding: 0.18rem 0.55rem;
+  background: var(--theme-soft-bg);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.panel-state {
+  margin: 0;
+  color: var(--muted);
+}
+
+.panel-state--error {
+  color: var(--danger, #ef4444);
+}

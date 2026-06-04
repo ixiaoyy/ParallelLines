@@ -1417,6 +1417,57 @@
         "title": "ApiResponse[FlagResponse]",
         "type": "object"
       },
+      "ApiResponse_FrontierNewsCollectResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FrontierNewsCollectResponse"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "ApiResponse[FrontierNewsCollectResponse]",
+        "type": "object"
+      },
+      "ApiResponse_FrontierNewsItemResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FrontierNewsItemResponse"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "ApiResponse[FrontierNewsItemResponse]",
+        "type": "object"
+      },
+      "ApiResponse_FrontierNewsSourceResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FrontierNewsSourceResponse"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "ApiResponse[FrontierNewsSourceResponse]",
+        "type": "object"
+      },
       "ApiResponse_GitHubIssuePreviewResponse_": {
         "properties": {
           "data": {
@@ -2583,6 +2634,48 @@
           "data"
         ],
         "title": "ApiResponse[list[FlagResponse]]",
+        "type": "object"
+      },
+      "ApiResponse_list_FrontierNewsItemResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FrontierNewsItemResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "ApiResponse[list[FrontierNewsItemResponse]]",
+        "type": "object"
+      },
+      "ApiResponse_list_FrontierNewsSourceResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/FrontierNewsSourceResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "ApiResponse[list[FrontierNewsSourceResponse]]",
         "type": "object"
       },
       "ApiResponse_list_PluginResponse__": {
@@ -5657,6 +5750,562 @@
           "status"
         ],
         "title": "FlagStatusUpdateRequest",
+        "type": "object"
+      },
+      "FrontierNewsCollectResponse": {
+        "properties": {
+          "created_count": {
+            "title": "Created Count",
+            "type": "integer"
+          },
+          "error_count": {
+            "title": "Error Count",
+            "type": "integer"
+          },
+          "queued_count": {
+            "title": "Queued Count",
+            "type": "integer"
+          },
+          "skipped_count": {
+            "title": "Skipped Count",
+            "type": "integer"
+          },
+          "source_count": {
+            "title": "Source Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source_count",
+          "created_count",
+          "queued_count",
+          "skipped_count",
+          "error_count"
+        ],
+        "title": "FrontierNewsCollectResponse",
+        "type": "object"
+      },
+      "FrontierNewsItemQueueRequest": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "FrontierNewsItemQueueRequest",
+        "type": "object"
+      },
+      "FrontierNewsItemResponse": {
+        "properties": {
+          "ai_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Error"
+          },
+          "ai_key_points": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ai Key Points",
+            "type": "array"
+          },
+          "ai_model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Model Name"
+          },
+          "ai_processed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Processed At"
+          },
+          "ai_review_suggestion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Review Suggestion"
+          },
+          "ai_risk_flags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ai Risk Flags",
+            "type": "array"
+          },
+          "ai_summary_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Summary Zh"
+          },
+          "ai_title_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Title Zh"
+          },
+          "ai_why_it_matters": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Why It Matters"
+          },
+          "author_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Author Names",
+            "type": "array"
+          },
+          "canonical_url": {
+            "title": "Canonical Url",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "item_type": {
+            "title": "Item Type",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "review_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Note"
+          },
+          "reviewable_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewable Id"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By Id"
+          },
+          "reviewed_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By Name"
+          },
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Name"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "suggested_tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggested Tags",
+            "type": "array"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "topic_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic Id"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source_id",
+          "external_id",
+          "canonical_url",
+          "title",
+          "author_names",
+          "item_type",
+          "suggested_tags",
+          "ai_key_points",
+          "ai_risk_flags",
+          "score",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "FrontierNewsItemResponse",
+        "type": "object"
+      },
+      "FrontierNewsSourceCreateRequest": {
+        "properties": {
+          "config": {
+            "additionalProperties": true,
+            "title": "Config",
+            "type": "object"
+          },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "fetch_interval_minutes": {
+            "default": 60,
+            "maximum": 1440.0,
+            "minimum": 5.0,
+            "title": "Fetch Interval Minutes",
+            "type": "integer"
+          },
+          "key": {
+            "maxLength": 96,
+            "minLength": 2,
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "rss",
+              "arxiv",
+              "hacker_news",
+              "github_search"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "trust_level": {
+            "default": 50,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Trust Level",
+            "type": "integer"
+          },
+          "url": {
+            "maxLength": 1024,
+            "minLength": 8,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "kind",
+          "url"
+        ],
+        "title": "FrontierNewsSourceCreateRequest",
+        "type": "object"
+      },
+      "FrontierNewsSourceResponse": {
+        "properties": {
+          "config": {
+            "additionalProperties": true,
+            "title": "Config",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "fetch_interval_minutes": {
+            "title": "Fetch Interval Minutes",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked At"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "trust_level": {
+            "title": "Trust Level",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "kind",
+          "url",
+          "config",
+          "enabled",
+          "trust_level",
+          "fetch_interval_minutes",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "FrontierNewsSourceResponse",
+        "type": "object"
+      },
+      "FrontierNewsSourceUpdateRequest": {
+        "properties": {
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "fetch_interval_minutes": {
+            "anyOf": [
+              {
+                "maximum": 1440.0,
+                "minimum": 5.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetch Interval Minutes"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "trust_level": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trust Level"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 8,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "FrontierNewsSourceUpdateRequest",
         "type": "object"
       },
       "GitHubIssuePreviewResponse": {
@@ -12392,6 +13041,384 @@
         "summary": "Update External Integration",
         "tags": [
           "integrations"
+        ]
+      }
+    },
+    "/api/v1/admin/frontier-news/collect": {
+      "post": {
+        "description": "Run a manual collection pass for all enabled frontier sources.",
+        "operationId": "collect_all_frontier_news_api_v1_admin_frontier_news_collect_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_FrontierNewsCollectResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Collect All Frontier News",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/frontier-news/items": {
+      "get": {
+        "description": "List collected frontier materials and their review/publication status.",
+        "operationId": "list_frontier_news_items_api_v1_admin_frontier_news_items_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_list_FrontierNewsItemResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Frontier News Items",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/frontier-news/items/{item_id}/enrich": {
+      "post": {
+        "description": "Re-run AI整理 for one material and send it to the unified moderation queue.",
+        "operationId": "enrich_frontier_news_item_api_v1_admin_frontier_news_items__item_id__enrich_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_FrontierNewsItemResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Enrich Frontier News Item",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/frontier-news/items/{item_id}/queue": {
+      "post": {
+        "description": "Send one AI-prepared material to the existing reviewables queue.",
+        "operationId": "queue_frontier_news_item_api_v1_admin_frontier_news_items__item_id__queue_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FrontierNewsItemQueueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_FrontierNewsItemResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Queue Frontier News Item",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/frontier-news/sources": {
+      "get": {
+        "description": "List white-listed sources used by the frontier news collector.",
+        "operationId": "list_frontier_news_sources_api_v1_admin_frontier_news_sources_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_list_FrontierNewsSourceResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Frontier News Sources",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "description": "Create a white-listed source for the frontier news collector.",
+        "operationId": "create_frontier_news_source_api_v1_admin_frontier_news_sources_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FrontierNewsSourceCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_FrontierNewsSourceResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Frontier News Source",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/frontier-news/sources/{source_id}": {
+      "put": {
+        "description": "Update source configuration, enabled state, or fetch cadence.",
+        "operationId": "update_frontier_news_source_api_v1_admin_frontier_news_sources__source_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FrontierNewsSourceUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_FrontierNewsSourceResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Frontier News Source",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/frontier-news/sources/{source_id}/collect": {
+      "post": {
+        "description": "Run a manual collection pass for one frontier source.",
+        "operationId": "collect_frontier_news_source_api_v1_admin_frontier_news_sources__source_id__collect_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_FrontierNewsCollectResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Collect Frontier News Source",
+        "tags": [
+          "admin"
         ]
       }
     },

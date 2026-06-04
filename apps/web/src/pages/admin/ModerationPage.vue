@@ -199,6 +199,10 @@ function reviewableTitle(reviewable: ReviewableResponse) {
 }
 
 function reviewableReason(reviewable: ReviewableResponse) {
+  if (reviewable.source === "frontier_news") {
+    return "资讯机器人自动采集并整理；审核通过后会直接发布到前沿资讯版块。";
+  }
+
   if (
     reviewable.source === "seed_content" ||
     reviewable.source === "persona_content" ||
@@ -220,6 +224,17 @@ function reviewableReason(reviewable: ReviewableResponse) {
 }
 
 function reviewablePreview(reviewable: ReviewableResponse) {
+  if (reviewable.source === "frontier_news") {
+    const sourceName = textField(reviewable.data.source_name);
+    const originalTitle = textField(reviewable.data.original_title);
+    const sourceUrl = textField(reviewable.data.source_url);
+    const rawMarkdown = textField(reviewable.data.raw_md);
+    return (
+      [sourceName, originalTitle, sourceUrl, rawMarkdown].filter(Boolean).join(" · ") ||
+      reviewableReason(reviewable)
+    );
+  }
+
   return (
     textField(reviewable.data.raw_md) ||
     textField(reviewable.data.excerpt) ||

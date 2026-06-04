@@ -574,7 +574,12 @@ class ModerationService:
             raise ValidationError("reviewable_not_open", "Reviewable is not open")
         previous_status = reviewable.status
         target_status = DECISION_STATUS[payload.action]
-        await self._apply_reviewable_decision(reviewable, payload.action)
+        await self._apply_reviewable_decision(
+            reviewable,
+            payload.action,
+            actor=current_user,
+            note=payload.note,
+        )
         reviewable.status = target_status
         reviewable.resolved_by_id = current_user.id
         reviewable.resolved_at = utcnow()
@@ -589,12 +594,13 @@ class ModerationService:
             note=payload.note,
             data={"action": payload.action},
         )
-        await self._notify_reviewable_user(
-            reviewable,
-            actor=current_user,
-            event="decided",
-            idempotency_suffix=payload.action,
-        )
+        if reviewable.source != "frontier_news":
+            await self._notify_reviewable_user(
+                reviewable,
+                actor=current_user,
+                event="decided",
+                idempotency_suffix=payload.action,
+            )
         await self.session.commit()
         return ReviewableResponse.from_model(await self._get_reviewable(reviewable.id))
 
@@ -728,9 +734,28 @@ class ModerationService:
         self,
         reviewable: Reviewable,
         action: str,
+        *,
+        actor: User,
+        note: str | None = None,
     ) -> None:
+        """Apply a moderator decision and trigger target side effects.
+
+        `queued_topic` approval publishes content immediately; frontier news rows are
+        synchronized here so the material pool reflects the same unified moderation decision.
+        """
+
         if action == "reject" and reviewable.flag_id:
             await self._set_flag_status(reviewable.flag_id, "rejected", None)
+            return
+        if action == "reject" and reviewable.source == "frontier_news":
+            from app.services.frontier_news import FrontierNewsService
+
+            await FrontierNewsService(self.session).record_reviewable_decision(
+                reviewable,
+                action=action,
+                actor=actor,
+                note=note,
+            )
             return
         if action in {"approve", "escalate"}:
             if action == "approve":
@@ -738,6 +763,15 @@ class ModerationService:
                     from app.services.forum import ForumService
 
                     await ForumService(self.session).publish_queued_topic(reviewable)
+                    if reviewable.source == "frontier_news":
+                        from app.services.frontier_news import FrontierNewsService
+
+                        await FrontierNewsService(self.session).record_reviewable_decision(
+                            reviewable,
+                            action=action,
+                            actor=actor,
+                            note=note,
+                        )
                 elif reviewable.type == "queued_post":
                     from app.services.forum import ForumService
 

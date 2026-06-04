@@ -247,6 +247,7 @@ class BackgroundJobService:
         background_upload_cleanup_interval_seconds: int,
         background_session_cleanup_interval_seconds: int,
         background_digest_interval_seconds: int,
+        background_frontier_news_interval_seconds: int = 0,
         now: datetime | None = None,
     ) -> list[BackgroundJob]:
         run_time = _queue_timestamp(now or utcnow())
@@ -256,6 +257,7 @@ class BackgroundJobService:
             ("cleanup_expired_uploads", background_upload_cleanup_interval_seconds),
             ("cleanup_expired_sessions", background_session_cleanup_interval_seconds),
             ("send_digest_emails", background_digest_interval_seconds),
+            ("collect_frontier_news", background_frontier_news_interval_seconds),
         )
         for task_name, interval_seconds in schedules:
             if interval_seconds <= 0:

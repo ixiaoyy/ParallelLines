@@ -353,6 +353,24 @@ export interface components {
       [key: string]: unknown;
     };
     };
+    ApiResponse_FrontierNewsCollectResponse_: {
+      data: components["schemas"]["FrontierNewsCollectResponse"];
+      meta?: {
+      [key: string]: unknown;
+    };
+    };
+    ApiResponse_FrontierNewsItemResponse_: {
+      data: components["schemas"]["FrontierNewsItemResponse"];
+      meta?: {
+      [key: string]: unknown;
+    };
+    };
+    ApiResponse_FrontierNewsSourceResponse_: {
+      data: components["schemas"]["FrontierNewsSourceResponse"];
+      meta?: {
+      [key: string]: unknown;
+    };
+    };
     ApiResponse_GitHubIssuePreviewResponse_: {
       data: components["schemas"]["GitHubIssuePreviewResponse"];
       meta?: {
@@ -457,6 +475,18 @@ export interface components {
     };
     ApiResponse_list_FlagResponse__: {
       data: Array<components["schemas"]["FlagResponse"]>;
+      meta?: {
+      [key: string]: unknown;
+    };
+    };
+    ApiResponse_list_FrontierNewsItemResponse__: {
+      data: Array<components["schemas"]["FrontierNewsItemResponse"]>;
+      meta?: {
+      [key: string]: unknown;
+    };
+    };
+    ApiResponse_list_FrontierNewsSourceResponse__: {
+      data: Array<components["schemas"]["FrontierNewsSourceResponse"]>;
       meta?: {
       [key: string]: unknown;
     };
@@ -1240,6 +1270,87 @@ export interface components {
     FlagStatusUpdateRequest: {
       resolution_note?: string | null;
       status: "pending" | "resolved" | "rejected";
+    };
+    FrontierNewsCollectResponse: {
+      created_count: number;
+      error_count: number;
+      queued_count: number;
+      skipped_count: number;
+      source_count: number;
+    };
+    FrontierNewsItemQueueRequest: {
+      note?: string | null;
+    };
+    FrontierNewsItemResponse: {
+      ai_error?: string | null;
+      ai_key_points: Array<string>;
+      ai_model_name?: string | null;
+      ai_processed_at?: string | null;
+      ai_review_suggestion?: string | null;
+      ai_risk_flags: Array<string>;
+      ai_summary_zh?: string | null;
+      ai_title_zh?: string | null;
+      ai_why_it_matters?: string | null;
+      author_names: Array<string>;
+      canonical_url: string;
+      created_at: string;
+      external_id: string;
+      id: string;
+      item_type: string;
+      published_at?: string | null;
+      review_note?: string | null;
+      reviewable_id?: string | null;
+      reviewed_at?: string | null;
+      reviewed_by_id?: string | null;
+      reviewed_by_name?: string | null;
+      score: number;
+      source_id: string;
+      source_name?: string | null;
+      status: string;
+      suggested_tags: Array<string>;
+      summary?: string | null;
+      title: string;
+      topic_id?: string | null;
+      updated_at: string;
+    };
+    FrontierNewsSourceCreateRequest: {
+      config?: {
+      [key: string]: unknown;
+    };
+      enabled?: boolean;
+      fetch_interval_minutes?: number;
+      key: string;
+      kind: "rss" | "arxiv" | "hacker_news" | "github_search";
+      name: string;
+      trust_level?: number;
+      url: string;
+    };
+    FrontierNewsSourceResponse: {
+      config: {
+      [key: string]: unknown;
+    };
+      created_at: string;
+      enabled: boolean;
+      fetch_interval_minutes: number;
+      id: string;
+      key: string;
+      kind: string;
+      last_checked_at?: string | null;
+      last_error?: string | null;
+      name: string;
+      trust_level: number;
+      updated_at: string;
+      url: string;
+    };
+    FrontierNewsSourceUpdateRequest: {
+      config?: {
+      [key: string]: unknown;
+    } | null;
+      enabled?: boolean | null;
+      fetch_interval_minutes?: number | null;
+      name?: string | null;
+      trust_level?: number | null;
+      url?: string | null;
     };
     GitHubIssuePreviewResponse: {
       number: number;
@@ -2223,6 +2334,28 @@ export interface paths {
     };
     "/api/v1/admin/external-integrations/events/{event_id}/retry": {
       post: { response: components["schemas"]["ApiResponse_ExternalIntegrationEventResponse_"]; operationId: "retry_external_integration_event_api_v1_admin_external_integrations_events__event_id__retry_post" };
+    };
+    "/api/v1/admin/frontier-news/collect": {
+      post: { response: components["schemas"]["ApiResponse_FrontierNewsCollectResponse_"]; operationId: "collect_all_frontier_news_api_v1_admin_frontier_news_collect_post" };
+    };
+    "/api/v1/admin/frontier-news/items": {
+      get: { response: components["schemas"]["ApiResponse_list_FrontierNewsItemResponse__"]; operationId: "list_frontier_news_items_api_v1_admin_frontier_news_items_get" };
+    };
+    "/api/v1/admin/frontier-news/items/{item_id}/enrich": {
+      post: { response: components["schemas"]["ApiResponse_FrontierNewsItemResponse_"]; operationId: "enrich_frontier_news_item_api_v1_admin_frontier_news_items__item_id__enrich_post" };
+    };
+    "/api/v1/admin/frontier-news/items/{item_id}/queue": {
+      post: { response: components["schemas"]["ApiResponse_FrontierNewsItemResponse_"]; operationId: "queue_frontier_news_item_api_v1_admin_frontier_news_items__item_id__queue_post" };
+    };
+    "/api/v1/admin/frontier-news/sources": {
+      get: { response: components["schemas"]["ApiResponse_list_FrontierNewsSourceResponse__"]; operationId: "list_frontier_news_sources_api_v1_admin_frontier_news_sources_get" };
+      post: { response: components["schemas"]["ApiResponse_FrontierNewsSourceResponse_"]; operationId: "create_frontier_news_source_api_v1_admin_frontier_news_sources_post" };
+    };
+    "/api/v1/admin/frontier-news/sources/{source_id}": {
+      put: { response: components["schemas"]["ApiResponse_FrontierNewsSourceResponse_"]; operationId: "update_frontier_news_source_api_v1_admin_frontier_news_sources__source_id__put" };
+    };
+    "/api/v1/admin/frontier-news/sources/{source_id}/collect": {
+      post: { response: components["schemas"]["ApiResponse_FrontierNewsCollectResponse_"]; operationId: "collect_frontier_news_source_api_v1_admin_frontier_news_sources__source_id__collect_post" };
     };
     "/api/v1/admin/migrations/export": {
       get: { response: components["schemas"]["ApiResponse_MigrationExportResponse_"]; operationId: "export_migration_json_api_v1_admin_migrations_export_get" };

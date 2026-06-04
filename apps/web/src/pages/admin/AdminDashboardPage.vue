@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+import AdminFrontierNewsPanel from "@/features/admin/components/AdminFrontierNewsPanel.vue";
 import AdminIntegrationsPanel from "@/features/admin/components/AdminIntegrationsPanel.vue";
 import AdminExternalIntegrationsPanel from "@/features/external-integrations/components/AdminExternalIntegrationsPanel.vue";
 import AdminSettingsPanel from "@/features/admin/components/AdminSettingsPanel.vue";
@@ -41,6 +42,7 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
 
     <template v-else>
       <AdminSystemPanel />
+      <AdminFrontierNewsPanel />
       <AdminAnalyticsPanel />
       <section class="admin-main-grid">
         <AdminSettingsPanel />

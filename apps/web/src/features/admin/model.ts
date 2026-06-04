@@ -210,6 +210,8 @@ export interface AdminQueueOverview {
   hot_rank_interval_seconds: number;
   upload_cleanup_interval_seconds: number;
   session_cleanup_interval_seconds: number;
+  digest_interval_seconds?: number;
+  frontier_news_interval_seconds?: number;
   counts?: Record<string, number>;
 }
 
@@ -291,6 +293,109 @@ export function adminStatusLabel(status: string): string {
     deleted: "已删除",
     silenced: "禁言",
     suspended: "停用",
+  };
+  return labels[status] ?? status;
+}
+
+export type FrontierNewsSourceKind = "rss" | "arxiv" | "hacker_news" | "github_search";
+
+export interface FrontierNewsSourceCreateRequest {
+  key: string;
+  name: string;
+  kind: FrontierNewsSourceKind;
+  url: string;
+  config: Record<string, unknown>;
+  enabled: boolean;
+  trust_level: number;
+  fetch_interval_minutes: number;
+}
+
+export interface FrontierNewsSourceUpdateRequest {
+  name?: string;
+  url?: string;
+  config?: Record<string, unknown>;
+  enabled?: boolean;
+  trust_level?: number;
+  fetch_interval_minutes?: number;
+}
+
+export interface FrontierNewsSourceResponse {
+  id: string;
+  key: string;
+  name: string;
+  kind: FrontierNewsSourceKind | string;
+  url: string;
+  config: Record<string, unknown>;
+  enabled: boolean;
+  trust_level: number;
+  fetch_interval_minutes: number;
+  last_checked_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FrontierNewsItemResponse {
+  id: string;
+  source_id: string;
+  source_name: string | null;
+  external_id: string;
+  canonical_url: string;
+  title: string;
+  summary: string | null;
+  author_names: string[];
+  published_at: string | null;
+  item_type: string;
+  suggested_tags: string[];
+  ai_title_zh: string | null;
+  ai_summary_zh: string | null;
+  ai_key_points: string[];
+  ai_why_it_matters: string | null;
+  ai_risk_flags: string[];
+  ai_review_suggestion: string | null;
+  ai_model_name: string | null;
+  ai_processed_at: string | null;
+  ai_error: string | null;
+  score: number;
+  status: string;
+  reviewable_id: string | null;
+  topic_id: string | null;
+  reviewed_by_id: string | null;
+  reviewed_by_name: string | null;
+  reviewed_at: string | null;
+  review_note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FrontierNewsCollectResponse {
+  source_count: number;
+  created_count: number;
+  queued_count: number;
+  skipped_count: number;
+  error_count: number;
+}
+
+export interface FrontierNewsItemsParams {
+  status?: string;
+  limit?: number;
+}
+
+/**
+ * Maps persisted frontier material statuses to labels shown in the admin material pool.
+ *
+ * @param status - Backend status value from a FrontierNewsItemResponse.
+ * @returns Localized status label, or the raw value for forward-compatible unknown states.
+ */
+export function frontierNewsStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    collected: "已采集",
+    ai_pending: "AI 整理中",
+    review_pending: "审核中",
+    published: "已发布",
+    rejected: "已拒绝",
+    duplicate: "重复",
+    failed: "失败",
   };
   return labels[status] ?? status;
 }

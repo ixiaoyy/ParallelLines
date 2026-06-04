@@ -618,6 +618,10 @@ class AdminService:
                 "session_cleanup_interval_seconds": (
                     self.settings.background_session_cleanup_interval_seconds
                 ),
+                "digest_interval_seconds": self.settings.background_digest_interval_seconds,
+                "frontier_news_interval_seconds": (
+                    self.settings.background_frontier_news_interval_seconds
+                ),
             },
             recent_audit_logs=await self.list_audit_logs(current_user, limit=8),
             recent_email_logs=self.email_logs(limit=8),

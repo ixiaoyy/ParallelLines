@@ -23,10 +23,19 @@ from app.schemas.backups import (
 from app.schemas.badges import BadgeGrantRequest, BadgeResponse, BadgeRevokeRequest
 from app.schemas.common import ApiResponse
 from app.schemas.moderation import AuditLogResponse
+from app.schemas.news import (
+    FrontierNewsCollectResponse,
+    FrontierNewsItemQueueRequest,
+    FrontierNewsItemResponse,
+    FrontierNewsSourceCreateRequest,
+    FrontierNewsSourceResponse,
+    FrontierNewsSourceUpdateRequest,
+)
 from app.schemas.plugins import PluginResponse, PluginUpdateRequest
 from app.schemas.privacy import PrivacyActionRequest, PrivacyActionResponse
 from app.services.admin import AdminService, SiteSettingService
 from app.services.backups import BackupService
+from app.services.frontier_news import FrontierNewsService
 from app.services.plugins import PluginService
 from app.services.privacy import PrivacyService
 
@@ -212,6 +221,155 @@ async def system_overview(
     current_user: CurrentUserDep,
 ) -> ApiResponse[AdminSystemOverviewResponse]:
     return ApiResponse(data=await AdminService(session, settings).system_overview(current_user))
+
+
+@router.get(
+    "/frontier-news/sources",
+    response_model=ApiResponse[list[FrontierNewsSourceResponse]],
+)
+async def list_frontier_news_sources(
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[list[FrontierNewsSourceResponse]]:
+    """List white-listed sources used by the frontier news collector."""
+
+    return ApiResponse(
+        data=await FrontierNewsService(session, settings).list_sources(current_user)
+    )
+
+
+@router.post(
+    "/frontier-news/sources",
+    response_model=ApiResponse[FrontierNewsSourceResponse],
+)
+async def create_frontier_news_source(
+    payload: FrontierNewsSourceCreateRequest,
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[FrontierNewsSourceResponse]:
+    """Create a white-listed source for the frontier news collector."""
+
+    return ApiResponse(
+        data=await FrontierNewsService(session, settings).create_source(payload, current_user)
+    )
+
+
+@router.put(
+    "/frontier-news/sources/{source_id}",
+    response_model=ApiResponse[FrontierNewsSourceResponse],
+)
+async def update_frontier_news_source(
+    source_id: str,
+    payload: FrontierNewsSourceUpdateRequest,
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[FrontierNewsSourceResponse]:
+    """Update source configuration, enabled state, or fetch cadence."""
+
+    return ApiResponse(
+        data=await FrontierNewsService(session, settings).update_source(
+            source_id,
+            payload,
+            current_user,
+        )
+    )
+
+
+@router.post(
+    "/frontier-news/collect",
+    response_model=ApiResponse[FrontierNewsCollectResponse],
+)
+async def collect_all_frontier_news(
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[FrontierNewsCollectResponse]:
+    """Run a manual collection pass for all enabled frontier sources."""
+
+    return ApiResponse(
+        data=await FrontierNewsService(session, settings).collect_all_sources(current_user)
+    )
+
+
+@router.post(
+    "/frontier-news/sources/{source_id}/collect",
+    response_model=ApiResponse[FrontierNewsCollectResponse],
+)
+async def collect_frontier_news_source(
+    source_id: str,
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[FrontierNewsCollectResponse]:
+    """Run a manual collection pass for one frontier source."""
+
+    return ApiResponse(
+        data=await FrontierNewsService(session, settings).collect_source(source_id, current_user)
+    )
+
+
+@router.get(
+    "/frontier-news/items",
+    response_model=ApiResponse[list[FrontierNewsItemResponse]],
+)
+async def list_frontier_news_items(
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+    item_status: Annotated[str | None, Query(alias="status")] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> ApiResponse[list[FrontierNewsItemResponse]]:
+    """List collected frontier materials and their review/publication status."""
+
+    return ApiResponse(
+        data=await FrontierNewsService(session, settings).list_items(
+            current_user,
+            status=item_status,
+            limit=limit,
+        )
+    )
+
+
+@router.post(
+    "/frontier-news/items/{item_id}/enrich",
+    response_model=ApiResponse[FrontierNewsItemResponse],
+)
+async def enrich_frontier_news_item(
+    item_id: str,
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[FrontierNewsItemResponse]:
+    """Re-run AI整理 for one material and send it to the unified moderation queue."""
+
+    return ApiResponse(
+        data=await FrontierNewsService(session, settings).enrich_item(item_id, current_user)
+    )
+
+
+@router.post(
+    "/frontier-news/items/{item_id}/queue",
+    response_model=ApiResponse[FrontierNewsItemResponse],
+)
+async def queue_frontier_news_item(
+    item_id: str,
+    payload: FrontierNewsItemQueueRequest,
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[FrontierNewsItemResponse]:
+    """Send one AI-prepared material to the existing reviewables queue."""
+
+    return ApiResponse(
+        data=await FrontierNewsService(session, settings).queue_item_for_review(
+            item_id,
+            current_user,
+            note=payload.note,
+        )
+    )
 
 
 @router.post("/backups", response_model=ApiResponse[BackupArtifactResponse])

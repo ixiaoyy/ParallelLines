@@ -50,6 +50,10 @@ export const queryKeys = {
   adminSystem: ["admin", "system"] as const,
   adminAudit: ["admin", "audit"] as const,
   adminEmailLogs: ["admin", "email-logs"] as const,
+  adminFrontierNewsRoot: ["admin", "frontier-news"] as const,
+  adminFrontierNewsSources: ["admin", "frontier-news", "sources"] as const,
+  adminFrontierNewsItems: (params: object) =>
+    ["admin", "frontier-news", "items", params] as const,
   moderationRoot: ["moderation"] as const,
   moderationQueue: (status: string) => ["moderation", "queue", status] as const,
   moderationReviewables: (status: string) => ["moderation", "reviewables", status] as const,

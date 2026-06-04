@@ -11,10 +11,14 @@ import type {
 } from "@/features/badges/model";
 
 import {
+  collectFrontierNews,
+  collectFrontierNewsSource,
+  createFrontierNewsSource,
   createAdminApiKey,
   createAdminWebhook,
   disableAdminApiKey,
   disableAdminWebhook,
+  enrichFrontierNewsItem,
   fetchAdminApiKeys,
   fetchAdminBadges,
   fetchAdminAuditLogs,
@@ -24,9 +28,13 @@ import {
   fetchAdminUsers,
   fetchAdminWebhookDeliveries,
   fetchAdminWebhooks,
+  fetchFrontierNewsItems,
+  fetchFrontierNewsSources,
   fetchPublicSiteSettings,
   grantAdminUserBadge,
+  queueFrontierNewsItem,
   revokeAdminUserBadge,
+  updateFrontierNewsSource,
   updateAdminSetting,
   updateAdminUser,
 } from "./api";
@@ -40,6 +48,12 @@ import type {
   AdminUsersParams,
   AdminUserUpdateRequest,
   AuditLogResponse,
+  FrontierNewsCollectResponse,
+  FrontierNewsItemResponse,
+  FrontierNewsItemsParams,
+  FrontierNewsSourceCreateRequest,
+  FrontierNewsSourceResponse,
+  FrontierNewsSourceUpdateRequest,
   PublicSiteSettingsResponse,
   SiteSettingResponse,
   SiteSettingUpdateRequest,
@@ -215,6 +229,135 @@ export function useAdminSystem() {
     enabled: computed(() => hasAccessToken()),
     retry: false,
     staleTime: 15_000,
+  });
+}
+
+/**
+ * Provides cached frontier source rows for the admin operations panel.
+ *
+ * @returns Vue Query result containing white-listed source rows.
+ */
+export function useFrontierNewsSources() {
+  return useQuery<FrontierNewsSourceResponse[], Error>({
+    queryKey: queryKeys.adminFrontierNewsSources,
+    queryFn: fetchFrontierNewsSources,
+    enabled: computed(() => hasAccessToken()),
+    retry: false,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Creates a frontier source and invalidates all frontier admin caches.
+ *
+ * @returns Mutation whose variables are the source creation payload.
+ */
+export function useCreateFrontierNewsSource() {
+  const queryClient = useQueryClient();
+  return useMutation<FrontierNewsSourceResponse, Error, FrontierNewsSourceCreateRequest>({
+    mutationFn: createFrontierNewsSource,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminFrontierNewsRoot });
+    },
+  });
+}
+
+/**
+ * Updates one frontier source and refreshes source/material views afterward.
+ *
+ * @returns Mutation accepting sourceId plus a partial update payload.
+ */
+export function useUpdateFrontierNewsSource() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    FrontierNewsSourceResponse,
+    Error,
+    { sourceId: string; payload: FrontierNewsSourceUpdateRequest }
+  >({
+    mutationFn: ({ sourceId, payload }) => updateFrontierNewsSource(sourceId, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminFrontierNewsRoot });
+    },
+  });
+}
+
+/**
+ * Runs a manual all-source collection and refreshes frontier/moderation caches.
+ *
+ * @returns Mutation resolving to backend collection counters.
+ */
+export function useCollectFrontierNews() {
+  const queryClient = useQueryClient();
+  return useMutation<FrontierNewsCollectResponse, Error, void>({
+    mutationFn: () => collectFrontierNews(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminFrontierNewsRoot });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.moderationRoot });
+    },
+  });
+}
+
+/**
+ * Runs a manual collection for a single source and refreshes dependent queues.
+ *
+ * @returns Mutation accepting the source ID to collect.
+ */
+export function useCollectFrontierNewsSource() {
+  const queryClient = useQueryClient();
+  return useMutation<FrontierNewsCollectResponse, Error, string>({
+    mutationFn: collectFrontierNewsSource,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminFrontierNewsRoot });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.moderationRoot });
+    },
+  });
+}
+
+/**
+ * Provides cached frontier materials for a status-filtered admin view.
+ *
+ * @param params - Reactive status and limit values used for query key and request.
+ * @returns Vue Query result containing material rows.
+ */
+export function useFrontierNewsItems(params: MaybeRefOrGetter<FrontierNewsItemsParams>) {
+  return useQuery<FrontierNewsItemResponse[], Error>({
+    queryKey: computed(() => queryKeys.adminFrontierNewsItems(toValue(params))),
+    queryFn: () => fetchFrontierNewsItems(toValue(params)),
+    enabled: computed(() => hasAccessToken()),
+    retry: false,
+    staleTime: 15_000,
+  });
+}
+
+/**
+ * Re-runs AI整理 for a material and invalidates frontier/moderation queues.
+ *
+ * @returns Mutation accepting the material ID.
+ */
+export function useEnrichFrontierNewsItem() {
+  const queryClient = useQueryClient();
+  return useMutation<FrontierNewsItemResponse, Error, string>({
+    mutationFn: enrichFrontierNewsItem,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminFrontierNewsRoot });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.moderationRoot });
+    },
+  });
+}
+
+/**
+ * Sends a material into the existing moderation queue and refreshes caches.
+ *
+ * @returns Mutation accepting material ID and optional administrator note.
+ */
+export function useQueueFrontierNewsItem() {
+  const queryClient = useQueryClient();
+  return useMutation<FrontierNewsItemResponse, Error, { itemId: string; note?: string }>({
+    mutationFn: ({ itemId, note }) => queueFrontierNewsItem(itemId, note),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminFrontierNewsRoot });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.moderationRoot });
+    },
   });
 }
 

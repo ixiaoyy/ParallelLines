@@ -21,6 +21,7 @@ from app.services.backups import BackupService
 from app.services.email import EmailService
 from app.services.email_notifications import EmailNotificationService
 from app.services.forum import calculate_hot_score
+from app.services.frontier_news import FrontierNewsService
 from app.services.integrations import IntegrationService
 from app.services.search import SearchIndexService
 from app.services.uploads import UploadService
@@ -160,6 +161,16 @@ async def handle_deliver_webhook(
     return await IntegrationService(session).deliver_webhook(_payload_str(payload, "delivery_id"))
 
 
+async def handle_collect_frontier_news(
+    session: AsyncSession,
+    _payload: dict[str, object],
+) -> dict[str, object]:
+    """Collect frontier news in the unified worker and enqueue AI-prepared reviewables."""
+
+    result = await FrontierNewsService(session).collect_due_sources()
+    return result.model_dump()
+
+
 JOB_HANDLERS: dict[str, BackgroundJobHandler] = {
     "recompute_hot_scores": handle_recompute_hot_scores,
     "cleanup_expired_uploads": handle_cleanup_expired_uploads,
@@ -171,6 +182,7 @@ JOB_HANDLERS: dict[str, BackgroundJobHandler] = {
     "create_site_backup": handle_create_site_backup,
     "rebuild_search_index": handle_rebuild_search_index,
     "deliver_webhook": handle_deliver_webhook,
+    "collect_frontier_news": handle_collect_frontier_news,
 }
 
 WORKER_QUEUES = ("mail", "notifications", "maintenance", "webhooks", "default")
@@ -202,6 +214,9 @@ async def run_once(
                 ),
                 background_digest_interval_seconds=(
                     runtime_settings.background_digest_interval_seconds
+                ),
+                background_frontier_news_interval_seconds=(
+                    runtime_settings.background_frontier_news_interval_seconds
                 ),
             )
         for _ in range(runtime_settings.background_job_batch_size):
