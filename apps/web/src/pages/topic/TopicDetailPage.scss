@@ -136,7 +136,10 @@
 @media (max-width: 720px) {
   .topic-detail-page {
     gap: 0.65rem;
+    box-sizing: border-box;
     max-width: 100%;
+    overflow-x: hidden;
+    padding-inline: 0.28rem;
   }
 
   .topic-layout {
@@ -168,6 +171,7 @@
 
   .post-anchor {
     min-width: 0;
+    max-width: 100%;
     scroll-margin-top: 4.5rem;
   }
 }

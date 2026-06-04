@@ -115,11 +115,23 @@
 }
 
 .post-body :deep(.markdown-body) {
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   color: var(--text);
   font-size: 0.98rem;
   line-height: 1.74;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.post-body :deep(.markdown-body > *) {
+  max-width: 100%;
+}
+
+.post-body :deep(.markdown-body a) {
+  word-break: break-word;
   overflow-wrap: anywhere;
 }
 
@@ -127,6 +139,27 @@
   display: block;
   max-width: 100%;
   height: auto;
+}
+
+.post-body :deep(.markdown-body video),
+.post-body :deep(.markdown-body iframe),
+.post-body :deep(.markdown-body canvas),
+.post-body :deep(.markdown-body svg) {
+  max-width: 100%;
+}
+
+.post-body :deep(.markdown-body table) {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  -webkit-overflow-scrolling: touch;
+}
+
+.post-body :deep(.markdown-body th),
+.post-body :deep(.markdown-body td) {
+  white-space: normal;
 }
 
 .post-body :deep(.markdown-body h1),
@@ -909,10 +942,20 @@
 @media (max-width: 680px) {
   .post-item {
     border-radius: 1rem;
+    overflow-x: hidden;
   }
 
   .post-item :deep(.ant-card-body) {
     padding: 0.86rem;
+  }
+
+  .post-item--article {
+    border-radius: 1.05rem;
+    box-shadow: 0 10px 28px rgba(var(--shadow-rgb), 0.055);
+  }
+
+  .post-item--article :deep(.ant-card-body) {
+    padding: clamp(0.98rem, 4vw, 1.12rem);
   }
 
   .post-item--article :deep(.ant-card-body),
@@ -932,6 +975,16 @@
   .post-body :deep(.markdown-body) {
     font-size: 0.92rem;
     line-height: 1.66;
+  }
+
+  .post-item--article .post-body :deep(.markdown-body) {
+    max-width: 100%;
+    font-size: clamp(0.9rem, 3.85vw, 0.96rem);
+    line-height: 1.72;
+  }
+
+  .post-item--article .post-body :deep(.markdown-body p) {
+    margin-bottom: 0.72rem;
   }
 
   .post-item--article .post-body :deep(.markdown-body h1) {
