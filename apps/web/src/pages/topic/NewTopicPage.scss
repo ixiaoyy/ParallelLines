@@ -153,6 +153,7 @@
 .editor-box {
   position: relative;
   display: grid;
+  min-width: 0;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--border) 58%, var(--primary));
   border-radius: 0.65rem;
@@ -208,18 +209,41 @@
 }
 
 .topic-md-editor {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: clamp(16rem, 36vh, 25rem);
+  overflow: hidden;
   border: 0;
   border-radius: 0;
   background: var(--bg-surface);
 }
 
 .topic-md-editor :deep(.md-editor-toolbar-wrapper) {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
   border-bottom-color: var(--border);
   background: rgba(248, 250, 252, 0.92);
 }
 
+.topic-md-editor :deep(.md-editor-toolbar) {
+  width: max-content;
+  min-width: 100%;
+}
+
+.topic-md-editor :deep(.md-editor-content),
+.topic-md-editor :deep(.md-editor-content-wrapper),
+.topic-md-editor :deep(.md-editor-input-wrapper),
+.topic-md-editor :deep(.cm-editor),
+.topic-md-editor :deep(.cm-scroller),
+.topic-md-editor :deep(.cm-content) {
+  max-width: 100%;
+  min-width: 0;
+}
+
 .topic-md-editor :deep(.md-editor-toolbar-item) {
+  flex: 0 0 auto;
   color: var(--text);
 }
 
