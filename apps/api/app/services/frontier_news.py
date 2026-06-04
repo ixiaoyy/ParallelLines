@@ -54,6 +54,19 @@ AI_KEYWORDS = (
     "人工智能",
     "模型",
 )
+INTERNAL_COPY_MARKERS = (
+    "发布/出现了一条",
+    "AI 前沿相关的信息",
+    "审核",
+    "送审",
+    "人工核验",
+    "人工事实判断",
+    "资讯机器人发布",
+    "发布到前沿资讯",
+    "进入人工审核流程",
+    "原文可信度",
+    "是否重复",
+)
 
 
 @dataclass(frozen=True)
@@ -325,6 +338,24 @@ class FrontierNewsService:
         item.reviewed_by_id = actor.id
         item.reviewed_at = utcnow()
         item.review_note = note
+
+    async def refresh_reviewable_public_copy(self, reviewable: Reviewable) -> None:
+        """Rewrite a frontier reviewable's public draft with the current reader-facing template."""
+
+        item_id = self._reviewable_item_id(reviewable)
+        if not item_id:
+            return
+        item = await self.session.get(FrontierNewsItem, item_id)
+        if not item:
+            return
+        raw_md = self._build_topic_markdown(item)
+        data = dict(reviewable.data or {})
+        fields = dict(data.get("fields") or {})
+        data["raw_md"] = raw_md
+        data["excerpt"] = raw_md[:180]
+        fields["raw_md"] = raw_md
+        data["fields"] = fields
+        reviewable.data = data
 
     async def ensure_system_entities(self) -> tuple[User, Board]:
         """Ensure the ordinary bot user and frontier board exist for scheduled publishing."""
@@ -811,20 +842,22 @@ class FrontierNewsService:
         }
 
     def _build_topic_markdown(self, item: FrontierNewsItem, *, note: str | None = None) -> str:
-        """Render the reviewed Chinese draft into the Markdown body published after approval."""
+        """Render reader-facing Chinese news copy without exposing moderation workflow notes."""
 
+        del note
         lines = [
-            item.ai_summary_zh or self._chinese_summary(item),
+            "### 大概内容",
+            self._public_summary(item),
             "",
-            "### 关键点",
+            "### 要点",
         ]
-        for point in item.ai_key_points or self._key_points(item):
+        for point in self._public_key_points(item):
             lines.append(f"- {point}")
         lines.extend(
             [
                 "",
-                "### 为什么值得关注",
-                item.ai_why_it_matters or self._why_it_matters(item, item.item_type),
+                "### 可以关注",
+                self._public_interest(item),
                 "",
                 "### 来源",
                 f"- 原文：[{item.title}]({item.canonical_url})",
@@ -834,12 +867,48 @@ class FrontierNewsService:
             lines.append(f"- 作者/来源账号：{', '.join(item.author_names[:6])}")
         if item.published_at:
             lines.append(f"- 原文时间：{item.published_at.date().isoformat()}")
-        if item.ai_risk_flags:
-            lines.extend(["", "### 审核提示", ", ".join(item.ai_risk_flags)])
-        if note:
-            lines.extend(["", "### 管理员备注", note.strip()])
-        lines.extend(["", "_本文由资讯机器人自动采集并整理，已进入人工审核流程。_"])
         return "\n".join(lines).strip()
+
+    def _public_summary(self, item: FrontierNewsItem) -> str:
+        """Return a public summary, recomputing when stored AI copy contains review-only wording."""
+
+        summary = _clean_text(item.ai_summary_zh)
+        if summary and not _contains_internal_copy(summary):
+            return summary
+        return self._chinese_summary(item)
+
+    def _public_key_points(self, item: FrontierNewsItem) -> list[str]:
+        """Return public content points with any moderation/process bullets removed."""
+
+        points = [
+            _clean_text(point)
+            for point in item.ai_key_points
+            if _clean_text(point)
+            and _clean_text(point).lower() != _clean_text(item.title).lower()
+            and not _contains_internal_copy(_clean_text(point))
+            and not _looks_like_low_value_point(_clean_text(point))
+        ]
+        if len(points) < 2:
+            points = []
+        for fallback in self._key_points(item):
+            if len(points) >= 3:
+                break
+            if (
+                fallback not in points
+                and fallback.lower() != _clean_text(item.title).lower()
+                and not _contains_internal_copy(fallback)
+                and not _looks_like_low_value_point(fallback)
+            ):
+                points.append(fallback)
+        return points[:3] or self._content_takeaways(item)[:3]
+
+    def _public_interest(self, item: FrontierNewsItem) -> str:
+        """Return public reader-interest copy, ignoring stored review guidance when present."""
+
+        interest = _clean_text(item.ai_why_it_matters)
+        if interest and not _contains_internal_copy(interest):
+            return interest
+        return self._why_it_matters(item, item.item_type)
 
     def _topic_tags(self, item: FrontierNewsItem) -> list[str]:
         """Return normalized-looking tag labels while keeping within forum request limits."""
@@ -917,37 +986,92 @@ class FrontierNewsService:
         return f"【{prefix}】{cleaned}"[:180]
 
     def _chinese_summary(self, item: FrontierNewsItem) -> str:
-        """Create a conservative Chinese summary from available source title and excerpt."""
+        """Create a reader-facing Chinese summary from available title and source excerpt."""
 
         source_name = item.source.name if item.source else "白名单来源"
-        summary = _truncate(_clean_text(item.summary or item.title), 420)
-        return f"{source_name} 发布/出现了一条与 AI 前沿相关的信息：{summary}"
+        title = _clean_text(item.title)
+        summary = _clean_text(item.summary)
+        focus = self._focus_hint(item)
+        if summary and summary.lower() != title.lower():
+            translated_summary = _truncate(summary, 420)
+            return f"这条资讯来自 {source_name}，主题是「{title}」。原文大意：{translated_summary}"
+        return f"这条资讯来自 {source_name}，主题是「{title}」。{focus}"
 
     def _key_points(self, item: FrontierNewsItem) -> list[str]:
-        """Extract up to three concise review points from title and summary text."""
+        """Extract concise reader-facing takeaways from title and summary text."""
 
         sentences = _split_sentences(f"{item.title}. {item.summary or ''}")
-        points = [_truncate(sentence, 140) for sentence in sentences if sentence][:3]
-        while len(points) < 3:
-            fallback = [
-                "该条目来自白名单来源，已保留原文链接供审核核验。",
-                "AI 整理仅基于标题、摘要和公开元数据，未替代人工事实判断。",
-                "通过审核后将由资讯机器人发布到前沿资讯版块。",
-            ][len(points)]
-            points.append(fallback)
-        return points
+        points = [_truncate(sentence, 140) for sentence in sentences if sentence][:2]
+        for fallback in self._content_takeaways(item):
+            if len(points) >= 3:
+                break
+            if fallback not in points:
+                points.append(fallback)
+        return points[:3]
 
     def _why_it_matters(self, item: FrontierNewsItem, item_type: str) -> str:
-        """Explain why the material may be useful to frontier readers."""
+        """Explain practical reader interest without mentioning the moderation workflow."""
 
         type_label = {"paper": "研究方向", "tool": "开源工具", "discussion": "社区反馈"}.get(
             item_type,
             "行业动态",
         )
-        return (
-            f"这条{type_label}可能帮助读者快速了解 AI 技术、产品或生态变化。"
-            "建议审核时重点核对原文可信度、是否重复，以及是否需要补充中文背景。"
-        )
+        title = item.title.lower()
+        if "computer use" in title or "agent" in title:
+            return (
+                "如果你关注 AI 智能体，这类内容可以帮助判断模型从聊天走向实际操作电脑、"
+                "调用工具和完成任务的进展。"
+            )
+        if item_type == "tool":
+            return (
+                "如果你在选型或跟踪开源生态，可以关注它解决的问题、集成成本、"
+                "许可证和社区活跃度。"
+            )
+        if item_type == "paper":
+            return (
+                "如果你跟踪研究进展，可以关注它提出的问题、方法改动、实验结果，"
+                "以及是否已经有可复现资源。"
+            )
+        return f"这条{type_label}有助于快速了解 AI 技术、产品或生态的最新变化。"
+
+    def _focus_hint(self, item: FrontierNewsItem) -> str:
+        """Infer one short reading guide from title keywords when no excerpt exists."""
+
+        lowered = item.title.lower()
+        hints: list[str] = []
+        if "computer use" in lowered:
+            hints.append("它关注能操作电脑界面或软件流程的 Computer Use Agents")
+        if "agent" in lowered:
+            hints.append("核心关键词是智能体/Agent")
+        if "local" in lowered:
+            hints.append("标题强调本地运行，可能涉及隐私、成本或部署门槛")
+        if "fast" in lowered:
+            hints.append("标题强调速度，可能与响应延迟或执行效率有关")
+        if not hints:
+            return "原始来源没有提供更长摘要，可先根据标题和原文链接了解具体内容。"
+        return "；".join(hints) + "。"
+
+    def _content_takeaways(self, item: FrontierNewsItem) -> list[str]:
+        """Build fallback public takeaways that describe the news content."""
+
+        title = _clean_text(item.title)
+        takeaways: list[str] = []
+        lowered = title.lower()
+        if "computer use" in lowered:
+            takeaways.append(
+                "内容方向：让 AI 智能体执行电脑操作任务，例如打开应用、点击界面或完成多步骤流程。"
+            )
+        if "local" in lowered:
+            takeaways.append("看点之一：本地运行通常意味着更低延迟、隐私更可控，也可能降低云端调用依赖。")
+        if "agent" in lowered:
+            takeaways.append("看点之一：Agent 能力通常涉及任务规划、工具调用、环境观察和错误恢复。")
+        if item.summary:
+            takeaways.append(f"摘要补充：{_truncate(_clean_text(item.summary), 140)}")
+        else:
+            takeaways.append("原文未提供长摘要，建议点开来源查看功能细节、演示和限制。")
+        if not takeaways:
+            takeaways.append(f"主题聚焦：{title}")
+        return takeaways
 
     def _risk_flags(self, item: FrontierNewsItem) -> list[str]:
         """Generate human-review reminders rather than making factual claims."""
@@ -1175,6 +1299,21 @@ def _contains_cjk(value: str) -> bool:
     return bool(re.search(r"[\u3400-\u9fff]", value))
 
 
+def _contains_internal_copy(value: str) -> bool:
+    """Return true when generated copy leaks moderation/process wording unsuitable for readers."""
+
+    return any(marker in value for marker in INTERNAL_COPY_MARKERS)
+
+
+def _looks_like_low_value_point(value: str) -> bool:
+    """Return true for fragments that are too short or look like broken title pieces."""
+
+    cleaned = _clean_text(value)
+    if len(cleaned) < 8:
+        return True
+    return bool(re.match(r"^\d+\s*[:：]", cleaned))
+
+
 def _truncate(value: str, max_length: int) -> str:
     """Trim text to a maximum length without leaving extra whitespace."""
 
@@ -1189,5 +1328,7 @@ def _split_sentences(value: str) -> list[str]:
 
     cleaned = _clean_text(value)
     return [
-        part.strip(" .。;；") for part in re.split(r"[。.!?！？;；]\s*", cleaned) if part.strip()
+        part.strip(" .。;；")
+        for part in re.split(r"[。!?！？;；]\s*|(?<!\d)\.(?!\d)\s*", cleaned)
+        if part.strip()
     ]

@@ -762,6 +762,12 @@ class ModerationService:
                 if reviewable.type == "queued_topic":
                     from app.services.forum import ForumService
 
+                    if reviewable.source == "frontier_news":
+                        from app.services.frontier_news import FrontierNewsService
+
+                        await FrontierNewsService(self.session).refresh_reviewable_public_copy(
+                            reviewable
+                        )
                     await ForumService(self.session).publish_queued_topic(reviewable)
                     if reviewable.source == "frontier_news":
                         from app.services.frontier_news import FrontierNewsService
