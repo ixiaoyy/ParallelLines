@@ -32,14 +32,14 @@ function updateSearch(event: Event) {
           <span class="hero-title__line">让不同方向的思考，</span>
           <span class="hero-title__line"> 在<em class="hero-brand">平行线</em>上汇合。 </span>
         </h1>
-        <form class="hero-search" role="search" aria-label="搜索平行线主题" @submit.prevent="emit('submitSearch')">
+        <form class="hero-search" role="search" aria-label="筛选首页主题" @submit.prevent="emit('submitSearch')">
           <span aria-hidden="true">⌕</span>
-          <input :value="props.search" type="search" placeholder="搜索主题、标签、成员" @input="updateSearch" />
-          <button type="submit" :disabled="!props.search.trim()">搜索</button>
+          <input :value="props.search" type="search" placeholder="输入标题关键词，筛选下面主题" @input="updateSearch" />
+          <button type="submit" :disabled="!props.search.trim()">筛选</button>
         </form>
         <div class="hero-cta">
-          <RouterLink class="btn btn-primary" :to="{ name: 'new-topic' }">开始讨论</RouterLink>
-          <RouterLink class="btn btn-secondary" :to="{ name: 'board-directory' }">浏览分类</RouterLink>
+          <RouterLink class="btn btn-primary" :to="{ name: 'new-topic' }">发布主题</RouterLink>
+          <RouterLink class="btn btn-secondary" :to="{ name: 'board-directory' }">浏览版块</RouterLink>
         </div>
         <ul class="hero-proof" aria-label="社区能力">
           <li>让思考发光</li>

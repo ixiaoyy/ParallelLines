@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { LocationQueryRaw } from "vue-router";
 
@@ -136,6 +136,14 @@ watch(
 );
 
 watch(
+  () => titleFilter.value,
+  (value) => {
+    heroSearch.value = value;
+  },
+  { immediate: true },
+);
+
+watch(
   () => boardsQuery.data.value,
   (boards) => {
     if (boards) {
@@ -197,13 +205,18 @@ function clearTopicFilters() {
   });
 }
 
+// Applies the hero search to the real home feed title filter and scrolls to the filtered results.
+// Key parameters: none; it reads `heroSearch`. Side effect: updates URL query state and moves the viewport to the feed.
 function submitHeroSearch() {
   const q = heroSearch.value.trim();
   if (!q) {
     return;
   }
 
-  void router.push({ name: "search", query: { q } });
+  titleFilter.value = q;
+  void nextTick(() => {
+    document.getElementById("topic-feed")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 }
 
 function updateFilterQuery(key: "title" | "board" | "tag", value: string) {
@@ -268,6 +281,7 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
         />
 
         <HomeTopicFeed
+          id="topic-feed"
           class="feed-slot"
           :tabs="discoveryTabs"
           :active-tab="activeTab"
