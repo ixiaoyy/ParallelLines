@@ -189,6 +189,11 @@
   box-shadow: none;
 }
 
+.post-body :deep(.markdown-body img.markdown-image--unavailable),
+.post-body :deep(.markdown-body .markdown-news-card__thumb--unavailable) {
+  display: none;
+}
+
 .post-body :deep(.markdown-body .markdown-news-card__title) {
   margin: 0 0 0.45rem;
   font-size: clamp(1.05rem, 1.18vw, 1.22rem);

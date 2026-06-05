@@ -206,7 +206,7 @@ const topicStats = computed(() => {
     { label: "回复", value: compactNumber(topic.value.replyCount) },
     { label: "浏览", value: compactNumber(topic.value.viewCount) },
     { label: "赞同", value: compactNumber(topicLikeCount.value) },
-    { label: "热度", value: String(topic.value.hotScore) },
+    { label: "收藏", value: compactNumber(bookmarkCount.value) },
   ];
 });
 

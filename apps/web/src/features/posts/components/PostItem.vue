@@ -116,7 +116,9 @@ const canViewHistory = computed(
   () => Boolean(!props.post.deleted && (isOwnPost.value || canModerateGlobally.value)),
 );
 const canRestoreHistory = computed(() => Boolean(!props.post.deleted && canModerateGlobally.value));
-const renderedPostHtml = computed(() => withResolvedImageHtml(props.post.cookedHtml, props.comicReader));
+const renderedPostHtml = computed(() =>
+  withResolvedImageHtml(props.post.cookedHtml, props.comicReader || props.variant === "article"),
+);
 const comicPages = computed(() => (props.comicReader ? extractComicPages(props.post.cookedHtml) : []));
 const hasComicPages = computed(() => props.comicReader && comicPages.value.length > 0);
 const activeComicPage = computed(() => comicPages.value[activeComicPageIndex.value] ?? null);
@@ -638,7 +640,7 @@ function decorateRenderedContent() {
   if (hasComicPages.value) {
     return;
   }
-  decorateRenderedImageSources();
+  decorateRenderedImages();
 }
 
 /**
@@ -661,23 +663,95 @@ function decorateHeadingAnchors() {
 }
 
 /**
- * Rewrites API-relative image paths inside server-rendered Markdown to the configured API origin.
+ * Rewrites API-relative image paths and marks failed images inside server-rendered Markdown.
  * Key parameters: none; it reads rendered Markdown under `bodyRef`. Return value: none.
- * Side effect: mutates `<img src>` attributes so `/uploads/...` content loads outside dev proxy contexts.
+ * Side effect: mutates `<img>` attributes/classes so image failures do not leave empty news-card slots.
  */
-function decorateRenderedImageSources() {
+function decorateRenderedImages() {
   const container = bodyRef.value;
   if (!container) {
     return;
   }
 
   container.querySelectorAll<HTMLImageElement>(".markdown-body img").forEach((image) => {
+    bindRenderedImageState(image);
+
     const originalSource = image.getAttribute("src")?.trim();
     const resolvedSource = resolveApiAssetUrl(originalSource);
     if (resolvedSource && resolvedSource !== originalSource) {
       image.setAttribute("src", resolvedSource);
     }
+
+    syncRenderedImageState(image);
   });
+}
+
+/**
+ * Binds one load/error observer to a rendered Markdown image.
+ * Key parameter: `image` is an already-mounted `<img>`. Return value: none.
+ * Side effect: stores a data flag and updates failure classes when the browser resolves the image.
+ */
+function bindRenderedImageState(image: HTMLImageElement) {
+  if (image.dataset.plImageStateBound === "true") {
+    return;
+  }
+
+  image.dataset.plImageStateBound = "true";
+  image.addEventListener("load", () => clearRenderedImageUnavailable(image));
+  image.addEventListener("error", () => markRenderedImageUnavailable(image));
+}
+
+/**
+ * Applies the current browser-known image state immediately after decoration.
+ * Key parameter: `image` is an already-mounted `<img>`. Return value: none.
+ * Side effect: hides failed images that completed before listeners were attached.
+ */
+function syncRenderedImageState(image: HTMLImageElement) {
+  if (!image.complete) {
+    return;
+  }
+
+  if (image.naturalWidth > 0) {
+    clearRenderedImageUnavailable(image);
+  } else {
+    markRenderedImageUnavailable(image);
+  }
+}
+
+/**
+ * Marks one rendered Markdown image as unavailable and collapses its news-card thumbnail slot.
+ * Key parameter: `image` is the failed `<img>`. Return value: none.
+ * Side effect: mutates classes/ARIA on the image and its optional news-card wrappers.
+ */
+function markRenderedImageUnavailable(image: HTMLImageElement) {
+  image.classList.add("markdown-image--unavailable");
+
+  const thumb = image.closest<HTMLElement>(".markdown-news-card__thumb");
+  if (!thumb) {
+    return;
+  }
+
+  thumb.classList.add("markdown-news-card__thumb--unavailable");
+  thumb.setAttribute("aria-hidden", "true");
+  thumb.closest<HTMLElement>(".markdown-news-card__body")?.classList.add("markdown-news-card__body--text-only");
+}
+
+/**
+ * Clears an unavailable marker when the browser successfully loads a rendered Markdown image.
+ * Key parameter: `image` is the loaded `<img>`. Return value: none.
+ * Side effect: restores the thumbnail layout classes for news cards when applicable.
+ */
+function clearRenderedImageUnavailable(image: HTMLImageElement) {
+  image.classList.remove("markdown-image--unavailable");
+
+  const thumb = image.closest<HTMLElement>(".markdown-news-card__thumb");
+  if (!thumb) {
+    return;
+  }
+
+  thumb.classList.remove("markdown-news-card__thumb--unavailable");
+  thumb.removeAttribute("aria-hidden");
+  thumb.closest<HTMLElement>(".markdown-news-card__body")?.classList.remove("markdown-news-card__body--text-only");
 }
 
 </script>
