@@ -85,6 +85,41 @@ AI_KEYWORDS = (
     "评测",
     "基准",
 )
+CHINESE_AI_NEWS_KEYWORDS = (
+    "AI",
+    "人工智能",
+    "大模型",
+    "生成式",
+    "AIGC",
+    "智能体",
+    "多模态",
+    "机器人",
+    "算法",
+    "AI识别",
+    "拍照识别",
+    "误判",
+    "豆包",
+    "DeepSeek",
+    "通义",
+    "千问",
+    "Kimi",
+    "文心一言",
+    "讯飞星火",
+    "腾讯元宝",
+    "智谱",
+    "月之暗面",
+    "OpenAI",
+    "Claude",
+    "Gemini",
+    "Grok",
+    "xAI",
+    "Sora",
+    "Veo",
+    "视频生成",
+    "图生视频",
+    "蘑菇中毒",
+    "毒蘑菇",
+)
 INTERNAL_COPY_MARKERS = (
     "发布/出现了一条",
     "AI 前沿相关的信息",
@@ -211,6 +246,38 @@ DEFAULT_FRONTIER_SOURCES: tuple[DefaultFrontierSource, ...] = (
             "keywords": list(AI_KEYWORDS),
         },
         trust_level=85,
+        fetch_interval_minutes=120,
+    ),
+    DefaultFrontierSource(
+        key="caiwen_ai_tech",
+        name="财闻网 AI / 科技动态",
+        kind="news_html_index",
+        url="https://www.caiwennews.com/",
+        config={
+            "max_items": 10,
+            "candidate_links": 36,
+            "review_batch_size": DEFAULT_REVIEW_BATCH_SIZE,
+            "allowed_hosts": ["www.caiwennews.com", "caiwennews.com"],
+            "link_contains": ["/article/"],
+            "keywords": list(CHINESE_AI_NEWS_KEYWORDS),
+        },
+        trust_level=72,
+        fetch_interval_minutes=120,
+    ),
+    DefaultFrontierSource(
+        key="eastmoney_ai_tech",
+        name="东方财富科技 AI / 产业动态",
+        kind="news_html_index",
+        url="https://finance.eastmoney.com/a/ckj_1.html",
+        config={
+            "max_items": 10,
+            "candidate_links": 36,
+            "review_batch_size": DEFAULT_REVIEW_BATCH_SIZE,
+            "allowed_hosts": ["finance.eastmoney.com", "wap.eastmoney.com"],
+            "link_contains": ["/a/"],
+            "keywords": list(CHINESE_AI_NEWS_KEYWORDS),
+        },
+        trust_level=70,
         fetch_interval_minutes=120,
     ),
 )
@@ -612,6 +679,8 @@ class FrontierNewsService:
             return await self._fetch_xai_news_entries(source)
         if source.kind == "arena_leaderboard":
             return await self._fetch_arena_leaderboard_entries(source)
+        if source.kind == "news_html_index":
+            return await self._fetch_news_html_index_entries(source)
         raise ValidationError(
             "frontier_source_kind_invalid", "Unsupported frontier news source kind"
         )
@@ -748,6 +817,89 @@ class FrontierNewsService:
                             "score": score,
                             "provider": provider,
                         }
+                    ),
+                )
+            )
+        return self._filter_entries(source, entries)
+
+    async def _fetch_news_html_index_entries(
+        self, source: FrontierNewsSource
+    ) -> list[FetchedNewsEntry]:
+        """Fetch a trusted news index and normalize article detail pages.
+
+        This generic fetcher is for ordinary media sites that do not expose a
+        clean RSS feed for AI/technology news. The source config must restrict
+        candidate URLs with allowed hosts and path fragments so the collector
+        does not crawl an entire news site blindly.
+        """
+
+        index_html = await self._read_url(source.url)
+        urls = _extract_news_html_index_urls(
+            index_html,
+            source.url,
+            limit=self._candidate_link_limit(source),
+            allowed_hosts=self._config_string_list(source, "allowed_hosts"),
+            link_contains=self._config_string_list(source, "link_contains"),
+        )
+        entries: list[FetchedNewsEntry] = []
+        for url in urls:
+            try:
+                detail_html = await self._read_url(url)
+            except (TimeoutError, OSError):
+                continue
+            title = _html_meta_content(
+                detail_html,
+                ("og:title", "twitter:title", "title"),
+            ) or _html_heading(detail_html)
+            title = _strip_news_site_suffix(title)
+            summary = _html_meta_content(
+                detail_html,
+                ("og:description", "twitter:description", "description"),
+            ) or _html_first_paragraph(detail_html)
+            if not title:
+                continue
+            entries.append(
+                FetchedNewsEntry(
+                    external_id=url,
+                    title=title,
+                    url=url,
+                    summary=summary or None,
+                    author_names=[
+                        value
+                        for value in [
+                            _html_meta_content(
+                                detail_html,
+                                ("author", "article:author"),
+                            )
+                        ]
+                        if value
+                    ],
+                    published_at=_parse_datetime(
+                        _html_meta_content(
+                            detail_html,
+                            (
+                                "article:published_time",
+                                "date",
+                                "datePublished",
+                                "publishdate",
+                                "pubdate",
+                            ),
+                        )
+                        or _html_first_date(detail_html)
+                    ),
+                    raw_payload=_safe_payload(
+                        {
+                            "source_kind": "news_html_index",
+                            "source_index_url": source.url,
+                            "title": title,
+                            "summary": summary,
+                        }
+                    ),
+                    image_url=_safe_image_url(
+                        _html_meta_raw_content(
+                            detail_html,
+                            ("og:image", "twitter:image", "image"),
+                        )
                     ),
                 )
             )
@@ -1374,6 +1526,16 @@ class FrontierNewsService:
             return []
         return [str(value) for value in values if str(value).strip()]
 
+    def _config_string_list(self, source: FrontierNewsSource, key: str) -> list[str]:
+        """Read a list-like source config value as trimmed strings for fetcher filters."""
+
+        values = source.config.get(key) if isinstance(source.config, dict) else None
+        if isinstance(values, str):
+            return [values.strip()] if values.strip() else []
+        if not isinstance(values, list):
+            return []
+        return [str(value).strip() for value in values if str(value).strip()]
+
     def _max_items(self, source: FrontierNewsSource) -> int:
         """Read and bound per-source max item count to keep one run predictable."""
 
@@ -1383,6 +1545,18 @@ class FrontierNewsService:
         except (TypeError, ValueError):
             value = 10
         return max(1, min(25, value))
+
+    def _candidate_link_limit(self, source: FrontierNewsSource) -> int:
+        """Read and bound the number of index links inspected before keyword filtering."""
+
+        raw_value = (
+            source.config.get("candidate_links") if isinstance(source.config, dict) else None
+        )
+        try:
+            value = int(raw_value or (self._max_items(source) * 3))
+        except (TypeError, ValueError):
+            value = self._max_items(source) * 3
+        return max(1, min(80, value))
 
     def _review_batch_size(self, source: FrontierNewsSource) -> int:
         """Read the per-source count of new reviewables to enqueue during one collect pass."""
@@ -1599,7 +1773,14 @@ def _html_first_date(page_html: str) -> str:
         cleaned,
         flags=re.IGNORECASE,
     )
-    return match.group(0) if match else ""
+    if match:
+        return match.group(0)
+    numeric_match = re.search(
+        r"\b20\d{2}(?:[-/.]\d{1,2}[-/.]\d{1,2}|年\d{1,2}月\d{1,2}日)"
+        r"(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?\b",
+        cleaned,
+    )
+    return numeric_match.group(0) if numeric_match else ""
 
 
 def _extract_xai_news_urls(page_html: str, base_url: str) -> list[str]:
@@ -1673,6 +1854,93 @@ def _extract_arena_leaderboard_rows(
         if len(rows) >= limit:
             break
     return rows
+
+
+def _extract_news_html_index_urls(
+    page_html: str,
+    base_url: str,
+    *,
+    limit: int,
+    allowed_hosts: list[str],
+    link_contains: list[str],
+) -> list[str]:
+    """Extract article URLs from a restricted HTML news index."""
+
+    normalized = page_html.replace("\\/", "/").replace("\\u002F", "/")
+    allowed = {host.lower() for host in allowed_hosts}
+    urls: list[str] = []
+    seen: set[str] = set()
+    for match in re.finditer(
+        r"<a\b[^>]*\bhref\s*=\s*(['\"])(.*?)\1[^>]*>",
+        normalized,
+        flags=re.IGNORECASE | re.DOTALL,
+    ):
+        href = html.unescape(match.group(2).strip())
+        if not href or href.startswith(("javascript:", "mailto:", "tel:", "#")):
+            continue
+        url = urllib.parse.urljoin(base_url, href)
+        parsed = urllib.parse.urlsplit(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            continue
+        host = parsed.netloc.lower()
+        if allowed and host not in allowed:
+            continue
+        if link_contains and not any(fragment in url for fragment in link_contains):
+            continue
+        canonical = _canonicalize_url(url)
+        if canonical in seen:
+            continue
+        seen.add(canonical)
+        urls.append(url)
+        if len(urls) >= limit:
+            break
+    return urls
+
+
+def _strip_news_site_suffix(title: str) -> str:
+    """Remove common media-site suffixes while preserving the article title."""
+
+    cleaned = _clean_text(title)
+    return re.sub(
+        r"\s*[_\-|｜]\s*(?:东方财富网|财闻网|财闻|Eastmoney|East Money)\s*$",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    ).strip()
+
+
+def _html_first_paragraph(page_html: str) -> str:
+    """Extract the first useful visible paragraph when article metadata is sparse."""
+
+    for tag in ("p", "h2", "h3"):
+        for match in re.finditer(
+            rf"<{tag}\b[^>]*>(.*?)</{tag}>",
+            page_html,
+            flags=re.IGNORECASE | re.DOTALL,
+        ):
+            text = _clean_text(match.group(1))
+            if len(text) >= 20 and not _looks_like_navigation_text(text):
+                return text
+    return ""
+
+
+def _looks_like_navigation_text(value: str) -> bool:
+    """Return true for boilerplate fragments that should not become news summaries."""
+
+    lowered = value.lower()
+    return any(
+        marker in lowered
+        for marker in (
+            "copyright",
+            "免责声明",
+            "扫码",
+            "登录",
+            "注册",
+            "首页",
+            "刷新",
+            "行情中心",
+        )
+    )
 
 
 def _html_image_url(value: str | None) -> str | None:
@@ -1794,6 +2062,24 @@ def _parse_datetime(value: str | None) -> datetime | None:
     if not value:
         return None
     text = value.strip()
+    cjk_match = re.search(
+        r"(20\d{2})[年/-](\d{1,2})[月/-](\d{1,2})日?"
+        r"(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?",
+        text,
+    )
+    if cjk_match:
+        try:
+            return datetime(
+                int(cjk_match.group(1)),
+                int(cjk_match.group(2)),
+                int(cjk_match.group(3)),
+                int(cjk_match.group(4) or 0),
+                int(cjk_match.group(5) or 0),
+                int(cjk_match.group(6) or 0),
+                tzinfo=utcnow().tzinfo,
+            )
+        except ValueError:
+            pass
     try:
         return datetime.fromisoformat(text.replace("Z", "+00:00"))
     except ValueError:

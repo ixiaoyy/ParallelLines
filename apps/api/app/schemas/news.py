@@ -15,6 +15,7 @@ FrontierNewsSourceKind = Literal[
     "github_search",
     "xai_news",
     "arena_leaderboard",
+    "news_html_index",
 ]
 FrontierNewsItemStatus = Literal[
     "collected",

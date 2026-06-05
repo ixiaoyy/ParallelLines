@@ -62,6 +62,7 @@ def test_frontier_news_source_kind_drives_item_classification() -> None:
         "hacker_news": "discussion",
         "xai_news": "news",
         "arena_leaderboard": "news",
+        "news_html_index": "news",
     }
     for kind, expected in expected_by_kind.items():
         source = FrontierNewsSource(
@@ -373,3 +374,71 @@ async def test_arena_leaderboard_fetcher_reads_video_model_rank(
     assert entries[0].author_names == ["Arena.ai", "xAI"]
     assert entries[1].title == "dreamina-seedance-2.0-720p"
     assert "第 2 名" in (entries[1].summary or "")
+
+
+@pytest.mark.asyncio
+async def test_news_html_index_fetcher_keeps_ai_articles_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify generic Chinese media indexes are host/path-bound and AI-keyword filtered."""
+
+    service = FrontierNewsService(cast(AsyncSession, object()), Settings(_env_file=None))
+    source = FrontierNewsSource(
+        key="eastmoney_ai_tech",
+        name="东方财富科技 AI / 产业动态",
+        kind="news_html_index",
+        url="https://finance.eastmoney.com/a/ckj_1.html",
+        config={
+            "max_items": 5,
+            "candidate_links": 5,
+            "allowed_hosts": ["finance.eastmoney.com"],
+            "link_contains": ["/a/"],
+            "keywords": ["豆包", "人工智能"],
+        },
+        enabled=True,
+        trust_level=70,
+        fetch_interval_minutes=120,
+    )
+    matched_url = "https://finance.eastmoney.com/a/202606053761889422.html"
+    ignored_url = "https://finance.eastmoney.com/a/202606053761800000.html"
+
+    async def fake_read_url(url: str) -> str:
+        """Return deterministic media index/detail HTML for the generic parser test."""
+
+        if url == source.url:
+            return f"""
+                <a href="{matched_url}">抖音高管回应豆包误判蘑菇导致中毒</a>
+                <a href="https://example.com/a/outside.html">外站链接</a>
+                <a href="{ignored_url}">上市公司公告</a>
+            """
+        if url == matched_url:
+            return """
+                <html>
+                  <head>
+                    <meta property="og:title"
+                      content="抖音高管回应豆包误判蘑菇导致中毒_东方财富网" />
+                    <meta name="description"
+                      content="豆包回复曾提示野生蘑菇识别风险极高，建议多方咨询求证。" />
+                    <meta property="og:image"
+                      content="https://finance.eastmoney.com/news/card.jpg" />
+                  </head>
+                  <body><span>2026-06-05 14:32</span></body>
+                </html>
+            """
+        return """
+            <html>
+              <head><meta property="og:title" content="上市公司公告_东方财富网" /></head>
+              <body><p>这是一条普通财经公告。</p></body>
+            </html>
+        """
+
+    monkeypatch.setattr(service, "_read_url", fake_read_url)
+
+    entries = await service._fetch_news_html_index_entries(source)
+
+    assert len(entries) == 1
+    assert entries[0].title == "抖音高管回应豆包误判蘑菇导致中毒"
+    assert entries[0].url == matched_url
+    assert "识别风险极高" in (entries[0].summary or "")
+    assert entries[0].image_url == "https://finance.eastmoney.com/news/card.jpg"
+    assert entries[0].published_at is not None

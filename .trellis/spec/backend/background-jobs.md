@@ -59,6 +59,9 @@ Frontier source `config` keys:
 | `max_items` | Candidate window fetched from the upstream source before de-duplication |
 | `review_batch_size` | Maximum new `frontier_news` reviewables to enqueue per source in one collection pass; default is 3 |
 | `candidate_items` | Hacker News top-story scan window before AI keyword filtering |
+| `candidate_links` | HTML news-index link scan window before AI keyword filtering |
+| `allowed_hosts` | Host allow-list for generic HTML news-index sources; required for broad media sites |
+| `link_contains` | URL/path fragments that candidate news-index links must contain |
 | `arxiv_category_items` | Optional per-category arXiv result count; absent values are derived from `max_items` |
 
 Frontier source `kind` values:
@@ -71,6 +74,7 @@ Frontier source `kind` values:
 | `github_search` | GitHub repository search API |
 | `xai_news` | xAI public news HTML index plus announcement detail pages |
 | `arena_leaderboard` | Arena.ai leaderboard pages converted into benchmark news entries |
+| `news_html_index` | Trusted media-site HTML indexes restricted by host/path config, then filtered by AI keywords |
 
 ### 3. Contracts
 

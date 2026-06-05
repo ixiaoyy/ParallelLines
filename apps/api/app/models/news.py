@@ -30,6 +30,7 @@ FrontierNewsSourceKind = Literal[
     "github_search",
     "xai_news",
     "arena_leaderboard",
+    "news_html_index",
 ]
 FrontierNewsItemStatus = Literal[
     "collected",
@@ -62,7 +63,10 @@ class FrontierNewsSource(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     kind: Mapped[str] = mapped_column(
         String(32),
         nullable=False,
-        comment="来源类型：rss、arxiv、hacker_news、github_search、xai_news 或 arena_leaderboard。",
+        comment=(
+            "来源类型：rss、arxiv、hacker_news、github_search、xai_news、"
+            "arena_leaderboard 或 news_html_index。"
+        ),
     )
     url: Mapped[str] = mapped_column(String(1024), nullable=False, comment="抓取入口 URL。")
     config: Mapped[dict[str, object]] = mapped_column(
