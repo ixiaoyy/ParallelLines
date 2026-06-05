@@ -869,20 +869,17 @@ class FrontierNewsService:
         }
 
     def _build_topic_markdown(self, item: FrontierNewsItem, *, note: str | None = None) -> str:
-        """Render source-first repost copy without exposing moderation workflow notes."""
+        """Render source-first flash-news copy without exposing moderation workflow notes."""
 
         del note
         lines = [
-            f"转载原文：[{item.title}]({item.canonical_url})",
+            f"原文：[{item.title}]({item.canonical_url})",
             self._original_meta_line(item),
         ]
         original_excerpt = self._original_excerpt(item)
         if original_excerpt:
             lines.append(f"原文摘要：{original_excerpt}")
-        lines.extend(["", "大致解释：", self._public_summary(item), "", "要点："])
-        for point in self._public_key_points(item):
-            lines.append(f"- {point}")
-        lines.extend(["", "可以关注：", self._public_interest(item)])
+        lines.extend(["", f"一句话：{self._brief_intro(item)}"])
         return "\n".join(lines).strip()
 
     def _original_meta_line(self, item: FrontierNewsItem) -> str:
@@ -902,6 +899,14 @@ class FrontierNewsService:
         if summary and summary.lower() != _clean_text(item.title).lower():
             return _truncate(summary, 360)
         return ""
+
+    def _brief_intro(self, item: FrontierNewsItem) -> str:
+        """Return one short Chinese sentence explaining why this item is being shown."""
+
+        summary = self._public_summary(item)
+        sentences = _split_sentences(summary)
+        first_sentence = sentences[0] if sentences else summary
+        return _truncate(first_sentence, 180)
 
     def _public_summary(self, item: FrontierNewsItem) -> str:
         """Return a public summary, recomputing when stored AI copy contains review-only wording."""
@@ -947,7 +952,7 @@ class FrontierNewsService:
     def _topic_tags(self, item: FrontierNewsItem) -> list[str]:
         """Return normalized-looking tag labels while keeping within forum request limits."""
 
-        tags = ["前沿资讯", "转载", *item.suggested_tags]
+        tags = ["前沿资讯", *item.suggested_tags]
         unique: list[str] = []
         for tag in tags:
             safe = str(tag).strip()[:48]

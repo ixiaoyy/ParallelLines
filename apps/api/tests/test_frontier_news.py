@@ -91,8 +91,8 @@ def test_frontier_news_source_kind_drives_item_classification() -> None:
         assert service._classify_item(item, item.title) == expected
 
 
-def test_frontier_news_repost_markdown_starts_with_original_source() -> None:
-    """Verify repost drafts show the original first, then the Chinese explanation."""
+def test_frontier_news_flash_markdown_starts_with_original_source() -> None:
+    """Verify flash-news drafts show the original first, then one Chinese sentence."""
 
     service = FrontierNewsService(cast(AsyncSession, object()), Settings(_env_file=None))
     source = FrontierNewsSource(
@@ -129,11 +129,11 @@ def test_frontier_news_repost_markdown_starts_with_original_source() -> None:
     raw_md = service._build_topic_markdown(item)
     tags = service._topic_tags(item)
 
-    assert raw_md.startswith(
-        "转载原文：[Example AI Agent Release](https://huggingface.co/blog/example)"
-    )
+    assert raw_md.startswith("原文：[Example AI Agent Release](https://huggingface.co/blog/example)")
     assert "来源：Hugging Face Blog" in raw_md
     assert "原文摘要：The upstream post introduces" in raw_md
-    assert "大致解释：" in raw_md
-    assert raw_md.index("转载原文：") < raw_md.index("大致解释：")
-    assert "转载" in tags
+    assert "一句话：这条资讯介绍了一个面向开发者的本地 AI 智能体工作流" in raw_md
+    assert "要点：" not in raw_md
+    assert "可以关注：" not in raw_md
+    assert "转载" not in raw_md
+    assert "转载" not in tags

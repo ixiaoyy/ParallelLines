@@ -76,9 +76,9 @@ Frontier source `config` keys:
   source cannot flood the unified moderation queue. Failed source fetches keep their previous
   `last_checked_at` and set `last_error`, allowing the next scheduled bucket to retry instead of
   waiting the full source interval.
-- Frontier news drafts are repost-style: the generated `raw_md` starts with the original source
-  link and upstream metadata/excerpt, then a Chinese `大致解释` and key points. Generated topic
-  tags must include `转载` in addition to `前沿资讯` and content tags.
+- Frontier news drafts are flash-news style: the generated `raw_md` starts with the original
+  source link and upstream metadata/excerpt, then one concise Chinese `一句话` explanation.
+  Generated topic tags include `前沿资讯` and content tags; do not add a `转载` tag by default.
 
 ### 4. Validation & Error Matrix
 
