@@ -38,6 +38,15 @@ import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
+interface FrontierPreviewCard {
+  source: string;
+  imageAlt: string;
+  imageUrl: string;
+  title: string;
+  url: string;
+  summary: string;
+}
+
 const activeTab = ref<"reviewables" | "flags" | "audit">("reviewables");
 const reviewablesTabActive = computed(() => activeTab.value === "reviewables");
 const flagsTabActive = computed(() => activeTab.value === "flags");
@@ -148,6 +157,9 @@ const activeFeedback = computed<{
 // Drawer state
 const selectedReviewable = ref<ReviewableResponse | null>(null);
 const isDrawerOpen = computed(() => selectedReviewable.value !== null);
+const selectedFrontierPreviewCard = computed(() =>
+  selectedReviewable.value ? frontierPreviewCard(selectedReviewable.value) : null,
+);
 const decisionAction = ref<ReviewableDecisionAction>("approve");
 const decisionNote = ref("");
 
@@ -225,14 +237,14 @@ function reviewableReason(reviewable: ReviewableResponse) {
 
 function reviewablePreview(reviewable: ReviewableResponse) {
   if (reviewable.source === "frontier_news") {
-    const sourceName = textField(reviewable.data.source_name);
-    const originalTitle = textField(reviewable.data.original_title);
-    const sourceUrl = textField(reviewable.data.source_url);
     const rawMarkdown = textField(reviewable.data.raw_md);
-    return (
-      [sourceName, originalTitle, sourceUrl, rawMarkdown].filter(Boolean).join(" · ") ||
-      reviewableReason(reviewable)
-    );
+    const previewMarkdown = rawMarkdown
+      .replace(/(^|\n):::\s*news-card\s*(?=\n|$)/g, "")
+      .replace(/(^|\n):::\s*(?=\n|$)/g, "")
+      .replace(/(^|\n)\s*一句话：.*(?=\n|$)/g, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    return previewMarkdown || reviewableReason(reviewable);
   }
 
   return (
@@ -240,6 +252,93 @@ function reviewablePreview(reviewable: ReviewableResponse) {
     textField(reviewable.data.excerpt) ||
     reviewableReason(reviewable)
   );
+}
+
+/**
+ * Parses the controlled frontier `news-card` Markdown block for the moderation drawer preview.
+ */
+function frontierPreviewCard(reviewable: ReviewableResponse): FrontierPreviewCard | null {
+  if (reviewable.source !== "frontier_news") return null;
+  const rawMarkdown = textField(reviewable.data.raw_md);
+  if (rawMarkdown.includes(":::news-card")) {
+    return parseFrontierNewsCard(rawMarkdown);
+  }
+  return parseLegacyFrontierNewsCard(rawMarkdown, reviewable);
+}
+
+/**
+ * Extracts source, optional image, title link, and summary from generated frontier Markdown.
+ */
+function parseFrontierNewsCard(rawMarkdown: string): FrontierPreviewCard | null {
+  const block = rawMarkdown.match(/:::news-card\s*([\s\S]*?)\n:::/);
+  const lines = (block?.[1] ?? rawMarkdown)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!lines.length) return null;
+
+  const card: FrontierPreviewCard = {
+    source: "",
+    imageAlt: "",
+    imageUrl: "",
+    title: "",
+    url: "",
+    summary: "",
+  };
+  const summaryLines: string[] = [];
+  for (const line of lines) {
+    const image = line.match(/^!\[([^\]\n]*)]\((https?:\/\/[^)\s]+|\/[^\s)]+)\)$/);
+    if (image && !card.imageUrl) {
+      card.imageAlt = image[1];
+      card.imageUrl = image[2];
+      continue;
+    }
+    const link = line.match(/^\[([^\]\n]+)]\((https?:\/\/[^)\s]+|\/[^\s)]+)\)$/);
+    if (link && !card.url) {
+      card.title = link[1];
+      card.url = link[2];
+      continue;
+    }
+    if (!card.source) {
+      card.source = line;
+    } else {
+      summaryLines.push(line);
+    }
+  }
+  card.summary = summaryLines.join("\n").trim();
+  return card.title && card.url && card.summary ? card : null;
+}
+
+/**
+ * Converts older frontier plain-text drafts into the same card preview shape.
+ */
+function parseLegacyFrontierNewsCard(
+  rawMarkdown: string,
+  reviewable: ReviewableResponse,
+): FrontierPreviewCard | null {
+  const lines = rawMarkdown
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const original = lines.find((line) => line.startsWith("原文：")) ?? "";
+  const source = lines.find((line) => line.startsWith("来源：")) || textField(reviewable.data.source_name);
+  const summary = (
+    lines.find((line) => line.startsWith("原文摘要："))?.replace(/^原文摘要：/, "") ||
+    textField(reviewable.data.excerpt)
+  ).trim();
+  const link = original.match(/^原文：\[([^\]\n]+)]\((https?:\/\/[^)\s]+|\/[^\s)]+)\)$/);
+  const title = link?.[1] || textField(reviewable.data.original_title) || reviewableTitle(reviewable);
+  const url = link?.[2] || textField(reviewable.data.source_url);
+  return title && url && summary
+    ? {
+        source,
+        imageAlt: "",
+        imageUrl: "",
+        title,
+        url,
+        summary,
+      }
+    : null;
 }
 
 function decideReviewable(
@@ -744,7 +843,29 @@ function mutationErrorMessage(error: unknown) {
             <span class="panel-kicker">内容预览</span>
             <h4 class="preview-title">{{ reviewableTitle(selectedReviewable) }}</h4>
             <div class="preview-body-box">
-              <p class="raw-markdown-view">{{ reviewablePreview(selectedReviewable) }}</p>
+              <article v-if="selectedFrontierPreviewCard" class="frontier-preview-card">
+                <div class="frontier-preview-card__source">
+                  {{ selectedFrontierPreviewCard.source }}
+                </div>
+                <div
+                  class="frontier-preview-card__body"
+                  :class="{ 'frontier-preview-card__body--text-only': !selectedFrontierPreviewCard.imageUrl }"
+                >
+                  <img
+                    v-if="selectedFrontierPreviewCard.imageUrl"
+                    :src="selectedFrontierPreviewCard.imageUrl"
+                    :alt="selectedFrontierPreviewCard.imageAlt || selectedFrontierPreviewCard.title"
+                    loading="lazy"
+                  />
+                  <div class="frontier-preview-card__copy">
+                    <a :href="selectedFrontierPreviewCard.url" target="_blank" rel="noopener noreferrer">
+                      {{ selectedFrontierPreviewCard.title }}
+                    </a>
+                    <p>{{ selectedFrontierPreviewCard.summary }}</p>
+                  </div>
+                </div>
+              </article>
+              <p v-else class="raw-markdown-view">{{ reviewablePreview(selectedReviewable) }}</p>
             </div>
             <div class="content-appeal-note" v-if="selectedReviewable.data.appeal_reason || selectedReviewable.data.note">
               <strong>复核理由 / 备注:</strong> {{ selectedReviewable.data.appeal_reason || selectedReviewable.data.note }}

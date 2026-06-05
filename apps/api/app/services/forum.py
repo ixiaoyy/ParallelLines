@@ -76,6 +76,8 @@ TAG_SEPARATOR_PATTERN = re.compile(r"[^a-z0-9一-鿿_.-]+")
 MENTION_PATTERN = re.compile(r"(?<![A-Za-z0-9_.-])@([A-Za-z0-9_.-]{3,32})")
 LIKE_ESCAPE_PATTERN = re.compile(r"([%_\\])")
 VISITOR_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.:-]{8,128}$")
+NEWS_CARD_START = ":::news-card"
+NEWS_CARD_END = ":::"
 INLINE_MARKDOWN_LINK_PATTERN = re.compile(
     r"(!?)\[([^\]\n]{0,160})\]\("
     r"(https?://[^)\s]+|/[^\s)]+)"
@@ -185,7 +187,9 @@ def render_markdown(raw_md: str) -> str:
     html_parts: list[str] = []
     paragraph_lines: list[str] = []
     code_lines: list[str] = []
+    news_card_lines: list[str] = []
     in_code = False
+    in_news_card = False
 
     def flush_paragraph() -> None:
         if not paragraph_lines:
@@ -204,7 +208,24 @@ def render_markdown(raw_md: str) -> str:
         html_parts.append(f"<pre><code>{escaped}</code></pre>")
         code_lines.clear()
 
+    def flush_news_card() -> None:
+        """Append the accumulated news-card block as sanitized HTML and clear its buffer."""
+
+        if not news_card_lines:
+            return
+        html_parts.append(render_news_card(news_card_lines))
+        news_card_lines.clear()
+
     for line in lines:
+        stripped = line.strip()
+        if in_news_card:
+            if stripped == NEWS_CARD_END:
+                flush_news_card()
+                in_news_card = False
+            else:
+                news_card_lines.append(line)
+            continue
+
         if line.strip().startswith("```"):
             if in_code:
                 flush_code()
@@ -218,6 +239,12 @@ def render_markdown(raw_md: str) -> str:
             code_lines.append(line)
             continue
 
+        if stripped == NEWS_CARD_START:
+            flush_paragraph()
+            in_news_card = True
+            news_card_lines.clear()
+            continue
+
         if line.strip():
             paragraph_lines.append(line)
         else:
@@ -225,12 +252,74 @@ def render_markdown(raw_md: str) -> str:
 
     if in_code:
         flush_code()
+    if in_news_card:
+        flush_news_card()
     flush_paragraph()
 
     return "".join(html_parts) or "<p></p>"
 
 
+def render_news_card(lines: list[str]) -> str:
+    """Render a safe source-card block with optional image, title link, and summary text."""
+
+    source = ""
+    image_src = ""
+    image_alt = ""
+    title_html = ""
+    summary_lines: list[str] = []
+
+    cleaned_lines = [line.strip() for line in lines if line.strip()]
+    for line in cleaned_lines:
+        link_match = INLINE_MARKDOWN_LINK_PATTERN.fullmatch(line)
+        if link_match:
+            marker, label, url = link_match.groups()
+            if not is_safe_markdown_url(url):
+                summary_lines.append(line)
+                continue
+            if marker and not image_src:
+                image_src = html.escape(url, quote=True)
+                image_alt = html.escape(label or "news image", quote=True)
+                continue
+            if not marker and not title_html:
+                title_html = render_inline_markdown(line)
+                continue
+        if not source:
+            source = line
+        else:
+            summary_lines.append(line)
+
+    source_html = (
+        f'<div class="markdown-news-card__source">{html.escape(source)}</div>' if source else ""
+    )
+    image_html = (
+        '<a class="markdown-news-card__thumb" '
+        f'href="{image_src}" target="_blank" rel="nofollow noopener noreferrer">'
+        f'<img src="{image_src}" alt="{image_alt}" loading="lazy" /></a>'
+        if image_src
+        else ""
+    )
+    title_block = (
+        f'<div class="markdown-news-card__title">{title_html}</div>' if title_html else ""
+    )
+    summary_html = " ".join(render_inline_markdown(line) for line in summary_lines)
+    summary_block = (
+        f'<p class="markdown-news-card__summary">{summary_html}</p>' if summary_html else ""
+    )
+    body_modifier = "" if image_html else " markdown-news-card__body--text-only"
+    return (
+        '<aside class="markdown-news-card">'
+        f"{source_html}"
+        f'<div class="markdown-news-card__body{body_modifier}">'
+        f"{image_html}"
+        '<div class="markdown-news-card__copy">'
+        f"{title_block}{summary_block}"
+        "</div></div></aside>"
+    )
+
+
 def render_inline_markdown(line: str) -> str:
+    """Render safe inline links/images while escaping all other Markdown text."""
+
     rendered: list[str] = []
     cursor = 0
     for match in INLINE_MARKDOWN_LINK_PATTERN.finditer(line):
@@ -254,6 +343,8 @@ def render_inline_markdown(line: str) -> str:
 
 
 def is_safe_markdown_url(url: str) -> bool:
+    """Allow public HTTP(S) URLs and first-party upload content paths in Markdown links."""
+
     if url.startswith(("http://", "https://")):
         return True
     return SAFE_UPLOAD_PATH_PATTERN.match(url) is not None

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.db.base import utcnow
 from app.models.news import FrontierNewsItem, FrontierNewsSource
+from app.services.forum import render_markdown
 from app.services.frontier_news import DEFAULT_REVIEW_BATCH_SIZE, FrontierNewsService
 
 
@@ -92,7 +93,7 @@ def test_frontier_news_source_kind_drives_item_classification() -> None:
 
 
 def test_frontier_news_flash_markdown_starts_with_original_source() -> None:
-    """Verify flash-news drafts show the original first, then one Chinese sentence."""
+    """Verify flash-news drafts render as source cards with optional image and summary."""
 
     service = FrontierNewsService(cast(AsyncSession, object()), Settings(_env_file=None))
     source = FrontierNewsSource(
@@ -115,7 +116,7 @@ def test_frontier_news_flash_markdown_starts_with_original_source() -> None:
         summary="The upstream post introduces a local AI agent workflow for developers.",
         author_names=["Hugging Face"],
         published_at=utcnow(),
-        raw_payload={},
+        raw_payload={"image_url": "https://example.com/card.png"},
         item_type="news",
         suggested_tags=["智能体"],
         ai_title_zh="【动态】Example AI Agent Release",
@@ -127,13 +128,61 @@ def test_frontier_news_flash_markdown_starts_with_original_source() -> None:
     )
 
     raw_md = service._build_topic_markdown(item)
+    cooked_html = render_markdown(raw_md)
     tags = service._topic_tags(item)
 
-    assert raw_md.startswith("原文：[Example AI Agent Release](https://huggingface.co/blog/example)")
+    assert raw_md.startswith(":::news-card\n来源：Hugging Face Blog")
+    assert "![Example AI Agent Release](https://example.com/card.png)" in raw_md
+    assert "[Example AI Agent Release](https://huggingface.co/blog/example)" in raw_md
     assert "来源：Hugging Face Blog" in raw_md
-    assert "原文摘要：The upstream post introduces" in raw_md
-    assert "一句话：这条资讯介绍了一个面向开发者的本地 AI 智能体工作流" in raw_md
+    assert "这条资讯介绍了一个面向开发者的本地 AI 智能体工作流" in raw_md
+    assert 'class="markdown-news-card"' in cooked_html
+    assert '<img src="https://example.com/card.png"' in cooked_html
+    assert "一句话：" not in raw_md
     assert "要点：" not in raw_md
     assert "可以关注：" not in raw_md
     assert "转载" not in raw_md
     assert "转载" not in tags
+
+
+def test_frontier_news_card_markdown_keeps_title_and_summary_without_image() -> None:
+    """Verify source cards degrade to title and summary when no image is available."""
+
+    service = FrontierNewsService(cast(AsyncSession, object()), Settings(_env_file=None))
+    source = FrontierNewsSource(
+        key="hacker_news_ai",
+        name="Hacker News AI 热点",
+        kind="hacker_news",
+        url="https://hacker-news.firebaseio.com/v0/topstories.json",
+        config={},
+        enabled=True,
+        trust_level=65,
+        fetch_interval_minutes=120,
+    )
+    item = FrontierNewsItem(
+        source_id="1",
+        source=source,
+        external_id="entry-2",
+        canonical_url="https://news.ycombinator.com/item?id=1",
+        canonical_url_hash="entry-2-hash",
+        title="AI agents discussion",
+        summary=None,
+        author_names=[],
+        raw_payload={},
+        item_type="discussion",
+        suggested_tags=["智能体"],
+        ai_title_zh="【社区】AI agents discussion",
+        ai_summary_zh=None,
+        ai_key_points=[],
+        ai_risk_flags=[],
+        score=65,
+        status="review_pending",
+    )
+
+    raw_md = service._build_topic_markdown(item)
+    cooked_html = render_markdown(raw_md)
+
+    assert "![AI agents discussion]" not in raw_md
+    assert "[AI agents discussion](https://news.ycombinator.com/item?id=1)" in raw_md
+    assert "核心关键词是智能体/Agent" in raw_md
+    assert 'markdown-news-card__body--text-only' in cooked_html

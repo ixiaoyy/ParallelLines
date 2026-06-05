@@ -94,6 +94,7 @@ class FetchedNewsEntry:
     author_names: list[str]
     published_at: datetime | None
     raw_payload: dict[str, object]
+    image_url: str | None = None
 
 
 DEFAULT_FRONTIER_SOURCES: tuple[DefaultFrontierSource, ...] = (
@@ -559,11 +560,12 @@ class FrontierNewsService:
             link = _entry_link(node)
             if not title or not link:
                 continue
-            summary = _clean_text(
+            raw_summary = (
                 _child_text(node, "description")
                 or _child_text(node, "summary")
                 or _child_text(node, "content")
             )
+            summary = _clean_text(raw_summary)
             author_value = _child_text(node, "author") or _child_text(node, "creator")
             entries.append(
                 FetchedNewsEntry(
@@ -578,6 +580,7 @@ class FrontierNewsService:
                         or _child_text(node, "pubDate")
                     ),
                     raw_payload=_safe_payload(_element_to_dict(node)),
+                    image_url=_entry_image_url(node) or _html_image_url(raw_summary),
                 )
             )
         return self._filter_entries(source, entries)
@@ -697,6 +700,12 @@ class FrontierNewsService:
             if not title or not link:
                 continue
             description = _clean_text(str(item.get("description") or ""))
+            owner = item.get("owner")
+            owner_avatar = (
+                _safe_image_url(str(owner.get("avatar_url") or ""))
+                if isinstance(owner, dict)
+                else None
+            )
             entries.append(
                 FetchedNewsEntry(
                     external_id=str(item.get("node_id") or item.get("id") or link),
@@ -713,6 +722,7 @@ class FrontierNewsService:
                         str(item.get("pushed_at") or item.get("updated_at") or "")
                     ),
                     raw_payload=_safe_payload(item),
+                    image_url=owner_avatar,
                 )
             )
         return self._filter_entries(source, entries)
@@ -737,6 +747,9 @@ class FrontierNewsService:
         )
         if existing:
             return existing, False
+        raw_payload = dict(entry.raw_payload)
+        if entry.image_url:
+            raw_payload["image_url"] = entry.image_url
         item = FrontierNewsItem(
             source_id=source.id,
             source=source,
@@ -747,7 +760,7 @@ class FrontierNewsService:
             summary=entry.summary,
             author_names=entry.author_names[:12],
             published_at=entry.published_at,
-            raw_payload=entry.raw_payload,
+            raw_payload=raw_payload,
             item_type="news",
             suggested_tags=[],
             ai_key_points=[],
@@ -869,18 +882,56 @@ class FrontierNewsService:
         }
 
     def _build_topic_markdown(self, item: FrontierNewsItem, *, note: str | None = None) -> str:
-        """Render source-first flash-news copy without exposing moderation workflow notes."""
+        """Render a source-first news card without generic generated commentary."""
 
         del note
         lines = [
-            f"原文：[{item.title}]({item.canonical_url})",
+            ":::news-card",
             self._original_meta_line(item),
         ]
+        image_url = self._image_url(item)
+        if image_url:
+            lines.append(f"![{_markdown_label(item.title)}]({image_url})")
+        lines.extend(
+            [
+                f"[{_markdown_label(item.title)}]({item.canonical_url})",
+                self._card_summary(item),
+                ":::",
+            ]
+        )
+        return "\n".join(line for line in lines if line).strip()
+
+    def _image_url(self, item: FrontierNewsItem) -> str:
+        """Return a safe card image URL extracted from normalized or upstream payload data."""
+
+        payload = item.raw_payload if isinstance(item.raw_payload, dict) else {}
+        direct = _first_image_candidate(
+            payload,
+            keys=("image_url", "image", "thumbnail", "thumbnail_url", "og_image"),
+        )
+        if direct:
+            return direct
+        owner = payload.get("owner")
+        if isinstance(owner, dict):
+            owner_avatar = _first_image_candidate(owner, keys=("avatar_url",))
+            if owner_avatar:
+                return owner_avatar
+        return _first_image_candidate(payload)
+
+    def _card_summary(self, item: FrontierNewsItem) -> str:
+        """Return the summary shown inside the source card, falling back when upstream is sparse."""
+
+        summary = _clean_text(item.ai_summary_zh)
+        if (
+            summary
+            and not _contains_internal_copy(summary)
+            and not _looks_like_low_value_summary(summary)
+        ):
+            return _truncate(summary, 420)
         original_excerpt = self._original_excerpt(item)
         if original_excerpt:
-            lines.append(f"原文摘要：{original_excerpt}")
-        lines.extend(["", f"一句话：{self._brief_intro(item)}"])
-        return "\n".join(lines).strip()
+            return original_excerpt
+        return self._focus_hint(item)
 
     def _original_meta_line(self, item: FrontierNewsItem) -> str:
         """Build the source/date/author metadata line shown directly under the original link."""
@@ -899,22 +950,6 @@ class FrontierNewsService:
         if summary and summary.lower() != _clean_text(item.title).lower():
             return _truncate(summary, 360)
         return ""
-
-    def _brief_intro(self, item: FrontierNewsItem) -> str:
-        """Return one short Chinese sentence explaining why this item is being shown."""
-
-        summary = self._public_summary(item)
-        sentences = _split_sentences(summary)
-        first_sentence = sentences[0] if sentences else summary
-        return _truncate(first_sentence, 180)
-
-    def _public_summary(self, item: FrontierNewsItem) -> str:
-        """Return a public summary, recomputing when stored AI copy contains review-only wording."""
-
-        summary = _clean_text(item.ai_summary_zh)
-        if summary and not _contains_internal_copy(summary):
-            return summary
-        return self._chinese_summary(item)
 
     def _public_key_points(self, item: FrontierNewsItem) -> list[str]:
         """Return public content points with any moderation/process bullets removed."""
@@ -1034,14 +1069,11 @@ class FrontierNewsService:
     def _chinese_summary(self, item: FrontierNewsItem) -> str:
         """Create a reader-facing Chinese summary from available title and source excerpt."""
 
-        source_name = item.source.name if item.source else "白名单来源"
         title = _clean_text(item.title)
         summary = _clean_text(item.summary)
-        focus = self._focus_hint(item)
         if summary and summary.lower() != title.lower():
-            translated_summary = _truncate(summary, 420)
-            return f"这条资讯来自 {source_name}，主题是「{title}」。原文大意：{translated_summary}"
-        return f"这条资讯来自 {source_name}，主题是「{title}」。{focus}"
+            return _truncate(summary, 420)
+        return self._focus_hint(item)
 
     def _key_points(self, item: FrontierNewsItem) -> list[str]:
         """Extract concise reader-facing takeaways from title and summary text."""
@@ -1293,6 +1325,90 @@ def _entry_link(node: ET.Element) -> str:
     return ""
 
 
+def _entry_image_url(node: ET.Element) -> str | None:
+    """Extract an image URL from common RSS/Atom media, enclosure, or image children."""
+
+    for child in node:
+        name = _local_name(child.tag)
+        attributes = child.attrib
+        if name in {"thumbnail", "image"}:
+            raw_url = (
+                attributes.get("url")
+                or attributes.get("href")
+                or attributes.get("src")
+                or child.text
+            )
+            image_url = _safe_image_url(
+                raw_url
+            )
+            if image_url:
+                return image_url
+        if name in {"content", "enclosure"}:
+            media_type = str(attributes.get("type") or "").lower()
+            medium = str(attributes.get("medium") or "").lower()
+            if media_type.startswith("image/") or medium == "image":
+                image_url = _safe_image_url(
+                    attributes.get("url") or attributes.get("href") or attributes.get("src")
+                )
+                if image_url:
+                    return image_url
+    return None
+
+
+def _html_image_url(value: str | None) -> str | None:
+    """Extract the first safe image source from an HTML summary string."""
+
+    if not value:
+        return None
+    match = re.search(r"<img\b[^>]*\bsrc=['\"]([^'\"]+)['\"]", value, flags=re.IGNORECASE)
+    return _safe_image_url(match.group(1)) if match else None
+
+
+def _safe_image_url(value: object) -> str | None:
+    """Validate an upstream image URL before putting it into generated Markdown."""
+
+    url = str(value or "").strip()
+    if not url.startswith(("http://", "https://")):
+        return None
+    parsed = urllib.parse.urlsplit(url)
+    if not parsed.netloc:
+        return None
+    return urllib.parse.urlunsplit(
+        (
+            parsed.scheme.lower(),
+            parsed.netloc.lower(),
+            parsed.path,
+            parsed.query,
+            "",
+        )
+    )
+
+
+def _first_image_candidate(
+    payload: dict[str, object],
+    *,
+    keys: tuple[str, ...] = ("image_url", "image", "thumbnail", "thumbnail_url", "url", "href"),
+) -> str:
+    """Find a safe image URL in a shallow payload dictionary or nested attributes block."""
+
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, str):
+            image_url = _safe_image_url(value)
+            if image_url:
+                return image_url
+        if isinstance(value, dict):
+            nested = _first_image_candidate(value)
+            if nested:
+                return nested
+    attributes = payload.get("attributes")
+    if isinstance(attributes, dict):
+        nested = _first_image_candidate(attributes)
+        if nested:
+            return nested
+    return ""
+
+
 def _element_to_dict(node: ET.Element) -> dict[str, object]:
     """Convert shallow XML children into a serializable diagnostic payload."""
 
@@ -1388,6 +1504,24 @@ def _looks_like_low_value_point(value: str) -> bool:
     if len(cleaned) < 8:
         return True
     return bool(re.match(r"^\d+\s*[:：]", cleaned))
+
+
+def _looks_like_low_value_summary(value: str) -> bool:
+    """Return true when a summary only restates source/title metadata."""
+
+    cleaned = _clean_text(value)
+    return (
+        cleaned.startswith("这条资讯来自")
+        or "主题是「" in cleaned
+        or _contains_internal_copy(cleaned)
+    )
+
+
+def _markdown_label(value: str, max_length: int = 150) -> str:
+    """Return a safe, bounded label for the small Markdown link/image renderer."""
+
+    label = re.sub(r"[\[\]\n\r]", " ", _clean_text(value))
+    return _truncate(label, max_length) or "原文"
 
 
 def _truncate(value: str, max_length: int) -> str:

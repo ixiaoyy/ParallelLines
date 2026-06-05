@@ -76,8 +76,10 @@ Frontier source `config` keys:
   source cannot flood the unified moderation queue. Failed source fetches keep their previous
   `last_checked_at` and set `last_error`, allowing the next scheduled bucket to retry instead of
   waiting the full source interval.
-- Frontier news drafts are flash-news style: the generated `raw_md` starts with the original
-  source link and upstream metadata/excerpt, then one concise Chinese `一句话` explanation.
+- Frontier news drafts are flash-news style: the generated `raw_md` starts with a controlled
+  `:::news-card` block containing source metadata, optional image, original-title link, and
+  a concise summary. If no image can be extracted, the card must still include title and
+  summary. Do not append generic generated `一句话` explanations or moderation/process wording.
   Generated topic tags include `前沿资讯` and content tags; do not add a `转载` tag by default.
 
 ### 4. Validation & Error Matrix
