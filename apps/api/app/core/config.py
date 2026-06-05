@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     background_digest_interval_seconds: int = 3600
     background_frontier_news_interval_seconds: int = 3600
     frontier_news_board_slug: str = "frontier"
-    frontier_news_bot_username: str = "资讯机器人"
+    frontier_news_bot_username: str = "小小资讯"
     frontier_news_bot_email: str = "frontier-news-bot@parallellines.local"
     frontier_news_ai_provider: str = "local"
     frontier_news_ai_model: str = "local-deterministic-v1"

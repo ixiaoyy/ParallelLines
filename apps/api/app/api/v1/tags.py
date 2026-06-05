@@ -18,6 +18,17 @@ _TAG_RESPONSE_CACHE = ResponseHotCache[list[TagResponse]](
 )
 
 
+def invalidate_tag_response_cache() -> None:
+    """Clear cached tag-cloud responses after topic visibility/tag writes.
+
+    There are no parameters and no return value. Side effect: invalidates this
+    process' `/tags` hot-cache entries so tag discovery reflects current visible
+    topics instead of waiting for the TTL.
+    """
+
+    _TAG_RESPONSE_CACHE.clear()
+
+
 @router.get("", response_model=ApiResponse[list[TagResponse]])
 async def list_tags(
     session: SessionDep,

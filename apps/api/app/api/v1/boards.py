@@ -3,6 +3,8 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request, Response, status
 
 from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep
+from app.api.v1.tags import invalidate_tag_response_cache
+from app.api.v1.topics import invalidate_topic_list_response_cache
 from app.core.response_cache import ResponseHotCache, scoped_cache_control, user_cache_scope
 from app.schemas.common import ApiResponse
 from app.schemas.forum import (
@@ -41,6 +43,19 @@ _BOARD_TOPIC_LIST_RESPONSE_CACHE = ResponseHotCache[ApiResponse[list[TopicRespon
     ttl_seconds=BOARD_TOPIC_LIST_CACHE_TTL_SECONDS,
     max_entries=256,
 )
+
+
+def invalidate_board_response_caches() -> None:
+    """Clear board directory, board detail, and board topic-list hot caches.
+
+    There are no parameters and no return value. Side effect: invalidates this
+    process' board-related cache entries after writes that change board counters,
+    latest topics, or topic visibility.
+    """
+
+    _BOARD_LIST_RESPONSE_CACHE.clear()
+    _BOARD_DETAIL_RESPONSE_CACHE.clear()
+    _BOARD_TOPIC_LIST_RESPONSE_CACHE.clear()
 
 
 @router.get("", response_model=ApiResponse[list[BoardResponse]])
@@ -353,4 +368,7 @@ async def create_topic(
     current_user: CurrentUserDep,
 ) -> ApiResponse[TopicResponse]:
     topic = await ForumService(session).create_topic(slug, payload, current_user, request)
+    invalidate_topic_list_response_cache()
+    invalidate_board_response_caches()
+    invalidate_tag_response_cache()
     return ApiResponse(data=TopicResponse.from_model(topic))

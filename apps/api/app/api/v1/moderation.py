@@ -2,7 +2,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, status
 
+from app.api.v1.boards import invalidate_board_response_caches
 from app.api.v1.dependencies import CurrentUserDep, SessionDep
+from app.api.v1.tags import invalidate_tag_response_cache
+from app.api.v1.topics import invalidate_topic_list_response_cache
 from app.schemas.common import ApiResponse
 from app.schemas.moderation import (
     AuditLogResponse,
@@ -28,6 +31,20 @@ from app.services.moderation import ModerationService
 from app.services.spam import SpamPreventionService
 
 router = APIRouter(prefix="/moderation", tags=["moderation"])
+
+
+def invalidate_public_content_response_caches(*, include_tags: bool = False) -> None:
+    """Clear public content caches after moderation changes visible content.
+
+    Key parameter `include_tags` should be true when topic creation, restoration,
+    or removal can change tag discovery. Return value is none. Side effect:
+    invalidates in-process topic/board caches and, when requested, tag caches.
+    """
+
+    invalidate_topic_list_response_cache()
+    invalidate_board_response_caches()
+    if include_tags:
+        invalidate_tag_response_cache()
 
 
 @router.post(
@@ -122,6 +139,8 @@ async def decide_reviewable(
         payload,
         current_user,
     )
+    if payload.action in {"approve", "hide", "delete"}:
+        invalidate_public_content_response_caches(include_tags=True)
     return ApiResponse(data=reviewable)
 
 
@@ -159,6 +178,7 @@ async def hide_topic(
     current_user: CurrentUserDep,
 ) -> ApiResponse[ModerationActionResponse]:
     result = await ModerationService(session).hide_topic(topic_id, payload, current_user)
+    invalidate_public_content_response_caches(include_tags=True)
     return ApiResponse(data=result)
 
 
@@ -170,6 +190,7 @@ async def restore_topic(
     current_user: CurrentUserDep,
 ) -> ApiResponse[ModerationActionResponse]:
     result = await ModerationService(session).restore_topic(topic_id, payload, current_user)
+    invalidate_public_content_response_caches(include_tags=True)
     return ApiResponse(data=result)
 
 
@@ -181,6 +202,7 @@ async def hide_post(
     current_user: CurrentUserDep,
 ) -> ApiResponse[ModerationActionResponse]:
     result = await ModerationService(session).hide_post(post_id, payload, current_user)
+    invalidate_public_content_response_caches()
     return ApiResponse(data=result)
 
 
@@ -192,6 +214,7 @@ async def restore_post(
     current_user: CurrentUserDep,
 ) -> ApiResponse[ModerationActionResponse]:
     result = await ModerationService(session).restore_post(post_id, payload, current_user)
+    invalidate_public_content_response_caches()
     return ApiResponse(data=result)
 
 

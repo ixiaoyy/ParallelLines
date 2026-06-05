@@ -14,6 +14,7 @@ export const queryKeys = {
   boards: ["boards"] as const,
   board: (slug: string) => ["boards", slug] as const,
   boardSettings: (slug: string) => ["boards", slug, "settings"] as const,
+  topicsRoot: ["topics"] as const,
   topics: (filter: string) => ["topics", filter] as const,
   topic: (id: string) => ["topics", "detail", id] as const,
   topicAiSummary: (id: string) => ["topics", "detail", id, "ai-summary"] as const,

@@ -37,6 +37,36 @@ _TOPIC_LIST_RESPONSE_CACHE = ResponseHotCache[ApiResponse[list[TopicResponse]]](
 )
 
 
+def invalidate_topic_list_response_cache() -> None:
+    """Clear cached global topic feed responses after topic/post write actions.
+
+    There are no parameters and no return value. Side effect: invalidates this
+    process' `/topics` hot-cache entries so hidden, moved, or updated topics do
+    not remain visible until TTL expiry.
+    """
+
+    _TOPIC_LIST_RESPONSE_CACHE.clear()
+
+
+def invalidate_topic_write_response_caches(*, include_tags: bool = False) -> None:
+    """Clear topic-related public caches after topic or reply write actions.
+
+    Key parameter `include_tags` should be true only when visible topic/tag
+    membership changes. Return value is none. Side effect: invalidates global
+    topic cache plus board caches; tag cache is also cleared when requested.
+    Local imports avoid route-module import cycles during application startup.
+    """
+
+    invalidate_topic_list_response_cache()
+    from app.api.v1.boards import invalidate_board_response_caches
+
+    invalidate_board_response_caches()
+    if include_tags:
+        from app.api.v1.tags import invalidate_tag_response_cache
+
+        invalidate_tag_response_cache()
+
+
 @router.get("", response_model=ApiResponse[list[TopicResponse]])
 async def list_topics(
     session: SessionDep,
@@ -156,6 +186,7 @@ async def set_topic_solution(
     current_user: CurrentUserDep,
 ) -> ApiResponse[TopicResponse]:
     topic = await ForumService(session).set_topic_solution(topic_id, payload, current_user)
+    invalidate_topic_write_response_caches()
     return ApiResponse(data=TopicResponse.from_model(topic))
 
 
@@ -177,6 +208,7 @@ async def vote_topic_poll(
     current_user: CurrentUserDep,
 ) -> ApiResponse[PollResponse]:
     poll = await ForumService(session).vote_topic_poll(topic_id, payload, current_user)
+    invalidate_topic_write_response_caches()
     return ApiResponse(data=PollResponse.from_model(poll))
 
 
@@ -188,6 +220,7 @@ async def update_topic_lifecycle(
     current_user: CurrentUserDep,
 ) -> ApiResponse[TopicResponse]:
     topic = await ForumService(session).update_topic_lifecycle(topic_id, payload, current_user)
+    invalidate_topic_write_response_caches()
     return ApiResponse(data=TopicResponse.from_model(topic))
 
 
@@ -199,6 +232,7 @@ async def move_topic(
     current_user: CurrentUserDep,
 ) -> ApiResponse[TopicResponse]:
     topic = await ForumService(session).move_topic(topic_id, payload, current_user)
+    invalidate_topic_write_response_caches()
     return ApiResponse(data=TopicResponse.from_model(topic))
 
 
@@ -214,6 +248,7 @@ async def split_topic(
         payload,
         current_user,
     )
+    invalidate_topic_write_response_caches()
     return ApiResponse(
         data=TopicLifecycleResponse(
             source_topic=TopicResponse.from_model(source_topic),
@@ -236,6 +271,7 @@ async def merge_topic(
         payload,
         current_user,
     )
+    invalidate_topic_write_response_caches()
     return ApiResponse(
         data=TopicLifecycleResponse(
             source_topic=None,
@@ -272,6 +308,7 @@ async def reply_to_topic(
     current_user: CurrentUserDep,
 ) -> ApiResponse[PostResponse]:
     post = await ForumService(session).reply_to_topic(topic_id, payload, current_user, request)
+    invalidate_topic_write_response_caches()
     return ApiResponse(data=PostResponse.from_model(post))
 
 

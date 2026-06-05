@@ -61,6 +61,17 @@ Frontier source `config` keys:
 | `candidate_items` | Hacker News top-story scan window before AI keyword filtering |
 | `arxiv_category_items` | Optional per-category arXiv result count; absent values are derived from `max_items` |
 
+Frontier source `kind` values:
+
+| Kind | Purpose |
+|---|---|
+| `rss` | RSS/Atom feeds with standard item/entry nodes |
+| `arxiv` | arXiv Atom API category queries |
+| `hacker_news` | Hacker News top story API filtered by AI keywords |
+| `github_search` | GitHub repository search API |
+| `xai_news` | xAI public news HTML index plus announcement detail pages |
+| `arena_leaderboard` | Arena.ai leaderboard pages converted into benchmark news entries |
+
 ### 3. Contracts
 
 - The unified worker owns all backend async work: mail delivery, notification creation, digest dispatch, hot-score recompute, search index rebuilds, temporary upload cleanup, and stale session cleanup.

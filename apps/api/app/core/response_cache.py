@@ -50,6 +50,15 @@ class ResponseHotCache[T]:
             self._entries.clear()
         self._entries[key] = (now + self.ttl_seconds, value)
 
+    def clear(self) -> None:
+        """Remove every cached response from this in-process hot cache.
+
+        There are no parameters and no return value. Side effect: all entries in
+        this process are invalidated immediately after write actions that change
+        list or counter responses.
+        """
+        self._entries.clear()
+
     def _prune_expired(self, now: float) -> None:
         """Remove expired entries using caller-supplied monotonic time `now`.
 

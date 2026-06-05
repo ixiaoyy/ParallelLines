@@ -321,7 +321,7 @@ export function isAuthenticationError(error: unknown): boolean {
 }
 
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
-  return apiRequest<T>(path, { ...init, method: "GET" });
+  return apiRequest<T>(path, { cache: "no-cache", ...init, method: "GET" });
 }
 
 export async function apiPut<T, TBody extends object>(

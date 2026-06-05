@@ -8,7 +8,14 @@ from pydantic import BaseModel, Field
 from app.models.news import FrontierNewsItem, FrontierNewsSource
 from app.schemas.common import ORMModel
 
-FrontierNewsSourceKind = Literal["rss", "arxiv", "hacker_news", "github_search"]
+FrontierNewsSourceKind = Literal[
+    "rss",
+    "arxiv",
+    "hacker_news",
+    "github_search",
+    "xai_news",
+    "arena_leaderboard",
+]
 FrontierNewsItemStatus = Literal[
     "collected",
     "ai_pending",

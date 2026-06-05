@@ -185,7 +185,7 @@ function queueItem(item: FrontierNewsItemResponse) {
       <div class="title-area">
         <span class="panel-kicker">Frontier</span>
         <h2>前沿资讯素材池</h2>
-        <p>定时任务采集白名单来源，AI 先整理成中文，再进入现有审核台；通过后自动由「资讯机器人」发布。</p>
+        <p>定时任务采集白名单来源，AI 先整理成中文，再进入现有审核台；通过后自动由「小小资讯」发布。</p>
       </div>
       <div class="frontier-news-panel__actions">
         <RouterLink class="review-link" :to="{ name: 'admin-moderation' }">去审核台</RouterLink>

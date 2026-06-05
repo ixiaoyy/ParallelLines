@@ -212,7 +212,7 @@ function reviewableTitle(reviewable: ReviewableResponse) {
 
 function reviewableReason(reviewable: ReviewableResponse) {
   if (reviewable.source === "frontier_news") {
-    return "资讯机器人自动采集并整理；审核通过后会直接发布到前沿资讯版块。";
+    return "小小资讯自动采集并整理；审核通过后会直接发布到前沿资讯版块。";
   }
 
   if (
@@ -601,68 +601,45 @@ function mutationErrorMessage(error: unknown) {
               <span>请稍候，待发布内容加载完成后会显示在这里。</span>
             </UiCard>
 
-            <div v-else-if="reviewables.length" class="flag-list">
-              <article v-for="rev in reviewables" :key="rev.id" class="flag-card reviewable-card">
-                <header>
-                  <div>
-                    <span class="flag-meta">
-                      {{ reviewableTypeLabel(rev.type) }} · {{ reviewableStatusLabel(rev.status) }} ·
-                      {{ relativeTime(rev.created_at) }}
-                    </span>
-                    <h3>{{ reviewableTitle(rev) }}</h3>
-                  </div>
-                  <button class="detail-link-btn" @click="openReviewableDetails(rev)">
-                    查看全文
-                  </button>
-                </header>
-
-                <div class="reviewable-card__body">
-                  <p class="reviewable-reason">{{ reviewableReason(rev) }}</p>
-                  <p class="reviewable-excerpt">{{ reviewablePreview(rev) }}</p>
+            <ol v-else-if="reviewables.length" class="reviewable-list">
+              <li v-for="rev in reviewables" :key="rev.id" class="reviewable-list-item">
+                <div class="reviewable-list-item__main">
+                  <span class="reviewable-list-item__meta">
+                    {{ reviewableStatusLabel(rev.status) }} ·
+                    {{ rev.board_name || '全局' }} ·
+                    {{ rev.target_user_name || rev.created_by_name || '系统' }} ·
+                    {{ relativeTime(rev.created_at) }}
+                  </span>
+                  <h3>{{ reviewableTitle(rev) }}</h3>
                 </div>
 
-                <dl>
-                  <div>
-                    <dt>类型</dt>
-                    <dd>{{ reviewableTypeLabel(rev.type) }}</dd>
-                  </div>
-                  <div>
-                    <dt>作者</dt>
-                    <dd>{{ rev.target_user_name || rev.created_by_name || '系统' }}</dd>
-                  </div>
-                  <div>
-                    <dt>版块</dt>
-                    <dd>{{ rev.board_name || '全局' }}</dd>
-                  </div>
-                  <div>
-                    <dt>状态</dt>
-                    <dd>{{ reviewableStatusLabel(rev.status) }}</dd>
-                  </div>
-                </dl>
-
-                <footer>
-                  <div class="footer-actions">
-                    <template v-if="canDecideReviewable(rev)">
-                      <UiButton tone="success" :disabled="pendingAction" @click="approveReviewable(rev)">
-                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "通过发布" }}
-                      </UiButton>
-                      <UiButton tone="ghost" :disabled="pendingAction" @click="rejectReviewable(rev)">
-                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "拒绝" }}
-                      </UiButton>
-                      <UiButton tone="subtle" :disabled="pendingAction" @click="openReviewableDetails(rev)">
-                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "更多处理" }}
-                      </UiButton>
-                    </template>
-                    <template v-else-if="isClaimedByOther(rev)">
-                      <span class="assignee-warn">其他审核员正在处理：{{ rev.assigned_to_name }}</span>
-                    </template>
-                    <template v-else>
-                      <span class="resolved-note">已处理：{{ rev.resolved_by_name || '系统' }}</span>
-                    </template>
-                  </div>
-                </footer>
-              </article>
-            </div>
+                <div class="reviewable-list-item__actions">
+                  <template v-if="canDecideReviewable(rev)">
+                    <UiButton tone="success" :disabled="pendingAction" @click="approveReviewable(rev)">
+                      {{ activeReviewablePendingId === rev.id ? "处理中…" : "通过" }}
+                    </UiButton>
+                    <UiButton tone="ghost" :disabled="pendingAction" @click="rejectReviewable(rev)">
+                      {{ activeReviewablePendingId === rev.id ? "处理中…" : "拒绝" }}
+                    </UiButton>
+                    <UiButton tone="subtle" :disabled="pendingAction" @click="openReviewableDetails(rev)">
+                      详情
+                    </UiButton>
+                  </template>
+                  <template v-else-if="isClaimedByOther(rev)">
+                    <span class="assignee-warn">处理中：{{ rev.assigned_to_name }}</span>
+                    <UiButton tone="subtle" :disabled="pendingAction" @click="openReviewableDetails(rev)">
+                      详情
+                    </UiButton>
+                  </template>
+                  <template v-else>
+                    <span class="resolved-note">已处理：{{ rev.resolved_by_name || '系统' }}</span>
+                    <UiButton tone="subtle" :disabled="pendingAction" @click="openReviewableDetails(rev)">
+                      详情
+                    </UiButton>
+                  </template>
+                </div>
+              </li>
+            </ol>
 
             <UiCard v-else class="moderation-empty">
               <strong>当前筛选下没有审核任务</strong>

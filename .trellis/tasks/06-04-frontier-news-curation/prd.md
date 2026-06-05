@@ -16,7 +16,7 @@
 - 第一版只做「采集候选 + 人工审核发布」，不做自动公开发布。
 - 内容定位以 AI / ML / AI 工具 / 前沿科研为主。
 - 发布目标板块固定为 `frontier` / 「前沿资讯」。
-- 发布作者固定使用「资讯机器人」账号；系统初始化时幂等自动创建为普通用户。
+- 发布作者固定使用「小小资讯」账号；系统初始化时幂等自动创建为普通用户。
 - 定时任务负责采集与 AI 整理；管理员只审核最终候选，不需要手工翻译。
 
 ## Requirements
@@ -74,16 +74,16 @@ AI 输出只作为草稿，不能自动发布；管理员发布前必须能编�
 
 - 调用 `ForumService.create_topic()` 创建主题，确保计数、搜索、通知、插件事件等一致。
 - 创建主题的 `board_slug` 固定为 `frontier`。
-- 创建主题的 `current_user` 为「资讯机器人」账号；审核人记录在 `news_items.approved_by_id`。
+- 创建主题的 `current_user` 为「小小资讯」账号；审核人记录在 `news_items.approved_by_id`。
 - 发帖正文必须保留来源、原文链接、发布时间。
 - 正文只保存摘要/评论/链接，禁止搬运全文、PDF 或大段付费内容。
 
-### R4.5 资讯机器人账号初始化
+### R4.5 小小资讯账号初始化
 
-系统初始化/迁移种子阶段必须幂等确保「资讯机器人」普通用户存在：
+系统初始化/迁移种子阶段必须幂等确保「小小资讯」普通用户存在：
 
-- `username`: `资讯机器人`
-- `display_name`: `资讯机器人`
+- `username`: `小小资讯`
+- `display_name`: `小小资讯`
 - `email`: 默认 `frontier-news-bot@parallellines.local`，允许通过配置覆盖。
 - `role`: `user`，禁止赋予 `moderator` 或 `admin`。
 - `status`: `active`，以便复用现有公开板块发帖服务。
@@ -287,7 +287,7 @@ Admin-only:
 - 定时任务能为新候选生成 AI 中文整理草稿，失败时可重试且不影响采集。
 - 重复 URL/guid 不会重复生成候选。
 - 管理员能编辑候选并发布到「前沿资讯」板块。
-- 发布到固定 `frontier` 板块，发布作者为「资讯机器人」，审核人单独记录。
+- 发布到固定 `frontier` 板块，发布作者为「小小资讯」，审核人单独记录。
 - 发布后的主题包含来源、原文链接和审核说明。
 - 驳回/重复/发布状态可追踪。
 - 来源抓取失败不会中断其他来源，并能在后台看到错误。
@@ -307,7 +307,7 @@ Admin-only:
 - 新增任务名建议：`enrich_frontier_news_item`，由采集任务为新候选逐条入队。
 - 新增配置建议：`BACKGROUND_FRONTIER_NEWS_INTERVAL_SECONDS`。
 - 新增配置建议：`FRONTIER_NEWS_BOARD_SLUG=frontier`。
-- 新增配置建议：`FRONTIER_NEWS_BOT_USERNAME=资讯机器人`。
+- 新增配置建议：`FRONTIER_NEWS_BOT_USERNAME=小小资讯`。
 - 新增配置建议：`FRONTIER_NEWS_BOT_EMAIL=frontier-news-bot@parallellines.local`。
 - 新增配置建议：`FRONTIER_NEWS_AI_PROVIDER`、`FRONTIER_NEWS_AI_MODEL`、`FRONTIER_NEWS_AI_ENABLED`。
 - 发布路径复用 `ForumService.create_topic()`。

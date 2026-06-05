@@ -47,6 +47,28 @@ AI_KEYWORDS = (
     "language model",
     "agent",
     "multimodal",
+    "xai",
+    "grok",
+    "imagine",
+    "openai",
+    "anthropic",
+    "claude",
+    "gemini",
+    "deepmind",
+    "sora",
+    "veo",
+    "runway",
+    "kling",
+    "seedance",
+    "video generation",
+    "image-to-video",
+    "text-to-video",
+    "synchronized audio",
+    "sound design",
+    "leaderboard",
+    "arena",
+    "benchmark",
+    "eval",
     "transformer",
     "reasoning",
     "rag",
@@ -54,6 +76,14 @@ AI_KEYWORDS = (
     "大模型",
     "人工智能",
     "模型",
+    "视频生成",
+    "图生视频",
+    "文生视频",
+    "音画同步",
+    "排行榜",
+    "竞技场",
+    "评测",
+    "基准",
 )
 INTERNAL_COPY_MARKERS = (
     "发布/出现了一条",
@@ -63,6 +93,8 @@ INTERNAL_COPY_MARKERS = (
     "人工核验",
     "人工事实判断",
     "资讯机器人发布",
+    "小小资讯发布",
+    "小小资讯整理",
     "发布到前沿资讯",
     "进入人工审核流程",
     "原文可信度",
@@ -154,6 +186,32 @@ DEFAULT_FRONTIER_SOURCES: tuple[DefaultFrontierSource, ...] = (
         },
         trust_level=80,
         fetch_interval_minutes=240,
+    ),
+    DefaultFrontierSource(
+        key="xai_news",
+        name="xAI News",
+        kind="xai_news",
+        url="https://x.ai/news?category=all",
+        config={
+            "max_items": 12,
+            "review_batch_size": 5,
+            "keywords": list(AI_KEYWORDS),
+        },
+        trust_level=95,
+        fetch_interval_minutes=60,
+    ),
+    DefaultFrontierSource(
+        key="arena_image_to_video",
+        name="Arena.ai Image-to-Video 榜单",
+        kind="arena_leaderboard",
+        url="https://arena.ai/leaderboard/image-to-video",
+        config={
+            "max_items": 8,
+            "review_batch_size": DEFAULT_REVIEW_BATCH_SIZE,
+            "keywords": list(AI_KEYWORDS),
+        },
+        trust_level=85,
+        fetch_interval_minutes=120,
     ),
 )
 
@@ -378,7 +436,7 @@ class FrontierNewsService:
         return bot, board
 
     async def ensure_bot_user(self) -> User:
-        """Create or normalize the ordinary `资讯机器人` account without login tokens."""
+        """Create or normalize the ordinary `小小资讯` account without login tokens."""
 
         username = self.settings.frontier_news_bot_username
         email = self.settings.frontier_news_bot_email
@@ -411,12 +469,19 @@ class FrontierNewsService:
             self.session.add(bot)
             await self.session.flush()
             return bot
-        if bot.username != username or bot.email != email:
+        if bot.email != email:
             raise ConflictError(
                 "frontier_news_bot_conflict",
-                "Frontier news bot username or email is already used by another account",
+                "Frontier news bot email is already used by another account",
             )
-        bot.display_name = bot.display_name or username
+        if bot.username != username:
+            if by_username is not None and by_username.id != bot.id:
+                raise ConflictError(
+                    "frontier_news_bot_conflict",
+                    "Frontier news bot username is already used by another account",
+                )
+            bot.username = username
+        bot.display_name = username
         bot.role = "user"
         bot.status = "active"
         bot.level = 0
@@ -543,6 +608,10 @@ class FrontierNewsService:
             return await self._fetch_hacker_news_entries(source)
         if source.kind == "github_search":
             return await self._fetch_github_entries(source)
+        if source.kind == "xai_news":
+            return await self._fetch_xai_news_entries(source)
+        if source.kind == "arena_leaderboard":
+            return await self._fetch_arena_leaderboard_entries(source)
         raise ValidationError(
             "frontier_source_kind_invalid", "Unsupported frontier news source kind"
         )
@@ -581,6 +650,105 @@ class FrontierNewsService:
                     ),
                     raw_payload=_safe_payload(_element_to_dict(node)),
                     image_url=_entry_image_url(node) or _html_image_url(raw_summary),
+                )
+            )
+        return self._filter_entries(source, entries)
+
+    async def _fetch_xai_news_entries(self, source: FrontierNewsSource) -> list[FetchedNewsEntry]:
+        """Fetch xAI's HTML news index and normalize linked announcement pages."""
+
+        index_html = await self._read_url(source.url)
+        urls = _extract_xai_news_urls(index_html, source.url)
+        entries: list[FetchedNewsEntry] = []
+        for url in urls[: self._max_items(source)]:
+            try:
+                detail_html = await self._read_url(url)
+            except (TimeoutError, OSError):
+                continue
+            title = _html_meta_content(
+                detail_html,
+                ("og:title", "twitter:title", "title"),
+            ) or _html_heading(detail_html)
+            title = re.sub(r"\s+\|\s*xAI\s*$", "", _clean_text(title), flags=re.IGNORECASE)
+            summary = _html_meta_content(
+                detail_html,
+                ("og:description", "twitter:description", "description"),
+            )
+            if not title:
+                continue
+            entries.append(
+                FetchedNewsEntry(
+                    external_id=url,
+                    title=title,
+                    url=url,
+                    summary=summary or None,
+                    author_names=["xAI"],
+                    published_at=_parse_datetime(
+                        _html_meta_content(
+                            detail_html,
+                            (
+                                "article:published_time",
+                                "date",
+                                "datePublished",
+                                "publishdate",
+                            ),
+                        )
+                        or _html_first_date(detail_html)
+                    ),
+                    raw_payload=_safe_payload(
+                        {
+                            "source_kind": "xai_news",
+                            "source_index_url": source.url,
+                            "title": title,
+                            "summary": summary,
+                        }
+                    ),
+                    image_url=_safe_image_url(
+                        _html_meta_raw_content(
+                            detail_html,
+                            ("og:image", "twitter:image", "image"),
+                        )
+                    ),
+                )
+            )
+        return self._filter_entries(source, entries)
+
+    async def _fetch_arena_leaderboard_entries(
+        self, source: FrontierNewsSource
+    ) -> list[FetchedNewsEntry]:
+        """Fetch Arena.ai leaderboard rows as benchmark-oriented frontier news entries."""
+
+        page_html = await self._read_url(source.url)
+        rows = _extract_arena_leaderboard_rows(page_html, source.url, self._max_items(source))
+        entries: list[FetchedNewsEntry] = []
+        leaderboard_date = _html_first_date(page_html)
+        for row in rows:
+            title = row["title"]
+            rank = row["rank"]
+            score = row.get("score") or ""
+            provider = row.get("provider") or "Arena.ai"
+            score_text = f"，分数 {score}" if score else ""
+            summary = (
+                f"Arena.ai Image-to-Video 榜单第 {rank} 名{score_text}；"
+                f"模型：{title}。"
+            )
+            entries.append(
+                FetchedNewsEntry(
+                    external_id=f"{source.key}:{title}",
+                    title=title,
+                    url=row.get("url") or source.url,
+                    summary=summary,
+                    author_names=["Arena.ai", provider] if provider != "Arena.ai" else ["Arena.ai"],
+                    published_at=_parse_datetime(leaderboard_date),
+                    raw_payload=_safe_payload(
+                        {
+                            "source_kind": "arena_leaderboard",
+                            "leaderboard_url": source.url,
+                            "rank": rank,
+                            "score": score,
+                            "provider": provider,
+                        }
+                    ),
                 )
             )
         return self._filter_entries(source, entries)
@@ -700,12 +868,6 @@ class FrontierNewsService:
             if not title or not link:
                 continue
             description = _clean_text(str(item.get("description") or ""))
-            owner = item.get("owner")
-            owner_avatar = (
-                _safe_image_url(str(owner.get("avatar_url") or ""))
-                if isinstance(owner, dict)
-                else None
-            )
             entries.append(
                 FetchedNewsEntry(
                     external_id=str(item.get("node_id") or item.get("id") or link),
@@ -722,7 +884,6 @@ class FrontierNewsService:
                         str(item.get("pushed_at") or item.get("updated_at") or "")
                     ),
                     raw_payload=_safe_payload(item),
-                    image_url=owner_avatar,
                 )
             )
         return self._filter_entries(source, entries)
@@ -852,7 +1013,7 @@ class FrontierNewsService:
                 "ai_risk_flags": item.ai_risk_flags,
             },
             source="frontier_news",
-            source_summary=f"资讯机器人整理：{title}",
+            source_summary=f"{self.settings.frontier_news_bot_username}整理：{title}",
         )
         item.reviewable_id = reviewable.id
         item.status = "review_pending"
@@ -902,24 +1063,26 @@ class FrontierNewsService:
         return "\n".join(line for line in lines if line).strip()
 
     def _image_url(self, item: FrontierNewsItem) -> str:
-        """Return a safe card image URL extracted from normalized or upstream payload data."""
+        """Return a safe source-provided card image URL for the news card.
+
+        Only explicit article/feed image fields are accepted. Avatars, generic
+        URLs, and nested fallback links are intentionally ignored so text-only
+        sources render left-aligned instead of showing misleading filler images.
+        """
 
         payload = item.raw_payload if isinstance(item.raw_payload, dict) else {}
-        direct = _first_image_candidate(
+        return _first_image_candidate(
             payload,
             keys=("image_url", "image", "thumbnail", "thumbnail_url", "og_image"),
         )
-        if direct:
-            return direct
-        owner = payload.get("owner")
-        if isinstance(owner, dict):
-            owner_avatar = _first_image_candidate(owner, keys=("avatar_url",))
-            if owner_avatar:
-                return owner_avatar
-        return _first_image_candidate(payload)
 
     def _card_summary(self, item: FrontierNewsItem) -> str:
-        """Return the summary shown inside the source card, falling back when upstream is sparse."""
+        """Return the concise summary shown inside the source card.
+
+        The summary may come from AI整理 or upstream excerpt text. When both are
+        missing, return an empty string so the card stays as title-only instead
+        of inventing generic filler commentary.
+        """
 
         summary = re.sub(r"^一句话[：:]\s*", "", _clean_text(item.ai_summary_zh)).strip()
         if (
@@ -931,7 +1094,7 @@ class FrontierNewsService:
         original_excerpt = self._original_excerpt(item)
         if original_excerpt:
             return original_excerpt
-        return self._focus_hint(item)
+        return ""
 
     def _original_meta_line(self, item: FrontierNewsItem) -> str:
         """Build the source/date/author metadata line shown directly under the original link."""
@@ -1044,6 +1207,13 @@ class FrontierNewsService:
             ("llm", "大模型"),
             ("agent", "智能体"),
             ("multimodal", "多模态"),
+            ("image-to-video", "视频生成"),
+            ("text-to-video", "视频生成"),
+            ("video generation", "视频生成"),
+            ("grok imagine", "视频生成"),
+            ("leaderboard", "评测"),
+            ("arena", "评测"),
+            ("benchmark", "评测"),
             ("rag", "RAG"),
             ("reasoning", "推理"),
             ("open source", "开源"),
@@ -1125,6 +1295,10 @@ class FrontierNewsService:
             hints.append("标题强调本地运行，可能涉及隐私、成本或部署门槛")
         if "fast" in lowered:
             hints.append("标题强调速度，可能与响应延迟或执行效率有关")
+        if "image-to-video" in lowered or "video" in lowered:
+            hints.append("它关注视频生成模型，适合留意画质、时长、音频和生成控制能力")
+        if "leaderboard" in lowered or "arena" in lowered:
+            hints.append("它来自模型榜单/竞技场，可作为能力对比线索，但仍需看评测口径")
         if not hints:
             return "原始来源没有提供更长摘要，可先根据标题和原文链接了解具体内容。"
         return "；".join(hints) + "。"
@@ -1143,6 +1317,10 @@ class FrontierNewsService:
             takeaways.append("看点之一：本地运行通常意味着更低延迟、隐私更可控，也可能降低云端调用依赖。")
         if "agent" in lowered:
             takeaways.append("看点之一：Agent 能力通常涉及任务规划、工具调用、环境观察和错误恢复。")
+        if "image-to-video" in lowered or "text-to-video" in lowered or "video" in lowered:
+            takeaways.append("内容方向：视频生成模型更新，重点通常包括分辨率、时长、运动一致性和音频控制。")
+        if "leaderboard" in lowered or "arena" in lowered or "benchmark" in lowered:
+            takeaways.append("看点之一：榜单/基准能提供横向比较，但要结合投票样本、误差和测试场景理解。")
         if item.summary:
             takeaways.append(f"摘要补充：{_truncate(_clean_text(item.summary), 140)}")
         else:
@@ -1353,6 +1531,148 @@ def _entry_image_url(node: ET.Element) -> str | None:
                 if image_url:
                     return image_url
     return None
+
+
+def _html_attr(tag: str, attr: str) -> str:
+    """Return one HTML tag attribute value with entity decoding and no DOM dependency."""
+
+    match = re.search(
+        rf"\b{re.escape(attr)}\s*=\s*(['\"])(.*?)\1",
+        tag,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    return html.unescape(match.group(2).strip()) if match else ""
+
+
+def _html_meta_raw_content(page_html: str, names: tuple[str, ...]) -> str:
+    """Extract a meta content value for any requested property/name key."""
+
+    wanted = {name.lower() for name in names}
+    for tag in re.findall(r"<meta\b[^>]*>", page_html, flags=re.IGNORECASE | re.DOTALL):
+        key = (_html_attr(tag, "property") or _html_attr(tag, "name")).lower()
+        if key in wanted:
+            return _html_attr(tag, "content")
+    if "title" in wanted:
+        match = re.search(
+            r"<title\b[^>]*>(.*?)</title>",
+            page_html,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        if match:
+            return html.unescape(match.group(1).strip())
+    return ""
+
+
+def _html_meta_content(page_html: str, names: tuple[str, ...]) -> str:
+    """Extract and clean a human-readable meta content value from an HTML page."""
+
+    return _clean_text(_html_meta_raw_content(page_html, names))
+
+
+def _html_heading(page_html: str) -> str:
+    """Extract the first heading text as a fallback when metadata is missing."""
+
+    match = re.search(
+        r"<h1\b[^>]*>(.*?)</h1>",
+        page_html,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    return _clean_text(match.group(1)) if match else ""
+
+
+def _html_first_date(page_html: str) -> str:
+    """Find the first readable publication date in metadata, time tags, or visible text."""
+
+    for key in ("datetime", "content"):
+        for tag in re.findall(
+            r"<(?:time|meta)\b[^>]*>",
+            page_html,
+            flags=re.IGNORECASE | re.DOTALL,
+        ):
+            value = _html_attr(tag, key)
+            if _parse_datetime(value):
+                return value
+    cleaned = _clean_text(page_html)
+    match = re.search(
+        r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)"
+        r"\.?\s+\d{1,2},\s+20\d{2}\b",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    return match.group(0) if match else ""
+
+
+def _extract_xai_news_urls(page_html: str, base_url: str) -> list[str]:
+    """Extract stable xAI announcement URLs from the public news index HTML."""
+
+    normalized = page_html.replace("\\/", "/").replace("\\u002F", "/")
+    urls: list[str] = []
+    seen: set[str] = set()
+    for match in re.finditer(
+        r"(?:href\s*=\s*['\"]|['\"])(/news/[a-z0-9][a-z0-9-]*)(?:['\"?#])",
+        normalized,
+        flags=re.IGNORECASE,
+    ):
+        url = urllib.parse.urljoin(base_url, match.group(1))
+        canonical = _canonicalize_url(url)
+        if canonical not in seen:
+            seen.add(canonical)
+            urls.append(url)
+    return urls
+
+
+def _extract_arena_leaderboard_rows(
+    page_html: str,
+    source_url: str,
+    limit: int,
+) -> list[dict[str, str]]:
+    """Extract ranked model rows from Arena.ai leaderboard HTML."""
+
+    rows: list[dict[str, str]] = []
+    seen_titles: set[str] = set()
+    rank = 1
+    for match in re.finditer(r"<a\b[^>]*>", page_html, flags=re.IGNORECASE | re.DOTALL):
+        tag = match.group(0)
+        title = _clean_text(_html_attr(tag, "title"))
+        if not title or title in seen_titles:
+            continue
+        href = _html_attr(tag, "href")
+        if not href or "leaderboard" in title.lower():
+            continue
+        lookahead = _clean_text(page_html[match.end() : match.end() + 4000])
+        score_area = lookahead
+        license_match = re.search(r"\b(?:Proprietary|Open Source)\b(.*)", lookahead)
+        if license_match:
+            score_area = license_match.group(1)
+        score_match = re.search(
+            r"\b(\d{3,4})(?:\s*(±|\+/-|&plusmn;)\s*(\d{1,2}))?",
+            score_area,
+        )
+        provider_match = re.search(
+            r"\b([A-Za-z][A-Za-z0-9 ._\-]{1,40})\s*·\s*(?:Proprietary|Open Source)\b",
+            lookahead,
+        )
+        provider = _clean_text(provider_match.group(1)) if provider_match else ""
+        if provider.lower().startswith(title.lower()):
+            provider = provider[len(title) :].strip()
+        if score_match and score_match.group(2) and score_match.group(3):
+            score = f"{score_match.group(1)}{score_match.group(2)}{score_match.group(3)}"
+        else:
+            score = score_match.group(1) if score_match else ""
+        rows.append(
+            {
+                "rank": str(rank),
+                "title": title,
+                "url": urllib.parse.urljoin(source_url, href),
+                "score": score,
+                "provider": provider,
+            }
+        )
+        seen_titles.add(title)
+        rank += 1
+        if len(rows) >= limit:
+            break
+    return rows
 
 
 def _html_image_url(value: str | None) -> str | None:

@@ -23,7 +23,14 @@ if TYPE_CHECKING:
     from app.models.moderation import Reviewable
     from app.models.user import User
 
-FrontierNewsSourceKind = Literal["rss", "arxiv", "hacker_news", "github_search"]
+FrontierNewsSourceKind = Literal[
+    "rss",
+    "arxiv",
+    "hacker_news",
+    "github_search",
+    "xai_news",
+    "arena_leaderboard",
+]
 FrontierNewsItemStatus = Literal[
     "collected",
     "ai_pending",
@@ -55,7 +62,7 @@ class FrontierNewsSource(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     kind: Mapped[str] = mapped_column(
         String(32),
         nullable=False,
-        comment="来源类型：rss、arxiv、hacker_news 或 github_search。",
+        comment="来源类型：rss、arxiv、hacker_news、github_search、xai_news 或 arena_leaderboard。",
     )
     url: Mapped[str] = mapped_column(String(1024), nullable=False, comment="抓取入口 URL。")
     config: Mapped[dict[str, object]] = mapped_column(

@@ -10,7 +10,7 @@ from hashlib import sha256
 from sqlalchemy import case, desc, func, not_, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import noload, selectinload
 from starlette.requests import Request
 
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
@@ -259,6 +259,104 @@ def render_markdown(raw_md: str) -> str:
     return "".join(html_parts) or "<p></p>"
 
 
+def _topic_list_excerpt(raw_md: str) -> str:
+    """Return the compact plain-text excerpt used by topic-list responses.
+
+    Key parameter `raw_md` is the first-post Markdown. Return value is a
+    user-facing summary string, with internal source-card directives and image
+    Markdown removed. The function has no side effects.
+    """
+
+    source = _extract_news_card_excerpt(raw_md) or _strip_news_card_blocks(raw_md)
+    cleaned = " ".join(_markdown_line_to_excerpt_text(source).split())
+    if len(cleaned) > 140:
+        return cleaned[:140].rstrip() + "..."
+    return cleaned
+
+
+def _extract_news_card_excerpt(raw_md: str) -> str:
+    """Return the best readable line from the first internal news-card block.
+
+    Key parameter `raw_md` may contain a controlled `:::news-card` block.
+    Return value prefers the card summary, then the linked title, then the
+    source line; an empty string means no complete card was found. The function
+    has no side effects.
+    """
+
+    card_match = re.search(r"(?ms)^:::news-card\s*\n(?P<body>.*?)\n:::\s*", raw_md.strip())
+    if not card_match:
+        return ""
+
+    source_line = ""
+    title_line = ""
+    summary_lines: list[str] = []
+    for raw_line in card_match.group("body").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        link_match = INLINE_MARKDOWN_LINK_PATTERN.fullmatch(line)
+        if link_match:
+            marker, label, _url = link_match.groups()
+            if marker:
+                continue
+            if not title_line:
+                title_line = label.strip()
+            continue
+        if line.startswith("来源：") and not source_line:
+            source_line = line
+            continue
+        summary_lines.append(line)
+
+    summary = " ".join(_markdown_line_to_excerpt_text(line) for line in summary_lines).strip()
+    if summary:
+        return summary
+    return title_line or source_line
+
+
+def _strip_news_card_blocks(raw_md: str) -> str:
+    """Remove internal news-card blocks before plain-text excerpt extraction.
+
+    Key parameter `raw_md` is arbitrary Markdown. Return value preserves normal
+    Markdown outside `:::news-card` blocks, while dropping incomplete card blocks
+    too. The function has no side effects.
+    """
+
+    lines: list[str] = []
+    in_news_card = False
+    for raw_line in raw_md.splitlines():
+        stripped = raw_line.strip()
+        if stripped == NEWS_CARD_START:
+            in_news_card = True
+            continue
+        if in_news_card:
+            if stripped == NEWS_CARD_END:
+                in_news_card = False
+            continue
+        lines.append(raw_line)
+    return "\n".join(lines)
+
+
+def _markdown_line_to_excerpt_text(value: str) -> str:
+    """Convert a small Markdown line to safe plain text for list excerpts.
+
+    Key parameter `value` is one Markdown line or short fragment. Return value
+    keeps link labels, drops image-only links, and removes lightweight markup.
+    The function has no side effects.
+    """
+
+    def replace_inline_link(match: re.Match[str]) -> str:
+        """Return the visible label for links and no text for image embeds."""
+
+        marker, label, _url = match.groups()
+        return "" if marker else label
+
+    without_links = INLINE_MARKDOWN_LINK_PATTERN.sub(replace_inline_link, value)
+    without_code = re.sub(r"`{1,3}([^`]+)`{1,3}", r"\1", without_links)
+    without_markup = re.sub(r"[*_>#~\[\]()`]", " ", without_code)
+    without_list_marker = re.sub(r"^\s*(?:[-+*]|\d+[.)])\s+", "", without_markup)
+    return html.unescape(" ".join(without_list_marker.split()))
+
+
 def render_news_card(lines: list[str]) -> str:
     """Render a safe source-card block with optional image, title link, and summary text."""
 
@@ -410,7 +508,17 @@ class ForumService:
     async def list_boards(self, current_user: User | None = None) -> list[Board]:
         statement = (
             select(Board)
-            .options(selectinload(Board.parent_board))
+            .options(
+                noload(Board.topics),
+                noload(Board.owner),
+                noload(Board.child_boards),
+                selectinload(Board.parent_board).options(
+                    noload(Board.topics),
+                    noload(Board.owner),
+                    noload(Board.child_boards),
+                    noload(Board.parent_board),
+                ),
+            )
             .where(self._board_visible_condition(current_user))
         )
         result = await self.session.scalars(
@@ -448,7 +556,19 @@ class ForumService:
         include_private_for_owner: bool = False,
     ) -> Board:
         board = await self.session.scalar(
-            select(Board).options(selectinload(Board.parent_board)).where(Board.slug == slug)
+            select(Board)
+            .options(
+                noload(Board.topics),
+                noload(Board.owner),
+                noload(Board.child_boards),
+                selectinload(Board.parent_board).options(
+                    noload(Board.topics),
+                    noload(Board.owner),
+                    noload(Board.child_boards),
+                    noload(Board.parent_board),
+                ),
+            )
+            .where(Board.slug == slug)
         )
         if not board or (
             not include_private_for_owner and not await self._can_access_board(board, current_user)
@@ -480,7 +600,17 @@ class ForumService:
     ) -> list[Board]:
         result = await self.session.scalars(
             select(Board)
-            .options(selectinload(Board.parent_board))
+            .options(
+                noload(Board.topics),
+                noload(Board.owner),
+                noload(Board.child_boards),
+                selectinload(Board.parent_board).options(
+                    noload(Board.topics),
+                    noload(Board.owner),
+                    noload(Board.child_boards),
+                    noload(Board.parent_board),
+                ),
+            )
             .where(
                 Board.parent_board_id == parent_board_id,
                 self._board_visible_condition(current_user),
@@ -639,6 +769,7 @@ class ForumService:
                 selectinload(Topic.author),
                 selectinload(Topic.tags),
                 selectinload(Topic.poll).selectinload(Poll.options),
+                noload(Topic.posts),
             )
             .where(Topic.deleted_at.is_(None), self._board_visible_condition(current_user))
             .where(Topic.visibility == "public")
@@ -702,6 +833,7 @@ class ForumService:
 
         result = await self.session.scalars(statement.distinct().limit(limit))
         topics = list(result)
+        await self._decorate_topic_excerpts(topics)
         await self._decorate_topics_for_user(topics, current_user)
         return topics
 
@@ -731,6 +863,7 @@ class ForumService:
         )
         result = await self.session.scalars(
             select(Tag)
+            .options(noload(Tag.topics))
             .where(or_(Tag.id.in_(visible_tag_ids), Tag.name.in_(TAG_DISPLAY_ORDER)))
             .order_by(tag_display_order_expression(), desc(Tag.topic_count), Tag.name)
             .limit(limit)
@@ -2294,6 +2427,27 @@ class ForumService:
         if poll is None:
             raise NotFoundError("poll_not_found", "Poll not found")
         return poll
+
+    async def _decorate_topic_excerpts(self, topics: list[Topic]) -> None:
+        """Attach first-post excerpts to topic-list rows without loading full post entities."""
+
+        if not topics:
+            return
+        topic_ids = [topic.id for topic in topics]
+        rows = (
+            await self.session.execute(
+                select(Post.topic_id, func.substr(Post.raw_md, 1, 600)).where(
+                    Post.topic_id.in_(topic_ids),
+                    Post.post_number == 1,
+                    Post.deleted_at.is_(None),
+                )
+            )
+        ).all()
+        excerpt_by_topic = {
+            str(topic_id): _topic_list_excerpt(str(raw_md or "")) for topic_id, raw_md in rows
+        }
+        for topic in topics:
+            topic.excerpt = excerpt_by_topic.get(topic.id, "")
 
     async def _decorate_topics_for_user(
         self,

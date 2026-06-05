@@ -137,7 +137,12 @@ export function useContentModerationMutation() {
   >({
     mutationFn: ({ targetType, targetId, hidden, note }) =>
       setContentHidden(targetType, targetId, hidden, { note: note ?? null }),
-    onSuccess: () => invalidateModeration(queryClient),
+    onSuccess: async (_response, variables) => {
+      if (variables.targetType === "topic" && variables.hidden) {
+        pruneTopicFromVisibleCaches(queryClient, variables.targetId);
+      }
+      await invalidateModeration(queryClient);
+    },
   });
 }
 
@@ -199,6 +204,54 @@ async function invalidateModeration(queryClient: ReturnType<typeof useQueryClien
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.moderationRoot }),
     queryClient.invalidateQueries({ queryKey: queryKeys.moderationMyReviewables }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.topicsRoot }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.boards }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.tagsRoot }),
   ]);
+}
+
+/**
+ * Immediately removes a hidden topic from cached topic-list arrays before the refetch returns.
+ *
+ * @param queryClient - TanStack Query client that owns visible topic caches.
+ * @param topicId - Hidden topic id that should disappear from feed, board, search, and related lists.
+ * @returns Nothing; side effects prune topic-list query data and remove stale topic detail/posts caches.
+ */
+function pruneTopicFromVisibleCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+  topicId: string,
+) {
+  const topicQueries = queryClient.getQueryCache().findAll({ queryKey: queryKeys.topicsRoot });
+  topicQueries.forEach((query) => {
+    const [, scope] = query.queryKey;
+    if (typeof scope !== "string") {
+      return;
+    }
+
+    queryClient.setQueryData(query.queryKey, (current: unknown) => {
+      if (!Array.isArray(current)) {
+        return current;
+      }
+      const next = current.filter((entry) => !isCachedTopicEntry(entry, topicId));
+      return next.length === current.length ? current : next;
+    });
+  });
+  queryClient.removeQueries({ queryKey: queryKeys.topic(topicId), exact: true });
+  queryClient.removeQueries({ queryKey: queryKeys.posts(topicId) });
+}
+
+/**
+ * Checks whether an unknown cached list item is the topic row being removed.
+ *
+ * @param entry - Unknown cache entry from a topic-list query.
+ * @param topicId - Topic id to compare against `entry.id`.
+ * @returns True when the cache entry is an object with the requested topic id.
+ */
+function isCachedTopicEntry(entry: unknown, topicId: string): entry is { id: string } {
+  return (
+    typeof entry === "object" &&
+    entry !== null &&
+    "id" in entry &&
+    (entry as { id?: unknown }).id === topicId
+  );
 }

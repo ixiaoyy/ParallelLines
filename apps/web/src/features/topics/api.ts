@@ -11,7 +11,7 @@ import type {
   TopicSort,
 } from "./model";
 
-export function fetchTopics(sort: TopicSort = "latest", limit = 50): Promise<TopicResponse[]> {
+export function fetchTopics(sort: TopicSort = "latest", limit = 30): Promise<TopicResponse[]> {
   return apiGet<TopicResponse[]>(`/topics?sort=${sort}&limit=${limit}`);
 }
 

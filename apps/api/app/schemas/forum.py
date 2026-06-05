@@ -288,14 +288,18 @@ class TopicResponse(BaseModel):
 
     @classmethod
     def from_model(cls, topic: Topic) -> TopicResponse:
-        first_post = next((p for p in topic.posts if p.post_number == 1), None)
-        if not first_post and topic.posts:
-            first_post = sorted(topic.posts, key=lambda p: p.post_number)[0]
+        prepared_excerpt = getattr(topic, "excerpt", None)
+        if isinstance(prepared_excerpt, str):
+            excerpt = prepared_excerpt
+        else:
+            first_post = next((p for p in topic.posts if p.post_number == 1), None)
+            if not first_post and topic.posts:
+                first_post = sorted(topic.posts, key=lambda p: p.post_number)[0]
 
-        excerpt = ""
-        if first_post:
-            cleaned = " ".join(first_post.raw_md.split())
-            excerpt = cleaned[:140] + "..." if len(cleaned) > 140 else cleaned
+            excerpt = ""
+            if first_post:
+                cleaned = " ".join(first_post.raw_md.split())
+                excerpt = cleaned[:140] + "..." if len(cleaned) > 140 else cleaned
 
         return cls(
             id=topic.id,
