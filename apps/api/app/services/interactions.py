@@ -23,6 +23,18 @@ from app.services.badges import BadgeTrustService
 from app.services.forum import calculate_hot_score, notification_idempotency_key
 from app.services.growth import GrowthService
 
+TOPIC_TARGET_NOTIFICATION_TYPES = frozenset(
+    {
+        "replied",
+        "mentioned",
+        "liked",
+        "topic_new_post",
+        "board_new_topic",
+        "user_new_topic",
+        "private_message",
+    }
+)
+
 
 class InteractionService:
     def __init__(self, session: AsyncSession) -> None:
@@ -332,6 +344,7 @@ class InteractionService:
         unread_only: bool = False,
         limit: int = 30,
     ) -> tuple[list[Notification], int]:
+        await self.purge_stale_notifications(current_user)
         statement = (
             select(Notification)
             .options(selectinload(Notification.actor))
@@ -342,7 +355,7 @@ class InteractionService:
         if unread_only:
             statement = statement.where(Notification.read_at.is_(None))
         notifications = list(await self.session.scalars(statement))
-        unread_count = await self.unread_notification_count(current_user)
+        unread_count = await self.unread_notification_count(current_user, purge_stale=False)
         return notifications, unread_count
 
     async def mark_notifications_read(
@@ -351,6 +364,7 @@ class InteractionService:
         *,
         ids: list[str] | None = None,
     ) -> NotificationReadResponse:
+        await self.purge_stale_notifications(current_user, commit=False)
         statement = select(Notification).where(
             Notification.user_id == current_user.id,
             Notification.read_at.is_(None),
@@ -362,13 +376,27 @@ class InteractionService:
         for notification in notifications:
             notification.read_at = now
         await self.session.commit()
-        unread_count = await self.unread_notification_count(current_user)
+        unread_count = await self.unread_notification_count(current_user, purge_stale=False)
         return NotificationReadResponse(
             updated_count=len(notifications),
             unread_count=unread_count,
         )
 
-    async def unread_notification_count(self, current_user: User) -> int:
+    async def unread_notification_count(
+        self,
+        current_user: User,
+        *,
+        purge_stale: bool = True,
+    ) -> int:
+        """Count unread notifications after optionally removing unreachable targets.
+
+        Key parameters: `current_user` scopes the count, and `purge_stale` lets callers that
+        already cleaned the session avoid duplicate work. Returns the current unread total.
+        Side effect: when `purge_stale` is true, stale notification rows may be deleted.
+        """
+
+        if purge_stale:
+            await self.purge_stale_notifications(current_user)
         count = await self.session.scalar(
             select(func.count(Notification.id)).where(
                 Notification.user_id == current_user.id,
@@ -376,6 +404,104 @@ class InteractionService:
             )
         )
         return count or 0
+
+    async def purge_stale_notifications(
+        self,
+        current_user: User,
+        *,
+        commit: bool = True,
+    ) -> int:
+        """Delete current-user notifications whose topic/post target can no longer open.
+
+        Key parameters: `current_user` limits cleanup and board access checks; `commit` controls
+        whether this read-path cleanup is persisted immediately. Returns the number of deleted
+        rows. Side effect: deletes stale notification records, committing by default so GET/SSE
+        responses and later unread badges stay aligned.
+        """
+
+        notifications = list(
+            await self.session.scalars(
+                select(Notification)
+                .options(
+                    selectinload(Notification.topic).selectinload(Topic.board),
+                    selectinload(Notification.post)
+                    .selectinload(Post.topic)
+                    .selectinload(Topic.board),
+                )
+                .where(Notification.user_id == current_user.id)
+            )
+        )
+        deleted_count = 0
+        for notification in notifications:
+            if await self._notification_target_is_stale(notification, current_user):
+                await self.session.delete(notification)
+                deleted_count += 1
+
+        if deleted_count:
+            if commit:
+                await self.session.commit()
+            else:
+                await self.session.flush()
+        return deleted_count
+
+    async def _notification_target_is_stale(
+        self,
+        notification: Notification,
+        current_user: User,
+    ) -> bool:
+        """Return whether a notification points at a missing or inaccessible topic/post.
+
+        Key parameters: `notification` is the candidate row and `current_user` is used for board
+        visibility checks. Returns `True` when the notification should be deleted. No side effects.
+        """
+
+        if notification.type == "moderation":
+            return False
+
+        has_topic_target = notification.type in TOPIC_TARGET_NOTIFICATION_TYPES
+        if has_topic_target and notification.topic_id is None and notification.post_id is None:
+            return True
+
+        if notification.topic_id is not None:
+            if self._topic_is_inactive(notification.topic):
+                return True
+            if not await self._notification_topic_is_accessible(notification.topic, current_user):
+                return True
+
+        if notification.post_id is not None:
+            post = notification.post
+            if post is None or post.deleted_at is not None:
+                return True
+            if self._topic_is_inactive(post.topic):
+                return True
+            if not await self._notification_topic_is_accessible(post.topic, current_user):
+                return True
+
+        return False
+
+    async def _notification_topic_is_accessible(
+        self,
+        topic: Topic | None,
+        current_user: User,
+    ) -> bool:
+        """Check whether a notification topic's board is still visible to the recipient.
+
+        Key parameters: `topic` is the linked topic and `current_user` is the notification owner.
+        Returns `False` for missing boards or lost private-board access. No side effects.
+        """
+
+        if topic is None or topic.board is None:
+            return False
+        return await self._can_access_board(topic.board, current_user)
+
+    @staticmethod
+    def _topic_is_inactive(topic: Topic | None) -> bool:
+        """Return whether a topic is absent, soft-deleted, or hidden.
+
+        Key parameter: `topic` is the target to inspect. Returns a boolean and has no side effects.
+        """
+
+        return topic is None or topic.deleted_at is not None or topic.status == "hidden"
 
     async def notification_stream_snapshot(
         self,

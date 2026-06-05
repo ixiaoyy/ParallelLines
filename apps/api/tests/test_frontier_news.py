@@ -120,7 +120,7 @@ def test_frontier_news_flash_markdown_starts_with_original_source() -> None:
         item_type="news",
         suggested_tags=["智能体"],
         ai_title_zh="【动态】Example AI Agent Release",
-        ai_summary_zh="这条资讯介绍了一个面向开发者的本地 AI 智能体工作流。",
+        ai_summary_zh="一句话：这条资讯介绍了一个面向开发者的本地 AI 智能体工作流。",
         ai_key_points=["它关注本地执行智能体任务。", "它适合关注开发者工具的人阅读。"],
         ai_risk_flags=[],
         score=80,

@@ -241,7 +241,7 @@ function reviewablePreview(reviewable: ReviewableResponse) {
     const previewMarkdown = rawMarkdown
       .replace(/(^|\n):::\s*news-card\s*(?=\n|$)/g, "")
       .replace(/(^|\n):::\s*(?=\n|$)/g, "")
-      .replace(/(^|\n)\s*一句话：.*(?=\n|$)/g, "")
+      .replace(/(^|\n)\s*一句话[：:].*(?=\n|$)/g, "")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
     return previewMarkdown || reviewableReason(reviewable);
@@ -261,7 +261,7 @@ function frontierPreviewCard(reviewable: ReviewableResponse): FrontierPreviewCar
   if (reviewable.source !== "frontier_news") return null;
   const rawMarkdown = textField(reviewable.data.raw_md);
   if (rawMarkdown.includes(":::news-card")) {
-    return parseFrontierNewsCard(rawMarkdown);
+    return parseFrontierNewsCard(rawMarkdown) ?? parseLegacyFrontierNewsCard(rawMarkdown, reviewable);
   }
   return parseLegacyFrontierNewsCard(rawMarkdown, reviewable);
 }
@@ -302,7 +302,14 @@ function parseFrontierNewsCard(rawMarkdown: string): FrontierPreviewCard | null 
     if (!card.source) {
       card.source = line;
     } else {
-      summaryLines.push(line);
+      if (/^一句话[：:]/.test(line)) {
+        continue;
+      }
+      const summaryLine = line.trim();
+      if (!summaryLine || /^(原文|来源)[：:]/.test(summaryLine)) {
+        continue;
+      }
+      summaryLines.push(summaryLine);
     }
   }
   card.summary = summaryLines.join("\n").trim();
@@ -325,7 +332,9 @@ function parseLegacyFrontierNewsCard(
   const summary = (
     lines.find((line) => line.startsWith("原文摘要："))?.replace(/^原文摘要：/, "") ||
     textField(reviewable.data.excerpt)
-  ).trim();
+  )
+    .replace(/^一句话[：:]\s*/, "")
+    .trim();
   const link = original.match(/^原文：\[([^\]\n]+)]\((https?:\/\/[^)\s]+|\/[^\s)]+)\)$/);
   const title = link?.[1] || textField(reviewable.data.original_title) || reviewableTitle(reviewable);
   const url = link?.[2] || textField(reviewable.data.source_url);

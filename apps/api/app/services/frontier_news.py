@@ -921,7 +921,7 @@ class FrontierNewsService:
     def _card_summary(self, item: FrontierNewsItem) -> str:
         """Return the summary shown inside the source card, falling back when upstream is sparse."""
 
-        summary = _clean_text(item.ai_summary_zh)
+        summary = re.sub(r"^一句话[：:]\s*", "", _clean_text(item.ai_summary_zh)).strip()
         if (
             summary
             and not _contains_internal_copy(summary)
