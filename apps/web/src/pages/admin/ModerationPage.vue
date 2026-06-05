@@ -237,6 +237,11 @@ function reviewableReason(reviewable: ReviewableResponse) {
 
 function reviewablePreview(reviewable: ReviewableResponse) {
   if (reviewable.source === "frontier_news") {
+    const previewCard = frontierPreviewCard(reviewable);
+    if (previewCard) {
+      return previewCard.summary;
+    }
+
     const rawMarkdown = textField(reviewable.data.raw_md);
     const previewMarkdown = rawMarkdown
       .replace(/(^|\n):::\s*news-card\s*(?=\n|$)/g, "")
@@ -611,8 +616,10 @@ function mutationErrorMessage(error: unknown) {
                   </button>
                 </header>
 
-                <p class="reviewable-reason">{{ reviewableReason(rev) }}</p>
-                <p class="reviewable-excerpt">{{ reviewablePreview(rev) }}</p>
+                <div class="reviewable-card__body">
+                  <p class="reviewable-reason">{{ reviewableReason(rev) }}</p>
+                  <p class="reviewable-excerpt">{{ reviewablePreview(rev) }}</p>
+                </div>
 
                 <dl>
                   <div>
