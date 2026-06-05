@@ -3,6 +3,7 @@ from typing import cast
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.db.base import utcnow
 from app.models.news import FrontierNewsItem, FrontierNewsSource
 from app.services.frontier_news import DEFAULT_REVIEW_BATCH_SIZE, FrontierNewsService
 
@@ -88,3 +89,51 @@ def test_frontier_news_source_kind_drives_item_classification() -> None:
         )
 
         assert service._classify_item(item, item.title) == expected
+
+
+def test_frontier_news_repost_markdown_starts_with_original_source() -> None:
+    """Verify repost drafts show the original first, then the Chinese explanation."""
+
+    service = FrontierNewsService(cast(AsyncSession, object()), Settings(_env_file=None))
+    source = FrontierNewsSource(
+        key="huggingface_blog",
+        name="Hugging Face Blog",
+        kind="rss",
+        url="https://huggingface.co/blog/feed.xml",
+        config={},
+        enabled=True,
+        trust_level=80,
+        fetch_interval_minutes=240,
+    )
+    item = FrontierNewsItem(
+        source_id="1",
+        source=source,
+        external_id="entry-1",
+        canonical_url="https://huggingface.co/blog/example",
+        canonical_url_hash="entry-1-hash",
+        title="Example AI Agent Release",
+        summary="The upstream post introduces a local AI agent workflow for developers.",
+        author_names=["Hugging Face"],
+        published_at=utcnow(),
+        raw_payload={},
+        item_type="news",
+        suggested_tags=["智能体"],
+        ai_title_zh="【动态】Example AI Agent Release",
+        ai_summary_zh="这条资讯介绍了一个面向开发者的本地 AI 智能体工作流。",
+        ai_key_points=["它关注本地执行智能体任务。", "它适合关注开发者工具的人阅读。"],
+        ai_risk_flags=[],
+        score=80,
+        status="review_pending",
+    )
+
+    raw_md = service._build_topic_markdown(item)
+    tags = service._topic_tags(item)
+
+    assert raw_md.startswith(
+        "转载原文：[Example AI Agent Release](https://huggingface.co/blog/example)"
+    )
+    assert "来源：Hugging Face Blog" in raw_md
+    assert "原文摘要：The upstream post introduces" in raw_md
+    assert "大致解释：" in raw_md
+    assert raw_md.index("转载原文：") < raw_md.index("大致解释：")
+    assert "转载" in tags

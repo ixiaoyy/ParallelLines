@@ -869,32 +869,39 @@ class FrontierNewsService:
         }
 
     def _build_topic_markdown(self, item: FrontierNewsItem, *, note: str | None = None) -> str:
-        """Render reader-facing Chinese news copy without exposing moderation workflow notes."""
+        """Render source-first repost copy without exposing moderation workflow notes."""
 
         del note
         lines = [
-            "### 大概内容",
-            self._public_summary(item),
-            "",
-            "### 要点",
+            f"转载原文：[{item.title}]({item.canonical_url})",
+            self._original_meta_line(item),
         ]
+        original_excerpt = self._original_excerpt(item)
+        if original_excerpt:
+            lines.append(f"原文摘要：{original_excerpt}")
+        lines.extend(["", "大致解释：", self._public_summary(item), "", "要点："])
         for point in self._public_key_points(item):
             lines.append(f"- {point}")
-        lines.extend(
-            [
-                "",
-                "### 可以关注",
-                self._public_interest(item),
-                "",
-                "### 来源",
-                f"- 原文：[{item.title}]({item.canonical_url})",
-            ]
-        )
-        if item.author_names:
-            lines.append(f"- 作者/来源账号：{', '.join(item.author_names[:6])}")
-        if item.published_at:
-            lines.append(f"- 原文时间：{item.published_at.date().isoformat()}")
+        lines.extend(["", "可以关注：", self._public_interest(item)])
         return "\n".join(lines).strip()
+
+    def _original_meta_line(self, item: FrontierNewsItem) -> str:
+        """Build the source/date/author metadata line shown directly under the original link."""
+
+        parts = [f"来源：{item.source.name if item.source else '白名单来源'}"]
+        if item.published_at:
+            parts.append(f"原文时间：{item.published_at.date().isoformat()}")
+        if item.author_names:
+            parts.append(f"作者/来源账号：{', '.join(item.author_names[:6])}")
+        return " · ".join(parts)
+
+    def _original_excerpt(self, item: FrontierNewsItem) -> str:
+        """Return a short upstream excerpt for the source-first repost block."""
+
+        summary = _clean_text(item.summary)
+        if summary and summary.lower() != _clean_text(item.title).lower():
+            return _truncate(summary, 360)
+        return ""
 
     def _public_summary(self, item: FrontierNewsItem) -> str:
         """Return a public summary, recomputing when stored AI copy contains review-only wording."""
@@ -940,7 +947,7 @@ class FrontierNewsService:
     def _topic_tags(self, item: FrontierNewsItem) -> list[str]:
         """Return normalized-looking tag labels while keeping within forum request limits."""
 
-        tags = ["前沿资讯", *item.suggested_tags]
+        tags = ["前沿资讯", "转载", *item.suggested_tags]
         unique: list[str] = []
         for tag in tags:
             safe = str(tag).strip()[:48]
