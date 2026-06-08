@@ -165,6 +165,19 @@
   box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.13);
 }
 
+.editor-box::after {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  z-index: 2;
+  width: 2rem;
+  height: 2.8rem;
+  border-radius: 0 0.65rem 0 0;
+  background: linear-gradient(90deg, transparent, rgba(248, 250, 252, 0.96));
+  pointer-events: none;
+  content: "";
+}
+
 .composer-upload-row {
   display: flex;
   flex-wrap: wrap;

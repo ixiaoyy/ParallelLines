@@ -30,11 +30,9 @@ import UiEmptyState from "@/shared/ui/EmptyState.vue";
 type BoardSort = "latest" | "hot" | "top";
 type TopicStatusFilter = "all" | "solved" | "unanswered" | "official";
 
-const notificationLevelOptions: Array<{ value: NotificationLevel; label: string }> = [
-  { value: "watching", label: "关注 · 新主题通知" },
-  { value: "tracking", label: "跟踪 · 精简通知" },
-  { value: "normal", label: "普通 · 不主动提醒" },
-  { value: "muted", label: "静音 · 不接收通知" },
+const notificationLevelOptions: Array<{ value: NotificationLevel; label: string; description: string }> = [
+  { value: "watching", label: "关注", description: "这个版块有新主题时提醒。" },
+  { value: "muted", label: "静音", description: "不接收这个版块的新主题提醒。" },
 ];
 
 const boardIcons: Record<string, string> = {
@@ -125,6 +123,14 @@ const canManageBoard = computed(
 );
 const boardNotificationLevel = ref<NotificationLevel>("watching");
 const boardNotificationPending = ref(false);
+const boardNotificationSelectValue = computed<NotificationLevel>(() =>
+  boardNotificationLevel.value === "muted" || boardNotificationLevel.value === "normal" ? "muted" : "watching",
+);
+const boardNotificationDescription = computed(
+  () =>
+    notificationLevelOptions.find((option) => option.value === boardNotificationSelectValue.value)?.description ??
+    notificationLevelOptions[0].description,
+);
 const {
   active: followingBoard,
   count: followerCount,
@@ -349,10 +355,10 @@ async function updateBoardNotificationLevel(event: Event) {
                   </template>
                   {{ followingBoard ? "已关注版块" : "关注版块" }}
                 </UiButton>
-                <label class="board-notification-select">
+                <label class="board-notification-select" :title="boardNotificationDescription">
                   <span>版块通知</span>
                   <select
-                    :value="boardNotificationLevel"
+                    :value="boardNotificationSelectValue"
                     :disabled="followPending || boardNotificationPending"
                     aria-label="设置版块通知级别"
                     @change="updateBoardNotificationLevel"

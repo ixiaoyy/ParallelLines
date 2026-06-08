@@ -24,6 +24,14 @@ textarea {
   font: inherit;
 }
 
+@media (max-width: 760px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 code,
 pre {
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;

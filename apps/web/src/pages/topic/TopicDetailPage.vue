@@ -351,19 +351,7 @@ function votePoll(optionIds: string[]) {
 }
 
 function notificationLevelLabel(level: NotificationLevel): string {
-  if (level === "watching") {
-    return "关注";
-  }
-
-  if (level === "tracking") {
-    return "跟踪";
-  }
-
-  if (level === "muted") {
-    return "静音";
-  }
-
-  return "普通";
+  return level === "muted" ? "静音" : "关注";
 }
 
 function moveTopic() {

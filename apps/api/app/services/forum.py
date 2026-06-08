@@ -530,6 +530,41 @@ class ForumService:
         )
         return list(result)
 
+    async def visible_topic_counts_by_board(
+        self,
+        board_ids: Iterable[str],
+        *,
+        current_user: User | None = None,
+    ) -> dict[str, int]:
+        """Return visible public topic counts keyed by board id.
+
+        Key parameter `board_ids` limits the aggregate to known boards and
+        `current_user` applies the same board and author visibility rules as
+        public topic feeds. Return value is a count map; the method has no side
+        effects and does not update counter caches.
+        """
+
+        ids = list(dict.fromkeys(board_ids))
+        if not ids:
+            return {}
+
+        statement = (
+            select(Topic.board_id, func.count(Topic.id))
+            .join(Topic.board)
+            .where(
+                Topic.board_id.in_(ids),
+                Topic.deleted_at.is_(None),
+                Topic.visibility == "public",
+                self._board_visible_condition(current_user),
+            )
+            .group_by(Topic.board_id)
+        )
+        if current_user is not None:
+            statement = statement.where(self._visible_author_condition(current_user))
+
+        rows = await self.session.execute(statement)
+        return {str(board_id): int(count) for board_id, count in rows.all()}
+
     async def board_memberships_for_user(
         self,
         board_ids: Iterable[str],

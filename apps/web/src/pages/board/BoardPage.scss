@@ -342,10 +342,10 @@
   }
 
   &.active {
-    color: var(--btn-primary-fg) !important;
-    border-color: var(--btn-primary-border) !important;
-    background: var(--btn-primary-bg) !important;
-    box-shadow: var(--btn-primary-shadow) !important;
+    color: var(--theme-soft-fg) !important;
+    border-color: var(--theme-soft-border) !important;
+    background: var(--theme-soft-bg) !important;
+    box-shadow: none !important;
   }
 }
 
@@ -471,13 +471,69 @@
 }
 
 @media (max-width: 760px) {
+  .board-page {
+    gap: 0.45rem;
+  }
+
   .board-hero,
   .board-hero__header {
     grid-template-columns: 1fr;
   }
 
   .board-hero {
-    border-radius: 1.05rem;
+    border-radius: 0.95rem;
+    padding: 0.82rem;
+  }
+
+  .board-hero__header {
+    gap: 0.62rem;
+  }
+
+  .board-hero__mark {
+    width: 2.55rem;
+    height: 2.55rem;
+    border-radius: 0.78rem;
+    padding: 0.48rem;
+  }
+
+  .board-hero h1 {
+    font-size: 1.45rem;
+    letter-spacing: 0;
+  }
+
+  .board-title-row {
+    gap: 0.55rem;
+    margin-top: 0;
+  }
+
+  .board-follow-controls {
+    width: 100%;
+  }
+
+  .board-notification-select {
+    width: 100%;
+  }
+
+  .board-notification-select select {
+    min-width: 0;
+  }
+
+  .board-toolbar {
+    gap: 0.6rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .board-tabs {
+    width: 100%;
+    gap: 0.35rem;
+  }
+
+  .board-tabs button {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+    padding: 0.52rem 0.5rem;
+    border-radius: 0.72rem;
   }
 
   .board-toolbar__actions {
@@ -492,9 +548,12 @@
     .status-filters {
       width: 100%;
       justify-content: flex-start;
+      gap: 0.4rem;
 
       button {
         flex: 1;
+        min-width: 0;
+        padding-inline: 0.45rem;
         text-align: center;
       }
     }

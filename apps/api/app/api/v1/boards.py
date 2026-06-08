@@ -77,6 +77,10 @@ async def list_boards(
 
     service = ForumService(session)
     boards = await service.list_boards(current_user)
+    topic_counts = await service.visible_topic_counts_by_board(
+        [board.id for board in boards],
+        current_user=current_user,
+    )
     memberships = await service.board_memberships_for_user(
         [board.id for board in boards],
         current_user,
@@ -87,6 +91,7 @@ async def list_boards(
                 board,
                 memberships.get(board.id),
                 can_create_topic=service.can_create_topic_in_board(board, current_user),
+                topic_count=topic_counts.get(board.id, 0),
             )
             for board in boards
         ]
@@ -145,6 +150,10 @@ async def get_board(
         [board.id, *[child.id for child in child_boards]],
         current_user,
     )
+    topic_counts = await service.visible_topic_counts_by_board(
+        [board.id, *[child.id for child in child_boards]],
+        current_user=current_user,
+    )
     child_can_create_topics = {
         child.id: service.can_create_topic_in_board(child, current_user) for child in child_boards
     }
@@ -157,6 +166,8 @@ async def get_board(
             memberships,
             can_create_topic=service.can_create_topic_in_board(board, current_user),
             child_can_create_topics=child_can_create_topics,
+            topic_count=topic_counts.get(board.id, 0),
+            child_topic_counts=topic_counts,
         )
     )
     _BOARD_DETAIL_RESPONSE_CACHE.set(cache_key, payload)

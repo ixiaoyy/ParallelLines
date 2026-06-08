@@ -154,58 +154,78 @@
 
 @media (max-width: 680px) {
   .topic-detail-hero {
-    gap: 0.56rem;
+    gap: 0.46rem;
     border-radius: 1.05rem;
-    padding: 0.86rem;
+    padding: 0.72rem;
   }
 
   .topic-breadcrumb {
-    font-size: 0.78rem;
+    gap: 0.32rem;
+    font-size: 0.76rem;
   }
 
   .topic-detail-hero h1 {
-    font-size: clamp(1.38rem, 6.3vw, 1.78rem);
-    line-height: 1.2;
+    font-size: clamp(1.22rem, 5.2vw, 1.52rem);
+    line-height: 1.18;
     letter-spacing: 0;
   }
 
   .topic-meta-row {
-    gap: 0.4rem;
-    font-size: 0.82rem;
+    flex-wrap: nowrap;
+    gap: 0.34rem;
+    font-size: 0.8rem;
+  }
+
+  .topic-meta-row strong,
+  .topic-meta-row time {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topic-meta-row strong {
+    max-width: min(38vw, 8.5rem);
+  }
+
+  .topic-meta-row time {
+    min-width: 0;
   }
 
   .topic-taxonomy {
-    gap: 0.38rem;
+    gap: 0.32rem;
   }
 
   .board-chip {
-    padding: 0.22rem 0.56rem;
-    font-size: 0.78rem;
+    display: none;
   }
 
   .topic-stat-line {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.38rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.28rem;
   }
 
   .topic-stat-line div {
-    min-height: 1.82rem;
-    border-radius: 0.75rem;
-    padding: 0.34rem 0.45rem;
+    min-height: 2.1rem;
+    border-radius: 0.68rem;
+    padding: 0.24rem 0.2rem;
     justify-content: center;
   }
 
   .topic-stat-line dt {
-    font-size: 0.66rem;
+    font-size: 0.62rem;
+    line-height: 1.1;
+    text-align: center;
   }
 
   .topic-stat-line dd {
-    font-size: 0.94rem;
+    font-size: 0.88rem;
+    line-height: 1.05;
+    text-align: center;
   }
 }
 
 @media (max-width: 420px) {
   .topic-detail-hero h1 {
-    font-size: clamp(1.32rem, 6vw, 1.6rem);
+    font-size: clamp(1.16rem, 5.6vw, 1.42rem);
   }
 }

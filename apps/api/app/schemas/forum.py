@@ -73,6 +73,7 @@ class BoardResponse(ORMModel):
         member: BoardMember | None = None,
         *,
         can_create_topic: bool = True,
+        topic_count: int | None = None,
     ) -> BoardResponse:
         return cls(
             id=board.id,
@@ -92,7 +93,7 @@ class BoardResponse(ORMModel):
             post_template=board.post_template,
             default_notification_level=board.default_notification_level,
             default_sort=board.default_sort,
-            topic_count=board.topic_count,
+            topic_count=board.topic_count if topic_count is None else topic_count,
             post_count=board.post_count,
             follower_count=board.follower_count,
             is_following=member is not None,
@@ -501,11 +502,14 @@ class BoardDetailResponse(BoardResponse):
         child_memberships: dict[str, BoardMember] | None = None,
         can_create_topic: bool = True,
         child_can_create_topics: dict[str, bool] | None = None,
+        topic_count: int | None = None,
+        child_topic_counts: dict[str, int] | None = None,
     ) -> BoardDetailResponse:
         board_data = BoardResponse.from_board(
             board,
             member,
             can_create_topic=can_create_topic,
+            topic_count=topic_count,
         ).model_dump()
         return cls(
             **board_data,
@@ -515,6 +519,7 @@ class BoardDetailResponse(BoardResponse):
                     child_board,
                     (child_memberships or {}).get(child_board.id),
                     can_create_topic=(child_can_create_topics or {}).get(child_board.id, True),
+                    topic_count=(child_topic_counts or {}).get(child_board.id),
                 )
                 for child_board in (child_boards or [])
             ],

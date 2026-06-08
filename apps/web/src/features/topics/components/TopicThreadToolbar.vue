@@ -18,7 +18,7 @@ import {
   UserOutlined,
   UserAddOutlined,
 } from "@ant-design/icons-vue";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 import type { NotificationLevel } from "@/features/notifications/model";
 import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
@@ -27,14 +27,12 @@ import UiCard from "@/shared/ui/Card.vue";
 type TopicStatus = "open" | "closed" | "archived" | "hidden";
 type TopicLifecycleStatus = "open" | "closed";
 
-const notificationOptions: Array<{ value: NotificationLevel; label: string }> = [
-  { value: "watching", label: "关注" },
-  { value: "tracking", label: "跟踪" },
-  { value: "normal", label: "普通" },
-  { value: "muted", label: "静音" },
+const notificationOptions: Array<{ value: NotificationLevel; label: string; description: string }> = [
+  { value: "watching", label: "关注", description: "接收这个主题的新楼层提醒。" },
+  { value: "muted", label: "静音", description: "不接收这个主题的提醒。" },
 ];
 
-defineProps<{
+const props = defineProps<{
   visibleCount: number;
   totalCount: number;
   onlyAuthor: boolean;
@@ -72,6 +70,13 @@ const emit = defineEmits<{
   deleteTopic: [];
   setNotificationLevel: [level: NotificationLevel];
 }>();
+
+const notificationSelectValue = computed<NotificationLevel>(() =>
+  props.notificationLevel === "muted" ? "muted" : "watching",
+);
+const selectedNotificationOption = computed(
+  () => notificationOptions.find((option) => option.value === notificationSelectValue.value) ?? notificationOptions[0],
+);
 
 const toolbarMoreRef = ref<HTMLDetailsElement | null>(null);
 
@@ -179,10 +184,10 @@ function deleteTopic() {
       <button class="toolbar-icon-button" type="button" title="邀请成员" aria-label="邀请成员" @click="emit('openInvites')">
         <UserAddOutlined aria-hidden="true" />
       </button>
-      <label class="notification-control" title="主题通知">
+      <label class="notification-control" :title="selectedNotificationOption.description">
         <BellOutlined aria-hidden="true" />
         <select
-          :value="notificationLevel"
+          :value="notificationSelectValue"
           :disabled="notificationPending || !canSetNotification"
           aria-label="设置主题通知级别"
           @change="onNotificationChange"

@@ -72,9 +72,15 @@ import UiSkeleton from "@/shared/ui/Skeleton.vue";
 .design-page {
   display: grid;
   gap: 1rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 header {
+  min-width: 0;
+  max-width: 100%;
   border-radius: 1.5rem;
   padding: 2rem;
   background: white;
@@ -103,9 +109,11 @@ p {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.8rem;
+  min-width: 0;
 }
 
 .swatches div {
+  min-width: 0;
   min-height: 5rem;
   border-radius: 1rem;
   padding: 0.75rem;
@@ -124,12 +132,28 @@ p {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+  min-width: 0;
 }
 
 .panel {
   display: grid;
   gap: 1rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   padding: 1rem;
+}
+
+.panel :deep(.ant-card-body) {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.panel.markdown-body pre {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 h2 {
@@ -147,6 +171,22 @@ h2 {
   .swatches,
   .grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  header {
+    border-radius: 1rem;
+    padding: 1.1rem;
+  }
+
+  h1 {
+    font-size: clamp(1.72rem, 10vw, 2.35rem);
+    letter-spacing: 0;
+  }
+
+  .swatches div {
+    min-height: 3.6rem;
   }
 }
 </style>

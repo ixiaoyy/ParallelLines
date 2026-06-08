@@ -12,7 +12,6 @@ import {
   useVerifyEmail,
 } from "@/features/auth/queries";
 import { ApiError } from "@/shared/api/client";
-import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 import PasswordField from "@/shared/ui/PasswordField.vue";
@@ -405,9 +404,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   <div class="auth-page">
     <UiCard class="auth-card">
       <header class="auth-heading">
-        <UiBadge tone="blue">账户</UiBadge>
-        <h1 id="auth-title">加入平行线，继续清晰讨论。</h1>
-        <p>登录后可以发布主题、回复楼层、关注版块，并把有价值的结论收藏起来。</p>
+        <h1 id="auth-title">
+          {{ activeTab === "register" ? "创建账号" : activeTab === "forgot" ? "找回密码" : "登录平行线" }}
+        </h1>
       </header>
 
       <div class="auth-tabs" role="tablist" aria-label="认证方式">
@@ -430,7 +429,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
           <input
             v-model="twoFactorCode"
             autocomplete="one-time-code"
-            placeholder="认证器 6 位验证码或恢复码"
+            placeholder="验证码或恢复码"
           />
         </label>
         <p v-if="formError" class="auth-error" role="alert">{{ formError }}</p>
@@ -452,7 +451,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       >
         <label>
           <span>用户名或邮箱</span>
-          <input v-model="account" autocomplete="username" placeholder="username 或 you@example.com" />
+          <input v-model="account" autocomplete="username" placeholder="用户名或邮箱" />
         </label>
         <label>
           <span>密码</span>
@@ -469,7 +468,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
         <p v-if="formNotice" class="auth-success" role="status">{{ formNotice }}</p>
         <label>
           <span>注册邮箱</span>
-          <input v-model="resetEmail" type="email" autocomplete="email" placeholder="you@example.com" />
+          <input v-model="resetEmail" type="email" autocomplete="email" placeholder="邮箱" />
         </label>
         <UiButton type="button" tone="primary" :disabled="isSubmitting" @click="requestPasswordReset">
           {{ requestPasswordResetMutation.isPending.value ? "发送中…" : "发送重置验证码" }}
@@ -481,7 +480,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
             autocomplete="one-time-code"
             inputmode="numeric"
             maxlength="6"
-            placeholder="请输入 6 位验证码"
+            placeholder="6 位验证码"
           />
         </label>
         <label>
@@ -511,11 +510,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       >
         <label>
           <span>用户名</span>
-          <input v-model="username" autocomplete="username" placeholder="3-32 位中文、字母、数字、点、下划线或短横线" />
+          <input v-model="username" autocomplete="username" placeholder="用户名" />
         </label>
         <label>
           <span>邮箱</span>
-          <input v-model="email" type="email" autocomplete="email" placeholder="you@example.com" />
+          <input v-model="email" type="email" autocomplete="email" placeholder="邮箱" />
         </label>
         <label>
           <span>密码</span>
@@ -540,7 +539,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
             autocomplete="one-time-code"
             inputmode="numeric"
             maxlength="6"
-            placeholder="请输入 6 位验证码"
+            placeholder="6 位验证码"
           />
         </label>
         <p v-if="devVerificationCode" class="auth-helper">
@@ -558,24 +557,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
         <button type="button" class="auth-link-button" @click="resetPendingVerification">重新填写注册信息</button>
       </form>
     </UiCard>
-
-    <aside class="auth-notes" aria-label="账户能力">
-      <h2>账户能做什么</h2>
-      <ul class="auth-steps">
-        <li>
-          <strong>发主题</strong>
-          <span>把问题放进合适版块</span>
-        </li>
-        <li>
-          <strong>接楼层</strong>
-          <span>追问、补充、复盘都留在同一条线</span>
-        </li>
-        <li>
-          <strong>收结论</strong>
-          <span>关注回复，把答案留给后来的人</span>
-        </li>
-      </ul>
-    </aside>
   </div>
 </template>
 

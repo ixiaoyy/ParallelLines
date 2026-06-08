@@ -42,7 +42,7 @@ const saveDraftMutation = useSaveDraft();
 const deleteDraftMutation = useDeleteDraft();
 const uploadMutation = useUploadFile();
 
-const selectedBoardSlug = ref("support");
+const selectedBoardSlug = ref("");
 const title = ref("");
 const body = ref("");
 const tags = ref("");
@@ -57,7 +57,7 @@ const isSaving = ref(false);
 const boardOptions = computed(() => boardsQuery.data.value ?? []);
 const publishableBoardOptions = computed(() => boardOptions.value.filter((board) => board.canCreateTopic));
 const selectedBoard = computed(
-  () => boardOptions.value.find((board) => board.slug === selectedBoardSlug.value) ?? publishableBoardOptions.value[0],
+  () => boardOptions.value.find((board) => board.slug === selectedBoardSlug.value),
 );
 const selectedBoardCanCreateTopic = computed(() => Boolean(selectedBoard.value?.canCreateTopic));
 
@@ -147,11 +147,8 @@ watch(
       return;
     }
 
-    if (
-      publishableBoardOptions.value.length &&
-      !publishableBoardOptions.value.some((board) => board.slug === selectedBoardSlug.value)
-    ) {
-      selectedBoardSlug.value = publishableBoardOptions.value[0].slug;
+    if (selectedBoardSlug.value && !publishableBoardOptions.value.some((board) => board.slug === selectedBoardSlug.value)) {
+      selectedBoardSlug.value = "";
     }
   },
   { immediate: true },
@@ -465,7 +462,7 @@ function localVerDraft(local: NewTopicDraft): NewTopicDraft {
 
 function serverDraftToLocal(server: DraftResponse): NewTopicDraft {
   return {
-    boardSlug: (server.data.boardSlug as string) ?? "support",
+    boardSlug: (server.data.boardSlug as string) ?? "",
     title: (server.data.title as string) ?? "",
     body: (server.data.body as string) ?? "",
     tags: (server.data.tags as string) ?? "",
@@ -566,6 +563,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
           <label class="select-field">
             <span class="sr-only">版块</span>
             <select v-model="selectedBoardSlug" :disabled="boardsQuery.isLoading.value">
+              <option value="" disabled>选择版块</option>
               <option v-if="boardsQuery.isLoading.value" value="">正在加载版块…</option>
               <option
                 v-for="board in boardOptions"
