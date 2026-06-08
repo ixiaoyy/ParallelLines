@@ -5,6 +5,7 @@
   min-width: 0;
   max-width: min(100%, 1220px);
   margin: 0 auto;
+  overflow-x: hidden;
 }
 
 .topic-detail-page--comic-reader {
@@ -38,6 +39,11 @@
   gap: clamp(0.9rem, 2vw, 1.35rem);
   align-items: start;
   min-width: 0;
+}
+
+.topic-layout > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .topic-detail-page--comic-reader .topic-layout {

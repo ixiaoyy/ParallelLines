@@ -31,11 +31,11 @@ export const router = createRouter({
   scrollBehavior(to) {
     if (to.hash) {
       return waitForHashTarget(to.hash).then((found) =>
-        found ? { el: to.hash, behavior: "smooth" } : { top: 0 },
+        found ? { el: to.hash, top: 0, left: 0, behavior: "smooth" } : { top: 0, left: 0 },
       );
     }
 
-    return { top: 0 };
+    return { top: 0, left: 0 };
   },
   routes: [
     {

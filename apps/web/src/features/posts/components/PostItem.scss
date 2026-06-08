@@ -21,6 +21,8 @@
 
 .post-header {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   gap: 0.85rem;
   align-items: flex-start;
   justify-content: space-between;
@@ -30,6 +32,7 @@
 .post-author-line {
   display: flex;
   min-width: 0;
+  max-width: 100%;
   gap: 0.7rem;
   align-items: center;
 }
@@ -44,14 +47,18 @@
 .post-meta-line {
   display: flex;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
   gap: 0.35rem;
   align-items: center;
 }
 
 .post-author-name strong {
+  min-width: 0;
   color: var(--title);
   font-size: 0.98rem;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .post-meta-line,
@@ -247,7 +254,7 @@
   margin: 1.35em 0 0.55em;
   color: var(--title);
   line-height: 1.28;
-  letter-spacing: -0.018em;
+  letter-spacing: 0;
 }
 
 .post-body :deep(.markdown-body h1) {
@@ -402,6 +409,10 @@
   position: relative;
 }
 
+.post-more:not([open]) .post-more-menu {
+  display: none;
+}
+
 .post-more summary {
   list-style: none;
 }
@@ -482,7 +493,7 @@
   font-size: clamp(1.38rem, 1.85vw, 1.7rem);
   font-weight: 780;
   line-height: 1.28;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
 }
 
 .post-item--article .post-body :deep(.markdown-body h2) {
@@ -1041,12 +1052,21 @@
   }
 
   .post-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.55rem;
     margin-bottom: 0.58rem;
   }
 
   .post-author-line {
+    min-width: 0;
     gap: 0.55rem;
+  }
+
+  .post-author-copy,
+  .post-author-name,
+  .post-meta-line {
+    min-width: 0;
   }
 
   .post-body :deep(.markdown-body) {
