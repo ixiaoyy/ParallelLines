@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CloseCircleOutlined, DeleteOutlined, RedoOutlined } from "@ant-design/icons-vue";
+import { CalendarOutlined, CloseCircleOutlined, DeleteOutlined, RedoOutlined } from "@ant-design/icons-vue";
 import { computed, reactive, ref } from "vue";
 
 import { canAccessModeration } from "@/features/auth/permissions";
@@ -173,7 +173,10 @@ function deleteCalendarEvent(event: EventItem) {
     <UiCard class="events-hero">
       <h1>社区日历</h1>
       <p>集中展示活动、报名人数、截止时间和本地时区时间；支持 iCal 订阅。</p>
-      <a class="ical-link" href="/api/v1/events/calendar.ics">订阅 iCal</a>
+      <a class="ical-link" href="/api/v1/events/calendar.ics" aria-label="订阅社区日历 iCal">
+        <CalendarOutlined aria-hidden="true" />
+        <span>订阅 iCal</span>
+      </a>
     </UiCard>
 
     <UiCard v-if="currentUser" class="event-form">

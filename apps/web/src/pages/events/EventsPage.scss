@@ -35,9 +35,40 @@
 
 .ical-link {
   display: inline-flex;
+  gap: 0.38rem;
+  align-items: center;
+  justify-content: center;
   margin-top: 0.7rem;
-  color: var(--primary);
-  font-weight: 750;
+  border: 1px solid var(--theme-soft-border);
+  border-radius: var(--radius-pill);
+  padding: 0.46rem 0.72rem;
+  color: var(--theme-soft-fg);
+  background: color-mix(in srgb, var(--bg-surface) 74%, var(--theme-soft-bg));
+  font-size: 0.9rem;
+  font-weight: 820;
+  line-height: 1;
+  text-decoration: none;
+  width: fit-content;
+  box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.08);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.ical-link:hover,
+.ical-link:focus-visible {
+  border-color: var(--theme-soft-border-hover);
+  color: var(--theme-soft-fg-hover);
+  outline: none;
+  background: var(--theme-soft-bg-hover);
+  transform: translateY(-1px);
+}
+
+.ical-link :deep(svg) {
+  width: 1rem;
+  height: 1rem;
 }
 
 .event-form {
