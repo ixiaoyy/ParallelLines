@@ -34,7 +34,7 @@ function updateSearch(event: Event) {
         </h1>
         <form class="hero-search" role="search" aria-label="筛选首页主题" @submit.prevent="emit('submitSearch')">
           <span aria-hidden="true">⌕</span>
-          <input :value="props.search" type="search" placeholder="输入标题关键词，筛选下面主题" @input="updateSearch" />
+          <input :value="props.search" type="search" placeholder="搜索主题" @input="updateSearch" />
           <button type="submit" :disabled="!props.search.trim()">筛选</button>
         </form>
         <div class="hero-cta">
