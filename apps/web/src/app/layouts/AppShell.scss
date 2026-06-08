@@ -9,6 +9,38 @@
     linear-gradient(180deg, #ffffff 0%, var(--bg-app) 55%, var(--bg-subtle) 100%);
 }
 
+.route-progress {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1300;
+  height: 0.18rem;
+  overflow: hidden;
+  pointer-events: none;
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.route-progress span {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--theme-primary), var(--brand-cyan), var(--accent-geek));
+  box-shadow: 0 0 14px rgba(var(--primary-rgb), 0.34);
+  animation: route-progress-slide 880ms ease-in-out infinite;
+}
+
+.route-progress-enter-active,
+.route-progress-leave-active {
+  transition: opacity 140ms ease;
+}
+
+.route-progress-enter-from,
+.route-progress-leave-to {
+  opacity: 0;
+}
+
 .topbar {
   position: sticky;
   top: 0.875rem;
@@ -37,9 +69,11 @@
   padding: 0.22rem 0.38rem 0.22rem 0.22rem;
   color: var(--title);
   text-decoration: none;
+  touch-action: manipulation;
   transition:
     background 160ms ease,
-    color 160ms ease;
+    color 160ms ease,
+    transform 120ms ease;
 }
 
 .brand:hover,
@@ -47,6 +81,10 @@
   color: var(--theme-soft-fg, #409eff);
   outline: none;
   background: var(--theme-soft-bg-hover);
+}
+
+.brand:active {
+  transform: translateY(1px);
 }
 
 .brand-mark {
@@ -183,6 +221,7 @@
 .publish-link {
   display: inline-flex;
   text-decoration: none;
+  touch-action: manipulation;
 }
 
 .publish-link :deep(.ui-button) {
@@ -204,9 +243,11 @@
   font: inherit;
   font-size: 0.9rem;
   font-weight: 650;
+  touch-action: manipulation;
   transition:
     background 160ms ease,
-    color 160ms ease;
+    color 160ms ease,
+    transform 120ms ease;
 }
 
 .auth-link:hover,
@@ -232,6 +273,13 @@
 
 .logout-button {
   cursor: pointer;
+}
+
+.auth-link:active,
+.admin-link:active,
+.logout-button:active,
+.account-menu__summary:active {
+  transform: translateY(1px);
 }
 
 .sr-only {
@@ -332,6 +380,7 @@
   font: inherit;
   font-size: 0.9rem;
   font-weight: 720;
+  touch-action: manipulation;
 }
 
 .account-menu__item:hover,
@@ -381,6 +430,11 @@
   font: inherit;
   font-size: 0.9rem;
   font-weight: 650;
+  touch-action: manipulation;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 120ms ease;
 }
 
 .nav-toggle:hover,
@@ -388,6 +442,10 @@
   color: var(--theme-soft-fg, #409eff);
   outline: none;
   background: var(--navy-soft);
+}
+
+.nav-toggle:active {
+  transform: translateY(1px);
 }
 
 .mobile-nav-panel {
@@ -409,6 +467,11 @@
   background: transparent;
   text-decoration: none;
   font-weight: 650;
+  touch-action: manipulation;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 120ms ease;
 }
 
 .mobile-nav-links a:hover,
@@ -417,6 +480,10 @@
   color: var(--theme-soft-fg, #409eff);
   outline: none;
   background: var(--navy-soft);
+}
+
+.mobile-nav-links a:active {
+  transform: translateY(1px);
 }
 
 .mobile-search-box {
@@ -606,6 +673,37 @@
   .account-menu__summary {
     width: 2.25rem;
     height: 2.25rem;
+  }
+}
+
+@keyframes route-progress-slide {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  55% {
+    transform: translateX(70vw);
+  }
+
+  100% {
+    transform: translateX(112vw);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-progress span {
+    width: 100%;
+    animation: none;
+  }
+
+  .brand,
+  .auth-link,
+  .admin-link,
+  .logout-button,
+  .account-menu__summary,
+  .nav-toggle,
+  .mobile-nav-links a {
+    transition: none;
   }
 }
 

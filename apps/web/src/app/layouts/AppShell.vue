@@ -8,7 +8,7 @@ import {
   SearchOutlined,
   UserOutlined,
 } from "@ant-design/icons-vue";
-import { computed, defineAsyncComponent, ref, watch, watchEffect } from "vue";
+import { computed, defineAsyncComponent, onUnmounted, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { RouteLocationRaw } from "vue-router";
 
@@ -50,6 +50,9 @@ let profileRoutePrefetched = false;
 let adminRoutePrefetched = false;
 let moderationRoutePrefetched = false;
 const currentUser = computed(() => currentUserQuery.data.value);
+// Auth route already renders the login/register form, so the guest CTA is hidden there to avoid duplicate entry points.
+const isAuthRoute = computed(() => route.name === "auth");
+const isRouteNavigating = ref(false);
 const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
 );
@@ -83,6 +86,21 @@ const isCurrentUserProfileActive = computed(() => {
     (route.name === "user-profile" && String(route.params.username ?? "") === currentUser.value.username)
   );
 });
+let routeFeedbackTimer: number | undefined;
+const removeRouteStartGuard = router.beforeEach((to, from) => {
+  if (to.fullPath === from.fullPath) {
+    return true;
+  }
+
+  window.clearTimeout(routeFeedbackTimer);
+  isRouteNavigating.value = false;
+  routeFeedbackTimer = window.setTimeout(() => {
+    isRouteNavigating.value = true;
+  }, 80);
+  return true;
+});
+const removeRouteEndGuard = router.afterEach(() => finishRouteNavigation());
+const removeRouteErrorHandler = router.onError(() => finishRouteNavigation());
 
 interface NavItem {
   key:
@@ -155,12 +173,31 @@ watch(
   { immediate: true },
 );
 
+schedulePublicRoutePrefetch();
+
+onUnmounted(() => {
+  removeRouteStartGuard();
+  removeRouteEndGuard();
+  removeRouteErrorHandler();
+  window.clearTimeout(routeFeedbackTimer);
+});
+
 useOutsidePointerDown(topbarRef, closeNavigation, () => isNavOpen.value);
 useOutsidePointerDown(accountMenuRef, closeAccountMenu, () => Boolean(accountMenuRef.value?.open));
 
 async function handleLogout() {
   closeAccountMenu();
   await logout();
+}
+
+// Keeps the brand click deterministic: it closes transient menus and scrolls home to the top when already there.
+// Key parameters: none. Side effects: closes topbar popovers and may scroll the window.
+function handleBrandClick() {
+  closeNavigation();
+  closeAccountMenu();
+  if (route.name === "home") {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+  }
 }
 
 function submitGlobalSearch() {
@@ -185,6 +222,26 @@ function closeAccountMenu() {
   if (accountMenuRef.value) {
     accountMenuRef.value.open = false;
   }
+}
+
+// Ends the visible route feedback once Vue Router has resolved the navigation or failed it.
+// Key parameters: none. Side effects: clears the delayed progress timer and hides the progress bar.
+function finishRouteNavigation() {
+  window.clearTimeout(routeFeedbackTimer);
+  isRouteNavigating.value = false;
+}
+
+// Warms the common public route chunks after first paint so topbar and mobile menu clicks feel immediate.
+// Key parameters: none. Side effect: schedules lazy component imports during idle time.
+function schedulePublicRoutePrefetch() {
+  scheduleIdleTask(() => {
+    void import("@/pages/home/HomePage.vue");
+    void import("@/pages/board/BoardDirectoryPage.vue");
+    void import("@/pages/user/UserDirectoryPage.vue");
+    void import("@/pages/events/EventsPage.vue");
+    void import("@/pages/search/SearchPage.vue");
+    void import("@/pages/auth/AuthPage.vue");
+  });
 }
 
 // Prefetches account-only routes after the desktop shell is stable; mobile loads them on demand.
@@ -264,9 +321,9 @@ function isNavItemActive(item: NavItem) {
 
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'is-route-navigating': isRouteNavigating }">
     <header ref="topbarRef" class="topbar" @keydown.esc="closeNavigation">
-      <RouterLink class="brand" :to="{ name: 'home' }" :aria-label="brandHomeLabel" :title="brandHomeLabel">
+      <RouterLink class="brand" to="/" :aria-label="brandHomeLabel" :title="brandHomeLabel" @click="handleBrandClick">
         <span class="brand-mark">
           <img class="brand-logo" :src="brandLogoUrl" alt="" aria-hidden="true" />
         </span>
@@ -318,9 +375,11 @@ function isNavItemActive(item: NavItem) {
 
         <NotificationBell v-if="currentUser" class="topbar-notification" />
 
-        <RouterLink v-if="!currentUser" class="auth-link auth-link--guest" :to="{ name: 'auth' }">
-          {{ t("auth.login_register", "登录/注册") }}
-        </RouterLink>
+        <template v-if="!currentUser">
+          <RouterLink v-if="!isAuthRoute" class="auth-link auth-link--guest" :to="{ name: 'auth' }">
+            {{ t("auth.login_register", "登录/注册") }}
+          </RouterLink>
+        </template>
         <template v-else>
           <details ref="accountMenuRef" class="account-menu" @keydown.esc="closeAccountMenu">
             <summary
@@ -449,6 +508,12 @@ function isNavItemActive(item: NavItem) {
         </form>
       </div>
     </header>
+
+    <Transition name="route-progress">
+      <div v-if="isRouteNavigating" class="route-progress" aria-hidden="true">
+        <span />
+      </div>
+    </Transition>
 
     <main class="shell-main">
       <slot />

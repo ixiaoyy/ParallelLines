@@ -211,20 +211,6 @@
   box-shadow: var(--btn-primary-shadow-hover);
 }
 
-.btn-secondary {
-  border: 1px solid var(--border);
-  color: color-mix(in srgb, var(--primary) 32%, var(--text));
-  background: var(--bg-surface);
-}
-
-.btn-secondary:hover,
-.btn-secondary:focus-visible {
-  border-color: var(--theme-soft-border-hover);
-  color: var(--theme-soft-fg-hover);
-  background: var(--theme-soft-bg-hover);
-  outline: none;
-}
-
 .signal-card {
   position: relative;
   overflow: hidden;
@@ -336,7 +322,7 @@
 
   .hero-cta {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.45rem;
     margin-top: 0;
   }

@@ -111,9 +111,11 @@
 
 .topic-stat-line div {
   display: grid;
+  min-width: 0;
   min-height: 2.16rem;
   align-content: center;
   gap: 0.12rem;
+  overflow: hidden;
   border: 1px solid rgba(var(--muted-rgb), 0.12);
   border-radius: 0.88rem;
   padding: 0.5rem 0.62rem;
@@ -171,7 +173,7 @@
   }
 
   .topic-meta-row {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 0.34rem;
     font-size: 0.8rem;
   }
@@ -200,12 +202,12 @@
   }
 
   .topic-stat-line {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.28rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.36rem;
   }
 
   .topic-stat-line div {
-    min-height: 2.1rem;
+    min-height: 2.32rem;
     border-radius: 0.68rem;
     padding: 0.24rem 0.2rem;
     justify-content: center;
@@ -228,4 +230,5 @@
   .topic-detail-hero h1 {
     font-size: clamp(1.16rem, 5.6vw, 1.42rem);
   }
+
 }

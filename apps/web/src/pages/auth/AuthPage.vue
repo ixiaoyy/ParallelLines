@@ -403,12 +403,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 <template>
   <div class="auth-page">
     <UiCard class="auth-card">
-      <header class="auth-heading">
-        <h1 id="auth-title">
-          {{ activeTab === "register" ? "创建账号" : activeTab === "forgot" ? "找回密码" : "登录平行线" }}
-        </h1>
-      </header>
-
       <div class="auth-tabs" role="tablist" aria-label="认证方式">
         <button type="button" :class="{ active: activeTab === 'login' }" @click="switchTab('login')">登录</button>
         <button type="button" :class="{ active: activeTab === 'register' }" @click="switchTab('register')">注册</button>

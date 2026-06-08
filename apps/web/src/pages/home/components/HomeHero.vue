@@ -39,7 +39,6 @@ function updateSearch(event: Event) {
         </form>
         <div class="hero-cta">
           <RouterLink class="btn btn-primary" :to="{ name: 'new-topic' }">发布主题</RouterLink>
-          <RouterLink class="btn btn-secondary" :to="{ name: 'board-directory' }">浏览版块</RouterLink>
         </div>
         <ul class="hero-proof" aria-label="社区能力">
           <li>让思考发光</li>
