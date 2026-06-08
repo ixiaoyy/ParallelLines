@@ -49,39 +49,6 @@
   outline: none;
 }
 
-.filter-link {
-  display: inline-flex;
-  flex: 0 0 auto;
-  gap: 0.42rem;
-  min-height: 2.35rem;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  padding: 0.55rem 0.85rem;
-  color: color-mix(in srgb, var(--primary) 32%, var(--text));
-  background: var(--bg-surface);
-  cursor: pointer;
-  text-decoration: none;
-  font-size: 0.86rem;
-  font-weight: 800;
-}
-
-.filter-link span {
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 760;
-}
-
-.filter-link:hover,
-.filter-link:focus-visible,
-.filter-link.active {
-  border-color: var(--theme-soft-border-hover);
-  color: var(--theme-soft-fg-hover);
-  background: var(--theme-soft-bg-hover);
-  outline: none;
-}
-
 .topic-filter-panel {
   display: grid;
   grid-template-columns: minmax(13rem, 1.4fr) minmax(9rem, 1fr) minmax(9rem, 1fr) auto;

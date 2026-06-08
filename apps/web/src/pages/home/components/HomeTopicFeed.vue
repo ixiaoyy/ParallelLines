@@ -12,7 +12,6 @@ const props = defineProps<{
   tabs: DiscoveryTab[];
   activeTab: DiscoveryTab["key"];
   topics: TopicCardVM[];
-  totalTopics: number;
   boards: BoardSummary[];
   tags: TagItemVM[];
   titleFilter: string;
@@ -39,13 +38,6 @@ const slicedTopics = computed(() => props.topics.slice(0, displayLimit.value));
 const hasActiveFilters = computed(() =>
   Boolean(props.titleFilter.trim() || props.boardFilter.trim() || props.tagFilter.trim()),
 );
-const filteredSummary = computed(() => {
-  if (!hasActiveFilters.value) {
-    return `${props.totalTopics} 个主题`;
-  }
-
-  return `${props.topics.length}/${props.totalTopics} 个主题`;
-});
 // Builds visitor-facing empty-state copy from the current filters; returns display text only and has no side effects.
 const emptyTitle = computed(() => (hasActiveFilters.value ? "没有符合筛选的主题" : "还没有公开主题"));
 const emptyDescription = computed(() =>
@@ -135,17 +127,6 @@ onUnmounted(() => observer?.disconnect());
           {{ tab.label }}
         </button>
       </div>
-      <button
-        type="button"
-        class="filter-link"
-        :class="{ active: hasActiveFilters }"
-        :aria-expanded="filtersOpen"
-        aria-controls="topic-feed-filters"
-        @click="filtersOpen = !filtersOpen"
-      >
-        过滤帖子
-        <span>{{ filteredSummary }}</span>
-      </button>
     </div>
 
     <div v-if="filtersOpen" id="topic-feed-filters" class="topic-filter-panel" aria-label="帖子过滤">

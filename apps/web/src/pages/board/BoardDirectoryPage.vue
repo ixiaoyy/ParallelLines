@@ -1,280 +1,372 @@
 <script setup lang="ts">
+import {
+  AppstoreOutlined,
+  BulbOutlined,
+  CoffeeOutlined,
+  CompassOutlined,
+  EditOutlined,
+  FileTextOutlined,
+  FireOutlined,
+  FlagOutlined,
+  FolderOpenOutlined,
+  HeartOutlined,
+  LikeOutlined,
+  NotificationOutlined,
+  QuestionCircleOutlined,
+  ReadOutlined,
+  RightOutlined,
+  SearchOutlined,
+  StarFilled,
+  TagsOutlined,
+  TeamOutlined,
+  TrophyOutlined,
+  UnorderedListOutlined,
+} from "@ant-design/icons-vue";
+import type { Component } from "vue";
 import { computed, ref } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
 import { sortBoardsWithFeedbackLast } from "@/entities/board/order";
 import { useBoards } from "@/features/boards/queries";
-import { useTopicFeed } from "@/features/topics/queries";
+import { useTags } from "@/features/tags/queries";
+import { compactNumber } from "@/shared/lib/format";
 import { boardToneClass } from "@/shared/theme/boardPalette";
-import { compactNumber, relativeTime } from "@/shared/lib/format";
-import { topicDetailRoute } from "@/shared/router/topicRoutes";
-import UiBadge from "@/shared/ui/Badge.vue";
-import UiCard from "@/shared/ui/Card.vue";
 
 const searchQuery = ref("");
+const showAllBoards = ref(false);
+const showAllTags = ref(false);
 const boardsQuery = useBoards();
-const topicsQuery = useTopicFeed("latest");
+const tagsQuery = useTags(60);
 
-const boardItems = computed(() => {
-  const boards = boardsQuery.data.value ?? [];
-  return sortBoardsWithFeedbackLast(
-    boards,
+const featuredBoardSlugs = ["qna", "resources", "frontier", "news", "experience", "dev"];
+const featuredTagNames = [
+  "人工智能",
+  "快问快答",
+  "教程",
+  "资源分享",
+  "精华神帖",
+  "原创",
+  "健康",
+  "闲聊",
+  "公告",
+  "集中帖",
+  "福利羊毛",
+  "作品集",
+  "读书",
+  "漫画",
+  "站务反馈",
+  "活动",
+  "发帖模板",
+];
+const boardIcons: Record<string, Component> = {
+  announcements: NotificationOutlined,
+  resources: FolderOpenOutlined,
+  benefits: FireOutlined,
+  reading: ReadOutlined,
+  comics: ReadOutlined,
+  health: HeartOutlined,
+  news: BulbOutlined,
+  frontier: BulbOutlined,
+  experience: TrophyOutlined,
+  dev: FileTextOutlined,
+  engineering: FileTextOutlined,
+  qna: QuestionCircleOutlined,
+  questions: QuestionCircleOutlined,
+  support: QuestionCircleOutlined,
+  feedback: FlagOutlined,
+  lounge: CoffeeOutlined,
+  community: TeamOutlined,
+};
+const tagIcons: Record<string, Component> = {
+  公告: NotificationOutlined,
+  集中帖: TeamOutlined,
+  精华神帖: LikeOutlined,
+  快问快答: QuestionCircleOutlined,
+  人工智能: BulbOutlined,
+  原创: EditOutlined,
+  资源分享: FolderOpenOutlined,
+  福利羊毛: FireOutlined,
+  教程: FileTextOutlined,
+  作品集: TrophyOutlined,
+  读书: ReadOutlined,
+  漫画: ReadOutlined,
+  健康: HeartOutlined,
+  闲聊: CoffeeOutlined,
+  站务反馈: FlagOutlined,
+  活动: FireOutlined,
+  发帖模板: TagsOutlined,
+};
+const tagAccentColors: Record<string, string> = {
+  公告: "#0ea5e9",
+  集中帖: "#06b6d4",
+  精华神帖: "#2563eb",
+  快问快答: "#65a30d",
+  人工智能: "#8b5cf6",
+  原创: "#0ea5e9",
+  资源分享: "#ea580c",
+  福利羊毛: "#f59e0b",
+  教程: "#6366f1",
+  作品集: "#db2777",
+  读书: "#be185d",
+  漫画: "#db2777",
+  健康: "#10b981",
+  闲聊: "#64748b",
+  站务反馈: "#475569",
+  活动: "#f59e0b",
+  发帖模板: "#14b8a6",
+};
+
+const normalizedSearch = computed(() => normalizeSearch(searchQuery.value));
+const boardItems = computed(() =>
+  sortBoardsWithFeedbackLast(
+    boardsQuery.data.value ?? [],
     (left, right) => right.topicCount + right.postCount - (left.topicCount + left.postCount),
-  );
-});
-
-const topicItems = computed(() => topicsQuery.data.value ?? []);
-const intentShortcuts = computed(() =>
-  boardItems.value.slice(0, 4).map((board) => ({
-    label: board.name,
-    hint: board.description,
-    to: { name: "board-detail", params: { slug: board.slug } },
-  })),
+  ),
 );
-
-const directorySignals = computed(() => [
-  {
-    label: "待首答",
-    value: compactNumber(topicItems.value.filter((topic) => topic.status === "open" && topic.replyCount === 0).length),
-    helper: "等待首个回复",
-  },
-  {
-    label: "已解决",
-    value: compactNumber(topicItems.value.filter((topic) => topic.solved).length),
-    helper: "可直接复用的案例",
-  },
-  {
-    label: "官方/精华",
-    value: compactNumber(
-      topicItems.value.filter((topic) => topic.officialReply || topic.featured || topic.pinned).length,
-    ),
-    helper: "高可信入口",
-  },
-]);
-
-const featuredTopics = computed(() =>
-  topicItems.value
-    .filter((topic) => topic.solved || topic.officialReply || topic.featured || topic.pinned)
-    .slice(0, 4),
-);
-
+const publicBoards = computed(() => boardItems.value.filter((board) => board.visibility === "public"));
 const filteredBoards = computed(() => {
-  const keyword = normalizeSearch(searchQuery.value);
-
+  const keyword = normalizedSearch.value;
+  const boards = boardItems.value;
   if (!keyword) {
-    return boardItems.value;
+    return boards;
   }
 
-  return boardItems.value.filter((board) => {
-    const previewText = getTopicsByBoardSlugLocal(board.slug)
-      .map((topic) => `${topic.title} ${topic.excerpt} ${topic.tags.join(" ")}`)
-      .join(" ");
-    return normalizeSearch(`${board.name} ${board.description} ${board.slug} ${previewText}`).includes(keyword);
+  return boards.filter((board) =>
+    normalizeSearch(`${board.name} ${board.description} ${board.slug} ${board.parentBoardName ?? ""}`).includes(keyword),
+  );
+});
+const recommendedBoards = computed(() => {
+  const pool = normalizedSearch.value ? filteredBoards.value : publicBoards.value;
+  const bySlug = new Map(pool.map((board) => [board.slug, board]));
+  const featured = featuredBoardSlugs.flatMap((slug) => {
+    const board = bySlug.get(slug);
+    return board ? [board] : [];
+  });
+  const fallback = pool.filter((board) => !featured.includes(board)).slice(0, 4 - featured.length);
+  return [...featured, ...fallback].slice(0, 4);
+});
+const listedBoards = computed(() => {
+  const boards = filteredBoards.value;
+  if (normalizedSearch.value || showAllBoards.value) {
+    return boards;
+  }
+
+  return boards.slice(0, 6);
+});
+const orderedTags = computed(() => {
+  const tags = tagsQuery.data.value ?? [];
+  const priority = new Map(featuredTagNames.map((name, index) => [name, index]));
+  return [...tags].sort((left, right) => {
+    const leftPriority = priority.get(left.name);
+    const rightPriority = priority.get(right.name);
+    if (leftPriority !== undefined || rightPriority !== undefined) {
+      return (leftPriority ?? Number.MAX_SAFE_INTEGER) - (rightPriority ?? Number.MAX_SAFE_INTEGER);
+    }
+
+    return right.topicCount - left.topicCount;
   });
 });
+const filteredTags = computed(() => {
+  const keyword = normalizedSearch.value;
+  const tags = orderedTags.value;
+  if (!keyword) {
+    return tags;
+  }
 
+  return tags.filter((tag) => normalizeSearch(`${tag.name} ${tag.slug}`).includes(keyword));
+});
+const listedTags = computed(() => {
+  const tags = filteredTags.value;
+  if (normalizedSearch.value || showAllTags.value) {
+    return tags;
+  }
+
+  return tags.slice(0, 8);
+});
+const hasSearch = computed(() => Boolean(normalizedSearch.value));
+const hasHiddenBoards = computed(() => !hasSearch.value && filteredBoards.value.length > listedBoards.value.length);
+const hasHiddenTags = computed(() => !hasSearch.value && filteredTags.value.length > listedTags.value.length);
+const hasVisibleResults = computed(() =>
+  recommendedBoards.value.length > 0 || listedBoards.value.length > 0 || listedTags.value.length > 0,
+);
+
+// normalizeSearch 用途：统一目录搜索文本的空白与大小写；参数为任意输入文本，返回规整后的字符串且无副作用。
 function normalizeSearch(value: string) {
   return value.trim().toLocaleLowerCase();
 }
 
-function previewTopics(board: BoardSummary) {
-  return getTopicsByBoardSlugLocal(board.slug)
-    .filter((topic) => topic.solved || topic.officialReply || topic.replyCount === 0 || topic.featured || topic.pinned)
-    .slice(0, 2);
+// boardIcon 用途：为版块入口选择与产品导航一致的图标；参数为版块摘要，返回 Vue 图标组件且无副作用。
+function boardIcon(board: BoardSummary): Component {
+  return boardIcons[board.slug] ?? TagsOutlined;
 }
 
-// boardMark 用途：生成单字版块徽标，避免多字在方形标记中换行溢出；无副作用。
-function boardMark(board: BoardSummary) {
+// tagIcon 用途：为标签入口选择与产品导航一致的图标；参数为标签名，返回 Vue 图标组件且无副作用。
+function tagIcon(tagName: string): Component {
+  return tagIcons[tagName] ?? TagsOutlined;
+}
+
+// tagAccentStyle 用途：把标签强调色写入 CSS 变量；参数为标签名，返回样式对象且无副作用。
+function tagAccentStyle(tagName: string): Record<string, string> {
+  return { "--tag-accent": tagAccentColors[tagName] ?? "var(--primary)" };
+}
+
+// boardPurpose 用途：生成推荐版块卡片中的短定位；参数为版块摘要，返回短文本且无副作用。
+function boardPurpose(board: BoardSummary) {
   const labels: Record<string, string> = {
-    announcements: "公",
-    comics: "漫",
-    community: "社",
-    dev: "开",
-    engineering: "工",
-    experience: "验",
-    feedback: "馈",
-    frontier: "前",
-    frontend: "前",
-    health: "健",
-    lounge: "聊",
-    news: "新",
-    plugins: "插",
-    qna: "问",
-    questions: "问",
-    reading: "读",
-    resources: "资",
-    support: "问",
+    qna: "快速提问与问题排查",
+    questions: "快速提问与问题排查",
+    support: "快速提问与问题排查",
+    resources: "工具、资料与学习路径",
+    frontier: "AI 与技术前沿资讯",
+    news: "AI 与技术前沿资讯",
+    experience: "实践复盘、踩坑记录",
+    dev: "接口设计与架构方案",
+    engineering: "接口设计与架构方案",
   };
 
-  return (labels[board.slug] ?? board.name.trim().slice(0, 1)) || "版";
-}
-
-function boardIntent(board: BoardSummary) {
-  if (board.parentBoardName) {
-    return `子版块 · ${board.parentBoardName}`;
-  }
-
-  const labels: Record<string, string> = {
-    announcements: "版本通知 / 维护窗口",
-    comics: "每日漫画 / 连载推荐",
-    support: "报错定位 / 可复现排查",
-    dev: "接口设计 / 架构方案",
-    plugins: "主题组件 / 编辑器体验",
-    community: "规则共识 / 运营反馈",
-  };
-
-  return labels[board.slug] ?? "按主题进入";
-}
-
-function boardSignals(board: BoardSummary) {
-  const boardTopics = getTopicsByBoardSlugLocal(board.slug);
-
-  return [
-    { label: "可查主题", value: compactNumber(board.topicCount) },
-    { label: "已解决", value: compactNumber(boardTopics.filter((topic) => topic.solved).length) },
-    { label: "未回复", value: compactNumber(boardTopics.filter((topic) => topic.replyCount === 0).length) },
-  ];
-}
-
-function getTopicsByBoardSlugLocal(slug: string) {
-  return topicItems.value.filter((topic) => topic.boardSlug === slug);
+  return labels[board.slug] ?? board.description;
 }
 </script>
 
 <template>
   <div class="board-directory-page">
-    <section class="boards-hero" aria-labelledby="boards-title">
-      <div class="boards-hero__copy">
-        <UiBadge tone="blue">浏览入口</UiBadge>
-        <h1 id="boards-title">先搜索问题，再选择版块。</h1>
-        <p>
-          输入错误码、接口名、日志关键词或问题现象；如果还不确定归属，再用下面的意图入口进入对应问题区。
-        </p>
+    <header class="discover-hero">
+      <h1>发现内容</h1>
+      <p>按版块进入，按标签筛选。</p>
 
-        <label class="board-search" for="board-directory-search">
-          <span>搜索主题、标签或版块</span>
-          <input
-            id="board-directory-search"
-            v-model="searchQuery"
-            type="search"
-            placeholder="例如：500 Error、请求超时、OIDC、Markdown"
-            autocomplete="off"
-          />
-        </label>
+      <label class="discover-search" for="board-directory-search">
+        <SearchOutlined aria-hidden="true" />
+        <input
+          id="board-directory-search"
+          v-model="searchQuery"
+          type="search"
+          placeholder="搜索版块或标签"
+          autocomplete="off"
+        />
+      </label>
+    </header>
 
-        <div class="intent-shortcuts" aria-label="常见问题入口">
-          <RouterLink v-for="shortcut in intentShortcuts" :key="shortcut.label" :to="shortcut.to">
-            <strong>{{ shortcut.label }}</strong>
-            <span>{{ shortcut.hint }}</span>
+    <div v-if="boardsQuery.isError.value || tagsQuery.isError.value" class="directory-state directory-state--error" role="alert">
+      部分入口暂时不可用，请稍后刷新。
+    </div>
+
+    <main class="discover-stack" aria-label="内容发现入口">
+      <section class="discover-section" aria-labelledby="recommended-boards-title">
+        <div class="section-head">
+          <h2 id="recommended-boards-title">
+            <StarFilled aria-hidden="true" />
+            推荐版块
+          </h2>
+          <button v-if="hasHiddenBoards" type="button" @click="showAllBoards = true">
+            查看全部
+            <RightOutlined aria-hidden="true" />
+          </button>
+        </div>
+
+        <div v-if="boardsQuery.isLoading.value" class="recommended-grid" role="status" aria-label="正在加载推荐版块">
+          <span v-for="item in 4" :key="item" class="recommended-skeleton"></span>
+        </div>
+        <p v-else-if="!recommendedBoards.length" class="directory-state">暂无匹配版块</p>
+        <div v-else class="recommended-grid">
+          <RouterLink
+            v-for="board in recommendedBoards"
+            :key="board.id"
+            class="recommended-card"
+            :class="boardToneClass(board.slug)"
+            :to="{ name: 'board-detail', params: { slug: board.slug } }"
+          >
+            <span class="recommended-card__top">
+              <span class="recommended-icon">
+                <component :is="boardIcon(board)" aria-hidden="true" />
+              </span>
+              <span>
+                <strong>{{ board.name }}</strong>
+                <small>{{ boardPurpose(board) }}</small>
+              </span>
+            </span>
+            <em>{{ compactNumber(board.topicCount) }} 个主题</em>
           </RouterLink>
         </div>
-      </div>
+      </section>
 
-      <div class="boards-hero__signals" aria-label="可操作线索">
-        <div v-for="signal in directorySignals" :key="signal.label">
-          <span>{{ signal.label }}</span>
-          <strong>{{ signal.value }}</strong>
-          <small>{{ signal.helper }}</small>
-        </div>
-      </div>
-    </section>
-
-    <div class="board-directory-layout">
-      <main class="board-results" aria-label="版块列表">
-        <UiCard v-if="boardsQuery.isError.value || topicsQuery.isError.value" class="directory-api-error" role="alert">
-          部分内容暂时加载失败，请稍后刷新。
-        </UiCard>
-
-        <div class="board-results__heading">
-          <div>
-            <UiBadge tone="green">{{ searchQuery ? "搜索结果" : "推荐路径" }}</UiBadge>
-            <h2>{{ searchQuery ? `匹配 “${searchQuery}” 的版块` : "按问题意图进入" }}</h2>
-          </div>
-          <span>{{ filteredBoards.length }} 个入口 · 优先看已解决与官方回复</span>
+      <section v-if="listedBoards.length || boardsQuery.isLoading.value" class="discover-section" aria-labelledby="all-boards-title">
+        <div class="section-head">
+          <h2 id="all-boards-title">
+            <AppstoreOutlined aria-hidden="true" />
+            全部版块
+          </h2>
+          <button v-if="hasHiddenBoards" type="button" @click="showAllBoards = true">
+            查看全部
+            <RightOutlined aria-hidden="true" />
+          </button>
         </div>
 
-        <section v-if="filteredBoards.length" class="board-grid">
-          <article
-            v-for="board in filteredBoards"
+        <div v-if="boardsQuery.isLoading.value" class="board-chip-grid" role="status" aria-label="正在加载版块">
+          <span v-for="item in 6" :key="item" class="chip-skeleton"></span>
+        </div>
+        <div v-else class="board-chip-grid">
+          <RouterLink
+            v-for="board in listedBoards"
             :key="board.id"
-            class="board-tile"
+            class="board-chip"
             :class="boardToneClass(board.slug)"
+            :to="{ name: 'board-detail', params: { slug: board.slug } }"
           >
-            <RouterLink class="board-tile__main" :to="{ name: 'board-detail', params: { slug: board.slug } }">
-              <span class="board-mark" :title="board.name">
-                <span class="board-mark__text">{{ boardMark(board) }}</span>
-              </span>
-              <span class="board-copy">
-                <span class="board-kicker">{{ boardIntent(board) }}</span>
-                <strong>{{ board.name }}</strong>
-                <em>{{ board.description }}</em>
-              </span>
-            </RouterLink>
+            <component :is="boardIcon(board)" aria-hidden="true" />
+            <span>{{ board.name }}</span>
+          </RouterLink>
+        </div>
+      </section>
 
-            <dl class="board-signal-list">
-              <div v-for="signal in boardSignals(board)" :key="signal.label">
-                <dt>{{ signal.label }}</dt>
-                <dd>{{ signal.value }}</dd>
-              </div>
-            </dl>
+      <section v-if="listedTags.length || tagsQuery.isLoading.value" class="discover-section" aria-labelledby="hot-tags-title">
+        <div class="section-head">
+          <h2 id="hot-tags-title">
+            <TagsOutlined aria-hidden="true" />
+            热门标签
+          </h2>
+          <button v-if="hasHiddenTags" type="button" @click="showAllTags = true">
+            查看全部
+            <RightOutlined aria-hidden="true" />
+          </button>
+        </div>
 
-            <div class="board-topic-preview" aria-label="精选主题">
-              <span class="board-topic-preview__label">推荐先看</span>
-              <RouterLink
-                v-for="topic in previewTopics(board)"
-                :key="topic.id"
-                :to="topicDetailRoute(topic)"
-              >
-                <span>{{ topic.title }}</span>
-                <small>
-                  {{ topic.solved ? "已解决" : topic.officialReply ? "官方回复" : `${compactNumber(topic.replyCount)} 回复` }} ·
-                  {{ relativeTime(topic.lastPostedAt) }}
-                </small>
-              </RouterLink>
-              <span v-if="previewTopics(board).length === 0" class="empty-preview">暂无精选主题，进入后查看全部主题</span>
-            </div>
+        <div v-if="tagsQuery.isLoading.value" class="tag-chip-grid" role="status" aria-label="正在加载标签">
+          <span v-for="item in 8" :key="item" class="chip-skeleton"></span>
+        </div>
+        <div v-else class="tag-chip-grid">
+          <RouterLink
+            v-for="tag in listedTags"
+            :key="tag.id"
+            class="tag-chip"
+            :style="tagAccentStyle(tag.name)"
+            :to="{ name: 'search', query: { q: tag.name, tag: tag.name } }"
+          >
+            <component :is="tagIcon(tag.name)" aria-hidden="true" />
+            <span># {{ tag.name }}</span>
+            <em>{{ compactNumber(tag.topicCount) }}</em>
+          </RouterLink>
+          <RouterLink v-if="!hasSearch && showAllTags" class="tag-chip tag-chip--all" :to="{ name: 'search' }">
+            <UnorderedListOutlined aria-hidden="true" />
+            <span>所有标签</span>
+          </RouterLink>
+        </div>
+      </section>
 
-            <footer class="board-actions">
-              <span>可先查看内容；登录后再关注通知。</span>
-              <RouterLink class="open-board-link" :to="{ name: 'board-detail', params: { slug: board.slug } }">
-                查看相关问题
-              </RouterLink>
-            </footer>
-          </article>
-        </section>
+      <RouterLink v-if="!hasSearch" class="latest-topic-link" :to="{ name: 'home' }">
+        <CompassOutlined aria-hidden="true" />
+        <span>
+          <strong>不知道去哪？</strong>
+          <small>看看大家在聊什么</small>
+        </span>
+        <em>
+          浏览最新主题
+          <RightOutlined aria-hidden="true" />
+        </em>
+      </RouterLink>
+    </main>
 
-        <UiCard v-else class="no-board-results">
-          <h2>没有匹配的版块</h2>
-          <p>换一个错误码、接口名或中文症状试试，例如 “OIDC”、“导入超时”、“Markdown”。</p>
-        </UiCard>
-      </main>
-
-      <aside class="board-directory-sidebar" aria-label="版块侧边栏">
-        <UiCard class="sidebar-panel spotlight-panel">
-          <div class="sidebar-panel__head">
-            <span class="panel-kicker">精选入口</span>
-            <h2>优先从这些主题开始</h2>
-          </div>
-          <ul>
-            <li v-for="topic in featuredTopics" :key="topic.id">
-              <RouterLink :to="topicDetailRoute(topic)">{{ topic.title }}</RouterLink>
-              <small>{{ topic.boardName }} · {{ topic.solved ? "已解决" : topic.officialReply ? "官方回复" : "精华" }}</small>
-            </li>
-          </ul>
-        </UiCard>
-
-        <UiCard class="sidebar-panel guide-panel">
-          <div class="sidebar-panel__head">
-            <span class="panel-kicker">发帖前</span>
-            <p class="guide-panel__lead">让问题更快得到回复</p>
-          </div>
-          <ol class="guide-panel__steps">
-            <li>先搜错误码、接口名、日志关键字。</li>
-            <li>排障类主题附环境、复现步骤和完整报错。</li>
-            <li>如果已有相似主题，优先补充你的差异信息。</li>
-          </ol>
-        </UiCard>
-      </aside>
+    <div v-if="!boardsQuery.isLoading.value && !tagsQuery.isLoading.value && !hasVisibleResults" class="directory-state">
+      没有匹配的版块或标签。
     </div>
   </div>
 </template>

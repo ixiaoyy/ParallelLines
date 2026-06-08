@@ -286,7 +286,6 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
           :tabs="discoveryTabs"
           :active-tab="activeTab"
           :topics="visibleTopics"
-          :total-topics="discoveryTopics.length"
           :boards="boardSummaries"
           :tags="topTags"
           :title-filter="titleFilter"
