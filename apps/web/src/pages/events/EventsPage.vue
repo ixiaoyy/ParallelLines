@@ -179,39 +179,51 @@ function deleteCalendarEvent(event: EventItem) {
     <UiCard v-if="currentUser" class="event-form">
       <h2>创建活动</h2>
       <form novalidate @input="formStatus = ''" @submit.prevent="submitEvent">
-        <input
-          v-model="form.title"
-          placeholder="活动标题"
-          aria-label="活动标题"
-          aria-describedby="event-form-status"
-          :aria-invalid="Boolean(formStatus && formStatusTone === 'error' && !form.title.trim())"
-          required
-        />
-        <input
-          v-model="form.startAt"
-          type="datetime-local"
-          aria-label="活动开始时间"
-          aria-describedby="event-form-status"
-          :aria-invalid="Boolean(formStatus && formStatusTone === 'error' && !form.startAt)"
-          required
-        />
-        <input
-          v-model="form.endAt"
-          type="datetime-local"
-          aria-label="活动结束时间"
-          aria-describedby="event-form-status"
-          :aria-invalid="Boolean(formStatus && formStatusTone === 'error' && !form.endAt)"
-          required
-        />
-        <input
-          v-model="form.timezone"
-          placeholder="Asia/Shanghai"
-          aria-label="活动时区"
-          aria-describedby="event-form-status"
-          :aria-invalid="Boolean(formStatus && formStatusTone === 'error' && !form.timezone.trim())"
-          required
-        />
-        <UiButton type="submit" :disabled="createEvent.isPending.value">发布活动</UiButton>
+        <label class="event-field event-field--title">
+          <span>标题</span>
+          <input
+            v-model="form.title"
+            placeholder="活动标题"
+            aria-label="活动标题"
+            aria-describedby="event-form-status"
+            :aria-invalid="Boolean(formStatus && formStatusTone === 'error' && !form.title.trim())"
+            required
+          />
+        </label>
+        <label class="event-field">
+          <span>开始时间</span>
+          <input
+            v-model="form.startAt"
+            type="datetime-local"
+            aria-label="活动开始时间"
+            aria-describedby="event-form-status"
+            :aria-invalid="Boolean(formStatus && formStatusTone === 'error' && !form.startAt)"
+            required
+          />
+        </label>
+        <label class="event-field">
+          <span>结束时间</span>
+          <input
+            v-model="form.endAt"
+            type="datetime-local"
+            aria-label="活动结束时间"
+            aria-describedby="event-form-status"
+            :aria-invalid="Boolean(formStatus && formStatusTone === 'error' && !form.endAt)"
+            required
+          />
+        </label>
+        <label class="event-field event-field--timezone">
+          <span>时区</span>
+          <input
+            v-model="form.timezone"
+            placeholder="Asia/Shanghai"
+            aria-label="活动时区"
+            aria-describedby="event-form-status"
+            :aria-invalid="Boolean(formStatus && formStatusTone === 'error' && !form.timezone.trim())"
+            required
+          />
+        </label>
+        <UiButton class="event-form__submit" type="submit" :disabled="createEvent.isPending.value">发布活动</UiButton>
         <p
           v-if="formStatus"
           id="event-form-status"
@@ -240,41 +252,46 @@ function deleteCalendarEvent(event: EventItem) {
           </div>
           <h2>{{ event.title }}</h2>
           <p>{{ event.description || "暂无活动说明。" }}</p>
-          <small>
-            {{ event.timezone }} · 已报名 {{ event.going_count }}
-            <template v-if="event.capacity"> / {{ event.capacity }}</template>
-          </small>
-          <div v-if="canManageEvent(event)" class="event-admin-actions" aria-label="活动管理">
-            <UiButton
-              tone="subtle"
-              :disabled="updateEventLifecycle.isPending.value"
-              @click="toggleEventLifecycle(event)"
-            >
-              <template #icon>
-                <RedoOutlined v-if="event.status === 'canceled'" aria-hidden="true" />
-                <CloseCircleOutlined v-else aria-hidden="true" />
-              </template>
-              {{ event.status === "canceled" ? "恢复活动" : "终止活动" }}
-            </UiButton>
-            <UiButton
-              tone="danger"
-              :disabled="deleteEvent.isPending.value"
-              @click="deleteCalendarEvent(event)"
-            >
-              <template #icon>
-                <DeleteOutlined aria-hidden="true" />
-              </template>
-              {{ deleteEvent.isPending.value ? "删除中…" : "删除" }}
-            </UiButton>
+          <div class="event-card__footer">
+            <small>
+              {{ event.timezone }} · 已报名 {{ event.going_count }}
+              <template v-if="event.capacity"> / {{ event.capacity }}</template>
+            </small>
+            <div class="event-card__actions">
+              <div v-if="canManageEvent(event)" class="event-admin-actions" aria-label="活动管理">
+                <UiButton
+                  tone="subtle"
+                  :disabled="updateEventLifecycle.isPending.value"
+                  @click="toggleEventLifecycle(event)"
+                >
+                  <template #icon>
+                    <RedoOutlined v-if="event.status === 'canceled'" aria-hidden="true" />
+                    <CloseCircleOutlined v-else aria-hidden="true" />
+                  </template>
+                  {{ event.status === "canceled" ? "恢复活动" : "终止活动" }}
+                </UiButton>
+                <UiButton
+                  tone="danger"
+                  :disabled="deleteEvent.isPending.value"
+                  @click="deleteCalendarEvent(event)"
+                >
+                  <template #icon>
+                    <DeleteOutlined aria-hidden="true" />
+                  </template>
+                  {{ deleteEvent.isPending.value ? "删除中…" : "删除" }}
+                </UiButton>
+              </div>
+              <UiButton
+                v-if="currentUser"
+                class="event-rsvp-button"
+                tone="subtle"
+                :disabled="event.status === 'canceled' || rsvpEvent.isPending.value"
+                @click="rsvpEvent.mutate({ eventId: event.id, payload: { status: 'going' } })"
+              >
+                {{ eventRsvpLabel(event) }}
+              </UiButton>
+            </div>
           </div>
-          <UiButton
-            v-if="currentUser"
-            tone="subtle"
-            :disabled="event.status === 'canceled' || rsvpEvent.isPending.value"
-            @click="rsvpEvent.mutate({ eventId: event.id, payload: { status: 'going' } })"
-          >
-            {{ eventRsvpLabel(event) }}
-          </UiButton>
         </UiCard>
       </section>
     </template>

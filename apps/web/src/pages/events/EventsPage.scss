@@ -1,13 +1,15 @@
 .events-page {
   display: grid;
   gap: 1rem;
+  width: min(100%, 62rem);
+  margin: 0 auto;
 }
 
 .events-hero,
 .event-form,
 .events-state,
 .event-card {
-  padding: 1rem;
+  padding: 1.15rem;
 }
 
 .events-hero {
@@ -20,7 +22,7 @@
 .events-hero h1,
 .event-form h2,
 .event-card h2 {
-  margin: 0.3rem 0;
+  margin: 0;
   color: var(--title);
 }
 
@@ -38,23 +40,54 @@
   font-weight: 750;
 }
 
+.event-form {
+  overflow: hidden;
+}
+
 .event-form form {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
-  gap: 0.55rem;
+  grid-template-columns: minmax(0, 1.25fr) repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+  margin-top: 0.95rem;
+}
+
+.event-field {
+  display: grid;
+  min-width: 0;
+  gap: 0.34rem;
+}
+
+.event-field span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.event-field--timezone {
+  grid-column: span 2;
 }
 
 .event-form input {
+  width: 100%;
+  min-width: 0;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 0.55rem 0.65rem;
+  border-radius: 0.55rem;
+  padding: 0.68rem 0.72rem;
   color: var(--text);
   background: var(--bg-surface);
+  font: inherit;
+  line-height: 1.2;
 }
 
 .event-form input[aria-invalid="true"] {
   border-color: var(--danger);
   box-shadow: 0 0 0 2px var(--danger-bg);
+}
+
+.event-form__submit {
+  align-self: end;
+  min-height: 2.7rem;
 }
 
 .event-form-status {
@@ -78,13 +111,13 @@
 
 .event-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.9rem;
 }
 
 .event-card {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.72rem;
+  min-width: 0;
 }
 
 .event-card__topline {
@@ -95,6 +128,8 @@
 }
 
 .event-time {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 0.82rem;
   font-weight: 750;
 }
@@ -110,20 +145,92 @@
   background: var(--danger-bg);
 }
 
+.event-card h2 {
+  font-size: 1.4rem;
+  line-height: 1.18;
+}
+
+.event-card p {
+  margin: 0;
+  max-width: 48rem;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.event-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.event-card__footer small {
+  min-width: min(100%, 13rem);
+}
+
+.event-card__actions {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .event-admin-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
+.event-card__actions :deep(.ui-button) {
+  min-height: 2.35rem;
+  justify-content: center;
+}
+
 @media (max-width: 920px) {
-  .event-form form,
-  .event-list {
+  .event-form form {
     grid-template-columns: 1fr;
+  }
+
+  .event-field--timezone {
+    grid-column: auto;
   }
 
   .event-admin-actions :deep(.ui-button) {
     flex: 1 1 8rem;
     justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .events-page {
+    gap: 0.85rem;
+  }
+
+  .events-hero,
+  .event-form,
+  .events-state,
+  .event-card {
+    padding: 0.92rem;
+  }
+
+  .event-card__topline,
+  .event-card__footer,
+  .event-card__actions,
+  .event-admin-actions {
+    align-items: stretch;
+  }
+
+  .event-card__actions,
+  .event-admin-actions {
+    width: 100%;
+  }
+
+  .event-card__actions :deep(.ui-button) {
+    flex: 1 1 100%;
   }
 }
