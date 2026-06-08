@@ -2,6 +2,7 @@ import type { components } from "@/shared/api/generated";
 
 export type EventItem = components["schemas"]["EventResponse"];
 export type EventCreateRequest = components["schemas"]["EventCreateRequest"];
+export type EventLifecycleRequest = components["schemas"]["EventLifecycleRequest"];
 export type EventRsvpRequest = components["schemas"]["EventRsvpRequest"];
 export type EventRsvp = components["schemas"]["EventRsvpResponse"];
 

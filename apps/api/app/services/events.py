@@ -6,12 +6,14 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import NotFoundError, PermissionDeniedError, ValidationError
+from app.core.permissions import is_global_moderator
 from app.db.base import utcnow
 from app.models.event import CalendarEvent, EventRsvp
 from app.models.user import User
 from app.schemas.events import (
     EventCreateRequest,
+    EventLifecycleRequest,
     EventResponse,
     EventRsvpRequest,
     EventRsvpResponse,
@@ -71,11 +73,61 @@ class EventService:
             capacity=payload.capacity,
             rsvp_deadline=self._aware(payload.rsvp_deadline) if payload.rsvp_deadline else None,
             reminder_minutes_before=payload.reminder_minutes_before,
+            status="scheduled",
         )
         self.session.add(event)
         await self.session.commit()
         await self.session.refresh(event)
         return EventResponse.from_model(event, going_count=0)
+
+    async def update_event_lifecycle(
+        self,
+        event_id: str,
+        payload: EventLifecycleRequest,
+        current_user: User,
+    ) -> EventResponse:
+        """Update an event lifecycle status for its creator or a global moderator.
+
+        Key parameters identify the event, requested status, and acting user.
+        Return value is the refreshed event response. Side effect: persists the
+        event status and updates `updated_at` when the status changes.
+        """
+
+        event = await self._event(event_id)
+        self._require_can_manage_event(event, current_user)
+        if event.status != payload.status:
+            event.status = payload.status
+            event.updated_at = utcnow()
+            await self.session.commit()
+            await self.session.refresh(event)
+        counts = await self._going_counts([event.id])
+        my_status = await self._my_statuses([event.id], current_user.id)
+        return EventResponse.from_model(
+            event,
+            going_count=counts.get(event.id, 0),
+            my_rsvp_status=my_status.get(event.id),
+        )
+
+    async def delete_event(self, event_id: str, current_user: User) -> EventResponse:
+        """Delete an event and its RSVP rows for its creator or a global moderator.
+
+        Key parameters identify the event and acting user. Return value is the
+        event snapshot from before deletion. Side effect: removes the event row;
+        database cascade deletes linked RSVP rows.
+        """
+
+        event = await self._event(event_id)
+        self._require_can_manage_event(event, current_user)
+        counts = await self._going_counts([event.id])
+        my_status = await self._my_statuses([event.id], current_user.id)
+        response = EventResponse.from_model(
+            event,
+            going_count=counts.get(event.id, 0),
+            my_rsvp_status=my_status.get(event.id),
+        )
+        await self.session.delete(event)
+        await self.session.commit()
+        return response
 
     async def rsvp_event(
         self,
@@ -86,6 +138,8 @@ class EventService:
         event = await self._event(event_id)
         now = utcnow()
         if payload.status == "going":
+            if event.status == "canceled":
+                raise ValidationError("event_canceled", "Event is canceled.")
             deadline = event.rsvp_deadline or event.start_at
             if self._is_past(deadline, now):
                 raise ValidationError("event_rsvp_closed", "RSVP is closed.")
@@ -119,6 +173,7 @@ class EventService:
                     f"DTEND:{self._ical_time(event.end_at)}",
                     f"SUMMARY:{self._escape_ical(event.title)}",
                     f"DESCRIPTION:{self._escape_ical(event.description or '')}",
+                    f"STATUS:{'CANCELLED' if event.status == 'canceled' else 'CONFIRMED'}",
                     "END:VEVENT",
                 ]
             )
@@ -130,6 +185,26 @@ class EventService:
         if event is None:
             raise NotFoundError("event_not_found", "Event not found")
         return event
+
+    def _require_can_manage_event(self, event: CalendarEvent, current_user: User) -> None:
+        """Require creator or global moderator permission for an event management action.
+
+        Key parameters are the loaded event and acting user. Return value is
+        none. Side effect: raises `PermissionDeniedError` when the user cannot
+        manage this event.
+        """
+
+        if not self._can_manage_event(event, current_user):
+            raise PermissionDeniedError("permission_denied", "Permission denied")
+
+    def _can_manage_event(self, event: CalendarEvent, current_user: User) -> bool:
+        """Return whether a user may cancel or delete an event.
+
+        Key parameters are the loaded event and acting user. Return value is a
+        boolean permission decision. Side effects: none.
+        """
+
+        return event.created_by_id == current_user.id or is_global_moderator(current_user)
 
     async def _going_count(self, event_id: str) -> int:
         count = await self.session.scalar(

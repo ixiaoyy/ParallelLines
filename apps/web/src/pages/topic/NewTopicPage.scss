@@ -1,7 +1,7 @@
 .new-topic-page {
   display: grid;
   justify-items: center;
-  padding-block: clamp(0.35rem, 1.4vw, 0.9rem) 2.25rem;
+  padding-block: clamp(0.35rem, 1.4vw, 0.9rem) calc(2.25rem + env(safe-area-inset-bottom));
 }
 
 .topic-composer {
@@ -283,7 +283,7 @@
   position: absolute;
   right: 0.72rem;
   bottom: 0.5rem;
-  color: #dc2626;
+  color: var(--muted);
   background: rgba(255, 255, 255, 0.86);
   font-size: 0.82rem;
   font-weight: 860;
@@ -358,7 +358,11 @@
 @media (max-width: 760px) {
   .new-topic-page {
     justify-items: stretch;
-    padding-block: 0.35rem 2rem;
+    padding-block: 1.05rem calc(7rem + env(safe-area-inset-bottom));
+  }
+
+  .composer-card {
+    border-radius: 1rem;
   }
 
   .composer-meta-row {
@@ -366,7 +370,8 @@
   }
 
   .composer-heading {
-    align-items: flex-start;
+    align-items: center;
+    padding-top: 0.2rem;
   }
 
   .composer-plus {
@@ -382,12 +387,65 @@
   }
 
   .topic-md-editor {
-    height: 20rem;
+    height: clamp(15rem, 42dvh, 19rem);
+  }
+
+  .topic-md-editor :deep(.md-editor-toolbar-wrapper) {
+    scrollbar-width: none;
+  }
+
+  .topic-md-editor :deep(.md-editor-toolbar-wrapper::-webkit-scrollbar) {
+    display: none;
+  }
+
+  .topic-md-editor :deep(.md-editor-toolbar) {
+    gap: 0.08rem;
+    padding-inline: 0.32rem;
+  }
+
+  .topic-md-editor :deep(.md-editor-toolbar-item) {
+    min-width: 2.55rem;
+    height: 2.45rem;
+    justify-content: center;
+  }
+
+  .topic-md-editor :deep(.cm-content) {
+    min-height: 10rem;
+    padding-bottom: 2.25rem;
+  }
+
+  .composer-upload-row {
+    min-height: 2.25rem;
+  }
+
+  .composer-footer {
+    position: sticky;
+    z-index: 5;
+    bottom: calc(0.55rem + env(safe-area-inset-bottom));
+    margin: 0 -0.1rem -0.1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.9rem;
+    padding: 0.45rem;
+    background: color-mix(in srgb, var(--bg-surface) 96%, transparent);
+    box-shadow:
+      0 14px 36px rgba(var(--shadow-rgb), 0.14),
+      0 0 0 1px rgba(255, 255, 255, 0.76) inset;
+    backdrop-filter: blur(12px);
   }
 
   .composer-footer :deep(.ui-button),
   .discard-link {
-    flex: 1 1 8rem;
     justify-content: center;
+  }
+
+  .composer-footer :deep(.ui-button) {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .discard-link {
+    flex: 0 0 auto;
+    min-height: 2.35rem;
+    padding-inline: 0.55rem;
   }
 }

@@ -5095,6 +5095,23 @@
         "title": "EventCreateRequest",
         "type": "object"
       },
+      "EventLifecycleRequest": {
+        "properties": {
+          "status": {
+            "enum": [
+              "scheduled",
+              "canceled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "EventLifecycleRequest",
+        "type": "object"
+      },
       "EventResponse": {
         "properties": {
           "capacity": {
@@ -5184,6 +5201,14 @@
             "title": "Start At",
             "type": "string"
           },
+          "status": {
+            "enum": [
+              "scheduled",
+              "canceled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
           "timezone": {
             "title": "Timezone",
             "type": "string"
@@ -5212,6 +5237,7 @@
           "end_at",
           "timezone",
           "reminder_minutes_before",
+          "status",
           "going_count",
           "created_at"
         ],
@@ -6104,7 +6130,10 @@
               "rss",
               "arxiv",
               "hacker_news",
-              "github_search"
+              "github_search",
+              "xai_news",
+              "arena_leaderboard",
+              "news_html_index"
             ],
             "title": "Kind",
             "type": "string"
@@ -16449,6 +16478,112 @@
           }
         },
         "summary": "Calendar Ics",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/events/{event_id}": {
+      "delete": {
+        "description": "Delete an event for the creator or global moderators.\n\nKey parameters are the path event id, database session, and authenticated\nuser. Return value is the deleted event snapshot. Side effect: removes the\nevent and cascades its RSVP rows in the database.",
+        "operationId": "delete_event_api_v1_events__event_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_EventResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/events/{event_id}/lifecycle": {
+      "put": {
+        "description": "Update an event lifecycle status for the creator or global moderators.\n\nKey parameters are the path event id, lifecycle payload, database session,\nand authenticated user. Return value is the updated event envelope. Side\neffect: persists a status transition such as scheduled -> canceled.",
+        "operationId": "update_event_lifecycle_api_v1_events__event_id__lifecycle_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventLifecycleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_EventResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Event Lifecycle",
         "tags": [
           "events"
         ]

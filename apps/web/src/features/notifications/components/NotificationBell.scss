@@ -261,7 +261,7 @@
   padding: 1.4rem 1rem;
   color: var(--text);
   text-align: center;
-  background: rgba(248, 250, 252, 0.72);
+  background: color-mix(in srgb, var(--bg-surface) 88%, var(--bg-subtle));
 }
 
 .notification-empty :deep(.anticon) {
@@ -285,11 +285,77 @@
 
 @media (max-width: 560px) {
   .notification-trigger {
-    width: 2.35rem;
-    height: 2.35rem;
+    width: 2.28rem;
+    height: 2.28rem;
+    box-shadow: 0 8px 16px rgba(var(--notify-rgb), 0.1);
   }
 
   .notification-panel {
-    right: -3.15rem;
+    position: fixed;
+    top: calc(4.35rem + env(safe-area-inset-top));
+    right: 0.65rem;
+    left: 0.65rem;
+    width: auto;
+    max-height: calc(100dvh - 5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    gap: 0.7rem;
+    overflow: hidden;
+    border-radius: 1.05rem;
+    padding: 0.78rem;
+    background:
+      linear-gradient(135deg, var(--bg-surface), color-mix(in srgb, var(--bg-surface) 92%, var(--cyan-soft))),
+      radial-gradient(circle at 100% 0%, rgba(var(--notify-rgb), 0.08), transparent 12rem);
+    box-shadow:
+      0 18px 44px rgba(var(--shadow-rgb), 0.18),
+      0 0 0 1px rgba(255, 255, 255, 0.88) inset;
+  }
+
+  .notification-panel::before {
+    top: -0.36rem;
+    right: 7.1rem;
+  }
+
+  .notification-panel__header {
+    gap: 0.75rem;
+  }
+
+  .notification-panel__header h2 {
+    font-size: 1rem;
+    letter-spacing: 0;
+  }
+
+  .mark-all {
+    min-height: 2rem;
+    padding: 0.34rem 0.5rem;
+    font-size: 0.78rem;
+  }
+
+  .mark-all:disabled {
+    display: none;
+  }
+
+  .notification-list {
+    max-height: calc(100dvh - 10rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding-right: 0;
+  }
+
+  .notification-card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.44rem;
+    border-radius: 0.88rem;
+    padding: 0.62rem;
+  }
+
+  .notification-copy span {
+    white-space: normal;
+  }
+
+  .mark-one {
+    justify-self: start;
+  }
+
+  .notification-empty {
+    min-height: 8.5rem;
+    padding: 1.15rem 0.78rem;
+    background: var(--bg-surface);
   }
 }

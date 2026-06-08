@@ -264,13 +264,14 @@
   }
 
   .hero-search {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto;
     border-radius: 1.25rem;
+    padding-right: 0.26rem;
   }
 
   .hero-search button {
-    grid-column: 1 / -1;
-    width: 100%;
+    min-width: 4.6rem;
+    padding-inline: 0.72rem;
   }
 
 }
@@ -286,6 +287,21 @@
 
   .hero-title {
     font-size: clamp(1.7rem, 9vw, 2.2rem);
+  }
+
+  .hero-search {
+    gap: 0.36rem;
+    padding-left: 0.68rem;
+  }
+
+  .hero-search input {
+    font-size: 0.9rem;
+  }
+
+  .hero-search button {
+    min-height: 2.25rem;
+    min-width: 4.35rem;
+    padding: 0.38rem 0.66rem;
   }
 
   .signal-visual {

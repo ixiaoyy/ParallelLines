@@ -16,9 +16,13 @@ Frontend APIs/composables:
 |---|---|
 | `fetchEvents(params)` | Load calendar events |
 | `createEvent(payload)` | Create event |
+| `updateEventLifecycle(eventId, payload)` | Terminate or restore an event |
+| `deleteEvent(eventId)` | Delete an event |
 | `rsvpEvent(eventId, payload)` | RSVP going/canceled |
 | `useEvents()` | Query wrapper |
 | `useCreateEvent()` | Mutation + event invalidation |
+| `useUpdateEventLifecycle()` | Mutation + event invalidation |
+| `useDeleteEvent()` | Mutation + event invalidation |
 | `useRsvpEvent()` | Mutation + event invalidation |
 
 Route:
@@ -31,6 +35,8 @@ Route:
 - Local time display uses `Intl.DateTimeFormat` with `event.timezone`.
 - Event creation uses `datetime-local` input converted to ISO instant before sending.
 - RSVP buttons are shown only to authenticated users.
+- Event management buttons are shown to the event creator, admins, and global moderators.
+- Canceled events show a terminated state and disable RSVP.
 - iCal subscription link points to `/api/v1/events/calendar.ics`.
 - Empty/loading/error states must be visible.
 
@@ -41,13 +47,18 @@ Route:
 | Anonymous views events | Can read list and iCal link, cannot RSVP/create |
 | Auth user creates event | Event query invalidates and new event appears |
 | RSVP succeeds | Event query invalidates and `my_rsvp_status` refreshes |
+| Admin/creator terminates event | Event query invalidates, status badge appears, RSVP action is disabled |
+| Admin/creator deletes event | Event query invalidates and the event card disappears |
 | RSVP fails due deadline/capacity | Mutation surfaces API error; no local fake success |
+| RSVP fails because event is canceled | Mutation surfaces API error; no local fake success |
 | Browser timezone exists | Form defaults to local IANA timezone |
 
 ### 5. Good/Base/Bad Cases
 
 - Good: card shows `Asia/Shanghai` event using that timezone even for users elsewhere.
 - Base: user creates a small event, another user RSVPs, count updates after refetch.
+- Base: admin terminates an event from the card, then users see `已终止` and cannot RSVP.
+- Base: admin deletes an event from the card, then the list refetches without that event.
 - Bad: hardcoding all event display to browser local time without showing event timezone.
 
 ### 6. Tests Required

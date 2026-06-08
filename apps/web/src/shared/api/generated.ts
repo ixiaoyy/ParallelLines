@@ -1171,6 +1171,9 @@ export interface components {
       title: string;
       topic_id?: string | null;
     };
+    EventLifecycleRequest: {
+      status: "scheduled" | "canceled";
+    };
     EventResponse: {
       capacity?: number | null;
       created_at: string;
@@ -1184,6 +1187,7 @@ export interface components {
       reminder_minutes_before: number;
       rsvp_deadline?: string | null;
       start_at: string;
+      status: "scheduled" | "canceled";
       timezone: string;
       title: string;
       topic_id?: string | null;
@@ -1320,7 +1324,7 @@ export interface components {
       enabled?: boolean;
       fetch_interval_minutes?: number;
       key: string;
-      kind: "rss" | "arxiv" | "hacker_news" | "github_search";
+      kind: "rss" | "arxiv" | "hacker_news" | "github_search" | "xai_news" | "arena_leaderboard" | "news_html_index";
       name: string;
       trust_level?: number;
       url: string;
@@ -2524,6 +2528,12 @@ export interface paths {
     "/api/v1/events": {
       get: { response: components["schemas"]["ApiResponse_list_EventResponse__"]; operationId: "list_events_api_v1_events_get" };
       post: { response: components["schemas"]["ApiResponse_EventResponse_"]; operationId: "create_event_api_v1_events_post" };
+    };
+    "/api/v1/events/{event_id}": {
+      delete: { response: components["schemas"]["ApiResponse_EventResponse_"]; operationId: "delete_event_api_v1_events__event_id__delete" };
+    };
+    "/api/v1/events/{event_id}/lifecycle": {
+      put: { response: components["schemas"]["ApiResponse_EventResponse_"]; operationId: "update_event_lifecycle_api_v1_events__event_id__lifecycle_put" };
     };
     "/api/v1/events/{event_id}/rsvp": {
       put: { response: components["schemas"]["ApiResponse_EventRsvpResponse_"]; operationId: "rsvp_event_api_v1_events__event_id__rsvp_put" };

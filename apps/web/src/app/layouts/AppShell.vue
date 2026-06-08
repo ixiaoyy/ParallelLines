@@ -6,6 +6,7 @@ import {
   MenuOutlined,
   PlusOutlined,
   SearchOutlined,
+  UserOutlined,
 } from "@ant-design/icons-vue";
 import { computed, defineAsyncComponent, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -327,6 +328,7 @@ function isNavItemActive(item: NavItem) {
               :class="{ 'is-active': isCurrentUserProfileActive }"
               :aria-label="t('nav.account_menu', '打开账号菜单')"
             >
+              <UserOutlined class="account-menu__icon" aria-hidden="true" />
               <span>
                 <strong>{{ t("nav.profile", "个人中心") }}</strong>
                 <small>@{{ currentUser.username }}</small>

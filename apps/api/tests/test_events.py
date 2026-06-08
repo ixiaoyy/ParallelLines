@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.api.v1.dependencies import get_session
 from app.main import create_app
+from app.models.user import User
 from tests.helpers import get_test_database_url, register_and_verify_user, reset_test_database
 
 
@@ -34,8 +35,16 @@ async def test_calendar_event_rsvp_deadline_capacity_and_ical() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         creator = await register_and_verify_user(client, "eventcreator")
         guest = await register_and_verify_user(client, "eventguest")
+        admin = await register_and_verify_user(client, "eventadmin")
+        async with session_factory() as session:
+            admin_user = await session.get(User, admin["user"]["id"])
+            assert admin_user is not None
+            admin_user.role = "admin"
+            await session.commit()
+
         creator_headers = {"Authorization": f"Bearer {creator['access_token']}"}
         guest_headers = {"Authorization": f"Bearer {guest['access_token']}"}
+        admin_headers = {"Authorization": f"Bearer {admin['access_token']}"}
 
         created = await client.post(
             "/api/v1/events",
@@ -56,6 +65,7 @@ async def test_calendar_event_rsvp_deadline_capacity_and_ical() -> None:
         listed = await client.get("/api/v1/events", headers=creator_headers)
         assert listed.status_code == 200
         assert listed.json()["data"][0]["timezone"] == "Asia/Shanghai"
+        assert listed.json()["data"][0]["status"] == "scheduled"
 
         rsvp = await client.put(
             f"/api/v1/events/{event_id}/rsvp",
@@ -77,5 +87,40 @@ async def test_calendar_event_rsvp_deadline_capacity_and_ical() -> None:
         assert ical.status_code == 200
         assert "BEGIN:VEVENT" in ical.text
         assert "线上社区圆桌" in ical.text
+
+        forbidden_cancel = await client.put(
+            f"/api/v1/events/{event_id}/lifecycle",
+            headers=guest_headers,
+            json={"status": "canceled"},
+        )
+        assert forbidden_cancel.status_code == 403
+
+        canceled = await client.put(
+            f"/api/v1/events/{event_id}/lifecycle",
+            headers=admin_headers,
+            json={"status": "canceled"},
+        )
+        assert canceled.status_code == 200
+        assert canceled.json()["data"]["status"] == "canceled"
+
+        closed_rsvp = await client.put(
+            f"/api/v1/events/{event_id}/rsvp",
+            headers=creator_headers,
+            json={"status": "going"},
+        )
+        assert closed_rsvp.status_code == 422
+        assert closed_rsvp.json()["error"]["code"] == "event_canceled"
+
+        canceled_ical = await client.get("/api/v1/events/calendar.ics")
+        assert canceled_ical.status_code == 200
+        assert "STATUS:CANCELLED" in canceled_ical.text
+
+        deleted = await client.delete(f"/api/v1/events/{event_id}", headers=admin_headers)
+        assert deleted.status_code == 200
+        assert deleted.json()["data"]["id"] == event_id
+
+        empty = await client.get("/api/v1/events", headers=creator_headers)
+        assert empty.status_code == 200
+        assert empty.json()["data"] == []
 
     await engine.dispose()

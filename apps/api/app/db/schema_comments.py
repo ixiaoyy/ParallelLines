@@ -671,11 +671,12 @@ COLUMN_COMMENTS.update(
             "capacity": "活动最大报名人数；为空表示不限。",
             "rsvp_deadline": "报名截止时间；为空表示开始前均可报名。",
             "reminder_minutes_before": "活动开始前提醒分钟数；为空表示不提醒。",
+            "status": "活动状态：scheduled 或 canceled。",
         },
         "event_rsvps": {
             "event_id": "活动 ID。",
             "user_id": "报名用户 ID。",
-            "status": "报名状态：going、interested 或 declined。",
+            "status": "报名状态：going 或 canceled。",
             "reminder_sent_at": "活动提醒发送时间；为空表示尚未发送。",
         },
         "chat_channels": {

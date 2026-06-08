@@ -252,6 +252,11 @@
   list-style: none;
 }
 
+.account-menu__icon {
+  display: none;
+  flex: 0 0 auto;
+}
+
 .account-menu__summary::-webkit-details-marker {
   display: none;
 }
@@ -564,6 +569,10 @@
     font-size: 0.84rem;
   }
 
+  .account-menu__icon {
+    display: inline-flex;
+  }
+
   .account-menu__summary small {
     display: none;
   }
@@ -574,7 +583,19 @@
 
   .shell-main {
     width: 100%;
-    padding: 0.85rem 0.5rem 4rem;
+    padding: 0.85rem 0.5rem calc(4.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 420px) {
+  .account-menu__summary {
+    gap: 0.28rem;
+    max-width: 5.75rem;
+    padding-inline: 0.46rem;
+  }
+
+  .account-menu__summary span {
+    max-width: 4rem;
   }
 }
 

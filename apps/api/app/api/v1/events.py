@@ -7,6 +7,7 @@ from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, Sess
 from app.schemas.common import ApiResponse
 from app.schemas.events import (
     EventCreateRequest,
+    EventLifecycleRequest,
     EventResponse,
     EventRsvpRequest,
     EventRsvpResponse,
@@ -39,6 +40,41 @@ async def create_event(
     current_user: CurrentUserDep,
 ) -> ApiResponse[EventResponse]:
     return ApiResponse(data=await EventService(session).create_event(payload, current_user))
+
+
+@router.put("/{event_id}/lifecycle", response_model=ApiResponse[EventResponse])
+async def update_event_lifecycle(
+    event_id: str,
+    payload: EventLifecycleRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[EventResponse]:
+    """Update an event lifecycle status for the creator or global moderators.
+
+    Key parameters are the path event id, lifecycle payload, database session,
+    and authenticated user. Return value is the updated event envelope. Side
+    effect: persists a status transition such as scheduled -> canceled.
+    """
+
+    return ApiResponse(
+        data=await EventService(session).update_event_lifecycle(event_id, payload, current_user)
+    )
+
+
+@router.delete("/{event_id}", response_model=ApiResponse[EventResponse])
+async def delete_event(
+    event_id: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[EventResponse]:
+    """Delete an event for the creator or global moderators.
+
+    Key parameters are the path event id, database session, and authenticated
+    user. Return value is the deleted event snapshot. Side effect: removes the
+    event and cascades its RSVP rows in the database.
+    """
+
+    return ApiResponse(data=await EventService(session).delete_event(event_id, current_user))
 
 
 @router.put("/{event_id}/rsvp", response_model=ApiResponse[EventRsvpResponse])

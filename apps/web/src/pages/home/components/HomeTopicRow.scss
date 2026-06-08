@@ -160,8 +160,15 @@
   }
 
   .activity {
-    grid-column: 2;
+    grid-column: 1 / -1;
+    justify-self: end;
+    border: 1px solid var(--theme-soft-border);
+    border-radius: var(--radius-pill);
+    padding: 0.16rem 0.48rem;
+    color: var(--theme-soft-fg);
     text-align: right;
+    font-size: 0.76rem;
+    background: var(--theme-soft-bg);
   }
 
   .topic-copy p {

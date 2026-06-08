@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from app.models.forum import Topic
     from app.models.user import User
 
+EventStatus = Literal["scheduled", "canceled"]
 EventRsvpStatus = Literal["going", "canceled"]
 
 
@@ -47,6 +48,9 @@ class CalendarEvent(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     )
     reminder_minutes_before: Mapped[int] = mapped_column(
         Integer, nullable=False, default=60, comment="提醒提前分钟数。"
+    )
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="scheduled", comment="活动状态：scheduled 或 canceled。"
     )
 
     topic: Mapped[Topic | None] = relationship("Topic", lazy="selectin")

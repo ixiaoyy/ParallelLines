@@ -9,6 +9,8 @@ import { queryClient } from "@/shared/api/queryClient";
 import { queryKeys } from "@/shared/api/queryKeys";
 
 type RequiredAccess = "authenticated" | "admin" | "moderation";
+const HASH_SCROLL_RETRY_LIMIT = 40;
+const HASH_SCROLL_RETRY_DELAY_MS = 50;
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -28,7 +30,9 @@ export const router = createRouter({
   history: createWebHistory(),
   scrollBehavior(to) {
     if (to.hash) {
-      return { el: to.hash, behavior: "smooth" };
+      return waitForHashTarget(to.hash).then((found) =>
+        found ? { el: to.hash, behavior: "smooth" } : { top: 0 },
+      );
     }
 
     return { top: 0 };
@@ -225,4 +229,44 @@ function loginRedirect(to: RouteLocationNormalized) {
     name: "auth",
     query: { redirect: to.fullPath },
   };
+}
+
+// Waits for hash targets rendered by async pages before Vue Router attempts to scroll.
+// `hash` is the browser fragment selector (for example `#post-2`); the return value tells
+// scrollBehavior whether to scroll to it or fall back to the top. Side effect: schedules short timers.
+function waitForHashTarget(hash: string): Promise<boolean> {
+  if (typeof document === "undefined") {
+    return Promise.resolve(false);
+  }
+
+  return new Promise((resolve) => {
+    let attempts = 0;
+    const checkTarget = () => {
+      if (hasHashTarget(hash)) {
+        resolve(true);
+        return;
+      }
+
+      attempts += 1;
+      if (attempts >= HASH_SCROLL_RETRY_LIMIT) {
+        resolve(false);
+        return;
+      }
+
+      window.setTimeout(checkTarget, HASH_SCROLL_RETRY_DELAY_MS);
+    };
+
+    checkTarget();
+  });
+}
+
+// Checks a hash selector safely because malformed fragments can throw in querySelector.
+// `hash` is passed through from Vue Router; the return value is true only when the element exists.
+// Side effect: none.
+function hasHashTarget(hash: string): boolean {
+  try {
+    return Boolean(document.querySelector(hash));
+  } catch {
+    return false;
+  }
 }

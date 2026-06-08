@@ -25,6 +25,10 @@ class EventRsvpRequest(BaseModel):
     status: Literal["going", "canceled"] = "going"
 
 
+class EventLifecycleRequest(BaseModel):
+    status: Literal["scheduled", "canceled"]
+
+
 class EventRsvpResponse(BaseModel):
     user_id: str
     username: str
@@ -54,6 +58,7 @@ class EventResponse(BaseModel):
     capacity: int | None = None
     rsvp_deadline: datetime | None = None
     reminder_minutes_before: int
+    status: Literal["scheduled", "canceled"]
     going_count: int
     my_rsvp_status: str | None = None
     created_at: datetime
@@ -79,6 +84,7 @@ class EventResponse(BaseModel):
             capacity=event.capacity,
             rsvp_deadline=event.rsvp_deadline,
             reminder_minutes_before=event.reminder_minutes_before,
+            status=event.status,
             going_count=going_count,
             my_rsvp_status=my_rsvp_status,
             created_at=event.created_at,
