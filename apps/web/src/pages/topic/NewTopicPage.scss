@@ -222,6 +222,7 @@
 }
 
 .topic-md-editor {
+  contain: inline-size;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -233,16 +234,21 @@
 }
 
 .topic-md-editor :deep(.md-editor-toolbar-wrapper) {
+  min-width: 0;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   border-bottom-color: var(--border);
   background: rgba(248, 250, 252, 0.92);
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .topic-md-editor :deep(.md-editor-toolbar) {
+  display: flex;
   width: max-content;
   min-width: 100%;
+  flex-wrap: nowrap;
 }
 
 .topic-md-editor :deep(.md-editor-content),
@@ -276,6 +282,7 @@
 .topic-md-editor :deep(.cm-content) {
   min-height: 12rem;
   padding-bottom: 2.1rem;
+  font-size: 1rem;
   font-family: inherit;
   line-height: 1.65;
 }
@@ -412,19 +419,37 @@
   }
 
   .topic-md-editor :deep(.md-editor-toolbar) {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
     gap: 0.08rem;
     padding-inline: 0.32rem;
   }
 
+  .topic-md-editor :deep(.md-editor-toolbar-left),
+  .topic-md-editor :deep(.md-editor-toolbar-right) {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 0.08rem;
+  }
+
   .topic-md-editor :deep(.md-editor-toolbar-item) {
-    min-width: 2.55rem;
+    flex: 1 0 2.36rem;
+    min-width: 2.36rem;
     height: 2.45rem;
     justify-content: center;
+  }
+
+  .editor-box::after {
+    display: none;
   }
 
   .topic-md-editor :deep(.cm-content) {
     min-height: 10rem;
     padding-bottom: 2.25rem;
+    font-size: 16px;
   }
 
   .composer-upload-row {

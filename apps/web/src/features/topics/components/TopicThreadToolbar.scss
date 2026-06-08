@@ -260,12 +260,45 @@
 }
 
 @media (max-width: 520px) {
+  .topic-thread-toolbar :deep(.ant-card-body) {
+    gap: 0.36rem;
+    padding: 0.48rem;
+  }
+
+  .toolbar-actions {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.32rem;
+    align-items: center;
+  }
+
+  .toolbar-icon-button,
+  .toolbar-more summary {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 0;
+  }
+
   .notification-control {
-    flex: 1 1 5.6rem;
+    grid-column: 1 / span 5;
+    width: 100%;
+    min-width: 0;
+    padding-left: 0.54rem;
   }
 
   .notification-control select {
     width: 100%;
+  }
+
+  .toolbar-more {
+    grid-column: 6;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .toolbar-more-menu {
+    right: 0;
+    max-width: calc(100vw - 1.5rem);
   }
 
   .toolbar-filter-button {

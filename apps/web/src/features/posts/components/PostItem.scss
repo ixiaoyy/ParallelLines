@@ -808,19 +808,48 @@
 }
 
 .edit-md-editor {
+  contain: inline-size;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: clamp(13rem, 34vh, 21rem);
+  overflow: hidden;
   border: 0;
   border-radius: 0;
   background: var(--bg-surface);
 }
 
 .edit-md-editor :deep(.md-editor-toolbar-wrapper) {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
   border-bottom-color: var(--border);
   background: rgba(248, 250, 252, 0.92);
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.edit-md-editor :deep(.md-editor-toolbar) {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  flex-wrap: nowrap;
 }
 
 .edit-md-editor :deep(.md-editor-toolbar-item) {
+  flex: 0 0 auto;
   color: var(--text);
+}
+
+.edit-md-editor :deep(.md-editor-content),
+.edit-md-editor :deep(.md-editor-content-wrapper),
+.edit-md-editor :deep(.md-editor-input-wrapper),
+.edit-md-editor :deep(.cm-editor),
+.edit-md-editor :deep(.cm-scroller),
+.edit-md-editor :deep(.cm-content) {
+  max-width: 100%;
+  min-width: 0;
 }
 
 .edit-md-editor :deep(.md-editor-toolbar-item:hover),
@@ -838,6 +867,7 @@
 
 .edit-md-editor :deep(.cm-content) {
   min-height: 9rem;
+  font-size: 1rem;
   font-family: inherit;
   line-height: 1.65;
 }
@@ -1121,7 +1151,10 @@
   }
 
   .post-action-bar {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, max-content)) minmax(4.6rem, 1fr);
     margin-top: 0.58rem;
+    align-items: center;
   }
 
   .icon-action,
@@ -1130,6 +1163,57 @@
     min-width: 2.15rem;
     min-height: 2.15rem;
     padding-inline: 0.52rem;
+  }
+
+  .reply-action {
+    grid-column: 5;
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  .post-more-menu {
+    right: auto;
+    left: 50%;
+    max-width: calc(100vw - 2rem);
+    transform: translateX(-50%);
+  }
+
+  .edit-md-editor :deep(.md-editor-toolbar-wrapper) {
+    scrollbar-width: none;
+  }
+
+  .edit-md-editor :deep(.md-editor-toolbar-wrapper::-webkit-scrollbar) {
+    display: none;
+  }
+
+  .edit-md-editor :deep(.md-editor-toolbar) {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 0.08rem;
+    padding-inline: 0.28rem;
+  }
+
+  .edit-md-editor :deep(.md-editor-toolbar-left),
+  .edit-md-editor :deep(.md-editor-toolbar-right) {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 0.08rem;
+  }
+
+  .edit-md-editor :deep(.md-editor-toolbar-item) {
+    flex: 1 0 2.32rem;
+    min-width: 2.32rem;
+    height: 2.42rem;
+    justify-content: center;
+  }
+
+  .edit-md-editor :deep(.cm-content) {
+    font-size: 16px;
   }
 
   .post-item--comic-reader :deep(.ant-card-body) {

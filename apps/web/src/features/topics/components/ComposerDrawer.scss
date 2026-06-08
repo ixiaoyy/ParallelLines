@@ -84,6 +84,7 @@ footer {
 }
 
 .composer-md-editor {
+  contain: inline-size;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -95,16 +96,21 @@ footer {
 }
 
 .composer-md-editor :deep(.md-editor-toolbar-wrapper) {
+  min-width: 0;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   border-bottom-color: var(--border);
   background: rgba(248, 250, 252, 0.92);
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .composer-md-editor :deep(.md-editor-toolbar) {
+  display: flex;
   width: max-content;
   min-width: 100%;
+  flex-wrap: nowrap;
 }
 
 .composer-md-editor :deep(.md-editor-content),
@@ -136,6 +142,7 @@ footer {
 
 .composer-md-editor :deep(.cm-content) {
   min-height: 16rem;
+  font-size: 1rem;
   font-family: inherit;
   line-height: 1.65;
 }
@@ -182,6 +189,42 @@ footer {
 
   .composer-md-editor {
     height: 20rem;
+  }
+
+  .composer-md-editor :deep(.md-editor-toolbar-wrapper) {
+    scrollbar-width: none;
+  }
+
+  .composer-md-editor :deep(.md-editor-toolbar-wrapper::-webkit-scrollbar) {
+    display: none;
+  }
+
+  .composer-md-editor :deep(.md-editor-toolbar) {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 0.08rem;
+    padding-inline: 0.28rem;
+  }
+
+  .composer-md-editor :deep(.md-editor-toolbar-left),
+  .composer-md-editor :deep(.md-editor-toolbar-right) {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 0.08rem;
+  }
+
+  .composer-md-editor :deep(.md-editor-toolbar-item) {
+    flex: 1 0 2.32rem;
+    min-width: 2.32rem;
+    height: 2.42rem;
+    justify-content: center;
+  }
+
+  .composer-md-editor :deep(.cm-content) {
+    font-size: 16px;
   }
 }
 

@@ -3,6 +3,7 @@
 }
 
 html {
+  overflow-x: hidden;
   color: var(--text);
   background: var(--bg-app);
   font-family:
@@ -28,6 +29,14 @@ textarea {
   input:not([type="checkbox"]):not([type="radio"]),
   textarea,
   select {
+    font-size: 16px !important;
+  }
+
+  .md-editor .md-editor-input-wrapper,
+  .md-editor .cm-editor,
+  .md-editor .cm-scroller,
+  .md-editor .cm-content,
+  .md-editor .cm-line {
     font-size: 16px !important;
   }
 }
