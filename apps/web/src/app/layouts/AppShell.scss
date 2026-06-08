@@ -564,13 +564,23 @@
   }
 
   .account-menu__summary {
-    max-width: 6.8rem;
-    padding-inline: 0.52rem;
-    font-size: 0.84rem;
+    width: 2.35rem;
+    height: 2.35rem;
+    max-width: none;
+    justify-content: center;
+    border: 1px solid var(--border-strong);
+    padding: 0;
+    background: var(--bg-surface);
+    font-size: 0.98rem;
   }
 
   .account-menu__icon {
     display: inline-flex;
+  }
+
+  .account-menu__summary > span:not(.account-menu__icon),
+  .account-menu__chevron {
+    display: none;
   }
 
   .account-menu__summary small {
@@ -589,13 +599,8 @@
 
 @media (max-width: 420px) {
   .account-menu__summary {
-    gap: 0.28rem;
-    max-width: 5.75rem;
-    padding-inline: 0.46rem;
-  }
-
-  .account-menu__summary span {
-    max-width: 4rem;
+    width: 2.25rem;
+    height: 2.25rem;
   }
 }
 
