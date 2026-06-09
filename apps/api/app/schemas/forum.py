@@ -17,10 +17,12 @@ from app.models.forum import (
     Post,
     PostRevision,
     Topic,
+    TopicRead,
 )
 from app.schemas.common import ORMModel
 
-TopicSort = Literal["latest", "hot", "top", "votes", "relevance"]
+TopicSort = Literal["latest", "hot", "top", "votes", "recommended", "relevance"]
+ImmersiveTopicFeedSort = Literal["latest", "hot", "top", "votes", "recommended"]
 PostSort = Literal["chronological", "qa"]
 
 
@@ -455,6 +457,73 @@ class TopicDetailResponse(TopicResponse):
     def from_topic_and_posts(cls, topic: Topic, posts: list[Post]) -> TopicDetailResponse:
         topic_data = TopicResponse.from_model(topic).model_dump()
         return cls(**topic_data, posts=[PostResponse.from_model(post) for post in posts])
+
+
+class TopicReadStateRequest(BaseModel):
+    last_read_post_number: int | None = Field(default=None, ge=0, le=1_000_000)
+
+
+class TopicReadStateResponse(BaseModel):
+    topic_id: str
+    last_read_post_number: int
+    highest_post_number: int
+    unread_count: int
+    read: bool
+    notification_level: NotificationLevel
+
+    @classmethod
+    def from_topic_and_state(
+        cls,
+        topic: Topic,
+        read_state: TopicRead | None,
+    ) -> TopicReadStateResponse:
+        """Build the public read-state payload for one visible topic.
+
+        Key parameters are the loaded `topic` and the current user's optional
+        `read_state`. Return value includes unread counts for feed cards. Side
+        effect: none.
+        """
+
+        highest_post_number = max(int(topic.reply_count or 0) + 1, 1)
+        last_read_post_number = min(
+            int(read_state.last_read_post_number) if read_state else 0,
+            highest_post_number,
+        )
+        unread_count = max(highest_post_number - last_read_post_number, 0)
+        return cls(
+            topic_id=topic.id,
+            last_read_post_number=last_read_post_number,
+            highest_post_number=highest_post_number,
+            unread_count=unread_count,
+            read=unread_count == 0,
+            notification_level=read_state.notification_level if read_state else "normal",
+        )
+
+
+class ImmersiveTopicFeedItemResponse(BaseModel):
+    topic: TopicResponse
+    lead_post: PostResponse | None = None
+    read_state: TopicReadStateResponse
+
+    @classmethod
+    def from_models(
+        cls,
+        topic: Topic,
+        lead_post: Post | None,
+        read_state: TopicRead | None,
+    ) -> ImmersiveTopicFeedItemResponse:
+        """Build one full-screen feed item from decorated ORM models.
+
+        Key parameters are the feed topic, its first visible post, and the
+        current user's optional read state. Return value is API-ready and has no
+        side effects.
+        """
+
+        return cls(
+            topic=TopicResponse.from_model(topic),
+            lead_post=PostResponse.from_model(lead_post) if lead_post else None,
+            read_state=TopicReadStateResponse.from_topic_and_state(topic, read_state),
+        )
 
 
 class TopicLifecycleResponse(BaseModel):

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed, toValue } from "vue";
 import type { MaybeRefOrGetter } from "vue";
 
@@ -9,8 +9,10 @@ import { queryKeys } from "@/shared/api/queryKeys";
 import {
   createTopic,
   fetchBoardTopics,
+  fetchImmersiveTopicFeed,
   fetchTopic,
   fetchTopics,
+  markTopicReadState,
   moveTopic,
   searchTopics,
   setTopicSolution,
@@ -21,8 +23,11 @@ import type { TopicSearchParams } from "./api";
 import { toTopicCard } from "./model";
 import type {
   CreateTopicRequest,
+  ImmersiveTopicFeedParams,
   PollResponse,
   PollVoteRequest,
+  TopicReadStateRequest,
+  TopicReadStateResponse,
   TopicLifecycleRequest,
   TopicMoveRequest,
   TopicResponse,
@@ -110,6 +115,53 @@ export function useRelatedTopics(topic: MaybeRefOrGetter<TopicCardVM | null | un
   });
 
   return computed(() => relatedQuery.data.value ?? []);
+}
+
+/**
+ * Loads cursor pages for the full-screen immersive topic feed.
+ *
+ * @param params - Reactive feed sort and filter parameters; `cursor` is managed by the query.
+ * @param enabled - Whether the feed should request data.
+ * @returns Infinite query containing API pages with items and next cursors; side effect is network fetching.
+ */
+export function useImmersiveTopicFeed(
+  params: MaybeRefOrGetter<Omit<ImmersiveTopicFeedParams, "cursor">>,
+  enabled: MaybeRefOrGetter<boolean> = true,
+) {
+  return useInfiniteQuery({
+    queryKey: computed(() => queryKeys.immersiveTopicFeed(immersiveTopicFeedKey(toValue(params)))),
+    queryFn: ({ pageParam }) =>
+      fetchImmersiveTopicFeed({
+        ...toValue(params),
+        cursor: typeof pageParam === "string" ? pageParam : null,
+      }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: computed(() => toValue(enabled)),
+    staleTime: 20_000,
+  });
+}
+
+/**
+ * Creates a mutation for writing the current user's topic read position.
+ *
+ * @returns TanStack mutation; side effects update backend read state and invalidate notification-level cache.
+ */
+export function useMarkTopicReadState() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    TopicReadStateResponse,
+    Error,
+    { topicId: string; payload?: TopicReadStateRequest }
+  >({
+    mutationFn: ({ topicId, payload }) => markTopicReadState(topicId, payload ?? {}),
+    onSuccess: (readState) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.topicNotificationLevel(readState.topic_id),
+      });
+    },
+  });
 }
 
 export function useCreateTopic() {
@@ -226,4 +278,22 @@ function invalidateTopicFeedQueries(queryClient: ReturnType<typeof useQueryClien
   void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:hot") });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:top") });
   void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:votes") });
+  void queryClient.invalidateQueries({ queryKey: ["topics", "immersive-feed"] });
+}
+
+/**
+ * Converts immersive feed params into a stable query key suffix.
+ *
+ * @param params - Feed params without cursor.
+ * @returns Stable key string. Side effect: none.
+ */
+function immersiveTopicFeedKey(params: Omit<ImmersiveTopicFeedParams, "cursor">): string {
+  return [
+    `sort=${params.sort ?? "latest"}`,
+    `board=${params.board ?? ""}`,
+    `tag=${params.tag ?? ""}`,
+    `q=${params.q ?? ""}`,
+    `author=${params.author ?? ""}`,
+    `limit=${params.limit ?? 20}`,
+  ].join("&");
 }

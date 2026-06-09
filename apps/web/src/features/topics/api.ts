@@ -1,9 +1,14 @@
-import { apiGet, apiPost, apiPut } from "@/shared/api/client";
+import { apiGet, apiGetEnvelope, apiPost, apiPut } from "@/shared/api/client";
 
 import type {
   CreateTopicRequest,
+  ImmersiveTopicFeedItemResponse,
+  ImmersiveTopicFeedPageResponse,
+  ImmersiveTopicFeedParams,
   PollResponse,
   PollVoteRequest,
+  TopicReadStateRequest,
+  TopicReadStateResponse,
   TopicLifecycleRequest,
   TopicMoveRequest,
   TopicResponse,
@@ -54,6 +59,52 @@ export function fetchBoardTopics(
 
 export function fetchTopic(topicId: string): Promise<TopicResponse> {
   return apiGet<TopicResponse>(`/topics/${topicId}`);
+}
+
+// Fetch one cursor page for the full-screen immersive topic feed.
+// Key parameter `params` carries sort/filter/cursor options. Return value keeps
+// feed rows plus `nextCursor`. Side effect: performs a GET request.
+export async function fetchImmersiveTopicFeed(
+  params: ImmersiveTopicFeedParams,
+): Promise<ImmersiveTopicFeedPageResponse> {
+  const query = new URLSearchParams({
+    sort: params.sort ?? "latest",
+    limit: String(params.limit ?? 20),
+  });
+
+  if (params.board) {
+    query.set("board", params.board);
+  }
+  if (params.tag) {
+    query.set("tag", params.tag);
+  }
+  if (params.q) {
+    query.set("q", params.q);
+  }
+  if (params.author) {
+    query.set("author", params.author);
+  }
+  if (params.cursor) {
+    query.set("cursor", params.cursor);
+  }
+
+  const envelope = await apiGetEnvelope<ImmersiveTopicFeedItemResponse[]>(
+    `/topics/immersive-feed?${query.toString()}`,
+  );
+  return {
+    items: envelope.data,
+    nextCursor: typeof envelope.meta?.next_cursor === "string" ? envelope.meta.next_cursor : null,
+  };
+}
+
+// Persist the current user's read position for a topic.
+// Key parameters are topic id and optional post number. Return value is the
+// refreshed read state. Side effect: performs an authenticated PUT request.
+export function markTopicReadState(
+  topicId: string,
+  payload: TopicReadStateRequest = {},
+): Promise<TopicReadStateResponse> {
+  return apiPut<TopicReadStateResponse, TopicReadStateRequest>(`/topics/${topicId}/read-state`, payload);
 }
 
 export function createTopic(boardSlug: string, payload: CreateTopicRequest): Promise<TopicResponse> {

@@ -53,6 +53,19 @@ export interface ReviewableDecisionRequest {
   note?: string | null;
 }
 
+export interface ReviewableBulkDecisionRequest {
+  reviewable_ids: string[];
+  action: ReviewableDecisionAction;
+  note?: string | null;
+}
+
+export interface ReviewableBulkDecisionResponse {
+  action: ReviewableDecisionAction;
+  requested_count: number;
+  processed_count: number;
+  reviewables: ReviewableResponse[];
+}
+
 export interface ReviewableAppealRequest {
   reason: string;
 }

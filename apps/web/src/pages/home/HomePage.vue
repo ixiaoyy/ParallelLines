@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import type { LocationQueryRaw } from "vue-router";
+import type { LocationQueryRaw, RouteLocationRaw } from "vue-router";
 
 import type { TopicCardVM } from "@/entities/topic/model";
 import { useBoards } from "@/features/boards/queries";
@@ -119,6 +119,15 @@ const visibleTopics = computed(() => {
 
   return sorted.sort((left, right) => right.lastPostedAt.localeCompare(left.lastPostedAt));
 });
+const immersiveFeedRoute = computed<RouteLocationRaw>(() => ({
+  name: "immersive-feed",
+  query: omitEmptyQuery({
+    sort: feedSort.value,
+    board: boardFilter.value,
+    tag: tagFilter.value,
+    q: titleFilter.value,
+  }),
+}));
 
 watch(
   () => route.hash,
@@ -291,6 +300,7 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
           :title-filter="titleFilter"
           :board-filter="boardFilter"
           :tag-filter="tagFilter"
+          :immersive-feed-to="immersiveFeedRoute"
           :loading="topicFeedLoading"
           :error="topicsQuery.isError.value"
           @select-tab="setActiveTab"

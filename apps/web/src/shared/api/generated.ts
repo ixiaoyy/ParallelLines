@@ -491,6 +491,12 @@ export interface components {
       [key: string]: unknown;
     };
     };
+    ApiResponse_list_ImmersiveTopicFeedItemResponse__: {
+      data: Array<components["schemas"]["ImmersiveTopicFeedItemResponse"]>;
+      meta?: {
+      [key: string]: unknown;
+    };
+    };
     ApiResponse_list_PluginResponse__: {
       data: Array<components["schemas"]["PluginResponse"]>;
       meta?: {
@@ -577,6 +583,12 @@ export interface components {
     };
     ApiResponse_list_UserDirectoryResponse__: {
       data: Array<components["schemas"]["UserDirectoryResponse"]>;
+      meta?: {
+      [key: string]: unknown;
+    };
+    };
+    ApiResponse_list_UserRelationshipUserResponse__: {
+      data: Array<components["schemas"]["UserRelationshipUserResponse"]>;
       meta?: {
       [key: string]: unknown;
     };
@@ -719,6 +731,12 @@ export interface components {
       [key: string]: unknown;
     };
     };
+    ApiResponse_ReviewableBulkDecisionResponse_: {
+      data: components["schemas"]["ReviewableBulkDecisionResponse"];
+      meta?: {
+      [key: string]: unknown;
+    };
+    };
     ApiResponse_ReviewableResponse_: {
       data: components["schemas"]["ReviewableResponse"];
       meta?: {
@@ -769,6 +787,12 @@ export interface components {
     };
     ApiResponse_TopicNotificationLevelResponse_: {
       data: components["schemas"]["TopicNotificationLevelResponse"];
+      meta?: {
+      [key: string]: unknown;
+    };
+    };
+    ApiResponse_TopicReadStateResponse_: {
+      data: components["schemas"]["TopicReadStateResponse"];
       meta?: {
       [key: string]: unknown;
     };
@@ -1371,6 +1395,11 @@ export interface components {
     HTTPValidationError: {
       detail?: Array<components["schemas"]["ValidationError"]>;
     };
+    ImmersiveTopicFeedItemResponse: {
+      lead_post?: components["schemas"]["PostResponse"] | null;
+      read_state: components["schemas"]["TopicReadStateResponse"];
+      topic: components["schemas"]["TopicResponse"];
+    };
     InboundEmailResponse: {
       created_at: string;
       from_email: string;
@@ -1797,6 +1826,17 @@ export interface components {
     ReviewableAppealRequest: {
       reason: string;
     };
+    ReviewableBulkDecisionRequest: {
+      action: "approve" | "reject" | "hide" | "delete" | "silence" | "escalate";
+      note?: string | null;
+      reviewable_ids: Array<string>;
+    };
+    ReviewableBulkDecisionResponse: {
+      action: "approve" | "reject" | "hide" | "delete" | "silence" | "escalate";
+      processed_count: number;
+      requested_count: number;
+      reviewables: Array<components["schemas"]["ReviewableResponse"]>;
+    };
     ReviewableDecisionRequest: {
       action: "approve" | "reject" | "hide" | "delete" | "silence" | "escalate";
       note?: string | null;
@@ -2004,6 +2044,17 @@ export interface components {
       notification_level: "muted" | "normal" | "tracking" | "watching";
       topic_id: string;
     };
+    TopicReadStateRequest: {
+      last_read_post_number?: number | null;
+    };
+    TopicReadStateResponse: {
+      highest_post_number: number;
+      last_read_post_number: number;
+      notification_level: "muted" | "normal" | "tracking" | "watching";
+      read: boolean;
+      topic_id: string;
+      unread_count: number;
+    };
     TopicResponse: {
       accepted_answer_post_id?: string | null;
       answer_mode?: boolean;
@@ -2144,6 +2195,8 @@ export interface components {
       display_name?: string | null;
       experience_to_next_level: number;
       experience_total: number;
+      follower_count: number;
+      following_count: number;
       id: string;
       level: number;
       level_progress_percent: number;
@@ -2202,6 +2255,19 @@ export interface components {
       ignored: boolean;
       target_user_id: string;
       target_username: string;
+    };
+    UserRelationshipUserResponse: {
+      avatar_url?: string | null;
+      display_name?: string | null;
+      followed_at: string;
+      id: string;
+      level: number;
+      post_count: number;
+      role: string;
+      topic_count: number;
+      trust_level: number;
+      trust_level_label: string;
+      username: string;
     };
     UserStatusResponse: {
       status: string;
@@ -2599,6 +2665,9 @@ export interface paths {
     "/api/v1/moderation/reviewables/{reviewable_id}/release": {
       post: { response: components["schemas"]["ApiResponse_ReviewableResponse_"]; operationId: "release_reviewable_api_v1_moderation_reviewables__reviewable_id__release_post" };
     };
+    "/api/v1/moderation/reviewables/bulk-decide": {
+      post: { response: components["schemas"]["ApiResponse_ReviewableBulkDecisionResponse_"]; operationId: "decide_reviewables_bulk_api_v1_moderation_reviewables_bulk_decide_post" };
+    };
     "/api/v1/moderation/reviewables/me": {
       get: { response: components["schemas"]["ApiResponse_list_ReviewableResponse__"]; operationId: "list_my_reviewables_api_v1_moderation_reviewables_me_get" };
     };
@@ -2717,6 +2786,9 @@ export interface paths {
       get: { response: components["schemas"]["ApiResponse_list_PostResponse__"]; operationId: "list_posts_api_v1_topics__topic_id__posts_get" };
       post: { response: components["schemas"]["ApiResponse_PostResponse_"]; operationId: "reply_to_topic_api_v1_topics__topic_id__posts_post" };
     };
+    "/api/v1/topics/{topic_id}/read-state": {
+      put: { response: components["schemas"]["ApiResponse_TopicReadStateResponse_"]; operationId: "mark_topic_read_state_api_v1_topics__topic_id__read_state_put" };
+    };
     "/api/v1/topics/{topic_id}/solution": {
       put: { response: components["schemas"]["ApiResponse_TopicResponse_"]; operationId: "set_topic_solution_api_v1_topics__topic_id__solution_put" };
     };
@@ -2725,6 +2797,9 @@ export interface paths {
     };
     "/api/v1/topics/{topic_id}/vote": {
       put: { response: components["schemas"]["ApiResponse_VoteStateResponse_"]; operationId: "vote_topic_api_v1_topics__topic_id__vote_put" };
+    };
+    "/api/v1/topics/immersive-feed": {
+      get: { response: components["schemas"]["ApiResponse_list_ImmersiveTopicFeedItemResponse__"]; operationId: "list_immersive_topic_feed_api_v1_topics_immersive_feed_get" };
     };
     "/api/v1/uploads": {
       post: { response: components["schemas"]["ApiResponse_UploadResponse_"]; operationId: "upload_file_api_v1_uploads_post" };
@@ -2758,6 +2833,9 @@ export interface paths {
     };
     "/api/v1/users/{username}/relationship": {
       get: { response: components["schemas"]["ApiResponse_UserRelationshipStateResponse_"]; operationId: "get_user_relationship_api_v1_users__username__relationship_get" };
+    };
+    "/api/v1/users/{username}/relationships/{kind}": {
+      get: { response: components["schemas"]["ApiResponse_list_UserRelationshipUserResponse__"]; operationId: "list_user_relationships_api_v1_users__username__relationships__kind__get" };
     };
     "/api/v1/users/{username}/topics": {
       get: { response: components["schemas"]["ApiResponse_list_TopicResponse__"]; operationId: "list_user_topics_api_v1_users__username__topics_get" };

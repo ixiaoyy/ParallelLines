@@ -1876,6 +1876,23 @@
         "title": "ApiResponse[RetentionPolicyResponse]",
         "type": "object"
       },
+      "ApiResponse_ReviewableBulkDecisionResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ReviewableBulkDecisionResponse"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "ApiResponse[ReviewableBulkDecisionResponse]",
+        "type": "object"
+      },
       "ApiResponse_ReviewableResponse_": {
         "properties": {
           "data": {
@@ -2027,6 +2044,23 @@
           "data"
         ],
         "title": "ApiResponse[TopicNotificationLevelResponse]",
+        "type": "object"
+      },
+      "ApiResponse_TopicReadStateResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TopicReadStateResponse"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "ApiResponse[TopicReadStateResponse]",
         "type": "object"
       },
       "ApiResponse_TopicResponse_": {
@@ -2678,6 +2712,27 @@
         "title": "ApiResponse[list[FrontierNewsSourceResponse]]",
         "type": "object"
       },
+      "ApiResponse_list_ImmersiveTopicFeedItemResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ImmersiveTopicFeedItemResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "ApiResponse[list[ImmersiveTopicFeedItemResponse]]",
+        "type": "object"
+      },
       "ApiResponse_list_PluginResponse__": {
         "properties": {
           "data": {
@@ -2991,6 +3046,27 @@
           "data"
         ],
         "title": "ApiResponse[list[UserDirectoryResponse]]",
+        "type": "object"
+      },
+      "ApiResponse_list_UserRelationshipUserResponse__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/UserRelationshipUserResponse"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "title": "Meta",
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "ApiResponse[list[UserRelationshipUserResponse]]",
         "type": "object"
       },
       "ApiResponse_list_WebhookDeliveryResponse__": {
@@ -6421,6 +6497,32 @@
         "title": "HideContentRequest",
         "type": "object"
       },
+      "ImmersiveTopicFeedItemResponse": {
+        "properties": {
+          "lead_post": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PostResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "read_state": {
+            "$ref": "#/components/schemas/TopicReadStateResponse"
+          },
+          "topic": {
+            "$ref": "#/components/schemas/TopicResponse"
+          }
+        },
+        "required": [
+          "topic",
+          "read_state"
+        ],
+        "title": "ImmersiveTopicFeedItemResponse",
+        "type": "object"
+      },
       "InboundEmailResponse": {
         "properties": {
           "created_at": {
@@ -8818,6 +8920,88 @@
         "title": "ReviewableAppealRequest",
         "type": "object"
       },
+      "ReviewableBulkDecisionRequest": {
+        "properties": {
+          "action": {
+            "enum": [
+              "approve",
+              "reject",
+              "hide",
+              "delete",
+              "silence",
+              "escalate"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reviewable_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Reviewable Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reviewable_ids",
+          "action"
+        ],
+        "title": "ReviewableBulkDecisionRequest",
+        "type": "object"
+      },
+      "ReviewableBulkDecisionResponse": {
+        "properties": {
+          "action": {
+            "enum": [
+              "approve",
+              "reject",
+              "hide",
+              "delete",
+              "silence",
+              "escalate"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "processed_count": {
+            "title": "Processed Count",
+            "type": "integer"
+          },
+          "requested_count": {
+            "title": "Requested Count",
+            "type": "integer"
+          },
+          "reviewables": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewableResponse"
+            },
+            "title": "Reviewables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "action",
+          "requested_count",
+          "processed_count",
+          "reviewables"
+        ],
+        "title": "ReviewableBulkDecisionResponse",
+        "type": "object"
+      },
       "ReviewableDecisionRequest": {
         "properties": {
           "action": {
@@ -10158,6 +10342,69 @@
         "title": "TopicNotificationLevelResponse",
         "type": "object"
       },
+      "TopicReadStateRequest": {
+        "properties": {
+          "last_read_post_number": {
+            "anyOf": [
+              {
+                "maximum": 1000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Read Post Number"
+          }
+        },
+        "title": "TopicReadStateRequest",
+        "type": "object"
+      },
+      "TopicReadStateResponse": {
+        "properties": {
+          "highest_post_number": {
+            "title": "Highest Post Number",
+            "type": "integer"
+          },
+          "last_read_post_number": {
+            "title": "Last Read Post Number",
+            "type": "integer"
+          },
+          "notification_level": {
+            "enum": [
+              "muted",
+              "normal",
+              "tracking",
+              "watching"
+            ],
+            "title": "Notification Level",
+            "type": "string"
+          },
+          "read": {
+            "title": "Read",
+            "type": "boolean"
+          },
+          "topic_id": {
+            "title": "Topic Id",
+            "type": "string"
+          },
+          "unread_count": {
+            "title": "Unread Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "topic_id",
+          "last_read_post_number",
+          "highest_post_number",
+          "unread_count",
+          "read",
+          "notification_level"
+        ],
+        "title": "TopicReadStateResponse",
+        "type": "object"
+      },
       "TopicResponse": {
         "properties": {
           "accepted_answer_post_id": {
@@ -10998,6 +11245,14 @@
             "title": "Experience Total",
             "type": "integer"
           },
+          "follower_count": {
+            "title": "Follower Count",
+            "type": "integer"
+          },
+          "following_count": {
+            "title": "Following Count",
+            "type": "integer"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -11089,7 +11344,9 @@
           "show_activity",
           "created_at",
           "topic_count",
-          "post_count"
+          "post_count",
+          "following_count",
+          "follower_count"
         ],
         "title": "UserProfileResponse",
         "type": "object"
@@ -11397,6 +11654,82 @@
           "followed_by"
         ],
         "title": "UserRelationshipStateResponse",
+        "type": "object"
+      },
+      "UserRelationshipUserResponse": {
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "followed_at": {
+            "format": "date-time",
+            "title": "Followed At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "integer"
+          },
+          "post_count": {
+            "title": "Post Count",
+            "type": "integer"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "topic_count": {
+            "title": "Topic Count",
+            "type": "integer"
+          },
+          "trust_level": {
+            "title": "Trust Level",
+            "type": "integer"
+          },
+          "trust_level_label": {
+            "title": "Trust Level Label",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "role",
+          "level",
+          "trust_level",
+          "trust_level_label",
+          "topic_count",
+          "post_count",
+          "followed_at"
+        ],
+        "title": "UserRelationshipUserResponse",
         "type": "object"
       },
       "UserStatusResponse": {
@@ -15834,6 +16167,7 @@
                 "hot",
                 "top",
                 "votes",
+                "recommended",
                 "relevance"
               ],
               "title": "Sort",
@@ -17502,6 +17836,53 @@
         ]
       }
     },
+    "/api/v1/moderation/reviewables/bulk-decide": {
+      "post": {
+        "description": "Apply one moderator decision to selected reviewables.\n\nKey parameters are the bulk payload and authenticated moderator. Return\nvalue reports processed reviewables. Side effect: may publish, reject, hide,\ndelete, silence, or escalate content in one transaction.",
+        "operationId": "decide_reviewables_bulk_api_v1_moderation_reviewables_bulk_decide_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewableBulkDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ReviewableBulkDecisionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Decide Reviewables Bulk",
+        "tags": [
+          "moderation"
+        ]
+      }
+    },
     "/api/v1/moderation/reviewables/me": {
       "get": {
         "operationId": "list_my_reviewables_api_v1_moderation_reviewables_me_get",
@@ -18958,6 +19339,7 @@
                 "hot",
                 "top",
                 "votes",
+                "recommended",
                 "relevance"
               ],
               "title": "Sort",
@@ -19240,6 +19622,7 @@
                 "hot",
                 "top",
                 "votes",
+                "recommended",
                 "relevance"
               ],
               "title": "Sort",
@@ -19303,6 +19686,154 @@
           }
         ],
         "summary": "List Topics",
+        "tags": [
+          "topics"
+        ]
+      }
+    },
+    "/api/v1/topics/immersive-feed": {
+      "get": {
+        "description": "Return the full-screen topic feed with first posts and read state.\n\nKey parameters are public topic filters, `sort`, `cursor`, and `limit`.\nReturn value is an API envelope with feed items and `next_cursor`. Side\neffect: none; this route does not count views or mark topics read.",
+        "operationId": "list_immersive_topic_feed_api_v1_topics_immersive_feed_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "board",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Board"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tag",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tag"
+            }
+          },
+          {
+            "in": "query",
+            "name": "author",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Author"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "latest",
+              "enum": [
+                "latest",
+                "hot",
+                "top",
+                "votes",
+                "recommended"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_list_ImmersiveTopicFeedItemResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Immersive Topic Feed",
         "tags": [
           "topics"
         ]
@@ -20236,6 +20767,64 @@
           }
         ],
         "summary": "Reply To Topic",
+        "tags": [
+          "topics"
+        ]
+      }
+    },
+    "/api/v1/topics/{topic_id}/read-state": {
+      "put": {
+        "description": "Persist the authenticated user's read marker for one topic.\n\nKey parameters are `topic_id`, request `payload`, and `current_user`.\nReturn value is the updated read-state envelope. Side effect: upserts the\n`topic_reads` row and commits.",
+        "operationId": "mark_topic_read_state_api_v1_topics__topic_id__read_state_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topic_id",
+            "required": true,
+            "schema": {
+              "title": "Topic Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TopicReadStateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TopicReadStateResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Mark Topic Read State",
         "tags": [
           "topics"
         ]
@@ -21333,6 +21922,78 @@
           }
         ],
         "summary": "Get User Relationship",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{username}/relationships/{kind}": {
+      "get": {
+        "operationId": "list_user_relationships_api_v1_users__username__relationships__kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "following",
+                "followers"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_list_UserRelationshipUserResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List User Relationships",
         "tags": [
           "users"
         ]

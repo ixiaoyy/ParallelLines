@@ -16,6 +16,8 @@ from app.schemas.moderation import (
     HideContentRequest,
     ModerationActionResponse,
     ReviewableAppealRequest,
+    ReviewableBulkDecisionRequest,
+    ReviewableBulkDecisionResponse,
     ReviewableDecisionRequest,
     ReviewableResponse,
     ReviewableStatus,
@@ -105,6 +107,28 @@ async def list_my_reviewables(
         limit=limit,
     )
     return ApiResponse(data=reviewables)
+
+
+@router.post(
+    "/reviewables/bulk-decide",
+    response_model=ApiResponse[ReviewableBulkDecisionResponse],
+)
+async def decide_reviewables_bulk(
+    payload: ReviewableBulkDecisionRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[ReviewableBulkDecisionResponse]:
+    """Apply one moderator decision to selected reviewables.
+
+    Key parameters are the bulk payload and authenticated moderator. Return
+    value reports processed reviewables. Side effect: may publish, reject, hide,
+    delete, silence, or escalate content in one transaction.
+    """
+
+    result = await ModerationService(session).decide_reviewables_bulk(payload, current_user)
+    if payload.action in {"approve", "hide", "delete"}:
+        _invalidate_public_content_caches(include_tags=payload.action == "approve")
+    return ApiResponse(data=result)
 
 
 @router.post("/reviewables/{reviewable_id}/claim", response_model=ApiResponse[ReviewableResponse])

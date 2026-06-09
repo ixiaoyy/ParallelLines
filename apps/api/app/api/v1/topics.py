@@ -6,11 +6,15 @@ from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, Sess
 from app.core.response_cache import ResponseHotCache, scoped_cache_control, user_cache_scope
 from app.schemas.common import ApiResponse
 from app.schemas.forum import (
+    ImmersiveTopicFeedItemResponse,
+    ImmersiveTopicFeedSort,
     PollResponse,
     PollVoteRequest,
     PostCreateRequest,
     PostResponse,
     PostSort,
+    TopicReadStateRequest,
+    TopicReadStateResponse,
     TopicLifecycleRequest,
     TopicLifecycleResponse,
     TopicMergeRequest,
@@ -113,7 +117,10 @@ async def list_topics(
     payload = ApiResponse(
         data=[TopicResponse.from_model(topic) for topic in topics],
         meta={
-            "next_cursor": encode_topic_cursor(topics[-1], include_pinned=sort == "latest")
+            "next_cursor": encode_topic_cursor(
+                topics[-1],
+                include_pinned=sort == "latest",
+            )
             if len(topics) == limit
             else None
         },
@@ -121,6 +128,52 @@ async def list_topics(
     _TOPIC_LIST_RESPONSE_CACHE.set(cache_key, payload)
     response.headers["X-ParallelLines-Cache"] = "miss"
     return payload
+
+
+@router.get("/immersive-feed", response_model=ApiResponse[list[ImmersiveTopicFeedItemResponse]])
+async def list_immersive_topic_feed(
+    session: SessionDep,
+    current_user: OptionalCurrentUserDep,
+    board: str | None = None,
+    q: str | None = None,
+    tag: str | None = None,
+    author: str | None = None,
+    sort: ImmersiveTopicFeedSort = "latest",
+    cursor: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+) -> ApiResponse[list[ImmersiveTopicFeedItemResponse]]:
+    """Return the full-screen topic feed with first posts and read state.
+
+    Key parameters are public topic filters, `sort`, `cursor`, and `limit`.
+    Return value is an API envelope with feed items and `next_cursor`. Side
+    effect: none; this route does not count views or mark topics read.
+    """
+
+    feed_rows = await ForumService(session).list_immersive_feed(
+        board_slug=board,
+        sort=sort,
+        limit=limit,
+        query=q,
+        tag=tag,
+        author=author,
+        cursor=cursor,
+        current_user=current_user,
+    )
+    topics = [topic for topic, _lead_post, _read_state in feed_rows]
+    return ApiResponse(
+        data=[
+            ImmersiveTopicFeedItemResponse.from_models(topic, lead_post, read_state)
+            for topic, lead_post, read_state in feed_rows
+        ],
+        meta={
+            "next_cursor": encode_topic_cursor(
+                topics[-1],
+                include_pinned=sort == "latest",
+            )
+            if len(topics) == limit
+            else None
+        },
+    )
 
 
 # Build an auth-scoped cache key for global topic feed/filter responses.
@@ -176,6 +229,28 @@ async def get_topic(
         visitor_id=request.headers.get("X-ParallelLines-Visitor"),
     )
     return ApiResponse(data=TopicResponse.from_model(topic))
+
+
+@router.put("/{topic_id}/read-state", response_model=ApiResponse[TopicReadStateResponse])
+async def mark_topic_read_state(
+    topic_id: str,
+    payload: TopicReadStateRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[TopicReadStateResponse]:
+    """Persist the authenticated user's read marker for one topic.
+
+    Key parameters are `topic_id`, request `payload`, and `current_user`.
+    Return value is the updated read-state envelope. Side effect: upserts the
+    `topic_reads` row and commits.
+    """
+
+    topic, read_state = await ForumService(session).mark_topic_read(
+        topic_id,
+        current_user,
+        post_number=payload.last_read_post_number,
+    )
+    return ApiResponse(data=TopicReadStateResponse.from_topic_and_state(topic, read_state))
 
 
 @router.put("/{topic_id}/solution", response_model=ApiResponse[TopicResponse])

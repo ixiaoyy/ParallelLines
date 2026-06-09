@@ -23,6 +23,8 @@ from app.schemas.moderation import (
     ModerationActionResponse,
     ModerationTargetResponse,
     ReviewableAppealRequest,
+    ReviewableBulkDecisionRequest,
+    ReviewableBulkDecisionResponse,
     ReviewableDecisionRequest,
     ReviewableResponse,
     UserStatusResponse,
@@ -568,6 +570,72 @@ class ModerationService:
         payload: ReviewableDecisionRequest,
         current_user: User,
     ) -> ReviewableResponse:
+        """Apply one moderator decision and commit the result.
+
+        Key parameters are the reviewable id, decision payload, and actor.
+        Return value is the refreshed reviewable response. Side effect: mutates
+        the target content, reviewable status, notifications, and audit log.
+        """
+
+        reviewable = await self._decide_reviewable_in_session(
+            reviewable_id,
+            payload,
+            current_user,
+        )
+        await self.session.commit()
+        return ReviewableResponse.from_model(await self._get_reviewable(reviewable.id))
+
+    async def decide_reviewables_bulk(
+        self,
+        payload: ReviewableBulkDecisionRequest,
+        current_user: User,
+    ) -> ReviewableBulkDecisionResponse:
+        """Apply one decision action to multiple reviewables in a single transaction.
+
+        Key parameters are a bulk decision payload and actor. Return value
+        reports the unique processed reviewables. Side effect: commits all
+        reviewable decisions together, or rolls the batch back when any item
+        fails validation or target mutation.
+        """
+
+        unique_ids = list(dict.fromkeys(payload.reviewable_ids))
+        decision_payload = ReviewableDecisionRequest(action=payload.action, note=payload.note)
+        decided_ids: list[str] = []
+        try:
+            for reviewable_id in unique_ids:
+                reviewable = await self._decide_reviewable_in_session(
+                    reviewable_id,
+                    decision_payload,
+                    current_user,
+                )
+                decided_ids.append(reviewable.id)
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+
+        decided_reviewables = await self._get_reviewables_by_ids(decided_ids)
+        return ReviewableBulkDecisionResponse(
+            action=payload.action,
+            requested_count=len(payload.reviewable_ids),
+            processed_count=len(decided_reviewables),
+            reviewables=[ReviewableResponse.from_model(reviewable) for reviewable in decided_reviewables],
+        )
+
+    async def _decide_reviewable_in_session(
+        self,
+        reviewable_id: str,
+        payload: ReviewableDecisionRequest,
+        current_user: User,
+    ) -> Reviewable:
+        """Mutate one reviewable decision without committing the transaction.
+
+        Key parameters are the reviewable id, decision payload, and actor.
+        Return value is the mutated ORM reviewable. Side effect: applies content
+        publishing/hiding/silencing work, notifications, and audit rows in the
+        current session only.
+        """
+
         reviewable = await self._get_reviewable(reviewable_id)
         await self._require_can_access_reviewable(current_user, reviewable)
         if reviewable.status not in OPEN_REVIEWABLE_STATUSES:
@@ -601,8 +669,7 @@ class ModerationService:
                 event="decided",
                 idempotency_suffix=payload.action,
             )
-        await self.session.commit()
-        return ReviewableResponse.from_model(await self._get_reviewable(reviewable.id))
+        return reviewable
 
     async def appeal_reviewable(
         self,
@@ -716,6 +783,31 @@ class ModerationService:
         if not reviewable:
             raise NotFoundError("reviewable_not_found", "Reviewable not found")
         return reviewable
+
+    async def _get_reviewables_by_ids(self, reviewable_ids: list[str]) -> list[Reviewable]:
+        """Return refreshed reviewables in caller-provided order.
+
+        Key parameter `reviewable_ids` should be unique ids already processed
+        by the current service call. Return value omits missing ids only after
+        commit-time refresh; the method has no side effects.
+        """
+
+        if not reviewable_ids:
+            return []
+
+        reviewables = list(
+            await self.session.scalars(
+                select(Reviewable)
+                .options(*self._reviewable_options())
+                .where(Reviewable.id.in_(reviewable_ids))
+            )
+        )
+        reviewable_by_id = {reviewable.id: reviewable for reviewable in reviewables}
+        return [
+            reviewable_by_id[reviewable_id]
+            for reviewable_id in reviewable_ids
+            if reviewable_id in reviewable_by_id
+        ]
 
     async def _require_can_access_reviewable(
         self,

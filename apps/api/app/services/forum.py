@@ -43,6 +43,7 @@ from app.schemas.forum import (
     BoardMemberUpdateRequest,
     BoardSettingsResponse,
     BoardSettingsUpdateRequest,
+    ImmersiveTopicFeedSort,
     PollVoteRequest,
     PostCreateRequest,
     PostRevisionRestoreRequest,
@@ -843,6 +844,17 @@ class ForumService:
                 desc(Topic.last_posted_at),
                 desc(Topic.id),
             )
+        elif sort == "recommended":
+            statement = apply_latest_topic_cursor(statement, topic_cursor)
+            featured_rank = case((Topic.featured.is_(True), 1), else_=0)
+            pinned_rank = case((Topic.pinned.is_(True), 1), else_=0)
+            statement = statement.order_by(
+                desc(featured_rank),
+                desc(pinned_rank),
+                desc(Topic.hot_score),
+                desc(Topic.last_posted_at),
+                desc(Topic.id),
+            )
         elif sort == "hot":
             statement = apply_latest_topic_cursor(statement, topic_cursor)
             statement = statement.order_by(desc(Topic.hot_score), desc(Topic.last_posted_at))
@@ -872,6 +884,74 @@ class ForumService:
         await self._decorate_topic_excerpts(topics)
         await self._decorate_topics_for_user(topics, current_user)
         return topics
+
+    async def list_immersive_feed(
+        self,
+        *,
+        board_slug: str | None = None,
+        sort: ImmersiveTopicFeedSort = "latest",
+        limit: int = 20,
+        query: str | None = None,
+        tag: str | None = None,
+        author: str | None = None,
+        cursor: str | datetime | None = None,
+        current_user: User | None = None,
+    ) -> list[tuple[Topic, Post | None, TopicRead | None]]:
+        """Return full-screen feed topics with lead posts and read state.
+
+        Key parameters mirror public topic-list filters and cursor pagination.
+        Return value preserves topic order as `(topic, first_post, read_state)`
+        tuples. Side effect: none; viewing and read tracking are handled by
+        dedicated routes.
+        """
+
+        topics = await self.list_topics(
+            board_slug=board_slug,
+            sort=sort,
+            limit=limit,
+            query=query,
+            tag=tag,
+            author=author,
+            cursor=cursor,
+            current_user=current_user,
+        )
+        lead_posts_by_topic = await self._lead_posts_by_topic(topics, current_user)
+        await self._decorate_posts_for_user(list(lead_posts_by_topic.values()), current_user)
+        read_states_by_topic = await self._topic_read_states_by_topic(topics, current_user)
+        return [
+            (topic, lead_posts_by_topic.get(topic.id), read_states_by_topic.get(topic.id))
+            for topic in topics
+        ]
+
+    async def mark_topic_read(
+        self,
+        topic_id: str,
+        current_user: User,
+        *,
+        post_number: int | None = None,
+    ) -> tuple[Topic, TopicRead]:
+        """Persist how far the current user has read in a visible topic.
+
+        Key parameters are `topic_id`, `current_user`, and optional
+        `post_number`; when omitted the topic is marked read through its latest
+        known post. Return value is the visible topic and refreshed read row.
+        Side effect: upserts `topic_reads` and commits the transaction.
+        """
+
+        topic = await self.get_topic(topic_id, current_user=current_user)
+        highest_post_number = max(int(topic.reply_count or 0) + 1, 1)
+        target_post_number = highest_post_number if post_number is None else post_number
+        target_post_number = max(0, min(target_post_number, highest_post_number))
+        await self._upsert_read_state(
+            topic.id,
+            current_user.id,
+            post_number=target_post_number,
+        )
+        await self.session.commit()
+        read_state = await self._topic_read_state(topic.id, current_user)
+        if read_state is None:
+            raise NotFoundError("topic_read_not_found", "Topic read state not found")
+        return topic, read_state
 
     async def get_user_by_username(self, username: str) -> User:
         user = await self.session.scalar(select(User).where(User.username == username))
@@ -2485,6 +2565,79 @@ class ForumService:
         for topic in topics:
             topic.excerpt = excerpt_by_topic.get(topic.id, "")
 
+    async def _lead_posts_by_topic(
+        self,
+        topics: list[Topic],
+        current_user: User | None,
+    ) -> dict[str, Post]:
+        """Return first visible posts keyed by topic id for immersive feed cards.
+
+        Key parameters are ordered feed `topics` and optional `current_user`
+        used for author-visibility filtering. Return value maps topic ids to
+        loaded first-post entities. Side effect: none.
+        """
+
+        if not topics:
+            return {}
+
+        topic_ids = [topic.id for topic in topics]
+        statement = (
+            select(Post)
+            .options(selectinload(Post.author), selectinload(Post.topic))
+            .where(
+                Post.topic_id.in_(topic_ids),
+                Post.post_number == 1,
+                Post.deleted_at.is_(None),
+            )
+        )
+        if current_user is not None:
+            statement = statement.where(self._visible_author_condition(current_user, Post.user_id))
+        posts = list(await self.session.scalars(statement))
+        return {post.topic_id: post for post in posts}
+
+    async def _topic_read_states_by_topic(
+        self,
+        topics: list[Topic],
+        current_user: User | None,
+    ) -> dict[str, TopicRead]:
+        """Return current-user read rows keyed by topic id for feed rendering.
+
+        Key parameters are the feed `topics` and optional `current_user`.
+        Return value is empty for anonymous users. Side effect: none.
+        """
+
+        if current_user is None or not topics:
+            return {}
+
+        topic_ids = [topic.id for topic in topics]
+        read_states = list(
+            await self.session.scalars(
+                select(TopicRead).where(
+                    TopicRead.topic_id.in_(topic_ids),
+                    TopicRead.user_id == current_user.id,
+                )
+            )
+        )
+        return {read_state.topic_id: read_state for read_state in read_states}
+
+    async def _topic_read_state(
+        self,
+        topic_id: str,
+        current_user: User,
+    ) -> TopicRead | None:
+        """Load one current-user topic read row after an upsert.
+
+        Key parameters are the topic id and current user. Return value is the
+        matching `TopicRead` row or `None`; the method has no side effects.
+        """
+
+        return await self.session.scalar(
+            select(TopicRead).where(
+                TopicRead.topic_id == topic_id,
+                TopicRead.user_id == current_user.id,
+            )
+        )
+
     async def _decorate_topics_for_user(
         self,
         topics: list[Topic],
@@ -2962,11 +3115,19 @@ class ForumService:
         return tags
 
     async def _upsert_read_state(self, topic_id: str, user_id: str, *, post_number: int) -> None:
+        """Create or advance a user's topic read marker.
+
+        Key parameters are `topic_id`, `user_id`, and the last read
+        `post_number`. Return value is none. Side effect: mutates the current
+        session without committing, and never moves an existing marker
+        backwards.
+        """
+
         read_state = await self.session.scalar(
             select(TopicRead).where(TopicRead.topic_id == topic_id, TopicRead.user_id == user_id)
         )
         if read_state:
-            read_state.last_read_post_number = post_number
+            read_state.last_read_post_number = max(read_state.last_read_post_number, post_number)
             # Only auto-upgrade to tracking if the user hasn't explicitly set a level
             if read_state.notification_level == "normal":
                 read_state.notification_level = "tracking"

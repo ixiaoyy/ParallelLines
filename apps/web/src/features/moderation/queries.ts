@@ -10,6 +10,7 @@ import {
   claimReviewable,
   createFlag,
   decideReviewable,
+  decideReviewablesBulk,
   fetchAuditLogs,
   fetchModerationQueue,
   fetchMyReviewables,
@@ -27,6 +28,8 @@ import type {
   FlagTargetType,
   ModerationActionResponse,
   ReviewableAppealRequest,
+  ReviewableBulkDecisionRequest,
+  ReviewableBulkDecisionResponse,
   ReviewableDecisionRequest,
   ReviewableResponse,
   ReviewableStatus,
@@ -185,6 +188,19 @@ export function useReviewableDecisionMutation() {
     { reviewableId: string; payload: ReviewableDecisionRequest }
   >({
     mutationFn: ({ reviewableId, payload }) => decideReviewable(reviewableId, payload),
+    onSuccess: () => invalidateModeration(queryClient),
+  });
+}
+
+/**
+ * Creates the bulk reviewable-decision mutation used by touch batch selection.
+ *
+ * @returns TanStack mutation; side effects apply the backend batch action and refresh moderation/public caches.
+ */
+export function useReviewableBulkDecisionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<ReviewableBulkDecisionResponse, Error, ReviewableBulkDecisionRequest>({
+    mutationFn: decideReviewablesBulk,
     onSuccess: () => invalidateModeration(queryClient),
   });
 }

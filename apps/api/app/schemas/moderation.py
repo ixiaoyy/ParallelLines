@@ -60,6 +60,12 @@ class ReviewableDecisionRequest(BaseModel):
     note: str | None = Field(default=None, max_length=2_000)
 
 
+class ReviewableBulkDecisionRequest(BaseModel):
+    reviewable_ids: list[str] = Field(min_length=1, max_length=100)
+    action: ReviewableDecisionAction
+    note: str | None = Field(default=None, max_length=2_000)
+
+
 class ReviewableAppealRequest(BaseModel):
     reason: str = Field(min_length=4, max_length=2_000)
 
@@ -236,6 +242,13 @@ class ReviewableResponse(BaseModel):
             created_at=reviewable.created_at,
             updated_at=reviewable.updated_at,
         )
+
+
+class ReviewableBulkDecisionResponse(BaseModel):
+    action: ReviewableDecisionAction
+    requested_count: int
+    processed_count: int
+    reviewables: list[ReviewableResponse]
 
 
 class AuditLogResponse(BaseModel):

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import {
   EyeOutlined,
   FlagOutlined,
@@ -30,6 +30,7 @@ import {
   useModerationQueue,
   useUserStatusMutation,
   usePublishReviewableQueue,
+  useReviewableBulkDecisionMutation,
   useReviewableDecisionMutation,
 } from "@/features/moderation/queries";
 import { hasAccessToken } from "@/shared/api/client";
@@ -70,6 +71,7 @@ const userStatusMutation = useUserStatusMutation();
 const currentUserQuery = useCurrentUser();
 
 const decisionMutation = useReviewableDecisionMutation();
+const bulkDecisionMutation = useReviewableBulkDecisionMutation();
 
 const userId = ref("");
 const userStatus = ref<UserModerationStatus>("silenced");
@@ -99,7 +101,8 @@ const pendingAction = computed(
     flagStatusMutation.isPending.value ||
     contentMutation.isPending.value ||
     userStatusMutation.isPending.value ||
-    decisionMutation.isPending.value,
+    decisionMutation.isPending.value ||
+    bulkDecisionMutation.isPending.value,
 );
 const activeReviewablePendingId = computed(() =>
   decisionMutation.isPending.value ? activeReviewableId.value : null,
@@ -162,6 +165,22 @@ const selectedFrontierPreviewCard = computed(() =>
 );
 const decisionAction = ref<ReviewableDecisionAction>("approve");
 const decisionNote = ref("");
+const selectedReviewableIds = ref<Set<string>>(new Set());
+const selectionPointerId = ref<number | null>(null);
+const selectionPointerValue = ref(true);
+const selectedReviewableIdList = computed(() => Array.from(selectedReviewableIds.value));
+const selectedReviewableCount = computed(() => selectedReviewableIds.value.size);
+const bulkSelectionActive = computed(() => selectedReviewableCount.value > 0);
+const bulkDecisionPending = computed(() => bulkDecisionMutation.isPending.value);
+
+watch(
+  () => reviewables.value,
+  (nextReviewables) => {
+    pruneReviewableSelection(nextReviewables);
+  },
+);
+
+watch(reviewableStatusFilter, () => clearReviewableSelection());
 
 function openReviewableDetails(reviewable: ReviewableResponse) {
   selectedReviewable.value = reviewable;
@@ -192,6 +211,136 @@ function canDecideReviewable(reviewable: ReviewableResponse) {
   }
 
   return !isClaimedByOther(reviewable);
+}
+
+// Returns whether a reviewable can participate in touch batch selection.
+// Key parameter `reviewable` is a visible queue item. Return value is boolean;
+// side effect: none.
+function canSelectReviewable(reviewable: ReviewableResponse) {
+  return canDecideReviewable(reviewable);
+}
+
+// Checks selection state for one reviewable id.
+// Key parameter `reviewable` is a visible queue item. Return value is boolean;
+// side effect: none.
+function isReviewableSelected(reviewable: ReviewableResponse) {
+  return selectedReviewableIds.value.has(reviewable.id);
+}
+
+// Returns the one-based visual selection order shown on selected reviewables.
+// Key parameter `reviewable` is a visible queue item. Return value is a display
+// index or zero. Side effect: none.
+function selectedReviewableNumber(reviewable: ReviewableResponse) {
+  return selectedReviewableIdList.value.indexOf(reviewable.id) + 1;
+}
+
+// Starts tap-and-drag selection from a reviewable card surface.
+// Key parameters are the reviewable and pointer event. Return value is none.
+// Side effects: captures the pointer and toggles the item selection.
+function beginReviewableSelection(reviewable: ReviewableResponse, event: PointerEvent) {
+  if (!canSelectReviewable(reviewable) || isSelectionIgnoredTarget(event.target)) {
+    return;
+  }
+  if (event.pointerType === "mouse" && event.button !== 0) {
+    return;
+  }
+
+  event.preventDefault();
+  selectionPointerId.value = event.pointerId;
+  selectionPointerValue.value = !isReviewableSelected(reviewable);
+  updateReviewableSelection(reviewable.id, selectionPointerValue.value);
+  (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+}
+
+// Extends the active drag selection over the reviewable currently under the pointer.
+// Key parameter `event` provides viewport coordinates. Return value is none.
+// Side effect: adds or removes queue items according to the drag mode.
+function extendReviewableSelection(event: PointerEvent) {
+  if (selectionPointerId.value !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  const targetId = reviewableIdAtPoint(event.clientX, event.clientY);
+  if (!targetId) {
+    return;
+  }
+  const reviewable = reviewables.value.find((item) => item.id === targetId);
+  if (!reviewable || !canSelectReviewable(reviewable)) {
+    return;
+  }
+
+  updateReviewableSelection(targetId, selectionPointerValue.value);
+}
+
+// Ends an active pointer selection gesture.
+// Key parameter `event` identifies the captured pointer. Return value is none.
+// Side effect: releases pointer capture bookkeeping.
+function endReviewableSelection(event: PointerEvent) {
+  if (selectionPointerId.value !== event.pointerId) {
+    return;
+  }
+
+  (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
+  selectionPointerId.value = null;
+}
+
+// Applies or removes one reviewable id in the immutable selection Set.
+// Key parameters are reviewable id and desired selected state. Return value is
+// none. Side effect: replaces `selectedReviewableIds`.
+function updateReviewableSelection(reviewableId: string, selected: boolean) {
+  const nextSelection = new Set(selectedReviewableIds.value);
+  if (selected) {
+    nextSelection.add(reviewableId);
+  } else {
+    nextSelection.delete(reviewableId);
+  }
+  selectedReviewableIds.value = nextSelection;
+}
+
+// Clears all selected reviewables.
+// Key parameters: none. Return value is none. Side effect: resets selection.
+function clearReviewableSelection() {
+  selectedReviewableIds.value = new Set();
+  selectionPointerId.value = null;
+}
+
+// Drops selected ids that are no longer visible in the current queue data.
+// Key parameter `nextReviewables` is the latest visible list. Return value is
+// none. Side effect: replaces selection when stale ids are present.
+function pruneReviewableSelection(nextReviewables: ReviewableResponse[]) {
+  const visibleIds = new Set(nextReviewables.map((reviewable) => reviewable.id));
+  const nextSelection = new Set(
+    selectedReviewableIdList.value.filter((reviewableId) => visibleIds.has(reviewableId)),
+  );
+  if (nextSelection.size !== selectedReviewableIds.value.size) {
+    selectedReviewableIds.value = nextSelection;
+  }
+}
+
+// Finds a reviewable card id at viewport coordinates during drag selection.
+// Key parameters are pointer x/y coordinates. Return value is the reviewable id
+// or null. Side effect: none.
+function reviewableIdAtPoint(clientX: number, clientY: number) {
+  const element = document
+    .elementFromPoint(clientX, clientY)
+    ?.closest<HTMLElement>("[data-reviewable-id]");
+  return element?.dataset.reviewableId ?? null;
+}
+
+// Checks whether a pointer target belongs to an interactive child control.
+// Key parameter is the raw pointer target. Return value is boolean; side effect:
+// none.
+function isSelectionIgnoredTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return Boolean(
+    target.closest(
+      "button,a,input,select,textarea,[role='button'],[data-selection-ignore='true']",
+    ),
+  );
 }
 
 function isClaimedByOther(reviewable: ReviewableResponse) {
@@ -395,6 +544,48 @@ function approveReviewable(reviewable: ReviewableResponse) {
 
 function rejectReviewable(reviewable: ReviewableResponse) {
   decideReviewable(reviewable, "reject", "审核拒绝，不予发布。");
+}
+
+// Submits the current selected reviewables as one backend batch decision.
+// Key parameters are the moderation action and note. Return value is none.
+// Side effects: mutates backend reviewables and clears selection on success.
+function submitBulkReviewableDecision(action: ReviewableDecisionAction, note: string) {
+  if (!selectedReviewableIdList.value.length || bulkDecisionPending.value) {
+    return;
+  }
+
+  resetActionFeedback();
+  bulkDecisionMutation.mutate(
+    {
+      reviewable_ids: selectedReviewableIdList.value,
+      action,
+      note,
+    },
+    {
+      onSuccess: (response) => {
+        actionNotice.value = `${bulkDecisionLabel(action)}：已处理 ${response.processed_count} 条。`;
+        clearReviewableSelection();
+      },
+      onError: (error) => {
+        actionError.value = mutationErrorMessage(error);
+      },
+    },
+  );
+}
+
+// Returns the operator-facing label for a bulk moderation action.
+// Key parameter `action` is the submitted decision. Return value is display
+// text. Side effect: none.
+function bulkDecisionLabel(action: ReviewableDecisionAction) {
+  const labels: Record<ReviewableDecisionAction, string> = {
+    approve: "一键通过",
+    reject: "批量驳回",
+    hide: "批量隐藏",
+    delete: "批量删除",
+    silence: "批量禁言",
+    escalate: "人工复核",
+  };
+  return labels[action];
 }
 
 function resolveFlag(flag: FlagResponse) {
@@ -602,7 +793,27 @@ function mutationErrorMessage(error: unknown) {
             </UiCard>
 
             <ol v-else-if="reviewables.length" class="reviewable-list">
-              <li v-for="rev in reviewables" :key="rev.id" class="reviewable-list-item">
+              <li
+                v-for="rev in reviewables"
+                :key="rev.id"
+                class="reviewable-list-item"
+                :class="{
+                  'reviewable-list-item--selected': isReviewableSelected(rev),
+                  'reviewable-list-item--disabled': !canSelectReviewable(rev),
+                }"
+                :data-reviewable-id="rev.id"
+                @pointerdown="beginReviewableSelection(rev, $event)"
+                @pointermove="extendReviewableSelection"
+                @pointerup="endReviewableSelection"
+                @pointercancel="endReviewableSelection"
+              >
+                <span
+                  class="reviewable-list-item__selector"
+                  :class="{ 'reviewable-list-item__selector--active': isReviewableSelected(rev) }"
+                  aria-hidden="true"
+                >
+                  <template v-if="isReviewableSelected(rev)">{{ selectedReviewableNumber(rev) }}</template>
+                </span>
                 <div class="reviewable-list-item__main">
                   <span class="reviewable-list-item__meta">
                     {{ reviewableStatusLabel(rev.status) }} ·
@@ -611,29 +822,60 @@ function mutationErrorMessage(error: unknown) {
                     {{ relativeTime(rev.created_at) }}
                   </span>
                   <h3>{{ reviewableTitle(rev) }}</h3>
+                  <p>{{ reviewablePreview(rev) }}</p>
                 </div>
 
                 <div class="reviewable-list-item__actions">
                   <template v-if="canDecideReviewable(rev)">
-                    <UiButton tone="success" :disabled="pendingAction" @click="approveReviewable(rev)">
+                    <UiButton
+                      tone="success"
+                      :disabled="pendingAction"
+                      data-selection-ignore="true"
+                      @pointerdown.stop
+                      @click.stop="approveReviewable(rev)"
+                    >
                       {{ activeReviewablePendingId === rev.id ? "处理中…" : "通过" }}
                     </UiButton>
-                    <UiButton tone="ghost" :disabled="pendingAction" @click="rejectReviewable(rev)">
+                    <UiButton
+                      tone="ghost"
+                      :disabled="pendingAction"
+                      data-selection-ignore="true"
+                      @pointerdown.stop
+                      @click.stop="rejectReviewable(rev)"
+                    >
                       {{ activeReviewablePendingId === rev.id ? "处理中…" : "拒绝" }}
                     </UiButton>
-                    <UiButton tone="subtle" :disabled="pendingAction" @click="openReviewableDetails(rev)">
+                    <UiButton
+                      tone="subtle"
+                      :disabled="pendingAction"
+                      data-selection-ignore="true"
+                      @pointerdown.stop
+                      @click.stop="openReviewableDetails(rev)"
+                    >
                       详情
                     </UiButton>
                   </template>
                   <template v-else-if="isClaimedByOther(rev)">
                     <span class="assignee-warn">处理中：{{ rev.assigned_to_name }}</span>
-                    <UiButton tone="subtle" :disabled="pendingAction" @click="openReviewableDetails(rev)">
+                    <UiButton
+                      tone="subtle"
+                      :disabled="pendingAction"
+                      data-selection-ignore="true"
+                      @pointerdown.stop
+                      @click.stop="openReviewableDetails(rev)"
+                    >
                       详情
                     </UiButton>
                   </template>
                   <template v-else>
                     <span class="resolved-note">已处理：{{ rev.resolved_by_name || '系统' }}</span>
-                    <UiButton tone="subtle" :disabled="pendingAction" @click="openReviewableDetails(rev)">
+                    <UiButton
+                      tone="subtle"
+                      :disabled="pendingAction"
+                      data-selection-ignore="true"
+                      @pointerdown.stop
+                      @click.stop="openReviewableDetails(rev)"
+                    >
                       详情
                     </UiButton>
                   </template>
@@ -641,7 +883,42 @@ function mutationErrorMessage(error: unknown) {
               </li>
             </ol>
 
-            <UiCard v-else class="moderation-empty">
+            <Transition name="bulk-bar">
+              <div v-if="bulkSelectionActive" class="reviewable-bulk-bar" role="status" aria-live="polite">
+                <div class="reviewable-bulk-bar__summary">
+                  <strong>已选 {{ selectedReviewableCount }} 条</strong>
+                  <span>{{ reviewableStatusLabel(reviewableStatusFilter === 'all' ? 'pending' : reviewableStatusFilter) }}</span>
+                </div>
+                <div class="reviewable-bulk-bar__actions">
+                  <UiButton
+                    tone="success"
+                    :disabled="bulkDecisionPending"
+                    @click="submitBulkReviewableDecision('approve', '批量审核通过，允许发布。')"
+                  >
+                    {{ bulkDecisionPending ? "处理中…" : "一键通过" }}
+                  </UiButton>
+                  <UiButton
+                    tone="ghost"
+                    :disabled="bulkDecisionPending"
+                    @click="submitBulkReviewableDecision('reject', '批量审核拒绝，不予发布。')"
+                  >
+                    驳回
+                  </UiButton>
+                  <UiButton
+                    tone="subtle"
+                    :disabled="bulkDecisionPending"
+                    @click="submitBulkReviewableDecision('escalate', '批量升级为人工复核。')"
+                  >
+                    人工复核
+                  </UiButton>
+                  <UiButton tone="ghost" :disabled="bulkDecisionPending" @click="clearReviewableSelection">
+                    取消
+                  </UiButton>
+                </div>
+              </div>
+            </Transition>
+
+            <UiCard v-if="!reviewablesQuery.isPending.value && !reviewables.length" class="moderation-empty">
               <strong>当前筛选下没有审核任务</strong>
               <span>需要人工确认的帖子会出现在这里。</span>
             </UiCard>

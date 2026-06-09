@@ -10,6 +10,8 @@ import type {
   HideContentRequest,
   ModerationActionResponse,
   ReviewableAppealRequest,
+  ReviewableBulkDecisionRequest,
+  ReviewableBulkDecisionResponse,
   ReviewableDecisionRequest,
   ReviewableResponse,
   ReviewableStatus,
@@ -67,6 +69,18 @@ export function decideReviewable(
 ): Promise<ReviewableResponse> {
   return apiPost<ReviewableResponse, ReviewableDecisionRequest>(
     `/moderation/reviewables/${reviewableId}/decide`,
+    payload,
+  );
+}
+
+// Apply one moderation decision to a selected group of reviewables.
+// Key parameter `payload` contains selected ids and action. Return value is the
+// backend batch summary. Side effect: performs the bulk moderation request.
+export function decideReviewablesBulk(
+  payload: ReviewableBulkDecisionRequest,
+): Promise<ReviewableBulkDecisionResponse> {
+  return apiPost<ReviewableBulkDecisionResponse, ReviewableBulkDecisionRequest>(
+    "/moderation/reviewables/bulk-decide",
     payload,
   );
 }

@@ -195,6 +195,38 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   }
 }
 
+// Request an API envelope when callers need response metadata such as cursors.
+// Key parameters match `apiRequest`. Return value preserves `data` and `meta`.
+// Side effect: increments the global request activity counter and may refresh auth.
+export async function apiRequestEnvelope<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<ApiEnvelope<T>> {
+  activeApiRequestCount.value += 1;
+  try {
+    const first = await performApiRequest(path, init);
+    if (first.response.ok) {
+      return unwrapApiEnvelope<T>(first.payload);
+    }
+
+    const firstError = toApiError(first.response, first.payload);
+    if (shouldRefreshAfterFailure(path, first.response)) {
+      const refreshedToken = await refreshAccessToken();
+      if (refreshedToken) {
+        const retry = await performApiRequest(path, init);
+        if (retry.response.ok) {
+          return unwrapApiEnvelope<T>(retry.payload);
+        }
+        throw toApiError(retry.response, retry.payload);
+      }
+    }
+
+    throw firstError;
+  } finally {
+    activeApiRequestCount.value = Math.max(0, activeApiRequestCount.value - 1);
+  }
+}
+
 async function performApiRequest(
   path: string,
   init?: RequestInit,
@@ -281,6 +313,17 @@ function unwrapApiResponse<T>(payload: unknown): T {
   return (payload as ApiEnvelope<T>).data;
 }
 
+// Normalize an API payload into the envelope shape expected by cursor readers.
+// Key parameter `payload` is parsed JSON. Return value always includes `meta`.
+// Side effect: none.
+function unwrapApiEnvelope<T>(payload: unknown): ApiEnvelope<T> {
+  const envelope = payload as ApiEnvelope<T>;
+  return {
+    data: envelope.data,
+    meta: envelope.meta ?? {},
+  };
+}
+
 function toApiError(response: Response, payload: unknown): ApiError {
   const error = (payload as ApiErrorEnvelope).error;
   return new ApiError(
@@ -322,6 +365,16 @@ export function isAuthenticationError(error: unknown): boolean {
 
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
   return apiRequest<T>(path, { cache: "no-cache", ...init, method: "GET" });
+}
+
+// GET an API envelope while preserving response metadata like `next_cursor`.
+// Key parameters are request path and optional init. Return value is the full
+// API envelope. Side effect: performs a network request.
+export async function apiGetEnvelope<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<ApiEnvelope<T>> {
+  return apiRequestEnvelope<T>(path, { cache: "no-cache", ...init, method: "GET" });
 }
 
 export async function apiPut<T, TBody extends object>(
