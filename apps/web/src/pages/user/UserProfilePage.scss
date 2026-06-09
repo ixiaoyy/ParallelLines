@@ -809,13 +809,28 @@
 }
 
 @media (max-width: 720px) {
+  .user-profile-page {
+    gap: 0.85rem;
+    padding-top: 0.35rem;
+  }
+
   .profile-hero {
     min-height: auto;
-    padding: 1rem;
+    border-radius: 1rem;
+    padding: 0.95rem;
   }
 
   .profile-lines {
     display: none;
+  }
+
+  .profile-hero::after,
+  .profile-hero__glow {
+    display: none;
+  }
+
+  .profile-hero :deep(.ant-card-body) {
+    gap: 0.9rem;
   }
 
   .profile-identity,
@@ -828,10 +843,21 @@
     flex-direction: column;
   }
 
+  .profile-identity {
+    gap: 0.9rem;
+    padding-block: 0;
+  }
+
+  .profile-avatar-stack {
+    width: 100%;
+    justify-items: start;
+  }
+
   .profile-avatar-frame {
-    width: 6rem;
-    height: 6rem;
-    border-radius: 1.6rem;
+    width: 5.2rem;
+    height: 5.2rem;
+    border-radius: 1.25rem;
+    transform: none;
   }
 
   .profile-copy {
@@ -839,7 +865,9 @@
   }
 
   .profile-hero h1 {
-    font-size: clamp(2.55rem, 16vw, 4.1rem);
+    margin-top: 0.45rem;
+    font-size: clamp(1.85rem, 9vw, 2.6rem);
+    line-height: 1.08;
     letter-spacing: 0;
   }
 
@@ -852,13 +880,29 @@
   }
 
   .profile-primary-actions {
+    position: relative;
+    z-index: 3;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
   }
 
   .profile-primary-actions :deep(.ui-button),
   .profile-action-link {
-    flex: 1 1 9rem;
+    width: 100%;
+    min-height: 2.75rem;
     justify-content: center;
+    border-radius: 0.85rem !important;
+  }
+
+  .profile-primary-actions :deep(.ui-button) {
+    grid-column: 1;
+  }
+
+  .profile-action-link:last-child {
+    grid-column: 1 / -1;
   }
 
   .profile-stats {

@@ -103,8 +103,6 @@ const replyComposerOpen = ref(false);
 const repliesExpanded = ref(false);
 const replyInsertText = ref("");
 const replyInsertToken = ref(0);
-const swipeTouchStart = ref<{ x: number; y: number } | null>(null);
-const lastSwipeNavigationAt = ref(0);
 const currentUserId = computed(() => currentUserQuery.data.value?.id ?? null);
 const currentUserRole = computed(() => currentUserQuery.data.value?.role ?? null);
 const comicReader = computed(() => topic.value?.tags.includes(COMIC_READER_TAG) ?? false);
@@ -149,9 +147,6 @@ const nextSwipeTopic = computed(() => {
   const index = currentSwipeTopicIndex.value;
   return index >= 0 && index < boardSwipeTopics.value.length - 1 ? boardSwipeTopics.value[index + 1] : null;
 });
-const canUseSwipeNavigation = computed(() =>
-  Boolean(!comicReader.value && !repliesExpanded.value && !replyComposerOpen.value && (previousSwipeTopic.value || nextSwipeTopic.value)),
-);
 const flagTopicMutation = useCreateFlag();
 const topicModerationMutation = useContentModerationMutation({ awaitInvalidation: false });
 const lifecycleMutation = useTopicLifecycle(topicId);
@@ -496,61 +491,7 @@ function navigateSwipeTopic(direction: "previous" | "next") {
 
   repliesExpanded.value = false;
   replyComposerOpen.value = false;
-  lastSwipeNavigationAt.value = Date.now();
   void router.push(topicDetailRoute(target));
-}
-
-// Records the first touch point used by edge swipe navigation.
-// Key parameter: `event` is the touchstart event. Return value: none; side effect: stores one touch coordinate.
-function rememberTopicTouchStart(event: TouchEvent) {
-  if (!canUseSwipeNavigation.value || event.touches.length !== 1 || isInteractiveSwipeTarget(event.target)) {
-    swipeTouchStart.value = null;
-    return;
-  }
-
-  const touch = event.touches[0];
-  swipeTouchStart.value = { x: touch.clientX, y: touch.clientY };
-}
-
-// Turns a vertical edge swipe into adjacent-topic navigation.
-// Key parameter: `event` is the touchend event. Return value: none; side effect: may route to another topic.
-function handleTopicTouchEnd(event: TouchEvent) {
-  const start = swipeTouchStart.value;
-  swipeTouchStart.value = null;
-  if (!start || !canUseSwipeNavigation.value || event.changedTouches.length !== 1 || isSwipeNavigationCoolingDown()) {
-    return;
-  }
-
-  const touch = event.changedTouches[0];
-  const deltaY = start.y - touch.clientY;
-  const deltaX = start.x - touch.clientX;
-  if (Math.abs(deltaY) < 72 || Math.abs(deltaY) < Math.abs(deltaX) * 1.4) {
-    return;
-  }
-
-  if (deltaY > 0 && isNearPageBottom()) {
-    navigateSwipeTopic("next");
-  } else if (deltaY < 0 && isNearPageTop()) {
-    navigateSwipeTopic("previous");
-  }
-}
-
-// Converts mouse-wheel edge scrolling into adjacent-topic navigation on desktop.
-// Key parameter: `event` is the wheel event. Return value: none; side effect: may route to another topic.
-function handleTopicWheel(event: WheelEvent) {
-  if (!canUseSwipeNavigation.value || isInteractiveSwipeTarget(event.target) || isSwipeNavigationCoolingDown()) {
-    return;
-  }
-
-  if (Math.abs(event.deltaY) < 96 || Math.abs(event.deltaY) < Math.abs(event.deltaX) * 1.4) {
-    return;
-  }
-
-  if (event.deltaY > 0 && isNearPageBottom()) {
-    navigateSwipeTopic("next");
-  } else if (event.deltaY < 0 && isNearPageTop()) {
-    navigateSwipeTopic("previous");
-  }
 }
 
 // Checks whether a hash points into the collapsed reply area.
@@ -568,31 +509,6 @@ async function scrollHashIntoViewAfterRepliesRender(hash: string) {
 
   await nextTick();
   document.querySelector(hash)?.scrollIntoView({ block: "start" });
-}
-
-// Detects whether the event target is an editor or form control where swipe should be ignored.
-// Key parameter: `target` is the raw event target. Return value: true for interactive controls; no side effects.
-function isInteractiveSwipeTarget(target: EventTarget | null) {
-  return target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, button, a, [contenteditable='true'], .md-editor"));
-}
-
-// Prevents repeated wheel/touch edge events from rapidly skipping several topics.
-// Key parameters: none. Return value: true during the navigation cooldown; no side effects.
-function isSwipeNavigationCoolingDown() {
-  return Date.now() - lastSwipeNavigationAt.value < 900;
-}
-
-// Checks whether the viewport is at the top edge of the document.
-// Key parameters: none. Return value: true near the top edge; no side effects.
-function isNearPageTop() {
-  return window.scrollY <= 8;
-}
-
-// Checks whether the viewport is at the bottom edge of the document.
-// Key parameters: none. Return value: true near the bottom edge; no side effects.
-function isNearPageBottom() {
-  const documentElement = document.documentElement;
-  return window.scrollY + window.innerHeight >= documentElement.scrollHeight - 16;
 }
 
 function quotePost(post: PostItemVM) {
@@ -679,9 +595,6 @@ function flagTopic() {
   <div
     class="topic-detail-page"
     :class="{ 'topic-detail-page--comic-reader': comicReader }"
-    @touchstart.passive="rememberTopicTouchStart"
-    @touchend.passive="handleTopicTouchEnd"
-    @wheel.passive="handleTopicWheel"
   >
     <UiCard v-if="topicQuery.isLoading.value" class="topic-state" role="status">
       正在加载主题…

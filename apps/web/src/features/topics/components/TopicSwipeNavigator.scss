@@ -1,7 +1,6 @@
 .topic-swipe-navigator {
-  position: sticky;
-  bottom: 0.75rem;
-  z-index: 3;
+  position: relative;
+  z-index: 1;
 }
 
 .topic-swipe-navigator :deep(.ant-card-body) {
@@ -103,7 +102,6 @@
 
 @media (max-width: 720px) {
   .topic-swipe-navigator {
-    bottom: 0.45rem;
     margin-inline: 0.1rem;
   }
 

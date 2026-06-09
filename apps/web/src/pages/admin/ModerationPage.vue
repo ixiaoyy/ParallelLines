@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import {
+  DownOutlined,
   EyeOutlined,
   FlagOutlined,
+  FilterOutlined,
   HistoryOutlined,
+  LeftOutlined,
+  ReloadOutlined,
+  SearchOutlined,
 } from "@ant-design/icons-vue";
 
 import { isAdmin } from "@/features/auth/permissions";
@@ -167,11 +172,17 @@ const decisionAction = ref<ReviewableDecisionAction>("approve");
 const decisionNote = ref("");
 const selectedReviewableIds = ref<Set<string>>(new Set());
 const selectionPointerId = ref<number | null>(null);
+const selectionPendingPointerId = ref<number | null>(null);
 const selectionPointerValue = ref(true);
+const selectionStartPoint = ref<{ x: number; y: number } | null>(null);
+const selectionLongPressTimer = ref<number | null>(null);
+const suppressReviewableClick = ref(false);
 const selectedReviewableIdList = computed(() => Array.from(selectedReviewableIds.value));
 const selectedReviewableCount = computed(() => selectedReviewableIds.value.size);
 const bulkSelectionActive = computed(() => selectedReviewableCount.value > 0);
 const bulkDecisionPending = computed(() => bulkDecisionMutation.isPending.value);
+const REVIEWABLE_LONG_PRESS_MS = 360;
+const REVIEWABLE_SCROLL_CANCEL_PX = 12;
 
 watch(
   () => reviewables.value,
@@ -186,6 +197,17 @@ function openReviewableDetails(reviewable: ReviewableResponse) {
   selectedReviewable.value = reviewable;
   decisionAction.value = "approve";
   decisionNote.value = "";
+}
+
+// Opens details unless a just-finished long-press selection should consume the
+// synthetic click. Key parameter is the clicked reviewable. Return value is
+// none. Side effect: may open the reviewable drawer.
+function handleReviewableClick(reviewable: ReviewableResponse) {
+  if (suppressReviewableClick.value) {
+    return;
+  }
+
+  openReviewableDetails(reviewable);
 }
 
 function closeDrawer() {
@@ -234,9 +256,9 @@ function selectedReviewableNumber(reviewable: ReviewableResponse) {
   return selectedReviewableIdList.value.indexOf(reviewable.id) + 1;
 }
 
-// Starts tap-and-drag selection from a reviewable card surface.
+// Starts a long-press selection gesture without blocking ordinary page scroll.
 // Key parameters are the reviewable and pointer event. Return value is none.
-// Side effects: captures the pointer and toggles the item selection.
+// Side effects: arms a long-press timer and records the starting coordinate.
 function beginReviewableSelection(reviewable: ReviewableResponse, event: PointerEvent) {
   if (!canSelectReviewable(reviewable) || isSelectionIgnoredTarget(event.target)) {
     return;
@@ -245,22 +267,43 @@ function beginReviewableSelection(reviewable: ReviewableResponse, event: Pointer
     return;
   }
 
-  event.preventDefault();
-  selectionPointerId.value = event.pointerId;
-  selectionPointerValue.value = !isReviewableSelected(reviewable);
-  updateReviewableSelection(reviewable.id, selectionPointerValue.value);
-  (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+  cancelPendingReviewableSelection();
+  const sourceElement = event.currentTarget as HTMLElement;
+  selectionPendingPointerId.value = event.pointerId;
+  selectionStartPoint.value = { x: event.clientX, y: event.clientY };
+  selectionLongPressTimer.value = window.setTimeout(() => {
+    if (selectionPendingPointerId.value !== event.pointerId) {
+      return;
+    }
+
+    selectionPendingPointerId.value = null;
+    selectionPointerId.value = event.pointerId;
+    selectionPointerValue.value = !isReviewableSelected(reviewable);
+    suppressReviewableClick.value = true;
+    updateReviewableSelection(reviewable.id, selectionPointerValue.value);
+    sourceElement.setPointerCapture?.(event.pointerId);
+  }, REVIEWABLE_LONG_PRESS_MS);
 }
 
-// Extends the active drag selection over the reviewable currently under the pointer.
-// Key parameter `event` provides viewport coordinates. Return value is none.
-// Side effect: adds or removes queue items according to the drag mode.
+// Extends active long-press selection, or cancels a pending selection when the
+// gesture is clearly a scroll. Key parameter is the pointer event. Return value
+// is none. Side effects: mutates selected ids during active selection.
 function extendReviewableSelection(event: PointerEvent) {
+  if (selectionPendingPointerId.value === event.pointerId && selectionStartPoint.value) {
+    const deltaX = event.clientX - selectionStartPoint.value.x;
+    const deltaY = event.clientY - selectionStartPoint.value.y;
+    if (Math.hypot(deltaX, deltaY) > REVIEWABLE_SCROLL_CANCEL_PX) {
+      cancelPendingReviewableSelection();
+    }
+    return;
+  }
+
   if (selectionPointerId.value !== event.pointerId) {
     return;
   }
 
   event.preventDefault();
+  suppressReviewableClick.value = true;
   const targetId = reviewableIdAtPoint(event.clientX, event.clientY);
   if (!targetId) {
     return;
@@ -273,16 +316,36 @@ function extendReviewableSelection(event: PointerEvent) {
   updateReviewableSelection(targetId, selectionPointerValue.value);
 }
 
-// Ends an active pointer selection gesture.
-// Key parameter `event` identifies the captured pointer. Return value is none.
-// Side effect: releases pointer capture bookkeeping.
+// Ends or cancels a long-press selection gesture.
+// Key parameter is the pointer event. Return value is none. Side effects:
+// clears timer/capture state and suppresses the follow-up click when needed.
 function endReviewableSelection(event: PointerEvent) {
+  if (selectionPendingPointerId.value === event.pointerId) {
+    cancelPendingReviewableSelection();
+    return;
+  }
+
   if (selectionPointerId.value !== event.pointerId) {
     return;
   }
 
+  event.preventDefault();
   (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
   selectionPointerId.value = null;
+  selectionStartPoint.value = null;
+  window.setTimeout(() => {
+    suppressReviewableClick.value = false;
+  }, 0);
+}
+
+// Toggles a reviewable through the explicit selector control.
+// Key parameter `reviewable` is the queue item being toggled. Return value is
+// none. Side effect: replaces `selectedReviewableIds`.
+function toggleReviewableSelection(reviewable: ReviewableResponse) {
+  if (!canSelectReviewable(reviewable)) {
+    return;
+  }
+  updateReviewableSelection(reviewable.id, !isReviewableSelected(reviewable));
 }
 
 // Applies or removes one reviewable id in the immutable selection Set.
@@ -302,6 +365,7 @@ function updateReviewableSelection(reviewableId: string, selected: boolean) {
 // Key parameters: none. Return value is none. Side effect: resets selection.
 function clearReviewableSelection() {
   selectedReviewableIds.value = new Set();
+  cancelPendingReviewableSelection();
   selectionPointerId.value = null;
 }
 
@@ -316,6 +380,18 @@ function pruneReviewableSelection(nextReviewables: ReviewableResponse[]) {
   if (nextSelection.size !== selectedReviewableIds.value.size) {
     selectedReviewableIds.value = nextSelection;
   }
+}
+
+// Clears the pending long-press timer before it becomes a selection gesture.
+// Key parameters: none. Return value is none. Side effects: resets pending
+// pointer bookkeeping and cancels the browser timer.
+function cancelPendingReviewableSelection() {
+  if (selectionLongPressTimer.value !== null) {
+    window.clearTimeout(selectionLongPressTimer.value);
+  }
+  selectionLongPressTimer.value = null;
+  selectionPendingPointerId.value = null;
+  selectionStartPoint.value = null;
 }
 
 // Finds a reviewable card id at viewport coordinates during drag selection.
@@ -735,6 +811,16 @@ function mutationErrorMessage(error: unknown) {
     </UiCard>
 
     <template v-else>
+      <div class="reviewable-mobile-appbar" aria-label="帖子审核移动端工具栏">
+        <RouterLink class="reviewable-mobile-appbar__icon" to="/admin" aria-label="返回后台">
+          <LeftOutlined />
+        </RouterLink>
+        <strong>帖子审核</strong>
+        <button type="button" class="reviewable-mobile-appbar__icon" aria-label="搜索审核内容">
+          <SearchOutlined />
+        </button>
+      </div>
+
       <!-- Navigation Tabs -->
       <nav class="moderation-tabs" aria-label="审核台导航">
         <button :class="{ active: activeTab === 'reviewables' }" @click="activeTab = 'reviewables'">
@@ -765,6 +851,49 @@ function mutationErrorMessage(error: unknown) {
         <main class="queue-column">
           <!-- Tab 1: Reviewables -->
           <div v-if="activeTab === 'reviewables'">
+            <div class="reviewable-mobile-reviewbar" aria-label="帖子审核状态">
+              <button
+                type="button"
+                class="reviewable-mobile-reviewbar__tab"
+                :class="{ active: reviewableStatusFilter === 'pending' }"
+                @click="reviewableStatusFilter = 'pending'"
+              >
+                <span>待审核</span>
+                <b>{{ reviewableStatusFilter === 'pending' ? reviewables.length : "·" }}</b>
+              </button>
+              <button
+                type="button"
+                class="reviewable-mobile-reviewbar__tab"
+                :class="{ active: bulkSelectionActive }"
+              >
+                <span>已选</span>
+                <b>{{ selectedReviewableCount }}</b>
+              </button>
+              <button
+                type="button"
+                class="reviewable-mobile-reviewbar__tab"
+                :class="{ active: reviewableStatusFilter === 'approved' }"
+                @click="reviewableStatusFilter = 'approved'"
+              >
+                <span>已处理</span>
+                <b>{{ reviewableStatusFilter === 'approved' ? reviewables.length : "·" }}</b>
+              </button>
+            </div>
+
+            <div class="reviewable-mobile-filterbar" aria-label="帖子审核筛选">
+              <button type="button">
+                <FilterOutlined />
+                <span>筛选</span>
+              </button>
+              <button type="button">
+                <span>排序：最新发布</span>
+                <DownOutlined />
+              </button>
+              <button type="button" aria-label="刷新审核队列" @click="reviewablesQuery.refetch()">
+                <ReloadOutlined />
+              </button>
+            </div>
+
             <div class="section-toolbar">
               <div>
                 <span class="panel-kicker">帖子发布审核</span>
@@ -802,18 +931,22 @@ function mutationErrorMessage(error: unknown) {
                   'reviewable-list-item--disabled': !canSelectReviewable(rev),
                 }"
                 :data-reviewable-id="rev.id"
+                @click="handleReviewableClick(rev)"
                 @pointerdown="beginReviewableSelection(rev, $event)"
                 @pointermove="extendReviewableSelection"
                 @pointerup="endReviewableSelection"
                 @pointercancel="endReviewableSelection"
               >
-                <span
+                <button
+                  type="button"
                   class="reviewable-list-item__selector"
                   :class="{ 'reviewable-list-item__selector--active': isReviewableSelected(rev) }"
-                  aria-hidden="true"
+                  :disabled="!canSelectReviewable(rev)"
+                  :aria-label="isReviewableSelected(rev) ? '取消选择审核项' : '选择审核项'"
+                  @click.stop="toggleReviewableSelection(rev)"
                 >
                   <template v-if="isReviewableSelected(rev)">{{ selectedReviewableNumber(rev) }}</template>
-                </span>
+                </button>
                 <div class="reviewable-list-item__main">
                   <span class="reviewable-list-item__meta">
                     {{ reviewableStatusLabel(rev.status) }} ·
