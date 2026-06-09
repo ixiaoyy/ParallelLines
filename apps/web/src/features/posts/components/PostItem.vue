@@ -1,17 +1,24 @@
 <script setup lang="ts">
 import {
+  BoldOutlined,
   CheckCircleOutlined,
   CodeOutlined,
   DeleteOutlined,
   EditOutlined,
   EllipsisOutlined,
+  EnterOutlined,
+  EyeOutlined,
   FlagOutlined,
   HeartFilled,
   HeartOutlined,
   HistoryOutlined,
+  ItalicOutlined,
   LinkOutlined,
+  OrderedListOutlined,
   RocketOutlined,
   RollbackOutlined,
+  SaveOutlined,
+  UnorderedListOutlined,
   UserDeleteOutlined,
 } from "@ant-design/icons-vue";
 import type { ExposeParam, ToolbarNames } from "md-editor-v3";
@@ -151,6 +158,9 @@ const editEditorToolbars: ToolbarNames[] = [
   "fullscreen",
 ];
 const editEditorFooters: [] = [];
+type EditMarkupKind = "bold" | "italic" | "quote" | "unorderedList" | "orderedList" | "code" | "link";
+const editPreviewVisible = ref(false);
+const editCharacterCount = computed(() => editDraft.value.length);
 
 type UploadImageCallback = (images: string[]) => void;
 const {
@@ -248,19 +258,113 @@ function toggleSolution() {
   emit("toggleSolution", props.post);
 }
 
+/**
+ * Opens the edit composer with the latest server Markdown.
+ * Key parameters: none. Return value: none. Side effect: switches this post into edit mode and focuses the editor.
+ */
 function startEdit() {
   if (!canEdit.value) {
     return;
   }
 
   editDraft.value = props.post.rawMd;
+  editPreviewVisible.value = false;
   editing.value = true;
   statusMessage.value = "";
+  void nextTick(() => {
+    editEditorRef.value?.focus("end");
+  });
 }
 
+/**
+ * Leaves edit mode without saving and restores the draft from the current post.
+ * Key parameters: none. Return value: none. Side effect: discards unsaved edit text in this component.
+ */
 function cancelEdit() {
   editing.value = false;
   editDraft.value = props.post.rawMd;
+  editPreviewVisible.value = false;
+}
+
+/**
+ * Inserts a Markdown formatting snippet from the mobile full-screen toolbar.
+ *
+ * @param kind - Formatting action requested by the tapped toolbar button.
+ * @returns Nothing. Side effect: mutates the current edit draft through md-editor-v3 when mounted.
+ */
+function insertEditMarkup(kind: EditMarkupKind) {
+  const editor = editEditorRef.value;
+  if (!editor) {
+    appendEditDraftSnippet(buildEditMarkup(kind, ""));
+    return;
+  }
+
+  editor.insert((selectedText) => ({
+    targetValue: buildEditMarkup(kind, selectedText),
+  }));
+  editor.focus();
+}
+
+/**
+ * Builds the Markdown text inserted by the mobile edit toolbar.
+ *
+ * @param kind - Formatting action to translate into Markdown.
+ * @param selectedText - Current md-editor-v3 selection, if any.
+ * @returns Markdown text that preserves the selection or inserts a short neutral placeholder.
+ */
+function buildEditMarkup(kind: EditMarkupKind, selectedText: string) {
+  const selected = selectedText.trim();
+  if (kind === "bold") {
+    return `**${selected || "加粗文字"}**`;
+  }
+  if (kind === "italic") {
+    return `*${selected || "斜体文字"}*`;
+  }
+  if (kind === "quote") {
+    return selected
+      ? selected.split("\n").map((line) => `> ${line}`).join("\n")
+      : "> 引用内容";
+  }
+  if (kind === "unorderedList") {
+    return selected
+      ? selected.split("\n").map((line) => `- ${line || "列表项"}`).join("\n")
+      : "- 列表项";
+  }
+  if (kind === "orderedList") {
+    return selected
+      ? selected.split("\n").map((line, index) => `${index + 1}. ${line || "列表项"}`).join("\n")
+      : "1. 列表项";
+  }
+  if (kind === "code") {
+    return selected.includes("\n")
+      ? `\`\`\`\n${selected}\n\`\`\``
+      : `\`${selected || "代码"}\``;
+  }
+
+  return `[${selected || "链接文字"}](https://)`;
+}
+
+/**
+ * Appends mobile toolbar text when the async editor has not mounted yet.
+ *
+ * @param markdown - Markdown snippet to append to the current edit draft.
+ * @returns Nothing. Side effect: updates the local edit draft string.
+ */
+function appendEditDraftSnippet(markdown: string) {
+  const before = editDraft.value.trimEnd();
+  editDraft.value = before ? `${before}\n\n${markdown}` : markdown;
+}
+
+/**
+ * Toggles the edit preview from the mobile bottom bar.
+ * Key parameters: none. Return value: none. Side effect: asks md-editor-v3 to show or hide preview.
+ */
+function toggleEditPreview() {
+  editPreviewVisible.value = !editPreviewVisible.value;
+  editEditorRef.value?.togglePreview(editPreviewVisible.value);
+  if (!editPreviewVisible.value) {
+    editEditorRef.value?.focus();
+  }
 }
 
 /**
@@ -270,6 +374,7 @@ function cancelEdit() {
 function insertEditMarkdownUpload(markdown: string) {
   const before = editDraft.value.trimEnd();
   editDraft.value = before ? `${before}\n\n${markdown}` : markdown;
+  editPreviewVisible.value = true;
   editEditorRef.value?.togglePreview(true);
 }
 
@@ -292,6 +397,7 @@ async function handleEditImageUpload(files: File[], callback: UploadImageCallbac
       images.push(resolveApiAssetUrl(upload.url) ?? upload.url);
     }
     callback(images);
+    editPreviewVisible.value = true;
     editEditorRef.value?.togglePreview(true);
     setStatus("图片已上传");
   } catch (error) {
@@ -323,6 +429,7 @@ function saveEdit() {
     {
       onSuccess: () => {
         editing.value = false;
+        editPreviewVisible.value = false;
         setStatus("已保存编辑");
       },
       onError: (error) => {
@@ -803,41 +910,111 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
       <div v-if="post.acceptedAnswer" class="accepted-answer-badge">✓ 已采纳解决方案</div>
       <div v-if="post.deleted" class="deleted-copy">该楼层已删除或隐藏。</div>
       <template v-else-if="editing">
-        <div class="edit-field">
-          <span>编辑本楼层</span>
-          <div class="edit-editor-box">
-            <MdEditor
-              ref="editEditorRef"
-              v-model="editDraft"
-              :id="`post-edit-editor-${post.id}`"
-              class="edit-md-editor"
-              language="zh-CN"
-              theme="light"
-              preview-theme="github"
-              code-theme="atom"
-              :preview="false"
-              :footers="editEditorFooters"
-              :toolbars="editEditorToolbars"
-              :sanitize="sanitizeEditHtml"
-              :transform-img-url="resolveApiAssetUrl"
-              :disabled="savingEdit"
-              :no-katex="true"
-              :no-mermaid="true"
-              :no-img-zoom-in="true"
-              :show-code-row-number="false"
-              placeholder="编辑内容"
-              @onUploadImg="handleEditImageUpload"
-            />
+        <div class="edit-shell" aria-label="编辑帖子">
+          <header class="edit-shell__topbar">
+            <button class="edit-shell__cancel" type="button" :disabled="savingEdit" @click="cancelEdit">
+              取消
+            </button>
+            <div class="edit-shell__title">
+              <strong>编辑帖子</strong>
+              <span>#{{ post.floor }} · {{ post.authorName }}</span>
+            </div>
+            <UiButton
+              class="edit-shell__save"
+              type="button"
+              tone="primary"
+              :disabled="!editDraft.trim() || savingEdit"
+              @click="saveEdit"
+            >
+              <SaveOutlined aria-hidden="true" />
+              {{ savingEdit ? "保存中" : "保存" }}
+            </UiButton>
+          </header>
+
+          <div class="edit-shell__context" role="status">
+            <span class="edit-shell__status-dot" aria-hidden="true"></span>
+            <span>#{{ post.floor }} {{ post.floor === 1 ? "楼主" : "楼层" }}</span>
+            <span>{{ editedAfterPublish ? "已编辑过" : "首次编辑" }}</span>
           </div>
-        </div>
-        <div class="edit-upload-row">
-          <MarkdownUploadButton compact :disabled="savingEdit" @insert="insertEditMarkdownUpload" />
-        </div>
-        <div class="edit-actions">
-          <UiButton tone="primary" :disabled="!editDraft.trim() || savingEdit" @click="saveEdit">
-            {{ savingEdit ? "保存中…" : "保存编辑" }}
-          </UiButton>
-          <UiButton tone="ghost" :disabled="savingEdit" @click="cancelEdit">取消编辑</UiButton>
+
+          <div class="edit-field">
+            <span class="edit-field__label">编辑本楼层</span>
+            <div class="edit-editor-box">
+              <MdEditor
+                ref="editEditorRef"
+                v-model="editDraft"
+                :id="`post-edit-editor-${post.id}`"
+                class="edit-md-editor"
+                language="zh-CN"
+                theme="light"
+                preview-theme="github"
+                code-theme="atom"
+                :preview="false"
+                :footers="editEditorFooters"
+                :toolbars="editEditorToolbars"
+                :sanitize="sanitizeEditHtml"
+                :transform-img-url="resolveApiAssetUrl"
+                :disabled="savingEdit"
+                :no-katex="true"
+                :no-mermaid="true"
+                :no-img-zoom-in="true"
+                :show-code-row-number="false"
+                placeholder="编辑内容"
+                @onUploadImg="handleEditImageUpload"
+              />
+            </div>
+          </div>
+
+          <div class="edit-mobile-tools" aria-label="编辑工具">
+            <button type="button" @click="insertEditMarkup('bold')">
+              <BoldOutlined aria-hidden="true" />
+              加粗
+            </button>
+            <button type="button" @click="insertEditMarkup('italic')">
+              <ItalicOutlined aria-hidden="true" />
+              斜体
+            </button>
+            <button type="button" @click="insertEditMarkup('quote')">
+              <EnterOutlined aria-hidden="true" />
+              引用
+            </button>
+            <button type="button" @click="insertEditMarkup('unorderedList')">
+              <UnorderedListOutlined aria-hidden="true" />
+              列表
+            </button>
+            <button type="button" @click="insertEditMarkup('orderedList')">
+              <OrderedListOutlined aria-hidden="true" />
+              编号
+            </button>
+            <button type="button" @click="insertEditMarkup('code')">
+              <CodeOutlined aria-hidden="true" />
+              代码
+            </button>
+            <button type="button" @click="insertEditMarkup('link')">
+              <LinkOutlined aria-hidden="true" />
+              链接
+            </button>
+          </div>
+
+          <div class="edit-upload-row edit-upload-row--desktop">
+            <MarkdownUploadButton compact :disabled="savingEdit" @insert="insertEditMarkdownUpload" />
+          </div>
+
+          <div class="edit-mobile-bottom">
+            <MarkdownUploadButton compact :disabled="savingEdit" @insert="insertEditMarkdownUpload" />
+            <button type="button" class="edit-mobile-bottom__preview" @click="toggleEditPreview">
+              <EyeOutlined aria-hidden="true" />
+              {{ editPreviewVisible ? "编辑" : "预览" }}
+            </button>
+            <span class="edit-mobile-bottom__count">{{ editCharacterCount }} / 20000</span>
+          </div>
+
+          <div class="edit-actions edit-actions--desktop">
+            <UiButton tone="primary" :disabled="!editDraft.trim() || savingEdit" @click="saveEdit">
+              {{ savingEdit ? "保存中…" : "保存编辑" }}
+            </UiButton>
+            <UiButton tone="ghost" :disabled="savingEdit" @click="cancelEdit">取消编辑</UiButton>
+          </div>
         </div>
       </template>
       <section

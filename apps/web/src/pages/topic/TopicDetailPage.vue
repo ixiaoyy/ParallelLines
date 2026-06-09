@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
+import { message } from "ant-design-vue";
 import { computed, defineAsyncComponent, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -122,7 +123,7 @@ const shouldRenderReplyComposer = computed(() =>
 const sidebarTopic = computed(() => (isDetailSidebarVisible.value ? topic.value : null));
 const relatedTopics = useRelatedTopics(sidebarTopic);
 const flagTopicMutation = useCreateFlag();
-const topicModerationMutation = useContentModerationMutation();
+const topicModerationMutation = useContentModerationMutation({ awaitInvalidation: false });
 const lifecycleMutation = useTopicLifecycle(topicId);
 const moveTopicMutation = useMoveTopic(topicId);
 const solutionMutation = useSetTopicSolution(topicId);
@@ -378,6 +379,7 @@ function deleteTopic() {
     return;
   }
 
+  const deletedTopicId = topic.value.id;
   const confirmed = window.confirm("确定删除这个主题吗？删除后主题会被软隐藏，可在审核后台恢复。");
   if (!confirmed) {
     return;
@@ -386,20 +388,20 @@ function deleteTopic() {
   topicModerationMutation.mutate(
     {
       targetType: "topic",
-      targetId: topic.value.id,
+      targetId: deletedTopicId,
       hidden: true,
       note: "从主题详情页删除主题",
     },
     {
-      onSuccess: () => {
-        setToolbarStatus("主题已删除");
+      onSuccess: async () => {
+        queryClient.removeQueries({ queryKey: queryKeys.topic(deletedTopicId), exact: true });
+        queryClient.removeQueries({ queryKey: queryKeys.posts(deletedTopicId) });
         void queryClient.invalidateQueries({ queryKey: queryKeys.boards });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:latest") });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:hot") });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:top") });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.topicsRoot });
         void queryClient.invalidateQueries({ queryKey: queryKeys.tagsRoot });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topic.value?.id ?? "") });
-        void router.replace({ name: "home" });
+        await router.replace({ name: "home" });
+        message.success("主题已删除，已返回首页并刷新列表。");
+        void queryClient.refetchQueries({ queryKey: queryKeys.topicsRoot, type: "active" });
       },
       onError: () => setToolbarStatus("删除失败，请确认管理员权限"),
     },

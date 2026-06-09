@@ -128,7 +128,13 @@ export function useFlagStatusMutation() {
   });
 }
 
-export function useContentModerationMutation() {
+/**
+ * Creates the moderation visibility mutation for hiding or restoring published content.
+ *
+ * @param options.awaitInvalidation - Set false when a caller must run its own success flow before global cache refreshes finish.
+ * @returns TanStack mutation; side effects prune hidden topics and refresh moderation/public content caches.
+ */
+export function useContentModerationMutation(options: { awaitInvalidation?: boolean } = {}) {
   const queryClient = useQueryClient();
   return useMutation<
     ModerationActionResponse,
@@ -137,11 +143,12 @@ export function useContentModerationMutation() {
   >({
     mutationFn: ({ targetType, targetId, hidden, note }) =>
       setContentHidden(targetType, targetId, hidden, { note: note ?? null }),
-    onSuccess: async (_response, variables) => {
+    onSuccess: (_response, variables) => {
       if (variables.targetType === "topic" && variables.hidden) {
         pruneTopicFromVisibleCaches(queryClient, variables.targetId);
       }
-      await invalidateModeration(queryClient);
+      const invalidation = invalidateModeration(queryClient);
+      return options.awaitInvalidation === false ? undefined : invalidation;
     },
   });
 }
