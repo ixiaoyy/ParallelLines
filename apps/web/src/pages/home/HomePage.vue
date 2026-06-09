@@ -4,6 +4,8 @@ import { useRoute, useRouter } from "vue-router";
 import type { LocationQueryRaw } from "vue-router";
 
 import type { TopicCardVM } from "@/entities/topic/model";
+import { publicSettingString } from "@/features/admin/model";
+import { usePublicSiteSettings } from "@/features/admin/queries";
 import { useBoards } from "@/features/boards/queries";
 import { useTags } from "@/features/tags/queries";
 import type { TopicSort } from "@/features/topics/model";
@@ -21,6 +23,7 @@ import {
 } from "@/pages/home/homeRailCache";
 import { readRouteParam } from "@/shared/router/params";
 import { useMediaQuery } from "@/shared/lib/useMediaQuery";
+import { useSeoMeta } from "@/shared/seo/meta";
 
 // Defers desktop-only rail icons and markup so mobile first paint does not download hidden navigation.
 // Key parameters: none. Return value is the HomeLeftRail component; side effect is lazy chunk loading on desktop.
@@ -32,6 +35,7 @@ const router = useRouter();
 const route = useRoute();
 const isDesktopRailVisible = useMediaQuery("(min-width: 981px)", true);
 const filtersDataRequested = ref(false);
+const siteSettingsQuery = usePublicSiteSettings();
 
 const feedSort = computed<TopicSort>(() =>
   activeTab.value === "hot" ? "hot" : activeTab.value === "top" ? "top" : "latest",
@@ -104,6 +108,20 @@ const railTagsLoading = computed(
 );
 const topicFeedLoading = computed(
   () => topicsQuery.isLoading.value && cachedFeedTopics.value[feedSort.value].length === 0,
+);
+const siteTitle = computed(() =>
+  publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
+);
+const siteDescription = computed(() =>
+  publicSettingString(siteSettingsQuery.data.value, "site_tagline", "让答案可追溯"),
+);
+
+useSeoMeta(
+  computed(() => ({
+    title: siteTitle.value,
+    description: siteDescription.value,
+    canonicalPath: "/",
+  })),
 );
 
 const visibleTopics = computed(() => {
