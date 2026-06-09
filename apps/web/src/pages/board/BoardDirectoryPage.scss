@@ -103,6 +103,20 @@
   font: inherit;
   font-size: 0.86rem;
   font-weight: 760;
+  transition:
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.section-head button:hover,
+.section-head button:focus-visible {
+  color: var(--btn-primary-bg-hover);
+  outline: none;
+  transform: translateX(2px);
+}
+
+.section-head button:active {
+  transform: translateX(1px) scale(0.98);
 }
 
 .recommended-grid {
@@ -112,6 +126,7 @@
 }
 
 .recommended-card {
+  position: relative;
   display: grid;
   min-width: 0;
   min-height: 6.25rem;
@@ -119,9 +134,47 @@
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 0.9rem;
+  --directory-link-accent: var(--board-accent, var(--primary));
   color: var(--text);
   background: var(--bg-surface);
   text-decoration: none;
+  transition:
+    transform 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.recommended-card::after,
+.board-chip::after,
+.tag-chip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--directory-link-accent) 38%, transparent);
+  transition: opacity 150ms ease;
+}
+
+.recommended-card:focus-visible,
+.board-chip:focus-visible,
+.tag-chip:focus-visible {
+  outline: none;
+}
+
+.recommended-card:focus-visible::after,
+.board-chip:focus-visible::after,
+.tag-chip:focus-visible::after {
+  opacity: 1;
+}
+
+.recommended-card:active,
+.board-chip:active,
+.tag-chip:active {
+  transform: translateY(1px) scale(0.99);
 }
 
 .recommended-card__top {
@@ -143,6 +196,10 @@
   color: var(--board-accent);
   background: color-mix(in srgb, var(--board-accent) 13%, var(--bg-surface));
   font-size: 1.2rem;
+  transition:
+    transform 150ms ease,
+    color 150ms ease,
+    background 150ms ease;
 }
 
 .recommended-card strong,
@@ -184,11 +241,17 @@
 
 .board-chip,
 .tag-chip {
+  position: relative;
   min-width: 0;
   color: var(--title);
   background: var(--bg-surface);
   text-decoration: none;
   box-shadow: inset 0 0 0 1px var(--border);
+  transition:
+    transform 150ms ease,
+    color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .board-chip {
@@ -199,6 +262,7 @@
   min-height: 2.45rem;
   border-radius: 0.8rem;
   padding: 0.45rem 0.58rem;
+  --directory-link-accent: var(--board-accent, var(--primary));
   font-size: 0.86rem;
   font-weight: 760;
 }
@@ -206,6 +270,9 @@
 .board-chip :deep(.anticon) {
   color: var(--board-accent);
   font-size: 1.08rem;
+  transition:
+    color 150ms ease,
+    transform 150ms ease;
 }
 
 .board-chip span,
@@ -229,6 +296,7 @@
   min-height: 2.35rem;
   border-radius: 999px;
   padding: 0.45rem 0.62rem;
+  --directory-link-accent: var(--tag-accent, var(--primary));
   color: color-mix(in srgb, var(--tag-accent) 74%, var(--title));
   background: color-mix(in srgb, var(--tag-accent) 8%, var(--bg-surface));
   font-size: 0.84rem;
@@ -237,6 +305,9 @@
 
 .tag-chip :deep(.anticon) {
   color: var(--tag-accent);
+  transition:
+    color 150ms ease,
+    transform 150ms ease;
 }
 
 .tag-chip em {
@@ -244,10 +315,60 @@
   font-size: 0.78rem;
   font-style: normal;
   font-weight: 720;
+  transition: color 150ms ease;
 }
 
 .tag-chip--all {
   --tag-accent: var(--primary);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .recommended-card:hover,
+  .recommended-card:focus-visible {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--directory-link-accent) 30%, var(--border));
+    background: color-mix(in srgb, var(--directory-link-accent) 5%, var(--bg-surface));
+    box-shadow: 0 12px 24px color-mix(in srgb, var(--directory-link-accent) 13%, transparent);
+  }
+
+  .recommended-card:hover .recommended-icon,
+  .recommended-card:focus-visible .recommended-icon {
+    transform: scale(1.04);
+    color: color-mix(in srgb, var(--board-accent) 84%, var(--title));
+    background: color-mix(in srgb, var(--board-accent) 18%, var(--bg-surface));
+  }
+
+  .board-chip:hover,
+  .board-chip:focus-visible {
+    transform: translateY(-1px);
+    color: var(--title);
+    background: color-mix(in srgb, var(--directory-link-accent) 9%, var(--bg-surface));
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--directory-link-accent) 35%, var(--border)),
+      0 8px 18px color-mix(in srgb, var(--directory-link-accent) 11%, transparent);
+  }
+
+  .board-chip:hover :deep(.anticon),
+  .board-chip:focus-visible :deep(.anticon),
+  .tag-chip:hover :deep(.anticon),
+  .tag-chip:focus-visible :deep(.anticon) {
+    transform: scale(1.08);
+  }
+
+  .tag-chip:hover,
+  .tag-chip:focus-visible {
+    transform: translateY(-1px);
+    color: color-mix(in srgb, var(--tag-accent) 84%, var(--title));
+    background: color-mix(in srgb, var(--tag-accent) 14%, var(--bg-surface));
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--tag-accent) 34%, transparent),
+      0 8px 18px color-mix(in srgb, var(--tag-accent) 10%, transparent);
+  }
+
+  .tag-chip:hover em,
+  .tag-chip:focus-visible em {
+    color: color-mix(in srgb, var(--tag-accent) 58%, var(--text));
+  }
 }
 
 .latest-topic-link {

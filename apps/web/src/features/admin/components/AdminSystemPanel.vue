@@ -98,7 +98,7 @@ function serviceTone(status: string): "green" | "amber" | "gray" {
                 <span class="config-value">每 {{ system.queue.upload_cleanup_interval_seconds }}s</span>
               </div>
               <div class="config-item">
-                <span class="config-label">前沿资讯采集</span>
+                <span class="config-label">热点资讯采集</span>
                 <span class="config-value">每 {{ system.queue.frontier_news_interval_seconds ?? 0 }}s</span>
               </div>
             </div>

@@ -12,12 +12,14 @@ from app.core.exceptions import NotFoundError, PermissionDeniedError, Validation
 from app.core.permissions import is_admin
 from app.models.forum import Board, Post, Topic
 from app.models.interaction import Bookmark, Reaction
+from app.models.social import UserRelationship
 from app.models.user import User
 from app.schemas.users import (
     UserActivityItemResponse,
     UserDirectoryResponse,
     UserProfileResponse,
     UserProfileUpdateRequest,
+    UserRelationshipUserResponse,
 )
 
 URL_PATTERN = re.compile(r"^https?://[^\s]+$", re.IGNORECASE)
@@ -28,6 +30,14 @@ TAG_PATTERN = re.compile(r"<[^>]+>")
 class UserContentCounts:
     topic_count: int
     post_count: int
+
+
+@dataclass(frozen=True)
+class UserRelationshipCounts:
+    """Aggregated user follow counters returned with profile responses."""
+
+    following_count: int
+    follower_count: int
 
 
 class UserProfileService:
@@ -42,7 +52,13 @@ class UserProfileService:
     ) -> UserProfileResponse:
         user = await self._user_by_username(username)
         counts = await self._content_counts(user.id)
-        return await self._profile_response(user, counts=counts, current_user=current_user)
+        relationship_counts = await self._relationship_counts(user.id)
+        return await self._profile_response(
+            user,
+            counts=counts,
+            relationship_counts=relationship_counts,
+            current_user=current_user,
+        )
 
     async def update_my_profile(
         self,
@@ -72,7 +88,13 @@ class UserProfileService:
         await self.session.commit()
         await self.session.refresh(current_user)
         counts = await self._content_counts(current_user.id)
-        return await self._profile_response(current_user, counts=counts, current_user=current_user)
+        relationship_counts = await self._relationship_counts(current_user.id)
+        return await self._profile_response(
+            current_user,
+            counts=counts,
+            relationship_counts=relationship_counts,
+            current_user=current_user,
+        )
 
     async def list_directory(self, *, sort: str, limit: int) -> list[UserDirectoryResponse]:
         topic_counts = (
@@ -161,11 +183,89 @@ class UserProfileService:
             return await self._bookmark_activity(user.id, limit)
         return await self._post_activity(user.id, limit)
 
+    # list_relationship_users 用途：读取某个用户的关注/粉丝列表。
+    # 关键参数：kind 控制 following/followers 方向，current_user 用于隐私判定。
+    # 返回值/副作用：返回公开安全的用户卡片列表，不写入数据库。
+    async def list_relationship_users(
+        self,
+        username: str,
+        *,
+        kind: str,
+        current_user: User | None,
+        limit: int,
+    ) -> list[UserRelationshipUserResponse]:
+        if kind not in {"following", "followers"}:
+            raise ValidationError("invalid_relationship_list", "Relationship list kind is invalid")
+
+        user = await self._user_by_username(username)
+        if not self._can_view_private_profile(user, current_user):
+            raise PermissionDeniedError("profile_relationships_private", "Profile relationships are private")
+
+        topic_counts = (
+            select(Topic.user_id.label("user_id"), func.count(Topic.id).label("topic_count"))
+            .join(Topic.board)
+            .where(*self._public_topic_conditions())
+            .group_by(Topic.user_id)
+            .subquery()
+        )
+        post_counts = (
+            select(Post.user_id.label("user_id"), func.count(Post.id).label("post_count"))
+            .join(Post.topic)
+            .join(Topic.board)
+            .where(Post.deleted_at.is_(None), *self._public_topic_conditions())
+            .group_by(Post.user_id)
+            .subquery()
+        )
+        if kind == "following":
+            relationship_filter = UserRelationship.actor_user_id == user.id
+            related_user_join = User.id == UserRelationship.target_user_id
+        else:
+            relationship_filter = UserRelationship.target_user_id == user.id
+            related_user_join = User.id == UserRelationship.actor_user_id
+
+        statement = (
+            select(
+                User,
+                UserRelationship.created_at,
+                func.coalesce(topic_counts.c.topic_count, 0).label("topic_count"),
+                func.coalesce(post_counts.c.post_count, 0).label("post_count"),
+            )
+            .select_from(UserRelationship)
+            .join(User, related_user_join)
+            .outerjoin(topic_counts, topic_counts.c.user_id == User.id)
+            .outerjoin(post_counts, post_counts.c.user_id == User.id)
+            .where(
+                relationship_filter,
+                UserRelationship.relationship_type == "follow",
+                User.status == "active",
+            )
+            .order_by(desc(UserRelationship.created_at), User.username)
+            .limit(limit)
+        )
+        rows = (await self.session.execute(statement)).all()
+        return [
+            UserRelationshipUserResponse(
+                id=related_user.id,
+                username=related_user.username,
+                display_name=related_user.display_name,
+                avatar_url=related_user.avatar_url,
+                role=related_user.role,
+                level=related_user.level,
+                trust_level=related_user.trust_level,
+                trust_level_label=related_user.trust_level_label,
+                topic_count=int(topic_count),
+                post_count=int(post_count),
+                followed_at=followed_at,
+            )
+            for related_user, followed_at, topic_count, post_count in rows
+        ]
+
     async def _profile_response(
         self,
         user: User,
         *,
         counts: UserContentCounts,
+        relationship_counts: UserRelationshipCounts,
         current_user: User | None,
     ) -> UserProfileResponse:
         can_edit = current_user is not None and (
@@ -202,6 +302,8 @@ class UserProfileService:
             created_at=user.created_at,
             topic_count=counts.topic_count,
             post_count=counts.post_count,
+            following_count=relationship_counts.following_count,
+            follower_count=relationship_counts.follower_count,
             badges=badges,
         )
 
@@ -228,6 +330,41 @@ class UserProfileService:
             or 0
         )
         return UserContentCounts(topic_count=topic_count, post_count=post_count)
+
+    # _relationship_counts 用途：聚合资料页关注数和粉丝数。
+    # 关键参数：user_id 是被统计的用户 ID。
+    # 返回值/副作用：返回关注计数对象，不写入数据库。
+    async def _relationship_counts(self, user_id: str) -> UserRelationshipCounts:
+        following_count = int(
+            await self.session.scalar(
+                select(func.count(UserRelationship.id)).join(
+                    User,
+                    User.id == UserRelationship.target_user_id,
+                ).where(
+                    UserRelationship.actor_user_id == user_id,
+                    UserRelationship.relationship_type == "follow",
+                    User.status == "active",
+                )
+            )
+            or 0
+        )
+        follower_count = int(
+            await self.session.scalar(
+                select(func.count(UserRelationship.id)).join(
+                    User,
+                    User.id == UserRelationship.actor_user_id,
+                ).where(
+                    UserRelationship.target_user_id == user_id,
+                    UserRelationship.relationship_type == "follow",
+                    User.status == "active",
+                )
+            )
+            or 0
+        )
+        return UserRelationshipCounts(
+            following_count=following_count,
+            follower_count=follower_count,
+        )
 
     async def _post_activity(self, user_id: str, limit: int) -> list[UserActivityItemResponse]:
         posts = list(

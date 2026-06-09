@@ -145,8 +145,44 @@ def test_frontier_news_flash_markdown_starts_with_original_source() -> None:
     assert "一句话：" not in raw_md
     assert "要点：" not in raw_md
     assert "可以关注：" not in raw_md
+    assert tags[:2] == ["热点资讯", "AI 科技"]
     assert "转载" not in raw_md
     assert "转载" not in tags
+
+
+def test_frontier_news_topic_tags_split_social_hot_news() -> None:
+    """Verify ordinary hot-news material receives the social-hot category tag."""
+
+    service = FrontierNewsService(cast(AsyncSession, object()), Settings(_env_file=None))
+    source = FrontierNewsSource(
+        key="caiwen_social_hot",
+        name="财闻网 社会热点",
+        kind="news_html_index",
+        url="https://www.caiwennews.com/",
+        config={"keywords": []},
+        enabled=True,
+        trust_level=68,
+        fetch_interval_minutes=120,
+    )
+    item = FrontierNewsItem(
+        source_id="1",
+        source=source,
+        external_id="social-1",
+        canonical_url="https://www.caiwennews.com/article/social-1",
+        canonical_url_hash="social-1-hash",
+        title="多地夜市客流回暖 带动周边消费",
+        summary="记者走访发现，周末夜市人流明显增长，餐饮与文创摊位恢复活跃。",
+        author_names=[],
+        raw_payload={},
+        item_type="news",
+        suggested_tags=["动态"],
+        ai_key_points=[],
+        ai_risk_flags=[],
+        score=68,
+        status="review_pending",
+    )
+
+    assert service._topic_tags(item)[:2] == ["热点资讯", "社会热点"]
 
 
 def test_frontier_news_card_markdown_keeps_title_and_summary_without_image() -> None:

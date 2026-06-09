@@ -22,6 +22,7 @@ import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
 import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
 import { readRouteParam } from "@/shared/router/params";
+import { resolveRouteSeoMeta, useSeoMeta } from "@/shared/seo/meta";
 import UiButton from "@/shared/ui/Button.vue";
 import { applySiteBranding } from "@/shared/theme/siteBranding";
 
@@ -58,6 +59,13 @@ const siteTitle = computed(() =>
 );
 const siteTagline = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_tagline", "让答案可追溯"),
+);
+const routeSeoMeta = computed(() =>
+  resolveRouteSeoMeta(route.meta.seo, {
+    routePath: route.path,
+    siteTitle: siteTitle.value,
+    siteTagline: siteTagline.value,
+  }),
 );
 const brandLogoUrl = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "brand_logo_url", "/logo-lines.png"),
@@ -154,6 +162,7 @@ const visibleNavItems = computed(() =>
 watchEffect(() => {
   applySiteBranding(siteSettingsQuery.data.value?.settings);
 });
+useSeoMeta(routeSeoMeta);
 
 watch(
   () => route.fullPath,

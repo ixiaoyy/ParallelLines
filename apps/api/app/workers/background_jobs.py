@@ -165,7 +165,7 @@ async def handle_collect_frontier_news(
     session: AsyncSession,
     _payload: dict[str, object],
 ) -> dict[str, object]:
-    """Collect frontier news in the unified worker and enqueue AI-prepared reviewables."""
+    """Collect hot-news sources in the unified worker and enqueue AI-prepared reviewables."""
 
     result = await FrontierNewsService(session).collect_due_sources()
     return result.model_dump()

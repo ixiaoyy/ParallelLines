@@ -816,7 +816,8 @@ def classify_topic(draft: TopicDraft) -> str:
     """
 
     board_slug = draft.topic.board.slug
-    text = f"{draft.topic.title} {draft.text}".lower()
+    tag_text = " ".join(tag.name for tag in draft.topic.tags)
+    text = f"{draft.topic.title} {tag_text} {draft.text}".lower()
     if board_slug in {"qna", "questions", "support"} or "求助" in text or "怎么" in text:
         return "qna"
     if board_slug in {"reading"} or "读" in text or "书" in text:
@@ -831,7 +832,14 @@ def classify_topic(draft: TopicDraft) -> str:
         return "feedback"
     if board_slug in {"announcements", "official"}:
         return "announcement"
-    if board_slug in {"news", "frontier"} or "趋势" in text:
+    if (
+        board_slug in {"news", "frontier"}
+        or "热点资讯" in text
+        or "ai 科技" in text
+        or "社会热点" in text
+        or "热点" in text
+        or "趋势" in text
+    ):
         return "news"
     if board_slug in {"memory-notes"} or "每日" in text or "记录" in text:
         return "memory"
@@ -1110,7 +1118,7 @@ def topic_kind_hint(kind: str, detail: str, rng: random.Random) -> str:
         "health": ("健康调整贵在不打断生活节奏", "身体信号通常藏在小习惯里"),
         "feedback": ("反馈越具体越容易验证", "这个体验点后面适合补触发条件"),
         "announcement": ("规则先讲边界会更友好", "说明类内容最好配具体例子"),
-        "news": ("趋势判断需要再观察一段时间", "它背后可能是使用习惯在变"),
+        "news": ("热点判断需要再观察一段时间", "它背后可能是使用习惯或公共议题在变"),
         "memory": (f"「{detail}」像记录里亮了一下的地方", "这类记录适合过一阵子回看"),
         "lounge": ("它胜在真实，不用拔高", "这种小秩序会慢慢影响状态"),
     }

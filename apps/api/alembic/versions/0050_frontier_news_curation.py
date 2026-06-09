@@ -160,7 +160,7 @@ def upgrade() -> None:
             "last_error", sa.Text(), nullable=True, comment="最近一次抓取失败摘要；成功后清空。"
         ),
         sa.UniqueConstraint("key", name="uq_frontier_news_sources_key"),
-        comment="前沿资讯白名单来源，保存抓取配置、频率和最近一次抓取状态。",
+        comment="热点资讯白名单来源，保存抓取配置、频率和最近一次抓取状态。",
     )
     op.create_index(
         "ix_frontier_news_sources_enabled_checked",
@@ -306,7 +306,7 @@ def upgrade() -> None:
             "source_id", "external_id", name="uq_frontier_news_items_source_external"
         ),
         sa.UniqueConstraint("canonical_url_hash", name="uq_frontier_news_items_url_hash"),
-        comment="前沿资讯素材池，保存原文元数据、AI 中文整理结果和审核发布关联。",
+        comment="热点资讯素材池，保存原文元数据、AI 中文整理结果和审核发布关联。",
     )
     op.create_index(
         "ix_frontier_news_items_status_created", "frontier_news_items", ["status", "created_at"]
@@ -370,7 +370,7 @@ def upgrade() -> None:
             comment="AI 运行记录创建时间（UTC）。",
         ),
         sa.ForeignKeyConstraint(["item_id"], ["frontier_news_items.id"], ondelete="CASCADE"),
-        comment="前沿资讯 AI 整理运行记录，保存模型、成本、状态和错误。",
+        comment="热点资讯 AI 整理运行记录，保存模型、成本、状态和错误。",
     )
     op.create_index(
         "ix_frontier_news_ai_runs_item_created", "frontier_news_ai_runs", ["item_id", "created_at"]
@@ -460,7 +460,7 @@ def ensure_frontier_board(bind: sa.Connection, owner_id: int | None) -> None:
         return
     legacy = bind.execute(
         sa.select(boards.c.id).where(
-            boards.c.slug == "news", boards.c.name.in_(["前沿快讯", "前沿资讯"])
+            boards.c.slug == "news", boards.c.name.in_(["前沿快讯", "前沿资讯", "热点资讯"])
         )
     ).first()
     if legacy:
@@ -469,8 +469,8 @@ def ensure_frontier_board(bind: sa.Connection, owner_id: int | None) -> None:
             .where(boards.c.id == legacy.id)
             .values(
                 slug=FRONTIER_BOARD_SLUG,
-                name="前沿资讯",
-                description="自动汇集 AI、科技、研究论文与开源工具动态，经人工审核后发布。",
+                name="热点资讯",
+                description="自动汇集 AI 科技与社会热点，经人工审核后发布。",
                 updated_at=now(),
             )
         )
@@ -479,9 +479,9 @@ def ensure_frontier_board(bind: sa.Connection, owner_id: int | None) -> None:
     bind.execute(
         boards.insert().values(
             slug=FRONTIER_BOARD_SLUG,
-            name="前沿资讯",
+            name="热点资讯",
             name_localizations=None,
-            description="自动汇集 AI、科技、研究论文与开源工具动态，经人工审核后发布。",
+            description="自动汇集 AI 科技与社会热点，经人工审核后发布。",
             color="#6366f1",
             avatar_url=None,
             owner_id=owner_id,

@@ -169,7 +169,7 @@ function rerunAi(item: FrontierNewsItemResponse) {
  */
 function queueItem(item: FrontierNewsItemResponse) {
   queueMutation.mutate(
-    { itemId: item.id, note: "管理员手动送审前沿资讯素材。" },
+    { itemId: item.id, note: "管理员手动送审热点资讯素材。" },
     {
       onSuccess: () => {
         actionNotice.value = "已送入统一审核队列，审核通过后将自动发布。";
@@ -183,8 +183,8 @@ function queueItem(item: FrontierNewsItemResponse) {
   <UiCard class="frontier-news-panel">
     <div class="section-head frontier-news-panel__head">
       <div class="title-area">
-        <span class="panel-kicker">Frontier</span>
-        <h2>前沿资讯素材池</h2>
+        <span class="panel-kicker">Hot News</span>
+        <h2>热点资讯素材池</h2>
         <p>定时任务采集白名单来源，AI 先整理成中文，再进入现有审核台；通过后自动由「小小资讯」发布。</p>
       </div>
       <div class="frontier-news-panel__actions">

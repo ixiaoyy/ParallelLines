@@ -24,6 +24,8 @@ export interface UserProfile {
   created_at: string;
   topic_count: number;
   post_count: number;
+  following_count: number;
+  follower_count: number;
   badges: UserBadgeResponse[];
 }
 

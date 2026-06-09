@@ -3,12 +3,17 @@ export const queryKeys = {
   currentUser: ["auth", "me"] as const,
   sessions: ["auth", "sessions"] as const,
   oauthProviders: ["auth", "oauth", "providers"] as const,
+  usersRoot: ["users"] as const,
   user: (username: string) => ["users", username] as const,
   userTopics: (username: string) => ["users", username, "topics"] as const,
   userActivity: (username: string, type: string) => ["users", username, "activity", type] as const,
   userDirectoryRoot: ["users", "directory"] as const,
   userDirectory: (sort: string) => ["users", "directory", sort] as const,
   userRelationship: (username: string) => ["users", username, "relationship"] as const,
+  userRelationshipUsersRoot: ["user-relationship-users"] as const,
+  // userRelationshipUsers 用途：缓存某个用户的关注/粉丝列表；参数为用户名和列表方向，返回稳定 query key 且无副作用。
+  userRelationshipUsers: (username: string, kind: string) =>
+    ["user-relationship-users", username, kind] as const,
   privateMessages: ["users", "messages"] as const,
   events: (startAt = "", endAt = "") => ["events", startAt, endAt] as const,
   boards: ["boards"] as const,

@@ -2,12 +2,15 @@
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import { publicSettingString } from "@/features/admin/model";
+import { usePublicSiteSettings } from "@/features/admin/queries";
 import { useCurrentUser } from "@/features/auth/queries";
-import { relationshipSummary } from "@/features/social/model";
+import { relationshipSummary, type UserRelationshipListKind } from "@/features/social/model";
 import {
   useCreatePrivateMessage,
   useUpdateUserRelationship,
   useUserRelationship,
+  useUserRelationshipUsers,
 } from "@/features/social/queries";
 import TopicList from "@/features/topics/components/TopicList.vue";
 import { useUploadAvatar } from "@/features/uploads/queries";
@@ -32,6 +35,8 @@ import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
+type ProfilePanel = "topics" | "activity" | "social" | "settings";
+
 const route = useRoute();
 const router = useRouter();
 const username = computed(() => String(route.params.username ?? ""));
@@ -39,15 +44,20 @@ const avatarInput = ref<HTMLInputElement | null>(null);
 const avatarStatus = ref("");
 const socialStatus = ref("");
 const profileStatus = ref("");
-const profileFormOpen = ref(false);
+const activeProfilePanel = ref<ProfilePanel>("topics");
 const activityType = ref<UserActivityType>("posts");
+const socialListKind = ref<UserRelationshipListKind>("following");
 const messageFormOpen = ref(false);
 const messageTitle = ref("");
 const messageBody = ref("");
 const currentUserQuery = useCurrentUser();
+const siteSettingsQuery = usePublicSiteSettings();
 const profileQuery = useUserProfile(username);
 const topicsQuery = useUserTopics(username);
 const profile = computed(() => profileQuery.data.value ?? null);
+const siteTitle = computed(() =>
+  publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
+);
 const isOwnProfile = computed(
   () => currentUserQuery.data.value?.username === profile.value?.username,
 );
@@ -66,8 +76,8 @@ useSeoMeta(
     profile.value
       ? {
           title: isOwnProfile.value
-            ? `${profileDisplayName(profile.value)} 的个人中心 · 平行线`
-            : `${profileDisplayName(profile.value)} 的公开档案 · 平行线`,
+            ? `${profileDisplayName(profile.value)} 的个人中心 · ${siteTitle.value}`
+            : `${profileDisplayName(profile.value)} 的公开档案 · ${siteTitle.value}`,
           description: isOwnProfile.value
             ? "管理头像、公开资料、成长轨迹、积分与徽章。"
             : `${profileDisplayName(profile.value)} 在平行线发布了 ${profile.value.topic_count} 个公开主题、${profile.value.post_count} 条公开回复。`,
@@ -90,6 +100,41 @@ const displayName = computed(() => (profile.value ? profileDisplayName(profile.v
 const canShowActivity = computed(() => Boolean(profile.value && (profile.value.show_activity || isOwnProfile.value)));
 const activityQuery = useUserActivity(username, activityType, canShowActivity);
 const activityItems = computed(() => activityQuery.data.value ?? []);
+const canViewRelationshipLists = computed(() => {
+  if (!profile.value) {
+    return false;
+  }
+
+  if (profile.value.profile_visibility === "public" || profile.value.can_edit) {
+    return true;
+  }
+
+  return profile.value.profile_visibility === "members" && Boolean(currentUserQuery.data.value);
+});
+const relationshipUsersQuery = useUserRelationshipUsers(
+  username,
+  socialListKind,
+  computed(() => activeProfilePanel.value === "social" && canViewRelationshipLists.value),
+);
+const relationshipUsers = computed(() => relationshipUsersQuery.data.value ?? []);
+
+// profilePanels 用途：根据访问者身份组织个人页主内容切换项；无参数，返回可渲染面板列表且无副作用。
+const profilePanels = computed<Array<{ key: ProfilePanel; label: string }>>(() => {
+  const panels: Array<{ key: ProfilePanel; label: string }> = [
+    { key: "topics", label: "主题" },
+    { key: "activity", label: "活动" },
+  ];
+
+  if (canViewRelationshipLists.value) {
+    panels.push({ key: "social", label: "关注" });
+  }
+
+  if (isOwnProfile.value) {
+    panels.push({ key: "settings", label: "设置" });
+  }
+
+  return panels;
+});
 
 const joinedAt = computed(() => {
   const createdAt = profile.value?.created_at;
@@ -99,11 +144,14 @@ const joinedAt = computed(() => {
 const profileStats = computed(() => {
   const topicCount = profile.value?.topic_count ?? 0;
   const postCount = profile.value?.post_count ?? 0;
+  const followingCount = profile.value?.following_count ?? 0;
+  const followerCount = profile.value?.follower_count ?? 0;
 
   return [
     { label: "主题", value: topicCount, note: topicCount > 0 ? "已发起讨论" : "等待首帖" },
     { label: "楼层", value: postCount, note: postCount > 0 ? "参与回复" : "还没接楼" },
-    { label: "贡献", value: topicCount + postCount, note: "公开内容" },
+    { label: "关注", value: followingCount, note: followingCount > 0 ? "正在关注" : "还未关注" },
+    { label: "粉丝", value: followerCount, note: followerCount > 0 ? "关注者" : "等待关注" },
   ];
 });
 
@@ -114,19 +162,20 @@ const profileSummary = computed(() => {
     return profile.value.bio;
   }
 
-  const topicCount = profile.value?.topic_count ?? 0;
-  const postCount = profile.value?.post_count ?? 0;
-
-  if (topicCount + postCount === 0) {
-    return "还没有留下公开讨论，但这条平行线已经预留好了第一束信号。";
-  }
-
-  if (topicCount >= postCount) {
-    return "更擅长把问题开成主题，适合作为讨论的起点。";
-  }
-
-  return "更常出现在楼层里补充线索，是讨论中的协作者。";
+  return "";
 });
+
+const socialPanelTitle = computed(() => (isOwnProfile.value ? "我的关注" : "关注关系"));
+const socialFollowingLabel = computed(() => (isOwnProfile.value ? "我关注的" : "TA 关注的"));
+const socialFollowersLabel = computed(() => (isOwnProfile.value ? "关注我的" : "关注 TA 的"));
+const socialEmptyTitle = computed(() =>
+  socialListKind.value === "following" ? "还没有关注任何成员" : "还没有粉丝",
+);
+const socialEmptyCopy = computed(() =>
+  isOwnProfile.value
+    ? "当关注关系建立后，这里会成为你的成员导航。"
+    : "这里暂时没有公开可展示的关注关系。",
+);
 
 watch(
   profile,
@@ -143,6 +192,20 @@ watch(
         ? value.profile_visibility
         : "public";
     profileDraft.show_activity = value.show_activity;
+  },
+  { immediate: true },
+);
+
+watch(
+  [isOwnProfile, canViewRelationshipLists],
+  ([ownProfile, canViewLists]) => {
+    if (!ownProfile && activeProfilePanel.value === "settings") {
+      activeProfilePanel.value = "topics";
+    }
+
+    if (!canViewLists && activeProfilePanel.value === "social") {
+      activeProfilePanel.value = "topics";
+    }
   },
   { immediate: true },
 );
@@ -264,7 +327,6 @@ async function saveProfile() {
     await updateProfileMutation.mutateAsync(payload);
     await profileQuery.refetch();
     profileStatus.value = "资料设置已保存。";
-    profileFormOpen.value = false;
   } catch (error) {
     profileStatus.value = profileErrorMessage(error);
   }
@@ -387,7 +449,7 @@ function socialErrorMessage(error: unknown): string {
             <p class="profile-meta">
               @{{ profile.username }} · 加入 {{ joinedAt }} · {{ profileVisibilityLabel(profile.profile_visibility) }}
             </p>
-            <p class="profile-summary">{{ profileSummary }}</p>
+            <p v-if="profileSummary" class="profile-summary">{{ profileSummary }}</p>
             <div v-if="profile.website_url || profile.location" class="profile-links">
               <a v-if="profile.website_url" :href="profile.website_url" target="_blank" rel="noopener noreferrer">
                 {{ profile.website_url }}
@@ -395,11 +457,26 @@ function socialErrorMessage(error: unknown): string {
               <span v-if="profile.location">{{ profile.location }}</span>
             </div>
             <div v-if="isOwnProfile" class="profile-primary-actions" aria-label="个人中心快捷操作">
-              <UiButton type="button" tone="primary" @click="profileFormOpen = !profileFormOpen">
-                {{ profileFormOpen ? "收起资料编辑" : "编辑个人资料" }}
+              <UiButton
+                type="button"
+                tone="primary"
+                @click="activeProfilePanel = 'settings'"
+              >
+                资料设置
               </UiButton>
               <RouterLink class="profile-action-link" :to="{ name: 'security' }">账号安全</RouterLink>
               <RouterLink class="profile-action-link" :to="{ name: 'email-preferences' }">邮件偏好</RouterLink>
+            </div>
+            <div v-else class="profile-primary-actions profile-primary-actions--social" aria-label="用户社交操作">
+              <UiButton
+                type="button"
+                :tone="relationship?.following ? 'success' : 'primary'"
+                :disabled="relationshipMutation.isPending.value || relationship?.blocked"
+                @click="toggleRelationship('follow', !relationship?.following)"
+              >
+                {{ relationship?.blocked ? "已屏蔽" : relationship?.following ? "已关注" : "关注" }}
+              </UiButton>
+              <UiButton type="button" tone="subtle" @click="openMessageForm">私信</UiButton>
             </div>
           </div>
         </div>
@@ -413,102 +490,19 @@ function socialErrorMessage(error: unknown): string {
             </div>
           </dl>
 
-          <div class="profile-signal-card">
-            <span>信号状态</span>
-            <strong>{{ profile.topic_count || profile.post_count ? "已接入讨论" : "等待第一条线索" }}</strong>
-            <p>公开资料只展示主题与楼层，不暴露邮箱。</p>
+          <div class="profile-overview-card">
+            <span>成长</span>
+            <strong>Lv.{{ profile.level }} · {{ profile.points_balance }} 积分</strong>
           </div>
 
-          <div class="profile-growth-card">
-            <div>
-              <span>可用积分</span>
-              <strong>{{ profile.points_balance }} 积分</strong>
-              <p>后续可用于兑换、解锁资源下载和更新查看。</p>
-            </div>
-            <div class="profile-growth-card__points">
-              <span>等级</span>
-              <strong>Lv.{{ profile.level }}</strong>
-            </div>
-          </div>
-
-          <div class="profile-badges-card">
-            <span>徽章与信任</span>
+          <div class="profile-overview-card">
+            <span>信任</span>
             <strong>TL{{ profile.trust_level }} · {{ profile.trust_level_label }}</strong>
-            <p>信任等级仅影响发链接、上传和频控边界，不等同于管理员权限。</p>
             <div v-if="profileBadges.length" class="profile-badges-list">
-              <span v-for="badge in profileBadges" :key="badge.id" class="profile-badge-chip">
+              <span v-for="badge in profileBadges.slice(0, 3)" :key="badge.id" class="profile-badge-chip">
                 <em>{{ badge.icon }}</em>
                 {{ badge.name }}
               </span>
-            </div>
-            <p v-else class="profile-badges-empty">暂无公开徽章，完成社区行为后会自动点亮。</p>
-          </div>
-
-          <div v-if="isOwnProfile" class="profile-settings-card">
-            <div>
-              <span>个人设置</span>
-              <strong>资料、隐私与界面偏好</strong>
-              <p>编辑公开昵称、简介、链接，并决定资料和活动流对谁可见。</p>
-            </div>
-            <UiButton type="button" tone="primary" @click="profileFormOpen = !profileFormOpen">
-              {{ profileFormOpen ? "收起设置" : "编辑资料" }}
-            </UiButton>
-            <p v-if="profileStatus" class="profile-social-status" role="status">{{ profileStatus }}</p>
-            <div v-if="profileFormOpen" class="profile-settings-form">
-              <label>
-                <span>公开昵称</span>
-                <input v-model="profileDraft.display_name" type="text" maxlength="80" />
-              </label>
-              <label>
-                <span>个人简介</span>
-                <textarea v-model="profileDraft.bio" rows="4" maxlength="1000"></textarea>
-              </label>
-              <label>
-                <span>个人链接</span>
-                <input v-model="profileDraft.website_url" type="url" placeholder="https://example.com" />
-              </label>
-              <label>
-                <span>位置/时区</span>
-                <input v-model="profileDraft.location" type="text" maxlength="120" />
-              </label>
-              <label>
-                <span>资料可见性</span>
-                <select v-model="profileDraft.profile_visibility">
-                  <option value="public">公开</option>
-                  <option value="members">仅登录用户</option>
-                  <option value="private">仅自己</option>
-                </select>
-              </label>
-              <label class="profile-settings-form__toggle">
-                <input v-model="profileDraft.show_activity" type="checkbox" />
-                <span>展示公开活动流</span>
-              </label>
-              <label>
-                <span>界面偏好</span>
-                <select v-model="profileDraft.interface_theme">
-                  <option value="system">跟随系统</option>
-                  <option value="light">明亮</option>
-                  <option value="colorful">多彩</option>
-                </select>
-              </label>
-              <label>
-                <span>语言</span>
-                <select v-model="profileDraft.locale">
-                  <option value="zh-CN">简体中文</option>
-                  <option value="en-US">English</option>
-                </select>
-              </label>
-              <div class="profile-message-actions">
-                <UiButton
-                  type="button"
-                  tone="primary"
-                  :disabled="updateProfileMutation.isPending.value"
-                  @click="saveProfile"
-                >
-                  {{ updateProfileMutation.isPending.value ? "保存中…" : "保存资料" }}
-                </UiButton>
-                <UiButton type="button" tone="subtle" @click="profileFormOpen = false">取消</UiButton>
-              </div>
             </div>
           </div>
 
@@ -516,14 +510,6 @@ function socialErrorMessage(error: unknown): string {
             <span>关系边界</span>
             <strong>{{ socialSummary }}</strong>
             <div class="profile-social-actions">
-              <UiButton
-                type="button"
-                :tone="relationship?.following ? 'success' : 'primary'"
-                :disabled="relationshipMutation.isPending.value"
-                @click="toggleRelationship('follow', !relationship?.following)"
-              >
-                {{ relationship?.following ? "已关注" : "关注" }}
-              </UiButton>
               <UiButton
                 type="button"
                 tone="subtle"
@@ -540,7 +526,6 @@ function socialErrorMessage(error: unknown): string {
               >
                 {{ relationship?.blocked ? "取消屏蔽" : "屏蔽" }}
               </UiButton>
-              <UiButton type="button" tone="ghost" @click="openMessageForm">私信</UiButton>
             </div>
             <p v-if="socialStatus" class="profile-social-status" role="status">{{ socialStatus }}</p>
             <div v-if="messageFormOpen" class="profile-message-form">
@@ -575,12 +560,22 @@ function socialErrorMessage(error: unknown): string {
       </template>
     </UiCard>
 
-    <section class="profile-topics" aria-labelledby="profile-topics-title">
+    <nav v-if="profile" class="profile-section-switcher" aria-label="个人中心内容">
+      <button
+        v-for="panel in profilePanels"
+        :key="panel.key"
+        type="button"
+        :class="{ active: activeProfilePanel === panel.key }"
+        @click="activeProfilePanel = panel.key"
+      >
+        {{ panel.label }}
+      </button>
+    </nav>
+
+    <section v-if="profile && activeProfilePanel === 'topics'" class="profile-topics" aria-labelledby="profile-topics-title">
       <header>
         <div>
-          <UiBadge tone="blue">用户主题</UiBadge>
-          <h2 id="profile-topics-title">{{ username }} 的公开主题</h2>
-          <p>只收录仍可见的公开讨论，隐藏或删除内容不会出现在这里。</p>
+          <h2 id="profile-topics-title">公开主题</h2>
         </div>
       </header>
 
@@ -599,12 +594,10 @@ function socialErrorMessage(error: unknown): string {
       <TopicList v-else :topics="topicsQuery.data.value" />
     </section>
 
-    <section class="profile-activity" aria-labelledby="profile-activity-title">
+    <section v-else-if="profile && activeProfilePanel === 'activity'" class="profile-activity" aria-labelledby="profile-activity-title">
       <header>
         <div>
-          <UiBadge tone="green">活动页</UiBadge>
-          <h2 id="profile-activity-title">{{ displayName }} 的公开活动</h2>
-          <p>活动流遵守资料隐私设置；隐藏内容、私信和邮箱不会出现在这里。</p>
+          <h2 id="profile-activity-title">公开活动</h2>
         </div>
         <div class="profile-activity-tabs" aria-label="活动类型">
           <UiButton type="button" :tone="activityType === 'posts' ? 'primary' : 'ghost'" @click="activityType = 'posts'">
@@ -648,6 +641,142 @@ function socialErrorMessage(error: unknown): string {
         <div>
           <strong>暂无该类型公开活动</strong>
           <p>当有公开回复、点赞或收藏后，这里会形成个人活动时间线。</p>
+        </div>
+      </UiCard>
+    </section>
+
+    <section
+      v-else-if="profile && activeProfilePanel === 'social'"
+      class="profile-social-section"
+      aria-labelledby="profile-social-title"
+    >
+      <header>
+        <div>
+          <h2 id="profile-social-title">{{ socialPanelTitle }}</h2>
+        </div>
+        <div class="profile-social-tabs" aria-label="关注列表类型">
+          <UiButton
+            type="button"
+            :tone="socialListKind === 'following' ? 'primary' : 'ghost'"
+            @click="socialListKind = 'following'"
+          >
+            {{ socialFollowingLabel }} · {{ profile.following_count }}
+          </UiButton>
+          <UiButton
+            type="button"
+            :tone="socialListKind === 'followers' ? 'primary' : 'ghost'"
+            @click="socialListKind = 'followers'"
+          >
+            {{ socialFollowersLabel }} · {{ profile.follower_count }}
+          </UiButton>
+        </div>
+      </header>
+
+      <UiCard v-if="!canViewRelationshipLists" class="profile-state">关注关系暂时不可见。</UiCard>
+      <UiCard v-else-if="relationshipUsersQuery.isLoading.value" class="profile-state">正在加载关注关系…</UiCard>
+      <UiCard v-else-if="relationshipUsersQuery.isError.value" class="profile-state profile-state--error" role="alert">
+        暂时无法读取关注关系，请稍后重试。
+      </UiCard>
+      <div v-else-if="relationshipUsers.length" class="profile-social-list">
+        <RouterLink
+          v-for="relatedUser in relationshipUsers"
+          :key="relatedUser.id"
+          class="profile-social-user"
+          :to="{ name: 'user-profile', params: { username: relatedUser.username } }"
+        >
+          <UiAvatar
+            :name="relatedUser.display_name?.trim() || relatedUser.username"
+            :src="relatedUser.avatar_url"
+            :role="relatedUser.role"
+            :level="relatedUser.level"
+            size="md"
+          />
+          <div>
+            <strong>{{ relatedUser.display_name?.trim() || relatedUser.username }}</strong>
+            <p>
+              @{{ relatedUser.username }} · Lv.{{ relatedUser.level }} ·
+              {{ relatedUser.topic_count }} 主题 / {{ relatedUser.post_count }} 回复
+            </p>
+          </div>
+          <span>{{ relativeTime(relatedUser.followed_at) }}</span>
+        </RouterLink>
+      </div>
+      <UiCard v-else class="profile-empty">
+        <span class="profile-empty__mark">∅</span>
+        <div>
+          <strong>{{ socialEmptyTitle }}</strong>
+          <p>{{ socialEmptyCopy }}</p>
+        </div>
+      </UiCard>
+    </section>
+
+    <section
+      v-else-if="profile && isOwnProfile && activeProfilePanel === 'settings'"
+      class="profile-settings-section"
+      aria-labelledby="profile-settings-title"
+    >
+      <header>
+        <div>
+          <h2 id="profile-settings-title">资料设置</h2>
+        </div>
+      </header>
+
+      <UiCard class="profile-settings-card">
+        <p v-if="profileStatus" class="profile-social-status" role="status">{{ profileStatus }}</p>
+        <div class="profile-settings-form">
+          <label>
+            <span>公开昵称</span>
+            <input v-model="profileDraft.display_name" type="text" maxlength="80" />
+          </label>
+          <label>
+            <span>个人简介</span>
+            <textarea v-model="profileDraft.bio" rows="4" maxlength="1000"></textarea>
+          </label>
+          <label>
+            <span>个人链接</span>
+            <input v-model="profileDraft.website_url" type="url" placeholder="https://example.com" />
+          </label>
+          <label>
+            <span>位置/时区</span>
+            <input v-model="profileDraft.location" type="text" maxlength="120" />
+          </label>
+          <label>
+            <span>资料可见性</span>
+            <select v-model="profileDraft.profile_visibility">
+              <option value="public">公开</option>
+              <option value="members">仅登录用户</option>
+              <option value="private">仅自己</option>
+            </select>
+          </label>
+          <label class="profile-settings-form__toggle">
+            <input v-model="profileDraft.show_activity" type="checkbox" />
+            <span>展示公开活动流</span>
+          </label>
+          <label>
+            <span>界面偏好</span>
+            <select v-model="profileDraft.interface_theme">
+              <option value="system">跟随系统</option>
+              <option value="light">明亮</option>
+              <option value="colorful">多彩</option>
+            </select>
+          </label>
+          <label>
+            <span>语言</span>
+            <select v-model="profileDraft.locale">
+              <option value="zh-CN">简体中文</option>
+              <option value="en-US">English</option>
+            </select>
+          </label>
+          <div class="profile-message-actions">
+            <UiButton
+              type="button"
+              tone="primary"
+              :disabled="updateProfileMutation.isPending.value"
+              @click="saveProfile"
+            >
+              {{ updateProfileMutation.isPending.value ? "保存中…" : "保存资料" }}
+            </UiButton>
+          </div>
         </div>
       </UiCard>
     </section>

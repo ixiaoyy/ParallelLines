@@ -21,6 +21,7 @@ import {
   TeamOutlined,
   TrophyOutlined,
   UnorderedListOutlined,
+  UpOutlined,
 } from "@ant-design/icons-vue";
 import type { Component } from "vue";
 import { computed, ref } from "vue";
@@ -33,14 +34,17 @@ import { compactNumber } from "@/shared/lib/format";
 import { boardToneClass } from "@/shared/theme/boardPalette";
 
 const searchQuery = ref("");
+const showAllRecommendedBoards = ref(false);
 const showAllBoards = ref(false);
 const showAllTags = ref(false);
 const boardsQuery = useBoards();
 const tagsQuery = useTags(60);
 
+const RECOMMENDED_BOARD_LIMIT = 4;
 const featuredBoardSlugs = ["qna", "resources", "frontier", "news", "experience", "dev"];
 const featuredTagNames = [
-  "人工智能",
+  "AI 科技",
+  "社会热点",
   "快问快答",
   "教程",
   "资源分享",
@@ -82,7 +86,8 @@ const tagIcons: Record<string, Component> = {
   集中帖: TeamOutlined,
   精华神帖: LikeOutlined,
   快问快答: QuestionCircleOutlined,
-  人工智能: BulbOutlined,
+  "AI 科技": BulbOutlined,
+  社会热点: FireOutlined,
   原创: EditOutlined,
   资源分享: FolderOpenOutlined,
   福利羊毛: FireOutlined,
@@ -101,7 +106,8 @@ const tagAccentColors: Record<string, string> = {
   集中帖: "#06b6d4",
   精华神帖: "#2563eb",
   快问快答: "#65a30d",
-  人工智能: "#8b5cf6",
+  "AI 科技": "#8b5cf6",
+  社会热点: "#ef4444",
   原创: "#0ea5e9",
   资源分享: "#ea580c",
   福利羊毛: "#f59e0b",
@@ -135,15 +141,24 @@ const filteredBoards = computed(() => {
     normalizeSearch(`${board.name} ${board.description} ${board.slug} ${board.parentBoardName ?? ""}`).includes(keyword),
   );
 });
-const recommendedBoards = computed(() => {
+const recommendedBoardCandidates = computed(() => {
   const pool = normalizedSearch.value ? filteredBoards.value : publicBoards.value;
   const bySlug = new Map(pool.map((board) => [board.slug, board]));
   const featured = featuredBoardSlugs.flatMap((slug) => {
     const board = bySlug.get(slug);
     return board ? [board] : [];
   });
-  const fallback = pool.filter((board) => !featured.includes(board)).slice(0, 4 - featured.length);
-  return [...featured, ...fallback].slice(0, 4);
+  const fallbackLimit = Math.max(RECOMMENDED_BOARD_LIMIT - featured.length, 0);
+  const fallback = pool.filter((board) => !featured.includes(board)).slice(0, fallbackLimit);
+  return [...featured, ...fallback];
+});
+const recommendedBoards = computed(() => {
+  const boards = recommendedBoardCandidates.value;
+  if (normalizedSearch.value || showAllRecommendedBoards.value) {
+    return boards;
+  }
+
+  return boards.slice(0, RECOMMENDED_BOARD_LIMIT);
 });
 const listedBoards = computed(() => {
   const boards = filteredBoards.value;
@@ -184,6 +199,9 @@ const listedTags = computed(() => {
   return tags.slice(0, 8);
 });
 const hasSearch = computed(() => Boolean(normalizedSearch.value));
+const hasExpandableRecommendedBoards = computed(
+  () => !hasSearch.value && recommendedBoardCandidates.value.length > RECOMMENDED_BOARD_LIMIT,
+);
 const hasHiddenBoards = computed(() => !hasSearch.value && filteredBoards.value.length > listedBoards.value.length);
 const hasHiddenTags = computed(() => !hasSearch.value && filteredTags.value.length > listedTags.value.length);
 const hasVisibleResults = computed(() =>
@@ -217,8 +235,8 @@ function boardPurpose(board: BoardSummary) {
     questions: "快速提问与问题排查",
     support: "快速提问与问题排查",
     resources: "工具、资料与学习路径",
-    frontier: "AI 与技术前沿资讯",
-    news: "AI 与技术前沿资讯",
+    frontier: "AI 科技与社会热点",
+    news: "AI 科技与社会热点",
     experience: "实践复盘、踩坑记录",
     dev: "接口设计与架构方案",
     engineering: "接口设计与架构方案",
@@ -257,9 +275,14 @@ function boardPurpose(board: BoardSummary) {
             <StarFilled aria-hidden="true" />
             推荐版块
           </h2>
-          <button v-if="hasHiddenBoards" type="button" @click="showAllBoards = true">
-            查看全部
-            <RightOutlined aria-hidden="true" />
+          <button
+            v-if="hasExpandableRecommendedBoards"
+            type="button"
+            @click="showAllRecommendedBoards = !showAllRecommendedBoards"
+          >
+            {{ showAllRecommendedBoards ? "收起" : "查看更多" }}
+            <UpOutlined v-if="showAllRecommendedBoards" aria-hidden="true" />
+            <RightOutlined v-else aria-hidden="true" />
           </button>
         </div>
 

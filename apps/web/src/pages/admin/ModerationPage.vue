@@ -212,7 +212,7 @@ function reviewableTitle(reviewable: ReviewableResponse) {
 
 function reviewableReason(reviewable: ReviewableResponse) {
   if (reviewable.source === "frontier_news") {
-    return "小小资讯自动采集并整理；审核通过后会直接发布到前沿资讯版块。";
+    return "小小资讯自动采集并整理；审核通过后会直接发布到热点资讯版块。";
   }
 
   if (

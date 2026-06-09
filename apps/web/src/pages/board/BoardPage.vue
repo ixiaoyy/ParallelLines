@@ -10,6 +10,8 @@ import {
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import { publicSettingString } from "@/features/admin/model";
+import { usePublicSiteSettings } from "@/features/admin/queries";
 import { isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser } from "@/features/auth/queries";
 import BoardSettingsPanel from "@/features/boards/components/BoardSettingsPanel.vue";
@@ -103,13 +105,17 @@ const router = useRouter();
 
 const slug = computed(() => readRouteParam(route.params.slug));
 const currentUserQuery = useCurrentUser();
+const siteSettingsQuery = usePublicSiteSettings();
 const boardQuery = useBoardDetail(slug);
 const board = computed(() => boardQuery.data.value);
+const siteTitle = computed(() =>
+  publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
+);
 useSeoMeta(
   computed(() =>
     board.value
       ? {
-          title: `${board.value.name} · 平行线`,
+          title: `${board.value.name} · ${siteTitle.value}`,
           description: board.value.description,
           canonicalPath: `/b/${board.value.slug}`,
         }
@@ -192,7 +198,6 @@ const activeStatus = computed<TopicStatusFilter>({
   },
 });
 
-const activeTab = computed(() => sortTabs.find((tab) => tab.key === activeSort.value) ?? sortTabs[0]);
 // showAnswerFilters 用途：仅问答/支持类版块显示解答状态筛选；无参数，返回布尔值且无副作用。
 const showAnswerFilters = computed(() => answerFilterBoardSlugs.has(slug.value));
 const topicsQuery = useBoardTopics(slug, activeSort);
@@ -334,45 +339,42 @@ async function updateBoardNotificationLevel(event: Event) {
             v-html="getBoardIcon(board.slug) || boardMark(board.name)"
           ></span>
           <div class="board-hero__copy">
-            <div class="board-breadcrumb">
-              <RouterLink to="/boards">全部版块</RouterLink>
-              <span>/</span>
-              <span>{{ board.name }}</span>
-            </div>
             <div class="board-title-row">
+              <RouterLink class="board-title-row__parent" to="/boards">全部版块</RouterLink>
+              <span class="board-title-row__separator">/</span>
               <h1 id="board-title">{{ board.name }}</h1>
-              <div class="board-follow-controls">
-                <UiButton
-                  class="board-follow-btn"
-                  :tone="followingBoard ? 'success' : 'subtle'"
-                  :aria-pressed="followingBoard"
+            </div>
+            <div class="board-follow-controls">
+              <UiButton
+                class="board-follow-btn"
+                :tone="followingBoard ? 'success' : 'subtle'"
+                :aria-pressed="followingBoard"
+                :disabled="followPending || boardNotificationPending"
+                @click="toggleBoardFollow"
+              >
+                <template #icon>
+                  <StarFilled v-if="followingBoard" />
+                  <StarOutlined v-else />
+                </template>
+                {{ followingBoard ? "已关注版块" : "关注版块" }}
+              </UiButton>
+              <label class="board-notification-select" :title="boardNotificationDescription">
+                <span>版块通知</span>
+                <select
+                  :value="boardNotificationSelectValue"
                   :disabled="followPending || boardNotificationPending"
-                  @click="toggleBoardFollow"
+                  aria-label="设置版块通知级别"
+                  @change="updateBoardNotificationLevel"
                 >
-                  <template #icon>
-                    <StarFilled v-if="followingBoard" />
-                    <StarOutlined v-else />
-                  </template>
-                  {{ followingBoard ? "已关注版块" : "关注版块" }}
-                </UiButton>
-                <label class="board-notification-select" :title="boardNotificationDescription">
-                  <span>版块通知</span>
-                  <select
-                    :value="boardNotificationSelectValue"
-                    :disabled="followPending || boardNotificationPending"
-                    aria-label="设置版块通知级别"
-                    @change="updateBoardNotificationLevel"
+                  <option
+                    v-for="option in notificationLevelOptions"
+                    :key="option.value"
+                    :value="option.value"
                   >
-                    <option
-                      v-for="option in notificationLevelOptions"
-                      :key="option.value"
-                      :value="option.value"
-                    >
-                      {{ option.label }}
-                    </option>
-                  </select>
-                </label>
-              </div>
+                    {{ option.label }}
+                  </option>
+                </select>
+              </label>
             </div>
           </div>
         </div>
@@ -424,14 +426,6 @@ async function updateBoardNotificationLevel(event: Event) {
               </div>
             </div>
           </section>
-
-          <div class="board-feed-heading">
-            <h2>{{ board.name }}帖子</h2>
-            <span>
-              {{ activeTab.label }}
-              {{ searchQuery ? `· 搜索 “${searchQuery}”` : "" }}
-            </span>
-          </div>
 
           <UiCard v-if="topicsQuery.isError.value" class="board-state board-state--error" role="alert">
             主题列表暂时加载失败，请稍后刷新。

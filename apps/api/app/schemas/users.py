@@ -59,6 +59,8 @@ class UserProfileResponse(ORMModel):
     created_at: datetime
     topic_count: int
     post_count: int
+    following_count: int
+    follower_count: int
     badges: list[UserBadgeResponse] = Field(default_factory=list)
 
 
@@ -87,6 +89,20 @@ class UserDirectoryResponse(BaseModel):
     post_count: int
     last_seen_at: datetime | None = None
     created_at: datetime
+
+
+class UserRelationshipUserResponse(BaseModel):
+    id: str
+    username: str
+    display_name: str | None = None
+    avatar_url: str | None = None
+    role: str
+    level: int
+    trust_level: int
+    trust_level_label: str
+    topic_count: int
+    post_count: int
+    followed_at: datetime
 
 
 class UserActivityItemResponse(BaseModel):

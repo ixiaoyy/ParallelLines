@@ -47,9 +47,6 @@ export function applySiteBranding(settings: PublicSettingMap | undefined, previe
 
   const faviconUrl = settingString(merged, "brand_favicon_url", "/favicon.svg");
   updateFavicon(faviconUrl);
-
-  const siteTitle = settingString(merged, "site_title", "平行线");
-  document.title = siteTitle;
 }
 
 function applyColor(root: HTMLElement, colorVar: string, rgbVar: string, color: string): void {

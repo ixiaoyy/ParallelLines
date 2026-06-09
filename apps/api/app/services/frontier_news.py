@@ -40,6 +40,50 @@ FRONTIER_NEWS_PROMPT_VERSION = "frontier-v1"
 DEFAULT_REVIEW_BATCH_SIZE = 3
 OPEN_REVIEW_STATUSES = {"pending", "claimed", "appealed"}
 TERMINAL_ITEM_STATUSES = {"published", "rejected", "duplicate"}
+HOT_NEWS_BOARD_NAME = "热点资讯"
+HOT_NEWS_BOARD_DESCRIPTION = "自动汇集 AI 科技与社会热点，经人工审核后发布。"
+HOT_NEWS_TAG = "热点资讯"
+AI_TECH_TAG = "AI 科技"
+SOCIAL_HOT_TAG = "社会热点"
+AI_TECH_SOURCE_KINDS = frozenset(
+    {"arxiv", "github_search", "hacker_news", "xai_news", "arena_leaderboard"}
+)
+AI_TECH_CATEGORY_KEYWORDS = (
+    "artificial intelligence",
+    "machine learning",
+    "deep learning",
+    "generative ai",
+    "llm",
+    "language model",
+    "agent",
+    "agentic",
+    "multimodal",
+    "openai",
+    "anthropic",
+    "claude",
+    "gemini",
+    "grok",
+    "deepseek",
+    "github",
+    "repository",
+    "arxiv",
+    "大模型",
+    "人工智能",
+    "生成式",
+    "AIGC",
+    "智能体",
+    "多模态",
+    "机器人",
+    "算法",
+    "科技",
+    "技术",
+    "开源",
+    "芯片",
+    "半导体",
+    "编程",
+    "开发者",
+    "论文",
+)
 AI_KEYWORDS = (
     "ai",
     "artificial intelligence",
@@ -130,7 +174,7 @@ INTERNAL_COPY_MARKERS = (
     "资讯机器人发布",
     "小小资讯发布",
     "小小资讯整理",
-    "发布到前沿资讯",
+    "发布到热点资讯",
     "进入人工审核流程",
     "原文可信度",
     "是否重复",
@@ -265,6 +309,22 @@ DEFAULT_FRONTIER_SOURCES: tuple[DefaultFrontierSource, ...] = (
         fetch_interval_minutes=120,
     ),
     DefaultFrontierSource(
+        key="caiwen_social_hot",
+        name="财闻网 社会热点",
+        kind="news_html_index",
+        url="https://www.caiwennews.com/",
+        config={
+            "max_items": 10,
+            "candidate_links": 36,
+            "review_batch_size": DEFAULT_REVIEW_BATCH_SIZE,
+            "allowed_hosts": ["www.caiwennews.com", "caiwennews.com"],
+            "link_contains": ["/article/"],
+            "keywords": [],
+        },
+        trust_level=68,
+        fetch_interval_minutes=120,
+    ),
+    DefaultFrontierSource(
         key="eastmoney_ai_tech",
         name="东方财富科技 AI / 产业动态",
         kind="news_html_index",
@@ -278,6 +338,22 @@ DEFAULT_FRONTIER_SOURCES: tuple[DefaultFrontierSource, ...] = (
             "keywords": list(CHINESE_AI_NEWS_KEYWORDS),
         },
         trust_level=70,
+        fetch_interval_minutes=120,
+    ),
+    DefaultFrontierSource(
+        key="eastmoney_social_hot",
+        name="东方财富 社会热点",
+        kind="news_html_index",
+        url="https://news.eastmoney.com/",
+        config={
+            "max_items": 10,
+            "candidate_links": 36,
+            "review_batch_size": DEFAULT_REVIEW_BATCH_SIZE,
+            "allowed_hosts": ["news.eastmoney.com", "wap.eastmoney.com"],
+            "link_contains": ["/a/"],
+            "keywords": [],
+        },
+        trust_level=66,
         fetch_interval_minutes=120,
     ),
 )
@@ -561,22 +637,25 @@ class FrontierNewsService:
         slug = self.settings.frontier_news_board_slug
         board = await self.session.scalar(select(Board).where(Board.slug == slug))
         if board:
+            if board.name in {"前沿快讯", "前沿资讯"}:
+                board.name = HOT_NEWS_BOARD_NAME
+                board.description = HOT_NEWS_BOARD_DESCRIPTION
             return board
         legacy = await self.session.scalar(
             select(Board).where(
                 Board.slug == "news",
-                Board.name.in_(["前沿快讯", "前沿资讯"]),
+                Board.name.in_(["前沿快讯", "前沿资讯", HOT_NEWS_BOARD_NAME]),
             )
         )
         if legacy:
             legacy.slug = slug
-            legacy.name = "前沿资讯"
-            legacy.description = "自动汇集 AI、科技、研究论文与开源工具动态，经人工审核后发布。"
+            legacy.name = HOT_NEWS_BOARD_NAME
+            legacy.description = HOT_NEWS_BOARD_DESCRIPTION
             return legacy
         board = Board(
             slug=slug,
-            name="前沿资讯",
-            description="自动汇集 AI、科技、研究论文与开源工具动态，经人工审核后发布。",
+            name=HOT_NEWS_BOARD_NAME,
+            description=HOT_NEWS_BOARD_DESCRIPTION,
             color="#6366f1",
             owner_id=owner_id,
             visibility="public",
@@ -828,7 +907,7 @@ class FrontierNewsService:
         """Fetch a trusted news index and normalize article detail pages.
 
         This generic fetcher is for ordinary media sites that do not expose a
-        clean RSS feed for AI/technology news. The source config must restrict
+        clean RSS feed for selected hot-news sections. The source config must restrict
         candidate URLs with allowed hosts and path fragments so the collector
         does not crawl an entire news site blindly.
         """
@@ -1302,13 +1381,31 @@ class FrontierNewsService:
     def _topic_tags(self, item: FrontierNewsItem) -> list[str]:
         """Return normalized-looking tag labels while keeping within forum request limits."""
 
-        tags = ["前沿资讯", *item.suggested_tags]
+        tags = [HOT_NEWS_TAG, self._topic_category_tag(item), *item.suggested_tags]
         unique: list[str] = []
         for tag in tags:
             safe = str(tag).strip()[:48]
             if safe and safe not in unique:
                 unique.append(safe)
         return unique[:8]
+
+    def _topic_category_tag(self, item: FrontierNewsItem) -> str:
+        """Choose the broad news category tag used for published hot-news topics.
+
+        Key parameter: `item` is the collected material with source metadata.
+        Return value: either `AI 科技` or `社会热点`. Side effect: none.
+        """
+
+        source = item.source
+        if source and source.kind in AI_TECH_SOURCE_KINDS:
+            return AI_TECH_TAG
+        source_text = ""
+        if source:
+            source_text = f"{source.key} {source.name} {source.url}"
+        item_text = f"{item.title} {item.summary or ''} {item.canonical_url}"
+        if _contains_ai_tech_signal(source_text) or _contains_ai_tech_signal(item_text):
+            return AI_TECH_TAG
+        return SOCIAL_HOT_TAG
 
     def _score_entry(self, source: FrontierNewsSource, entry: FetchedNewsEntry) -> int:
         """Score relevance from source trust, keyword hits, and metadata completeness."""
@@ -1432,7 +1529,9 @@ class FrontierNewsService:
                 "如果你跟踪研究进展，可以关注它提出的问题、方法改动、实验结果，"
                 "以及是否已经有可复现资源。"
             )
-        return f"这条{type_label}有助于快速了解 AI 技术、产品或生态的最新变化。"
+        if self._topic_category_tag(item) == SOCIAL_HOT_TAG:
+            return f"这条{type_label}有助于快速了解社会热点、公共议题或正在发生的新变化。"
+        return f"这条{type_label}有助于快速了解 AI 科技、产品或生态的最新变化。"
 
     def _focus_hint(self, item: FrontierNewsItem) -> str:
         """Infer one short reading guide from title keywords when no excerpt exists."""
@@ -2023,6 +2122,24 @@ def _safe_payload(value: Any) -> dict[str, object]:
     except json.JSONDecodeError:
         return {"raw": truncated}
     return decoded if isinstance(decoded, dict) else {"items": decoded}
+
+
+def _contains_ai_tech_signal(text: str) -> bool:
+    """Detect explicit AI or technology wording in source/title text.
+
+    Key parameter: `text` is source metadata or article copy to classify.
+    Return value: true when the text has an AI/technology signal. Side effect:
+    none.
+    """
+
+    lowered = text.lower()
+    if re.search(r"(?<![a-z0-9])ai(?![a-z0-9])", lowered):
+        return True
+    for keyword in AI_TECH_CATEGORY_KEYWORDS:
+        needle = keyword.lower().strip()
+        if needle and needle in lowered:
+            return True
+    return False
 
 
 def _clean_text(value: str | None) -> str:

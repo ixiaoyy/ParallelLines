@@ -65,8 +65,7 @@
   min-width: 0;
 }
 
-.post-stream > *,
-.post-list > * {
+.post-stream > * {
   min-width: 0;
   max-width: 100%;
 }
@@ -77,23 +76,10 @@
   max-width: 100%;
 }
 
-.post-list {
-  display: grid;
-  gap: 0.85rem;
-}
-
 .post-anchor {
   width: 100%;
   max-width: 100%;
   scroll-margin-top: 6.5rem;
-}
-
-.reply-section {
-  display: grid;
-  gap: 0;
-  margin-top: 0;
-  border-top: 1px solid rgba(var(--muted-rgb), 0.18);
-  padding-top: 0.9rem;
 }
 
 .reply-status {
@@ -153,20 +139,13 @@
   }
 
   .topic-layout,
-  .post-stream,
-  .post-list,
-  .reply-section {
+  .post-stream {
     width: 100%;
     min-width: 0;
   }
 
-  .post-stream,
-  .post-list {
+  .post-stream {
     gap: 0.68rem;
-  }
-
-  .reply-section {
-    padding-top: 0.68rem;
   }
 
   .reply-compose-prompt :deep(.ant-card-body) {

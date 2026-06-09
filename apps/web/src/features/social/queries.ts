@@ -9,13 +9,16 @@ import {
   createPrivateMessage,
   fetchPrivateMessages,
   fetchUserRelationship,
+  fetchUserRelationshipUsers,
   setUserRelationship,
 } from "./api";
 import type {
   PrivateMessageCreateRequest,
   PrivateMessageTopic,
   UserRelationshipKind,
+  UserRelationshipListKind,
   UserRelationshipState,
+  UserRelationshipUser,
 } from "./model";
 
 export function useUserRelationship(
@@ -48,10 +51,35 @@ export function useUpdateUserRelationship(username: MaybeRefOrGetter<string>) {
     mutationFn: ({ kind, active }) => setUserRelationship(toValue(username), kind, active),
     onSuccess: (response) => {
       queryClient.setQueryData(queryKeys.userRelationship(response.target_username), response);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.usersRoot });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.userRelationshipUsersRoot });
       void queryClient.invalidateQueries({ queryKey: queryKeys.user(toValue(username)) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.userTopics(toValue(username)) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
     },
+  });
+}
+
+// useUserRelationshipUsers 用途：按方向查询用户的关注/粉丝列表。
+// 关键参数：username 为资料用户名，kind 为 following/followers，enabled 控制懒加载。
+// 返回值/副作用：返回 TanStack Query 对象，仅读取服务端状态。
+export function useUserRelationshipUsers(
+  username: MaybeRefOrGetter<string>,
+  kind: MaybeRefOrGetter<UserRelationshipListKind>,
+  enabled: MaybeRefOrGetter<boolean> = true,
+) {
+  return useQuery<UserRelationshipUser[], Error>({
+    queryKey: computed(() => queryKeys.userRelationshipUsers(toValue(username), toValue(kind))),
+    queryFn: async () => {
+      if (!toValue(username) || !toValue(enabled)) {
+        return [];
+      }
+
+      return fetchUserRelationshipUsers(toValue(username), toValue(kind));
+    },
+    enabled: computed(() => Boolean(toValue(username)) && toValue(enabled)),
+    retry: false,
+    staleTime: 20_000,
   });
 }
 

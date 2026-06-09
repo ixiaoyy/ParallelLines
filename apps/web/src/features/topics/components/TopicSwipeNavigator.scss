@@ -1,0 +1,129 @@
+.topic-swipe-navigator {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 3;
+}
+
+.topic-swipe-navigator :deep(.ant-card-body) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: stretch;
+  padding: 0.62rem;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(18px);
+}
+
+.topic-swipe-button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "icon label"
+    "icon title"
+    "icon meta";
+  gap: 0.1rem 0.55rem;
+  align-content: center;
+  min-width: 0;
+  min-height: 4.1rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.14);
+  border-radius: 0.9rem;
+  padding: 0.64rem 0.72rem;
+  color: var(--text);
+  background: rgba(248, 250, 252, 0.78);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.topic-swipe-button > svg {
+  grid-area: icon;
+  align-self: center;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.topic-swipe-button span {
+  grid-area: label;
+  color: var(--primary);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.topic-swipe-button strong {
+  grid-area: title;
+  overflow: hidden;
+  color: var(--title);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: 880;
+}
+
+.topic-swipe-button small {
+  grid-area: meta;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  font-weight: 760;
+}
+
+.topic-swipe-button:hover,
+.topic-swipe-button:focus-visible {
+  border-color: rgba(var(--primary-rgb), 0.28);
+  outline: none;
+  background: var(--theme-soft-bg, rgba(var(--primary-rgb), 0.1));
+  transform: translateY(-1px);
+}
+
+.topic-swipe-button:disabled {
+  cursor: default;
+  opacity: 0.58;
+  transform: none;
+}
+
+.topic-swipe-divider {
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  color: var(--muted);
+}
+
+.topic-swipe-divider span {
+  width: 1px;
+  height: 100%;
+  min-height: 2.2rem;
+  background: rgba(var(--muted-rgb), 0.22);
+}
+
+@media (max-width: 720px) {
+  .topic-swipe-navigator {
+    bottom: 0.45rem;
+    margin-inline: 0.1rem;
+  }
+
+  .topic-swipe-navigator :deep(.ant-card-body) {
+    grid-template-columns: 1fr;
+    gap: 0.42rem;
+    padding: 0.48rem;
+  }
+
+  .topic-swipe-divider {
+    display: none;
+  }
+
+  .topic-swipe-button {
+    min-height: 3.35rem;
+    border-radius: 0.8rem;
+    padding: 0.54rem 0.62rem;
+  }
+
+  .topic-swipe-button strong {
+    font-size: 0.86rem;
+  }
+}

@@ -20,7 +20,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 BOARD_SLUG = "comics"
-BOARD_NAME = "漫画分享"
+BOARD_NAME = "漫画梗图"
 BOARD_DESCRIPTION = "分享漫画作品、连载更新、读后感和每日漫画推荐。"
 BOARD_COLOR = "#DB2777"
 TAG_NAME = "漫画"

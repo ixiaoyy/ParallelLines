@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { message } from "ant-design-vue";
-import { computed, defineAsyncComponent, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import type { PostItemVM } from "@/entities/post/model";
+import { publicSettingString } from "@/features/admin/model";
+import { usePublicSiteSettings } from "@/features/admin/queries";
 import { useCurrentUser } from "@/features/auth/queries";
 import { setTopicBookmark, setTopicLike } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
@@ -18,11 +20,13 @@ import type { PostSort } from "@/features/posts/api";
 import PostItem from "@/features/posts/components/PostItem.vue";
 import { useCreatePost, useTopicPosts } from "@/features/posts/queries";
 import { setUserRelationship } from "@/features/social/api";
+import TopicRepliesPanel from "@/features/topics/components/TopicRepliesPanel.vue";
 import TopicDetailHero from "@/features/topics/components/TopicDetailHero.vue";
+import TopicSwipeNavigator from "@/features/topics/components/TopicSwipeNavigator.vue";
 import TopicThreadToolbar from "@/features/topics/components/TopicThreadToolbar.vue";
 import {
+  useBoardTopics,
   useMoveTopic,
-  useRelatedTopics,
   useSetTopicSolution,
   useTopicDetail,
   useTopicLifecycle,
@@ -68,16 +72,20 @@ const topicQuery = useTopicDetail(topicId);
 const postsQuery = useTopicPosts(topicId, postSort);
 const createPost = useCreatePost(topicId);
 const currentUserQuery = useCurrentUser();
+const siteSettingsQuery = usePublicSiteSettings();
 const topicNotificationQuery = useTopicNotificationLevel(topicId);
 const updateTopicNotificationMutation = useUpdateTopicNotificationLevel(topicId);
 const topic = computed(() => topicQuery.data.value);
+const siteTitle = computed(() =>
+  publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
+);
 const isDesktopReplyComposer = useMediaQuery("(min-width: 721px)", true);
 const isDetailSidebarVisible = useMediaQuery("(min-width: 1121px)", true);
 useSeoMeta(
   computed(() =>
     topic.value
       ? {
-          title: `${topic.value.title} · ${topic.value.boardName} · 平行线`,
+          title: `${topic.value.title} · ${topic.value.boardName} · ${siteTitle.value}`,
           description:
             topic.value.excerpt || `${topic.value.boardName} 中的公开主题：${topic.value.title}`,
           canonicalPath: `/topics/${topic.value.id}/${topic.value.slug}`,
@@ -92,8 +100,11 @@ const toolbarStatus = ref("");
 const replyStatus = ref("");
 const replyResetToken = ref(0);
 const replyComposerOpen = ref(false);
+const repliesExpanded = ref(false);
 const replyInsertText = ref("");
 const replyInsertToken = ref(0);
+const swipeTouchStart = ref<{ x: number; y: number } | null>(null);
+const lastSwipeNavigationAt = ref(0);
 const currentUserId = computed(() => currentUserQuery.data.value?.id ?? null);
 const currentUserRole = computed(() => currentUserQuery.data.value?.role ?? null);
 const comicReader = computed(() => topic.value?.tags.includes(COMIC_READER_TAG) ?? false);
@@ -120,8 +131,27 @@ const hiddenRelationshipPostCount = computed(() => {
 const shouldRenderReplyComposer = computed(() =>
   topic.value?.status === "open" && (isDesktopReplyComposer.value || replyComposerOpen.value),
 );
-const sidebarTopic = computed(() => (isDetailSidebarVisible.value ? topic.value : null));
-const relatedTopics = useRelatedTopics(sidebarTopic);
+const boardSwipeTopicsQuery = useBoardTopics(() => topic.value?.boardSlug ?? "", "latest");
+const boardSwipeTopics = computed(() => boardSwipeTopicsQuery.data.value ?? []);
+const relatedTopics = computed(() =>
+  boardSwipeTopics.value
+    .filter((candidate) => candidate.id !== topic.value?.id)
+    .slice(0, 3),
+);
+const currentSwipeTopicIndex = computed(() =>
+  boardSwipeTopics.value.findIndex((candidate) => candidate.id === topic.value?.id),
+);
+const previousSwipeTopic = computed(() => {
+  const index = currentSwipeTopicIndex.value;
+  return index > 0 ? boardSwipeTopics.value[index - 1] : null;
+});
+const nextSwipeTopic = computed(() => {
+  const index = currentSwipeTopicIndex.value;
+  return index >= 0 && index < boardSwipeTopics.value.length - 1 ? boardSwipeTopics.value[index + 1] : null;
+});
+const canUseSwipeNavigation = computed(() =>
+  Boolean(!comicReader.value && !repliesExpanded.value && !replyComposerOpen.value && (previousSwipeTopic.value || nextSwipeTopic.value)),
+);
 const flagTopicMutation = useCreateFlag();
 const topicModerationMutation = useContentModerationMutation({ awaitInvalidation: false });
 const lifecycleMutation = useTopicLifecycle(topicId);
@@ -228,6 +258,20 @@ watch(
       query: route.query,
       hash: route.hash,
     });
+  },
+  { immediate: true },
+);
+
+watch(
+  () => [topicId.value, route.hash] as const,
+  ([, hash]) => {
+    if (shouldExpandRepliesForHash(hash)) {
+      repliesExpanded.value = true;
+      void scrollHashIntoViewAfterRepliesRender(hash);
+      return;
+    }
+
+    repliesExpanded.value = false;
   },
   { immediate: true },
 );
@@ -435,6 +479,122 @@ function toggleOnlyAuthor() {
   setToolbarStatus(onlyAuthor.value ? "已切换为只看楼主" : "已显示全部楼层");
 }
 
+// Toggles the reply list without changing server state.
+// Key parameters: none. Return value: none; side effect: expands or collapses the local reply panel.
+function toggleReplies() {
+  repliesExpanded.value = !repliesExpanded.value;
+}
+
+// Navigates to the previous or next topic in the current board's latest feed.
+// Key parameter: `direction` selects the adjacent topic. Return value: none; side effect: routes to another topic detail.
+function navigateSwipeTopic(direction: "previous" | "next") {
+  const target = direction === "previous" ? previousSwipeTopic.value : nextSwipeTopic.value;
+  if (!target) {
+    setToolbarStatus(direction === "previous" ? "已经是最新主题" : "没有更多主题");
+    return;
+  }
+
+  repliesExpanded.value = false;
+  replyComposerOpen.value = false;
+  lastSwipeNavigationAt.value = Date.now();
+  void router.push(topicDetailRoute(target));
+}
+
+// Records the first touch point used by edge swipe navigation.
+// Key parameter: `event` is the touchstart event. Return value: none; side effect: stores one touch coordinate.
+function rememberTopicTouchStart(event: TouchEvent) {
+  if (!canUseSwipeNavigation.value || event.touches.length !== 1 || isInteractiveSwipeTarget(event.target)) {
+    swipeTouchStart.value = null;
+    return;
+  }
+
+  const touch = event.touches[0];
+  swipeTouchStart.value = { x: touch.clientX, y: touch.clientY };
+}
+
+// Turns a vertical edge swipe into adjacent-topic navigation.
+// Key parameter: `event` is the touchend event. Return value: none; side effect: may route to another topic.
+function handleTopicTouchEnd(event: TouchEvent) {
+  const start = swipeTouchStart.value;
+  swipeTouchStart.value = null;
+  if (!start || !canUseSwipeNavigation.value || event.changedTouches.length !== 1 || isSwipeNavigationCoolingDown()) {
+    return;
+  }
+
+  const touch = event.changedTouches[0];
+  const deltaY = start.y - touch.clientY;
+  const deltaX = start.x - touch.clientX;
+  if (Math.abs(deltaY) < 72 || Math.abs(deltaY) < Math.abs(deltaX) * 1.4) {
+    return;
+  }
+
+  if (deltaY > 0 && isNearPageBottom()) {
+    navigateSwipeTopic("next");
+  } else if (deltaY < 0 && isNearPageTop()) {
+    navigateSwipeTopic("previous");
+  }
+}
+
+// Converts mouse-wheel edge scrolling into adjacent-topic navigation on desktop.
+// Key parameter: `event` is the wheel event. Return value: none; side effect: may route to another topic.
+function handleTopicWheel(event: WheelEvent) {
+  if (!canUseSwipeNavigation.value || isInteractiveSwipeTarget(event.target) || isSwipeNavigationCoolingDown()) {
+    return;
+  }
+
+  if (Math.abs(event.deltaY) < 96 || Math.abs(event.deltaY) < Math.abs(event.deltaX) * 1.4) {
+    return;
+  }
+
+  if (event.deltaY > 0 && isNearPageBottom()) {
+    navigateSwipeTopic("next");
+  } else if (event.deltaY < 0 && isNearPageTop()) {
+    navigateSwipeTopic("previous");
+  }
+}
+
+// Checks whether a hash points into the collapsed reply area.
+// Key parameter: `hash` is a route hash. Return value: true when replies must be mounted; no side effects.
+function shouldExpandRepliesForHash(hash: string) {
+  return hash === "#replies" || (/^#post-\d+$/.test(hash) && hash !== "#post-1");
+}
+
+// Scrolls to a hash after Vue has mounted the expanded reply list.
+// Key parameter: `hash` is the element id hash. Return value: promise with no value; side effect: scrolls the page.
+async function scrollHashIntoViewAfterRepliesRender(hash: string) {
+  if (!hash) {
+    return;
+  }
+
+  await nextTick();
+  document.querySelector(hash)?.scrollIntoView({ block: "start" });
+}
+
+// Detects whether the event target is an editor or form control where swipe should be ignored.
+// Key parameter: `target` is the raw event target. Return value: true for interactive controls; no side effects.
+function isInteractiveSwipeTarget(target: EventTarget | null) {
+  return target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, button, a, [contenteditable='true'], .md-editor"));
+}
+
+// Prevents repeated wheel/touch edge events from rapidly skipping several topics.
+// Key parameters: none. Return value: true during the navigation cooldown; no side effects.
+function isSwipeNavigationCoolingDown() {
+  return Date.now() - lastSwipeNavigationAt.value < 900;
+}
+
+// Checks whether the viewport is at the top edge of the document.
+// Key parameters: none. Return value: true near the top edge; no side effects.
+function isNearPageTop() {
+  return window.scrollY <= 8;
+}
+
+// Checks whether the viewport is at the bottom edge of the document.
+// Key parameters: none. Return value: true near the bottom edge; no side effects.
+function isNearPageBottom() {
+  const documentElement = document.documentElement;
+  return window.scrollY + window.innerHeight >= documentElement.scrollHeight - 16;
+}
+
 function quotePost(post: PostItemVM) {
   const excerpt = buildQuoteExcerpt(post);
   const quoteText = `> ${post.authorName} #${post.floor}\n> ${excerpt}\n\n`;
@@ -516,7 +676,13 @@ function flagTopic() {
 </script>
 
 <template>
-  <div class="topic-detail-page" :class="{ 'topic-detail-page--comic-reader': comicReader }">
+  <div
+    class="topic-detail-page"
+    :class="{ 'topic-detail-page--comic-reader': comicReader }"
+    @touchstart.passive="rememberTopicTouchStart"
+    @touchend.passive="handleTopicTouchEnd"
+    @wheel.passive="handleTopicWheel"
+  >
     <UiCard v-if="topicQuery.isLoading.value" class="topic-state" role="status">
       正在加载主题…
     </UiCard>
@@ -595,6 +761,13 @@ function flagTopic() {
               @delete-topic="deleteTopic"
             />
 
+            <TopicSwipeNavigator
+              :previous-topic="previousSwipeTopic"
+              :next-topic="nextSwipeTopic"
+              :loading="boardSwipeTopicsQuery.isFetching.value"
+              @navigate="navigateSwipeTopic"
+            />
+
             <UiCard v-if="hiddenRelationshipPostCount > 0" class="topic-state topic-state--muted" role="status">
               已隐藏 {{ hiddenRelationshipPostCount }} 条来自已屏蔽用户的楼层。
             </UiCard>
@@ -606,24 +779,19 @@ function flagTopic() {
               @vote="votePoll"
             />
 
-            <section id="replies" class="reply-section" aria-label="回复列表">
-              <div v-if="replyPosts.length" class="post-list">
-                <div v-for="post in replyPosts" :id="`post-${post.floor}`" :key="post.id" class="post-anchor">
-                  <PostItem
-                    :post="post"
-                    variant="reply"
-                    :current-user-id="currentUserId"
-                    :current-user-role="currentUserRole"
-                    :can-manage-solution="canManageSolution"
-                    :solution-pending="solutionMutation.isPending.value"
-                    @quote="quotePost"
-                    @require-login="requireLogin"
-                    @toggle-solution="togglePostSolution"
-                    @block-author="blockPostAuthor"
-                  />
-                </div>
-              </div>
-            </section>
+            <TopicRepliesPanel
+              :replies="replyPosts"
+              :expanded="repliesExpanded"
+              :current-user-id="currentUserId"
+              :current-user-role="currentUserRole"
+              :can-manage-solution="canManageSolution"
+              :solution-pending="solutionMutation.isPending.value"
+              @toggle="toggleReplies"
+              @quote="quotePost"
+              @require-login="requireLogin"
+              @toggle-solution="togglePostSolution"
+              @block-author="blockPostAuthor"
+            />
           </template>
 
           <template v-if="topic.status === 'open'">

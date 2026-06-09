@@ -1,6 +1,7 @@
 import type { TopicResponse } from "@/features/topics/model";
 
 export type UserRelationshipKind = "follow" | "ignore" | "block";
+export type UserRelationshipListKind = "following" | "followers";
 
 export interface UserRelationshipState {
   target_user_id: string;
@@ -9,6 +10,20 @@ export interface UserRelationshipState {
   ignored: boolean;
   blocked: boolean;
   followed_by: boolean;
+}
+
+export interface UserRelationshipUser {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  role: string;
+  level: number;
+  trust_level: number;
+  trust_level_label: string;
+  topic_count: number;
+  post_count: number;
+  followed_at: string;
 }
 
 export interface PrivateMessageParticipant {

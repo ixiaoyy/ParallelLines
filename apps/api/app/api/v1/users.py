@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
 from starlette.responses import Response
@@ -19,6 +19,7 @@ from app.schemas.users import (
     UserProfileResponse,
     UserProfileUpdateRequest,
     UserRelationshipStateResponse,
+    UserRelationshipUserResponse,
 )
 from app.services.backups import BackupService
 from app.services.forum import ForumService
@@ -176,6 +177,29 @@ async def unblock_user(
 ) -> ApiResponse[UserRelationshipStateResponse]:
     state = await SocialService(session).clear_relationship(username, "block", current_user)
     return ApiResponse(data=state)
+
+
+# list_user_relationships 用途：返回用户关注/粉丝列表。
+# 关键参数：kind 限定列表方向，current_user 用于资料隐私判定。
+# 返回值/副作用：返回公开安全的用户卡片数组，无写入副作用。
+@router.get(
+    "/{username}/relationships/{kind}",
+    response_model=ApiResponse[list[UserRelationshipUserResponse]],
+)
+async def list_user_relationships(
+    username: str,
+    kind: Literal["following", "followers"],
+    session: SessionDep,
+    current_user: OptionalCurrentUserDep,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> ApiResponse[list[UserRelationshipUserResponse]]:
+    users = await UserProfileService(session).list_relationship_users(
+        username,
+        kind=kind,
+        current_user=current_user,
+        limit=limit,
+    )
+    return ApiResponse(data=users)
 
 
 @router.get("/{username}", response_model=ApiResponse[UserProfileResponse])

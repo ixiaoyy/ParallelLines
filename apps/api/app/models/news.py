@@ -51,7 +51,7 @@ class FrontierNewsSource(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("key", name="uq_frontier_news_sources_key"),
         Index("ix_frontier_news_sources_enabled_checked", "enabled", "last_checked_at"),
-        {"comment": "前沿资讯白名单来源，保存抓取配置、频率和最近一次抓取状态。"},
+        {"comment": "热点资讯白名单来源，保存抓取配置、频率和最近一次抓取状态。"},
     )
 
     key: Mapped[str] = mapped_column(
@@ -120,7 +120,7 @@ class FrontierNewsItem(IntegerPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_frontier_news_items_status_created", "status", "created_at"),
         Index("ix_frontier_news_items_source_published", "source_id", "published_at"),
         Index("ix_frontier_news_items_reviewable", "reviewable_id"),
-        {"comment": "前沿资讯素材池，保存原文元数据、AI 中文整理结果和审核发布关联。"},
+        {"comment": "热点资讯素材池，保存原文元数据、AI 中文整理结果和审核发布关联。"},
     )
 
     source_id: Mapped[str] = mapped_column(
@@ -269,7 +269,7 @@ class FrontierNewsAiRun(IntegerPrimaryKeyMixin, Base):
     __tablename__ = "frontier_news_ai_runs"
     __table_args__ = (
         Index("ix_frontier_news_ai_runs_item_created", "item_id", "created_at"),
-        {"comment": "前沿资讯 AI 整理运行记录，保存模型、成本、状态和错误。"},
+        {"comment": "热点资讯 AI 整理运行记录，保存模型、成本、状态和错误。"},
     )
 
     item_id: Mapped[str] = mapped_column(
