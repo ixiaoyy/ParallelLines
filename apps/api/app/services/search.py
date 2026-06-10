@@ -4,13 +4,14 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import case, delete, desc, not_, or_, select
+from sqlalchemy import case, delete, desc, func, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import noload, selectinload
 
 from app.core.exceptions import NotFoundError
 from app.db.base import utcnow
-from app.models.forum import Board, BoardMember, Tag, Topic, topic_tags
+from app.models.forum import Board, BoardMember, Poll, Post, Tag, Topic, topic_tags
+from app.models.interaction import Bookmark, Reaction, Vote
 from app.models.search import SearchDocument, SearchLog
 from app.models.social import UserRelationship
 from app.models.user import User
@@ -85,6 +86,20 @@ def search_relevance_expression(query: str):
             + case((SearchDocument.body.ilike(contains, escape="\\"), 8), else_=0)
         )
     return relevance
+
+
+def search_topic_excerpt(raw_md: str) -> str:
+    """Return a compact first-post excerpt for search result topic cards.
+
+    Key parameter `raw_md` is first-post Markdown. Return value mirrors the
+    existing topic-card length limit without loading full `Topic.posts`
+    relationships. The function has no side effects.
+    """
+
+    cleaned = " ".join(raw_md.split())
+    if len(cleaned) > 140:
+        return cleaned[:140].rstrip() + "..."
+    return cleaned
 
 
 class SearchIndexService:
@@ -210,6 +225,8 @@ class SearchService:
                 selectinload(Topic.board),
                 selectinload(Topic.author),
                 selectinload(Topic.tags),
+                selectinload(Topic.poll).selectinload(Poll.options),
+                noload(Topic.posts),
             )
             .where(
                 Topic.deleted_at.is_(None),
@@ -269,6 +286,8 @@ class SearchService:
 
         result = await self.session.execute(statement.limit(limit))
         topics = [row[0] for row in result.unique().all()]
+        await self._decorate_topic_excerpts(topics)
+        await self._decorate_topics_for_user(topics, current_user)
         await self.log_search(
             query=query,
             normalized_query=normalized,
@@ -277,6 +296,105 @@ class SearchService:
             current_user=current_user,
         )
         return topics
+
+    async def _decorate_topic_excerpts(self, topics: list[Topic]) -> None:
+        """Attach first-post excerpts to search topic rows without loading posts.
+
+        Key parameter `topics` is the ordered result set. Return value is none.
+        Side effect: assigns transient `topic.excerpt` attributes used by
+        `TopicResponse.from_model`.
+        """
+
+        if not topics:
+            return
+        topic_ids = [topic.id for topic in topics]
+        rows = (
+            await self.session.execute(
+                select(Post.topic_id, func.substr(Post.raw_md, 1, 600)).where(
+                    Post.topic_id.in_(topic_ids),
+                    Post.post_number == 1,
+                    Post.deleted_at.is_(None),
+                )
+            )
+        ).all()
+        excerpt_by_topic = {
+            str(topic_id): search_topic_excerpt(str(raw_md or "")) for topic_id, raw_md in rows
+        }
+        for topic in topics:
+            topic.excerpt = excerpt_by_topic.get(topic.id, "")
+
+    async def _decorate_topics_for_user(
+        self,
+        topics: list[Topic],
+        current_user: User | None,
+    ) -> None:
+        """Attach bookmark/reaction/vote state to search topic rows.
+
+        Key parameters are the ordered `topics` and optional `current_user`.
+        Return value is none. Side effect: assigns transient response-only
+        fields such as `bookmark_count`, `liked_by_me`, and `my_vote`.
+        """
+
+        if not topics:
+            return
+        for topic in topics:
+            topic.liked_by_me = False
+            topic.bookmarked_by_me = False
+            topic.my_vote = 0
+
+        topic_ids = [topic.id for topic in topics]
+        bookmark_counts = {
+            target_id: int(count)
+            for target_id, count in (
+                await self.session.execute(
+                    select(Bookmark.target_id, func.count(Bookmark.id))
+                    .where(
+                        Bookmark.target_type == "topic",
+                        Bookmark.target_id.in_(topic_ids),
+                    )
+                    .group_by(Bookmark.target_id)
+                )
+            ).all()
+        }
+        for topic in topics:
+            topic.bookmark_count = bookmark_counts.get(topic.id, 0)
+
+        if current_user is None:
+            return
+
+        liked_topic_ids = set(
+            await self.session.scalars(
+                select(Reaction.target_id).where(
+                    Reaction.target_type == "topic",
+                    Reaction.target_id.in_(topic_ids),
+                    Reaction.user_id == current_user.id,
+                    Reaction.type == "like",
+                )
+            )
+        )
+        bookmarked_topic_ids = set(
+            await self.session.scalars(
+                select(Bookmark.target_id).where(
+                    Bookmark.target_type == "topic",
+                    Bookmark.target_id.in_(topic_ids),
+                    Bookmark.user_id == current_user.id,
+                )
+            )
+        )
+        votes = list(
+            await self.session.scalars(
+                select(Vote).where(
+                    Vote.target_type == "topic",
+                    Vote.target_id.in_(topic_ids),
+                    Vote.user_id == current_user.id,
+                )
+            )
+        )
+        vote_by_topic = {vote.target_id: vote.value for vote in votes}
+        for topic in topics:
+            topic.liked_by_me = topic.id in liked_topic_ids
+            topic.bookmarked_by_me = topic.id in bookmarked_topic_ids
+            topic.my_vote = vote_by_topic.get(topic.id, 0)
 
     async def log_search(
         self,

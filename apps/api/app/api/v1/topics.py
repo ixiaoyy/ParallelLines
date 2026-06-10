@@ -37,17 +37,15 @@ TOPIC_LIST_CACHE_TTL_SECONDS = 15
 IMMERSIVE_TOPIC_FEED_CACHE_TTL_SECONDS = TOPIC_LIST_CACHE_TTL_SECONDS
 TOPIC_POST_LIST_CACHE_TTL_SECONDS = 15
 
-_TOPIC_LIST_RESPONSE_CACHE = ResponseHotCache[ApiResponse[list[TopicResponse]]](
+_TOPIC_LIST_RESPONSE_CACHE = ResponseHotCache[str](
     ttl_seconds=TOPIC_LIST_CACHE_TTL_SECONDS,
     max_entries=256,
 )
-_IMMERSIVE_TOPIC_FEED_RESPONSE_CACHE = ResponseHotCache[
-    ApiResponse[list[ImmersiveTopicFeedItemResponse]]
-](
+_IMMERSIVE_TOPIC_FEED_RESPONSE_CACHE = ResponseHotCache[str](
     ttl_seconds=IMMERSIVE_TOPIC_FEED_CACHE_TTL_SECONDS,
     max_entries=256,
 )
-_TOPIC_POST_LIST_RESPONSE_CACHE = ResponseHotCache[ApiResponse[list[PostResponse]]](
+_TOPIC_POST_LIST_RESPONSE_CACHE = ResponseHotCache[str](
     ttl_seconds=TOPIC_POST_LIST_CACHE_TTL_SECONDS,
     max_entries=512,
 )
@@ -95,10 +93,36 @@ def invalidate_topic_write_response_caches(*, include_tags: bool = False) -> Non
     from app.api.seo import invalidate_sitemap_response_cache
 
     invalidate_sitemap_response_cache()
+    from app.api.v1.search import invalidate_search_response_cache
+
+    invalidate_search_response_cache()
     if include_tags:
         from app.api.v1.tags import invalidate_tag_response_cache
 
         invalidate_tag_response_cache()
+
+
+# Return a pre-encoded JSON envelope with the same cache headers as route hits/misses.
+def _json_cache_response(
+    content: str,
+    *,
+    cache_control: str,
+    cache_status: str,
+) -> Response:
+    """Build a JSON response from cached or freshly encoded API content.
+
+    Key parameters are the JSON `content`, `cache_control` header, and cache
+    hit/miss status. Return value is a FastAPI response; side effect is none.
+    """
+
+    return Response(
+        content=content,
+        media_type="application/json",
+        headers={
+            "Cache-Control": cache_control,
+            "X-ParallelLines-Cache": cache_status,
+        },
+    )
 
 
 @router.get("", response_model=ApiResponse[list[TopicResponse]])
@@ -113,8 +137,8 @@ async def list_topics(
     sort: TopicSort = "latest",
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
-) -> ApiResponse[list[TopicResponse]]:
-    response.headers["Cache-Control"] = scoped_cache_control(
+) -> Response:
+    cache_control = scoped_cache_control(
         current_user,
         max_age=TOPIC_LIST_CACHE_TTL_SECONDS,
         stale_while_revalidate=60,
@@ -129,10 +153,13 @@ async def list_topics(
         cursor=cursor,
         limit=limit,
     )
-    cached = _TOPIC_LIST_RESPONSE_CACHE.get(cache_key)
-    if cached is not None:
-        response.headers["X-ParallelLines-Cache"] = "hit"
-        return cached
+    cached_json = _TOPIC_LIST_RESPONSE_CACHE.get(cache_key)
+    if cached_json is not None:
+        return _json_cache_response(
+            cached_json,
+            cache_control=cache_control,
+            cache_status="hit",
+        )
 
     topics = await ForumService(session).list_topics(
         board_slug=board,
@@ -155,9 +182,13 @@ async def list_topics(
             else None
         },
     )
-    _TOPIC_LIST_RESPONSE_CACHE.set(cache_key, payload)
-    response.headers["X-ParallelLines-Cache"] = "miss"
-    return payload
+    json_content = payload.model_dump_json()
+    _TOPIC_LIST_RESPONSE_CACHE.set(cache_key, json_content)
+    return _json_cache_response(
+        json_content,
+        cache_control=cache_control,
+        cache_status="miss",
+    )
 
 
 @router.get("/immersive-feed", response_model=ApiResponse[list[ImmersiveTopicFeedItemResponse]])
@@ -172,7 +203,7 @@ async def list_immersive_topic_feed(
     sort: ImmersiveTopicFeedSort = "latest",
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
-) -> ApiResponse[list[ImmersiveTopicFeedItemResponse]]:
+) -> Response:
     """Return the full-screen topic feed with first posts and read state.
 
     Key parameters are public topic filters, `sort`, `cursor`, and `limit`.
@@ -180,7 +211,7 @@ async def list_immersive_topic_feed(
     effect: none; this route does not count views or mark topics read.
     """
 
-    response.headers["Cache-Control"] = scoped_cache_control(
+    cache_control = scoped_cache_control(
         current_user,
         max_age=IMMERSIVE_TOPIC_FEED_CACHE_TTL_SECONDS,
         stale_while_revalidate=60,
@@ -195,10 +226,13 @@ async def list_immersive_topic_feed(
         cursor=cursor,
         limit=limit,
     )
-    cached = _IMMERSIVE_TOPIC_FEED_RESPONSE_CACHE.get(cache_key)
-    if cached is not None:
-        response.headers["X-ParallelLines-Cache"] = "hit"
-        return cached
+    cached_json = _IMMERSIVE_TOPIC_FEED_RESPONSE_CACHE.get(cache_key)
+    if cached_json is not None:
+        return _json_cache_response(
+            cached_json,
+            cache_control=cache_control,
+            cache_status="hit",
+        )
 
     feed_rows = await ForumService(session).list_immersive_feed(
         board_slug=board,
@@ -225,9 +259,13 @@ async def list_immersive_topic_feed(
             else None
         },
     )
-    _IMMERSIVE_TOPIC_FEED_RESPONSE_CACHE.set(cache_key, payload)
-    response.headers["X-ParallelLines-Cache"] = "miss"
-    return payload
+    json_content = payload.model_dump_json()
+    _IMMERSIVE_TOPIC_FEED_RESPONSE_CACHE.set(cache_key, json_content)
+    return _json_cache_response(
+        json_content,
+        cache_control=cache_control,
+        cache_status="miss",
+    )
 
 
 # Build an auth-scoped cache key for global topic feed/filter responses.
@@ -419,8 +457,8 @@ async def list_posts(
     current_user: OptionalCurrentUserDep,
     response: Response,
     sort: PostSort = "chronological",
-) -> ApiResponse[list[PostResponse]]:
-    response.headers["Cache-Control"] = scoped_cache_control(
+) -> Response:
+    cache_control = scoped_cache_control(
         current_user,
         max_age=TOPIC_POST_LIST_CACHE_TTL_SECONDS,
         stale_while_revalidate=60,
@@ -430,18 +468,25 @@ async def list_posts(
         topic_id=topic_id,
         sort=sort,
     )
-    cached = _TOPIC_POST_LIST_RESPONSE_CACHE.get(cache_key)
-    if cached is not None:
-        response.headers["X-ParallelLines-Cache"] = "hit"
-        return cached
+    cached_json = _TOPIC_POST_LIST_RESPONSE_CACHE.get(cache_key)
+    if cached_json is not None:
+        return _json_cache_response(
+            cached_json,
+            cache_control=cache_control,
+            cache_status="hit",
+        )
 
     posts = await ForumService(session).list_posts(
         topic_id, current_user=current_user, sort=sort
     )
     payload = ApiResponse(data=[PostResponse.from_model(post) for post in posts])
-    _TOPIC_POST_LIST_RESPONSE_CACHE.set(cache_key, payload)
-    response.headers["X-ParallelLines-Cache"] = "miss"
-    return payload
+    json_content = payload.model_dump_json()
+    _TOPIC_POST_LIST_RESPONSE_CACHE.set(cache_key, json_content)
+    return _json_cache_response(
+        json_content,
+        cache_control=cache_control,
+        cache_status="miss",
+    )
 
 
 # Build an auth-scoped cache key for one topic's post stream.

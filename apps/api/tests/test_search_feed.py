@@ -114,7 +114,16 @@ async def test_search_filters_cursor_and_hot_recompute() -> None:
 
         search = await client.get("/api/v1/search?q=callback")
         assert search.status_code == 200
+        assert search.headers["x-parallellines-cache"] == "miss"
         assert [item["id"] for item in search.json()["data"][:2]] == [
+            callback_title_topic_id,
+            oidc_topic_id,
+        ]
+
+        cached_search = await client.get("/api/v1/search?q=callback")
+        assert cached_search.status_code == 200
+        assert cached_search.headers["x-parallellines-cache"] == "hit"
+        assert [item["id"] for item in cached_search.json()["data"][:2]] == [
             callback_title_topic_id,
             oidc_topic_id,
         ]

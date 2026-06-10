@@ -797,6 +797,7 @@ class ForumService:
         author: str | None = None,
         cursor: str | datetime | None = None,
         current_user: User | None = None,
+        decorate_excerpts: bool = True,
     ) -> list[Topic]:
         statement = (
             select(Topic)
@@ -881,7 +882,8 @@ class ForumService:
 
         result = await self.session.scalars(statement.distinct().limit(limit))
         topics = list(result)
-        await self._decorate_topic_excerpts(topics)
+        if decorate_excerpts:
+            await self._decorate_topic_excerpts(topics)
         await self._decorate_topics_for_user(topics, current_user)
         return topics
 
@@ -914,8 +916,12 @@ class ForumService:
             author=author,
             cursor=cursor,
             current_user=current_user,
+            decorate_excerpts=False,
         )
         lead_posts_by_topic = await self._lead_posts_by_topic(topics, current_user)
+        for topic in topics:
+            lead_post = lead_posts_by_topic.get(topic.id)
+            topic.excerpt = _topic_list_excerpt(lead_post.raw_md if lead_post else "")
         await self._decorate_posts_for_user(list(lead_posts_by_topic.values()), current_user)
         read_states_by_topic = await self._topic_read_states_by_topic(topics, current_user)
         return [

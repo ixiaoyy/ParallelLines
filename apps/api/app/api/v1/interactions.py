@@ -18,6 +18,7 @@ def invalidate_interaction_response_caches(*, include_post_lists: bool = False) 
     """
 
     from app.api.v1.boards import invalidate_board_response_caches
+    from app.api.v1.search import invalidate_search_response_cache
     from app.api.v1.topics import (
         invalidate_topic_list_response_cache,
         invalidate_topic_post_list_response_cache,
@@ -25,6 +26,7 @@ def invalidate_interaction_response_caches(*, include_post_lists: bool = False) 
 
     invalidate_topic_list_response_cache()
     invalidate_board_response_caches()
+    invalidate_search_response_cache()
     if include_post_lists:
         invalidate_topic_post_list_response_cache()
 

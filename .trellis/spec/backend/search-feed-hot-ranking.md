@@ -64,8 +64,11 @@ DB tables:
   speed. Cache keys must include the full filter/sort/cursor/limit set and a
   visibility scope (`anonymous` or the authenticated user id) so private-board
   visibility and per-user reaction state never leak across users. `/search`
-  must not skip execution through a response cache because each search request
-  writes a `search_logs` row.
+  may reuse a short-lived server-side encoded result cache only if the route
+  still writes a fresh `search_logs` row for every HTTP request; do not use
+  browser/CDN caching or any path that lets a search request bypass logging.
+  Search cache keys must include query, filters, sort, cursor, limit, and
+  visibility scope.
 - Hot score recompute is idempotent and uses `calculate_hot_score(reply_count, like_count, view_count)`.
 - `SearchIndexService.sync_topic` must run in the same transaction for topic
   create, reply, first-post edit, revision restore, reply delete, topic status
@@ -74,6 +77,8 @@ DB tables:
   from `body`; they must not make a topic discoverable.
 - Every `/search` request writes a `search_logs` row with normalized query,
   safe filter snapshot, result count, and anonymous/authenticated user id.
+  This includes server-side cache hits; cached search responses must keep
+  `Cache-Control: no-store` so clients still call the API and produce logs.
 - `GET /api/v1/topics/{topic_id}` is the only public topic-read route that
   records a view. Internal service reads and `GET /topics/{topic_id}/posts`
   must call the plain topic lookup and must not increment `view_count`.
@@ -126,6 +131,8 @@ DB tables:
 
 - API test for search by post body.
 - API test for relevance order, special-character escaping, status/date/board/tag/author filters, and search logging.
+- API test proving repeated identical `/search` requests can hit the server
+  response cache while still increasing `search_logs`.
 - API test for tag filter and cursor meta.
 - API test for `GET /tags` returning persisted tag names and `topic_count`.
 - API test for `GET /topics/{id}` counting one view per authenticated user and
