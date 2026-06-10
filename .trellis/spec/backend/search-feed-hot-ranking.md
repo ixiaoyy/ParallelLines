@@ -69,6 +69,11 @@ DB tables:
   browser/CDN caching or any path that lets a search request bypass logging.
   Search cache keys must include query, filters, sort, cursor, limit, and
   visibility scope.
+- Public topic feed sort paths must have matching composite database indexes:
+  latest by `visibility/deleted_at/pinned/last_posted_at/id`, hot by
+  `visibility/deleted_at/hot_score/last_posted_at/id`, top by
+  `visibility/deleted_at/like_count/reply_count/id`, and votes by
+  `visibility/deleted_at/vote_score/vote_count/last_posted_at/id`.
 - Hot score recompute is idempotent and uses `calculate_hot_score(reply_count, like_count, view_count)`.
 - `SearchIndexService.sync_topic` must run in the same transaction for topic
   create, reply, first-post edit, revision restore, reply delete, topic status

@@ -178,6 +178,39 @@ class Topic(IntegerPrimaryKeyMixin, TimestampMixin, Base):
         UniqueConstraint("board_id", "slug", name="uq_topics_board_slug"),
         Index("ix_topics_board_last_posted", "board_id", "last_posted_at"),
         Index("ix_topics_board_hot_score", "board_id", "hot_score"),
+        Index(
+            "ix_topics_public_latest_feed",
+            "visibility",
+            "deleted_at",
+            "pinned",
+            "last_posted_at",
+            "id",
+        ),
+        Index(
+            "ix_topics_public_hot_feed",
+            "visibility",
+            "deleted_at",
+            "hot_score",
+            "last_posted_at",
+            "id",
+        ),
+        Index(
+            "ix_topics_public_top_feed",
+            "visibility",
+            "deleted_at",
+            "like_count",
+            "reply_count",
+            "id",
+        ),
+        Index(
+            "ix_topics_public_votes_feed",
+            "visibility",
+            "deleted_at",
+            "vote_score",
+            "vote_count",
+            "last_posted_at",
+            "id",
+        ),
     )
 
     board_id: Mapped[str] = mapped_column(
