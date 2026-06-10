@@ -9,6 +9,7 @@ import {
   appealReviewable,
   claimReviewable,
   createFlag,
+  deleteModeratedContent,
   decideReviewable,
   decideReviewablesBulk,
   fetchAuditLogs,
@@ -149,6 +150,31 @@ export function useContentModerationMutation(options: { awaitInvalidation?: bool
     onSuccess: (_response, variables) => {
       if (variables.targetType === "topic" && variables.hidden) {
         pruneTopicFromVisibleCaches(queryClient, variables.targetId);
+      }
+      const invalidation = invalidateModeration(queryClient);
+      return options.awaitInvalidation === false ? undefined : invalidation;
+    },
+  });
+}
+
+/**
+ * Creates the moderation deletion mutation for staff console actions.
+ *
+ * @param options.awaitInvalidation - Set false when caller handles follow-up UI before cache refreshes finish.
+ * @returns TanStack mutation; side effects hide topics or erase post bodies and refresh moderation/public caches.
+ */
+export function useContentDeleteMutation(options: { awaitInvalidation?: boolean } = {}) {
+  const queryClient = useQueryClient();
+  return useMutation<
+    ModerationActionResponse,
+    Error,
+    { targetType: FlagTargetType; targetId: string; note?: string }
+  >({
+    mutationFn: ({ targetType, targetId, note }) =>
+      deleteModeratedContent(targetType, targetId, { note: note ?? null }),
+    onSuccess: (response, variables) => {
+      if (response.target_type === "topic" || variables.targetType === "topic") {
+        pruneTopicFromVisibleCaches(queryClient, response.target_id);
       }
       const invalidation = invalidateModeration(queryClient);
       return options.awaitInvalidation === false ? undefined : invalidation;

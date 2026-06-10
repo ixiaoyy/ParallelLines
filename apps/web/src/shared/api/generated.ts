@@ -174,700 +174,349 @@ export interface components {
       updated_at: string;
     };
     ApiResponse_AdminSystemOverviewResponse_: {
-      data: components["schemas"]["AdminSystemOverviewResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_AdminUserResponse_: {
-      data: components["schemas"]["AdminUserResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_AnalyticsOverviewResponse_: {
-      data: components["schemas"]["AnalyticsOverviewResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_ApiKeyCreateResponse_: {
-      data: components["schemas"]["ApiKeyCreateResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_ApiKeyResponse_: {
-      data: components["schemas"]["ApiKeyResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_BackupArtifactResponse_: {
-      data: components["schemas"]["BackupArtifactResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_BackupRestoreResponse_: {
-      data: components["schemas"]["BackupRestoreResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_BoardDetailResponse_: {
-      data: components["schemas"]["BoardDetailResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_BoardFollowResponse_: {
-      data: components["schemas"]["BoardFollowResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_BoardInviteResponse_: {
-      data: components["schemas"]["BoardInviteResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_BoardMemberRemoveResponse_: {
-      data: components["schemas"]["BoardMemberRemoveResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_BoardMemberResponse_: {
-      data: components["schemas"]["BoardMemberResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_BoardResponse_: {
-      data: components["schemas"]["BoardResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_BoardSettingsResponse_: {
-      data: components["schemas"]["BoardSettingsResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_bool_: {
-      data: boolean;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_DataExplorerReportResponse_: {
-      data: components["schemas"]["DataExplorerReportResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_dict_str__bool__: {
-      data: {
-      [key: string]: boolean;
-    };
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_dict_str__int__: {
-      data: {
-      [key: string]: number;
-    };
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_dict_str__str__: {
-      data: {
-      [key: string]: string;
-    };
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_DraftResponse_: {
-      data: components["schemas"]["DraftResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_EmailChangeStartResponse_: {
-      data: components["schemas"]["EmailChangeStartResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_EmailDeliveryEventResponse_: {
-      data: components["schemas"]["EmailDeliveryEventResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_EmailPreferenceResponse_: {
-      data: components["schemas"]["EmailPreferenceResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_EventResponse_: {
-      data: components["schemas"]["EventResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_EventRsvpResponse_: {
-      data: components["schemas"]["EventRsvpResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_ExternalIntegrationEventResponse_: {
-      data: components["schemas"]["ExternalIntegrationEventResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_ExternalIntegrationResponse_: {
-      data: components["schemas"]["ExternalIntegrationResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_ExternalWebhookResponse_: {
-      data: components["schemas"]["ExternalWebhookResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_FlagResponse_: {
-      data: components["schemas"]["FlagResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_FrontierNewsCollectResponse_: {
-      data: components["schemas"]["FrontierNewsCollectResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_FrontierNewsItemResponse_: {
-      data: components["schemas"]["FrontierNewsItemResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_FrontierNewsSourceResponse_: {
-      data: components["schemas"]["FrontierNewsSourceResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_GitHubIssuePreviewResponse_: {
-      data: components["schemas"]["GitHubIssuePreviewResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_InboundEmailResponse_: {
-      data: components["schemas"]["InboundEmailResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_InteractionStateResponse_: {
-      data: components["schemas"]["InteractionStateResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_AdminBackgroundJobLogResponse__: {
-      data: Array<components["schemas"]["AdminBackgroundJobLogResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_AdminBackgroundJobResponse__: {
-      data: Array<components["schemas"]["AdminBackgroundJobResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_AdminEmailLogResponse__: {
-      data: Array<components["schemas"]["AdminEmailLogResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_AdminUserResponse__: {
-      data: Array<components["schemas"]["AdminUserResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_ApiKeyResponse__: {
-      data: Array<components["schemas"]["ApiKeyResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_AuditLogResponse__: {
-      data: Array<components["schemas"]["AuditLogResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_BackupArtifactResponse__: {
-      data: Array<components["schemas"]["BackupArtifactResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_BadgeResponse__: {
-      data: Array<components["schemas"]["BadgeResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_BoardResponse__: {
-      data: Array<components["schemas"]["BoardResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_DataExplorerReportSummary__: {
-      data: Array<components["schemas"]["DataExplorerReportSummary"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_DraftResponse__: {
-      data: Array<components["schemas"]["DraftResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_EventResponse__: {
-      data: Array<components["schemas"]["EventResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_ExternalIntegrationEventResponse__: {
-      data: Array<components["schemas"]["ExternalIntegrationEventResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_ExternalIntegrationResponse__: {
-      data: Array<components["schemas"]["ExternalIntegrationResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_FlagResponse__: {
-      data: Array<components["schemas"]["FlagResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_FrontierNewsItemResponse__: {
-      data: Array<components["schemas"]["FrontierNewsItemResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_FrontierNewsSourceResponse__: {
-      data: Array<components["schemas"]["FrontierNewsSourceResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_ImmersiveTopicFeedItemResponse__: {
-      data: Array<components["schemas"]["ImmersiveTopicFeedItemResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_PluginResponse__: {
-      data: Array<components["schemas"]["PluginResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_PluginUiExtensionResponse__: {
-      data: Array<components["schemas"]["PluginUiExtensionResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_PostResponse__: {
-      data: Array<components["schemas"]["PostResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_PostRevisionResponse__: {
-      data: Array<components["schemas"]["PostRevisionResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_PrivateMessageTopicResponse__: {
-      data: Array<components["schemas"]["PrivateMessageTopicResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_ReviewableResponse__: {
-      data: Array<components["schemas"]["ReviewableResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_ScreenedRuleResponse__: {
-      data: Array<components["schemas"]["ScreenedRuleResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_SessionResponse__: {
-      data: Array<components["schemas"]["SessionResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_SimilarTopicResponse__: {
-      data: Array<components["schemas"]["SimilarTopicResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_SiteSettingResponse__: {
-      data: Array<components["schemas"]["SiteSettingResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_SpamActionResponse__: {
-      data: Array<components["schemas"]["SpamActionResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_TagResponse__: {
-      data: Array<components["schemas"]["TagResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_TopicResponse__: {
-      data: Array<components["schemas"]["TopicResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_UserActivityItemResponse__: {
-      data: Array<components["schemas"]["UserActivityItemResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_UserDirectoryResponse__: {
-      data: Array<components["schemas"]["UserDirectoryResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_UserRelationshipUserResponse__: {
-      data: Array<components["schemas"]["UserRelationshipUserResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_WebhookDeliveryResponse__: {
-      data: Array<components["schemas"]["WebhookDeliveryResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_list_WebhookEndpointResponse__: {
-      data: Array<components["schemas"]["WebhookEndpointResponse"]>;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_LoginResponse_: {
-      data: components["schemas"]["LoginResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_MigrationExportResponse_: {
-      data: components["schemas"]["MigrationExportResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_MigrationImportResponse_: {
-      data: components["schemas"]["MigrationImportResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_ModerationActionResponse_: {
-      data: components["schemas"]["ModerationActionResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_ModerationAdviceResponse_: {
-      data: components["schemas"]["ModerationAdviceResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_MyBoardInvitesResponse_: {
-      data: components["schemas"]["MyBoardInvitesResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_NotificationListResponse_: {
-      data: components["schemas"]["NotificationListResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_NotificationReadResponse_: {
-      data: components["schemas"]["NotificationReadResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_OAuthProviderResponse_: {
-      data: components["schemas"]["OAuthProviderResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_PasswordResetStartResponse_: {
-      data: components["schemas"]["PasswordResetStartResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_PluginResponse_: {
-      data: components["schemas"]["PluginResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_PollResponse_: {
-      data: components["schemas"]["PollResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_PostResponse_: {
-      data: components["schemas"]["PostResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_PostRevisionResponse_: {
-      data: components["schemas"]["PostRevisionResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_PrivacyActionResponse_: {
-      data: components["schemas"]["PrivacyActionResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_PrivateMessageTopicResponse_: {
-      data: components["schemas"]["PrivateMessageTopicResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_PublicApiDocsResponse_: {
-      data: components["schemas"]["PublicApiDocsResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_PublicSiteSettingsResponse_: {
-      data: components["schemas"]["PublicSiteSettingsResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_PushSubscriptionStateResponse_: {
-      data: components["schemas"]["PushSubscriptionStateResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_RegistrationStartResponse_: {
-      data: components["schemas"]["RegistrationStartResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_RetentionPolicyResponse_: {
-      data: components["schemas"]["RetentionPolicyResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_ReviewableBulkDecisionResponse_: {
-      data: components["schemas"]["ReviewableBulkDecisionResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_ReviewableResponse_: {
-      data: components["schemas"]["ReviewableResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_ScreenedRuleResponse_: {
-      data: components["schemas"]["ScreenedRuleResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_SeoMetaResponse_: {
-      data: components["schemas"]["SeoMetaResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_SiteSettingResponse_: {
-      data: components["schemas"]["SiteSettingResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_TokenPair_: {
-      data: components["schemas"]["TokenPair"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_TopicAiSummaryResponse_: {
-      data: components["schemas"]["TopicAiSummaryResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_TopicLifecycleResponse_: {
-      data: components["schemas"]["TopicLifecycleResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_TopicLocalizationResponse_: {
-      data: components["schemas"]["TopicLocalizationResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_TopicNotificationLevelResponse_: {
-      data: components["schemas"]["TopicNotificationLevelResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_TopicReadStateResponse_: {
-      data: components["schemas"]["TopicReadStateResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_TopicResponse_: {
-      data: components["schemas"]["TopicResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_TwoFactorRecoveryCodesResponse_: {
-      data: components["schemas"]["TwoFactorRecoveryCodesResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_TwoFactorSetupResponse_: {
-      data: components["schemas"]["TwoFactorSetupResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_Union_DraftResponse__NoneType__: {
-      data: components["schemas"]["DraftResponse"] | null;
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_UploadResponse_: {
-      data: components["schemas"]["UploadResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_UserProfileResponse_: {
-      data: components["schemas"]["UserProfileResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_UserPublic_: {
-      data: components["schemas"]["UserPublic"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_UserRelationshipStateResponse_: {
-      data: components["schemas"]["UserRelationshipStateResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_UserStatusResponse_: {
-      data: components["schemas"]["UserStatusResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_VoteStateResponse_: {
-      data: components["schemas"]["VoteStateResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_WebhookEndpointCreateResponse_: {
-      data: components["schemas"]["WebhookEndpointCreateResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     ApiResponse_WebhookEndpointResponse_: {
-      data: components["schemas"]["WebhookEndpointResponse"];
-      meta?: {
       [key: string]: unknown;
-    };
     };
     AuditLogResponse: {
       action: string;
@@ -2641,6 +2290,9 @@ export interface paths {
     "/api/v1/moderation/flags/{flag_id}/status": {
       put: { response: components["schemas"]["ApiResponse_FlagResponse_"]; operationId: "update_flag_status_api_v1_moderation_flags__flag_id__status_put" };
     };
+    "/api/v1/moderation/posts/{post_id}/delete": {
+      put: { response: components["schemas"]["ApiResponse_ModerationActionResponse_"]; operationId: "delete_post_api_v1_moderation_posts__post_id__delete_put" };
+    };
     "/api/v1/moderation/posts/{post_id}/hide": {
       put: { response: components["schemas"]["ApiResponse_ModerationActionResponse_"]; operationId: "hide_post_api_v1_moderation_posts__post_id__hide_put" };
     };
@@ -2680,6 +2332,9 @@ export interface paths {
     };
     "/api/v1/moderation/spam-actions": {
       get: { response: components["schemas"]["ApiResponse_list_SpamActionResponse__"]; operationId: "list_spam_actions_api_v1_moderation_spam_actions_get" };
+    };
+    "/api/v1/moderation/topics/{topic_id}/delete": {
+      put: { response: components["schemas"]["ApiResponse_ModerationActionResponse_"]; operationId: "delete_topic_api_v1_moderation_topics__topic_id__delete_put" };
     };
     "/api/v1/moderation/topics/{topic_id}/hide": {
       put: { response: components["schemas"]["ApiResponse_ModerationActionResponse_"]; operationId: "hide_topic_api_v1_moderation_topics__topic_id__hide_put" };

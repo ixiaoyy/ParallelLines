@@ -30,6 +30,7 @@ import type {
 } from "@/features/moderation/model";
 import {
   useAuditLogs,
+  useContentDeleteMutation,
   useContentModerationMutation,
   useFlagStatusMutation,
   useModerationQueue,
@@ -72,6 +73,7 @@ const reviewablesQuery = usePublishReviewableQueue(reviewableStatusFilter, revie
 const auditQuery = useAuditLogs(auditTabActive);
 const flagStatusMutation = useFlagStatusMutation();
 const contentMutation = useContentModerationMutation();
+const contentDeleteMutation = useContentDeleteMutation();
 const userStatusMutation = useUserStatusMutation();
 const currentUserQuery = useCurrentUser();
 
@@ -105,6 +107,7 @@ const pendingAction = computed(
   () =>
     flagStatusMutation.isPending.value ||
     contentMutation.isPending.value ||
+    contentDeleteMutation.isPending.value ||
     userStatusMutation.isPending.value ||
     decisionMutation.isPending.value ||
     bulkDecisionMutation.isPending.value,
@@ -116,7 +119,9 @@ const activeFlagPendingId = computed(() =>
   flagStatusMutation.isPending.value ? activeFlagId.value : null,
 );
 const activeContentPendingFlagId = computed(() =>
-  contentMutation.isPending.value ? activeContentFlagId.value : null,
+  contentMutation.isPending.value || contentDeleteMutation.isPending.value
+    ? activeContentFlagId.value
+    : null,
 );
 const activeFeedback = computed<{
   tone: "working" | "success" | "error";
@@ -181,6 +186,14 @@ const selectedReviewableIdList = computed(() => Array.from(selectedReviewableIds
 const selectedReviewableCount = computed(() => selectedReviewableIds.value.size);
 const bulkSelectionActive = computed(() => selectedReviewableCount.value > 0);
 const bulkDecisionPending = computed(() => bulkDecisionMutation.isPending.value);
+const selectedReviewablesForAction = computed(() =>
+  reviewables.value.filter((rev) => selectedReviewableIds.value.has(rev.id)),
+);
+const selectedReviewablesCanDelete = computed(
+  () =>
+    selectedReviewablesForAction.value.length > 0 &&
+    selectedReviewablesForAction.value.every(canDeleteReviewableTarget),
+);
 
 const selectableReviewables = computed(() => reviewables.value.filter(canSelectReviewable));
 
@@ -253,8 +266,24 @@ function submitDecision() {
   decideReviewable(selectedReviewable.value, decisionAction.value, decisionNote.value, closeDrawer);
 }
 
+// Returns whether a reviewable points at already-published content that can be moderated.
+// Key parameter `reviewable` is the queue item. Return value is false for queued
+// new topics/replies so their contextual topic is not treated as the target.
 function hasReviewableTarget(reviewable: ReviewableResponse) {
-  return Boolean(reviewable.target_id && ["topic", "post"].includes(reviewable.target_type ?? ""));
+  const hasPublishedTarget = Boolean(
+    reviewable.target_id && ["topic", "post"].includes(reviewable.target_type ?? ""),
+  );
+  if (!hasPublishedTarget) {
+    return false;
+  }
+  return !["queued_topic", "queued_post"].includes(String(reviewable.type));
+}
+
+// Returns whether the current staff user can delete the reviewable's target now.
+// Key parameter `reviewable` is a visible queue item. Return value gates destructive
+// shortcuts; side effect: none.
+function canDeleteReviewableTarget(reviewable: ReviewableResponse) {
+  return canDecideReviewable(reviewable) && hasReviewableTarget(reviewable);
 }
 
 function canSilenceReviewable(reviewable: ReviewableResponse) {
@@ -656,6 +685,21 @@ function rejectReviewable(reviewable: ReviewableResponse) {
   decideReviewable(reviewable, "reject", "审核拒绝，不予发布。");
 }
 
+// Deletes the already-published target attached to one reviewable after confirmation.
+// Key parameter `reviewable` is the queue item being handled. Return value is none;
+// side effect: submits a destructive moderation decision and refreshes queues.
+function deleteReviewable(reviewable: ReviewableResponse) {
+  if (!canDeleteReviewableTarget(reviewable)) {
+    actionError.value = "这条审核项没有可删除的已发布内容。";
+    return;
+  }
+  const confirmed = window.confirm("确定删除这条已发布内容吗？删除后会从公开页面隐藏。");
+  if (!confirmed) {
+    return;
+  }
+  decideReviewable(reviewable, "delete", "审核删除已发布内容。");
+}
+
 // Submits the current selected reviewables as one backend batch decision.
 // Key parameters are the moderation action and note. Return value is none.
 // Side effects: mutates backend reviewables and clears selection on success.
@@ -681,6 +725,21 @@ function submitBulkReviewableDecision(action: ReviewableDecisionAction, note: st
       },
     },
   );
+}
+
+// Deletes all selected reviewables that point at published targets after confirmation.
+// Key parameters: none. Return value is none. Side effect: submits the existing
+// bulk reviewable decision endpoint with the destructive delete action.
+function submitBulkDeleteReviewables() {
+  if (!selectedReviewablesCanDelete.value) {
+    actionError.value = "只能批量删除已发布内容；待审新帖请使用驳回。";
+    return;
+  }
+  const confirmed = window.confirm(`确定删除已选 ${selectedReviewableCount.value} 条已发布内容吗？`);
+  if (!confirmed) {
+    return;
+  }
+  submitBulkReviewableDecision("delete", "批量审核删除已发布内容。");
 }
 
 // Returns the operator-facing label for a bulk moderation action.
@@ -747,6 +806,34 @@ function toggleHidden(flag: FlagResponse) {
   }, {
     onSuccess: (response) => {
       actionNotice.value = `${flag.target.title}：${response.hidden ? "已隐藏" : "已恢复"}。`;
+    },
+    onError: (error) => {
+      actionError.value = mutationErrorMessage(error);
+    },
+    onSettled: () => {
+      activeContentFlagId.value = null;
+    },
+  });
+}
+
+// Deletes the reported content from the flag queue after explicit confirmation.
+// Key parameter `flag` provides the target id/type from the current queue row.
+// Return value is none; side effect: hides topics or erases post bodies.
+function deleteFlagTarget(flag: FlagResponse) {
+  const confirmed = window.confirm("确定删除这条被举报内容吗？删除后会从公开页面隐藏。");
+  if (!confirmed) {
+    return;
+  }
+
+  resetActionFeedback();
+  activeContentFlagId.value = flag.id;
+  contentDeleteMutation.mutate({
+    targetType: flag.target.target_type,
+    targetId: flag.target.target_id,
+    note: "审核台删除内容。",
+  }, {
+    onSuccess: () => {
+      actionNotice.value = `${flag.target.title}：已删除内容。`;
     },
     onError: (error) => {
       actionError.value = mutationErrorMessage(error);
@@ -1025,6 +1112,16 @@ function mutationErrorMessage(error: unknown) {
                         {{ activeReviewablePendingId === rev.id ? "处理中…" : "驳回" }}
                       </UiButton>
                       <UiButton
+                        v-if="canDeleteReviewableTarget(rev)"
+                        tone="danger"
+                        :disabled="pendingAction"
+                        data-selection-ignore="true"
+                        @pointerdown.stop
+                        @click.stop="deleteReviewable(rev)"
+                      >
+                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "删除" }}
+                      </UiButton>
+                      <UiButton
                         tone="success"
                         :disabled="pendingAction"
                         data-selection-ignore="true"
@@ -1099,6 +1196,14 @@ function mutationErrorMessage(error: unknown) {
                     @click="submitBulkReviewableDecision('escalate', '批量升级为人工复核。')"
                   >
                     人工复核
+                  </UiButton>
+                  <UiButton
+                    tone="danger"
+                    :disabled="bulkDecisionPending || !selectedReviewablesCanDelete"
+                    title="只支持删除已发布内容；待审新帖请使用驳回"
+                    @click="submitBulkDeleteReviewables"
+                  >
+                    删除
                   </UiButton>
                   <UiButton tone="ghost" :disabled="bulkDecisionPending" @click="clearReviewableSelection">
                     取消
@@ -1187,6 +1292,9 @@ function mutationErrorMessage(error: unknown) {
                           ? "恢复内容"
                           : "隐藏内容"
                     }}
+                  </UiButton>
+                  <UiButton tone="danger" :disabled="pendingAction" @click="deleteFlagTarget(flag)">
+                    {{ activeContentPendingFlagId === flag.id ? "处理中…" : "删除内容" }}
                   </UiButton>
                   <UiButton tone="success" :disabled="pendingAction" @click="resolveFlag(flag)">
                     {{ activeFlagPendingId === flag.id ? "处理中…" : "标记已处理" }}

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.api.v1.dependencies import get_session
 from app.main import create_app
+from app.models.forum import Post
 from app.models.moderation import AuditLog, Flag
 from app.models.user import User
 from tests.helpers import get_test_database_url, register_and_verify_user, reset_test_database
@@ -135,6 +136,21 @@ async def test_report_queue_hide_post_and_audit_permissions() -> None:
         assert hidden_search.status_code == 200
         assert fixture["topic_id"] not in {item["id"] for item in hidden_search.json()["data"]}
 
+        delete = await client.put(
+            f"/api/v1/moderation/posts/{fixture['post_id']}/delete",
+            headers=owner_headers,
+            json={"note": "删除刷屏回复正文。"},
+        )
+        assert delete.status_code == 200
+        assert delete.json()["data"]["status"] == "deleted"
+
+        async with session_factory() as session:
+            deleted_post = await session.get(Post, fixture["post_id"])
+            assert deleted_post is not None
+            assert deleted_post.deleted_at is not None
+            assert deleted_post.raw_md == ""
+            assert deleted_post.cooked_html == ""
+
         resolved = await client.put(
             f"/api/v1/moderation/flags/{flag_data['id']}/status",
             headers=owner_headers,
@@ -152,7 +168,7 @@ async def test_report_queue_hide_post_and_audit_permissions() -> None:
         flag_count = await session.scalar(select(func.count(Flag.id)))
         audit_count = await session.scalar(select(func.count(AuditLog.id)))
         assert flag_count == 1
-        assert audit_count >= 3
+        assert audit_count >= 4
 
     await engine.dispose()
 

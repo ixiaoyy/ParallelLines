@@ -17,7 +17,9 @@ Backend endpoints:
 | `GET /api/v1/moderation/queue?status=&limit=` | board moderator/owner or global moderator/admin | List flags scoped to moderatable boards |
 | `PUT /api/v1/moderation/flags/{flag_id}/status` | moderator | Move flag to `pending`, `resolved`, or `rejected` |
 | `PUT /api/v1/moderation/topics/{topic_id}/hide|restore` | moderator | Soft-hide or restore a topic |
+| `PUT /api/v1/moderation/topics/{topic_id}/delete` | moderator | Delete a topic from the moderation console by soft-hiding it |
 | `PUT /api/v1/moderation/posts/{post_id}/hide|restore` | moderator | Soft-hide or restore a post |
+| `PUT /api/v1/moderation/posts/{post_id}/delete` | moderator | Delete a post from the moderation console by hiding it and erasing its body |
 | `PUT /api/v1/topics/{topic_id}/lifecycle` | moderator | Close/open/archive or pin/unpin a topic |
 | `POST /api/v1/topics/{topic_id}/move|split|merge` | moderator | Move a topic, split replies into a new topic, or merge a source topic into a target |
 | `PUT /api/v1/moderation/users/{user_id}/status` | admin only | Set `active`, `silenced`, or `suspended` |
@@ -62,6 +64,9 @@ Permission helpers:
 - `hide` is a soft delete:
   - topic: set `topics.deleted_at` and `topics.status='hidden'`;
   - post: set `posts.deleted_at`.
+- Moderation `delete` uses the same visibility contract as `hide`; topic delete
+  soft-hides the topic, while post delete also clears `posts.raw_md` and
+  `posts.cooked_html` for non-topic posts.
 - Public topic feeds/search exclude hidden topics via `Topic.deleted_at is null`.
 - Public post responses must not leak hidden `raw_md` or `cooked_html`; return empty strings with `deleted_at` set.
 - Every flag creation, status transition, hide/restore, and user status change writes an `audit_logs` row in the same transaction.

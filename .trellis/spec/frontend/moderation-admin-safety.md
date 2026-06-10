@@ -17,6 +17,7 @@ Frontend API functions:
 | `fetchModerationQueue(status, limit)` | `GET /api/v1/moderation/queue` | `FlagResponse[]` |
 | `updateFlagStatus(flagId, payload)` | `PUT /api/v1/moderation/flags/{flag_id}/status` | `FlagResponse` |
 | `setContentHidden(type, id, hidden, payload)` | `PUT /api/v1/moderation/{topics|posts}/{id}/{hide|restore}` | `ModerationActionResponse` |
+| `deleteModeratedContent(type, id, payload)` | `PUT /api/v1/moderation/{topics|posts}/{id}/delete` | `ModerationActionResponse` |
 | `updateUserStatus(userId, payload)` | `PUT /api/v1/moderation/users/{user_id}/status` | `UserStatusResponse` |
 | `fetchAuditLogs(limit)` | `GET /api/v1/moderation/audit-logs` | `AuditLogResponse[]` |
 | `fetchReviewables(status, type, limit)` | `GET /api/v1/moderation/reviewables` | `ReviewableResponse[]` |
@@ -32,6 +33,7 @@ Query composables:
 - `useModerationQueue(status)`
 - `useFlagStatusMutation()`
 - `useContentModerationMutation()`
+- `useContentDeleteMutation()`
 - `useUserStatusMutation()`
 - `useAuditLogs()`
 - `useReviewableQueue(status)`
@@ -84,6 +86,7 @@ Query composables:
 | Reviewable `appeal_available=true` | Show appeal form and post `reason`; invalidate my-reviewables after success |
 | Moderation notification lacks topic fields | Link falls back to `/moderation/reviewables` when `reviewable_id` exists |
 | Hide/restore succeeds | Invalidate `moderationRoot` and topic feed query |
+| Delete succeeds | Invalidate `moderationRoot` and topic feed query; post delete hides content and erases the stored body server-side |
 | User status form lacks user ID | Do not send request |
 | Post flag response target has `post_number` | Link points to topic route with `#post-{number}` |
 

@@ -127,7 +127,7 @@ async def decide_reviewables_bulk(
 
     result = await ModerationService(session).decide_reviewables_bulk(payload, current_user)
     if payload.action in {"approve", "hide", "delete"}:
-        _invalidate_public_content_caches(include_tags=payload.action == "approve")
+        invalidate_public_content_response_caches(include_tags=payload.action == "approve")
     return ApiResponse(data=result)
 
 
@@ -206,6 +206,26 @@ async def hide_topic(
     return ApiResponse(data=result)
 
 
+@router.put("/topics/{topic_id}/delete", response_model=ApiResponse[ModerationActionResponse])
+async def delete_topic(
+    topic_id: str,
+    payload: HideContentRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[ModerationActionResponse]:
+    """Soft-delete a topic from the moderation console.
+
+    Key parameters are the topic id, optional note payload, and authenticated
+    moderator. Return value is the hidden topic response. Side effect:
+    delegates permission/audit/search work to `ModerationService` and clears
+    public content caches.
+    """
+
+    result = await ModerationService(session).delete_topic(topic_id, payload, current_user)
+    invalidate_public_content_response_caches(include_tags=True)
+    return ApiResponse(data=result)
+
+
 @router.put("/topics/{topic_id}/restore", response_model=ApiResponse[ModerationActionResponse])
 async def restore_topic(
     topic_id: str,
@@ -227,6 +247,26 @@ async def hide_post(
 ) -> ApiResponse[ModerationActionResponse]:
     result = await ModerationService(session).hide_post(post_id, payload, current_user)
     invalidate_public_content_response_caches()
+    return ApiResponse(data=result)
+
+
+@router.put("/posts/{post_id}/delete", response_model=ApiResponse[ModerationActionResponse])
+async def delete_post(
+    post_id: str,
+    payload: HideContentRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[ModerationActionResponse]:
+    """Delete a post body from the moderation console.
+
+    Key parameters are the post id, optional note payload, and authenticated
+    moderator. Return value is the hidden/deleted target response. Side effect:
+    delegates permission/audit/search work to `ModerationService` and clears
+    public content caches.
+    """
+
+    result = await ModerationService(session).delete_post(post_id, payload, current_user)
+    invalidate_public_content_response_caches(include_tags=result.target_type == "topic")
     return ApiResponse(data=result)
 
 

@@ -993,2122 +993,463 @@
         "type": "object"
       },
       "ApiResponse_AdminSystemOverviewResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/AdminSystemOverviewResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[AdminSystemOverviewResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_AdminUserResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/AdminUserResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[AdminUserResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_AnalyticsOverviewResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/AnalyticsOverviewResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[AnalyticsOverviewResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_ApiKeyCreateResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ApiKeyCreateResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[ApiKeyCreateResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_ApiKeyResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ApiKeyResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[ApiKeyResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_BackupArtifactResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/BackupArtifactResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[BackupArtifactResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_BackupRestoreResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/BackupRestoreResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[BackupRestoreResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_BoardDetailResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/BoardDetailResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[BoardDetailResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_BoardFollowResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/BoardFollowResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[BoardFollowResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_BoardInviteResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/BoardInviteResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[BoardInviteResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_BoardMemberRemoveResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/BoardMemberRemoveResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[BoardMemberRemoveResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_BoardMemberResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/BoardMemberResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[BoardMemberResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_BoardResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/BoardResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[BoardResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_BoardSettingsResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/BoardSettingsResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[BoardSettingsResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_DataExplorerReportResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/DataExplorerReportResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[DataExplorerReportResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_DraftResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/DraftResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[DraftResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_EmailChangeStartResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/EmailChangeStartResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[EmailChangeStartResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_EmailDeliveryEventResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/EmailDeliveryEventResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[EmailDeliveryEventResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_EmailPreferenceResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/EmailPreferenceResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[EmailPreferenceResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_EventResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/EventResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[EventResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_EventRsvpResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/EventRsvpResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[EventRsvpResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_ExternalIntegrationEventResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ExternalIntegrationEventResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[ExternalIntegrationEventResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_ExternalIntegrationResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ExternalIntegrationResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[ExternalIntegrationResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_ExternalWebhookResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ExternalWebhookResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[ExternalWebhookResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_FlagResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/FlagResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[FlagResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_FrontierNewsCollectResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/FrontierNewsCollectResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[FrontierNewsCollectResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_FrontierNewsItemResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/FrontierNewsItemResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[FrontierNewsItemResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_FrontierNewsSourceResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/FrontierNewsSourceResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[FrontierNewsSourceResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_GitHubIssuePreviewResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/GitHubIssuePreviewResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[GitHubIssuePreviewResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_InboundEmailResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/InboundEmailResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[InboundEmailResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_InteractionStateResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/InteractionStateResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[InteractionStateResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_LoginResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/LoginResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[LoginResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_MigrationExportResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/MigrationExportResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[MigrationExportResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_MigrationImportResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/MigrationImportResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[MigrationImportResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_ModerationActionResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ModerationActionResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[ModerationActionResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_ModerationAdviceResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ModerationAdviceResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[ModerationAdviceResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_MyBoardInvitesResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/MyBoardInvitesResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[MyBoardInvitesResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_NotificationListResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/NotificationListResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[NotificationListResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_NotificationReadResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/NotificationReadResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[NotificationReadResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_OAuthProviderResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/OAuthProviderResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[OAuthProviderResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_PasswordResetStartResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/PasswordResetStartResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[PasswordResetStartResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_PluginResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/PluginResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[PluginResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_PollResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/PollResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[PollResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_PostResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/PostResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[PostResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_PostRevisionResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/PostRevisionResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[PostRevisionResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_PrivacyActionResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/PrivacyActionResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[PrivacyActionResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_PrivateMessageTopicResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/PrivateMessageTopicResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[PrivateMessageTopicResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_PublicApiDocsResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/PublicApiDocsResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[PublicApiDocsResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_PublicSiteSettingsResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/PublicSiteSettingsResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[PublicSiteSettingsResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_PushSubscriptionStateResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/PushSubscriptionStateResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[PushSubscriptionStateResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_RegistrationStartResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/RegistrationStartResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[RegistrationStartResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_RetentionPolicyResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/RetentionPolicyResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[RetentionPolicyResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_ReviewableBulkDecisionResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ReviewableBulkDecisionResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[ReviewableBulkDecisionResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_ReviewableResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ReviewableResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[ReviewableResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_ScreenedRuleResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/ScreenedRuleResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[ScreenedRuleResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_SeoMetaResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/SeoMetaResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[SeoMetaResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_SiteSettingResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/SiteSettingResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[SiteSettingResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_TokenPair_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/TokenPair"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[TokenPair]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_TopicAiSummaryResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/TopicAiSummaryResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[TopicAiSummaryResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_TopicLifecycleResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/TopicLifecycleResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[TopicLifecycleResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_TopicLocalizationResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/TopicLocalizationResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[TopicLocalizationResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_TopicNotificationLevelResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/TopicNotificationLevelResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[TopicNotificationLevelResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_TopicReadStateResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/TopicReadStateResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[TopicReadStateResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_TopicResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/TopicResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[TopicResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_TwoFactorRecoveryCodesResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/TwoFactorRecoveryCodesResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[TwoFactorRecoveryCodesResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_TwoFactorSetupResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/TwoFactorSetupResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[TwoFactorSetupResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_Union_DraftResponse__NoneType__": {
-        "properties": {
-          "data": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/DraftResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[Union[DraftResponse, NoneType]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_UploadResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/UploadResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[UploadResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_UserProfileResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/UserProfileResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[UserProfileResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_UserPublic_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/UserPublic"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[UserPublic]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_UserRelationshipStateResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/UserRelationshipStateResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[UserRelationshipStateResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_UserStatusResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/UserStatusResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[UserStatusResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_VoteStateResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/VoteStateResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[VoteStateResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_WebhookEndpointCreateResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/WebhookEndpointCreateResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[WebhookEndpointCreateResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_WebhookEndpointResponse_": {
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/WebhookEndpointResponse"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[WebhookEndpointResponse]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_bool_": {
-        "properties": {
-          "data": {
-            "title": "Data",
-            "type": "boolean"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[bool]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_dict_str__bool__": {
-        "properties": {
-          "data": {
-            "additionalProperties": {
-              "type": "boolean"
-            },
-            "title": "Data",
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[dict[str, bool]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_dict_str__int__": {
-        "properties": {
-          "data": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "title": "Data",
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[dict[str, int]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_dict_str__str__": {
-        "properties": {
-          "data": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "title": "Data",
-            "type": "object"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[dict[str, str]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_AdminBackgroundJobLogResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/AdminBackgroundJobLogResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[AdminBackgroundJobLogResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_AdminBackgroundJobResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/AdminBackgroundJobResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[AdminBackgroundJobResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_AdminEmailLogResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/AdminEmailLogResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[AdminEmailLogResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_AdminUserResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/AdminUserResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[AdminUserResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_ApiKeyResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/ApiKeyResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[ApiKeyResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_AuditLogResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/AuditLogResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[AuditLogResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_BackupArtifactResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/BackupArtifactResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[BackupArtifactResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_BadgeResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/BadgeResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[BadgeResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_BoardResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/BoardResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[BoardResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_DataExplorerReportSummary__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/DataExplorerReportSummary"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[DataExplorerReportSummary]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_DraftResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/DraftResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[DraftResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_EventResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/EventResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[EventResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_ExternalIntegrationEventResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/ExternalIntegrationEventResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[ExternalIntegrationEventResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_ExternalIntegrationResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/ExternalIntegrationResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[ExternalIntegrationResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_FlagResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/FlagResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[FlagResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_FrontierNewsItemResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/FrontierNewsItemResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[FrontierNewsItemResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_FrontierNewsSourceResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/FrontierNewsSourceResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[FrontierNewsSourceResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_ImmersiveTopicFeedItemResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/ImmersiveTopicFeedItemResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[ImmersiveTopicFeedItemResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_PluginResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/PluginResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[PluginResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_PluginUiExtensionResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/PluginUiExtensionResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[PluginUiExtensionResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_PostResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/PostResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[PostResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_PostRevisionResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/PostRevisionResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[PostRevisionResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_PrivateMessageTopicResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/PrivateMessageTopicResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[PrivateMessageTopicResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_ReviewableResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/ReviewableResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[ReviewableResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_ScreenedRuleResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/ScreenedRuleResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[ScreenedRuleResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_SessionResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/SessionResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[SessionResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_SimilarTopicResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/SimilarTopicResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[SimilarTopicResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_SiteSettingResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/SiteSettingResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[SiteSettingResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_SpamActionResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/SpamActionResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[SpamActionResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_TagResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/TagResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[TagResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_TopicResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/TopicResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[TopicResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_UserActivityItemResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/UserActivityItemResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[UserActivityItemResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_UserDirectoryResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/UserDirectoryResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[UserDirectoryResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_UserRelationshipUserResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/UserRelationshipUserResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[UserRelationshipUserResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_WebhookDeliveryResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/WebhookDeliveryResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[WebhookDeliveryResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "ApiResponse_list_WebhookEndpointResponse__": {
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/WebhookEndpointResponse"
-            },
-            "title": "Data",
-            "type": "array"
-          },
-          "meta": {
-            "additionalProperties": true,
-            "title": "Meta",
-            "type": "object"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "title": "ApiResponse[list[WebhookEndpointResponse]]",
+        "additionalProperties": true,
         "type": "object"
       },
       "AuditLogResponse": {
@@ -17548,6 +15889,64 @@
         ]
       }
     },
+    "/api/v1/moderation/posts/{post_id}/delete": {
+      "put": {
+        "description": "Delete a post body from the moderation console.\n\nKey parameters are the post id, optional note payload, and authenticated\nmoderator. Return value is the hidden/deleted target response. Side effect:\ndelegates permission/audit/search work to `ModerationService` and clears\npublic content caches.",
+        "operationId": "delete_post_api_v1_moderation_posts__post_id__delete_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "title": "Post Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HideContentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ModerationActionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Post",
+        "tags": [
+          "moderation"
+        ]
+      }
+    },
     "/api/v1/moderation/posts/{post_id}/hide": {
       "put": {
         "operationId": "hide_post_api_v1_moderation_posts__post_id__hide_put",
@@ -18348,6 +16747,64 @@
           }
         ],
         "summary": "List Spam Actions",
+        "tags": [
+          "moderation"
+        ]
+      }
+    },
+    "/api/v1/moderation/topics/{topic_id}/delete": {
+      "put": {
+        "description": "Soft-delete a topic from the moderation console.\n\nKey parameters are the topic id, optional note payload, and authenticated\nmoderator. Return value is the hidden topic response. Side effect:\ndelegates permission/audit/search work to `ModerationService` and clears\npublic content caches.",
+        "operationId": "delete_topic_api_v1_moderation_topics__topic_id__delete_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "topic_id",
+            "required": true,
+            "schema": {
+              "title": "Topic Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HideContentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ModerationActionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Topic",
         "tags": [
           "moderation"
         ]

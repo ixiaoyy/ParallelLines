@@ -113,6 +113,18 @@ export function setContentHidden(
   return apiPut<ModerationActionResponse, HideContentRequest>(`/moderation/${path}/${targetId}/${action}`, payload);
 }
 
+// Deletes moderated content through moderation-owned endpoints.
+// Key parameters identify the target content and audit payload. Return value
+// mirrors hide/restore responses; side effect: may hide a topic or erase a post body.
+export function deleteModeratedContent(
+  targetType: FlagTargetType,
+  targetId: string,
+  payload: HideContentRequest = {},
+): Promise<ModerationActionResponse> {
+  const path = targetType === "topic" ? "topics" : "posts";
+  return apiPut<ModerationActionResponse, HideContentRequest>(`/moderation/${path}/${targetId}/delete`, payload);
+}
+
 export function updateUserStatus(
   userId: string,
   payload: UserStatusUpdateRequest,

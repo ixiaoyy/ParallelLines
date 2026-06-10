@@ -267,6 +267,40 @@ class ModerationService:
             target_type="topic", target_id=topic_id, hidden=True, status="hidden"
         )
 
+    async def delete_topic(
+        self,
+        topic_id: str,
+        payload: HideContentRequest,
+        current_user: User,
+    ) -> ModerationActionResponse:
+        """Soft-delete a moderated topic through the staff moderation surface.
+
+        Key parameters are the topic id, optional audit note, and acting user.
+        Return value mirrors hide-topic responses. Side effects: verifies board
+        moderation permission, hides the topic, removes it from search, writes
+        an audit row, and commits the transaction.
+        """
+
+        target = await self._resolve_target("topic", topic_id, include_hidden=True)
+        if not target.topic:
+            raise NotFoundError("topic_not_found", "Topic not found")
+        await self._require_can_moderate_board(current_user, target.board_id)
+        target.topic.deleted_at = utcnow()
+        target.topic.status = "hidden"
+        await SearchIndexService(self.session).remove_topic(target.topic.id)
+        self._add_audit_log(
+            actor_id=current_user.id,
+            action="topic_hidden",
+            target_type="topic",
+            target_id=topic_id,
+            board_id=target.board_id,
+            data={"note": payload.note or "", "delete": True},
+        )
+        await self.session.commit()
+        return ModerationActionResponse(
+            target_type="topic", target_id=topic_id, hidden=True, status="hidden"
+        )
+
     async def restore_topic(
         self,
         topic_id: str,
@@ -315,6 +349,61 @@ class ModerationService:
         )
         await self.session.commit()
         return ModerationActionResponse(target_type="post", target_id=post_id, hidden=True)
+
+    async def delete_post(
+        self,
+        post_id: str,
+        payload: HideContentRequest,
+        current_user: User,
+    ) -> ModerationActionResponse:
+        """Soft-delete a moderated post and erase its stored body.
+
+        Key parameters are the post id, optional audit note, and acting user.
+        Return value identifies the hidden target. Side effects: verifies board
+        moderation permission, marks the post hidden, clears raw/rendered body
+        for non-topic posts, updates search, writes an audit row, and commits.
+        """
+
+        target = await self._resolve_target("post", post_id, include_hidden=True)
+        if not target.post:
+            raise NotFoundError("post_not_found", "Post not found")
+        await self._require_can_moderate_board(current_user, target.board_id)
+
+        if target.post.post_number == 1:
+            topic = target.post.topic
+            topic.deleted_at = utcnow()
+            topic.status = "hidden"
+            await SearchIndexService(self.session).remove_topic(topic.id)
+            self._add_audit_log(
+                actor_id=current_user.id,
+                action="topic_hidden",
+                target_type="topic",
+                target_id=topic.id,
+                board_id=target.board_id,
+                data={"note": payload.note or "", "delete": True, "source_post_id": post_id},
+            )
+            await self.session.commit()
+            return ModerationActionResponse(
+                target_type="topic", target_id=topic.id, hidden=True, status="hidden"
+            )
+
+        target.post.deleted_at = utcnow()
+        target.post.raw_md = ""
+        target.post.cooked_html = ""
+        target.post.updated_at = utcnow()
+        await SearchIndexService(self.session).sync_topic(target.topic_id or target.post.topic_id)
+        self._add_audit_log(
+            actor_id=current_user.id,
+            action="post_hidden",
+            target_type="post",
+            target_id=post_id,
+            board_id=target.board_id,
+            data={"note": payload.note or "", "delete": True},
+        )
+        await self.session.commit()
+        return ModerationActionResponse(
+            target_type="post", target_id=post_id, hidden=True, status="deleted"
+        )
 
     async def restore_post(
         self,
@@ -619,7 +708,9 @@ class ModerationService:
             action=payload.action,
             requested_count=len(payload.reviewable_ids),
             processed_count=len(decided_reviewables),
-            reviewables=[ReviewableResponse.from_model(reviewable) for reviewable in decided_reviewables],
+            reviewables=[
+                ReviewableResponse.from_model(reviewable) for reviewable in decided_reviewables
+            ],
         )
 
     async def _decide_reviewable_in_session(
