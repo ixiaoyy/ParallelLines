@@ -100,7 +100,6 @@ const toolbarStatus = ref("");
 const replyStatus = ref("");
 const replyResetToken = ref(0);
 const replyComposerOpen = ref(false);
-const repliesExpanded = ref(false);
 const replyInsertText = ref("");
 const replyInsertToken = ref(0);
 const topicSwipeStart = ref<{ x: number; y: number } | null>(null);
@@ -263,13 +262,9 @@ watch(
 watch(
   () => [topicId.value, route.hash] as const,
   ([, hash]) => {
-    if (shouldExpandRepliesForHash(hash)) {
-      repliesExpanded.value = true;
+    if (isReplyHashTarget(hash)) {
       void scrollHashIntoViewAfterRepliesRender(hash);
-      return;
     }
-
-    repliesExpanded.value = false;
   },
   { immediate: true },
 );
@@ -477,12 +472,6 @@ function toggleOnlyAuthor() {
   setToolbarStatus(onlyAuthor.value ? "已切换为只看楼主" : "已显示全部楼层");
 }
 
-// Toggles the reply list without changing server state.
-// Key parameters: none. Return value: none; side effect: expands or collapses the local reply panel.
-function toggleReplies() {
-  repliesExpanded.value = !repliesExpanded.value;
-}
-
 // Records the start point for topic-level horizontal swipe navigation.
 // Key parameter: `event` is the user's touch start. Return value: none; side
 // effect: stores coordinates unless the gesture begins on an interactive control.
@@ -563,18 +552,17 @@ function navigateSwipeTopic(direction: "previous" | "next") {
     return;
   }
 
-  repliesExpanded.value = false;
   replyComposerOpen.value = false;
   void router.push(topicDetailRoute(target));
 }
 
-// Checks whether a hash points into the collapsed reply area.
-// Key parameter: `hash` is a route hash. Return value: true when replies must be mounted; no side effects.
-function shouldExpandRepliesForHash(hash: string) {
+// Checks whether a hash points into the always-visible reply area.
+// Key parameter: `hash` is a route hash. Return value: true when the page should scroll to replies; no side effects.
+function isReplyHashTarget(hash: string) {
   return hash === "#replies" || (/^#post-\d+$/.test(hash) && hash !== "#post-1");
 }
 
-// Scrolls to a hash after Vue has mounted the expanded reply list.
+// Scrolls to a hash after Vue has mounted the reply list.
 // Key parameter: `hash` is the element id hash. Return value: promise with no value; side effect: scrolls the page.
 async function scrollHashIntoViewAfterRepliesRender(hash: string) {
   if (!hash) {
@@ -770,12 +758,10 @@ function flagTopic() {
 
             <TopicRepliesPanel
               :replies="replyPosts"
-              :expanded="repliesExpanded"
               :current-user-id="currentUserId"
               :current-user-role="currentUserRole"
               :can-manage-solution="canManageSolution"
               :solution-pending="solutionMutation.isPending.value"
-              @toggle="toggleReplies"
               @quote="quotePost"
               @require-login="requireLogin"
               @toggle-solution="togglePostSolution"

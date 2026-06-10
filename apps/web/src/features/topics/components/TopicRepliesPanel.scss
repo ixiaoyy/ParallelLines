@@ -6,7 +6,7 @@
   padding-top: 0.9rem;
 }
 
-.topic-replies-toggle :deep(.ant-card-body) {
+.topic-replies-header :deep(.ant-card-body) {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -14,62 +14,26 @@
   padding: 0.85rem 0.95rem;
 }
 
-.topic-replies-toggle__summary {
+.topic-replies-header__summary {
   display: flex;
   min-width: 0;
   gap: 0.6rem;
   align-items: center;
 }
 
-.topic-replies-toggle__summary svg {
+.topic-replies-header__summary svg {
   flex: 0 0 auto;
   color: var(--primary);
   font-size: 1.05rem;
 }
 
-.topic-replies-toggle__summary strong {
+.topic-replies-header__summary strong {
   overflow: hidden;
   color: var(--title);
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.98rem;
   font-weight: 900;
-}
-
-.topic-replies-toggle__summary span {
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 760;
-}
-
-.topic-replies-toggle__button {
-  flex: 0 0 auto;
-  display: inline-flex;
-  gap: 0.42rem;
-  align-items: center;
-  justify-content: center;
-  min-height: 2.25rem;
-  border: 1px solid var(--theme-soft-border, rgba(var(--primary-rgb), 0.16));
-  border-radius: var(--radius-pill);
-  padding: 0.48rem 0.82rem;
-  color: var(--theme-soft-fg, var(--primary));
-  background: var(--theme-soft-bg, rgba(var(--primary-rgb), 0.1));
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.86rem;
-  font-weight: 860;
-  transition:
-    background 150ms ease,
-    color 150ms ease,
-    transform 150ms ease;
-}
-
-.topic-replies-toggle__button:hover,
-.topic-replies-toggle__button:focus-visible {
-  color: var(--theme-soft-fg-hover, var(--primary-hover));
-  outline: none;
-  background: var(--theme-soft-bg-hover);
-  transform: translateY(-1px);
 }
 
 .post-list {
@@ -96,14 +60,10 @@
     padding-top: 0.68rem;
   }
 
-  .topic-replies-toggle :deep(.ant-card-body) {
+  .topic-replies-header :deep(.ant-card-body) {
     display: grid;
     gap: 0.75rem;
     padding: 0.82rem;
-  }
-
-  .topic-replies-toggle__button {
-    width: 100%;
   }
 
   .post-list {
