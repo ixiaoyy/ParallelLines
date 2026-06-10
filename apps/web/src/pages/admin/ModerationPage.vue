@@ -7,6 +7,7 @@ import {
   FilterOutlined,
   HistoryOutlined,
   LeftOutlined,
+  MoreOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons-vue";
@@ -936,10 +937,16 @@ function mutationErrorMessage(error: unknown) {
         <RouterLink class="reviewable-mobile-appbar__icon" to="/admin" aria-label="返回后台">
           <LeftOutlined />
         </RouterLink>
-        <strong>帖子审核</strong>
-        <button type="button" class="reviewable-mobile-appbar__icon" aria-label="搜索审核内容">
-          <SearchOutlined />
-        </button>
+        <strong>发布审核</strong>
+        <div class="reviewable-mobile-appbar__actions">
+          <button type="button" class="reviewable-mobile-appbar__icon" aria-label="搜索审核内容">
+            <SearchOutlined />
+          </button>
+          <button type="button" class="reviewable-mobile-appbar__filter" aria-label="筛选审核内容">
+            <span>筛选</span>
+            <FilterOutlined />
+          </button>
+        </div>
       </div>
 
       <!-- Navigation Tabs -->
@@ -979,7 +986,7 @@ function mutationErrorMessage(error: unknown) {
                 :class="{ active: reviewableStatusFilter === 'pending' }"
                 @click="reviewableStatusFilter = 'pending'"
               >
-                <span>待审核</span>
+                <span>待处理</span>
                 <b>{{ reviewableStatusFilter === 'pending' ? reviewables.length : "·" }}</b>
               </button>
               <button
@@ -996,8 +1003,8 @@ function mutationErrorMessage(error: unknown) {
                 :class="{ active: reviewableStatusFilter === 'approved' }"
                 @click="reviewableStatusFilter = 'approved'"
               >
-                <span>已处理</span>
-                <b>{{ reviewableStatusFilter === 'approved' ? reviewables.length : "·" }}</b>
+                <span>已通过</span>
+                <b>{{ reviewableStatusFilter === 'approved' ? reviewables.length : "" }}</b>
               </button>
             </div>
 
@@ -1085,9 +1092,21 @@ function mutationErrorMessage(error: unknown) {
                     :class="{ 'reviewable-list-item__selector--active': isReviewableSelected(rev) }"
                     :disabled="!canSelectReviewable(rev)"
                     :aria-label="isReviewableSelected(rev) ? '取消选择审核项' : '选择审核项'"
+                    data-selection-ignore="true"
+                    @pointerdown.stop
                     @click.stop="toggleReviewableSelection(rev)"
                   >
                     <template v-if="isReviewableSelected(rev)">{{ selectedReviewableNumber(rev) }}</template>
+                  </button>
+                  <button
+                    type="button"
+                    class="reviewable-list-item__menu"
+                    aria-label="打开审核项操作"
+                    data-selection-ignore="true"
+                    @pointerdown.stop
+                    @click.stop="openReviewableDetails(rev)"
+                  >
+                    <MoreOutlined />
                   </button>
                   <div class="reviewable-list-item__main">
                     <span class="reviewable-list-item__meta">
@@ -1181,7 +1200,7 @@ function mutationErrorMessage(error: unknown) {
                     :disabled="bulkDecisionPending"
                     @click="submitBulkReviewableDecision('approve', '批量审核通过，允许发布。')"
                   >
-                    {{ bulkDecisionPending ? "处理中…" : "一键通过" }}
+                    {{ bulkDecisionPending ? "处理中…" : "通过" }}
                   </UiButton>
                   <UiButton
                     tone="ghost"

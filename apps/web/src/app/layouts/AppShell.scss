@@ -593,7 +593,7 @@
   }
 
   .topbar-actions {
-    gap: 0.2rem;
+    gap: 0.5rem;
   }
 
   .topbar-actions--guest .topbar-notification {
@@ -666,6 +666,14 @@
   .shell-main {
     width: 100%;
     padding: 0.85rem 0.5rem calc(4.5rem + env(safe-area-inset-bottom));
+  }
+
+  .app-shell--mobile-fullscreen .topbar {
+    display: none;
+  }
+
+  .app-shell--mobile-fullscreen .shell-main {
+    padding: 0;
   }
 }
 

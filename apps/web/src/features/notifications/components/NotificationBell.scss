@@ -284,6 +284,19 @@
 }
 
 @media (max-width: 560px) {
+  .notification-bell :deep(.ant-badge .ant-badge-count) {
+    min-width: 1.08rem;
+    height: 1.08rem;
+    padding: 0 0.28rem;
+    font-size: 0.68rem;
+    line-height: 1.08rem;
+    transform: translate(18%, -38%);
+  }
+
+  .notification-bell :deep(.ant-badge .ant-badge-multiple-words) {
+    padding-inline: 0.28rem;
+  }
+
   .notification-trigger {
     width: 2.28rem;
     height: 2.28rem;

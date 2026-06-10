@@ -53,6 +53,7 @@ let moderationRoutePrefetched = false;
 const currentUser = computed(() => currentUserQuery.data.value);
 // Auth route already renders the login/register form, so the guest CTA is hidden there to avoid duplicate entry points.
 const isAuthRoute = computed(() => route.name === "auth");
+const isMobileFullscreenRoute = computed(() => route.name === "admin-moderation");
 const isRouteNavigating = ref(false);
 const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
@@ -330,7 +331,13 @@ function isNavItemActive(item: NavItem) {
 
 
 <template>
-  <div class="app-shell" :class="{ 'is-route-navigating': isRouteNavigating }">
+  <div
+    class="app-shell"
+    :class="{
+      'is-route-navigating': isRouteNavigating,
+      'app-shell--mobile-fullscreen': isMobileFullscreenRoute,
+    }"
+  >
     <header ref="topbarRef" class="topbar" @keydown.esc="closeNavigation">
       <RouterLink class="brand" to="/" :aria-label="brandHomeLabel" :title="brandHomeLabel" @click="handleBrandClick">
         <span class="brand-mark">
