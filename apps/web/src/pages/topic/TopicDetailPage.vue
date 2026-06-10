@@ -45,6 +45,7 @@ import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
 const COMIC_READER_TAG = "漫画阅读";
+const TOPIC_SWIPE_TOPIC_LIMIT = 24;
 
 // Loads the reply composer only when the desktop bottom composer is visible or a mobile user opens it.
 // Key parameters: none. Return value is the ComposerDrawer component; side effect is deferred editor-shell loading.
@@ -129,7 +130,11 @@ const hiddenRelationshipPostCount = computed(() => {
 const shouldRenderReplyComposer = computed(() =>
   topic.value?.status === "open" && (isDesktopReplyComposer.value || replyComposerOpen.value),
 );
-const boardSwipeTopicsQuery = useBoardTopics(() => topic.value?.boardSlug ?? "", "latest");
+const boardSwipeTopicsQuery = useBoardTopics(
+  () => topic.value?.boardSlug ?? "",
+  "latest",
+  TOPIC_SWIPE_TOPIC_LIMIT,
+);
 const boardSwipeTopics = computed(() => boardSwipeTopicsQuery.data.value ?? []);
 const relatedTopics = computed(() =>
   boardSwipeTopics.value

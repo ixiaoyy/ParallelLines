@@ -1219,8 +1219,8 @@ class ForumService:
                 selectinload(Topic.board),
                 selectinload(Topic.author),
                 selectinload(Topic.tags),
-                selectinload(Topic.posts),
                 selectinload(Topic.poll).selectinload(Poll.options),
+                noload(Topic.posts),
             )
             .where(Topic.id == topic_id)
         )
@@ -1242,6 +1242,7 @@ class ForumService:
             or not await self._can_access_topic(topic, current_user)
         ):
             raise NotFoundError("topic_not_found", "Topic not found")
+        await self._decorate_topic_excerpts([topic])
         await self._decorate_topics_for_user([topic], current_user)
         return topic
 
@@ -1290,7 +1291,7 @@ class ForumService:
             view_count=topic.view_count,
         )
         await self.session.commit()
-        return await self.get_topic(topic.id, current_user=current_user)
+        return topic
 
     # Build the stable, privacy-preserving identity used by topic view dedupe.
     @staticmethod

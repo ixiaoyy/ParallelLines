@@ -44,13 +44,17 @@ export function useTopicFeed(sort: MaybeRefOrGetter<TopicSort> = "latest") {
 export function useBoardTopics(
   boardSlug: MaybeRefOrGetter<string>,
   sort: MaybeRefOrGetter<TopicSort> = "latest",
+  limit: MaybeRefOrGetter<number> = 100,
 ) {
   return useQuery({
-    queryKey: computed(() => queryKeys.topics(`board:${toValue(boardSlug)}:${toValue(sort)}`)),
+    queryKey: computed(() =>
+      queryKeys.topics(`board:${toValue(boardSlug)}:${toValue(sort)}:${toValue(limit)}`),
+    ),
     queryFn: async () => {
       const slug = toValue(boardSlug);
       const topicSort = toValue(sort);
-      return (await fetchBoardTopics(slug, topicSort)).map(toTopicCard);
+      const topicLimit = toValue(limit);
+      return (await fetchBoardTopics(slug, topicSort, topicLimit)).map(toTopicCard);
     },
     enabled: computed(() => Boolean(toValue(boardSlug))),
     staleTime: 20_000,

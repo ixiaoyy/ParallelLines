@@ -7,14 +7,13 @@ import {
   StarFilled,
   StarOutlined,
 } from "@ant-design/icons-vue";
-import { computed, ref, watch } from "vue";
+import { computed, defineAsyncComponent, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import { publicSettingString } from "@/features/admin/model";
 import { usePublicSiteSettings } from "@/features/admin/queries";
 import { isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser } from "@/features/auth/queries";
-import BoardSettingsPanel from "@/features/boards/components/BoardSettingsPanel.vue";
 import { useBoardDetail } from "@/features/boards/queries";
 import { setBoardFollow } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
@@ -31,6 +30,12 @@ import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
 type BoardSort = "latest" | "hot" | "top";
 type TopicStatusFilter = "all" | "solved" | "unanswered" | "official";
+
+// Loads board management controls only for owners/admins so regular board pages keep a smaller route chunk.
+// Key parameters: none. Return value is the BoardSettingsPanel component; side effect is lazy chunk loading.
+const BoardSettingsPanel = defineAsyncComponent(() =>
+  import("@/features/boards/components/BoardSettingsPanel.vue"),
+);
 
 const notificationLevelOptions: Array<{ value: NotificationLevel; label: string; description: string }> = [
   { value: "watching", label: "关注", description: "这个版块有新主题时提醒。" },
