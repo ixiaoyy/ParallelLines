@@ -7,7 +7,12 @@ from app.core.config import Settings
 from app.db.base import utcnow
 from app.models.news import FrontierNewsItem, FrontierNewsSource
 from app.services.forum import _topic_list_excerpt, render_markdown
-from app.services.frontier_news import DEFAULT_REVIEW_BATCH_SIZE, FrontierNewsService
+from app.services.frontier_news import (
+    DEFAULT_FRONTIER_SOURCES,
+    DEFAULT_REVIEW_BATCH_SIZE,
+    RETIRED_FRONTIER_SOURCE_KEYS,
+    FrontierNewsService,
+)
 
 
 def test_frontier_news_review_batch_size_defaults_and_bounds() -> None:
@@ -50,6 +55,14 @@ def test_frontier_news_review_batch_size_defaults_and_bounds() -> None:
         fetch_interval_minutes=60,
     )
     assert service._review_batch_size(high_source) == 10
+
+
+def test_frontier_news_default_sources_exclude_retired_caiwen_keys() -> None:
+    """Verify low-quality Caiwen sources are no longer part of seeded defaults."""
+
+    default_keys = {source.key for source in DEFAULT_FRONTIER_SOURCES}
+
+    assert default_keys.isdisjoint(RETIRED_FRONTIER_SOURCE_KEYS)
 
 
 def test_frontier_news_source_kind_drives_item_classification() -> None:
@@ -195,10 +208,10 @@ def test_frontier_news_topic_tags_split_social_hot_news() -> None:
 
     service = FrontierNewsService(cast(AsyncSession, object()), Settings(_env_file=None))
     source = FrontierNewsSource(
-        key="caiwen_social_hot",
-        name="财闻网 社会热点",
+        key="eastmoney_social_hot",
+        name="东方财富 社会热点",
         kind="news_html_index",
-        url="https://www.caiwennews.com/",
+        url="https://news.eastmoney.com/",
         config={"keywords": []},
         enabled=True,
         trust_level=68,
@@ -208,7 +221,7 @@ def test_frontier_news_topic_tags_split_social_hot_news() -> None:
         source_id="1",
         source=source,
         external_id="social-1",
-        canonical_url="https://www.caiwennews.com/article/social-1",
+        canonical_url="https://news.eastmoney.com/a/social-1.html",
         canonical_url_hash="social-1-hash",
         title="多地夜市客流回暖 带动周边消费",
         summary="记者走访发现，周末夜市人流明显增长，餐饮与文创摊位恢复活跃。",

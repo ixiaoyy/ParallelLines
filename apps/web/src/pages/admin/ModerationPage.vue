@@ -1016,6 +1016,15 @@ function mutationErrorMessage(error: unknown) {
                   <div class="reviewable-list-item__actions">
                     <template v-if="canDecideReviewable(rev)">
                       <UiButton
+                        tone="danger"
+                        :disabled="pendingAction"
+                        data-selection-ignore="true"
+                        @pointerdown.stop
+                        @click.stop="rejectReviewable(rev)"
+                      >
+                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "驳回" }}
+                      </UiButton>
+                      <UiButton
                         tone="success"
                         :disabled="pendingAction"
                         data-selection-ignore="true"
@@ -1023,15 +1032,6 @@ function mutationErrorMessage(error: unknown) {
                         @click.stop="approveReviewable(rev)"
                       >
                         {{ activeReviewablePendingId === rev.id ? "处理中…" : "通过" }}
-                      </UiButton>
-                      <UiButton
-                        tone="ghost"
-                        :disabled="pendingAction"
-                        data-selection-ignore="true"
-                        @pointerdown.stop
-                        @click.stop="rejectReviewable(rev)"
-                      >
-                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "拒绝" }}
                       </UiButton>
                       <UiButton
                         tone="subtle"

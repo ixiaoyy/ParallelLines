@@ -48,6 +48,7 @@ SOCIAL_HOT_TAG = "社会热点"
 AI_TECH_SOURCE_KINDS = frozenset(
     {"arxiv", "github_search", "hacker_news", "xai_news", "arena_leaderboard"}
 )
+RETIRED_FRONTIER_SOURCE_KEYS = ("caiwen_ai_tech", "caiwen_social_hot")
 AI_TECH_CATEGORY_KEYWORDS = (
     "artificial intelligence",
     "machine learning",
@@ -293,38 +294,6 @@ DEFAULT_FRONTIER_SOURCES: tuple[DefaultFrontierSource, ...] = (
         fetch_interval_minutes=120,
     ),
     DefaultFrontierSource(
-        key="caiwen_ai_tech",
-        name="财闻网 AI / 科技动态",
-        kind="news_html_index",
-        url="https://www.caiwennews.com/",
-        config={
-            "max_items": 10,
-            "candidate_links": 36,
-            "review_batch_size": DEFAULT_REVIEW_BATCH_SIZE,
-            "allowed_hosts": ["www.caiwennews.com", "caiwennews.com"],
-            "link_contains": ["/article/"],
-            "keywords": list(CHINESE_AI_NEWS_KEYWORDS),
-        },
-        trust_level=72,
-        fetch_interval_minutes=120,
-    ),
-    DefaultFrontierSource(
-        key="caiwen_social_hot",
-        name="财闻网 社会热点",
-        kind="news_html_index",
-        url="https://www.caiwennews.com/",
-        config={
-            "max_items": 10,
-            "candidate_links": 36,
-            "review_batch_size": DEFAULT_REVIEW_BATCH_SIZE,
-            "allowed_hosts": ["www.caiwennews.com", "caiwennews.com"],
-            "link_contains": ["/article/"],
-            "keywords": [],
-        },
-        trust_level=68,
-        fetch_interval_minutes=120,
-    ),
-    DefaultFrontierSource(
         key="eastmoney_ai_tech",
         name="东方财富科技 AI / 产业动态",
         kind="news_html_index",
@@ -375,9 +344,12 @@ class FrontierNewsService:
         await self.ensure_system_entities()
         await self.ensure_default_sources()
         await self.session.commit()
-        sources = list(
-            await self.session.scalars(select(FrontierNewsSource).order_by(FrontierNewsSource.name))
+        statement = (
+            select(FrontierNewsSource)
+            .where(FrontierNewsSource.key.notin_(RETIRED_FRONTIER_SOURCE_KEYS))
+            .order_by(FrontierNewsSource.name)
         )
+        sources = list(await self.session.scalars(statement))
         return [FrontierNewsSourceResponse.from_model(source) for source in sources]
 
     async def create_source(
@@ -388,13 +360,19 @@ class FrontierNewsService:
         """Create one administrator-managed white-listed frontier source."""
 
         self._require_admin(current_user)
+        key = payload.key.strip()
+        if key in RETIRED_FRONTIER_SOURCE_KEYS:
+            raise ValidationError(
+                "frontier_source_retired",
+                "This frontier news source has been retired for low content quality",
+            )
         existing = await self.session.scalar(
-            select(FrontierNewsSource).where(FrontierNewsSource.key == payload.key.strip())
+            select(FrontierNewsSource).where(FrontierNewsSource.key == key)
         )
         if existing:
             raise ConflictError("frontier_source_exists", "Frontier news source already exists")
         source = FrontierNewsSource(
-            key=payload.key.strip(),
+            key=key,
             name=payload.name.strip(),
             kind=payload.kind,
             url=payload.url.strip(),
@@ -418,6 +396,11 @@ class FrontierNewsService:
 
         self._require_admin(current_user)
         source = await self._get_source(source_id)
+        if source.key in RETIRED_FRONTIER_SOURCE_KEYS:
+            raise ValidationError(
+                "frontier_source_retired",
+                "This frontier news source has been retired for low content quality",
+            )
         if payload.name is not None:
             source.name = payload.name.strip()
         if payload.url is not None:
@@ -451,6 +434,11 @@ class FrontierNewsService:
         await self.ensure_system_entities()
         await self.ensure_default_sources()
         source = await self._get_source(source_id)
+        if source.key in RETIRED_FRONTIER_SOURCE_KEYS:
+            raise ValidationError(
+                "frontier_source_retired",
+                "This frontier news source has been retired for low content quality",
+            )
         summary = await self._collect_source(source, force=True)
         await self.session.commit()
         return summary
@@ -460,7 +448,10 @@ class FrontierNewsService:
 
         await self.ensure_system_entities()
         await self.ensure_default_sources()
-        statement = select(FrontierNewsSource).where(FrontierNewsSource.enabled.is_(True))
+        statement = select(FrontierNewsSource).where(
+            FrontierNewsSource.enabled.is_(True),
+            FrontierNewsSource.key.notin_(RETIRED_FRONTIER_SOURCE_KEYS),
+        )
         sources = list(await self.session.scalars(statement.order_by(FrontierNewsSource.name)))
         totals = {
             "source_count": 0,

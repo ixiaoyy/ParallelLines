@@ -116,10 +116,10 @@ BOARD_SPECS = (
         legacy_slugs=("feedback", "community"),
         legacy_names=("社区反馈",),
         name="社区反馈",
-        description="对网站功能、内容氛围和社区规则提出建议。",
+        description="收集网站功能、社区体验和内容运营相关的建议、意见与问题反馈。",
         color="#64748B",
-        purpose="收集大家对产品功能、内容组织、社区氛围和规则治理的建议。",
-        guidance="反馈时请尽量写清使用场景、遇到的问题、期望变化，以及可接受的替代方案。",
+        purpose="收集大家对产品功能、使用体验、内容组织和社区规则的建议、意见与问题反馈，方便持续改进。",
+        guidance="功能建议、体验意见、问题反馈或社区规则/内容组织相关想法，都可以发在这里。",
     ),
     BoardSpec(
         slug="lounge",
