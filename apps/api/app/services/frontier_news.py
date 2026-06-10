@@ -22,7 +22,7 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
 from app.core.permissions import is_admin
 from app.core.security import hash_password
-from app.db.base import utcnow
+from app.db.base import as_shanghai_datetime, utcnow
 from app.models.forum import Board
 from app.models.moderation import Reviewable
 from app.models.news import FrontierNewsAiRun, FrontierNewsItem, FrontierNewsSource
@@ -1331,8 +1331,10 @@ class FrontierNewsService:
         """Build the source/date/author metadata line shown directly under the original link."""
 
         parts = [f"来源：{item.source.name if item.source else '白名单来源'}"]
-        if item.published_at:
-            parts.append(f"原文时间：{item.published_at.date().isoformat()}")
+        if item.published_at or item.created_at:
+            time_label = "原文时间" if item.published_at else "抓取时间"
+            display_at = as_shanghai_datetime(item.published_at or item.created_at)
+            parts.append(f"{time_label}：{display_at.date().isoformat()}")
         if item.author_names:
             parts.append(f"作者/来源账号：{', '.join(item.author_names[:6])}")
         return " · ".join(parts)

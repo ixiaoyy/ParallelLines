@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from secrets import token_hex
 
 from sqlalchemy import BigInteger, DateTime
@@ -40,6 +40,21 @@ def new_random_suffix(byte_count: int = 4) -> str:
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+SHANGHAI_TZ = timezone(timedelta(hours=8), "Asia/Shanghai")
+
+
+def as_shanghai_datetime(value: datetime) -> datetime:
+    """Return a datetime normalized for API display in Asia/Shanghai.
+
+    Key parameter `value` may be timezone-aware or a naive MySQL value. The return value is
+    timezone-aware in Asia/Shanghai; side effect is none.
+    """
+
+    if value.tzinfo is None or value.utcoffset() is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(SHANGHAI_TZ)
 
 
 class Base(DeclarativeBase):

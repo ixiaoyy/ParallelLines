@@ -150,6 +150,46 @@ def test_frontier_news_flash_markdown_starts_with_original_source() -> None:
     assert "转载" not in tags
 
 
+def test_frontier_news_meta_uses_collected_time_when_original_time_missing() -> None:
+    """Verify source cards fall back to collected time when upstream omits publish time."""
+
+    service = FrontierNewsService(cast(AsyncSession, object()), Settings(_env_file=None))
+    source = FrontierNewsSource(
+        key="xai_news",
+        name="xAI News",
+        kind="xai_news",
+        url="https://x.ai/news",
+        config={},
+        enabled=True,
+        trust_level=90,
+        fetch_interval_minutes=240,
+    )
+    item = FrontierNewsItem(
+        source_id="1",
+        source=source,
+        external_id="entry-no-time",
+        canonical_url="https://x.ai/news/example",
+        canonical_url_hash="entry-no-time-hash",
+        title="Example Model Update",
+        summary="Upstream entry without a published timestamp.",
+        author_names=["xAI"],
+        published_at=None,
+        raw_payload={},
+        item_type="news",
+        suggested_tags=["动态"],
+        ai_key_points=[],
+        ai_risk_flags=[],
+        score=80,
+        status="review_pending",
+        created_at=utcnow(),
+    )
+
+    raw_md = service._build_topic_markdown(item)
+
+    assert "抓取时间：" in raw_md
+    assert "原文时间：" not in raw_md
+
+
 def test_frontier_news_topic_tags_split_social_hot_news() -> None:
     """Verify ordinary hot-news material receives the social-hot category tag."""
 
