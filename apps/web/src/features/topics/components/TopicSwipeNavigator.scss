@@ -45,6 +45,10 @@
   font-size: 1.1rem;
 }
 
+.topic-swipe-button--next > svg {
+  justify-self: end;
+}
+
 .topic-swipe-button span {
   grid-area: label;
   color: var(--primary);

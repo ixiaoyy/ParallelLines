@@ -21,8 +21,6 @@ export const queryKeys = {
   boardSettings: (slug: string) => ["boards", slug, "settings"] as const,
   topicsRoot: ["topics"] as const,
   topics: (filter: string) => ["topics", filter] as const,
-  // immersiveTopicFeed 用途：缓存全屏信息流游标页；参数为稳定筛选串，返回 query key 且无副作用。
-  immersiveTopicFeed: (filter: string) => ["topics", "immersive-feed", filter] as const,
   topic: (id: string) => ["topics", "detail", id] as const,
   topicAiSummary: (id: string) => ["topics", "detail", id, "ai-summary"] as const,
   posts: (topicId: string, sort?: string) =>

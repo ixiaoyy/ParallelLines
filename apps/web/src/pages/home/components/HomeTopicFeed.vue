@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from "vue";
-import type { RouteLocationRaw } from "vue-router";
 
 import type { BoardSummary } from "@/entities/board/model";
 import { sortBoardsWithFeedbackLast } from "@/entities/board/order";
@@ -18,7 +17,6 @@ const props = defineProps<{
   titleFilter: string;
   boardFilter: string;
   tagFilter: string;
-  immersiveFeedTo: RouteLocationRaw;
   loading: boolean;
   error: boolean;
 }>();
@@ -129,9 +127,6 @@ onUnmounted(() => observer?.disconnect());
           {{ tab.label }}
         </button>
       </div>
-      <RouterLink class="immersive-feed-link" :to="immersiveFeedTo">
-        沉浸阅读
-      </RouterLink>
     </div>
 
     <div v-if="filtersOpen" id="topic-feed-filters" class="topic-filter-panel" aria-label="帖子过滤">

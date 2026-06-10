@@ -103,6 +103,7 @@ const replyComposerOpen = ref(false);
 const repliesExpanded = ref(false);
 const replyInsertText = ref("");
 const replyInsertToken = ref(0);
+const topicSwipeStart = ref<{ x: number; y: number } | null>(null);
 const currentUserId = computed(() => currentUserQuery.data.value?.id ?? null);
 const currentUserRole = computed(() => currentUserQuery.data.value?.role ?? null);
 const comicReader = computed(() => topic.value?.tags.includes(COMIC_READER_TAG) ?? false);
@@ -177,6 +178,8 @@ const topicNotificationPending = computed(
   () => topicNotificationQuery.isFetching.value || updateTopicNotificationMutation.isPending.value,
 );
 const canSetTopicNotification = computed(() => Boolean(topic.value?.id) && hasAccessToken());
+const TOPIC_HORIZONTAL_SWIPE_MIN_PX = 72;
+const TOPIC_HORIZONTAL_SWIPE_RATIO = 1.35;
 const lifecyclePending = computed(
   () =>
     lifecycleMutation.isPending.value ||
@@ -480,6 +483,77 @@ function toggleReplies() {
   repliesExpanded.value = !repliesExpanded.value;
 }
 
+// Records the start point for topic-level horizontal swipe navigation.
+// Key parameter: `event` is the user's touch start. Return value: none; side
+// effect: stores coordinates unless the gesture begins on an interactive control.
+function handleTopicTouchStart(event: TouchEvent) {
+  if (event.touches.length !== 1 || isTopicSwipeIgnoredTarget(event.target)) {
+    topicSwipeStart.value = null;
+    return;
+  }
+
+  const touch = event.touches[0];
+  if (!touch) {
+    topicSwipeStart.value = null;
+    return;
+  }
+  topicSwipeStart.value = { x: touch.clientX, y: touch.clientY };
+}
+
+// Converts a clear horizontal swipe into previous/next topic navigation.
+// Key parameter: `event` is the touch end. Return value: none; side effect:
+// routes to the adjacent topic only when horizontal movement dominates vertical scroll.
+function handleTopicTouchEnd(event: TouchEvent) {
+  const start = topicSwipeStart.value;
+  topicSwipeStart.value = null;
+  const touch = event.changedTouches[0];
+  if (!start || !touch) {
+    return;
+  }
+
+  const deltaX = touch.clientX - start.x;
+  const deltaY = touch.clientY - start.y;
+  const absX = Math.abs(deltaX);
+  const absY = Math.abs(deltaY);
+  if (absX < TOPIC_HORIZONTAL_SWIPE_MIN_PX || absX < absY * TOPIC_HORIZONTAL_SWIPE_RATIO) {
+    return;
+  }
+
+  navigateSwipeTopic(deltaX > 0 ? "previous" : "next");
+}
+
+// Checks whether topic swipe navigation should ignore a gesture target.
+// Key parameter: `target` is the event target. Return value is true for real
+// controls, editors, and custom interactive regions. Side effect: none.
+function isTopicSwipeIgnoredTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(
+    target.closest(
+      [
+        "a",
+        "button",
+        "input",
+        "textarea",
+        "select",
+        "summary",
+        "pre",
+        "table",
+        "[contenteditable='true']",
+        "[role='button']",
+        "[role='link']",
+        ".ant-dropdown",
+        ".ant-modal",
+        ".ant-drawer",
+        ".comic-reader",
+        ".md-editor",
+      ].join(","),
+    ),
+  );
+}
+
 // Navigates to the previous or next topic in the current board's latest feed.
 // Key parameter: `direction` selects the adjacent topic. Return value: none; side effect: routes to another topic detail.
 function navigateSwipeTopic(direction: "previous" | "next") {
@@ -595,6 +669,8 @@ function flagTopic() {
   <div
     class="topic-detail-page"
     :class="{ 'topic-detail-page--comic-reader': comicReader }"
+    @touchstart.passive="handleTopicTouchStart"
+    @touchend.passive="handleTopicTouchEnd"
   >
     <UiCard v-if="topicQuery.isLoading.value" class="topic-state" role="status">
       正在加载主题…

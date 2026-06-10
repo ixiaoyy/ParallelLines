@@ -66,19 +66,6 @@ export const router = createRouter({
       },
     },
     {
-      path: "/feed",
-      name: "immersive-feed",
-      component: () => import("@/pages/feed/ImmersiveFeedPage.vue"),
-      meta: {
-        seo: {
-          title: "沉浸阅读 · {siteTitle}",
-          description: "全屏上下滑动浏览平行线帖子，按最新、推荐、热门或筛选条件连续阅读讨论内容。",
-          canonicalPath: "/feed",
-          robots: "noindex,follow",
-        },
-      },
-    },
-    {
       path: "/auth",
       name: "auth",
       component: () => import("@/pages/auth/AuthPage.vue"),

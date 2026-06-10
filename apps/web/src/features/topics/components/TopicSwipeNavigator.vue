@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DownOutlined, LoadingOutlined, UpOutlined } from "@ant-design/icons-vue";
+import { LeftOutlined, LoadingOutlined, RightOutlined } from "@ant-design/icons-vue";
 import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
@@ -27,7 +27,7 @@ const hasNavigation = computed(() => Boolean(props.previousTopic || props.nextTo
       :disabled="!previousTopic"
       @click="emit('navigate', 'previous')"
     >
-      <UpOutlined aria-hidden="true" />
+      <LeftOutlined aria-hidden="true" />
       <span>上一篇</span>
       <strong>{{ previousTopic?.title ?? "已经是最新" }}</strong>
       <small v-if="previousTopic">
@@ -46,7 +46,7 @@ const hasNavigation = computed(() => Boolean(props.previousTopic || props.nextTo
       :disabled="!nextTopic"
       @click="emit('navigate', 'next')"
     >
-      <DownOutlined aria-hidden="true" />
+      <RightOutlined aria-hidden="true" />
       <span>下一篇</span>
       <strong>{{ nextTopic?.title ?? "没有更多主题" }}</strong>
       <small v-if="nextTopic">
