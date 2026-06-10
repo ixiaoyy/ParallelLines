@@ -70,10 +70,23 @@ print('<script>')
 
         posts = await client.get(f"/api/v1/topics/{topic_data['id']}/posts")
         assert posts.status_code == 200
+        assert posts.headers["x-parallellines-cache"] == "miss"
         post_data = posts.json()["data"][0]
         assert post_data["post_number"] == 1
         assert "&lt;script&gt;" in post_data["cooked_html"]
         assert "<script>" not in post_data["cooked_html"]
+
+        cached_posts = await client.get(f"/api/v1/topics/{topic_data['id']}/posts")
+        assert cached_posts.status_code == 200
+        assert cached_posts.headers["x-parallellines-cache"] == "hit"
+
+        immersive_feed = await client.get("/api/v1/topics/immersive-feed")
+        assert immersive_feed.status_code == 200
+        assert immersive_feed.headers["x-parallellines-cache"] == "miss"
+
+        cached_immersive_feed = await client.get("/api/v1/topics/immersive-feed")
+        assert cached_immersive_feed.status_code == 200
+        assert cached_immersive_feed.headers["x-parallellines-cache"] == "hit"
 
         reply = await client.post(
             f"/api/v1/topics/{topic_data['id']}/posts",
@@ -82,6 +95,11 @@ print('<script>')
         )
         assert reply.status_code == 201
         assert reply.json()["data"]["post_number"] == 2
+
+        refreshed_posts = await client.get(f"/api/v1/topics/{topic_data['id']}/posts")
+        assert refreshed_posts.status_code == 200
+        assert refreshed_posts.headers["x-parallellines-cache"] == "miss"
+        assert len(refreshed_posts.json()["data"]) == 2
 
         topic_after_reply = await client.get(f"/api/v1/topics/{topic_data['id']}")
         assert topic_after_reply.status_code == 200

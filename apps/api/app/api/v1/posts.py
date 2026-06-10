@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Request
 
-from app.api.v1.boards import invalidate_board_response_caches
 from app.api.v1.dependencies import CurrentUserDep, SessionDep
-from app.api.v1.topics import invalidate_topic_list_response_cache
+from app.api.v1.topics import invalidate_topic_write_response_caches
 from app.schemas.common import ApiResponse
 from app.schemas.forum import (
     PostResponse,
@@ -16,15 +15,14 @@ router = APIRouter(prefix="/posts", tags=["posts"])
 
 
 def invalidate_post_write_response_caches() -> None:
-    """Clear topic and board list caches after post write actions.
+    """Clear topic, post-list, board, and sitemap caches after post writes.
 
     There are no parameters and no return value. Side effect: invalidates
-    in-process caches whose cards can include first-post excerpts, reply counts,
-    or latest-activity ordering.
+    in-process caches whose cards, post streams, or sitemap timestamps can
+    include edited content, reply counts, or latest-activity ordering.
     """
 
-    invalidate_topic_list_response_cache()
-    invalidate_board_response_caches()
+    invalidate_topic_write_response_caches()
 
 
 @router.patch("/{post_id}", response_model=ApiResponse[PostResponse])

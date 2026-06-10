@@ -13,12 +13,12 @@ from app.schemas.forum import (
     PostCreateRequest,
     PostResponse,
     PostSort,
-    TopicReadStateRequest,
-    TopicReadStateResponse,
     TopicLifecycleRequest,
     TopicLifecycleResponse,
     TopicMergeRequest,
     TopicMoveRequest,
+    TopicReadStateRequest,
+    TopicReadStateResponse,
     TopicResponse,
     TopicSolutionRequest,
     TopicSort,
@@ -34,10 +34,22 @@ from app.services.topic_cursor import encode_topic_cursor
 router = APIRouter(prefix="/topics", tags=["topics"])
 
 TOPIC_LIST_CACHE_TTL_SECONDS = 15
+IMMERSIVE_TOPIC_FEED_CACHE_TTL_SECONDS = TOPIC_LIST_CACHE_TTL_SECONDS
+TOPIC_POST_LIST_CACHE_TTL_SECONDS = 15
 
 _TOPIC_LIST_RESPONSE_CACHE = ResponseHotCache[ApiResponse[list[TopicResponse]]](
     ttl_seconds=TOPIC_LIST_CACHE_TTL_SECONDS,
     max_entries=256,
+)
+_IMMERSIVE_TOPIC_FEED_RESPONSE_CACHE = ResponseHotCache[
+    ApiResponse[list[ImmersiveTopicFeedItemResponse]]
+](
+    ttl_seconds=IMMERSIVE_TOPIC_FEED_CACHE_TTL_SECONDS,
+    max_entries=256,
+)
+_TOPIC_POST_LIST_RESPONSE_CACHE = ResponseHotCache[ApiResponse[list[PostResponse]]](
+    ttl_seconds=TOPIC_POST_LIST_CACHE_TTL_SECONDS,
+    max_entries=512,
 )
 
 
@@ -45,11 +57,24 @@ def invalidate_topic_list_response_cache() -> None:
     """Clear cached global topic feed responses after topic/post write actions.
 
     There are no parameters and no return value. Side effect: invalidates this
-    process' `/topics` hot-cache entries so hidden, moved, or updated topics do
-    not remain visible until TTL expiry.
+    process' `/topics` and `/topics/immersive-feed` hot-cache entries so
+    hidden, moved, or updated topics do not remain visible until TTL expiry.
     """
 
     _TOPIC_LIST_RESPONSE_CACHE.clear()
+    _IMMERSIVE_TOPIC_FEED_RESPONSE_CACHE.clear()
+
+
+# Clear cached post-list envelopes after any post content or per-user state write.
+def invalidate_topic_post_list_response_cache() -> None:
+    """Clear cached topic post-list responses after post state changes.
+
+    There are no parameters and no return value. Side effect: invalidates this
+    process' `/topics/{id}/posts` hot-cache entries so replies, edits,
+    moderation state, likes, and votes are visible immediately.
+    """
+
+    _TOPIC_POST_LIST_RESPONSE_CACHE.clear()
 
 
 def invalidate_topic_write_response_caches(*, include_tags: bool = False) -> None:
@@ -57,14 +82,19 @@ def invalidate_topic_write_response_caches(*, include_tags: bool = False) -> Non
 
     Key parameter `include_tags` should be true only when visible topic/tag
     membership changes. Return value is none. Side effect: invalidates global
-    topic cache plus board caches; tag cache is also cleared when requested.
-    Local imports avoid route-module import cycles during application startup.
+    topic/feed/post caches, board caches, and the public sitemap; tag cache is
+    also cleared when requested. Local imports avoid route-module import cycles
+    during application startup.
     """
 
     invalidate_topic_list_response_cache()
+    invalidate_topic_post_list_response_cache()
     from app.api.v1.boards import invalidate_board_response_caches
 
     invalidate_board_response_caches()
+    from app.api.seo import invalidate_sitemap_response_cache
+
+    invalidate_sitemap_response_cache()
     if include_tags:
         from app.api.v1.tags import invalidate_tag_response_cache
 
@@ -134,6 +164,7 @@ async def list_topics(
 async def list_immersive_topic_feed(
     session: SessionDep,
     current_user: OptionalCurrentUserDep,
+    response: Response,
     board: str | None = None,
     q: str | None = None,
     tag: str | None = None,
@@ -149,6 +180,26 @@ async def list_immersive_topic_feed(
     effect: none; this route does not count views or mark topics read.
     """
 
+    response.headers["Cache-Control"] = scoped_cache_control(
+        current_user,
+        max_age=IMMERSIVE_TOPIC_FEED_CACHE_TTL_SECONDS,
+        stale_while_revalidate=60,
+    )
+    cache_key = _topic_list_cache_key(
+        current_user=current_user,
+        board=board,
+        q=q,
+        tag=tag,
+        author=author,
+        sort=sort,
+        cursor=cursor,
+        limit=limit,
+    )
+    cached = _IMMERSIVE_TOPIC_FEED_RESPONSE_CACHE.get(cache_key)
+    if cached is not None:
+        response.headers["X-ParallelLines-Cache"] = "hit"
+        return cached
+
     feed_rows = await ForumService(session).list_immersive_feed(
         board_slug=board,
         sort=sort,
@@ -160,7 +211,7 @@ async def list_immersive_topic_feed(
         current_user=current_user,
     )
     topics = [topic for topic, _lead_post, _read_state in feed_rows]
-    return ApiResponse(
+    payload = ApiResponse(
         data=[
             ImmersiveTopicFeedItemResponse.from_models(topic, lead_post, read_state)
             for topic, lead_post, read_state in feed_rows
@@ -174,6 +225,9 @@ async def list_immersive_topic_feed(
             else None
         },
     )
+    _IMMERSIVE_TOPIC_FEED_RESPONSE_CACHE.set(cache_key, payload)
+    response.headers["X-ParallelLines-Cache"] = "miss"
+    return payload
 
 
 # Build an auth-scoped cache key for global topic feed/filter responses.
@@ -184,7 +238,7 @@ def _topic_list_cache_key(
     q: str | None,
     tag: str | None,
     author: str | None,
-    sort: TopicSort,
+    sort: str,
     cursor: str | None,
     limit: int,
 ) -> tuple[object, ...]:
@@ -250,6 +304,7 @@ async def mark_topic_read_state(
         current_user,
         post_number=payload.last_read_post_number,
     )
+    invalidate_topic_list_response_cache()
     return ApiResponse(data=TopicReadStateResponse.from_topic_and_state(topic, read_state))
 
 
@@ -362,12 +417,48 @@ async def list_posts(
     topic_id: str,
     session: SessionDep,
     current_user: OptionalCurrentUserDep,
+    response: Response,
     sort: PostSort = "chronological",
 ) -> ApiResponse[list[PostResponse]]:
+    response.headers["Cache-Control"] = scoped_cache_control(
+        current_user,
+        max_age=TOPIC_POST_LIST_CACHE_TTL_SECONDS,
+        stale_while_revalidate=60,
+    )
+    cache_key = _topic_post_list_cache_key(
+        current_user=current_user,
+        topic_id=topic_id,
+        sort=sort,
+    )
+    cached = _TOPIC_POST_LIST_RESPONSE_CACHE.get(cache_key)
+    if cached is not None:
+        response.headers["X-ParallelLines-Cache"] = "hit"
+        return cached
+
     posts = await ForumService(session).list_posts(
         topic_id, current_user=current_user, sort=sort
     )
-    return ApiResponse(data=[PostResponse.from_model(post) for post in posts])
+    payload = ApiResponse(data=[PostResponse.from_model(post) for post in posts])
+    _TOPIC_POST_LIST_RESPONSE_CACHE.set(cache_key, payload)
+    response.headers["X-ParallelLines-Cache"] = "miss"
+    return payload
+
+
+# Build an auth-scoped cache key for one topic's post stream.
+def _topic_post_list_cache_key(
+    *,
+    current_user: object | None,
+    topic_id: str,
+    sort: PostSort,
+) -> tuple[object, ...]:
+    """Return the hot-cache key for a topic post-list request.
+
+    Key parameters are the current user scope, topic id, and post sort mode.
+    Return value keeps per-user reaction/vote state isolated; the function has
+    no side effects.
+    """
+
+    return (user_cache_scope(current_user), topic_id, sort)
 
 
 @router.post(

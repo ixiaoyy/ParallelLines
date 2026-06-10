@@ -2,10 +2,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, status
 
-from app.api.v1.boards import invalidate_board_response_caches
 from app.api.v1.dependencies import CurrentUserDep, SessionDep
-from app.api.v1.tags import invalidate_tag_response_cache
-from app.api.v1.topics import invalidate_topic_list_response_cache
+from app.api.v1.topics import invalidate_topic_write_response_caches
 from app.schemas.common import ApiResponse
 from app.schemas.moderation import (
     AuditLogResponse,
@@ -40,13 +38,11 @@ def invalidate_public_content_response_caches(*, include_tags: bool = False) -> 
 
     Key parameter `include_tags` should be true when topic creation, restoration,
     or removal can change tag discovery. Return value is none. Side effect:
-    invalidates in-process topic/board caches and, when requested, tag caches.
+    invalidates in-process topic/feed/post/board/sitemap caches and, when
+    requested, tag caches.
     """
 
-    invalidate_topic_list_response_cache()
-    invalidate_board_response_caches()
-    if include_tags:
-        invalidate_tag_response_cache()
+    invalidate_topic_write_response_caches(include_tags=include_tags)
 
 
 @router.post(
@@ -290,6 +286,7 @@ async def update_user_status(
     current_user: CurrentUserDep,
 ) -> ApiResponse[UserStatusResponse]:
     result = await ModerationService(session).update_user_status(user_id, payload, current_user)
+    invalidate_public_content_response_caches()
     return ApiResponse(data=result)
 
 

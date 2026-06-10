@@ -3,8 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request, Response, status
 
 from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep
-from app.api.v1.tags import invalidate_tag_response_cache
-from app.api.v1.topics import invalidate_topic_list_response_cache
+from app.api.v1.topics import invalidate_topic_write_response_caches
 from app.core.response_cache import ResponseHotCache, scoped_cache_control, user_cache_scope
 from app.schemas.common import ApiResponse
 from app.schemas.forum import (
@@ -113,6 +112,7 @@ async def create_board(
 ) -> ApiResponse[BoardResponse]:
     service = ForumService(session)
     board = await service.create_board(payload, current_user)
+    invalidate_topic_write_response_caches()
     memberships = await service.board_memberships_for_user([board.id], current_user)
     return ApiResponse(
         data=BoardResponse.from_board(
@@ -194,6 +194,7 @@ async def update_board_settings(
 ) -> ApiResponse[BoardResponse]:
     service = ForumService(session)
     board = await service.update_board_settings(slug, payload, current_user)
+    invalidate_topic_write_response_caches(include_tags=True)
     memberships = await service.board_memberships_for_user([board.id], current_user)
     return ApiResponse(
         data=BoardResponse.from_board(
@@ -257,6 +258,7 @@ async def follow_board(
         current_user,
         notification_level=payload.notification_level,
     )
+    invalidate_board_response_caches()
     return ApiResponse(data=state)
 
 
@@ -267,6 +269,7 @@ async def unfollow_board(
     current_user: CurrentUserDep,
 ) -> ApiResponse[BoardFollowResponse]:
     state = await InteractionService(session).unfollow_board(slug, current_user)
+    invalidate_board_response_caches()
     return ApiResponse(data=state)
 
 
@@ -379,7 +382,5 @@ async def create_topic(
     current_user: CurrentUserDep,
 ) -> ApiResponse[TopicResponse]:
     topic = await ForumService(session).create_topic(slug, payload, current_user, request)
-    invalidate_topic_list_response_cache()
-    invalidate_board_response_caches()
-    invalidate_tag_response_cache()
+    invalidate_topic_write_response_caches(include_tags=True)
     return ApiResponse(data=TopicResponse.from_model(topic))

@@ -75,6 +75,7 @@ async def test_sitemap_filters_private_content_and_legacy_redirects() -> None:
 
         sitemap = await client.get("/sitemap.xml")
         assert sitemap.status_code == 200
+        assert sitemap.headers["x-parallellines-cache"] == "miss"
         body = sitemap.text
         public_topic_data = public_topic.json()["data"]
         private_topic_data = private_topic.json()["data"]
@@ -82,6 +83,28 @@ async def test_sitemap_filters_private_content_and_legacy_redirects() -> None:
         assert f"/topics/{public_topic_data['id']}/{public_topic_data['slug']}" in body
         assert "/b/seo-private" not in body
         assert f"/topics/{private_topic_data['id']}/{private_topic_data['slug']}" not in body
+
+        cached_sitemap = await client.get("/sitemap.xml")
+        assert cached_sitemap.status_code == 200
+        assert cached_sitemap.headers["x-parallellines-cache"] == "hit"
+        assert cached_sitemap.text == body
+
+        next_public_topic = await client.post(
+            "/api/v1/boards/seo-public/topics",
+            headers=auth_headers,
+            json={
+                "title": "Public sitemap cache refresh topic",
+                "raw_md": "Publishing a new topic should invalidate cached sitemap XML.",
+                "tags": ["seo"],
+            },
+        )
+        assert next_public_topic.status_code == 201
+        refreshed_sitemap = await client.get("/sitemap.xml")
+        assert refreshed_sitemap.status_code == 200
+        assert refreshed_sitemap.headers["x-parallellines-cache"] == "miss"
+        next_topic_data = next_public_topic.json()["data"]
+        next_topic_path = f"/topics/{next_topic_data['id']}/{next_topic_data['slug']}"
+        assert next_topic_path in refreshed_sitemap.text
 
         robots = await client.get("/robots.txt")
         assert robots.status_code == 200
