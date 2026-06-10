@@ -181,6 +181,40 @@ const selectedReviewableIdList = computed(() => Array.from(selectedReviewableIds
 const selectedReviewableCount = computed(() => selectedReviewableIds.value.size);
 const bulkSelectionActive = computed(() => selectedReviewableCount.value > 0);
 const bulkDecisionPending = computed(() => bulkDecisionMutation.isPending.value);
+
+const selectableReviewables = computed(() => reviewables.value.filter(canSelectReviewable));
+
+const isAllSelected = computed(() => {
+  const selectables = selectableReviewables.value;
+  if (selectables.length === 0) return false;
+  return selectables.every((rev) => isReviewableSelected(rev));
+});
+
+const isSomeSelected = computed(() => {
+  const selectables = selectableReviewables.value;
+  if (selectables.length === 0) return false;
+  return selectables.some((rev) => isReviewableSelected(rev));
+});
+
+function toggleSelectAll() {
+  const selectables = selectableReviewables.value;
+  if (selectables.length === 0) return;
+
+  if (isAllSelected.value) {
+    const nextSelection = new Set(selectedReviewableIds.value);
+    for (const rev of selectables) {
+      nextSelection.delete(rev.id);
+    }
+    selectedReviewableIds.value = nextSelection;
+  } else {
+    const nextSelection = new Set(selectedReviewableIds.value);
+    for (const rev of selectables) {
+      nextSelection.add(rev.id);
+    }
+    selectedReviewableIds.value = nextSelection;
+  }
+}
+
 const REVIEWABLE_LONG_PRESS_MS = 360;
 const REVIEWABLE_SCROLL_CANCEL_PX = 12;
 
@@ -921,100 +955,122 @@ function mutationErrorMessage(error: unknown) {
               <span>请稍候，待发布内容加载完成后会显示在这里。</span>
             </UiCard>
 
-            <ol v-else-if="reviewables.length" class="reviewable-list">
-              <li
-                v-for="rev in reviewables"
-                :key="rev.id"
-                class="reviewable-list-item"
-                :class="{
-                  'reviewable-list-item--selected': isReviewableSelected(rev),
-                  'reviewable-list-item--disabled': !canSelectReviewable(rev),
-                }"
-                :data-reviewable-id="rev.id"
-                @click="handleReviewableClick(rev)"
-                @pointerdown="beginReviewableSelection(rev, $event)"
-                @pointermove="extendReviewableSelection"
-                @pointerup="endReviewableSelection"
-                @pointercancel="endReviewableSelection"
-              >
+            <template v-else-if="reviewables.length">
+              <div v-if="selectableReviewables.length" class="list-operations-bar">
+                <label class="select-all-label">
+                  <input
+                    type="checkbox"
+                    :checked="isAllSelected"
+                    :indeterminate="isSomeSelected && !isAllSelected"
+                    @change="toggleSelectAll"
+                  />
+                  <span>全选当前页 (已选 {{ selectedReviewableCount }} / {{ selectableReviewables.length }} 条可处理)</span>
+                </label>
                 <button
+                  v-if="bulkSelectionActive"
                   type="button"
-                  class="reviewable-list-item__selector"
-                  :class="{ 'reviewable-list-item__selector--active': isReviewableSelected(rev) }"
-                  :disabled="!canSelectReviewable(rev)"
-                  :aria-label="isReviewableSelected(rev) ? '取消选择审核项' : '选择审核项'"
-                  @click.stop="toggleReviewableSelection(rev)"
+                  class="clear-selection-btn"
+                  @click="clearReviewableSelection"
                 >
-                  <template v-if="isReviewableSelected(rev)">{{ selectedReviewableNumber(rev) }}</template>
+                  取消选择
                 </button>
-                <div class="reviewable-list-item__main">
-                  <span class="reviewable-list-item__meta">
-                    {{ reviewableStatusLabel(rev.status) }} ·
-                    {{ rev.board_name || '全局' }} ·
-                    {{ rev.target_user_name || rev.created_by_name || '系统' }} ·
-                    {{ relativeTime(rev.created_at) }}
-                  </span>
-                  <h3>{{ reviewableTitle(rev) }}</h3>
-                  <p>{{ reviewablePreview(rev) }}</p>
-                </div>
+              </div>
 
-                <div class="reviewable-list-item__actions">
-                  <template v-if="canDecideReviewable(rev)">
-                    <UiButton
-                      tone="success"
-                      :disabled="pendingAction"
-                      data-selection-ignore="true"
-                      @pointerdown.stop
-                      @click.stop="approveReviewable(rev)"
-                    >
-                      {{ activeReviewablePendingId === rev.id ? "处理中…" : "通过" }}
-                    </UiButton>
-                    <UiButton
-                      tone="ghost"
-                      :disabled="pendingAction"
-                      data-selection-ignore="true"
-                      @pointerdown.stop
-                      @click.stop="rejectReviewable(rev)"
-                    >
-                      {{ activeReviewablePendingId === rev.id ? "处理中…" : "拒绝" }}
-                    </UiButton>
-                    <UiButton
-                      tone="subtle"
-                      :disabled="pendingAction"
-                      data-selection-ignore="true"
-                      @pointerdown.stop
-                      @click.stop="openReviewableDetails(rev)"
-                    >
-                      详情
-                    </UiButton>
-                  </template>
-                  <template v-else-if="isClaimedByOther(rev)">
-                    <span class="assignee-warn">处理中：{{ rev.assigned_to_name }}</span>
-                    <UiButton
-                      tone="subtle"
-                      :disabled="pendingAction"
-                      data-selection-ignore="true"
-                      @pointerdown.stop
-                      @click.stop="openReviewableDetails(rev)"
-                    >
-                      详情
-                    </UiButton>
-                  </template>
-                  <template v-else>
-                    <span class="resolved-note">已处理：{{ rev.resolved_by_name || '系统' }}</span>
-                    <UiButton
-                      tone="subtle"
-                      :disabled="pendingAction"
-                      data-selection-ignore="true"
-                      @pointerdown.stop
-                      @click.stop="openReviewableDetails(rev)"
-                    >
-                      详情
-                    </UiButton>
-                  </template>
-                </div>
-              </li>
-            </ol>
+              <ol class="reviewable-list">
+                <li
+                  v-for="rev in reviewables"
+                  :key="rev.id"
+                  class="reviewable-list-item"
+                  :class="{
+                    'reviewable-list-item--selected': isReviewableSelected(rev),
+                    'reviewable-list-item--disabled': !canSelectReviewable(rev),
+                  }"
+                  :data-reviewable-id="rev.id"
+                  @click="handleReviewableClick(rev)"
+                  @pointerdown="beginReviewableSelection(rev, $event)"
+                  @pointermove="extendReviewableSelection"
+                  @pointerup="endReviewableSelection"
+                  @pointercancel="endReviewableSelection"
+                >
+                  <button
+                    type="button"
+                    class="reviewable-list-item__selector"
+                    :class="{ 'reviewable-list-item__selector--active': isReviewableSelected(rev) }"
+                    :disabled="!canSelectReviewable(rev)"
+                    :aria-label="isReviewableSelected(rev) ? '取消选择审核项' : '选择审核项'"
+                    @click.stop="toggleReviewableSelection(rev)"
+                  >
+                    <template v-if="isReviewableSelected(rev)">{{ selectedReviewableNumber(rev) }}</template>
+                  </button>
+                  <div class="reviewable-list-item__main">
+                    <span class="reviewable-list-item__meta">
+                      {{ reviewableStatusLabel(rev.status) }} ·
+                      {{ rev.board_name || '全局' }} ·
+                      {{ rev.target_user_name || rev.created_by_name || '系统' }} ·
+                      {{ relativeTime(rev.created_at) }}
+                    </span>
+                    <h3>{{ reviewableTitle(rev) }}</h3>
+                    <p>{{ reviewablePreview(rev) }}</p>
+                  </div>
+
+                  <div class="reviewable-list-item__actions">
+                    <template v-if="canDecideReviewable(rev)">
+                      <UiButton
+                        tone="success"
+                        :disabled="pendingAction"
+                        data-selection-ignore="true"
+                        @pointerdown.stop
+                        @click.stop="approveReviewable(rev)"
+                      >
+                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "通过" }}
+                      </UiButton>
+                      <UiButton
+                        tone="ghost"
+                        :disabled="pendingAction"
+                        data-selection-ignore="true"
+                        @pointerdown.stop
+                        @click.stop="rejectReviewable(rev)"
+                      >
+                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "拒绝" }}
+                      </UiButton>
+                      <UiButton
+                        tone="subtle"
+                        :disabled="pendingAction"
+                        data-selection-ignore="true"
+                        @pointerdown.stop
+                        @click.stop="openReviewableDetails(rev)"
+                      >
+                        详情
+                      </UiButton>
+                    </template>
+                    <template v-else-if="isClaimedByOther(rev)">
+                      <span class="assignee-warn">处理中：{{ rev.assigned_to_name }}</span>
+                      <UiButton
+                        tone="subtle"
+                        :disabled="pendingAction"
+                        data-selection-ignore="true"
+                        @pointerdown.stop
+                        @click.stop="openReviewableDetails(rev)"
+                      >
+                        详情
+                      </UiButton>
+                    </template>
+                    <template v-else>
+                      <span class="resolved-note">已处理：{{ rev.resolved_by_name || '系统' }}</span>
+                      <UiButton
+                        tone="subtle"
+                        :disabled="pendingAction"
+                        data-selection-ignore="true"
+                        @pointerdown.stop
+                        @click.stop="openReviewableDetails(rev)"
+                      >
+                        详情
+                      </UiButton>
+                    </template>
+                  </div>
+                </li>
+              </ol>
+            </template>
 
             <Transition name="bulk-bar">
               <div v-if="bulkSelectionActive" class="reviewable-bulk-bar" role="status" aria-live="polite">
