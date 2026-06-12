@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from asyncio import gather
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -362,34 +363,34 @@ class SearchService:
         if current_user is None:
             return
 
-        liked_topic_ids = set(
-            await self.session.scalars(
+        # Parallelize Reaction, Bookmark, and Vote queries for better performance
+        liked_result, bookmarked_result, votes_result = await gather(
+            self.session.scalars(
                 select(Reaction.target_id).where(
                     Reaction.target_type == "topic",
                     Reaction.target_id.in_(topic_ids),
                     Reaction.user_id == current_user.id,
                     Reaction.type == "like",
                 )
-            )
-        )
-        bookmarked_topic_ids = set(
-            await self.session.scalars(
+            ),
+            self.session.scalars(
                 select(Bookmark.target_id).where(
                     Bookmark.target_type == "topic",
                     Bookmark.target_id.in_(topic_ids),
                     Bookmark.user_id == current_user.id,
                 )
-            )
-        )
-        votes = list(
-            await self.session.scalars(
+            ),
+            self.session.scalars(
                 select(Vote).where(
                     Vote.target_type == "topic",
                     Vote.target_id.in_(topic_ids),
                     Vote.user_id == current_user.id,
                 )
-            )
+            ),
         )
+        liked_topic_ids = set(liked_result)
+        bookmarked_topic_ids = set(bookmarked_result)
+        votes = list(votes_result)
         vote_by_topic = {vote.target_id: vote.value for vote in votes}
         for topic in topics:
             topic.liked_by_me = topic.id in liked_topic_ids

@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import json
 import re
+from asyncio import gather
 from collections.abc import Iterable, Mapping
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -567,6 +568,87 @@ class ForumService:
         rows = await self.session.execute(statement)
         return {str(board_id): int(count) for board_id, count in rows.all()}
 
+    async def batch_board_data(
+        self,
+        board_ids: list[str],
+        *,
+        current_user: User | None = None,
+    ) -> tuple[dict[str, int], dict[str, BoardMember]]:
+        """Batch fetch topic counts and board memberships concurrently.
+
+        Key parameter `board_ids` limits the aggregates to known boards and
+        `current_user` applies the same board and author visibility rules as
+        public topic feeds. Return value is a tuple of (topic_counts, memberships);
+        the method has no side effects.
+        """
+        import asyncio
+
+        ids = list(dict.fromkeys(board_ids))
+        if not ids:
+            return {}, {}
+
+        # Execute both queries concurrently
+        topic_counts_task = self._visible_topic_counts_query(ids, current_user)
+        memberships_task = self._board_memberships_query(ids, current_user)
+
+        topic_counts_raw, memberships_raw = await asyncio.gather(
+            topic_counts_task,
+            memberships_task,
+        )
+
+        topic_counts = {str(board_id): int(count) for board_id, count in topic_counts_raw}
+        memberships = {member.board_id: member for member in memberships_raw}
+
+        return topic_counts, memberships
+
+    async def _visible_topic_counts_query(
+        self,
+        board_ids: list[str],
+        current_user: User | None,
+    ) -> list[tuple[str, int]]:
+        """Return raw visible topic counts for the supplied boards.
+
+        Key parameters are `board_ids` and optional `current_user` visibility.
+        Return value is SQL row tuples of board id and count. Side effect:
+        performs one read query through the current session.
+        """
+        statement = (
+            select(Topic.board_id, func.count(Topic.id))
+            .join(Topic.board)
+            .where(
+                Topic.board_id.in_(board_ids),
+                Topic.deleted_at.is_(None),
+                Topic.visibility == "public",
+                self._board_visible_condition(current_user),
+            )
+            .group_by(Topic.board_id)
+        )
+        if current_user is not None:
+            statement = statement.where(self._visible_author_condition(current_user))
+        rows = await self.session.execute(statement)
+        return rows.all()
+
+    async def _board_memberships_query(
+        self,
+        board_ids: list[str],
+        current_user: User | None,
+    ) -> list[BoardMember]:
+        """Return membership rows for the current user across supplied boards.
+
+        Key parameters are `board_ids` and `current_user`; anonymous users
+        return an empty list. Return value is a list of matching memberships.
+        Side effect: performs one read query when a user is present.
+        """
+        if current_user is None:
+            return []
+        result = await self.session.scalars(
+            select(BoardMember).where(
+                BoardMember.board_id.in_(board_ids),
+                BoardMember.user_id == current_user.id,
+            )
+        )
+        return list(result)
+
     async def board_memberships_for_user(
         self,
         board_ids: Iterable[str],
@@ -918,12 +1000,15 @@ class ForumService:
             current_user=current_user,
             decorate_excerpts=False,
         )
-        lead_posts_by_topic = await self._lead_posts_by_topic(topics, current_user)
+        # Parallelize lead posts and read states queries for better performance
+        lead_posts_by_topic, read_states_by_topic = await gather(
+            self._lead_posts_by_topic(topics, current_user),
+            self._topic_read_states_by_topic(topics, current_user),
+        )
         for topic in topics:
             lead_post = lead_posts_by_topic.get(topic.id)
             topic.excerpt = _topic_list_excerpt(lead_post.raw_md if lead_post else "")
         await self._decorate_posts_for_user(list(lead_posts_by_topic.values()), current_user)
-        read_states_by_topic = await self._topic_read_states_by_topic(topics, current_user)
         return [
             (topic, lead_posts_by_topic.get(topic.id), read_states_by_topic.get(topic.id))
             for topic in topics
@@ -2681,34 +2766,34 @@ class ForumService:
         if current_user is None:
             return
 
-        liked_topic_ids = set(
-            await self.session.scalars(
+        # Parallelize Reaction, Bookmark, and Vote queries for better performance
+        liked_result, bookmarked_result, votes_result = await gather(
+            self.session.scalars(
                 select(Reaction.target_id).where(
                     Reaction.target_type == "topic",
                     Reaction.target_id.in_(topic_ids),
                     Reaction.user_id == current_user.id,
                     Reaction.type == "like",
                 )
-            )
-        )
-        bookmarked_topic_ids = set(
-            await self.session.scalars(
+            ),
+            self.session.scalars(
                 select(Bookmark.target_id).where(
                     Bookmark.target_type == "topic",
                     Bookmark.target_id.in_(topic_ids),
                     Bookmark.user_id == current_user.id,
                 )
-            )
-        )
-        votes = list(
-            await self.session.scalars(
+            ),
+            self.session.scalars(
                 select(Vote).where(
                     Vote.target_type == "topic",
                     Vote.target_id.in_(topic_ids),
                     Vote.user_id == current_user.id,
                 )
-            )
+            ),
         )
+        liked_topic_ids = set(liked_result)
+        bookmarked_topic_ids = set(bookmarked_result)
+        votes = list(votes_result)
         vote_by_topic = {vote.target_id: vote.value for vote in votes}
         for topic in topics:
             topic.liked_by_me = topic.id in liked_topic_ids
@@ -2736,25 +2821,26 @@ class ForumService:
         from app.models.interaction import Reaction, Vote
 
         post_ids = [post.id for post in posts]
-        liked_post_ids = set(
-            await self.session.scalars(
+        # Parallelize Reaction and Vote queries for better performance
+        liked_result, votes_result = await gather(
+            self.session.scalars(
                 select(Reaction.target_id).where(
                     Reaction.target_type == "post",
                     Reaction.target_id.in_(post_ids),
                     Reaction.user_id == current_user.id,
                     Reaction.type == "like",
                 )
-            )
-        )
-        votes = list(
-            await self.session.scalars(
+            ),
+            self.session.scalars(
                 select(Vote).where(
                     Vote.target_type == "post",
                     Vote.target_id.in_(post_ids),
                     Vote.user_id == current_user.id,
                 )
-            )
+            ),
         )
+        liked_post_ids = set(liked_result)
+        votes = list(votes_result)
         vote_by_post = {vote.target_id: vote.value for vote in votes}
         for post in posts:
             post.liked_by_me = post.id in liked_post_ids
