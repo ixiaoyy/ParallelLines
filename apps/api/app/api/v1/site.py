@@ -25,6 +25,12 @@ _PUBLIC_SITE_EXTENSIONS_RESPONSE_CACHE = ResponseHotCache[
 )
 
 
+def invalidate_public_site_extensions_cache() -> None:
+    """Invalidate public UI extension responses after plugin configuration changes."""
+
+    _PUBLIC_SITE_EXTENSIONS_RESPONSE_CACHE.clear()
+
+
 @router.get("/settings", response_model=ApiResponse[PublicSiteSettingsResponse])
 async def public_site_settings(
     session: SessionDep,

@@ -169,9 +169,12 @@ async def update_plugin(
     session: SessionDep,
     current_user: CurrentUserDep,
 ) -> ApiResponse[PluginResponse]:
-    return ApiResponse(
-        data=await PluginService(session).update_plugin(plugin_id, payload, current_user)
-    )
+    updated = await PluginService(session).update_plugin(plugin_id, payload, current_user)
+
+    from app.api.v1.site import invalidate_public_site_extensions_cache
+
+    invalidate_public_site_extensions_cache()
+    return ApiResponse(data=updated)
 
 
 @router.post("/users/{user_id}/badges", response_model=ApiResponse[AdminUserResponse])
