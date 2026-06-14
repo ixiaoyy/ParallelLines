@@ -93,7 +93,7 @@ test.describe("马甲账号回复测试", () => {
     }
 
     // 找一个有回复的主题
-    let targetTopic = topicsData.data.find(t => t.reply_count > 0) || topicsData.data[0];
+    const targetTopic = topicsData.data.find(t => t.reply_count > 0) || topicsData.data[0];
     const topicId = targetTopic.id;
     const topicTitle = targetTopic.title;
     console.log(`测试目标主题: ${topicTitle} (ID: ${topicId})`);

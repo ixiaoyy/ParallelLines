@@ -1,7 +1,5 @@
 import { test, expect, Page, devices } from "@playwright/test";
 
-const apiBaseUrl = process.env.PLAYWRIGHT_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
-
 /**
  * 性能指标类型
  */
@@ -43,7 +41,7 @@ async function checkConsoleErrors(page: Page): Promise<string[]> {
   const errors: string[] = [];
   page.on("console", (msg) => {
     if (msg.type() === "error") {
-      errors.push(msg.text());
+      errors.push(`[${msg.location().url}] ${msg.text()}`);
     }
   });
   return errors;
@@ -403,13 +401,7 @@ test.describe("可访问性测试", () => {
 
 test.describe("控制台错误检测", () => {
   test("页面加载时不应有非网络相关的 Error 级别控制台错误", async ({ page }) => {
-    const errors: string[] = [];
-
-    page.on("console", (msg) => {
-      if (msg.type() === "error") {
-        errors.push(`[${msg.location().url}] ${msg.text()}`);
-      }
-    });
+    const errors = await checkConsoleErrors(page);
 
     for (const pageInfo of CORE_PAGES) {
       await page.goto(pageInfo.path, { waitUntil: "networkidle" });
