@@ -22,11 +22,13 @@ Services:
 - API: <http://localhost:8000>
 - API health: <http://localhost:8000/healthz>
 - API metrics: <http://localhost:8000/metrics>
+- MySQL: `localhost:3306`
 - Redis: `localhost:6379`
 
-`docker compose up` reads `apps/api/.env`, runs Alembic migrations against the configured
-`DATABASE_URL`, then starts the API, web preview server, Redis, and the unified background job
-worker. Compose uses only that configured database and does not create users/content automatically.
+`docker compose up` reads `apps/api/.env.compose` for local Docker defaults, then overlays
+`apps/api/.env` when that private file exists. It starts MySQL, Redis, the API, the web
+preview server, and the unified background job worker. The API runs Alembic migrations before
+serving traffic. Compose does not create users/content automatically.
 
 ## Local Development without Docker
 
@@ -39,6 +41,12 @@ Copy-Item .env.example .env  # then edit DATABASE_URL / JWT_SECRET_KEY
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --port 8000
 ```
+
+For local Docker, the tracked `apps/api/.env.compose` already points `DATABASE_URL` at the
+Compose MySQL service (`mysql`). If a private `apps/api/.env` exists and overrides
+`DATABASE_URL`, use `mysql` as the hostname inside Docker containers, not `localhost`.
+Compose always points `REDIS_URL` at its `redis` service, so a host-local Redis setting in
+`apps/api/.env` will not break container startup.
 
 Useful commands:
 
@@ -89,8 +97,9 @@ SMTP_USE_TLS=true
 ### 上传、头像与附件
 
 本地默认使用 `UPLOAD_STORAGE_BACKEND=local`，文件保存到 `UPLOAD_STORAGE_PATH=var/uploads`。
-Docker Compose 部署会覆盖容器内路径为 `/var/lib/parallellines/uploads`，并把宿主机固定目录
-`/opt/parallellines/var/uploads` 绑定到该路径，避免镜像重建或命名卷变化导致上传文件不可见。
+Docker Compose 部署会覆盖容器内路径为 `/var/lib/parallellines/uploads`，并把仓库内目录
+`./var/uploads` 绑定到该路径。生产 checkout 位于 `/opt/parallellines` 时，这会落到
+`/opt/parallellines/var/uploads`，避免镜像重建或命名卷变化导致上传文件不可见。
 发帖上传会返回 `/uploads/{id}/content` 引用，创建/编辑帖子后自动绑定到对应楼层。头像通过
 `POST /api/v1/uploads/avatar` 更新，并会同步到 `/auth/me` 和公开用户资料。
 
@@ -130,12 +139,12 @@ Docker Compose 部署会覆盖容器内路径为 `/var/lib/parallellines/uploads
 `docker-compose.yml` 固定挂载：
 
 ```text
-/opt/parallellines/var/uploads  -> /var/lib/parallellines/uploads
-/opt/parallellines/var/backups  -> /var/lib/parallellines/backups
+./var/uploads  -> /var/lib/parallellines/uploads
+./var/backups  -> /var/lib/parallellines/backups
 ```
 
-部署脚本会先创建目录并赋予读写权限；不要执行 `docker-compose down -v` 或
-`docker system prune --volumes` 清理历史命名卷，除非已确认没有待迁移的旧上传文件。
+部署脚本会先创建目录并赋予读写权限；不要执行 `docker compose down -v` 或
+`docker system prune --volumes` 清理历史 MySQL 命名卷，除非已确认没有待迁移的旧数据或上传文件。
 
 ## Smoke Tests
 
@@ -178,7 +187,7 @@ Troubleshooting:
 
 - API returns 401 after login: verify `JWT_SECRET_KEY` is stable across API replicas.
 - Frontend cannot call API: verify `VITE_API_BASE_URL` was set at build time and `CORS_ORIGINS` includes the web origin.
-- Docker API cannot connect to DB: verify `apps/api/.env` has the intended `DATABASE_URL`, then inspect `docker compose logs api worker`.
+- Docker API cannot connect to DB: run `docker compose config`; if `apps/api/.env` exists, verify it does not override `DATABASE_URL` to `localhost` inside containers. Then inspect `docker compose logs mysql api worker`.
 - Smoke test cannot find new board: confirm the API URL points to the same backend used by the web app.
 
 ## Design Artifacts

@@ -1,4 +1,19 @@
 services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: parallellines
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
   redis:
     image: redis:7-alpine
     ports:
@@ -13,16 +28,21 @@ services:
     build:
       context: ./apps/api
     env_file:
-      - ./apps/api/.env
+      - ./apps/api/.env.compose
+      - path: ./apps/api/.env
+        required: false
     environment:
+      REDIS_URL: redis://redis:6379/0
       UPLOAD_STORAGE_PATH: /var/lib/parallellines/uploads
       BACKUP_STORAGE_PATH: /var/lib/parallellines/backups
     ports:
       - "8000:8000"
     volumes:
-      - /opt/parallellines/var/uploads:/var/lib/parallellines/uploads
-      - /opt/parallellines/var/backups:/var/lib/parallellines/backups
+      - ./var/uploads:/var/lib/parallellines/uploads
+      - ./var/backups:/var/lib/parallellines/backups
     depends_on:
+      mysql:
+        condition: service_healthy
       redis:
         condition: service_healthy
     command: >
@@ -44,13 +64,16 @@ services:
     build:
       context: ./apps/api
     env_file:
-      - ./apps/api/.env
+      - ./apps/api/.env.compose
+      - path: ./apps/api/.env
+        required: false
     environment:
+      REDIS_URL: redis://redis:6379/0
       UPLOAD_STORAGE_PATH: /var/lib/parallellines/uploads
       BACKUP_STORAGE_PATH: /var/lib/parallellines/backups
     volumes:
-      - /opt/parallellines/var/uploads:/var/lib/parallellines/uploads
-      - /opt/parallellines/var/backups:/var/lib/parallellines/backups
+      - ./var/uploads:/var/lib/parallellines/uploads
+      - ./var/backups:/var/lib/parallellines/backups
     depends_on:
       api:
         condition: service_healthy
@@ -79,3 +102,6 @@ services:
     depends_on:
       - api
       - web
+
+volumes:
+  mysql-data:

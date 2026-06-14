@@ -16,6 +16,7 @@ Runtime services:
 | `api` | `uvicorn app.main:app --host 0.0.0.0 --port 8000` | Runs migrations in Compose before serving |
 | `web` | `pnpm --dir apps/web preview --host 0.0.0.0 --port 5174` | Static Vite preview built with `VITE_API_BASE_URL` |
 | `worker` | `python -m app.workers.background_jobs` | Unified queue worker for mail, notifications, hot ranking, upload cleanup, and session cleanup |
+| `mysql` | `mysql:8.4` | Local Docker database for `docker compose up --build` |
 | `redis` | `redis:7-alpine` | Cache/coordination dependency |
 
 Email verification env:
@@ -92,19 +93,20 @@ CI commands:
 
 ### 3. Contracts
 
-- Docker Compose must start a usable environment with the database configured in `apps/api/.env`;
-  it must use only that configured database and must not create users/content automatically.
+- Docker Compose must start a usable local environment from a fresh checkout using
+  `apps/api/.env.compose`, with an optional private `apps/api/.env` overlay for
+  deployment/custom configuration; it must not create users/content automatically.
 - API startup in Compose must run `alembic upgrade head` before serving traffic.
 - Worker image reuses the API build and must not run migrations.
 - API and `worker` must share the same `UPLOAD_STORAGE_PATH` and `BACKUP_STORAGE_PATH`
   bind-mounted host directories; otherwise DB metadata will point at files the cleanup handler, backup
   handler, or API cannot see.
 - `VITE_API_BASE_URL` is a build-time frontend contract; Docker build args and CI env must set it explicitly when not using the default.
-- CI may start MySQL for isolated migration/smoke gates; Docker Compose deployment uses the
-  configured external `DATABASE_URL`.
-- Compose API and worker services must not override `DATABASE_URL` after `env_file`;
-  otherwise deployment can silently use the wrong database while operators
-  believe `apps/api/.env` points at the real database.
+- CI may start MySQL for isolated migration/smoke gates; Docker Compose starts a
+  MySQL service for local use unless operators override the private env file.
+- Compose API and worker services must keep `apps/api/.env` after
+  `apps/api/.env.compose` in `env_file` order; otherwise deployment can silently
+  use the wrong database while operators believe the private env file wins.
 - Slow API requests log `request_slow` when duration exceeds `SLOW_REQUEST_MS`.
 - Preloaded users/content must not run automatically in Compose and must not be used against
   production or shared databases.
@@ -118,7 +120,7 @@ CI commands:
 
 | Case | Expected behavior |
 |---|---|
-| Empty configured database | Migrations run before API serves traffic; no users/content are inserted automatically |
+| Empty configured database | MySQL healthcheck passes, migrations run before API serves traffic; no users/content are inserted automatically |
 | Existing content database | Compose does not rewrite users, boards, topics, or posts |
 | API dependency down | Compose healthchecks keep dependent services waiting |
 | Frontend built with wrong API URL | README troubleshooting points to `VITE_API_BASE_URL` |
@@ -130,12 +132,12 @@ CI commands:
 | Password-reset unknown email | API still returns `200` with the same shape as known emails; no account existence leak. |
 | Rate-limited write path | API returns `429 rate_limited`; admin-only `spam_actions` records context. |
 | Screened email/IP/URL hit | API returns `403 screening_blocked`; public response does not include matched rule value. |
-| Upload volume missing/mismatched | Uploaded metadata may exist but content route returns `upload_not_found`; Compose must mount `/opt/parallellines/var/uploads` into API and worker. |
-| Backup volume missing/mismatched | Backup metadata may be succeeded but download returns `backup_file_not_found`; Compose must mount `/opt/parallellines/var/backups` into API and worker. |
+| Upload volume missing/mismatched | Uploaded metadata may exist but content route returns `upload_not_found`; Compose must mount `./var/uploads` into API and worker. |
+| Backup volume missing/mismatched | Backup metadata may be succeeded but download returns `backup_file_not_found`; Compose must mount `./var/backups` into API and worker. |
 
 ### 5. Good/Base/Bad Cases
 
-- Good: operator runs `docker compose up --build`, opens web against the database configured in `apps/api/.env`, checks `/metrics`, and can run smoke tests.
+- Good: operator runs `docker compose up --build`, opens web against the Compose MySQL database or a private env override, checks `/metrics`, and can run smoke tests.
 - Base: CI runs backend and frontend quality gates, then starts temporary API/web servers and executes Playwright happy path.
 - Bad: a Docker entrypoint creates users/content before migrations, or CI runs smoke tests against a frontend build pointing at a different API URL.
 - Bad: deploying with `EMAIL_DELIVERY_MODE=memory`, which exposes a dev-only verification code in API responses.
