@@ -29,5 +29,9 @@ jobs:
             git reset --hard origin/main
             sudo install -d -m 0775 -o root -g root /opt/parallellines/var/uploads /opt/parallellines/var/backups
             sudo chmod -R u+rwX,g+rwX,o+rX /opt/parallellines/var/uploads /opt/parallellines/var/backups
-            sudo docker compose up -d --build
+            if sudo docker compose version >/dev/null 2>&1; then
+              sudo docker compose up -d --build
+            else
+              sudo docker-compose up -d --build
+            fi
             sudo docker image prune -f

@@ -16,8 +16,8 @@ Stack: Vue 3 + FastAPI (monorepo: `apps/api` + `apps/web`)
 ```powershell
 # Docker (full stack)
 docker compose up --build
-# Uses apps/api/.env.compose by default; optional apps/api/.env overrides it.
-# Docker includes MySQL, Redis, API, worker, web, and nginx.
+# Uses apps/api/.env for API configuration, including DATABASE_URL.
+# Docker includes Redis, API, worker, web, and nginx; MySQL may be remote.
 
 # Backend (local)
 cd apps/api
