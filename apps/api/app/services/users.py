@@ -199,7 +199,10 @@ class UserProfileService:
 
         user = await self._user_by_username(username)
         if not self._can_view_private_profile(user, current_user):
-            raise PermissionDeniedError("profile_relationships_private", "Profile relationships are private")
+            raise PermissionDeniedError(
+                "profile_relationships_private",
+                "Profile relationships are private",
+            )
 
         topic_counts = (
             select(Topic.user_id.label("user_id"), func.count(Topic.id).label("topic_count"))
