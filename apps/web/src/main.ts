@@ -6,6 +6,7 @@ import { createApp } from "vue";
 import App from "@/app/App.vue";
 import { router } from "@/app/router";
 import { queryClient } from "@/shared/api/queryClient";
+import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
 import "@/shared/styles/base.scss";
 import { registerPwaServiceWorker } from "@/shared/pwa/register";
 import { injectBoardPalette } from "@/shared/theme/boardPalette";
@@ -15,10 +16,11 @@ import "@/shared/styles/button-surfaces.scss";
 import "@/shared/styles/tone-utilities.scss";
 
 injectBoardPalette();
-void registerPwaServiceWorker();
 
 createApp(App)
   .use(createPinia())
   .use(VueQueryPlugin, { queryClient })
   .use(router)
   .mount("#app");
+
+void runWhenBrowserIdle(4_000).then(registerPwaServiceWorker);

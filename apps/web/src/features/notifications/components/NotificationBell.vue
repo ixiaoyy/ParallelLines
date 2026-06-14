@@ -53,7 +53,7 @@ useOutsidePointerDown(bellRef, closePanel, () => open.value);
 
 <template>
   <div ref="bellRef" class="notification-bell" @keydown.esc="closePanel">
-    <ABadge :count="unreadCount" :number-style="{ backgroundColor: 'var(--btn-primary-bg)' }">
+    <ABadge :count="unreadCount" :number-style="{ backgroundColor: '#ef4444' }">
       <button
         class="notification-trigger"
         type="button"

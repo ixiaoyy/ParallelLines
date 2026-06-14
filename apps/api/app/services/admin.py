@@ -92,7 +92,7 @@ DEFAULT_SITE_SETTINGS: dict[str, DefaultSiteSetting] = {
     ),
     "brand_logo_url": DefaultSiteSetting(
         key="brand_logo_url",
-        value="/logo-lines.png",
+        value="/favicon.svg",
         data_type="string",
         category="brand",
         description="站点 Logo URL，可使用站内相对路径或 http(s) 地址。",

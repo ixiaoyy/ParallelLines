@@ -65,7 +65,7 @@ pnpm --dir apps/web typecheck
 pnpm --dir apps/web build
 ```
 
-The frontend reads `VITE_API_BASE_URL`; the default is `http://localhost:8000/api/v1`.
+The frontend reads `VITE_API_BASE_URL`; the local dev fallback is `http://127.0.0.1:8000/api/v1`.
 
 ### 注册邮件验证码
 

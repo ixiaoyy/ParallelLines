@@ -50,6 +50,11 @@ const { locale } = useLocale();
 let profileRoutePrefetched = false;
 let adminRoutePrefetched = false;
 let moderationRoutePrefetched = false;
+const DEFAULT_BRAND_LOGO_URL = "/favicon.svg";
+const LEGACY_HEAVY_BRAND_LOGO_URL = "/logo-lines.png";
+const PUBLIC_ROUTE_PREFETCH_DELAY_MS = 2_400;
+const ACCOUNT_ROUTE_PREFETCH_DELAY_MS = 1_800;
+const IDLE_PREFETCH_TIMEOUT_MS = 4_000;
 const currentUser = computed(() => currentUserQuery.data.value);
 // Auth route already renders the login/register form, so the guest CTA is hidden there to avoid duplicate entry points.
 const isAuthRoute = computed(() => route.name === "auth");
@@ -68,9 +73,14 @@ const routeSeoMeta = computed(() =>
     siteTagline: siteTagline.value,
   }),
 );
-const brandLogoUrl = computed(() =>
-  publicSettingString(siteSettingsQuery.data.value, "brand_logo_url", "/logo-lines.png"),
-);
+const brandLogoUrl = computed(() => {
+  const configuredLogo = publicSettingString(
+    siteSettingsQuery.data.value,
+    "brand_logo_url",
+    DEFAULT_BRAND_LOGO_URL,
+  );
+  return configuredLogo === LEGACY_HEAVY_BRAND_LOGO_URL ? DEFAULT_BRAND_LOGO_URL : configuredLogo;
+});
 const brandHomeLabel = computed(() => t("brand.home_aria", "返回首页"));
 const adminLinkTarget = computed<RouteLocationRaw>(() =>
   isAdmin(currentUser.value) ? { name: "admin-dashboard" } : { name: "admin-moderation" },
@@ -251,7 +261,7 @@ function schedulePublicRoutePrefetch() {
     void import("@/pages/events/EventsPage.vue");
     void import("@/pages/search/SearchPage.vue");
     void import("@/pages/auth/AuthPage.vue");
-  });
+  }, PUBLIC_ROUTE_PREFETCH_DELAY_MS);
 }
 
 // Prefetches account-only routes after the desktop shell is stable; mobile loads them on demand.
@@ -273,18 +283,15 @@ function scheduleAccountRoutePrefetch(user: UserPublic) {
       moderationRoutePrefetched = true;
       void import("@/pages/admin/ModerationPage.vue");
     }
-  });
+  }, ACCOUNT_ROUTE_PREFETCH_DELAY_MS);
 }
 
-// Schedules non-critical work during browser idle time; falls back to a short timeout on older browsers.
-// Key parameter: `callback` is invoked once. Side effect: registers one idle callback or timeout.
-function scheduleIdleTask(callback: () => void) {
-  if (window.requestIdleCallback) {
-    window.requestIdleCallback(callback, { timeout: 2_000 });
-    return;
-  }
-
-  window.setTimeout(callback, 400);
+// Schedules non-critical work after the initial route has had time to fetch and paint.
+// Key parameters: `callback` runs once and `delayMs` keeps route prefetches off the critical path. Side effect: registers timers/idle callbacks.
+function scheduleIdleTask(callback: () => void, delayMs: number) {
+  window.setTimeout(() => {
+    void runWhenBrowserIdle(IDLE_PREFETCH_TIMEOUT_MS).then(callback);
+  }, delayMs);
 }
 
 function t(key: string, fallback: string) {

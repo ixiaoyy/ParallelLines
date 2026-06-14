@@ -1,6 +1,6 @@
-const CACHE_NAME = "parallellines-pwa-v1";
+const CACHE_NAME = "parallellines-pwa-v2";
 const OFFLINE_URL = "/offline.html";
-const APP_SHELL = [OFFLINE_URL, "/manifest.webmanifest", "/favicon.svg", "/logo-icon.png"];
+const APP_SHELL = [OFFLINE_URL, "/manifest.webmanifest", "/favicon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));

@@ -40,11 +40,26 @@
   animation: global-loading-spin 840ms linear infinite;
 }
 
-.global-loading-indicator__mark img {
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 999px;
-  object-fit: cover;
+.global-loading-indicator__mark i {
+  position: absolute;
+  width: 1.08rem;
+  height: 0.13rem;
+  border-radius: var(--radius-pill);
+  background: var(--brand-cyan);
+}
+
+.global-loading-indicator__mark i:nth-child(1) {
+  transform: translateY(-0.26rem) rotate(32deg);
+}
+
+.global-loading-indicator__mark i:nth-child(2) {
+  background: var(--accent-coral);
+  transform: rotate(-36deg);
+}
+
+.global-loading-indicator__mark i:nth-child(3) {
+  background: var(--accent-lime);
+  transform: translateY(0.27rem) rotate(28deg);
 }
 
 .global-loading-indicator__copy {

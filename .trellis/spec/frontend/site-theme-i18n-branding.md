@@ -28,7 +28,7 @@ Admin UI:
 
 - App shell text that is part of top-level navigation/search/publish auth controls must resolve through
   `siteText(..., key, fallback)` so missing keys safely fall back to Simplified Chinese defaults.
-- Logo uses public `brand_logo_url` with `/logo-lines.png` fallback.
+- Logo uses public `brand_logo_url` with `/favicon.svg` fallback; the old `/logo-lines.png` default is a large PNG and should not be loaded on the critical home-page path.
 - `applySiteBranding()` must validate hex colors before writing CSS variables and must update favicon
   only to safe site-relative or `http(s)` URLs.
 - Theme preview is browser-local. It must not call mutation APIs until the admin clicks `保存`.

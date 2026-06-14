@@ -49,7 +49,9 @@ watch(
       aria-label="接口处理中"
     >
       <span class="global-loading-indicator__mark" aria-hidden="true">
-        <img src="/logo-icon.png" alt="" />
+        <i></i>
+        <i></i>
+        <i></i>
       </span>
       <span class="global-loading-indicator__copy">处理中</span>
     </div>

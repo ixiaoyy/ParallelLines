@@ -76,14 +76,14 @@ async def list_boards(
 
     service = ForumService(session)
     boards = await service.list_boards(current_user)
-    topic_counts = await service.visible_topic_counts_by_board(
-        [board.id for board in boards],
+
+    # Execute topic counts and memberships concurrently for better performance
+    board_ids = [board.id for board in boards]
+    topic_counts, memberships = await service.batch_board_data(
+        board_ids,
         current_user=current_user,
     )
-    memberships = await service.board_memberships_for_user(
-        [board.id for board in boards],
-        current_user,
-    )
+
     payload = ApiResponse(
         data=[
             BoardResponse.from_board(
