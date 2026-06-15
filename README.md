@@ -29,6 +29,13 @@ Services:
 API, the static web Nginx container, the public Nginx entrypoint, and the unified background job
 worker. Compose uses only that configured database and does not create users/content automatically.
 
+Production Compose exposes ports 80 and 443 through the Nginx entrypoint. Nginx serves the HTTP-01
+challenge from `/opt/parallellines/var/certbot`, persists certificates under
+`/opt/parallellines/var/letsencrypt`, and redirects normal HTTP traffic to HTTPS. The deploy
+workflow requests a Let's Encrypt certificate for `pingxingxian.space` and `www.pingxingxian.space`
+after the containers start; until that succeeds, Nginx starts with a temporary self-signed fallback
+certificate so the deployment does not fail before the first certificate is issued.
+
 ## Local Development without Docker
 
 ### Backend
@@ -169,7 +176,8 @@ Before deployment:
 
 - Set `JWT_SECRET_KEY` to a strong secret; never use the local default.
 - Set `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGINS`, `ENVIRONMENT`, SMTP email settings, `EMAIL_WEBHOOK_SECRET`, background job intervals, upload storage settings, and `BACKUP_STORAGE_PATH` for the target environment.
-- Keep host-level Nginx/Apache stopped on port 80 when using the Compose Nginx entrypoint.
+- Keep host-level Nginx/Apache stopped on ports 80 and 443 when using the Compose Nginx entrypoint.
+- Ensure the cloud security group allows inbound TCP 80 and 443 before the first Let's Encrypt request.
 - Run `alembic upgrade head` before starting new application code.
 - Check `/healthz`, `/metrics`, API request logs, and worker logs after rollout.
 - Run smoke tests against the target environment or staging before promotion.

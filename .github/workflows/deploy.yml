@@ -27,11 +27,17 @@ jobs:
             cd /opt/parallellines
             git fetch origin
             git reset --hard origin/main
-            sudo install -d -m 0775 -o root -g root /opt/parallellines/var/uploads /opt/parallellines/var/backups
-            sudo chmod -R u+rwX,g+rwX,o+rX /opt/parallellines/var/uploads /opt/parallellines/var/backups
+            sudo install -d -m 0775 -o root -g root /opt/parallellines/var/uploads /opt/parallellines/var/backups /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
+            sudo chmod -R u+rwX,g+rwX,o+rX /opt/parallellines/var/uploads /opt/parallellines/var/backups /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
             if sudo docker compose version >/dev/null 2>&1; then
-              sudo docker compose up -d --build
+              COMPOSE="sudo docker compose"
             else
-              sudo docker-compose up -d --build
+              COMPOSE="sudo docker-compose"
+            fi
+            $COMPOSE up -d --build
+            if $COMPOSE run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
+              $COMPOSE exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
+            else
+              echo "::warning::Let's Encrypt certificate request failed; Nginx is running with a temporary self-signed certificate."
             fi
             sudo docker image prune -f
