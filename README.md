@@ -13,21 +13,21 @@
 
 ```powershell
 # From repo root
-docker compose up --build
+docker compose up -d --build
 ```
 
 Services:
 
-- Web: <http://localhost:5174>
-- API: <http://localhost:8000>
-- API health: <http://localhost:8000/healthz>
-- API metrics: <http://localhost:8000/metrics>
-- Redis: `localhost:6379`
+- Web: <http://localhost> via the Compose Nginx entrypoint
+- API: <http://127.0.0.1:8000> for local debugging, and `/api/` via Nginx
+- API health: <http://localhost/healthz>
+- API metrics: <http://localhost/metrics>
+- Redis: `127.0.0.1:6379` for local debugging only
 
 `docker compose up` reads `apps/api/.env`, runs Alembic migrations against the configured
-`DATABASE_URL`, then starts Redis, the API, the web preview server, and the unified background
-job worker. Compose uses only that configured database and does not create users/content
-automatically.
+`DATABASE_URL`, builds the frontend with `VITE_API_BASE_URL=/api/v1`, then starts Redis, the
+API, the static web Nginx container, the public Nginx entrypoint, and the unified background job
+worker. Compose uses only that configured database and does not create users/content automatically.
 
 ## Local Development without Docker
 
@@ -70,7 +70,8 @@ pnpm --dir apps/web typecheck
 pnpm --dir apps/web build
 ```
 
-The frontend reads `VITE_API_BASE_URL`; the local dev fallback is `http://127.0.0.1:8000/api/v1`.
+The frontend reads `VITE_API_BASE_URL`; local dev falls back to `http://127.0.0.1:8000/api/v1`,
+while Docker Compose builds the production frontend against the same-origin `/api/v1` path.
 
 ### 注册邮件验证码
 
@@ -148,8 +149,8 @@ Playwright smoke tests cover register → login → create board/topic → reply
 
 ```powershell
 # Terminal 1: start API + web, or use docker compose up
-$env:PLAYWRIGHT_BASE_URL="http://127.0.0.1:5174"
-$env:PLAYWRIGHT_API_BASE_URL="http://127.0.0.1:8000/api/v1"
+$env:PLAYWRIGHT_BASE_URL="http://127.0.0.1"
+$env:PLAYWRIGHT_API_BASE_URL="http://127.0.0.1/api/v1"
 pnpm --dir apps/web exec playwright install chromium
 pnpm --dir apps/web test:smoke
 ```
@@ -168,6 +169,7 @@ Before deployment:
 
 - Set `JWT_SECRET_KEY` to a strong secret; never use the local default.
 - Set `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGINS`, `ENVIRONMENT`, SMTP email settings, `EMAIL_WEBHOOK_SECRET`, background job intervals, upload storage settings, and `BACKUP_STORAGE_PATH` for the target environment.
+- Keep host-level Nginx/Apache stopped on port 80 when using the Compose Nginx entrypoint.
 - Run `alembic upgrade head` before starting new application code.
 - Check `/healthz`, `/metrics`, API request logs, and worker logs after rollout.
 - Run smoke tests against the target environment or staging before promotion.
