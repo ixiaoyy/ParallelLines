@@ -25,7 +25,8 @@ jobs:
           script: |
             set -e
             cd /opt/parallellines
-            git fetch origin
+            git remote set-url origin https://github.com/${{ github.repository }}.git
+            git fetch --prune origin main
             git reset --hard origin/main
             sudo install -d -m 0775 -o root -g root /opt/parallellines/var/uploads /opt/parallellines/var/backups /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
             sudo chmod -R u+rwX,g+rwX,o+rX /opt/parallellines/var/uploads /opt/parallellines/var/backups /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
