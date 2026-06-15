@@ -13,21 +13,21 @@ export const THEME_PACKAGES: ThemePackage[] = [
     name: "Parallel Calm",
     description: "默认蓝青色调，适合技术社区长期阅读。",
     settings: { brand_primary_color: "#409EFF", brand_accent_color: "#08C7D8" },
-    assets: ["/logo-lines.png"],
+    assets: ["/logo-lines-mark.png"],
   },
   {
     id: "forest-focus",
     name: "Forest Focus",
     description: "绿色强调色，适合知识库和问答型社区。",
     settings: { brand_primary_color: "#047857", brand_accent_color: "#10B981" },
-    assets: ["/logo-lines.png"],
+    assets: ["/logo-lines-mark.png"],
   },
   {
     id: "ember-support",
     name: "Ember Support",
     description: "暖色高对比，用于客服和运营场景。",
     settings: { brand_primary_color: "#B45309", brand_accent_color: "#F97316" },
-    assets: ["/logo-lines.png"],
+    assets: ["/logo-lines-mark.png"],
   },
 ];
 

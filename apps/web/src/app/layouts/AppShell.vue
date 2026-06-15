@@ -51,8 +51,8 @@ const { locale } = useLocale();
 let profileRoutePrefetched = false;
 let adminRoutePrefetched = false;
 let moderationRoutePrefetched = false;
-const DEFAULT_BRAND_LOGO_URL = "/favicon.svg";
-const LEGACY_HEAVY_BRAND_LOGO_URL = "/logo-lines.png";
+const DEFAULT_BRAND_LOGO_URL = "/logo-lines-mark.png";
+const LEGACY_BRAND_LOGO_URLS = new Set(["/logo-lines.png", "/favicon.svg"]);
 const PUBLIC_ROUTE_PREFETCH_DELAY_MS = 2_400;
 const ACCOUNT_ROUTE_PREFETCH_DELAY_MS = 1_800;
 const IDLE_PREFETCH_TIMEOUT_MS = 4_000;
@@ -80,7 +80,7 @@ const brandLogoUrl = computed(() => {
     "brand_logo_url",
     DEFAULT_BRAND_LOGO_URL,
   );
-  return configuredLogo === LEGACY_HEAVY_BRAND_LOGO_URL ? DEFAULT_BRAND_LOGO_URL : configuredLogo;
+  return LEGACY_BRAND_LOGO_URLS.has(configuredLogo) ? DEFAULT_BRAND_LOGO_URL : configuredLogo;
 });
 const brandHomeLabel = computed(() => t("brand.home_aria", "返回首页"));
 const adminLinkTarget = computed<RouteLocationRaw>(() =>

@@ -109,14 +109,14 @@
   content: "";
 }
 
-/* 完整 Logo 撑满容器，通过放大 + 顶对齐裁掉下方英文/中文，只露出线条区 */
+/* 正方形无文字品牌图，保留 Parallel Crossing 原始线条构图。 */
 .brand-logo {
   position: absolute;
   inset: 0;
   z-index: 0;
   display: block;
   width: 100%;
-  height: 3.8rem;
+  height: 100%;
   max-width: none;
   object-fit: cover;
   object-position: center top;
