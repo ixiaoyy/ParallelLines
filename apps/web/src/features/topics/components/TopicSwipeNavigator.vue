@@ -20,7 +20,7 @@ const hasNavigation = computed(() => Boolean(props.previousTopic || props.nextTo
 </script>
 
 <template>
-  <UiCard v-if="hasNavigation || loading" class="topic-swipe-navigator" aria-label="同版块帖子导航">
+  <UiCard v-if="hasNavigation || loading" class="topic-swipe-navigator" aria-label="同版块主题导航">
     <button
       class="topic-swipe-button"
       type="button"

@@ -5,6 +5,7 @@ import { useRoute, useRouter } from "vue-router";
 import TopicList from "@/features/topics/components/TopicList.vue";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicSearch } from "@/features/topics/queries";
+import { useBoards } from "@/features/boards/queries";
 import { readRouteParam } from "@/shared/router/params";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -41,6 +42,10 @@ const activeSort = computed<TopicSort>({
 const boardFilter = computed(() => readRouteParam(route.query.board as string | string[] | undefined));
 const tagFilter = computed(() => readRouteParam(route.query.tag as string | string[] | undefined));
 const authorFilter = computed(() => readRouteParam(route.query.author as string | string[] | undefined));
+const boardsQuery = useBoards(computed(() => Boolean(boardFilter.value)));
+const boardLabelBySlug = computed(() =>
+  new Map((boardsQuery.data.value ?? []).map((board) => [board.slug, board.name])),
+);
 
 const searchParams = computed(() => ({
   q: q.value,
@@ -57,7 +62,7 @@ const filterChips = computed<FilterChip[]>(() => {
   const chips: FilterChip[] = [];
 
   if (boardFilter.value) {
-    chips.push({ key: "board", label: "版块", value: boardFilter.value });
+    chips.push({ key: "board", label: "版块", value: boardLabelBySlug.value.get(boardFilter.value) ?? boardFilter.value });
   }
   if (tagFilter.value) {
     chips.push({ key: "tag", label: "标签", value: tagFilter.value });

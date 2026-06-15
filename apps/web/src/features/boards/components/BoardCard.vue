@@ -29,7 +29,7 @@ defineEmits<{ toggleFollow: [slug: string] }>();
           <dd>{{ compactNumber(board.topicCount) }}</dd>
         </div>
         <div>
-          <dt>帖子</dt>
+          <dt>回复</dt>
           <dd>{{ compactNumber(board.postCount) }}</dd>
         </div>
         <div>

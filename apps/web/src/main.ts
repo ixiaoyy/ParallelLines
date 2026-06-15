@@ -10,12 +10,14 @@ import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
 import "@/shared/styles/base.scss";
 import { registerPwaServiceWorker } from "@/shared/pwa/register";
 import { injectBoardPalette } from "@/shared/theme/boardPalette";
+import { applyStoredInterfaceTheme } from "@/shared/theme/interfaceTheme";
 
 import "@/shared/styles/tokens.scss";
 import "@/shared/styles/button-surfaces.scss";
 import "@/shared/styles/tone-utilities.scss";
 
 injectBoardPalette();
+applyStoredInterfaceTheme();
 
 createApp(App)
   .use(createPinia())

@@ -11,6 +11,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons-vue";
+import { Modal } from "ant-design-vue";
 
 import { isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser } from "@/features/auth/queries";
@@ -694,11 +695,14 @@ function deleteReviewable(reviewable: ReviewableResponse) {
     actionError.value = "这条审核项没有可删除的已发布内容。";
     return;
   }
-  const confirmed = window.confirm("确定删除这条已发布内容吗？删除后会从公开页面隐藏。");
-  if (!confirmed) {
-    return;
-  }
-  decideReviewable(reviewable, "delete", "审核删除已发布内容。");
+  Modal.confirm({
+    title: "删除这条已发布内容？",
+    content: "删除后会从公开页面隐藏，并在审核记录中留下操作痕迹。",
+    okText: "删除",
+    cancelText: "取消",
+    okType: "danger",
+    onOk: () => decideReviewable(reviewable, "delete", "审核删除已发布内容。"),
+  });
 }
 
 // Submits the current selected reviewables as one backend batch decision.
@@ -736,11 +740,14 @@ function submitBulkDeleteReviewables() {
     actionError.value = "只能批量删除已发布内容；待审新帖请使用驳回。";
     return;
   }
-  const confirmed = window.confirm(`确定删除已选 ${selectedReviewableCount.value} 条已发布内容吗？`);
-  if (!confirmed) {
-    return;
-  }
-  submitBulkReviewableDecision("delete", "批量审核删除已发布内容。");
+  Modal.confirm({
+    title: `删除已选 ${selectedReviewableCount.value} 条内容？`,
+    content: "这些已发布内容会从公开页面隐藏，并按批量审核删除记录处理。",
+    okText: "批量删除",
+    cancelText: "取消",
+    okType: "danger",
+    onOk: () => submitBulkReviewableDecision("delete", "批量审核删除已发布内容。"),
+  });
 }
 
 // Returns the operator-facing label for a bulk moderation action.
@@ -821,26 +828,30 @@ function toggleHidden(flag: FlagResponse) {
 // Key parameter `flag` provides the target id/type from the current queue row.
 // Return value is none; side effect: hides topics or erases post bodies.
 function deleteFlagTarget(flag: FlagResponse) {
-  const confirmed = window.confirm("确定删除这条被举报内容吗？删除后会从公开页面隐藏。");
-  if (!confirmed) {
-    return;
-  }
-
-  resetActionFeedback();
-  activeContentFlagId.value = flag.id;
-  contentDeleteMutation.mutate({
-    targetType: flag.target.target_type,
-    targetId: flag.target.target_id,
-    note: "审核台删除内容。",
-  }, {
-    onSuccess: () => {
-      actionNotice.value = `${flag.target.title}：已删除内容。`;
-    },
-    onError: (error) => {
-      actionError.value = mutationErrorMessage(error);
-    },
-    onSettled: () => {
-      activeContentFlagId.value = null;
+  Modal.confirm({
+    title: "删除这条被举报内容？",
+    content: "删除后会从公开页面隐藏，举报队列会在接口完成后刷新。",
+    okText: "删除",
+    cancelText: "取消",
+    okType: "danger",
+    onOk: () => {
+      resetActionFeedback();
+      activeContentFlagId.value = flag.id;
+      contentDeleteMutation.mutate({
+        targetType: flag.target.target_type,
+        targetId: flag.target.target_id,
+        note: "审核台删除内容。",
+      }, {
+        onSuccess: () => {
+          actionNotice.value = `${flag.target.title}：已删除内容。`;
+        },
+        onError: (error) => {
+          actionError.value = mutationErrorMessage(error);
+        },
+        onSettled: () => {
+          activeContentFlagId.value = null;
+        },
+      });
     },
   });
 }
@@ -917,7 +928,7 @@ function mutationErrorMessage(error: unknown) {
       <div>
         <span class="panel-kicker">审核台</span>
         <h1 id="moderation-title">内容审核</h1>
-        <p>这里分两件事：审核帖子是否发布；查看用户举报原因，并处理被举报的帖子或回复。</p>
+        <p>这里分两件事：审核内容是否发布；查看用户举报原因，并处理被举报的主题或楼层。</p>
       </div>
       <RouterLink class="hero-link" to="/admin">返回后台</RouterLink>
     </section>
@@ -933,7 +944,7 @@ function mutationErrorMessage(error: unknown) {
     </UiCard>
 
     <template v-else>
-      <div class="reviewable-mobile-appbar" aria-label="帖子审核移动端工具栏">
+      <div class="reviewable-mobile-appbar" aria-label="内容审核移动端工具栏">
         <RouterLink class="reviewable-mobile-appbar__icon" to="/admin" aria-label="返回后台">
           <LeftOutlined />
         </RouterLink>
@@ -952,7 +963,7 @@ function mutationErrorMessage(error: unknown) {
       <!-- Navigation Tabs -->
       <nav class="moderation-tabs" aria-label="审核台导航">
         <button :class="{ active: activeTab === 'reviewables' }" @click="activeTab = 'reviewables'">
-          <EyeOutlined /> 帖子发布审核
+          <EyeOutlined /> 内容发布审核
         </button>
         <button :class="{ active: activeTab === 'flags' }" @click="activeTab = 'flags'">
           <FlagOutlined /> 用户举报审核
@@ -979,7 +990,7 @@ function mutationErrorMessage(error: unknown) {
         <main class="queue-column">
           <!-- Tab 1: Reviewables -->
           <div v-if="activeTab === 'reviewables'">
-            <div class="reviewable-mobile-reviewbar" aria-label="帖子审核状态">
+            <div class="reviewable-mobile-reviewbar" aria-label="内容审核状态">
               <button
                 type="button"
                 class="reviewable-mobile-reviewbar__tab"
@@ -1008,7 +1019,7 @@ function mutationErrorMessage(error: unknown) {
               </button>
             </div>
 
-            <div class="reviewable-mobile-filterbar" aria-label="帖子审核筛选">
+            <div class="reviewable-mobile-filterbar" aria-label="内容审核筛选">
               <button type="button">
                 <FilterOutlined />
                 <span>筛选</span>
@@ -1024,8 +1035,8 @@ function mutationErrorMessage(error: unknown) {
 
             <div class="section-toolbar">
               <div>
-                <span class="panel-kicker">帖子发布审核</span>
-                <h2>审核待发布的帖子</h2>
+                <span class="panel-kicker">内容发布审核</span>
+                <h2>审核待发布的内容</h2>
               </div>
               <label>
                 <span>查看状态</span>
@@ -1233,7 +1244,7 @@ function mutationErrorMessage(error: unknown) {
 
             <UiCard v-if="!reviewablesQuery.isPending.value && !reviewables.length" class="moderation-empty">
               <strong>当前筛选下没有审核任务</strong>
-              <span>需要人工确认的帖子会出现在这里。</span>
+              <span>需要人工确认的主题、回复或编辑会出现在这里。</span>
             </UiCard>
           </div>
 
@@ -1242,7 +1253,7 @@ function mutationErrorMessage(error: unknown) {
             <div class="section-toolbar">
               <div>
                 <span class="panel-kicker">用户举报审核</span>
-                <h2>查看举报原因并处理帖子</h2>
+                <h2>查看举报原因并处理内容</h2>
               </div>
               <label>
                 <span>状态</span>
@@ -1396,7 +1407,7 @@ function mutationErrorMessage(error: unknown) {
           <UiCard v-else class="user-tool">
             <span class="panel-kicker">管理员操作</span>
             <h2>用户状态</h2>
-            <p>只有全站管理员可以调整用户状态；版主可以处理帖子发布审核、用户举报和内容可见性。</p>
+            <p>只有全站管理员可以调整用户状态；版主可以处理内容发布审核、用户举报和内容可见性。</p>
           </UiCard>
         </aside>
       </section>

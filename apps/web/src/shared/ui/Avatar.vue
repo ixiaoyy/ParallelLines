@@ -98,7 +98,7 @@ function handleImageError() {
 
 .avatar img {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   display: block;
   width: 100%;
   height: 100%;
@@ -109,7 +109,7 @@ function handleImageError() {
 .avatar .ant-avatar-string {
   position: absolute !important;
   inset: 0 !important;
-  z-index: 2;
+  z-index: 3;
   display: grid !important;
   place-items: center !important;
   transform: none !important;
@@ -148,9 +148,15 @@ function handleImageError() {
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.86);
 }
 
+.avatar--level-frame .ant-avatar-string {
+  border-radius: inherit;
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.86);
+}
+
 .avatar--level-frame::after {
   position: absolute;
-  z-index: 4;
+  z-index: 2;
   inset: -32%;
   border-radius: inherit;
   background-repeat: no-repeat;

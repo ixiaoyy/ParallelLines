@@ -127,9 +127,19 @@ onUnmounted(() => observer?.disconnect());
           {{ tab.label }}
         </button>
       </div>
+      <button
+        type="button"
+        class="filter-toggle-button"
+        :class="{ active: filtersOpen }"
+        :aria-expanded="filtersOpen"
+        aria-controls="topic-feed-filters"
+        @click="filtersOpen = !filtersOpen"
+      >
+        {{ filtersOpen ? "收起筛选" : "筛选" }}
+      </button>
     </div>
 
-    <div v-if="filtersOpen" id="topic-feed-filters" class="topic-filter-panel" aria-label="帖子过滤">
+    <div v-if="filtersOpen" id="topic-feed-filters" class="topic-filter-panel" aria-label="主题过滤">
       <label class="topic-filter-field topic-filter-field--title">
         <span>标题关键词</span>
         <input
@@ -142,9 +152,9 @@ onUnmounted(() => observer?.disconnect());
       </label>
 
       <label class="topic-filter-field">
-        <span>板块</span>
+        <span>版块</span>
         <select :value="boardFilter" @change="emit('updateBoardFilter', ($event.target as HTMLSelectElement).value)">
-          <option value="">全部板块</option>
+          <option value="">全部版块</option>
           <option v-for="board in boardOptions" :key="board.id" :value="board.slug">
             {{ board.parentBoardName ? `${board.parentBoardName} / ` : "" }}{{ board.name }}
           </option>

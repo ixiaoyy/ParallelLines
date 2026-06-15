@@ -46,7 +46,7 @@ export const emailToggleItems: EmailToggleVM[] = [
   {
     key: "notify_replied",
     title: "被回复",
-    description: "当有人回复你的主题或帖子时发送即时邮件。",
+    description: "当有人回复你的主题或楼层时发送即时邮件。",
     badge: "高优先级",
   },
   {

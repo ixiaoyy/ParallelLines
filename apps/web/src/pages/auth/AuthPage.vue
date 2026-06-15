@@ -20,6 +20,7 @@ type AuthTab = "login" | "register" | "forgot";
 
 const USERNAME_PATTERN = /^[\p{L}\p{N}_.-]+$/u;
 const USERNAME_HELPER = "用户名需为 3-32 位，可使用中文、字母、数字、点、下划线或短横线。";
+const shouldUseDevVerificationCode = import.meta.env.DEV;
 
 const route = useRoute();
 const router = useRouter();
@@ -213,8 +214,8 @@ async function submitRegister() {
       password: registerPassword.value,
     });
     pendingVerificationEmail.value = registration.email;
-    verificationCode.value = registration.dev_verification_code ?? "";
-    devVerificationCode.value = registration.dev_verification_code;
+    verificationCode.value = shouldUseDevVerificationCode ? (registration.dev_verification_code ?? "") : "";
+    devVerificationCode.value = shouldUseDevVerificationCode ? registration.dev_verification_code : null;
     registerPassword.value = "";
     registerConfirmPassword.value = "";
     formNotice.value = "验证码已发送，请查收邮件。";
@@ -250,8 +251,8 @@ async function resendCode() {
     const registration = await resendVerificationMutation.mutateAsync({
       email: pendingVerificationEmail.value,
     });
-    verificationCode.value = registration.dev_verification_code ?? "";
-    devVerificationCode.value = registration.dev_verification_code;
+    verificationCode.value = shouldUseDevVerificationCode ? (registration.dev_verification_code ?? "") : "";
+    devVerificationCode.value = shouldUseDevVerificationCode ? registration.dev_verification_code : null;
     formNotice.value = "验证码已重新发送，请查收邮件。";
   } catch (error) {
     formError.value = toAuthError(error, "验证码暂时无法重发，请稍后再试。");
@@ -536,7 +537,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
             placeholder="6 位验证码"
           />
         </label>
-        <p v-if="devVerificationCode" class="auth-helper">
+        <p v-if="shouldUseDevVerificationCode && devVerificationCode" class="auth-helper">
           本地开发验证码：<strong>{{ devVerificationCode }}</strong>
         </p>
         <p v-if="formError" class="auth-error" role="alert">{{ formError }}</p>

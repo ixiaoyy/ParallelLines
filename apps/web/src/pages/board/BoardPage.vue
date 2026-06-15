@@ -134,6 +134,7 @@ const canManageBoard = computed(
 );
 const boardNotificationLevel = ref<NotificationLevel>("watching");
 const boardNotificationPending = ref(false);
+const boardNotificationStatus = ref("");
 const boardNotificationSelectValue = computed<NotificationLevel>(() =>
   boardNotificationLevel.value === "muted" || boardNotificationLevel.value === "normal" ? "muted" : "watching",
 );
@@ -250,15 +251,15 @@ const searchPlaceholder = computed(() => {
     return "搜索问题、错误码或日志片段";
   }
 
-  return "搜索帖子标题或标签";
+  return "搜索主题标题或标签";
 });
 // emptyTopicDescription 用途：根据搜索和发帖权限生成空列表提示；无参数，返回展示文案且无副作用。
 const emptyTopicDescription = computed(() => {
   if (searchQuery.value) {
-    return "换个关键词再搜，或清除搜索查看全部帖子。";
+    return "换个关键词再搜，或清除搜索查看全部主题。";
   }
 
-  return board.value?.canCreateTopic ? "发布第一篇帖子，或稍后再来看看。" : "稍后再来看看。";
+  return board.value?.canCreateTopic ? "发布第一篇主题，或稍后再来看看。" : "稍后再来看看。";
 });
 
 // boardMark 用途：生成单字版块徽标兜底，避免多字在方形标记中换行溢出；无副作用。
@@ -299,8 +300,11 @@ async function updateBoardNotificationLevel(event: Event) {
   const nextLevel = target.value as NotificationLevel;
   const previousLevel = boardNotificationLevel.value;
   boardNotificationLevel.value = nextLevel;
+  boardNotificationStatus.value = "";
 
   if (!hasAccessToken()) {
+    boardNotificationLevel.value = previousLevel;
+    boardNotificationStatus.value = "登录后才能设置版块通知。";
     void router.push({ name: "auth", query: { redirect: route.fullPath } });
     return;
   }
@@ -311,8 +315,10 @@ async function updateBoardNotificationLevel(event: Event) {
     followingBoard.value = response.following;
     followerCount.value = response.follower_count;
     boardNotificationLevel.value = response.notification_level ?? nextLevel;
+    boardNotificationStatus.value = `版块通知已设为${nextLevel === "muted" ? "静音" : "关注"}。`;
   } catch {
     boardNotificationLevel.value = previousLevel;
+    boardNotificationStatus.value = "版块通知设置失败，请稍后重试。";
   } finally {
     boardNotificationPending.value = false;
   }
@@ -382,6 +388,7 @@ async function updateBoardNotificationLevel(event: Event) {
               </label>
             </div>
           </div>
+          <p v-if="boardNotificationStatus" class="board-notification-status" role="status">{{ boardNotificationStatus }}</p>
         </div>
 
       </section>
@@ -437,9 +444,16 @@ async function updateBoardNotificationLevel(event: Event) {
           </UiCard>
           <TopicList
             :topics="boardTopics"
-            empty-title="还没有帖子"
+            empty-title="还没有主题"
             :empty-description="emptyTopicDescription"
           />
+          <RouterLink
+            v-if="!topicsQuery.isLoading.value && !boardTopics.length && !searchQuery && board.canCreateTopic"
+            class="board-empty-publish-link"
+            :to="{ name: 'new-topic', query: { board: board.slug } }"
+          >
+            在此版块发帖
+          </RouterLink>
         </main>
 
         <aside v-if="hasSidebar" class="board-sidebar" aria-label="版块信息">

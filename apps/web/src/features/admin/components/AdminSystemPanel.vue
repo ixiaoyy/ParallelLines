@@ -18,7 +18,7 @@ const statCards = computed(() => {
     { label: "用户", value: stats.users },
     { label: "版块", value: stats.boards },
     { label: "主题", value: stats.topics },
-    { label: "帖子", value: stats.posts },
+    { label: "楼层", value: stats.posts },
     { label: "待处理举报", value: stats.pending_flags },
     { label: "审计记录", value: stats.audit_logs },
   ];

@@ -23,6 +23,7 @@ import {
 } from "@ant-design/icons-vue";
 import type { ExposeParam, ToolbarNames } from "md-editor-v3";
 import DOMPurify from "dompurify";
+import { Modal } from "ant-design-vue";
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import type { PostItemVM } from "@/entities/post/model";
@@ -108,11 +109,11 @@ const isOwnPost = computed(() => Boolean(props.currentUserId && props.currentUse
 const canModerateGlobally = computed(
   () => props.currentUserRole === "admin" || props.currentUserRole === "moderator",
 );
-const canEdit = computed(() => Boolean(isOwnPost.value && props.post.floor === 1 && !props.post.deleted));
+const canEdit = computed(() => Boolean(isOwnPost.value && !props.post.deleted));
 const canDelete = computed(() =>
   Boolean(!props.post.deleted && props.post.floor > 1 && (isOwnPost.value || canModerateGlobally.value)),
 );
-const canFlag = computed(() => hasAccessToken() && !props.post.deleted);
+const canFlag = computed(() => !props.post.deleted);
 const canBlockAuthor = computed(() => Boolean(!props.post.deleted && !isOwnPost.value));
 const canToggleSolution = computed(
   () => Boolean(props.canManageSolution && props.post.floor > 1 && !props.post.deleted),
@@ -479,19 +480,27 @@ function deleteReply() {
   }
 
   closeMoreMenu();
-  const confirmed = window.confirm("确定删除这条回复吗？删除后正文会被隐藏。");
-  if (!confirmed) {
-    return;
-  }
-
-  deletePostMutation.mutate(props.post.id, {
-    onSuccess: () => setStatus("回复已删除"),
-    onError: () => setStatus("删除失败，请确认登录状态后重试"),
+  Modal.confirm({
+    title: "删除这条回复？",
+    content: "删除后正文会被隐藏，其他用户将不能继续看到这条内容。",
+    okText: "删除",
+    cancelText: "取消",
+    okType: "danger",
+    onOk: () => {
+      deletePostMutation.mutate(props.post.id, {
+        onSuccess: () => setStatus("回复已删除"),
+        onError: () => setStatus("删除失败，请确认登录状态后重试"),
+      });
+    },
   });
 }
 
 function flagPost() {
   if (!canFlag.value) {
+    return;
+  }
+  if (!hasAccessToken()) {
+    requestLogin("请先登录后再举报楼层。");
     return;
   }
   closeMoreMenu();
@@ -910,13 +919,13 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
       <div v-if="post.acceptedAnswer" class="accepted-answer-badge">✓ 已采纳解决方案</div>
       <div v-if="post.deleted" class="deleted-copy">该楼层已删除或隐藏。</div>
       <template v-else-if="editing">
-        <div class="edit-shell" aria-label="编辑帖子">
+        <div class="edit-shell" aria-label="编辑楼层">
           <header class="edit-shell__topbar">
             <button class="edit-shell__cancel" type="button" :disabled="savingEdit" @click="cancelEdit">
               取消
             </button>
             <div class="edit-shell__title">
-              <strong>编辑帖子</strong>
+              <strong>编辑楼层</strong>
               <span>#{{ post.floor }} · {{ post.authorName }}</span>
             </div>
             <UiButton
@@ -1172,7 +1181,7 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
           <small v-if="post.replyCount">{{ post.replyCount }}</small>
         </button>
       </footer>
-      <section v-if="historyOpen && canViewHistory" class="revision-panel" aria-label="帖子编辑历史">
+      <section v-if="historyOpen && canViewHistory" class="revision-panel" aria-label="楼层编辑历史">
         <p v-if="revisionsQuery.isLoading.value" role="status">正在加载编辑历史…</p>
         <p v-else-if="revisionsQuery.isError.value" role="alert">编辑历史加载失败。</p>
         <p v-else-if="!revisionsQuery.data.value?.length">暂无历史版本。</p>

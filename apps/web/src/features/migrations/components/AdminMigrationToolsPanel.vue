@@ -151,7 +151,7 @@ function downloadExportSnapshot() {
       <span>用户 {{ exportSnapshot.users.length }}</span>
       <span>版块 {{ exportSnapshot.boards.length }}</span>
       <span>主题 {{ exportSnapshot.topics.length }}</span>
-      <span>帖子 {{ exportSnapshot.posts.length }}</span>
+      <span>楼层 {{ exportSnapshot.posts.length }}</span>
       <button type="button" class="secondary-action" @click="downloadExportSnapshot">下载 JSON</button>
     </div>
   </UiCard>

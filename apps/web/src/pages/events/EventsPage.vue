@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { CalendarOutlined, CloseCircleOutlined, DeleteOutlined, RedoOutlined } from "@ant-design/icons-vue";
+import { Modal } from "ant-design-vue";
 import { computed, reactive, ref } from "vue";
 
 import { canAccessModeration } from "@/features/auth/permissions";
@@ -124,24 +125,26 @@ function toggleEventLifecycle(event: EventItem) {
   }
 
   const nextStatus = event.status === "canceled" ? "scheduled" : "canceled";
-  const confirmed = window.confirm(
-    nextStatus === "canceled" ? "确定终止这个活动吗？终止后将不能继续报名。" : "确定恢复这个活动吗？",
-  );
-  if (!confirmed) {
-    return;
-  }
-
-  updateEventLifecycle.mutate(
-    { eventId: event.id, payload: { status: nextStatus } },
-    {
-      onSuccess: () => {
-        eventActionStatus.value = nextStatus === "canceled" ? "活动已终止" : "活动已恢复";
-      },
-      onError: () => {
-        eventActionStatus.value = "活动状态更新失败，请确认权限后重试";
-      },
+  Modal.confirm({
+    title: nextStatus === "canceled" ? "终止这个活动？" : "恢复这个活动？",
+    content: nextStatus === "canceled" ? "终止后将不能继续报名。" : "恢复后用户可以继续报名参加。",
+    okText: nextStatus === "canceled" ? "终止活动" : "恢复活动",
+    cancelText: "取消",
+    okType: nextStatus === "canceled" ? "danger" : "primary",
+    onOk: () => {
+      updateEventLifecycle.mutate(
+        { eventId: event.id, payload: { status: nextStatus } },
+        {
+          onSuccess: () => {
+            eventActionStatus.value = nextStatus === "canceled" ? "活动已终止" : "活动已恢复";
+          },
+          onError: () => {
+            eventActionStatus.value = "活动状态更新失败，请确认权限后重试";
+          },
+        },
+      );
     },
-  );
+  });
 }
 
 // Delete an event after user confirmation.
@@ -152,17 +155,21 @@ function deleteCalendarEvent(event: EventItem) {
     return;
   }
 
-  const confirmed = window.confirm("确定删除这个活动吗？删除后报名记录也会一起移除。");
-  if (!confirmed) {
-    return;
-  }
-
-  deleteEvent.mutate(event.id, {
-    onSuccess: () => {
-      eventActionStatus.value = "活动已删除";
-    },
-    onError: () => {
-      eventActionStatus.value = "删除失败，请确认权限后重试";
+  Modal.confirm({
+    title: "删除这个活动？",
+    content: "删除后报名记录也会一起移除。",
+    okText: "删除活动",
+    cancelText: "取消",
+    okType: "danger",
+    onOk: () => {
+      deleteEvent.mutate(event.id, {
+        onSuccess: () => {
+          eventActionStatus.value = "活动已删除";
+        },
+        onError: () => {
+          eventActionStatus.value = "删除失败，请确认权限后重试";
+        },
+      });
     },
   });
 }

@@ -302,10 +302,11 @@
   }
 
   .toolbar-filter-button {
+    grid-column: span 3;
     padding-inline: 0.56rem;
   }
 
   .toolbar-button-label {
-    display: none;
+    font-size: 0.74rem;
   }
 }

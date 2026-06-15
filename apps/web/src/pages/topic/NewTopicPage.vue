@@ -562,16 +562,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
         <div class="composer-meta-row">
           <label class="select-field">
             <span class="sr-only">版块</span>
-            <select v-model="selectedBoardSlug" :disabled="boardsQuery.isLoading.value">
+            <select v-model="selectedBoardSlug" :disabled="boardsQuery.isLoading.value || !publishableBoardOptions.length">
               <option value="" disabled>选择版块</option>
               <option v-if="boardsQuery.isLoading.value" value="">正在加载版块…</option>
+              <option v-else-if="!publishableBoardOptions.length" value="">暂无可发布版块</option>
               <option
-                v-for="board in boardOptions"
+                v-for="board in publishableBoardOptions"
                 :key="board.id"
                 :value="board.slug"
-                :disabled="!board.canCreateTopic"
               >
-                {{ board.parentBoardName ? `${board.parentBoardName} / ` : "" }}{{ board.name }}{{ board.canCreateTopic ? "" : "（不可发布）" }}
+                {{ board.parentBoardName ? `${board.parentBoardName} / ` : "" }}{{ board.name }}
               </option>
             </select>
           </label>
@@ -640,7 +640,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
         <footer class="composer-footer">
           <RouterLink class="discard-link" to="/boards">舍弃</RouterLink>
           <UiButton type="button" tone="ghost" @click="handleSaveDraft">保存草稿</UiButton>
-          <UiButton type="submit" tone="primary" :disabled="createTopic.isPending.value || boardsQuery.isLoading.value || isBodyTooLong">
+          <UiButton type="submit" tone="primary" :disabled="createTopic.isPending.value || boardsQuery.isLoading.value || !publishableBoardOptions.length || isBodyTooLong">
             {{ createTopic.isPending.value ? "发布中…" : "发布" }}
           </UiButton>
         </footer>

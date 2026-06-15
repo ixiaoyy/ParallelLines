@@ -25,6 +25,7 @@ import { readRouteParam } from "@/shared/router/params";
 import { resolveRouteSeoMeta, useSeoMeta } from "@/shared/seo/meta";
 import UiButton from "@/shared/ui/Button.vue";
 import { applySiteBranding } from "@/shared/theme/siteBranding";
+import { setInterfaceTheme } from "@/shared/theme/interfaceTheme";
 
 // Defers the notification widget so logged-in mobile first paint is not blocked by notification CSS/API setup.
 // Key parameters: none. Return value is the NotificationBell component; side effect is idle-time chunk loading.
@@ -174,6 +175,16 @@ watchEffect(() => {
   applySiteBranding(siteSettingsQuery.data.value?.settings);
 });
 useSeoMeta(routeSeoMeta);
+
+watch(
+  currentUser,
+  (user) => {
+    if (user?.interface_theme) {
+      setInterfaceTheme(user.interface_theme);
+    }
+  },
+  { immediate: true },
+);
 
 watch(
   () => route.fullPath,
@@ -494,6 +505,11 @@ function isNavItemActive(item: NavItem) {
       </div>
 
       <div v-if="isNavOpen" id="mobile-navigation" class="mobile-nav-panel">
+        <RouterLink class="mobile-nav-publish" :to="publishLinkTarget" @click="closeNavigation">
+          <PlusOutlined aria-hidden="true" />
+          <span>{{ t("topic.publish", "发布主题") }}</span>
+        </RouterLink>
+
         <nav class="mobile-nav-links" aria-label="移动主导航">
           <RouterLink
             v-for="item in visibleNavItems"

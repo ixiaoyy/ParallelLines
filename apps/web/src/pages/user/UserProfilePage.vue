@@ -28,8 +28,10 @@ import {
   useUserTopics,
 } from "@/features/users/queries";
 import { ApiError, hasAccessToken, resolveApiAssetUrl } from "@/shared/api/client";
+import { setLocale } from "@/shared/i18n/locale";
 import { relativeTime } from "@/shared/lib/format";
 import { useSeoMeta } from "@/shared/seo/meta";
+import { setInterfaceTheme, type InterfaceTheme } from "@/shared/theme/interfaceTheme";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiButton from "@/shared/ui/Button.vue";
@@ -149,7 +151,7 @@ const profileStats = computed(() => {
 
   return [
     { label: "主题", value: topicCount, note: topicCount > 0 ? "已发起讨论" : "等待首帖" },
-    { label: "楼层", value: postCount, note: postCount > 0 ? "参与回复" : "还没接楼" },
+    { label: "回复", value: postCount, note: postCount > 0 ? "参与讨论" : "还没有回复" },
     { label: "关注", value: followingCount, note: followingCount > 0 ? "正在关注" : "还未关注" },
     { label: "粉丝", value: followerCount, note: followerCount > 0 ? "关注者" : "等待关注" },
   ];
@@ -178,8 +180,8 @@ const socialEmptyCopy = computed(() =>
 );
 
 watch(
-  profile,
-  (value) => {
+  [profile, () => currentUserQuery.data.value],
+  ([value, currentUser]) => {
     if (!value) {
       return;
     }
@@ -192,6 +194,13 @@ watch(
         ? value.profile_visibility
         : "public";
     profileDraft.show_activity = value.show_activity;
+    if (currentUser && currentUser.username === value.username) {
+      profileDraft.interface_theme =
+        currentUser.interface_theme === "light" || currentUser.interface_theme === "colorful"
+          ? (currentUser.interface_theme as InterfaceTheme)
+          : "system";
+      profileDraft.locale = currentUser.locale === "en-US" ? "en-US" : "zh-CN";
+    }
   },
   { immediate: true },
 );
@@ -325,6 +334,8 @@ async function saveProfile() {
   profileStatus.value = "";
   try {
     await updateProfileMutation.mutateAsync(payload);
+    setLocale(profileDraft.locale);
+    setInterfaceTheme(profileDraft.interface_theme);
     await profileQuery.refetch();
     profileStatus.value = "资料设置已保存。";
   } catch (error) {
@@ -356,7 +367,9 @@ function avatarErrorMessage(error: unknown): string {
       return "头像必须是 PNG、JPG、GIF 或 WebP 图片。";
     }
     if (error.code === "upload_too_large") {
-      return "头像文件超过大小限制。";
+      const maxBytes = typeof error.details.max_bytes === "number" ? error.details.max_bytes : null;
+      const limit = maxBytes ? `${(maxBytes / 1024 / 1024).toFixed(maxBytes >= 1024 * 1024 ? 1 : 2)} MB` : "2 MB";
+      return `头像文件超过 ${limit} 限制，请压缩或裁剪后再上传。`;
     }
   }
 
@@ -438,8 +451,8 @@ function socialErrorMessage(error: unknown): string {
             <div class="profile-kicker">
               <UiBadge tone="blue">{{ isOwnProfile ? "个人中心" : "公开资料" }}</UiBadge>
               <UiBadge tone="green">{{ roleLabel(profile.role) }}</UiBadge>
-              <UiBadge tone="blue">Lv.{{ profile.level }}</UiBadge>
-              <UiBadge tone="amber">TL{{ profile.trust_level }} · {{ profile.trust_level_label }}</UiBadge>
+              <UiBadge tone="blue" :title="`社区等级 ${profile.level}，由参与和贡献累计提升。`">等级 {{ profile.level }}</UiBadge>
+              <UiBadge tone="amber" :title="`信任等级 ${profile.trust_level}：${profile.trust_level_label}`">信任等级 {{ profile.trust_level }}</UiBadge>
               <span class="profile-status">
                 <span class="profile-status__dot"></span>
                 {{ statusLabel(profile.status) }}
@@ -492,12 +505,12 @@ function socialErrorMessage(error: unknown): string {
 
           <div class="profile-overview-card">
             <span>成长</span>
-            <strong>Lv.{{ profile.level }} · {{ profile.points_balance }} 积分</strong>
+            <strong>等级 {{ profile.level }} · {{ profile.points_balance }} 可用积分</strong>
           </div>
 
           <div class="profile-overview-card">
             <span>信任</span>
-            <strong>TL{{ profile.trust_level }} · {{ profile.trust_level_label }}</strong>
+            <strong>信任等级 {{ profile.trust_level }} · {{ profile.trust_level_label }}</strong>
             <div v-if="profileBadges.length" class="profile-badges-list">
               <span v-for="badge in profileBadges.slice(0, 3)" :key="badge.id" class="profile-badge-chip">
                 <em>{{ badge.icon }}</em>
@@ -587,7 +600,7 @@ function socialErrorMessage(error: unknown): string {
         <span class="profile-empty__mark">∅</span>
         <div>
           <strong>还没有可展示的主题</strong>
-          <p>等第一篇帖子发布后，这里会变成一条清晰的个人讨论时间线。</p>
+          <p>等第一篇主题发布后，这里会变成一条清晰的个人讨论时间线。</p>
         </div>
         <RouterLink class="profile-empty__link" to="/boards">去看看版块</RouterLink>
       </UiCard>
@@ -686,7 +699,7 @@ function socialErrorMessage(error: unknown): string {
         >
           <UiAvatar
             :name="relatedUser.display_name?.trim() || relatedUser.username"
-            :src="relatedUser.avatar_url"
+            :src="resolveApiAssetUrl(relatedUser.avatar_url)"
             :role="relatedUser.role"
             :level="relatedUser.level"
             size="md"
@@ -694,7 +707,7 @@ function socialErrorMessage(error: unknown): string {
           <div>
             <strong>{{ relatedUser.display_name?.trim() || relatedUser.username }}</strong>
             <p>
-              @{{ relatedUser.username }} · Lv.{{ relatedUser.level }} ·
+              @{{ relatedUser.username }} · 等级 {{ relatedUser.level }} ·
               {{ relatedUser.topic_count }} 主题 / {{ relatedUser.post_count }} 回复
             </p>
           </div>

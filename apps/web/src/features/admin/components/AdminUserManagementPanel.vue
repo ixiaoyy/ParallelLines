@@ -190,7 +190,7 @@ function revokeBadge(badge: UserBadgeResponse) {
         </div>
         <div>
           <dt>内容</dt>
-          <dd>{{ selectedUser.topic_count }} 主题 / {{ selectedUser.post_count }} 帖子</dd>
+          <dd>{{ selectedUser.topic_count }} 主题 / {{ selectedUser.post_count }} 回复</dd>
         </div>
         <div>
           <dt>成长</dt>

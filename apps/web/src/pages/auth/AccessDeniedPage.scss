@@ -1,0 +1,66 @@
+.access-denied-page {
+  display: grid;
+  min-height: min(62vh, 34rem);
+  place-items: center;
+  padding: clamp(1rem, 4vw, 2.5rem) 0;
+}
+
+.access-denied-card {
+  width: min(100%, 34rem);
+  border-color: rgba(var(--primary-rgb), 0.14);
+  background:
+    radial-gradient(circle at 16% 0, rgba(var(--primary-rgb), 0.09), transparent 16rem),
+    var(--bg-surface);
+}
+
+.access-denied-card :deep(.ant-card-body) {
+  display: grid;
+  gap: 0.86rem;
+  padding: clamp(1.15rem, 3vw, 1.8rem);
+}
+
+.access-denied-card__eyebrow {
+  width: fit-content;
+  border-radius: var(--radius-pill);
+  padding: 0.28rem 0.66rem;
+  color: var(--primary);
+  background: var(--theme-soft-bg);
+  font-size: 0.78rem;
+  font-weight: 880;
+}
+
+.access-denied-card h1 {
+  margin: 0;
+  color: var(--title);
+  font-size: clamp(1.45rem, 3.4vw, 2.1rem);
+  line-height: 1.16;
+}
+
+.access-denied-card p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.access-denied-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  padding-top: 0.2rem;
+}
+
+.access-denied-card__actions a {
+  text-decoration: none;
+}
+
+@media (max-width: 520px) {
+  .access-denied-card__actions {
+    display: grid;
+  }
+
+  .access-denied-card__actions a,
+  .access-denied-card__actions :deep(.ui-button) {
+    width: 100%;
+  }
+}

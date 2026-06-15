@@ -79,6 +79,19 @@ export const router = createRouter({
       },
     },
     {
+      path: "/forbidden",
+      name: "access-denied",
+      component: () => import("@/pages/auth/AccessDeniedPage.vue"),
+      meta: {
+        seo: {
+          title: "无权限 · {siteTitle}",
+          description: "当前账号没有访问该页面所需的权限。",
+          canonicalPath: "/forbidden",
+          robots: NOINDEX_ROBOTS,
+        },
+      },
+    },
+    {
       path: "/me",
       name: "my-profile",
       component: () => import("@/pages/user/UserProfilePage.vue"),
@@ -141,6 +154,7 @@ export const router = createRouter({
       name: "new-topic",
       component: () => import("@/pages/topic/NewTopicPage.vue"),
       meta: {
+        requiredAccess: "authenticated",
         seo: {
           title: "发布主题 · {siteTitle}",
           description: "在平行线选择版块并发布新的公开讨论主题。",
@@ -327,11 +341,11 @@ router.beforeEach(async (to) => {
   }
 
   if (requiredAccess === "admin" && !isAdmin(currentUser)) {
-    return { name: "home" };
+    return accessDeniedRedirect(to, "admin");
   }
 
   if (requiredAccess === "moderation" && !canAccessModeration(currentUser)) {
-    return { name: "home" };
+    return accessDeniedRedirect(to, "moderation");
   }
 
   return true;
@@ -374,6 +388,18 @@ function loginRedirect(to: RouteLocationNormalized) {
   return {
     name: "auth",
     query: { redirect: to.fullPath },
+  };
+}
+
+// Builds the explicit no-permission route for authenticated users who lack the required role.
+// `to` is the blocked route and `requiredAccess` is the failed route meta; return value is a Vue Router location.
+function accessDeniedRedirect(to: RouteLocationNormalized, requiredAccess: RequiredAccess) {
+  return {
+    name: "access-denied",
+    query: {
+      required: requiredAccess,
+      from: to.fullPath,
+    },
   };
 }
 

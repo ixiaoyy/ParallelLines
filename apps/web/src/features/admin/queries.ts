@@ -62,11 +62,20 @@ import type {
   WebhookEndpointCreateResponse,
   WebhookEndpointResponse,
 } from "./model";
+import {
+  cachePublicSiteSettings,
+  readCachedPublicSiteSettings,
+} from "./publicSettingsCache";
 
 export function usePublicSiteSettings() {
   return useQuery<PublicSiteSettingsResponse, Error>({
     queryKey: queryKeys.siteSettingsPublic,
-    queryFn: fetchPublicSiteSettings,
+    queryFn: async () => {
+      const settings = await fetchPublicSiteSettings();
+      cachePublicSiteSettings(settings);
+      return settings;
+    },
+    placeholderData: () => readCachedPublicSiteSettings() ?? undefined,
     retry: false,
     staleTime: 300_000,
   });

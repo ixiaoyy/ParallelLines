@@ -11,7 +11,7 @@ const props = withDefaults(
     emptyDescription?: string;
   }>(),
   {
-    emptyTitle: "还没有帖子",
+    emptyTitle: "还没有主题",
     emptyDescription: "可以稍后再来看看。",
   },
 );
