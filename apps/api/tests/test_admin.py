@@ -78,6 +78,9 @@ async def test_admin_settings_public_settings_and_registration_gate() -> None:
             "upload_max_bytes",
         }.issubset(setting_keys)
 
+        initial_public_settings = await client.get("/api/v1/site/settings")
+        assert initial_public_settings.status_code == 200
+
         title = await client.put(
             "/api/v1/admin/settings/site_title",
             headers={"Authorization": admin["auth"]},
@@ -89,7 +92,11 @@ async def test_admin_settings_public_settings_and_registration_gate() -> None:
         public_settings = await client.get("/api/v1/site/settings")
         assert public_settings.status_code == 200
         assert public_settings.json()["data"]["settings"]["site_title"] == "平行线实验场"
-        assert public_settings.json()["data"]["settings"]["brand_logo_url"] == "/favicon.svg"
+        assert (
+            public_settings.json()["data"]["settings"]["brand_logo_url"]
+            == "/logo-lines-mark.png"
+        )
+        assert public_settings.json()["data"]["settings"]["brand_favicon_url"] == "/favicon.svg"
 
         text_overrides = await client.put(
             "/api/v1/admin/settings/site_text_overrides",

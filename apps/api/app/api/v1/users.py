@@ -86,6 +86,9 @@ async def create_private_message(
     current_user: CurrentUserDep,
 ) -> ApiResponse[PrivateMessageTopicResponse]:
     message = await SocialService(session).create_private_message(payload, current_user)
+    from app.api.v1.topics import invalidate_topic_write_response_caches
+
+    invalidate_topic_write_response_caches()
     return ApiResponse(data=message)
 
 

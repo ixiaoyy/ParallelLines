@@ -38,22 +38,24 @@
     transform 150ms ease;
 }
 
-.topic-swipe-button > svg {
+.topic-swipe-button__icon {
   grid-area: icon;
+  display: inline-grid;
+  place-items: center;
   align-self: center;
+  justify-self: center;
+  width: 1.25rem;
   color: var(--primary);
   font-size: 1.1rem;
+  line-height: 1;
 }
 
-.topic-swipe-button--next > svg {
-  justify-self: end;
-}
-
-.topic-swipe-button span {
+.topic-swipe-button__label {
   grid-area: label;
   color: var(--primary);
   font-size: 0.74rem;
   font-weight: 900;
+  line-height: 1.2;
 }
 
 .topic-swipe-button strong {

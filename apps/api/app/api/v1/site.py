@@ -25,6 +25,12 @@ _PUBLIC_SITE_EXTENSIONS_RESPONSE_CACHE = ResponseHotCache[
 )
 
 
+def invalidate_public_site_settings_cache() -> None:
+    """Invalidate public site settings after an admin setting change."""
+
+    _PUBLIC_SITE_SETTINGS_RESPONSE_CACHE.clear()
+
+
 def invalidate_public_site_extensions_cache() -> None:
     """Invalidate public UI extension responses after plugin configuration changes."""
 

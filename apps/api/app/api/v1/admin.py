@@ -61,13 +61,16 @@ async def update_site_setting(
     settings: SettingsDep,
     current_user: CurrentUserDep,
 ) -> ApiResponse[SiteSettingResponse]:
-    return ApiResponse(
-        data=await SiteSettingService(session, settings).update_site_setting(
-            key,
-            payload,
-            current_user,
-        )
+    updated = await SiteSettingService(session, settings).update_site_setting(
+        key,
+        payload,
+        current_user,
     )
+    if updated.public:
+        from app.api.v1.site import invalidate_public_site_settings_cache
+
+        invalidate_public_site_settings_cache()
+    return ApiResponse(data=updated)
 
 
 @router.get("/users", response_model=ApiResponse[list[AdminUserResponse]])

@@ -27,8 +27,8 @@ const hasNavigation = computed(() => Boolean(props.previousTopic || props.nextTo
       :disabled="!previousTopic"
       @click="emit('navigate', 'previous')"
     >
-      <LeftOutlined aria-hidden="true" />
-      <span>上一篇</span>
+      <LeftOutlined class="topic-swipe-button__icon" aria-hidden="true" />
+      <span class="topic-swipe-button__label">上一篇</span>
       <strong>{{ previousTopic?.title ?? "已经是最新" }}</strong>
       <small v-if="previousTopic">
         {{ compactNumber(previousTopic.replyCount) }} 回复 · {{ relativeTime(previousTopic.lastPostedAt) }}
@@ -46,8 +46,8 @@ const hasNavigation = computed(() => Boolean(props.previousTopic || props.nextTo
       :disabled="!nextTopic"
       @click="emit('navigate', 'next')"
     >
-      <RightOutlined aria-hidden="true" />
-      <span>下一篇</span>
+      <RightOutlined class="topic-swipe-button__icon" aria-hidden="true" />
+      <span class="topic-swipe-button__label">下一篇</span>
       <strong>{{ nextTopic?.title ?? "没有更多主题" }}</strong>
       <small v-if="nextTopic">
         {{ compactNumber(nextTopic.replyCount) }} 回复 · {{ relativeTime(nextTopic.lastPostedAt) }}
