@@ -7,14 +7,21 @@
 }
 
 .ops-card,
-.audit-card {
+.audit-card,
+.error-card {
+  min-width: 0;
+}
+
+.ops-card :deep(.ant-card-body),
+.audit-card :deep(.ant-card-body),
+.error-card :deep(.ant-card-body) {
   display: grid;
   gap: 0.85rem;
   min-width: 0;
   padding: 1rem;
 }
 
-.ops-card--wide {
+.ops-card--wide :deep(.ant-card-body) {
   align-content: start;
 }
 
@@ -223,12 +230,6 @@
   margin-top: 1rem;
 }
 
-.error-card {
-  display: grid;
-  gap: 0.85rem;
-  padding: 1rem;
-}
-
 .error-header {
   display: flex;
   justify-content: space-between;
@@ -282,8 +283,13 @@
   .ops-card,
   .audit-card,
   .error-card {
-    gap: 0.65rem;
     border-radius: 1rem;
+  }
+
+  .ops-card :deep(.ant-card-body),
+  .audit-card :deep(.ant-card-body),
+  .error-card :deep(.ant-card-body) {
+    gap: 0.65rem;
     padding: 0.9rem;
   }
 

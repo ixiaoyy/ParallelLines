@@ -1,11 +1,51 @@
 .frontier-news-panel {
+  min-width: 0;
+}
+
+.frontier-news-panel :deep(.ant-card-body) {
   display: grid;
-  gap: 1.25rem;
+  gap: 1.15rem;
+  min-width: 0;
+  padding: clamp(1rem, 2.5vw, 1.25rem);
 }
 
 .frontier-news-panel__head {
+  display: flex;
+  justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
+  min-width: 0;
+}
+
+.title-area {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.panel-kicker {
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 920;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.frontier-news-panel h2 {
+  margin: 0;
+  color: var(--title);
+  font-size: clamp(1.45rem, 3.2vw, 2rem);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+
+.frontier-news-panel__head p {
+  max-width: 48rem;
+  margin: 0;
+  color: var(--text);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
 }
 
 .frontier-news-panel__actions,
@@ -22,6 +62,17 @@
   color: var(--primary);
   font-weight: 700;
   text-decoration: none;
+}
+
+.review-link {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--theme-soft-border);
+  border-radius: 0.35rem;
+  padding: 0.34rem 0.7rem;
+  background: var(--theme-soft-bg);
 }
 
 .review-link:hover,
@@ -60,6 +111,8 @@
 .item-card {
   display: grid;
   gap: 0.7rem;
+  align-items: start;
+  min-width: 0;
   padding: 0.9rem;
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -76,6 +129,11 @@
   color: var(--title);
 }
 
+.source-card strong {
+  font-size: 1.02rem;
+  line-height: 1.35;
+}
+
 .source-card span,
 .item-card__meta,
 .source-url {
@@ -86,6 +144,7 @@
 .source-url {
   overflow-wrap: anywhere;
   margin: 0;
+  line-height: 1.55;
 }
 
 .source-error {
@@ -153,4 +212,89 @@
 
 .panel-state--error {
   color: var(--danger, #ef4444);
+}
+
+.source-card :deep(.badge),
+.item-card__meta :deep(.badge) {
+  justify-self: start;
+}
+
+.source-card__actions :deep(.ui-button),
+.frontier-news-panel__actions :deep(.ui-button) {
+  min-height: 2.15rem;
+}
+
+@media (max-width: 720px) {
+  .frontier-news-panel :deep(.ant-card-body) {
+    gap: 0.95rem;
+    padding: 0.95rem;
+  }
+
+  .frontier-news-panel__head {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .title-area {
+    gap: 0.35rem;
+  }
+
+  .panel-kicker {
+    font-size: 0.64rem;
+    letter-spacing: 0.1em;
+  }
+
+  .frontier-news-panel h2 {
+    font-size: 1.35rem;
+    line-height: 1.18;
+    letter-spacing: -0.015em;
+  }
+
+  .frontier-news-panel__head p {
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+
+  .frontier-news-panel__actions,
+  .source-card__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .frontier-news-panel__actions :deep(.ui-button),
+  .source-card__actions :deep(.ui-button),
+  .review-link {
+    width: 100%;
+    min-height: 2.35rem;
+  }
+
+  .frontier-news-panel__sources,
+  .frontier-news-panel__items {
+    gap: 0.7rem;
+  }
+
+  .source-grid {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+
+  .source-card,
+  .item-card {
+    gap: 0.58rem;
+    border-radius: 14px;
+    padding: 0.78rem;
+  }
+
+  .source-card strong {
+    font-size: 0.98rem;
+  }
+
+  .source-card span,
+  .item-card__meta,
+  .source-url,
+  .source-error {
+    font-size: 0.82rem;
+  }
 }
