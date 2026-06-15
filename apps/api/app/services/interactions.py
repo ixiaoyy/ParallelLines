@@ -8,7 +8,7 @@ from app.core.exceptions import NotFoundError, ValidationError
 from app.db.base import utcnow
 from app.models.forum import Board, BoardMember, NotificationLevel, Post, Topic, TopicRead
 from app.models.interaction import Bookmark, Notification, Reaction, Vote
-from app.models.social import UserRelationship
+from app.models.social import PrivateMessageParticipant, UserRelationship
 from app.models.user import User
 from app.schemas.interactions import (
     BoardFollowResponse,
@@ -490,9 +490,22 @@ class InteractionService:
         Returns `False` for missing boards or lost private-board access. No side effects.
         """
 
-        if topic is None or topic.board is None:
+        if topic is None:
+            return False
+        if topic.visibility == "private_message":
+            return await self._is_private_message_participant(topic.id, current_user.id)
+        if topic.board is None:
             return False
         return await self._can_access_board(topic.board, current_user)
+
+    async def _is_private_message_participant(self, topic_id: str, user_id: str) -> bool:
+        participant_id = await self.session.scalar(
+            select(PrivateMessageParticipant.id).where(
+                PrivateMessageParticipant.topic_id == topic_id,
+                PrivateMessageParticipant.user_id == user_id,
+            )
+        )
+        return participant_id is not None
 
     @staticmethod
     def _topic_is_inactive(topic: Topic | None) -> bool:
