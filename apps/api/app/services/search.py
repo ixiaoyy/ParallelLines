@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import re
 from asyncio import gather
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import case, delete, desc, func, not_, or_, select
+from sqlalchemy import delete, desc, func, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
@@ -16,12 +15,15 @@ from app.models.interaction import Bookmark, Reaction, Vote
 from app.models.search import SearchDocument, SearchLog
 from app.models.social import UserRelationship
 from app.models.user import User
+from app.repositories.forum.topic_search import (
+    normalize_search_query,
+    normalize_search_tag,
+    search_match_conditions,
+    search_relevance_expression,
+)
 from app.schemas.forum import TopicSort
 from app.services.topic_cursor import apply_latest_topic_cursor, parse_topic_cursor
 
-LIKE_ESCAPE_PATTERN = re.compile(r"([%_\\])")
-TAG_SEPARATOR_PATTERN = re.compile(r"[^a-z0-9一-鿿_.-]+")
-SEARCH_TOKEN_PATTERN = re.compile(r"\S+")
 SEARCHABLE_TOPIC_STATUSES = {"open", "closed", "archived"}
 
 
@@ -43,50 +45,6 @@ class SearchFilters:
             "created_before": self.created_before.isoformat() if self.created_before else None,
             "status": self.status,
         }
-
-
-def normalize_search_query(value: str) -> str:
-    return " ".join(SEARCH_TOKEN_PATTERN.findall(value.strip().casefold()))
-
-
-def normalize_search_tag(value: str) -> str:
-    return TAG_SEPARATOR_PATTERN.sub("-", value.strip().lower()).strip("-#")
-
-
-def escape_search_like(value: str) -> str:
-    return LIKE_ESCAPE_PATTERN.sub(r"\\\1", value)
-
-
-def search_match_conditions(query: str):
-    normalized = normalize_search_query(query)
-    conditions = []
-    for token in SEARCH_TOKEN_PATTERN.findall(normalized):
-        pattern = f"%{escape_search_like(token)}%"
-        conditions.append(
-            or_(
-                SearchDocument.title.ilike(pattern, escape="\\"),
-                SearchDocument.body.ilike(pattern, escape="\\"),
-                SearchDocument.tags_text.ilike(pattern, escape="\\"),
-                SearchDocument.author_username.ilike(pattern, escape="\\"),
-            )
-        )
-    return conditions
-
-
-def search_relevance_expression(query: str):
-    relevance = 0
-    for token in SEARCH_TOKEN_PATTERN.findall(normalize_search_query(query)):
-        starts_with = f"{escape_search_like(token)}%"
-        contains = f"%{escape_search_like(token)}%"
-        relevance = (
-            relevance
-            + case((SearchDocument.title.ilike(starts_with, escape="\\"), 60), else_=0)
-            + case((SearchDocument.title.ilike(contains, escape="\\"), 35), else_=0)
-            + case((SearchDocument.tags_text.ilike(contains, escape="\\"), 20), else_=0)
-            + case((SearchDocument.author_username.ilike(contains, escape="\\"), 10), else_=0)
-            + case((SearchDocument.body.ilike(contains, escape="\\"), 8), else_=0)
-        )
-    return relevance
 
 
 def search_topic_excerpt(raw_md: str) -> str:

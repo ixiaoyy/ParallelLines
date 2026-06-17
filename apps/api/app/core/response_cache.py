@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Hashable
 from time import monotonic
 
+from fastapi import Response
+
 
 class ResponseHotCache[T]:
     """Small in-process TTL cache for hot API response objects.
@@ -98,3 +100,26 @@ def scoped_cache_control(
     """
     visibility = "private" if current_user is not None else "public"
     return f"{visibility}, max-age={max_age}, stale-while-revalidate={stale_while_revalidate}"
+
+
+def cached_json_response(
+    content: str,
+    *,
+    cache_control: str,
+    cache_status: str,
+) -> Response:
+    """Build a JSON response from pre-encoded cache content.
+
+    Key parameters are encoded JSON `content`, the `Cache-Control` value, and
+    the cache hit/miss label. Return value is a FastAPI response; side effect is
+    none.
+    """
+
+    return Response(
+        content=content,
+        media_type="application/json",
+        headers={
+            "Cache-Control": cache_control,
+            "X-ParallelLines-Cache": cache_status,
+        },
+    )

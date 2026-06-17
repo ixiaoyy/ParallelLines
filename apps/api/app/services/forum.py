@@ -11,7 +11,7 @@ from hashlib import sha256
 from sqlalchemy import case, desc, func, not_, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import noload, selectinload
+from sqlalchemy.orm import contains_eager, joinedload, noload, selectinload
 from starlette.requests import Request
 
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
@@ -34,10 +34,10 @@ from app.models.forum import (
 )
 from app.models.interaction import Notification
 from app.models.moderation import AuditLog, Reviewable
-from app.models.search import SearchDocument
 from app.models.social import PrivateMessageParticipant, UserRelationship
 from app.models.upload import Upload
 from app.models.user import User
+from app.repositories.forum.topic_feed import TopicFeedRepository
 from app.schemas.forum import (
     BoardCreateRequest,
     BoardInviteCreateRequest,
@@ -64,13 +64,8 @@ from app.services.badges import BadgeTrustService
 from app.services.content_safety import moderate_text_fields
 from app.services.growth import GrowthService
 from app.services.integrations import IntegrationService
-from app.services.search import (
-    SearchIndexService,
-    search_match_conditions,
-    search_relevance_expression,
-)
+from app.services.search import SearchIndexService
 from app.services.spam import SpamPreventionService
-from app.services.topic_cursor import apply_latest_topic_cursor, parse_topic_cursor
 from app.services.uploads import UploadService
 
 SLUG_SEPARATOR_PATTERN = re.compile(r"[^a-z0-9]+")
@@ -881,89 +876,22 @@ class ForumService:
         current_user: User | None = None,
         decorate_excerpts: bool = True,
     ) -> list[Topic]:
-        statement = (
-            select(Topic)
-            .join(Topic.board)
-            .options(
-                selectinload(Topic.board),
-                selectinload(Topic.author),
-                selectinload(Topic.tags),
-                selectinload(Topic.poll).selectinload(Poll.options),
-                noload(Topic.posts),
-            )
-            .where(Topic.deleted_at.is_(None), self._board_visible_condition(current_user))
-            .where(Topic.visibility == "public")
-        )
-        if current_user is not None:
-            statement = statement.where(self._visible_author_condition(current_user))
+        board_id: str | None = None
         if board_slug:
             board = await self.get_board_by_slug(board_slug, current_user=current_user)
-            statement = statement.where(Topic.board_id == board.id)
+            board_id = board.id
 
-        relevance = None
-        if query and query.strip():
-            relevance = search_relevance_expression(query)
-            statement = statement.join(
-                SearchDocument,
-                SearchDocument.topic_id == Topic.id,
-            ).where(*search_match_conditions(query))
-
-        if tag:
-            normalized_tag = normalize_tag_name(tag)
-            if normalized_tag:
-                statement = statement.join(Topic.tags).where(
-                    or_(Tag.slug == normalized_tag, Tag.name == normalized_tag)
-                )
-
-        if author:
-            statement = statement.join(Topic.author).where(User.username == author)
-
-        topic_cursor = parse_topic_cursor(cursor)
-
-        if sort == "relevance" and relevance is not None:
-            statement = apply_latest_topic_cursor(statement, topic_cursor)
-            statement = statement.order_by(
-                relevance.desc(),
-                desc(Topic.last_posted_at),
-                desc(Topic.id),
-            )
-        elif sort == "recommended":
-            statement = apply_latest_topic_cursor(statement, topic_cursor)
-            featured_rank = case((Topic.featured.is_(True), 1), else_=0)
-            pinned_rank = case((Topic.pinned.is_(True), 1), else_=0)
-            statement = statement.order_by(
-                desc(featured_rank),
-                desc(pinned_rank),
-                desc(Topic.hot_score),
-                desc(Topic.last_posted_at),
-                desc(Topic.id),
-            )
-        elif sort == "hot":
-            statement = apply_latest_topic_cursor(statement, topic_cursor)
-            statement = statement.order_by(desc(Topic.hot_score), desc(Topic.last_posted_at))
-        elif sort == "top":
-            statement = apply_latest_topic_cursor(statement, topic_cursor)
-            statement = statement.order_by(desc(Topic.like_count), desc(Topic.reply_count))
-        elif sort == "votes":
-            statement = apply_latest_topic_cursor(statement, topic_cursor)
-            statement = statement.order_by(
-                desc(Topic.vote_score),
-                desc(Topic.vote_count),
-                desc(Topic.last_posted_at),
-            )
-        else:
-            pinned_rank = case((Topic.pinned.is_(True), 1), else_=0)
-            statement = apply_latest_topic_cursor(
-                statement, topic_cursor, include_pinned=True
-            )
-            statement = statement.order_by(
-                desc(pinned_rank),
-                desc(Topic.last_posted_at),
-                desc(Topic.id),
-            )
-
-        result = await self.session.scalars(statement.distinct().limit(limit))
-        topics = list(result)
+        normalized_tag = normalize_tag_name(tag) if tag else None
+        topics = await TopicFeedRepository(self.session).list_visible_topics(
+            board_id=board_id,
+            sort=sort,
+            limit=limit,
+            query=query,
+            normalized_tag=normalized_tag,
+            author=author,
+            cursor=cursor,
+            current_user=current_user,
+        )
         if decorate_excerpts:
             await self._decorate_topic_excerpts(topics)
         await self._decorate_topics_for_user(topics, current_user)
@@ -1126,8 +1054,8 @@ class ForumService:
             select(Topic)
             .join(Topic.board)
             .options(
-                selectinload(Topic.board),
-                selectinload(Topic.author),
+                contains_eager(Topic.board),
+                joinedload(Topic.author),
                 selectinload(Topic.tags),
             )
             .where(
@@ -1307,8 +1235,8 @@ class ForumService:
         topic = await self.session.scalar(
             select(Topic)
             .options(
-                selectinload(Topic.board),
-                selectinload(Topic.author),
+                joinedload(Topic.board),
+                joinedload(Topic.author),
                 selectinload(Topic.tags),
                 selectinload(Topic.poll).selectinload(Poll.options),
                 noload(Topic.posts),
@@ -1318,7 +1246,7 @@ class ForumService:
         if topic and topic.merged_into_topic_id:
             target_topic = await self.session.scalar(
                 select(Topic)
-                .options(selectinload(Topic.board))
+                .options(joinedload(Topic.board))
                 .where(Topic.id == topic.merged_into_topic_id)
             )
             if target_topic and await self._can_access_board(target_topic.board, current_user):
@@ -1422,7 +1350,7 @@ class ForumService:
             await self._mark_private_message_read(topic, current_user)
         statement = (
             select(Post)
-            .options(selectinload(Post.author), selectinload(Post.topic))
+            .options(joinedload(Post.author), joinedload(Post.topic))
             .where(Post.topic_id == topic_id)
             .order_by(Post.post_number)
         )
@@ -2675,7 +2603,7 @@ class ForumService:
         topic_ids = [topic.id for topic in topics]
         statement = (
             select(Post)
-            .options(selectinload(Post.author), selectinload(Post.topic))
+            .options(joinedload(Post.author), joinedload(Post.topic))
             .where(
                 Post.topic_id.in_(topic_ids),
                 Post.post_number == 1,

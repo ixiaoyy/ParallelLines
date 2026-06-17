@@ -3,7 +3,12 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request, Response, status
 
 from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep
-from app.core.response_cache import ResponseHotCache, scoped_cache_control, user_cache_scope
+from app.core.response_cache import (
+    ResponseHotCache,
+    cached_json_response,
+    scoped_cache_control,
+    user_cache_scope,
+)
 from app.schemas.common import ApiResponse
 from app.schemas.forum import (
     ImmersiveTopicFeedItemResponse,
@@ -102,29 +107,6 @@ def invalidate_topic_write_response_caches(*, include_tags: bool = False) -> Non
         invalidate_tag_response_cache()
 
 
-# Return a pre-encoded JSON envelope with the same cache headers as route hits/misses.
-def _json_cache_response(
-    content: str,
-    *,
-    cache_control: str,
-    cache_status: str,
-) -> Response:
-    """Build a JSON response from cached or freshly encoded API content.
-
-    Key parameters are the JSON `content`, `cache_control` header, and cache
-    hit/miss status. Return value is a FastAPI response; side effect is none.
-    """
-
-    return Response(
-        content=content,
-        media_type="application/json",
-        headers={
-            "Cache-Control": cache_control,
-            "X-ParallelLines-Cache": cache_status,
-        },
-    )
-
-
 @router.get("", response_model=ApiResponse[list[TopicResponse]])
 async def list_topics(
     session: SessionDep,
@@ -155,7 +137,7 @@ async def list_topics(
     )
     cached_json = _TOPIC_LIST_RESPONSE_CACHE.get(cache_key)
     if cached_json is not None:
-        return _json_cache_response(
+        return cached_json_response(
             cached_json,
             cache_control=cache_control,
             cache_status="hit",
@@ -184,7 +166,7 @@ async def list_topics(
     )
     json_content = payload.model_dump_json()
     _TOPIC_LIST_RESPONSE_CACHE.set(cache_key, json_content)
-    return _json_cache_response(
+    return cached_json_response(
         json_content,
         cache_control=cache_control,
         cache_status="miss",
@@ -228,7 +210,7 @@ async def list_immersive_topic_feed(
     )
     cached_json = _IMMERSIVE_TOPIC_FEED_RESPONSE_CACHE.get(cache_key)
     if cached_json is not None:
-        return _json_cache_response(
+        return cached_json_response(
             cached_json,
             cache_control=cache_control,
             cache_status="hit",
@@ -261,7 +243,7 @@ async def list_immersive_topic_feed(
     )
     json_content = payload.model_dump_json()
     _IMMERSIVE_TOPIC_FEED_RESPONSE_CACHE.set(cache_key, json_content)
-    return _json_cache_response(
+    return cached_json_response(
         json_content,
         cache_control=cache_control,
         cache_status="miss",
@@ -470,7 +452,7 @@ async def list_posts(
     )
     cached_json = _TOPIC_POST_LIST_RESPONSE_CACHE.get(cache_key)
     if cached_json is not None:
-        return _json_cache_response(
+        return cached_json_response(
             cached_json,
             cache_control=cache_control,
             cache_status="hit",
@@ -482,7 +464,7 @@ async def list_posts(
     payload = ApiResponse(data=[PostResponse.from_model(post) for post in posts])
     json_content = payload.model_dump_json()
     _TOPIC_POST_LIST_RESPONSE_CACHE.set(cache_key, json_content)
-    return _json_cache_response(
+    return cached_json_response(
         json_content,
         cache_control=cache_control,
         cache_status="miss",

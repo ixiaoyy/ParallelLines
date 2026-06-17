@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Response
 
 from app.api.v1.dependencies import OptionalCurrentUserDep, SessionDep
-from app.core.response_cache import ResponseHotCache, user_cache_scope
+from app.core.response_cache import ResponseHotCache, cached_json_response, user_cache_scope
 from app.schemas.common import ApiResponse
 from app.schemas.forum import TopicResponse, TopicSort
 from app.services.search import SearchFilters, SearchService, normalize_search_query
@@ -29,24 +29,6 @@ def invalidate_search_response_cache() -> None:
     """
 
     _SEARCH_RESPONSE_CACHE.clear()
-
-
-# Return JSON without client caching so every search still reaches the API logger.
-def _json_search_response(content: str, *, cache_status: str) -> Response:
-    """Build a JSON search response with server-cache observability headers.
-
-    Key parameters are encoded JSON `content` and cache hit/miss status. Return
-    value is a FastAPI response; side effect is none.
-    """
-
-    return Response(
-        content=content,
-        media_type="application/json",
-        headers={
-            "Cache-Control": "no-store",
-            "X-ParallelLines-Cache": cache_status,
-        },
-    )
 
 
 @router.get("", response_model=ApiResponse[list[TopicResponse]])
@@ -91,7 +73,11 @@ async def search_topics(
             result_count=result_count,
             current_user=current_user,
         )
-        return _json_search_response(cached_json, cache_status="hit")
+        return cached_json_response(
+            cached_json,
+            cache_control="no-store",
+            cache_status="hit",
+        )
 
     topics = await service.search_topics(
         query=q,
@@ -109,7 +95,11 @@ async def search_topics(
     )
     json_content = payload.model_dump_json()
     _SEARCH_RESPONSE_CACHE.set(cache_key, (json_content, len(topics)))
-    return _json_search_response(json_content, cache_status="miss")
+    return cached_json_response(
+        json_content,
+        cache_control="no-store",
+        cache_status="miss",
+    )
 
 
 # Build a server-cache key that keeps all filters and user visibility isolated.

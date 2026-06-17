@@ -4,7 +4,12 @@ from fastapi import APIRouter, Query, Request, Response, status
 
 from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep
 from app.api.v1.topics import invalidate_topic_write_response_caches
-from app.core.response_cache import ResponseHotCache, scoped_cache_control, user_cache_scope
+from app.core.response_cache import (
+    ResponseHotCache,
+    cached_json_response,
+    scoped_cache_control,
+    user_cache_scope,
+)
 from app.schemas.common import ApiResponse
 from app.schemas.forum import (
     BoardCreateRequest,
@@ -30,15 +35,15 @@ BOARD_LIST_CACHE_TTL_SECONDS = 60
 BOARD_DETAIL_CACHE_TTL_SECONDS = 30
 BOARD_TOPIC_LIST_CACHE_TTL_SECONDS = 15
 
-_BOARD_LIST_RESPONSE_CACHE = ResponseHotCache[ApiResponse[list[BoardResponse]]](
+_BOARD_LIST_RESPONSE_CACHE = ResponseHotCache[str](
     ttl_seconds=BOARD_LIST_CACHE_TTL_SECONDS,
     max_entries=128,
 )
-_BOARD_DETAIL_RESPONSE_CACHE = ResponseHotCache[ApiResponse[BoardDetailResponse]](
+_BOARD_DETAIL_RESPONSE_CACHE = ResponseHotCache[str](
     ttl_seconds=BOARD_DETAIL_CACHE_TTL_SECONDS,
     max_entries=256,
 )
-_BOARD_TOPIC_LIST_RESPONSE_CACHE = ResponseHotCache[ApiResponse[list[TopicResponse]]](
+_BOARD_TOPIC_LIST_RESPONSE_CACHE = ResponseHotCache[str](
     ttl_seconds=BOARD_TOPIC_LIST_CACHE_TTL_SECONDS,
     max_entries=256,
 )
@@ -62,17 +67,20 @@ async def list_boards(
     session: SessionDep,
     current_user: OptionalCurrentUserDep,
     response: Response,
-) -> ApiResponse[list[BoardResponse]]:
-    response.headers["Cache-Control"] = scoped_cache_control(
+) -> Response:
+    cache_control = scoped_cache_control(
         current_user,
         max_age=BOARD_LIST_CACHE_TTL_SECONDS,
         stale_while_revalidate=300,
     )
     cache_key = (user_cache_scope(current_user),)
-    cached = _BOARD_LIST_RESPONSE_CACHE.get(cache_key)
-    if cached is not None:
-        response.headers["X-ParallelLines-Cache"] = "hit"
-        return cached
+    cached_json = _BOARD_LIST_RESPONSE_CACHE.get(cache_key)
+    if cached_json is not None:
+        return cached_json_response(
+            cached_json,
+            cache_control=cache_control,
+            cache_status="hit",
+        )
 
     service = ForumService(session)
     boards = await service.list_boards(current_user)
@@ -95,9 +103,13 @@ async def list_boards(
             for board in boards
         ]
     )
-    _BOARD_LIST_RESPONSE_CACHE.set(cache_key, payload)
-    response.headers["X-ParallelLines-Cache"] = "miss"
-    return payload
+    json_content = payload.model_dump_json()
+    _BOARD_LIST_RESPONSE_CACHE.set(cache_key, json_content)
+    return cached_json_response(
+        json_content,
+        cache_control=cache_control,
+        cache_status="miss",
+    )
 
 
 @router.post(
@@ -129,17 +141,20 @@ async def get_board(
     session: SessionDep,
     current_user: OptionalCurrentUserDep,
     response: Response,
-) -> ApiResponse[BoardDetailResponse]:
-    response.headers["Cache-Control"] = scoped_cache_control(
+) -> Response:
+    cache_control = scoped_cache_control(
         current_user,
         max_age=BOARD_DETAIL_CACHE_TTL_SECONDS,
         stale_while_revalidate=120,
     )
     cache_key = (user_cache_scope(current_user), slug)
-    cached = _BOARD_DETAIL_RESPONSE_CACHE.get(cache_key)
-    if cached is not None:
-        response.headers["X-ParallelLines-Cache"] = "hit"
-        return cached
+    cached_json = _BOARD_DETAIL_RESPONSE_CACHE.get(cache_key)
+    if cached_json is not None:
+        return cached_json_response(
+            cached_json,
+            cache_control=cache_control,
+            cache_status="hit",
+        )
 
     service = ForumService(session)
     board, latest_topics, child_boards = await service.get_board_detail(
@@ -170,9 +185,13 @@ async def get_board(
             child_topic_counts=topic_counts,
         )
     )
-    _BOARD_DETAIL_RESPONSE_CACHE.set(cache_key, payload)
-    response.headers["X-ParallelLines-Cache"] = "miss"
-    return payload
+    json_content = payload.model_dump_json()
+    _BOARD_DETAIL_RESPONSE_CACHE.set(cache_key, json_content)
+    return cached_json_response(
+        json_content,
+        cache_control=cache_control,
+        cache_status="miss",
+    )
 
 
 @router.get("/{slug}/settings", response_model=ApiResponse[BoardSettingsResponse])
@@ -285,8 +304,8 @@ async def list_board_topics(
     sort: TopicSort = "latest",
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
-) -> ApiResponse[list[TopicResponse]]:
-    response.headers["Cache-Control"] = scoped_cache_control(
+) -> Response:
+    cache_control = scoped_cache_control(
         current_user,
         max_age=BOARD_TOPIC_LIST_CACHE_TTL_SECONDS,
         stale_while_revalidate=60,
@@ -301,10 +320,13 @@ async def list_board_topics(
         cursor=cursor,
         limit=limit,
     )
-    cached = _BOARD_TOPIC_LIST_RESPONSE_CACHE.get(cache_key)
-    if cached is not None:
-        response.headers["X-ParallelLines-Cache"] = "hit"
-        return cached
+    cached_json = _BOARD_TOPIC_LIST_RESPONSE_CACHE.get(cache_key)
+    if cached_json is not None:
+        return cached_json_response(
+            cached_json,
+            cache_control=cache_control,
+            cache_status="hit",
+        )
 
     topics = await ForumService(session).list_topics(
         board_slug=slug,
@@ -324,9 +346,13 @@ async def list_board_topics(
             else None
         },
     )
-    _BOARD_TOPIC_LIST_RESPONSE_CACHE.set(cache_key, payload)
-    response.headers["X-ParallelLines-Cache"] = "miss"
-    return payload
+    json_content = payload.model_dump_json()
+    _BOARD_TOPIC_LIST_RESPONSE_CACHE.set(cache_key, json_content)
+    return cached_json_response(
+        json_content,
+        cache_control=cache_control,
+        cache_status="miss",
+    )
 
 
 # Build an auth-scoped cache key for board-scoped topic list responses.

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Response
 
 from app.api.v1.dependencies import SessionDep, SettingsDep
-from app.core.response_cache import ResponseHotCache
+from app.core.response_cache import ResponseHotCache, cached_json_response
 from app.schemas.admin import PublicSiteSettingsResponse
 from app.schemas.common import ApiResponse
 from app.schemas.plugins import PluginUiExtensionResponse
@@ -13,13 +13,11 @@ router = APIRouter(prefix="/site", tags=["site"])
 PUBLIC_SITE_SETTINGS_CACHE_TTL_SECONDS = 60
 PUBLIC_SITE_EXTENSIONS_CACHE_TTL_SECONDS = 120
 
-_PUBLIC_SITE_SETTINGS_RESPONSE_CACHE = ResponseHotCache[ApiResponse[PublicSiteSettingsResponse]](
+_PUBLIC_SITE_SETTINGS_RESPONSE_CACHE = ResponseHotCache[str](
     ttl_seconds=PUBLIC_SITE_SETTINGS_CACHE_TTL_SECONDS,
     max_entries=8,
 )
-_PUBLIC_SITE_EXTENSIONS_RESPONSE_CACHE = ResponseHotCache[
-    ApiResponse[list[PluginUiExtensionResponse]]
-](
+_PUBLIC_SITE_EXTENSIONS_RESPONSE_CACHE = ResponseHotCache[str](
     ttl_seconds=PUBLIC_SITE_EXTENSIONS_CACHE_TTL_SECONDS,
     max_entries=8,
 )
@@ -42,31 +40,45 @@ async def public_site_settings(
     session: SessionDep,
     settings: SettingsDep,
     response: Response,
-) -> ApiResponse[PublicSiteSettingsResponse]:
-    response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=300"
-    cached = _PUBLIC_SITE_SETTINGS_RESPONSE_CACHE.get("public")
-    if cached is not None:
-        response.headers["X-ParallelLines-Cache"] = "hit"
-        return cached
+) -> Response:
+    cache_control = "public, max-age=60, stale-while-revalidate=300"
+    cached_json = _PUBLIC_SITE_SETTINGS_RESPONSE_CACHE.get("public")
+    if cached_json is not None:
+        return cached_json_response(
+            cached_json,
+            cache_control=cache_control,
+            cache_status="hit",
+        )
 
     payload = ApiResponse(data=await SiteSettingService(session, settings).public_site_settings())
-    _PUBLIC_SITE_SETTINGS_RESPONSE_CACHE.set("public", payload)
-    response.headers["X-ParallelLines-Cache"] = "miss"
-    return payload
+    json_content = payload.model_dump_json()
+    _PUBLIC_SITE_SETTINGS_RESPONSE_CACHE.set("public", json_content)
+    return cached_json_response(
+        json_content,
+        cache_control=cache_control,
+        cache_status="miss",
+    )
 
 
 @router.get("/extensions", response_model=ApiResponse[list[PluginUiExtensionResponse]])
 async def public_site_extensions(
     session: SessionDep,
     response: Response,
-) -> ApiResponse[list[PluginUiExtensionResponse]]:
-    response.headers["Cache-Control"] = "public, max-age=120, stale-while-revalidate=300"
-    cached = _PUBLIC_SITE_EXTENSIONS_RESPONSE_CACHE.get("public")
-    if cached is not None:
-        response.headers["X-ParallelLines-Cache"] = "hit"
-        return cached
+) -> Response:
+    cache_control = "public, max-age=120, stale-while-revalidate=300"
+    cached_json = _PUBLIC_SITE_EXTENSIONS_RESPONSE_CACHE.get("public")
+    if cached_json is not None:
+        return cached_json_response(
+            cached_json,
+            cache_control=cache_control,
+            cache_status="hit",
+        )
 
     payload = ApiResponse(data=await PluginService(session).public_ui_extensions())
-    _PUBLIC_SITE_EXTENSIONS_RESPONSE_CACHE.set("public", payload)
-    response.headers["X-ParallelLines-Cache"] = "miss"
-    return payload
+    json_content = payload.model_dump_json()
+    _PUBLIC_SITE_EXTENSIONS_RESPONSE_CACHE.set("public", json_content)
+    return cached_json_response(
+        json_content,
+        cache_control=cache_control,
+        cache_status="miss",
+    )

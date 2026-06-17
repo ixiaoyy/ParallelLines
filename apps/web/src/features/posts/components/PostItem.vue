@@ -41,6 +41,7 @@ import { useUploadFile } from "@/features/uploads/queries";
 import { hasAccessToken, resolveApiAssetUrl, resolveApiThumbnailUrl } from "@/shared/api/client";
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { relativeTime } from "@/shared/lib/format";
+import { loadMarkdownEditorWhenIdle } from "@/shared/lib/loadMarkdownEditor";
 import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
 import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
 import UiAvatar from "@/shared/ui/Avatar.vue";
@@ -49,15 +50,7 @@ import UiCard from "@/shared/ui/Card.vue";
 
 // Loads the edit-mode markdown editor and styles only after a post enters edit mode.
 // Key parameters: none. Return value is the MdEditor component; side effect is deferred editor asset loading.
-const MdEditor = defineAsyncComponent(() =>
-  runWhenBrowserIdle().then(async () => {
-    const [module] = await Promise.all([
-      import("md-editor-v3"),
-      import("md-editor-v3/lib/style.css"),
-    ]);
-    return module.MdEditor;
-  }),
-);
+const MdEditor = defineAsyncComponent(loadMarkdownEditorWhenIdle);
 
 // Loads the report dialog only when the post report flow is opened.
 // Key parameters: none. Return value is the ReportModal component; side effect is deferred dialog chunk loading.

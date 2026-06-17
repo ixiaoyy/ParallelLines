@@ -4,7 +4,7 @@
 
 ### 1. Scope / Trigger
 
-- Trigger: changing public branding settings, theme color validation, text override storage, or email template setting keys.
+- Trigger: changing public branding settings, default logo/favicon values, theme color validation, text override storage, or email template setting keys.
 - Applies to `app/services/admin.py`, `app/schemas/admin.py`, `app/api/v1/admin.py`,
   `app/api/v1/site.py`, and consumers of `SiteSettingService`.
 
@@ -36,6 +36,12 @@ Validation helpers:
   return `invalid_site_setting_value`.
 - Logo/favicon values must be safe asset URLs: site-relative `/...` or `http(s)://...`, with no
   whitespace.
+- `DEFAULT_SITE_SETTINGS["brand_logo_url"].value` is protected and must stay `/logo-lines-mark.png`
+  unless there is an explicit logo-change product/design task. Do not change it as part of unrelated
+  admin settings, theme, performance, seed-data, or refactor work.
+- `DEFAULT_SITE_SETTINGS["brand_favicon_url"].value` is protected and must stay `/favicon.svg`
+  unless the same explicit logo/favicon-change task updates frontend assets, frontend branding spec,
+  backend branding spec, and focused verification together.
 - `site_text_overrides` must be a JSON object with at most 100 keys. Keys match
   `^[a-z0-9_.-]{1,80}$`; values are non-empty strings up to 500 characters after trimming.
 - Email template body settings may be up to 4000 characters; other string settings are capped at 512.
@@ -52,6 +58,8 @@ Validation helpers:
 | Ordinary user updates theme | `admin_required` / 403 |
 | `brand_primary_color="red;"` | `invalid_site_setting_value` / 422 |
 | `brand_logo_url="javascript:..."` | `invalid_site_setting_value` / 422 |
+| Unrelated backend setting change edits default `brand_logo_url` | Reject or split into explicit logo-change task |
+| Explicit logo-change task edits default `brand_logo_url` | Also update frontend assets/specs and verification |
 | `site_text_overrides` is array | `invalid_site_setting_value` / 422 |
 | Valid `site_text_overrides` object | Trimmed object persists and appears in public settings |
 | Email body template > 512 but <= 4000 chars | Accepted |
@@ -60,7 +68,9 @@ Validation helpers:
 ### 5. Good/Base/Bad Cases
 
 - Good: add new public UI text via `site_text_overrides` rather than a new column or hardcoded route.
+- Good: preserve `brand_logo_url="/logo-lines-mark.png"` while changing admin setting labels or caches.
 - Base: admin changes `brand_logo_url`; public settings refresh and app shell displays the new logo.
+- Bad: changing `DEFAULT_SITE_SETTINGS["brand_logo_url"]` to `/logo.png` during unrelated branding cleanup.
 - Bad: exposing `email_notification_body` through `/site/settings`.
 - Bad: accepting arbitrary CSS strings as color settings.
 
@@ -71,6 +81,8 @@ Default roadmap scope is downgraded unless detailed testing is requested:
 - `ruff check app/services/admin.py tests/test_admin.py`
 - `pytest tests/test_admin.py -q`
 - Assert public settings include brand/text keys and invalid color values fail with typed error.
+- For explicit default logo/favicon changes: assert backend defaults, frontend `DEFAULT_BRAND_LOGO_URL`,
+  public assets, and app shell fallback behavior are updated together.
 
 ### 7. Wrong vs Correct
 

@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { MdEditor } from "md-editor-v3";
 import type { ExposeParam, ToolbarNames } from "md-editor-v3";
-import "md-editor-v3/lib/style.css";
 import DOMPurify from "dompurify";
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import type { BoardSummary } from "@/entities/board/model";
@@ -17,10 +15,15 @@ import { uploadErrorMessage } from "@/features/uploads/errors";
 import { useUploadFile } from "@/features/uploads/queries";
 import { contentPolicyMessage, isApiErrorCode } from "@/shared/api/errors";
 import { ApiError, hasAccessToken, resolveApiAssetUrl } from "@/shared/api/client";
+import { loadMarkdownEditor } from "@/shared/lib/loadMarkdownEditor";
 import { readRouteParam } from "@/shared/router/params";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
+
+// Loads the heavy markdown editor and its CSS as a separate chunk when the new-topic composer renders.
+// Key parameters: none. Return value is the async MdEditor component; side effect is downloading editor assets on demand.
+const MdEditor = defineAsyncComponent(loadMarkdownEditor);
 
 interface NewTopicDraft {
   boardSlug: string;

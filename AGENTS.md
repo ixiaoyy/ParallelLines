@@ -32,6 +32,16 @@ Keep this managed block so 'trellis update' can refresh the instructions.
 
 ---
 
+# 品牌 Logo 规范（禁止顺手修改）
+
+- 当前正式站点 Logo 是 `apps/web/public/logo-lines-mark.png`，后台默认配置是 `brand_logo_url="/logo-lines-mark.png"`；浏览器图标是 `apps/web/public/favicon.svg`，默认配置是 `brand_favicon_url="/favicon.svg"`。
+- Logo / favicon / 品牌图形属于受保护品牌资产。普通性能优化、页面样式调整、主题色调整、布局重构、组件拆分时，**禁止**替换、重绘、删除、重命名或改默认路径。
+- 允许后台管理员通过已有 `brand_logo_url` 配置预览/保存运行时 Logo；但代码里的默认 Logo、内置资源和旧 Logo 兼容映射不能借普通需求顺手改。
+- 真正换 Logo 必须是独立、明确的产品/设计需求，并同步检查：`apps/web/src/app/layouts/AppShell.vue`、`apps/web/src/app/layouts/AppShell.scss`、`apps/web/public/*logo*`、`apps/api/app/services/admin.py`、`.trellis/spec/frontend/site-theme-i18n-branding.md`、`.trellis/spec/backend/site-theme-i18n-branding.md`。
+- 禁止把 `/logo-lines.png`、`/logo.png`、`/brand-mark.svg` 或 `/favicon.svg` 当作顶栏默认 Logo 的替代品；如需兼容旧值，应继续回退到 `/logo-lines-mark.png`。
+
+---
+
 # 前端配色与按钮规范（ParallelLines / apps/web）
 
 **修改配色前必读。** 不要凭感觉改渐变或「更现代」的实心色；全局只改下面列出的源文件，页面里尽量用 CSS 变量。

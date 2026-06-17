@@ -12,21 +12,13 @@ import { toMarkdownUpload } from "@/features/uploads/model";
 import { useUploadFile } from "@/features/uploads/queries";
 import { hasAccessToken, resolveApiAssetUrl } from "@/shared/api/client";
 import { isApiErrorCode } from "@/shared/api/errors";
-import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
+import { loadMarkdownEditorWhenIdle } from "@/shared/lib/loadMarkdownEditor";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 // Loads the heavy markdown editor and its CSS only when the composer is actually rendered.
 // Key parameters: none. Return value is the async MdEditor component; side effect is downloading editor assets after idle.
-const MdEditor = defineAsyncComponent(() =>
-  runWhenBrowserIdle().then(async () => {
-    const [module] = await Promise.all([
-      import("md-editor-v3"),
-      import("md-editor-v3/lib/style.css"),
-    ]);
-    return module.MdEditor;
-  }),
-);
+const MdEditor = defineAsyncComponent(loadMarkdownEditorWhenIdle);
 
 interface ReplyDraft {
   body: string;
