@@ -17,8 +17,8 @@ API endpoints:
 |---|---|---|
 | `POST /api/v1/uploads` multipart `file`, form `kind=post_attachment|avatar` | active user | Save one upload and return metadata/URL. |
 | `POST /api/v1/uploads/avatar` multipart `file` | active user | Save avatar image, update `User.avatar_url`, return `UserPublic`. |
-| `GET /api/v1/uploads/{upload_id}/content?download=false` | optional | Stream file content after avatar/public/private ACL checks. |
-| `GET /api/v1/uploads/{upload_id}/thumbnail` | optional | Stream a cached WebP thumbnail after the same ACL checks as content. |
+| `GET /api/v1/uploads/{upload_id}/content?download=false` | optional | Stream or redirect image content after avatar/public/private ACL checks. |
+| `GET /api/v1/uploads/{upload_id}/thumbnail` | optional | Stream or redirect a cached WebP thumbnail after the same ACL checks as content. |
 
 DB table:
 
@@ -30,7 +30,7 @@ Settings:
 
 - `UPLOAD_STORAGE_BACKEND=local|s3`
 - `UPLOAD_STORAGE_PATH=var/uploads`
-- `UPLOAD_CDN_BASE_URL`, `UPLOAD_S3_BUCKET`, `UPLOAD_S3_REGION`,
+- `UPLOAD_CDN_BASE_URL`, `UPLOAD_PUBLIC_CDN_URLS`, `UPLOAD_S3_BUCKET`, `UPLOAD_S3_REGION`,
   `UPLOAD_S3_ENDPOINT_URL`
 - `UPLOAD_MAX_BYTES`, `UPLOAD_MAX_AVATAR_BYTES`, `UPLOAD_MAX_FILES_PER_POST`
 - `UPLOAD_TEMPORARY_TTL_HOURS`, `BACKGROUND_UPLOAD_CLEANUP_INTERVAL_SECONDS`
@@ -53,11 +53,13 @@ CLI tools:
 
 - Routers parse multipart input only; `UploadService` owns validation, disk writes,
   DB metadata, ACL checks, and cleanup.
-- Upload URLs returned to clients are API-relative (`/uploads/{id}/content`); clients may
-  convert them to absolute API URLs before inserting Markdown.
+- Upload URLs returned to clients are API-relative (`/uploads/{id}/content`) by default; clients may
+  convert them to absolute API URLs before inserting Markdown. When `UPLOAD_PUBLIC_CDN_URLS=true`,
+  S3-backed image uploads may instead return a public CDN URL based on `UPLOAD_CDN_BASE_URL`.
 - `services/forum.py` must call `attach_uploads_to_post` after creating the first post,
   creating replies, and editing the topic first post. Attachments are discovered from
-  Markdown URLs matching `/uploads/{id}/content` or `/api/v1/uploads/{id}/content`.
+  Markdown URLs matching `/uploads/{id}/content`, `/api/v1/uploads/{id}/content`, or the
+  configured `UPLOAD_CDN_BASE_URL/{storage_key}` for direct public CDN image URLs.
 - Temporary post uploads start as `status="temporary"` and expire after
   `UPLOAD_TEMPORARY_TTL_HOURS`; attaching sets `status="attached"` and clears expiry.
 - Avatar uploads must be images and set `status="avatar"`; `User.avatar_url` stores the
@@ -70,10 +72,13 @@ CLI tools:
   - deleted/hidden post or deleted upload: always `upload_not_found`.
 - `GET /uploads/{id}/content` should set long-lived browser cache headers after ACL checks:
   anonymous-readable content uses public cache, authenticated reads use private cache, and
-  `X-Content-Type-Options: nosniff` is sent with streamed files.
+  `X-Content-Type-Options: nosniff` is sent with streamed files. When `UPLOAD_CDN_BASE_URL`
+  is configured for an S3-backed image and `download=false`, the endpoint may return a short
+  302 redirect to the public CDN object URL after those same ACL checks.
 - `GET /uploads/{id}/thumbnail` follows the same privacy behavior as content, generates missing/stale
   thumbnails under `_thumbnails/` from the source image, returns WebP, and keeps thumbnail bounds small
-  enough for page rails so clients do not preload full comic pages.
+  enough for page rails so clients do not preload full comic pages. S3-backed thumbnails may redirect
+  to `UPLOAD_CDN_BASE_URL/_thumbnails/{storage_key}.webp` after the thumbnail object exists.
 - Validation is based on server-side signature sniffing, not only browser MIME headers.
   Disallowed active types include `svg`, `html`, `js`, shell/PowerShell/batch scripts,
   PHP, DLL, COM, and EXE.
@@ -105,6 +110,7 @@ CLI tools:
 | Accepted private-board member reads attachment | 200 |
 | Local-to-S3 migration cannot read local source | Row remains `storage_backend="local"` and the script reports the missing object |
 | Local-to-S3 migration verification fails | Row remains `storage_backend="local"` and the script exits non-zero in apply mode |
+| S3 image read with `UPLOAD_CDN_BASE_URL` configured | 302 to `{UPLOAD_CDN_BASE_URL}/{storage_key}` after ACL checks |
 
 ### 5. Good/Base/Bad Cases
 
@@ -127,6 +133,7 @@ CLI tools:
   - image upload attaches to topic first post and renders `<img>`;
   - content route returns original bytes for public attached uploads;
   - thumbnail route returns a cached WebP after ACL checks for public/private uploads;
+  - configured CDN URLs can be generated and discovered during attachment binding;
   - disallowed extension, MIME mismatch, and oversize files return project error shape;
   - avatar upload updates `/auth/me` and public profile consistently;
   - private-board attachments are hidden from anonymous/stranger and visible after invite accept.

@@ -77,6 +77,7 @@ class Settings(BaseSettings):
     upload_storage_backend: Literal["local", "s3"] = "local"
     upload_storage_path: str = "var/uploads"
     upload_cdn_base_url: str | None = None
+    upload_public_cdn_urls: bool = False
     upload_s3_bucket: str | None = None
     upload_s3_region: str | None = None
     upload_s3_endpoint_url: str | None = None

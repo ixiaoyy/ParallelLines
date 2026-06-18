@@ -9,13 +9,13 @@ from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlsplit, urlunsplit
+from urllib.parse import quote, unquote, urlsplit, urlunsplit
 from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
 
 from fastapi import UploadFile
 from PIL import Image, ImageOps, UnidentifiedImageError
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.requests import Request
@@ -36,6 +36,7 @@ UPLOAD_REFERENCE_PATTERN = re.compile(
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
     r")/content"
 )
+CDN_OBJECT_KEY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._~!$&'()*+,;=:@/%-]*$")
 SAFE_FILENAME_PATTERN = re.compile(r"[^A-Za-z0-9._-]+")
 IMAGE_MEDIA_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
 THUMBNAIL_DIRECTORY = "_thumbnails"
@@ -85,6 +86,26 @@ class UploadThumbnail:
     upload: Upload
     content: bytes
     media_type: str = THUMBNAIL_MEDIA_TYPE
+
+
+@dataclass(frozen=True)
+class UploadReferences:
+    """Upload references extracted from one Markdown body.
+
+    Key fields are API upload IDs and CDN storage keys. Return value is immutable
+    data for attachment binding. Side effect: none.
+    """
+
+    ids: list[str]
+    storage_keys: list[str]
+
+    def count(self) -> int:
+        """Return the number of distinct upload references found in Markdown.
+
+        Key parameters: none. Return value is the unique ID/key count. Side
+        effect: none.
+        """
+        return len(self.ids) + len(self.storage_keys)
 
 
 class LocalUploadStorage:
@@ -388,6 +409,11 @@ def storage_unavailable_error(details: dict[str, object] | None = None) -> AppEr
 
 class UploadService:
     def __init__(self, session: AsyncSession, settings: Settings | None = None) -> None:
+        """Create an upload service bound to one database session.
+
+        Key parameters are the async session and optional settings override. Return
+        value is none. Side effect: stores collaborators for later upload work.
+        """
         self.session = session
         self.settings = settings or get_settings()
 
@@ -422,20 +448,34 @@ class UploadService:
         board: Board,
         current_user: User,
     ) -> None:
-        upload_ids = extract_upload_ids(raw_md)
-        if len(upload_ids) > self.settings.upload_max_files_per_post:
+        upload_refs = extract_upload_references(
+            raw_md,
+            cdn_base_url=self.settings.upload_cdn_base_url,
+        )
+        if upload_refs.count() > self.settings.upload_max_files_per_post:
             raise ValidationError(
                 "upload_count_exceeded",
                 "Too many uploads referenced by this post",
                 {"max_files": self.settings.upload_max_files_per_post},
             )
-        if not upload_ids:
+        if upload_refs.count() == 0:
             return
 
-        result = await self.session.scalars(select(Upload).where(Upload.id.in_(upload_ids)))
+        predicates = []
+        if upload_refs.ids:
+            predicates.append(Upload.id.in_(upload_refs.ids))
+        if upload_refs.storage_keys:
+            predicates.append(Upload.storage_key.in_(upload_refs.storage_keys))
+        result = await self.session.scalars(select(Upload).where(or_(*predicates)))
         uploads_by_id = {upload.id: upload for upload in result}
-        missing_ids = [upload_id for upload_id in upload_ids if upload_id not in uploads_by_id]
-        if missing_ids:
+        uploads_by_key = {upload.storage_key: upload for upload in uploads_by_id.values()}
+        missing_ids = [upload_id for upload_id in upload_refs.ids if upload_id not in uploads_by_id]
+        missing_keys = [
+            storage_key
+            for storage_key in upload_refs.storage_keys
+            if storage_key not in uploads_by_key
+        ]
+        if missing_ids or missing_keys:
             raise NotFoundError("upload_not_found", "Upload not found")
 
         for upload in uploads_by_id.values():
@@ -462,6 +502,20 @@ class UploadService:
         upload_id: str,
         current_user: User | None,
     ) -> UploadContent:
+        upload = await self.get_upload_for_delivery(upload_id, current_user)
+        return await self.read_upload_content(upload)
+
+    async def get_upload_for_delivery(
+        self,
+        upload_id: str,
+        current_user: User | None,
+    ) -> Upload:
+        """Load one upload row after applying its read-access policy.
+
+        Key parameters are the upload ID and optional current user. Return value is
+        the upload model with attachment relationships loaded. Side effect: raises
+        not-found for deleted or unauthorized objects.
+        """
         upload = await self.session.scalar(
             select(Upload)
             .options(
@@ -476,6 +530,14 @@ class UploadService:
         if upload.kind != "avatar":
             await self._require_attachment_access(upload, current_user)
 
+        return upload
+
+    async def read_upload_content(self, upload: Upload) -> UploadContent:
+        """Read original upload bytes from the row's configured storage backend.
+
+        Key parameter is an already authorized upload row. Return value combines
+        metadata and bytes. Side effect: performs storage I/O in a worker thread.
+        """
         storage = self._storage_for_upload(upload)
         content = await asyncio.to_thread(storage.read, upload.storage_key)
         return UploadContent(upload=upload, content=content)
@@ -533,6 +595,18 @@ class UploadService:
         relative WebP sidecar key. Side effect: none.
         """
         return f"{THUMBNAIL_DIRECTORY}/{upload.storage_key}.webp"
+
+    def public_upload_url(self, upload: Upload, *, thumbnail: bool = False) -> str | None:
+        """Return the public CDN URL for an S3-backed upload when configured.
+
+        Key parameters are the upload row and whether the cached thumbnail object
+        should be addressed. Return value is an absolute CDN URL or none. Side
+        effect: none.
+        """
+        if upload.storage_backend != "s3" or not self.settings.upload_cdn_base_url:
+            return None
+        storage_key = self.thumbnail_key_for(upload) if thumbnail else upload.storage_key
+        return public_storage_url(self.settings.upload_cdn_base_url, storage_key)
 
     def local_path_for(self, upload: Upload) -> Path:
         """Return the absolute local path for an upload storage key.
@@ -731,6 +805,20 @@ class UploadService:
         return member is not None
 
 def extract_upload_ids(raw_md: str) -> list[str]:
+    """Return API upload IDs referenced by Markdown upload URLs.
+
+    Key parameter is raw Markdown. Return value preserves first-seen order and
+    removes duplicates. Side effect: none.
+    """
+    return extract_upload_references(raw_md).ids
+
+
+def extract_upload_references(raw_md: str, *, cdn_base_url: str | None = None) -> UploadReferences:
+    """Return upload IDs and configured CDN storage keys referenced by Markdown.
+
+    Key parameters are raw Markdown and the optional public CDN base URL. Return
+    value keeps unique references in first-seen order. Side effect: none.
+    """
     seen: set[str] = set()
     ordered: list[str] = []
     for match in UPLOAD_REFERENCE_PATTERN.finditer(raw_md):
@@ -738,7 +826,57 @@ def extract_upload_ids(raw_md: str) -> list[str]:
         if upload_id not in seen:
             seen.add(upload_id)
             ordered.append(upload_id)
-    return ordered
+    storage_keys = extract_cdn_storage_keys(raw_md, cdn_base_url=cdn_base_url)
+    return UploadReferences(ids=ordered, storage_keys=storage_keys)
+
+
+def extract_cdn_storage_keys(raw_md: str, *, cdn_base_url: str | None = None) -> list[str]:
+    """Return storage keys referenced through the configured CDN domain.
+
+    Key parameters are raw Markdown and optional CDN base URL. Return value is a
+    unique ordered list of object keys. Side effect: none.
+    """
+    normalized_base = normalized_cdn_base_url(cdn_base_url)
+    if not normalized_base:
+        return []
+    prefix = f"{re.escape(normalized_base)}/"
+    pattern = re.compile(rf"{prefix}(?P<key>[^\s\]\"'<>?#)]+)")
+    seen: set[str] = set()
+    keys: list[str] = []
+    for match in pattern.finditer(raw_md):
+        storage_key = unquote(match.group("key")).lstrip("/")
+        if (
+            storage_key.startswith(f"{THUMBNAIL_DIRECTORY}/")
+            or not CDN_OBJECT_KEY_PATTERN.fullmatch(storage_key)
+            or storage_key in seen
+        ):
+            continue
+        seen.add(storage_key)
+        keys.append(storage_key)
+    return keys
+
+
+def public_storage_url(cdn_base_url: str, storage_key: str) -> str:
+    """Build an absolute public CDN URL for one upload storage key.
+
+    Key parameters are the CDN base URL and storage key. Return value is a URL with
+    the key safely path-encoded. Side effect: none.
+    """
+    return f"{cdn_base_url.rstrip('/')}/{quote(storage_key, safe='/-_.~')}"
+
+
+def normalized_cdn_base_url(cdn_base_url: str | None) -> str | None:
+    """Normalize a CDN base URL before matching Markdown references.
+
+    Key parameter is an optional configured base URL. Return value is the normalized
+    URL without query, fragment, or trailing slash. Side effect: none.
+    """
+    if not cdn_base_url:
+        return None
+    parsed = urlsplit(cdn_base_url.rstrip("/"))
+    if not parsed.scheme or not parsed.netloc:
+        return None
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path.rstrip("/"), "", ""))
 
 
 def sanitize_filename(filename: str) -> str:

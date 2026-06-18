@@ -11,12 +11,43 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import NotFoundError
 from app.main import create_app
 from app.models.upload import Upload
-from app.services.uploads import S3UploadStorage
+from app.services.uploads import S3UploadStorage, extract_upload_references, public_storage_url
 from tests.helpers import get_test_database_url, register_and_verify_user, reset_test_database
 
 PNG_BYTES = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
 )
+
+
+def test_public_storage_url_builds_cdn_object_url() -> None:
+    """Verify configured CDN bases produce stable object URLs.
+
+    Key parameters: none. Return value is none. Side effect: none.
+    """
+    assert (
+        public_storage_url("https://img.pingxingxian.space/", "2026/06/10.png")
+        == "https://img.pingxingxian.space/2026/06/10.png"
+    )
+
+
+def test_extract_upload_references_accepts_api_and_configured_cdn_urls() -> None:
+    """Verify attachment binding can see API URLs and configured CDN URLs.
+
+    Key parameters: none. Return value is none. Side effect: none.
+    """
+    refs = extract_upload_references(
+        "\n".join(
+            [
+                "![api](/uploads/10/content)",
+                "![cdn](https://img.pingxingxian.space/2026/06/10.png)",
+                "![thumb](https://img.pingxingxian.space/_thumbnails/2026/06/10.png.webp)",
+            ]
+        ),
+        cdn_base_url="https://img.pingxingxian.space/",
+    )
+
+    assert refs.ids == ["10"]
+    assert refs.storage_keys == ["2026/06/10.png"]
 
 
 async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], object]:

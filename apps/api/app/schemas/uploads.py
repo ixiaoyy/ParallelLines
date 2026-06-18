@@ -20,10 +20,15 @@ class UploadResponse(BaseModel):
     created_at: datetime
 
     @classmethod
-    def from_model(cls, upload: Upload) -> "UploadResponse":
+    def from_model(cls, upload: Upload, *, url: str | None = None) -> "UploadResponse":
+        """Build an upload API payload from a database upload row.
+
+        Key parameters are the upload model and optional precomputed delivery URL.
+        Return value is the public API response shape. Side effect: none.
+        """
         return cls(
             id=upload.id,
-            url=f"/uploads/{upload.id}/content",
+            url=url or f"/uploads/{upload.id}/content",
             original_filename=upload.original_filename,
             media_type=upload.media_type,
             byte_size=upload.byte_size,

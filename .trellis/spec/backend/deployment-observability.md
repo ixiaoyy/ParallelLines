@@ -52,8 +52,9 @@ Upload storage env:
 |---|---|
 | `UPLOAD_STORAGE_BACKEND` | `local` for current MVP; `s3` is reserved config and must not be silently treated as local in production docs. |
 | `UPLOAD_STORAGE_PATH` | Local storage root; Docker Compose overrides the container path to `/var/lib/parallellines/uploads` and bind-mounts host `/opt/parallellines/var/uploads`. |
-| `UPLOAD_CDN_BASE_URL` | Optional future CDN base URL for public objects. |
-| `UPLOAD_S3_BUCKET` / `UPLOAD_S3_REGION` / `UPLOAD_S3_ENDPOINT_URL` | Reserved S3-compatible object storage config. |
+| `UPLOAD_CDN_BASE_URL` | Optional public CDN/custom domain base URL for S3-backed upload images; content routes may redirect to `{base}/{storage_key}` after ACL checks. |
+| `UPLOAD_PUBLIC_CDN_URLS` | Optional direct URL mode for public image sites; when true, new S3 image upload responses may return the CDN object URL instead of `/uploads/{id}/content`. |
+| `UPLOAD_S3_BUCKET` / `UPLOAD_S3_REGION` / `UPLOAD_S3_ENDPOINT_URL` | S3-compatible object storage config. |
 | `UPLOAD_MAX_BYTES` / `UPLOAD_MAX_AVATAR_BYTES` | Single-file limits for post attachments and avatars. |
 | `UPLOAD_MAX_FILES_PER_POST` | Maximum number of upload URLs attachable to one post. |
 | `UPLOAD_TEMPORARY_TTL_HOURS` | Expiry window for uploads not yet attached to a post. |

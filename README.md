@@ -107,8 +107,8 @@ Docker Compose 部署会覆盖容器内路径为 `/var/lib/parallellines/uploads
 发帖上传会返回 `/uploads/{id}/content` 引用，创建/编辑帖子后自动绑定到对应楼层。头像通过
 `POST /api/v1/uploads/avatar` 更新，并会同步到 `/auth/me` 和公开用户资料。
 
-也可以把新上传切到 S3 兼容存储（例如 Cloudflare R2），前端 URL 和权限检查保持不变，API 会按
-每条上传记录的 `storage_backend` 从本地或对象存储读取文件：
+也可以把新上传切到 S3 兼容存储（例如 Cloudflare R2）。默认前端 URL 和权限检查保持不变，
+API 会按每条上传记录的 `storage_backend` 从本地或对象存储读取文件：
 
 ```env
 UPLOAD_STORAGE_BACKEND=s3
@@ -119,6 +119,22 @@ UPLOAD_S3_ACCESS_KEY_ID=your-r2-access-key-id
 UPLOAD_S3_SECRET_ACCESS_KEY=your-r2-secret-access-key
 UPLOAD_S3_REQUEST_TIMEOUT_SECONDS=10
 ```
+
+如果 R2 已绑定公开访问域名，可以设置：
+
+```env
+UPLOAD_CDN_BASE_URL=https://img.pingxingxian.space
+```
+
+这样 API 在完成上传 ACL 校验后，会把图片和缩略图请求 302 到
+`https://img.pingxingxian.space/{storage_key}`。如果希望新上传接口直接返回 CDN URL，额外开启：
+
+```env
+UPLOAD_PUBLIC_CDN_URLS=true
+```
+
+这个开关适合公开图片站点；开启后 Markdown 会保存 `img.pingxingxian.space` 地址，图片 URL
+本身就是可直接访问的公开链接。
 
 已有本地文件迁移到 R2 时，保持对象 key 与数据库 `storage_key` 一致，例如
 `2026/06/3.png` 和 `_thumbnails/2026/06/3.png.webp`，并把对应上传记录的

@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, Query, Request, UploadFile, status
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
 
 from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep, SettingsDep
 from app.core.response_cache import scoped_cache_control
@@ -26,16 +26,22 @@ async def upload_file(
     file: Annotated[UploadFile, File()],
     kind: Annotated[UploadKind, Form()] = "post_attachment",
 ) -> ApiResponse[UploadResponse]:
+    service = UploadService(session, settings)
     if kind == "avatar":
-        upload = await UploadService(session, settings).update_avatar(file, current_user, request)
+        upload = await service.update_avatar(file, current_user, request)
     else:
-        upload = await UploadService(session, settings).create_post_upload(
+        upload = await service.create_post_upload(
             file,
             current_user,
             request,
         )
         await session.commit()
-    return ApiResponse(data=UploadResponse.from_model(upload))
+    public_url = (
+        service.public_upload_url(upload)
+        if settings.upload_public_cdn_urls and upload.is_image
+        else None
+    )
+    return ApiResponse(data=UploadResponse.from_model(upload, url=public_url))
 
 
 @router.post(
@@ -62,18 +68,28 @@ async def get_upload_content(
     current_user: OptionalCurrentUserDep,
     download: Annotated[bool, Query()] = False,
 ) -> Response:
-    content = await UploadService(session, settings).get_upload_content(upload_id, current_user)
-    inline = content.upload.is_image and not download
+    service = UploadService(session, settings)
+    upload = await service.get_upload_for_delivery(upload_id, current_user)
+    inline = upload.is_image and not download
+    public_url = service.public_upload_url(upload)
+    if public_url and inline:
+        return RedirectResponse(
+            public_url,
+            status_code=status.HTTP_302_FOUND,
+            headers=upload_redirect_headers(current_user),
+        )
+
+    content = await service.read_upload_content(upload)
     headers = upload_file_headers(
         current_user,
         content_disposition=content_disposition(
-            content.upload.original_filename,
+            upload.original_filename,
             inline=inline,
         ),
     )
     return Response(
         content.content,
-        media_type=content.upload.media_type,
+        media_type=upload.media_type,
         headers=headers,
     )
 
@@ -85,10 +101,19 @@ async def get_upload_thumbnail(
     settings: SettingsDep,
     current_user: OptionalCurrentUserDep,
 ) -> Response:
-    thumbnail = await UploadService(session, settings).get_upload_thumbnail(
+    service = UploadService(session, settings)
+    thumbnail = await service.get_upload_thumbnail(
         upload_id,
         current_user,
     )
+    public_url = service.public_upload_url(thumbnail.upload, thumbnail=True)
+    if public_url:
+        return RedirectResponse(
+            public_url,
+            status_code=status.HTTP_302_FOUND,
+            headers=upload_redirect_headers(current_user),
+        )
+
     headers = upload_file_headers(
         current_user,
         content_disposition=content_disposition(
@@ -116,5 +141,21 @@ def upload_file_headers(current_user: object | None, *, content_disposition: str
             stale_while_revalidate=604_800,
         ),
         "Content-Disposition": content_disposition,
+        "X-Content-Type-Options": "nosniff",
+    }
+
+
+def upload_redirect_headers(current_user: object | None) -> dict[str, str]:
+    """Build cache headers for short API redirects to public upload objects.
+
+    Key parameter is the optional current user. Return value is a response header
+    dict for the redirect itself. Side effect: none.
+    """
+    return {
+        "Cache-Control": scoped_cache_control(
+            current_user,
+            max_age=300,
+            stale_while_revalidate=3600,
+        ),
         "X-Content-Type-Options": "nosniff",
     }
