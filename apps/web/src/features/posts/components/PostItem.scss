@@ -652,7 +652,86 @@
   border: 0;
   border-radius: 0.55rem;
   background: #fff;
+  color: transparent;
+  font-size: 0;
   box-shadow: 0 18px 52px rgba(var(--shadow-rgb), 0.22);
+}
+
+.comic-reader__page-unavailable {
+  display: grid;
+  width: 100%;
+  max-width: min(100%, 44rem);
+  min-height: clamp(16rem, 42vw, 30rem);
+  place-items: center;
+  align-content: center;
+  gap: 0.52rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.16);
+  border-radius: 0.85rem;
+  padding: clamp(1.3rem, 4vw, 2.2rem);
+  color: var(--text);
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 0, rgba(var(--primary-rgb), 0.11), transparent 12rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+}
+
+.comic-reader__page-unavailable span {
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 920;
+}
+
+.comic-reader__page-unavailable strong {
+  max-width: 100%;
+  color: var(--title);
+  font-size: clamp(1.05rem, 2vw, 1.32rem);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.comic-reader__page-unavailable p {
+  max-width: 22rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.comic-reader__page-unavailable-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.48rem;
+  justify-content: center;
+  margin-top: 0.28rem;
+}
+
+.comic-reader__page-unavailable-actions button,
+.comic-reader__page-unavailable-actions a {
+  display: inline-grid;
+  min-height: 2.2rem;
+  place-items: center;
+  border: 1px solid rgba(var(--primary-rgb), 0.2);
+  border-radius: var(--radius-pill);
+  padding: 0.42rem 0.86rem;
+  color: var(--primary);
+  background: rgba(255, 255, 255, 0.88);
+  font-size: 0.84rem;
+  font-weight: 860;
+  text-decoration: none;
+}
+
+.comic-reader__page-unavailable-actions button {
+  cursor: pointer;
+}
+
+.comic-reader__page-unavailable-actions button:hover,
+.comic-reader__page-unavailable-actions button:focus-visible,
+.comic-reader__page-unavailable-actions a:hover,
+.comic-reader__page-unavailable-actions a:focus-visible {
+  outline: none;
+  border-color: rgba(var(--primary-rgb), 0.38);
+  background: rgba(var(--primary-rgb), 0.1);
 }
 
 .comic-reader__page-hit {
@@ -1061,7 +1140,9 @@
     border: 0;
     border-radius: 0;
     padding: 0;
-    background: #fff;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.95), #fff 5.5rem),
+      #fff;
   }
 
   .comic-reader__single-page img {
@@ -1070,6 +1151,15 @@
     max-width: none;
     max-height: none;
     border-radius: 0;
+    box-shadow: none;
+  }
+
+  .comic-reader__page-unavailable {
+    max-width: none;
+    min-height: 17rem;
+    border-width: 1px 0;
+    border-radius: 0;
+    padding: 1.45rem 1rem;
     box-shadow: none;
   }
 

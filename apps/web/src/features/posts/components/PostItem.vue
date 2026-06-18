@@ -92,6 +92,8 @@ const reportModalOpen = ref(false);
 const bodyRef = ref<HTMLElement | null>(null);
 const postMoreRef = ref<HTMLDetailsElement | null>(null);
 const activeComicPageIndex = ref(0);
+const activeComicImageUnavailable = ref(false);
+const activeComicImageRetryToken = ref(0);
 const prefetchedComicImageUrls = new Set<string>();
 const prefetchedComicThumbnailUrls = new Set<string>();
 let nextComicPreloadTimer: number | null = null;
@@ -202,6 +204,15 @@ watch(
 watch(activeComicPageIndex, () => {
   scheduleNextComicPagePreload();
 });
+
+// Purpose: clears stale image-failure state when the active comic page changes.
+// Key parameter: the watched source URL identifies the mounted page image. Return value: none; side effect: resets the reader failure UI.
+watch(
+  () => activeComicPage.value?.src,
+  () => {
+    activeComicImageUnavailable.value = false;
+  },
+);
 
 // Purpose: prevents delayed comic preloads from firing after this post item is destroyed.
 // Key parameters: none. Return value: none; side effect: clears any pending preload timer.
@@ -676,6 +687,32 @@ function handleComicReaderKeydown(event: KeyboardEvent) {
 }
 
 /**
+ * Marks the active comic page as unavailable when the browser cannot load it.
+ * Key parameters: none; it reads the current active image element event context. Return value: none.
+ * Side effect: swaps the broken browser image for the designed reader fallback.
+ */
+function markActiveComicImageUnavailable() {
+  activeComicImageUnavailable.value = true;
+}
+
+/**
+ * Clears the active comic page failure marker after a successful image load.
+ * Key parameters: none. Return value: none. Side effect: restores the normal comic page view.
+ */
+function clearActiveComicImageUnavailable() {
+  activeComicImageUnavailable.value = false;
+}
+
+/**
+ * Retries loading the active comic page without changing pages.
+ * Key parameters: none. Return value: none. Side effect: remounts the image by bumping its render key.
+ */
+function retryActiveComicImage() {
+  activeComicImageUnavailable.value = false;
+  activeComicImageRetryToken.value += 1;
+}
+
+/**
  * Schedules a low-priority background preload for only the next comic page.
  * Key parameters: none; it reads active page state. Return value: none.
  * Side effect: starts one delayed image request, leaving the rendered DOM to the current page only.
@@ -1074,13 +1111,25 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
                 ‹
               </button>
               <img
-                :key="activeComicPage.src"
+                v-if="!activeComicImageUnavailable"
+                :key="`${activeComicPage.src}:${activeComicImageRetryToken}`"
                 :src="activeComicPage.src"
                 :alt="activeComicPage.alt"
                 loading="eager"
                 decoding="async"
                 fetchpriority="high"
+                @load="clearActiveComicImageUnavailable"
+                @error="markActiveComicImageUnavailable"
               />
+              <div v-else class="comic-reader__page-unavailable" role="status">
+                <span>图片没有加载出来</span>
+                <strong>{{ activeComicPage.alt }}</strong>
+                <p>原图地址可能暂时不可用，先保留页码和原图入口。</p>
+                <div class="comic-reader__page-unavailable-actions">
+                  <button type="button" @click="retryActiveComicImage">重试</button>
+                  <a :href="activeComicPage.src" target="_blank" rel="noreferrer">打开原图</a>
+                </div>
+              </div>
               <button
                 class="comic-reader__page-hit comic-reader__page-hit--next"
                 type="button"
