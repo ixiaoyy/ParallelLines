@@ -117,7 +117,6 @@ jobs:
           JWT_SECRET_KEY: smoke-test-secret-change-me-123456
         run: |
           uv run alembic upgrade head
-          uv run python -m app.sync_quality_posts
       - name: Start API and Web, then run smoke tests
         env:
           DATABASE_URL: mysql+asyncmy://root:root@127.0.0.1:3306/parallellines_smoke?charset=utf8mb4
