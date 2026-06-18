@@ -49,7 +49,7 @@ async def create_topic_fixture(client: AsyncClient, auth: str) -> dict[str, str]
         headers={"Authorization": auth},
         json={
             "title": "FastAPI 长任务通知如何设计？",
-            "raw_md": "想知道回复、提及和关注版块通知应该如何落库。",
+            "raw_md": "想知道回复、提及和主题通知应该如何落库。",
             "tags": ["fastapi", "notifications"],
         },
     )
@@ -162,7 +162,7 @@ async def test_follow_like_and_bookmark_are_idempotent() -> None:
 
 
 @pytest.mark.asyncio
-async def test_reply_and_board_follow_create_readable_notifications() -> None:
+async def test_reply_notifications_remain_readable_without_board_follow_fanout() -> None:
     session_factory, engine = await create_test_session()
 
     async def override_session():
@@ -190,8 +190,8 @@ async def test_reply_and_board_follow_create_readable_notifications() -> None:
             "/api/v1/boards/support/topics",
             headers=owner_headers,
             json={
-                "title": "关注版块后是否收到新主题通知？",
-                "raw_md": "这个主题用于验证 board_new_topic 通知。",
+                "title": "版块成员是否还会收到新主题通知？",
+                "raw_md": "这个主题用于验证版块级新主题通知已停用。",
                 "tags": ["notification"],
             },
         )
@@ -204,8 +204,8 @@ async def test_reply_and_board_follow_create_readable_notifications() -> None:
         )
         assert watcher_notifications.status_code == 200
         watcher_data = watcher_notifications.json()["data"]
-        assert watcher_data["unread_count"] == 1
-        assert watcher_data["notifications"][0]["type"] == "board_new_topic"
+        assert watcher_data["unread_count"] == 0
+        assert watcher_data["notifications"] == []
 
         reply = await client.post(
             f"/api/v1/topics/{fixture['topic_id']}/posts",
@@ -243,6 +243,6 @@ async def test_reply_and_board_follow_create_readable_notifications() -> None:
         topic_count = await session.scalar(select(func.count(Topic.id)))
         notification_count = await session.scalar(select(func.count(Notification.id)))
         assert topic_count == 2
-        assert notification_count >= 3
+        assert notification_count >= 2
 
     await engine.dispose()

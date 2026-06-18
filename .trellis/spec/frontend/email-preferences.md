@@ -25,7 +25,6 @@ Payload fields:
 - `notify_mentioned`
 - `notify_liked`
 - `notify_topic_new_post`
-- `notify_board_new_topic`
 - `digest_frequency: "off" | "daily" | "weekly"`
 - `quiet_hours_start: number | null` (UTC hour `0..23`)
 - `quiet_hours_end: number | null` (UTC hour `0..23`)
@@ -34,7 +33,9 @@ Payload fields:
 
 - The page uses `/auth/me` via `useCurrentUser`; it must not infer identity from JWT content.
 - Preference state comes from TanStack Query, with a local draft copy for editing.
-- Saving sends only the documented preference fields and replaces the query cache with the server response.
+- Saving sends only the documented visible preference fields plus `notify_board_new_topic=false` for
+  legacy cleanup, then replaces the query cache with the server response.
+- The UI must not render a "board new topic" email toggle; board-level subscriptions are retired.
 - The master switch disables UI controls visually but still preserves individual toggle values for later re-enable.
 - Quiet hours are edited as UTC hour selects. Enabling quiet hours should default to a practical
   overnight window (for example `22 -> 7`); disabling sends `quiet_hours_start=null` and

@@ -3230,28 +3230,10 @@ class ForumService:
         first_post: Post,
         current_user: User,
     ) -> None:
-        watchers = await self.session.scalars(
-            select(BoardMember).where(
-                BoardMember.board_id == board.id,
-                BoardMember.user_id != current_user.id,
-                BoardMember.notification_level.in_(("watching", "tracking")),
-            )
-        )
-        for watcher in watchers:
-            await self._add_notification(
-                user_id=watcher.user_id,
-                kind="board_new_topic",
-                topic_id=topic.id,
-                post_id=first_post.id,
-                actor_id=current_user.id,
-                data={
-                    "board_slug": board.slug,
-                    "board_name": board.name,
-                    "topic_title": topic.title,
-                    "topic_slug": topic.slug,
-                    "post_number": first_post.post_number,
-                },
-            )
+        # Board-level topic subscriptions are retired in the product UI. Keep the method as a
+        # compatibility no-op because BoardMember rows still represent private-board access
+        # and roles.
+        return
 
     async def _queue_followed_user_new_topic_notifications(
         self,

@@ -257,18 +257,20 @@ COLUMN_COMMENTS: dict[str, dict[str, str]] = {
         "required_tags": "发帖必须包含的规范化标签名列表；为空或空数组表示不强制。",
         "allowed_tags": "允许使用的规范化标签名列表；为空或空数组表示不限制。",
         "post_template": "该版块新主题默认 Markdown 模板；为空表示不预填。",
-        "default_notification_level": "新关注者或受邀成员默认版块通知级别。",
+        "default_notification_level": (
+            "受邀成员或历史关注关系的默认版块通知级别；版块新帖订阅已退役。"
+        ),
         "default_sort": "版块主题默认排序：latest、hot 或 top。",
         "topic_count": "版块下未删除主题数量缓存。",
         "post_count": "版块下帖子数量缓存。",
-        "follower_count": "关注/订阅该版块的用户数量缓存。",
+        "follower_count": "版块成员数量缓存；包含历史关注关系。",
     },
     "board_members": {
         "board_id": "所属版块 ID。",
         "user_id": "成员用户 ID。",
         "role": "成员在版块内的角色。",
-        "notification_level": "该成员对版块的通知级别。",
-        "joined_at": "加入或关注版块时间。",
+        "notification_level": "该成员对版块的历史通知级别；不再触发版块新帖提醒。",
+        "joined_at": "加入版块或建立历史关注关系的时间。",
     },
     "board_invitations": {
         "board_id": "被邀请加入的版块 ID。",
@@ -557,7 +559,7 @@ COLUMN_COMMENTS: dict[str, dict[str, str]] = {
         "notify_mentioned": "被提及时是否发送邮件。",
         "notify_liked": "帖子被点赞时是否发送邮件。",
         "notify_topic_new_post": "关注主题有新回复时是否发送邮件。",
-        "notify_board_new_topic": "关注版块有新主题时是否发送邮件。",
+        "notify_board_new_topic": "历史版块新主题邮件偏好；保留字段但不再发送。",
         "digest_frequency": "摘要邮件频率：off、daily 或 weekly。",
         "last_digest_sent_at": "上次摘要邮件发送时间；为空表示从未发送。",
         "delivery_status": "邮件投递状态：ok、bounced、complained 或 disabled。",

@@ -4,7 +4,7 @@
 
 ### 1. Scope / Trigger
 
-- Trigger: changing notification bell/center, SSE stream handling, optimistic post likes, topic bookmarks, board follows, or notification read state.
+- Trigger: changing notification bell/center, SSE stream handling, optimistic post likes, topic bookmarks, topic notification levels, or notification read state.
 - Applies to `apps/web/src/features/notifications/`, `apps/web/src/features/interactions/`, `PostItem`, board pages, topic pages, and shared API wrappers.
 
 ### 2. Signatures
@@ -18,7 +18,7 @@ Frontend APIs/composables:
 | `useNotificationList()` | TanStack Query server-state wrapper with local mock fallback |
 | `useMarkNotificationsRead()` | Optimistic read-state mutation |
 | `useNotificationsStream()` | Fetch-based SSE reader with `AbortController` cleanup |
-| `useOptimisticToggle<TResponse>()` | Shared optimistic toggle helper for likes/bookmarks/follows |
+| `useOptimisticToggle<TResponse>()` | Shared optimistic toggle helper for likes/bookmarks |
 | `getTopicNotificationLevel(topicId)` | Load current user's topic notification/read-state level |
 | `setTopicNotificationLevel(topicId, level)` | Persist `muted|normal|tracking|watching` for a topic |
 | `useTopicNotificationLevel(topicId)` | TanStack Query wrapper for topic notification level |
@@ -32,7 +32,6 @@ Backend endpoints consumed:
 - `PUT|DELETE /api/v1/posts/{post_id}/like`
 - `PUT|DELETE /api/v1/topics/{topic_id}/like`
 - `PUT|DELETE /api/v1/topics/{topic_id}/bookmark`
-- `PUT|DELETE /api/v1/boards/{slug}/follow`
 - `GET|PUT /api/v1/topics/{topic_id}/notification-level`
 
 ### 3. Contracts
@@ -54,9 +53,9 @@ Backend endpoints consumed:
   `canSetNotification` props down to the toolbar.
 - Topic notification-level query key is `queryKeys.topicNotificationLevel(topicId)`. Mutation success
   must replace this cache entry and invalidate `queryKeys.notifications`.
-- Board follow controls may send `notification_level` with `PUT /boards/{slug}/follow`; the selected
-  level must be one of `muted|normal|tracking|watching` and should reuse the shared `NotificationLevel`
-  type.
+- Board pages and directory cards must not render board follow, board notification, or follower-count
+  controls. `board_new_topic` remains a historical notification type only; new UI must guide users to
+  search, tags, topic bookmarks, topic notification levels, and user follows instead.
 
 ### 4. Validation & Error Matrix
 
@@ -72,7 +71,7 @@ Backend endpoints consumed:
 | Optimistic API failure | Revert the toggled active/count values |
 | Missing token for topic notification selector | Disable the selector or route to auth before mutating |
 | Topic notification mutation succeeds | Toolbar status updates and `topicNotificationLevel(topicId)` cache reflects server response |
-| Board notification-level selector changes while logged in | `PUT /boards/{slug}/follow` persists the selected level and reconciles follower state |
+| Historical `board_new_topic` notification exists | Notification center can render and link it, but no UI exposes a board follow/reminder control |
 
 ### 5. Good/Base/Bad Cases
 
@@ -87,7 +86,7 @@ Backend endpoints consumed:
 - `pnpm --dir apps/web typecheck` must pass for notification DTOs, composables, and template bindings.
 - `pnpm --dir apps/web lint` must pass with no warnings.
 - `pnpm --dir apps/web build` must complete; chunk size warnings are acceptable unless they fail the build.
-- Manual smoke: open the bell, mark one/all read, toggle a topic like, post like, board follow, and topic bookmark.
+- Manual smoke: open the bell, mark one/all read, toggle a topic like, post like, and topic bookmark.
 - Manual smoke: open a topic while logged in, switch notification level through
   normal/tracking/watching/muted, reload, and confirm the selected level persists.
 

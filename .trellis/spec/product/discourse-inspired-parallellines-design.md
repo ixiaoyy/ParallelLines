@@ -27,12 +27,12 @@
 
 ## 2. 产品定位
 
-**平行线**：面向开发者、技术社区或兴趣圈子的“主题式论坛”（代码仓库和内部包名沿用 ParallelLines/parallellines）。它保留中文论坛的低门槛发帖、关注版块、楼层回复、热帖榜；吸收 Discourse 的分类清晰、主题流、通知级别、社区治理和可扩展 API。
+**平行线**：面向开发者、技术社区或兴趣圈子的“主题式论坛”（代码仓库和内部包名沿用 ParallelLines/parallellines）。它保留中文论坛的低门槛发帖、楼层回复、热帖榜；吸收 Discourse 的分类清晰、主题流、通知级别、社区治理和可扩展 API。
 
 ### 核心用户
 
 1. 游客：浏览热门版块、热门帖、搜索内容。
-2. 注册用户：关注版块、发主题、回复、点赞、收藏、设置通知。
+2. 注册用户：发主题、回复、点赞、收藏、关注成员、设置主题通知。
 3. 版主/分区版主：置顶、加精、隐藏、处理举报、维护版块介绍。
 4. 管理员：用户管理、全站分类、内容安全、审计日志。
 
@@ -41,14 +41,14 @@
 ### 必做
 
 - 用户注册、登录、刷新 token、当前用户资料。
-- 版块列表、版块主页、关注/取消关注版块。
+- 版块列表、版块主页、按版块浏览和搜索内容。
 - 主题帖：创建、详情、列表、标签、置顶/加精状态。
 - 回帖：楼层号、回复指定楼层、编辑、软删除。
 - Markdown 编辑器，服务端渲染/净化 HTML，代码块使用深色样式。
 - 点赞、收藏、浏览数、回复数、最后回复时间。
 - 最新、热门、精华、我的关注信息流。
 - 搜索：标题、正文、版块、标签、作者。
-- 通知：被回复、被提及、主题新回复、版块新帖。
+- 通知：被回复、被提及、主题新回复、关注成员动态。
 - 举报、隐藏、封禁、审计日志基础版。
 
 ### 暂不做
@@ -125,7 +125,7 @@ D:\work\ParallelLines\
 | `users` | `id, username, email, password_hash, avatar_url, role, status` | 账号主体 |
 | `user_profiles` | `user_id, bio, reputation, location, links` | 展示资料 |
 | `boards` | `id, slug, name, description, color, avatar_url, owner_id, visibility, topic_count, post_count, follower_count` | 版块/分类，借鉴 Discourse Category |
-| `board_members` | `board_id, user_id, role, notification_level, joined_at` | 关注版块、版主/分区版主 |
+| `board_members` | `board_id, user_id, role, notification_level, joined_at` | 私有版块成员、版主/分区版主；历史关注数据兼容 |
 | `topics` | `id, board_id, user_id, title, slug, status, pinned, featured, view_count, reply_count, hot_score, last_posted_at` | 主题帖，借鉴 Discourse Topic |
 | `posts` | `id, topic_id, user_id, parent_id, post_number, raw_md, cooked_html, reply_count, like_count, deleted_at` | 主贴和回帖，第一楼也是 Post |
 | `tags` / `topic_tags` | `name, slug, topic_count` | 跨版块聚合 |
@@ -151,7 +151,7 @@ D:\work\ParallelLines\
 |---|---|---|
 | Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` | 账号会话 |
 | Users | `GET /me`, `GET /users/{username}`, `GET /users/{username}/topics` | 用户资料与动态 |
-| Boards | `GET /boards`, `POST /boards`, `GET /boards/{slug}`, `POST /boards/{slug}/follow` | 版块浏览与关注 |
+| Boards | `GET /boards`, `POST /boards`, `GET /boards/{slug}` | 版块浏览与管理 |
 | Topics | `GET /topics?sort=latest|hot|top`, `POST /boards/{slug}/topics`, `GET /topics/{id}-{slug}` | 主题流与发帖 |
 | Posts | `GET /topics/{topic_id}/posts`, `POST /topics/{topic_id}/posts`, `PATCH /posts/{id}` | 回帖与编辑 |
 | Actions | `PUT /posts/{id}/like`, `PUT /topics/{id}/bookmark`, `POST /flags` | 互动/举报 |
@@ -197,7 +197,7 @@ D:\work\ParallelLines\
 ### 页面布局
 
 - 顶部：Logo、搜索框、`最新/热门/分类/关注`、通知、发帖按钮。
-- 左栏：我的关注版块、热门标签、社区规则。
+- 左栏：热门标签、社区规则、内容导航。
 - 中栏：主题列表/详情主内容。
 - 右栏：热榜、活跃用户、版主公告。
 - 移动端：底部导航 + 发帖浮动按钮。
@@ -209,7 +209,7 @@ UI 基础采用 Ant Design Vue，并通过 `ConfigProvider` 注入平行线色�
 | 组件 | 说明 |
 |---|---|
 | `AppShell` | 顶部导航、三栏栅格、响应式容器 |
-| `BoardCard` | 版块头像、描述、统计、关注按钮 |
+| `BoardCard` | 版块头像、描述、统计、入口 |
 | `TopicList` / `TopicCard` | 标题、版块、标签、作者、回复/热度、最后回复 |
 | `TopicDetail` | 主帖、状态条、楼层导航 |
 | `PostItem` | 楼层、回复引用、动作栏、折叠删除态 |
@@ -223,7 +223,7 @@ UI 基础采用 Ant Design Vue，并通过 `ConfigProvider` 注入平行线色�
 - 发主题 = 创建 `topic` + 第 1 条 `post`，必须单事务完成。
 - 回帖写入时更新 `topics.reply_count / last_posted_at / hot_score`。
 - 每个用户在每个主题维护 `last_read_post_number`，用于新回复提示。
-- 通知级别：`muted / normal / tracking / watching`，优先级：主题设置 > 版块设置 > 默认设置。
+- 通知级别：`muted / normal / tracking / watching`，用于主题设置；版块级新帖订阅已退役。
 - 软删除优先；物理删除仅管理员定时清理或合规要求触发。
 - Markdown 渲染必须服务端净化，禁止原始 HTML 和危险 URL。
 - 热度分 = 时间衰减 + 回复 + 点赞 + 收藏 + 浏览 + 加精/置顶权重。

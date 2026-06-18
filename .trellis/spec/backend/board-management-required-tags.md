@@ -61,7 +61,8 @@ class BoardMemberUpdateRequest(BaseModel):
   - required tags must be a subset of allowed tags when allowed tags are configured.
 - Board member creation increments `follower_count` only when inserting a new `BoardMember`.
 - Removing a member decrements `follower_count`, but owner membership cannot be removed/demoted through member routes.
-- New invite acceptances and board follows default to `board.default_notification_level` when no explicit level is supplied.
+- New invite acceptances and legacy board follow API calls default to `board.default_notification_level`
+  when no explicit level is supplied; board-level new-topic reminders remain retired.
 - Board parent changes must reject self-parenting and cycles.
 
 ### 4. Validation & Error Matrix

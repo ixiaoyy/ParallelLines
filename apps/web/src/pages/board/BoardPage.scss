@@ -83,7 +83,7 @@
 
 .board-hero__copy {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 0.8rem;
   min-width: 0;
@@ -128,60 +128,6 @@
   font-size: clamp(1.45rem, 2.45vw, 2.05rem);
   line-height: 1.08;
   letter-spacing: 0;
-}
-
-.board-follow-controls {
-  display: flex;
-  flex: 0 0 auto;
-  flex-wrap: nowrap;
-  gap: 0.55rem;
-  align-items: center;
-  justify-self: end;
-}
-
-.board-follow-btn {
-  height: 1.85rem;
-  padding: 0 0.85rem;
-  font-size: 0.8rem;
-  font-weight: 800;
-  border-radius: var(--radius-pill);
-}
-
-.board-notification-select {
-  display: flex;
-  gap: 0.45rem;
-  align-items: center;
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 780;
-  white-space: nowrap;
-}
-
-.board-notification-select select {
-  min-height: 1.95rem;
-  border: 1px solid rgba(var(--primary-rgb), 0.22);
-  border-radius: var(--radius-pill);
-  padding: 0 0.7rem;
-  color: var(--title);
-  background: var(--bg-surface);
-  font: inherit;
-}
-
-.board-notification-select select:disabled {
-  color: var(--muted);
-  background: var(--bg-subtle);
-  cursor: not-allowed;
-}
-
-.board-notification-status {
-  grid-column: 1 / -1;
-  margin: 0;
-  border-radius: 0.75rem;
-  padding: 0.52rem 0.65rem;
-  color: var(--primary);
-  background: var(--theme-soft-bg);
-  font-size: 0.82rem;
-  font-weight: 760;
 }
 
 .board-layout {
@@ -422,40 +368,6 @@
   line-height: 1.45;
 }
 
-.board-follow-btn {
-  height: 2rem;
-  padding: 0 0.85rem;
-  font-size: 0.8rem;
-  font-weight: 750;
-  border-radius: var(--radius-pill) !important;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  cursor: pointer;
-  transition: all 150ms ease;
-
-  &.ui-button--subtle {
-    color: var(--primary) !important;
-    border: 1px solid rgba(var(--primary-rgb), 0.35) !important;
-    background: var(--bg-surface) !important;
-
-    &:hover {
-      background: var(--bg-hover) !important;
-      border-color: var(--primary) !important;
-    }
-  }
-
-  &.ui-button--success {
-    color: var(--accent-geek) !important;
-    border: 1px solid rgba(var(--accent-geek-rgb), 0.35) !important;
-    background: rgba(var(--accent-geek-rgb), 0.05) !important;
-
-    &:hover {
-      background: rgba(var(--accent-geek-rgb), 0.1) !important;
-    }
-  }
-}
-
 .empty-link {
   color: var(--primary);
   font-weight: 850;
@@ -525,8 +437,9 @@
   }
 
   .board-hero__copy {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.5rem;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 0.55rem;
   }
 
   .board-hero h1 {
@@ -541,26 +454,6 @@
     max-width: 5.2rem;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .board-follow-controls {
-    gap: 0.35rem;
-  }
-
-  .board-follow-btn {
-    height: 1.9rem;
-    padding: 0 0.62rem;
-    font-size: 0.76rem;
-  }
-
-  .board-notification-select span {
-    display: none;
-  }
-
-  .board-notification-select select {
-    min-width: 4.35rem;
-    min-height: 1.9rem;
-    padding: 0 0.55rem;
   }
 
   .board-toolbar {
@@ -626,11 +519,5 @@
   .board-title-row__parent,
   .board-title-row__separator {
     display: none;
-  }
-
-  .board-follow-btn {
-    max-width: 5.5rem;
-    padding: 0 0.5rem;
-    overflow: hidden;
   }
 }

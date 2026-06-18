@@ -119,7 +119,7 @@ useOutsidePointerDown(bellRef, closePanel, () => open.value);
       <div v-else class="notification-empty">
         <InboxOutlined />
         <strong>暂时没有新通知</strong>
-        <span>回复、提及和关注版块动态会在这里出现。</span>
+        <span>回复、提及、主题更新和成员动态会在这里出现。</span>
       </div>
     </section>
   </div>

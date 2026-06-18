@@ -90,7 +90,7 @@ async function savePreferences() {
       notify_mentioned: draft.value.notify_mentioned,
       notify_liked: draft.value.notify_liked,
       notify_topic_new_post: draft.value.notify_topic_new_post,
-      notify_board_new_topic: draft.value.notify_board_new_topic,
+      notify_board_new_topic: false,
       digest_frequency: normalizeDigest(draft.value.digest_frequency),
       quiet_hours_start: draft.value.quiet_hours_start,
       quiet_hours_end: draft.value.quiet_hours_end,

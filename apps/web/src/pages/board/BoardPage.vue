@@ -4,10 +4,8 @@ import {
   CheckCircleOutlined,
   FireOutlined,
   HistoryOutlined,
-  StarFilled,
-  StarOutlined,
 } from "@ant-design/icons-vue";
-import { computed, defineAsyncComponent, ref, watch } from "vue";
+import { computed, defineAsyncComponent } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import { publicSettingString } from "@/features/admin/model";
@@ -15,16 +13,11 @@ import { usePublicSiteSettings } from "@/features/admin/queries";
 import { isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser } from "@/features/auth/queries";
 import { useBoardDetail } from "@/features/boards/queries";
-import { setBoardFollow } from "@/features/interactions/api";
-import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
-import type { NotificationLevel } from "@/features/notifications/model";
 import TopicList from "@/features/topics/components/TopicList.vue";
 import { useBoardTopics } from "@/features/topics/queries";
-import { hasAccessToken } from "@/shared/api/client";
 import { readRouteParam } from "@/shared/router/params";
 import { useSeoMeta } from "@/shared/seo/meta";
 import { boardToneClass } from "@/shared/theme/boardPalette";
-import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
@@ -36,11 +29,6 @@ type TopicStatusFilter = "all" | "solved" | "unanswered" | "official";
 const BoardSettingsPanel = defineAsyncComponent(() =>
   import("@/features/boards/components/BoardSettingsPanel.vue"),
 );
-
-const notificationLevelOptions: Array<{ value: NotificationLevel; label: string; description: string }> = [
-  { value: "watching", label: "关注", description: "这个版块有新主题时提醒。" },
-  { value: "muted", label: "静音", description: "不接收这个版块的新主题提醒。" },
-];
 
 const boardIcons: Record<string, string> = {
   engineering: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -131,46 +119,6 @@ const canManageBoard = computed(
   () =>
     Boolean(board.value?.ownerId && board.value.ownerId === currentUserQuery.data.value?.id) ||
     isAdmin(currentUserQuery.data.value),
-);
-const boardNotificationLevel = ref<NotificationLevel>("watching");
-const boardNotificationPending = ref(false);
-const boardNotificationStatus = ref("");
-const boardNotificationSelectValue = computed<NotificationLevel>(() =>
-  boardNotificationLevel.value === "muted" || boardNotificationLevel.value === "normal" ? "muted" : "watching",
-);
-const boardNotificationDescription = computed(
-  () =>
-    notificationLevelOptions.find((option) => option.value === boardNotificationSelectValue.value)?.description ??
-    notificationLevelOptions[0].description,
-);
-const {
-  active: followingBoard,
-  count: followerCount,
-  pending: followPending,
-  toggle: toggleBoardFollow,
-} = useOptimisticToggle({
-  active: () => board.value?.isFollowing ?? false,
-  count: () => board.value?.followerCount ?? 0,
-  enabled: hasAccessToken,
-  commit: (active) => setBoardFollow(slug.value, active, boardNotificationLevel.value),
-  readActive: (response) => response.following,
-  readCount: (response) => response.follower_count,
-  onDisabled: () => {
-    void router.push({ name: "auth", query: { redirect: route.fullPath } });
-  },
-  mockWhenDisabled: false,
-});
-
-watch(
-  board,
-  (current) => {
-    if (!current || boardNotificationPending.value) {
-      return;
-    }
-
-    boardNotificationLevel.value = toNotificationLevel(current.notificationLevel) ?? "watching";
-  },
-  { immediate: true },
 );
 
 const searchQuery = computed<string>({
@@ -281,48 +229,6 @@ function updateQuery(patch: Record<string, string | undefined>) {
 
   void router.replace({ name: "board-detail", params: { slug: slug.value }, query });
 }
-
-function toNotificationLevel(value: string | null): NotificationLevel | null {
-  if (
-    value === "watching" ||
-    value === "tracking" ||
-    value === "normal" ||
-    value === "muted"
-  ) {
-    return value;
-  }
-
-  return null;
-}
-
-async function updateBoardNotificationLevel(event: Event) {
-  const target = event.target as HTMLSelectElement;
-  const nextLevel = target.value as NotificationLevel;
-  const previousLevel = boardNotificationLevel.value;
-  boardNotificationLevel.value = nextLevel;
-  boardNotificationStatus.value = "";
-
-  if (!hasAccessToken()) {
-    boardNotificationLevel.value = previousLevel;
-    boardNotificationStatus.value = "登录后才能设置版块通知。";
-    void router.push({ name: "auth", query: { redirect: route.fullPath } });
-    return;
-  }
-
-  boardNotificationPending.value = true;
-  try {
-    const response = await setBoardFollow(slug.value, true, nextLevel);
-    followingBoard.value = response.following;
-    followerCount.value = response.follower_count;
-    boardNotificationLevel.value = response.notification_level ?? nextLevel;
-    boardNotificationStatus.value = `版块通知已设为${nextLevel === "muted" ? "静音" : "关注"}。`;
-  } catch {
-    boardNotificationLevel.value = previousLevel;
-    boardNotificationStatus.value = "版块通知设置失败，请稍后重试。";
-  } finally {
-    boardNotificationPending.value = false;
-  }
-}
 </script>
 
 <template>
@@ -355,40 +261,7 @@ async function updateBoardNotificationLevel(event: Event) {
               <span class="board-title-row__separator">/</span>
               <h1 id="board-title">{{ board.name }}</h1>
             </div>
-            <div class="board-follow-controls">
-              <UiButton
-                class="board-follow-btn"
-                :tone="followingBoard ? 'success' : 'subtle'"
-                :aria-pressed="followingBoard"
-                :disabled="followPending || boardNotificationPending"
-                @click="toggleBoardFollow"
-              >
-                <template #icon>
-                  <StarFilled v-if="followingBoard" />
-                  <StarOutlined v-else />
-                </template>
-                {{ followingBoard ? "已关注版块" : "关注版块" }}
-              </UiButton>
-              <label class="board-notification-select" :title="boardNotificationDescription">
-                <span>版块通知</span>
-                <select
-                  :value="boardNotificationSelectValue"
-                  :disabled="followPending || boardNotificationPending"
-                  aria-label="设置版块通知级别"
-                  @change="updateBoardNotificationLevel"
-                >
-                  <option
-                    v-for="option in notificationLevelOptions"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
-            </div>
           </div>
-          <p v-if="boardNotificationStatus" class="board-notification-status" role="status">{{ boardNotificationStatus }}</p>
         </div>
 
       </section>

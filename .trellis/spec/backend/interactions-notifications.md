@@ -4,7 +4,7 @@
 
 ### 1. Scope / Trigger
 
-- Trigger: implementing likes, bookmarks, board follows, and notifications touches API routes, service transactions, database tables, response schemas, and tests.
+- Trigger: implementing likes, bookmarks, legacy board member follow APIs, and notifications touches API routes, service transactions, database tables, response schemas, and tests.
 - Use this contract whenever changing `reactions`, `bookmarks`, `notifications`, `board_members`, or notification creation during topic/post writes.
 
 ### 2. Signatures
@@ -13,8 +13,8 @@ API routes:
 
 | Method | Path | Auth | Purpose |
 |---|---|---:|---|
-| `PUT` | `/api/v1/boards/{slug}/follow` | yes | Follow board or update notification level |
-| `DELETE` | `/api/v1/boards/{slug}/follow` | yes | Unfollow board |
+| `PUT` | `/api/v1/boards/{slug}/follow` | yes | Legacy compatibility path for creating/updating a board member row |
+| `DELETE` | `/api/v1/boards/{slug}/follow` | yes | Legacy compatibility path for removing a non-owner board member row |
 | `PUT` | `/api/v1/posts/{post_id}/like` | yes | Like a post idempotently |
 | `DELETE` | `/api/v1/posts/{post_id}/like` | yes | Unlike a post idempotently |
 | `PUT` | `/api/v1/topics/{topic_id}/like` | yes | Like a topic idempotently |
@@ -60,9 +60,9 @@ Database signatures:
   already-earned points.
 - `watching` and `tracking` topic read states receive `topic_new_post` fan-out when they were not
   already notified by a direct reply/mention notification.
-- Board members with `notification_level in ("watching", "tracking")` receive `board_new_topic`
-  fan-out. `normal` and `muted` board levels remain membership/follow state but do not trigger
-  board-new-topic fan-out.
+- Board-level new-topic fan-out is retired. Topic creation must not enqueue `board_new_topic`,
+  even if existing `BoardMember.notification_level` is `watching` or `tracking`. Keep the
+  `board_new_topic` type only for historical notification cleanup/rendering compatibility.
 
 ### 4. Validation & Error Matrix
 
@@ -96,6 +96,8 @@ Database signatures:
   unless the interaction contract changes materially.
 - Service or API test proving duplicate rows cannot be created through repeated calls.
 - Notification test proving reply + mention fan-out creates queued jobs and, after draining the worker, unread records.
+- Regression test proving a legacy board member with `notification_level="watching"` does not
+  receive `board_new_topic` when another user creates a topic.
 - Preference matrix test proving muted topic suppresses `replied`, `mentioned`, and `liked`, and
   watching/tracking topics receive `topic_new_post`.
 - API tests for `GET|PUT /topics/{topic_id}/notification-level`, including default `normal` when no

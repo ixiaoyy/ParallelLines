@@ -39,14 +39,15 @@ Env:
 
 ### 3. Contracts
 
-- User preferences default to email enabled, replied/mentioned/liked enabled, topic/board bulk notifications disabled, and daily digest enabled.
+- User preferences default to email enabled, replied/mentioned/liked enabled, topic bulk notifications
+  disabled, legacy board bulk notifications disabled, and daily digest enabled.
 - Preference payload fields are:
   - `email_enabled`
   - `notify_replied`
   - `notify_mentioned`
   - `notify_liked`
   - `notify_topic_new_post`
-  - `notify_board_new_topic`
+  - `notify_board_new_topic` (legacy field retained for schema compatibility; board-new-topic emails are not sent)
   - `digest_frequency: "off" | "daily" | "weekly"`
   - `quiet_hours_start: 0..23 | null`
   - `quiet_hours_end: 0..23 | null`
@@ -56,6 +57,8 @@ Env:
   disables quiet-hour suppression.
 - Request paths never perform SMTP; they enqueue or record only. SMTP happens inside background handlers.
 - Notification email idempotency key is `email-notification:{notification_id}`.
+- `board_new_topic` notifications are historical compatibility records only and must not enqueue
+  immediate notification email jobs.
 - Digest jobs send only to active users whose `email_enabled=true`, `delivery_status="ok"`, and `digest_frequency != "off"`.
 - Bounce/complaint/drop webhooks record an event and automatically set `email_enabled=false` for a matched user.
 - Inbound reply webhook v1 records payload and matching status only; it does not create posts yet.

@@ -30,7 +30,6 @@ NOTIFICATION_EMAIL_KINDS = {
     "mentioned": "notify_mentioned",
     "liked": "notify_liked",
     "topic_new_post": "notify_topic_new_post",
-    "board_new_topic": "notify_board_new_topic",
 }
 
 NOTIFICATION_TITLES = {
@@ -38,7 +37,6 @@ NOTIFICATION_TITLES = {
     "mentioned": "有人提到了你",
     "liked": "有人赞同了你的帖子",
     "topic_new_post": "关注主题有新回复",
-    "board_new_topic": "关注版块有新主题",
 }
 
 DEFAULT_EMAIL_TEMPLATES = {

@@ -80,7 +80,7 @@ class Board(IntegerPrimaryKeyMixin, TimestampMixin, Base):
         String(32),
         nullable=False,
         default="normal",
-        comment="新关注者或受邀成员默认版块通知级别。",
+        comment="受邀成员或历史关注关系的默认版块通知级别；版块新帖订阅已退役。",
     )
     default_sort: Mapped[str] = mapped_column(
         String(32),

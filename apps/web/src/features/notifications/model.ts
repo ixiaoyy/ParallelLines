@@ -55,7 +55,7 @@ const typeMeta: Record<
   mentioned: { title: "有人提到了你", tone: "green", description: "提及" },
   liked: { title: "有人赞同了你的内容", tone: "amber", description: "赞同" },
   topic_new_post: { title: "关注主题有新楼层", tone: "blue", description: "新楼层" },
-  board_new_topic: { title: "关注版块有新主题", tone: "green", description: "新主题" },
+  board_new_topic: { title: "版块有新主题", tone: "green", description: "新主题" },
   user_new_topic: { title: "关注成员发布主题", tone: "blue", description: "成员动态" },
   private_message: { title: "收到新的私信", tone: "green", description: "私密主题" },
   moderation: { title: "版务提醒", tone: "red", description: "站务" },

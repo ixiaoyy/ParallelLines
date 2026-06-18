@@ -35,7 +35,6 @@ export interface EmailToggleVM {
     | "notify_mentioned"
     | "notify_liked"
     | "notify_topic_new_post"
-    | "notify_board_new_topic"
   >;
   title: string;
   description: string;
@@ -66,12 +65,6 @@ export const emailToggleItems: EmailToggleVM[] = [
     title: "关注主题更新",
     description: "跟踪或关注的主题出现新楼层时发送邮件。",
     badge: "订阅",
-  },
-  {
-    key: "notify_board_new_topic",
-    title: "关注版块新主题",
-    description: "关注版块有新主题时发送邮件。",
-    badge: "版块",
   },
 ];
 
