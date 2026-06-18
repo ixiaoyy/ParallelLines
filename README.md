@@ -124,6 +124,26 @@ UPLOAD_S3_REQUEST_TIMEOUT_SECONDS=10
 `2026/06/3.png` 和 `_thumbnails/2026/06/3.png.webp`，并把对应上传记录的
 `storage_backend` 改为 `s3`；这样旧记录不需要改 URL。
 
+可以用内置迁移脚本分批迁移历史图片。默认只预览 `uploads.storage_backend='local'`
+且 `is_image=true` 的记录，不写 R2、不改数据库：
+
+```bash
+cd apps/api
+uv run python -m app.migrate_uploads_to_s3 --dry-run
+```
+
+确认数量和缺失文件后再执行真实迁移：
+
+```bash
+uv run python -m app.migrate_uploads_to_s3 --apply
+```
+
+脚本会按原 `storage_key` 上传原图，已存在的本地缩略图会迁到
+`_thumbnails/{storage_key}.webp`；没有缩略图的图片会在首次请求缩略图时由 API
+重新生成到 R2。迁移成功后才把对应上传记录更新为 `storage_backend='s3'`，本地文件
+不会被删除。可用 `--limit 100` 先小批量验证，`--start-after-id <id>` 断点续跑，
+或用 `--all-files` 把非图片附件也一起迁移。
+
 新上传文件按 UTC 年/月切目录，例如 `2026/05/{upload_id}.jpeg`；旧记录中的历史
 `storage_key` 仍按数据库原值读取。
 

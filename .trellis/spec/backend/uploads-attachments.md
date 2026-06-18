@@ -44,6 +44,11 @@ Service methods:
 - `UploadService.get_upload_thumbnail(upload_id, current_user) -> UploadThumbnail`
 - `UploadService.cleanup_expired_temporary_uploads() -> int`
 
+CLI tools:
+
+- `python -m app.migrate_uploads_to_s3 --dry-run|--apply`: migrate existing local upload objects
+  to the configured S3-compatible backend while preserving `uploads.storage_key`.
+
 ### 3. Contracts
 
 - Routers parse multipart input only; `UploadService` owns validation, disk writes,
@@ -74,6 +79,12 @@ Service methods:
   PHP, DLL, COM, and EXE.
 - Local storage paths are generated from server-assigned numeric upload IDs under UTC
   `YYYY/MM/` directories and must never accept user-provided path segments.
+- Local-to-S3 migration must preserve the exact `storage_key` for original objects and existing
+  cached thumbnails (`_thumbnails/{storage_key}.webp`), update `uploads.storage_backend` only after
+  a successful write and read-back verification, and leave local files in place for rollback.
+- The migration command defaults to dry-run and image rows only. Operators must pass `--apply` to
+  change R2/S3 or database state, and may pass `--all-files` only when non-image attachments should
+  also move.
 
 ### 4. Validation & Error Matrix
 
@@ -92,6 +103,8 @@ Service methods:
 | Anonymous reads public-board attached image | 200 |
 | Anonymous/stranger reads private-board attachment | `upload_not_found` / 404 |
 | Accepted private-board member reads attachment | 200 |
+| Local-to-S3 migration cannot read local source | Row remains `storage_backend="local"` and the script reports the missing object |
+| Local-to-S3 migration verification fails | Row remains `storage_backend="local"` and the script exits non-zero in apply mode |
 
 ### 5. Good/Base/Bad Cases
 
@@ -99,10 +112,14 @@ Service methods:
   create topic → service attaches upload to first post → refreshed post renders `<img>`.
 - Base: user uploads avatar with `POST /uploads/avatar`, then `/auth/me` and
   `/users/{username}` return the same `avatar_url`.
+- Good: `python -m app.migrate_uploads_to_s3 --apply --limit 100` uploads originals and existing
+  thumbnails using unchanged keys, then marks only successful rows as `storage_backend="s3"`.
 - Bad: frontend hides the link to a private attachment but `GET /uploads/{id}/content`
   streams it to anonymous users.
 - Bad: trusting `UploadFile.content_type == "image/png"` without checking PNG bytes.
 - Bad: storing an absolute local path in `uploads.storage_key`.
+- Bad: bulk-updating every upload row to `storage_backend="s3"` before all objects are verified in
+  the bucket.
 
 ### 6. Tests Required
 
@@ -116,6 +133,7 @@ Service methods:
 - Regression commands:
   - `ruff check app tests alembic`
   - `pytest -q --tb=short`
+  - `python -m py_compile app/migrate_uploads_to_s3.py`
   - Alembic upgrade on a clean database through `0009_uploads`.
 
 ### 7. Wrong vs Correct
