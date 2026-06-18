@@ -89,6 +89,10 @@
   font-weight: 820;
 }
 
+.reply-composer-anchor {
+  scroll-margin-top: 5.8rem;
+}
+
 .reply-compose-prompt :deep(.ant-card-body) {
   display: flex;
   align-items: center;
@@ -281,6 +285,10 @@
     display: grid;
     justify-items: start;
     padding: 0.95rem;
+  }
+
+  .reply-composer-anchor {
+    scroll-margin-top: 4.2rem;
   }
 
   .post-anchor {

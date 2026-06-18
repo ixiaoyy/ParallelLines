@@ -78,6 +78,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   blockAuthor: [post: PostItemVM];
   quote: [post: PostItemVM];
+  reply: [post: PostItemVM];
   requireLogin: [message: string];
   toggleSolution: [post: PostItemVM];
 }>();
@@ -240,7 +241,17 @@ async function copyCode() {
   setStatus(copied ? "已复制代码" : "无法访问剪贴板，已保留代码内容");
 }
 
+// Opens a blank reply composer from the primary reply action.
+// Key parameters: none. Return value: none. Side effect: asks the topic page to reveal the reply composer.
+function replyPost() {
+  emit("reply", props.post);
+  setStatus("已打开回复框");
+}
+
+// Inserts this post as a quoted reference through the secondary quote action.
+// Key parameters: none. Return value: none. Side effect: asks the topic page to prepend quote Markdown.
 function quotePost() {
+  closeMoreMenu();
   emit("quote", props.post);
   setStatus("已插入引用");
 }
@@ -1150,6 +1161,10 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
               <CodeOutlined aria-hidden="true" />
               复制代码
             </button>
+            <button type="button" @click="quotePost">
+              <EnterOutlined aria-hidden="true" />
+              引用楼层
+            </button>
             <button type="button" :disabled="!canFlag" @click="flagPost">
               <FlagOutlined aria-hidden="true" />
               举报
@@ -1168,7 +1183,7 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
             </button>
           </div>
         </details>
-        <button class="reply-action" type="button" @click="quotePost">
+        <button class="reply-action" type="button" @click="replyPost">
           <RollbackOutlined aria-hidden="true" />
           <span>回复</span>
           <small v-if="post.replyCount">{{ post.replyCount }}</small>

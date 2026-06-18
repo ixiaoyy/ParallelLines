@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import secrets
 from dataclasses import dataclass
-from pathlib import Path
 
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +30,7 @@ from app.models.user import (
     UserSession,
 )
 from app.schemas.privacy import PrivacyActionResponse, RetentionPolicyResponse
+from app.services.uploads import UploadService
 
 ANON_USERNAME_PREFIX = "anonymous"
 DELETED_EMAIL_DOMAIN = "deleted.invalid"
@@ -350,7 +351,10 @@ class PrivacyService:
                     deleted_count += 1
                 upload.status = "deleted"
                 upload.deleted_at = upload.deleted_at or now
-                self._delete_local_upload_file(upload)
+                await asyncio.to_thread(
+                    UploadService(self.session, self.settings).delete_upload_files,
+                    upload,
+                )
             else:
                 retained_count += 1
         return deleted_count, retained_count
@@ -459,17 +463,6 @@ class PrivacyService:
             delete(model).where(*conditions).execution_options(synchronize_session=False)
         )
         return int(result.rowcount or 0)
-
-    def _delete_local_upload_file(self, upload: Upload) -> None:
-        if upload.storage_backend != "local" or self.settings.upload_storage_backend != "local":
-            return
-        root = Path(self.settings.upload_storage_path)
-        if not root.is_absolute():
-            root = Path.cwd() / root
-        root = root.resolve()
-        path = (root / upload.storage_key).resolve()
-        if root in path.parents and path.exists():
-            path.unlink()
 
     async def _require_user(self, user_id: str) -> User:
         user = await self.session.get(User, user_id)

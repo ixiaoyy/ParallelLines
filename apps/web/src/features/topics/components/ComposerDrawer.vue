@@ -69,8 +69,9 @@ const showConflictBanner = ref(false);
 const isSaving = ref(false);
 let isRestoring = false;
 let lastAppliedInsertToken = 0;
+let pendingExternalInsert: { markdown: string; token: number } | null = null;
 
-const editorToolbars: ToolbarNames[] = [
+const topicEditorToolbars: ToolbarNames[] = [
   "bold",
   "italic",
   "strikeThrough",
@@ -87,6 +88,21 @@ const editorToolbars: ToolbarNames[] = [
   "preview",
   "fullscreen",
 ];
+const replyEditorToolbars: ToolbarNames[] = [
+  "bold",
+  "italic",
+  "strikeThrough",
+  "quote",
+  "unorderedList",
+  "orderedList",
+  "codeRow",
+  "code",
+  "link",
+  "image",
+  "revoke",
+  "next",
+  "preview",
+];
 const editorFooters: [] = [];
 
 const isReplyMode = computed(() => props.mode === "reply");
@@ -94,6 +110,7 @@ const heading = computed(() => (isReplyMode.value ? "回复" : "发一条新主�
 const placeholder = computed(() =>
   isReplyMode.value ? "输入回复内容" : "输入正文",
 );
+const editorToolbars = computed(() => (isReplyMode.value ? replyEditorToolbars : topicEditorToolbars));
 const canSubmit = computed(() => draft.value.trim().length > 0 && !props.submitting);
 
 const targetId = computed(() => {
@@ -167,8 +184,25 @@ function applyExternalInsert(markdown: string, token: number) {
     return;
   }
 
+  if (isRestoring) {
+    pendingExternalInsert = { markdown, token };
+    return;
+  }
+
   lastAppliedInsertToken = token;
   insertDraftText(markdown);
+}
+
+// Flushes quote or upload text that arrived while a draft was still being restored.
+// Key parameters: none. Return value: none. Side effect: mutates the draft once restoration is complete.
+function flushPendingExternalInsert() {
+  if (!pendingExternalInsert || isRestoring) {
+    return;
+  }
+
+  const insert = pendingExternalInsert;
+  pendingExternalInsert = null;
+  applyExternalInsert(insert.markdown, insert.token);
 }
 
 function handleDragEnter(event: DragEvent) {
@@ -313,6 +347,7 @@ async function initDraft() {
 
   nextTick(() => {
     isRestoring = false;
+    flushPendingExternalInsert();
   });
 }
 
@@ -341,6 +376,7 @@ function loadDraftState(state: ReplyDraft) {
 
   nextTick(() => {
     isRestoring = false;
+    flushPendingExternalInsert();
   });
 }
 
@@ -413,6 +449,7 @@ async function clearSavedDraft() {
 
   nextTick(() => {
     isRestoring = false;
+    flushPendingExternalInsert();
   });
 }
 

@@ -178,11 +178,20 @@ footer {
     rgba(255, 255, 255, 0.88);
 }
 
+.composer--reply .composer-md-editor {
+  height: 18rem;
+}
+
 .composer--compact .composer-md-editor {
   height: 18rem;
 }
 
 @media (max-width: 560px) {
+  .composer {
+    gap: 0.62rem;
+    padding: 0.72rem;
+  }
+
   footer {
     justify-content: flex-start;
   }
@@ -225,6 +234,47 @@ footer {
 
   .composer-md-editor :deep(.cm-content) {
     font-size: 16px;
+  }
+
+  .composer--reply .composer-editor {
+    border-radius: 0.92rem;
+    padding: 0.28rem;
+  }
+
+  .composer--reply .composer-md-editor {
+    height: 14rem;
+  }
+
+  .composer--reply .composer-md-editor :deep(.md-editor-toolbar-wrapper) {
+    overflow-x: auto;
+  }
+
+  .composer--reply .composer-md-editor :deep(.md-editor-toolbar) {
+    width: max-content;
+    min-width: 100%;
+    flex-wrap: nowrap;
+    gap: 0;
+    padding-inline: 0.18rem;
+  }
+
+  .composer--reply .composer-md-editor :deep(.md-editor-toolbar-left),
+  .composer--reply .composer-md-editor :deep(.md-editor-toolbar-right) {
+    width: auto;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 0;
+  }
+
+  .composer--reply .composer-md-editor :deep(.md-editor-toolbar-item) {
+    flex: 0 0 2.22rem;
+    min-width: 2.22rem;
+    height: 2.26rem;
+    padding: 0;
+  }
+
+  .composer--reply .composer-md-editor :deep(.cm-content) {
+    min-height: 10rem;
+    line-height: 1.58;
   }
 }
 

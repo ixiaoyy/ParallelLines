@@ -80,6 +80,9 @@ class Settings(BaseSettings):
     upload_s3_bucket: str | None = None
     upload_s3_region: str | None = None
     upload_s3_endpoint_url: str | None = None
+    upload_s3_access_key_id: str | None = None
+    upload_s3_secret_access_key: str | None = None
+    upload_s3_request_timeout_seconds: float = 10.0
     upload_max_bytes: int = 5 * 1024 * 1024
     upload_max_avatar_bytes: int = 2 * 1024 * 1024
     upload_max_files_per_post: int = 10

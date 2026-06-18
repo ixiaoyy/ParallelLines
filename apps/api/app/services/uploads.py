@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import hmac
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from io import BytesIO
 from pathlib import Path
-from urllib.parse import quote
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urlsplit, urlunsplit
+from urllib.request import Request as UrlRequest
+from urllib.request import urlopen
 
 from fastapi import UploadFile
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -71,14 +77,313 @@ DISALLOWED_EXTENSIONS = {
 @dataclass(frozen=True)
 class UploadContent:
     upload: Upload
-    path: Path
+    content: bytes
 
 
 @dataclass(frozen=True)
 class UploadThumbnail:
     upload: Upload
-    path: Path
+    content: bytes
     media_type: str = THUMBNAIL_MEDIA_TYPE
+
+
+class LocalUploadStorage:
+    """Read and write upload objects on the configured local filesystem."""
+
+    def __init__(self, settings: Settings) -> None:
+        """Create a local storage adapter for one settings object.
+
+        Key parameter is the loaded runtime settings. Return value is none. Side
+        effect: stores settings for later path resolution.
+        """
+        self.settings = settings
+
+    def write(self, key: str, content: bytes, media_type: str) -> None:
+        """Persist one upload object under `key`.
+
+        Key parameters are the relative object key, raw bytes, and media type for
+        interface parity with S3. Return value is none. Side effect: creates parent
+        directories and writes/replaces the local file.
+        """
+        path = self.path_for(key)
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(content)
+        except OSError as exc:
+            raise storage_unavailable_error() from exc
+
+    def read(self, key: str) -> bytes:
+        """Load one upload object from local storage.
+
+        Key parameter is the relative storage key. Return value is the file bytes.
+        Side effect: validates path containment and raises `upload_not_found` when
+        the object is missing.
+        """
+        path = self.path_for(key)
+        if not path.is_file():
+            raise NotFoundError("upload_not_found", "Upload not found")
+        try:
+            return path.read_bytes()
+        except OSError as exc:
+            raise storage_unavailable_error() from exc
+
+    def delete(self, key: str) -> None:
+        """Delete one local upload object when it exists.
+
+        Key parameter is the relative storage key. Return value is none. Side effect:
+        removes the file after validating it remains inside the upload root.
+        """
+        path = self.path_for(key)
+        try:
+            if path.exists():
+                path.unlink()
+        except OSError as exc:
+            raise storage_unavailable_error() from exc
+
+    def path_for(self, key: str) -> Path:
+        """Resolve a relative object key to an absolute local path.
+
+        Key parameter is a database `storage_key`. Return value is an absolute path
+        inside the configured upload root. Side effect: raises `upload_not_found`
+        when the key would escape the storage root.
+        """
+        root = self.root()
+        path = (root / key).resolve()
+        if root not in path.parents:
+            raise NotFoundError("upload_not_found", "Upload not found")
+        return path
+
+    def root(self) -> Path:
+        """Return the absolute local upload root.
+
+        Key parameters: none. Return value is the resolved configured upload
+        directory. Side effect: none.
+        """
+        root = Path(self.settings.upload_storage_path)
+        if not root.is_absolute():
+            root = Path.cwd() / root
+        return root.resolve()
+
+
+class S3UploadStorage:
+    """Minimal S3-compatible upload storage client for Cloudflare R2."""
+
+    def __init__(self, settings: Settings) -> None:
+        """Create an S3-compatible storage adapter for one settings object.
+
+        Key parameter is the loaded runtime settings. Return value is none. Side
+        effect: validates required R2/S3 configuration without making a network call.
+        """
+        self.settings = settings
+        self.bucket = self._require_config("UPLOAD_S3_BUCKET", settings.upload_s3_bucket)
+        self.region = settings.upload_s3_region or "auto"
+        self.endpoint_url = self._require_config(
+            "UPLOAD_S3_ENDPOINT_URL",
+            settings.upload_s3_endpoint_url,
+        ).rstrip("/")
+        self.access_key = self._require_config(
+            "UPLOAD_S3_ACCESS_KEY_ID",
+            settings.upload_s3_access_key_id,
+        )
+        self.secret_key = self._require_config(
+            "UPLOAD_S3_SECRET_ACCESS_KEY",
+            settings.upload_s3_secret_access_key,
+        )
+        self.timeout = settings.upload_s3_request_timeout_seconds
+        self.endpoint = urlsplit(self.endpoint_url)
+        if (
+            not self.endpoint.scheme
+            or not self.endpoint.netloc
+            or self.endpoint.query
+            or self.endpoint.fragment
+        ):
+            raise AppError(
+                "upload_storage_backend_unavailable",
+                "Upload storage backend is not configured",
+                status_code=503,
+            )
+
+    def write(self, key: str, content: bytes, media_type: str) -> None:
+        """Persist one object through an S3-compatible PUT request.
+
+        Key parameters are the storage key, raw bytes, and media type. Return value
+        is none. Side effect: sends a signed PUT request to the configured bucket.
+        """
+        self._request("PUT", key, body=content, content_type=media_type)
+
+    def read(self, key: str) -> bytes:
+        """Load one object through an S3-compatible GET request.
+
+        Key parameter is the storage key. Return value is the object bytes. Side
+        effect: sends a signed GET request and maps 404 to `upload_not_found`.
+        """
+        return self._request("GET", key)
+
+    def delete(self, key: str) -> None:
+        """Delete one object through an S3-compatible DELETE request.
+
+        Key parameter is the storage key. Return value is none. Side effect: sends a
+        signed DELETE request; missing objects are treated as already deleted.
+        """
+        self._request("DELETE", key)
+
+    def _request(
+        self,
+        method: str,
+        key: str,
+        *,
+        body: bytes = b"",
+        content_type: str | None = None,
+    ) -> bytes:
+        """Send one signed S3 request and return the response body.
+
+        Key parameters are the HTTP method, object key, optional request body, and
+        optional content type. Return value is response bytes. Side effect: performs
+        blocking network I/O with a bounded timeout.
+        """
+        url = self._object_url(key)
+        headers = self._signed_headers(method, url, body, content_type=content_type)
+        request = UrlRequest(
+            url,
+            data=body if method in {"PUT", "POST"} else None,
+            headers=headers,
+            method=method,
+        )
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                return response.read()
+        except HTTPError as exc:
+            if exc.code == 404:
+                if method == "DELETE":
+                    return b""
+                raise NotFoundError("upload_not_found", "Upload not found") from exc
+            raise storage_unavailable_error({"status_code": exc.code}) from exc
+        except (TimeoutError, URLError, OSError) as exc:
+            raise storage_unavailable_error() from exc
+
+    def _object_url(self, key: str) -> str:
+        """Build a path-style object URL for the configured bucket.
+
+        Key parameter is the storage key. Return value is a fully qualified URL.
+        Side effect: none.
+        """
+        base_path = self.endpoint.path.rstrip("/")
+        bucket = quote(self.bucket, safe="")
+        object_key = quote(key, safe="/-_.~")
+        object_path = f"{base_path}/{bucket}/{object_key}"
+        return urlunsplit((self.endpoint.scheme, self.endpoint.netloc, object_path, "", ""))
+
+    def _signed_headers(
+        self,
+        method: str,
+        url: str,
+        body: bytes,
+        *,
+        content_type: str | None,
+    ) -> dict[str, str]:
+        """Create AWS SigV4 headers for one S3-compatible request.
+
+        Key parameters are the method, URL, request body, and optional content type.
+        Return value is the signed HTTP header mapping. Side effect: none.
+        """
+        parsed = urlsplit(url)
+        payload_hash = hashlib.sha256(body).hexdigest()
+        now = datetime.now(UTC)
+        amz_date = now.strftime("%Y%m%dT%H%M%SZ")
+        date_stamp = now.strftime("%Y%m%d")
+        canonical_headers = {
+            "host": parsed.netloc,
+            "x-amz-content-sha256": payload_hash,
+            "x-amz-date": amz_date,
+        }
+        if content_type:
+            canonical_headers["content-type"] = content_type
+        signed_header_names = sorted(canonical_headers)
+        canonical_header_text = "".join(
+            f"{name}:{canonical_headers[name].strip()}\n" for name in signed_header_names
+        )
+        signed_headers = ";".join(signed_header_names)
+        canonical_request = "\n".join(
+            [
+                method,
+                parsed.path or "/",
+                parsed.query,
+                canonical_header_text,
+                signed_headers,
+                payload_hash,
+            ]
+        )
+        credential_scope = f"{date_stamp}/{self.region}/s3/aws4_request"
+        string_to_sign = "\n".join(
+            [
+                "AWS4-HMAC-SHA256",
+                amz_date,
+                credential_scope,
+                hashlib.sha256(canonical_request.encode()).hexdigest(),
+            ]
+        )
+        signature = hmac.new(
+            self._signing_key(date_stamp),
+            string_to_sign.encode(),
+            hashlib.sha256,
+        ).hexdigest()
+        authorization = (
+            "AWS4-HMAC-SHA256 "
+            f"Credential={self.access_key}/{credential_scope}, "
+            f"SignedHeaders={signed_headers}, "
+            f"Signature={signature}"
+        )
+        return {
+            "Authorization": authorization,
+            "Host": parsed.netloc,
+            "X-Amz-Content-Sha256": payload_hash,
+            "X-Amz-Date": amz_date,
+            **({"Content-Type": content_type} if content_type else {}),
+        }
+
+    def _signing_key(self, date_stamp: str) -> bytes:
+        """Derive the AWS SigV4 signing key for one date.
+
+        Key parameter is the YYYYMMDD date stamp. Return value is raw HMAC key
+        bytes. Side effect: none.
+        """
+        date_key = hmac.new(
+            f"AWS4{self.secret_key}".encode(),
+            date_stamp.encode(),
+            hashlib.sha256,
+        ).digest()
+        region_key = hmac.new(date_key, self.region.encode(), hashlib.sha256).digest()
+        service_key = hmac.new(region_key, b"s3", hashlib.sha256).digest()
+        return hmac.new(service_key, b"aws4_request", hashlib.sha256).digest()
+
+    def _require_config(self, env_name: str, value: str | None) -> str:
+        """Return a required S3 config value or raise a safe service error.
+
+        Key parameters are the environment variable name and loaded value. Return
+        value is the non-empty string. Side effect: raises without exposing secrets.
+        """
+        if value:
+            return value
+        raise AppError(
+            "upload_storage_backend_unavailable",
+            "Upload storage backend is not configured",
+            status_code=503,
+            details={"missing": env_name},
+        )
+
+
+def storage_unavailable_error(details: dict[str, object] | None = None) -> AppError:
+    """Build a safe storage service error without leaking provider credentials.
+
+    Key parameter is optional non-secret diagnostic details. Return value is an
+    `AppError` suitable for API responses. Side effect: none.
+    """
+    return AppError(
+        "upload_storage_unavailable",
+        "Upload storage is temporarily unavailable",
+        status_code=503,
+        details=details,
+    )
 
 
 class UploadService:
@@ -171,10 +476,9 @@ class UploadService:
         if upload.kind != "avatar":
             await self._require_attachment_access(upload, current_user)
 
-        path = self.local_path_for(upload)
-        if not path.is_file():
-            raise NotFoundError("upload_not_found", "Upload not found")
-        return UploadContent(upload=upload, path=path)
+        storage = self._storage_for_upload(upload)
+        content = await asyncio.to_thread(storage.read, upload.storage_key)
+        return UploadContent(upload=upload, content=content)
 
     async def get_upload_thumbnail(
         self,
@@ -184,17 +488,26 @@ class UploadService:
         """Return or lazily generate a small WebP thumbnail for an uploaded image.
 
         Key parameters mirror `get_upload_content`, including ACL checks. Return value
-        is a local thumbnail path plus upload metadata. Side effect: writes a cached
-        thumbnail file under the upload root when missing or stale.
+        is thumbnail bytes plus upload metadata. Side effect: writes a cached
+        thumbnail object under the upload storage backend when missing.
         """
         content = await self.get_upload_content(upload_id, current_user)
         if not content.upload.is_image:
             raise NotFoundError("upload_not_found", "Upload not found")
 
-        thumbnail_path = self.thumbnail_path_for(content.upload)
-        if self._thumbnail_needs_refresh(thumbnail_path, content.path):
-            self._generate_thumbnail(content.path, thumbnail_path)
-        return UploadThumbnail(upload=content.upload, path=thumbnail_path)
+        storage = self._storage_for_upload(content.upload)
+        thumbnail_key = self.thumbnail_key_for(content.upload)
+        try:
+            thumbnail_content = await asyncio.to_thread(storage.read, thumbnail_key)
+        except NotFoundError:
+            thumbnail_content = self._generate_thumbnail(content.content)
+            await asyncio.to_thread(
+                storage.write,
+                thumbnail_key,
+                thumbnail_content,
+                THUMBNAIL_MEDIA_TYPE,
+            )
+        return UploadThumbnail(upload=content.upload, content=thumbnail_content)
 
     async def cleanup_expired_temporary_uploads(self) -> int:
         now = utcnow()
@@ -209,14 +522,17 @@ class UploadService:
         for upload in uploads:
             upload.status = "deleted"
             upload.deleted_at = now
-            path = self.local_path_for(upload)
-            if path.exists():
-                path.unlink()
-            thumbnail_path = self.thumbnail_path_for(upload)
-            if thumbnail_path.exists():
-                thumbnail_path.unlink()
+            await asyncio.to_thread(self.delete_upload_files, upload)
         await self.session.commit()
         return len(uploads)
+
+    def thumbnail_key_for(self, upload: Upload) -> str:
+        """Return the cached thumbnail object key for an upload.
+
+        Key parameter is an upload model with a `storage_key`. Return value is the
+        relative WebP sidecar key. Side effect: none.
+        """
+        return f"{THUMBNAIL_DIRECTORY}/{upload.storage_key}.webp"
 
     def local_path_for(self, upload: Upload) -> Path:
         """Return the absolute local path for an upload storage key.
@@ -225,11 +541,7 @@ class UploadService:
         absolute path inside the configured upload root. Side effect: validates path
         containment and raises `upload_not_found` on traversal.
         """
-        root = self._storage_root()
-        path = (root / upload.storage_key).resolve()
-        if root not in path.parents:
-            raise NotFoundError("upload_not_found", "Upload not found")
-        return path
+        return LocalUploadStorage(self.settings).path_for(upload.storage_key)
 
     def thumbnail_path_for(self, upload: Upload) -> Path:
         """Return the absolute cached thumbnail path for an upload.
@@ -238,11 +550,18 @@ class UploadService:
         WebP sidecar path under `_thumbnails/`. Side effect: validates containment
         before callers create or read the file.
         """
-        root = self._storage_root()
-        path = (root / THUMBNAIL_DIRECTORY / f"{upload.storage_key}.webp").resolve()
-        if root not in path.parents:
-            raise NotFoundError("upload_not_found", "Upload not found")
-        return path
+        return LocalUploadStorage(self.settings).path_for(self.thumbnail_key_for(upload))
+
+    def delete_upload_files(self, upload: Upload) -> None:
+        """Delete the original object and cached thumbnail for one upload.
+
+        Key parameter is the upload model whose `storage_backend` and `storage_key`
+        identify stored objects. Return value is none. Side effect: removes objects
+        from local storage or S3-compatible storage.
+        """
+        storage = self._storage_for_upload(upload)
+        storage.delete(upload.storage_key)
+        storage.delete(self.thumbnail_key_for(upload))
 
     async def _create_upload(
         self,
@@ -256,7 +575,6 @@ class UploadService:
             request,
             current_user=current_user,
         )
-        self._require_local_backend()
         max_bytes = (
             self.settings.upload_max_avatar_bytes
             if kind == "avatar"
@@ -297,9 +615,8 @@ class UploadService:
         self.session.add(upload)
         await self.session.flush()
         upload.storage_key = storage_key_for(upload.id, extension)
-        path = self.local_path_for(upload)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(content)
+        storage = self._storage_for_backend(upload.storage_backend)
+        await asyncio.to_thread(storage.write, upload.storage_key, content, media_type)
         await self.session.flush()
         return upload
 
@@ -334,37 +651,53 @@ class UploadService:
         if not await self._can_access_board(topic.board, current_user):
             raise NotFoundError("upload_not_found", "Upload not found")
 
-    def _storage_root(self) -> Path:
-        self._require_local_backend()
-        root = Path(self.settings.upload_storage_path)
-        if not root.is_absolute():
-            root = Path.cwd() / root
-        return root.resolve()
+    def _storage_for_upload(self, upload: Upload) -> LocalUploadStorage | S3UploadStorage:
+        """Return the storage adapter recorded on an upload row.
 
-    def _thumbnail_needs_refresh(self, thumbnail_path: Path, source_path: Path) -> bool:
-        """Check whether a thumbnail is missing or older than its source image.
-
-        Key parameters are the thumbnail and source paths. Return value is true when
-        regeneration is required. Side effect: none.
+        Key parameter is the upload model. Return value is a local or S3-compatible
+        storage adapter. Side effect: validates backend configuration as needed.
         """
-        return (
-            not thumbnail_path.is_file()
-            or thumbnail_path.stat().st_mtime < source_path.stat().st_mtime
+        return self._storage_for_backend(upload.storage_backend)
+
+    def _storage_for_backend(self, backend: str) -> LocalUploadStorage | S3UploadStorage:
+        """Return a storage adapter for a backend name.
+
+        Key parameter is the backend string from settings or the database. Return
+        value is a storage adapter. Side effect: raises a safe service error for
+        unsupported or unconfigured backends.
+        """
+        if backend == "local":
+            return LocalUploadStorage(self.settings)
+        if backend == "s3":
+            return S3UploadStorage(self.settings)
+        raise AppError(
+            "upload_storage_backend_unavailable",
+            "Upload storage backend is not available",
+            status_code=503,
         )
 
-    def _generate_thumbnail(self, source_path: Path, thumbnail_path: Path) -> None:
-        """Generate a constrained WebP thumbnail for a stored image.
+    def _storage_root(self) -> Path:
+        """Return the absolute local upload root for legacy callers.
 
-        Key parameters are the source and destination paths. Return value is none.
-        Side effect: creates parent directories and writes/replaces the thumbnail file.
+        Key parameters: none. Return value is a resolved local path. Side effect:
+        none.
+        """
+        return LocalUploadStorage(self.settings).root()
+
+    def _generate_thumbnail(self, source_content: bytes) -> bytes:
+        """Generate a constrained WebP thumbnail for stored image bytes.
+
+        Key parameter is the original image content. Return value is WebP bytes.
+        Side effect: none beyond PIL decoding and encoding in memory.
         """
         try:
-            with Image.open(source_path) as source_image:
+            with Image.open(BytesIO(source_content)) as source_image:
                 image = ImageOps.exif_transpose(source_image)
                 image.thumbnail(THUMBNAIL_MAX_SIZE, Image.Resampling.LANCZOS)
-                thumbnail_path.parent.mkdir(parents=True, exist_ok=True)
                 image = self._to_thumbnail_rgb(image)
-                image.save(thumbnail_path, "WEBP", quality=82, method=4)
+                output = BytesIO()
+                image.save(output, "WEBP", quality=82, method=4)
+                return output.getvalue()
         except (OSError, UnidentifiedImageError) as exc:
             raise NotFoundError("upload_not_found", "Upload not found") from exc
 
@@ -396,15 +729,6 @@ class UploadService:
             )
         )
         return member is not None
-
-    def _require_local_backend(self) -> None:
-        if self.settings.upload_storage_backend != "local":
-            raise AppError(
-                "upload_storage_backend_unavailable",
-                "Upload storage backend is not available",
-                status_code=503,
-            )
-
 
 def extract_upload_ids(raw_md: str) -> list[str]:
     seen: set[str] = set()

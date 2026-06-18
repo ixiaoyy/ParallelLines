@@ -8,8 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.api.v1.dependencies import get_session
 from app.core.config import Settings, get_settings
+from app.core.exceptions import NotFoundError
 from app.main import create_app
 from app.models.upload import Upload
+from app.services.uploads import S3UploadStorage
 from tests.helpers import get_test_database_url, register_and_verify_user, reset_test_database
 
 PNG_BYTES = base64.b64decode(
@@ -29,17 +31,27 @@ def create_upload_test_app(
     upload_dir: Path,
     *,
     upload_max_bytes: int = 1024,
+    settings_overrides: dict[str, object] | None = None,
 ):
+    """Create a FastAPI test app with isolated session and upload settings.
+
+    Key parameters are the session factory, upload directory, size limit, and
+    optional settings overrides. Return value is an ASGI app. Side effect: installs
+    dependency overrides on that app instance.
+    """
     async def override_session():
         async with session_factory() as session:
             yield session
 
-    settings = Settings(
-        environment="test",
-        upload_storage_path=str(upload_dir),
-        upload_max_bytes=upload_max_bytes,
-        upload_max_avatar_bytes=upload_max_bytes,
-    )
+    settings_kwargs = {
+        "environment": "test",
+        "upload_storage_path": str(upload_dir),
+        "upload_max_bytes": upload_max_bytes,
+        "upload_max_avatar_bytes": upload_max_bytes,
+    }
+    if settings_overrides:
+        settings_kwargs.update(settings_overrides)
+    settings = Settings(**settings_kwargs)
     app = create_app()
     app.dependency_overrides[get_session] = override_session
     app.dependency_overrides[get_settings] = lambda: settings
@@ -122,6 +134,99 @@ async def test_post_image_upload_attaches_and_renders_after_refresh(tmp_path: Pa
         assert saved_upload.board_id == board.json()["data"]["id"]
         assert saved_upload.topic_id == topic_id
         assert saved_upload.post_id == first_post["id"]
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_s3_backend_stores_and_serves_upload_content(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stored_objects: dict[str, tuple[bytes, str]] = {}
+
+    def fake_write(self: S3UploadStorage, key: str, content: bytes, media_type: str) -> None:
+        """Store one fake S3 object in memory for upload flow assertions.
+
+        Key parameters mirror `S3UploadStorage.write`. Return value is none. Side
+        effect: mutates the in-memory object map used by this test.
+        """
+        stored_objects[key] = (content, media_type)
+
+    def fake_read(self: S3UploadStorage, key: str) -> bytes:
+        """Read one fake S3 object from memory for API response assertions.
+
+        Key parameter is the storage key. Return value is object bytes. Side effect:
+        raises the same not-found error shape as real storage when absent.
+        """
+        if key not in stored_objects:
+            raise NotFoundError("upload_not_found", "Upload not found")
+        return stored_objects[key][0]
+
+    def fake_delete(self: S3UploadStorage, key: str) -> None:
+        """Delete one fake S3 object from memory for cleanup compatibility.
+
+        Key parameter is the storage key. Return value is none. Side effect: removes
+        the object from the in-memory map when present.
+        """
+        stored_objects.pop(key, None)
+
+    monkeypatch.setattr(S3UploadStorage, "write", fake_write)
+    monkeypatch.setattr(S3UploadStorage, "read", fake_read)
+    monkeypatch.setattr(S3UploadStorage, "delete", fake_delete)
+
+    session_factory, engine = await create_test_session()
+    app = create_upload_test_app(
+        session_factory,
+        tmp_path,
+        settings_overrides={
+            "upload_storage_backend": "s3",
+            "upload_s3_bucket": "parallel-lines-test",
+            "upload_s3_region": "auto",
+            "upload_s3_endpoint_url": "https://example-account.r2.cloudflarestorage.com",
+            "upload_s3_access_key_id": "test-access-key",
+            "upload_s3_secret_access_key": "test-secret-key",
+        },
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        user = await register_user(client, "r2uploader")
+        headers = {"Authorization": user["auth"]}
+
+        upload = await client.post(
+            "/api/v1/uploads",
+            headers=headers,
+            data={"kind": "post_attachment"},
+            files={"file": ("r2.png", PNG_BYTES, "image/png")},
+        )
+        assert upload.status_code == 201
+        upload_data = upload.json()["data"]
+
+        content = await client.get(
+            f"/api/v1/uploads/{upload_data['id']}/content",
+            headers=headers,
+        )
+        assert content.status_code == 200
+        assert content.headers["content-type"].startswith("image/png")
+        assert content.content == PNG_BYTES
+
+        thumbnail = await client.get(
+            f"/api/v1/uploads/{upload_data['id']}/thumbnail",
+            headers=headers,
+        )
+        assert thumbnail.status_code == 200
+        assert thumbnail.headers["content-type"].startswith("image/webp")
+        assert thumbnail.content[:4] == b"RIFF"
+        assert thumbnail.content[8:12] == b"WEBP"
+
+    async with session_factory() as session:
+        saved_upload = await session.get(Upload, upload_data["id"])
+        assert saved_upload is not None
+        assert saved_upload.storage_backend == "s3"
+        assert re.fullmatch(r"\d{4}/\d{2}/\d+\.png", saved_upload.storage_key)
+        assert stored_objects[saved_upload.storage_key] == (PNG_BYTES, "image/png")
+        thumbnail_key = f"_thumbnails/{saved_upload.storage_key}.webp"
+        assert thumbnail_key in stored_objects
 
     await engine.dispose()
 

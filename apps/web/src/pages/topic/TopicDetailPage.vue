@@ -649,9 +649,19 @@ function quotePost(post: PostItemVM) {
 
   const excerpt = buildQuoteExcerpt(post);
   const quoteText = `> ${post.authorName} #${post.floor}\n> ${excerpt}\n\n`;
-  openReplyComposer();
   insertReplyDraft(quoteText);
+  openReplyComposer();
   setToolbarStatus(`已引用 ${post.authorName} #${post.floor}`);
+}
+
+// Opens the reply composer without injecting quoted text.
+// Key parameter: `post` is the floor that initiated the action. Side effect: reveals and scrolls to the composer.
+function replyToPost(post: PostItemVM) {
+  clearReplyInsertRequest();
+  openReplyComposer();
+  if (canReply.value) {
+    setToolbarStatus(`正在回复 ${post.authorName} #${post.floor}`);
+  }
 }
 
 function blockPostAuthor(post: PostItemVM) {
@@ -702,13 +712,34 @@ function openReplyComposer() {
   }
 
   replyComposerOpen.value = true;
+  void scrollReplyComposerIntoView();
 }
 
-// Sends quoted text into ComposerDrawer after it has been opened.
+// Queues quoted text for ComposerDrawer before or after the editor is mounted.
 // Key parameter: `prefix` is Markdown to prepend. Side effect: updates insert props and focuses any mounted editor input.
 function insertReplyDraft(prefix: string) {
   replyInsertText.value = prefix;
   replyInsertToken.value += 1;
+}
+
+// Clears any queued quote text before a plain reply opens the composer.
+// Key parameters: none. Return value: none. Side effect: prevents stale quote props on the next mount.
+function clearReplyInsertRequest() {
+  replyInsertText.value = "";
+}
+
+// Scrolls the revealed reply composer into view and focuses its editable area when mounted.
+// Key parameters: none. Return value: promise with no value. Side effect: scrolls and focuses browser UI.
+async function scrollReplyComposerIntoView() {
+  await nextTick();
+  const composer = document.getElementById("reply-composer");
+  composer?.scrollIntoView({ block: "start", behavior: "smooth" });
+  const focusTarget = composer?.querySelector<HTMLElement>(
+    ".cm-content, textarea, [contenteditable='true']",
+  );
+  window.setTimeout(() => {
+    focusTarget?.focus();
+  }, 180);
 }
 
 async function writeClipboard(value: string) {
@@ -784,6 +815,7 @@ function flagTopic() {
                 :can-manage-solution="canManageSolution"
                 :solution-pending="solutionMutation.isPending.value"
                 @quote="quotePost"
+                @reply="replyToPost"
                 @require-login="requireLogin"
                 @toggle-solution="togglePostSolution"
                 @block-author="blockPostAuthor"
@@ -860,6 +892,7 @@ function flagTopic() {
               :can-manage-solution="canManageSolution"
               :solution-pending="solutionMutation.isPending.value"
               @quote="quotePost"
+              @reply="replyToPost"
               @require-login="requireLogin"
               @toggle-solution="togglePostSolution"
               @block-author="blockPostAuthor"
@@ -867,18 +900,19 @@ function flagTopic() {
           </template>
 
           <template v-if="topic.status === 'open'">
-            <ComposerDrawer
-              v-if="shouldRenderReplyComposer"
-              mode="reply"
-              :topic-title="topic.title"
-              :board-name="topic.boardName"
-              :submitting="createPost.isPending.value"
-              :reset-token="replyResetToken"
-              :draft-storage-key="`parallellines:reply-draft:${topic.id}`"
-              :insert-text="replyInsertText"
-              :insert-token="replyInsertToken"
-              @submit="handleReply"
-            />
+            <div v-if="shouldRenderReplyComposer" id="reply-composer" class="reply-composer-anchor">
+              <ComposerDrawer
+                mode="reply"
+                :topic-title="topic.title"
+                :board-name="topic.boardName"
+                :submitting="createPost.isPending.value"
+                :reset-token="replyResetToken"
+                :draft-storage-key="`parallellines:reply-draft:${topic.id}`"
+                :insert-text="replyInsertText"
+                :insert-token="replyInsertToken"
+                @submit="handleReply"
+              />
+            </div>
             <UiCard v-else class="reply-compose-prompt">
               <div>
                 <strong>{{ canReply ? "想补充一句？" : isReplyAuthChecking ? "正在确认登录状态" : "登录后参与回复" }}</strong>

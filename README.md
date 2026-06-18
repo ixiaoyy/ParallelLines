@@ -107,6 +107,23 @@ Docker Compose 部署会覆盖容器内路径为 `/var/lib/parallellines/uploads
 发帖上传会返回 `/uploads/{id}/content` 引用，创建/编辑帖子后自动绑定到对应楼层。头像通过
 `POST /api/v1/uploads/avatar` 更新，并会同步到 `/auth/me` 和公开用户资料。
 
+也可以把新上传切到 S3 兼容存储（例如 Cloudflare R2），前端 URL 和权限检查保持不变，API 会按
+每条上传记录的 `storage_backend` 从本地或对象存储读取文件：
+
+```env
+UPLOAD_STORAGE_BACKEND=s3
+UPLOAD_S3_BUCKET=your-r2-bucket
+UPLOAD_S3_REGION=auto
+UPLOAD_S3_ENDPOINT_URL=https://<account-id>.r2.cloudflarestorage.com
+UPLOAD_S3_ACCESS_KEY_ID=your-r2-access-key-id
+UPLOAD_S3_SECRET_ACCESS_KEY=your-r2-secret-access-key
+UPLOAD_S3_REQUEST_TIMEOUT_SECONDS=10
+```
+
+已有本地文件迁移到 R2 时，保持对象 key 与数据库 `storage_key` 一致，例如
+`2026/06/3.png` 和 `_thumbnails/2026/06/3.png.webp`，并把对应上传记录的
+`storage_backend` 改为 `s3`；这样旧记录不需要改 URL。
+
 新上传文件按 UTC 年/月切目录，例如 `2026/05/{upload_id}.jpeg`；旧记录中的历史
 `storage_key` 仍按数据库原值读取。
 
@@ -139,8 +156,7 @@ Docker Compose 部署会覆盖容器内路径为 `/var/lib/parallellines/uploads
 - 配置 `EMAIL_WEBHOOK_SECRET` 后，邮件服务商回调必须传入 `X-Email-Webhook-Secret`。
 - 本地可运行 `uv run python -m app.workers.background_jobs` 处理 `mail`、`notifications` 和 `maintenance` 队列。
 
-当前已预留 `UPLOAD_CDN_BASE_URL` 和 S3 相关配置项；生产本地存储由
-`docker-compose.yml` 固定挂载：
+生产本地存储由 `docker-compose.yml` 固定挂载：
 
 ```text
 /opt/parallellines/var/uploads  -> /var/lib/parallellines/uploads

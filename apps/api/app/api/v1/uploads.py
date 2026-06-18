@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, Query, Request, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 
 from app.api.v1.dependencies import CurrentUserDep, OptionalCurrentUserDep, SessionDep, SettingsDep
 from app.core.response_cache import scoped_cache_control
@@ -61,7 +61,7 @@ async def get_upload_content(
     settings: SettingsDep,
     current_user: OptionalCurrentUserDep,
     download: Annotated[bool, Query()] = False,
-) -> FileResponse:
+) -> Response:
     content = await UploadService(session, settings).get_upload_content(upload_id, current_user)
     inline = content.upload.is_image and not download
     headers = upload_file_headers(
@@ -71,10 +71,9 @@ async def get_upload_content(
             inline=inline,
         ),
     )
-    return FileResponse(
-        content.path,
+    return Response(
+        content.content,
         media_type=content.upload.media_type,
-        filename=content.upload.original_filename,
         headers=headers,
     )
 
@@ -85,7 +84,7 @@ async def get_upload_thumbnail(
     session: SessionDep,
     settings: SettingsDep,
     current_user: OptionalCurrentUserDep,
-) -> FileResponse:
+) -> Response:
     thumbnail = await UploadService(session, settings).get_upload_thumbnail(
         upload_id,
         current_user,
@@ -97,10 +96,9 @@ async def get_upload_thumbnail(
             inline=True,
         ),
     )
-    return FileResponse(
-        thumbnail.path,
+    return Response(
+        thumbnail.content,
         media_type=thumbnail.media_type,
-        filename=f"{thumbnail.upload.id}-thumbnail.webp",
         headers=headers,
     )
 

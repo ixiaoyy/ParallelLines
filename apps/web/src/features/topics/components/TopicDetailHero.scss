@@ -72,14 +72,6 @@
   overflow-wrap: anywhere;
 }
 
-.topic-meta-row span {
-  border-radius: 999px;
-  padding: 0.12rem 0.45rem;
-  color: var(--primary);
-  background: rgba(var(--primary-rgb), 0.09);
-  font-weight: 860;
-}
-
 .topic-taxonomy {
   grid-area: tax;
   gap: 0.52rem;

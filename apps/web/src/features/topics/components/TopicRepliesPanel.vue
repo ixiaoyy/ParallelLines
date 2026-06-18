@@ -17,6 +17,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   blockAuthor: [post: PostItemVM];
   quote: [post: PostItemVM];
+  reply: [post: PostItemVM];
   requireLogin: [message: string];
   toggleSolution: [post: PostItemVM];
 }>();
@@ -43,6 +44,7 @@ const replyCountLabel = computed(() => `${props.replies.length} 条回复`);
           :can-manage-solution="canManageSolution"
           :solution-pending="solutionPending"
           @quote="emit('quote', post)"
+          @reply="emit('reply', post)"
           @require-login="emit('requireLogin', $event)"
           @toggle-solution="emit('toggleSolution', post)"
           @block-author="emit('blockAuthor', post)"
