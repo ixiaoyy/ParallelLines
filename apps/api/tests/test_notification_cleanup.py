@@ -18,10 +18,20 @@ def _public_board() -> SimpleNamespace:
     return SimpleNamespace(visibility="public", owner_id="owner")
 
 
-def _topic(*, deleted_at: datetime | None = None, status: str = "open") -> SimpleNamespace:
+def _topic(
+    *,
+    deleted_at: datetime | None = None,
+    status: str = "open",
+    visibility: str = "public",
+) -> SimpleNamespace:
     """Build a minimal topic object with the fields used by stale-notification checks."""
 
-    return SimpleNamespace(deleted_at=deleted_at, status=status, board=_public_board())
+    return SimpleNamespace(
+        deleted_at=deleted_at,
+        status=status,
+        visibility=visibility,
+        board=_public_board(),
+    )
 
 
 def _notification(
