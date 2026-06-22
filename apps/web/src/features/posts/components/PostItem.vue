@@ -71,9 +71,11 @@ const props = withDefaults(defineProps<{
   solutionPending?: boolean;
   comicReader?: boolean;
   variant?: "article" | "reply";
+  hideHeader?: boolean;
 }>(), {
   comicReader: false,
   variant: "reply",
+  hideHeader: false,
 });
 const emit = defineEmits<{
   blockAuthor: [post: PostItemVM];
@@ -921,10 +923,11 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
       'post-item--article': variant === 'article',
       'post-item--comic-reader': comicReader,
       'post-item--reply': variant === 'reply',
+      'post-item--headerless': hideHeader,
     }"
   >
     <article ref="bodyRef" class="post-body">
-      <header class="post-header">
+      <header v-if="!hideHeader" class="post-header">
         <div class="post-author-line">
           <UiAvatar
             :src="post.authorAvatarUrl"
@@ -957,6 +960,12 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
           </UiButton>
         </div>
       </header>
+      <div v-if="hideHeader && canEdit" class="post-inline-actions">
+        <UiButton class="post-header-edit" tone="subtle" @click="startEdit">
+          <EditOutlined aria-hidden="true" />
+          编辑
+        </UiButton>
+      </div>
       <div v-if="post.acceptedAnswer" class="accepted-answer-badge">✓ 已采纳解决方案</div>
       <div v-if="post.deleted" class="deleted-copy">该楼层已删除或隐藏。</div>
       <template v-else-if="editing">

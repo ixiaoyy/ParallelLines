@@ -110,6 +110,12 @@
   padding-inline: 0.72rem !important;
 }
 
+.post-inline-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.25rem;
+}
+
 .accepted-answer-badge {
   width: fit-content;
   margin-bottom: 0.65rem;
@@ -460,7 +466,6 @@
 }
 
 .post-item--article {
-  border-color: rgba(var(--primary-rgb), 0.12);
   border-color: rgba(var(--primary-rgb), 0.09);
   border-radius: 1.4rem;
   background:
@@ -473,8 +478,9 @@
   padding: clamp(1.1rem, 2vw, 1.7rem);
 }
 
-.post-item--article .post-header {
-  margin-bottom: 0.95rem;
+
+.post-item--headerless .post-body :deep(.markdown-body) {
+  padding-top: 0.05rem;
 }
 
 .post-item--article .post-body :deep(.markdown-body) {

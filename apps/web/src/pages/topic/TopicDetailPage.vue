@@ -18,10 +18,8 @@ import { setUserRelationship } from "@/features/social/api";
 import { useBoards } from "@/features/boards/queries";
 import TopicRepliesPanel from "@/features/topics/components/TopicRepliesPanel.vue";
 import TopicDetailHero from "@/features/topics/components/TopicDetailHero.vue";
-import TopicSwipeNavigator from "@/features/topics/components/TopicSwipeNavigator.vue";
 import TopicThreadToolbar from "@/features/topics/components/TopicThreadToolbar.vue";
 import {
-  useBoardTopics,
   useMoveTopic,
   useSetTopicSolution,
   useTopicDetail,
@@ -31,7 +29,6 @@ import {
 import { ApiError, hasAccessToken } from "@/shared/api/client";
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { queryKeys } from "@/shared/api/queryKeys";
-import { compactNumber } from "@/shared/lib/format";
 import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import { readRouteParam } from "@/shared/router/params";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
@@ -41,7 +38,6 @@ import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
 const COMIC_READER_TAG = "漫画阅读";
-const TOPIC_SWIPE_TOPIC_LIMIT = 24;
 
 // Loads the reply composer only when the desktop bottom composer is visible or a mobile user opens it.
 // Key parameters: none. Return value is the ComposerDrawer component; side effect is deferred editor-shell loading.
@@ -54,10 +50,6 @@ const PollPanel = defineAsyncComponent(() => import("@/features/topics/component
 // Loads report dialog only when the user opens the report flow.
 // Key parameters: none. Return value is the ReportModal component; side effect is deferred moderation dialog loading.
 const ReportModal = defineAsyncComponent(() => import("@/features/moderation/components/ReportModal.vue"));
-
-// Loads the desktop/tablet side rail only when it can be shown.
-// Key parameters: none. Return value is the TopicDetailSidebar component; side effect is deferred side-rail loading.
-const TopicDetailSidebar = defineAsyncComponent(() => import("@/features/topics/components/TopicDetailSidebar.vue"));
 
 const route = useRoute();
 const router = useRouter();
@@ -76,7 +68,6 @@ const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
 );
 const isDesktopReplyComposer = useMediaQuery("(min-width: 721px)", true);
-const isDetailSidebarVisible = useMediaQuery("(min-width: 1121px)", true);
 useSeoMeta(
   computed(() =>
     topic.value
@@ -100,7 +91,6 @@ const replyInsertToken = ref(0);
 const moveTopicDialogOpen = ref(false);
 const moveTopicBoardSlug = ref("");
 const moveTopicStatus = ref("");
-const topicSwipeStart = ref<{ x: number; y: number } | null>(null);
 const currentUserId = computed(() => currentUserQuery.data.value?.id ?? null);
 const currentUserRole = computed(() => currentUserQuery.data.value?.role ?? null);
 const comicReader = computed(() => topic.value?.tags.includes(COMIC_READER_TAG) ?? false);
@@ -125,28 +115,6 @@ const shouldRenderReplyComposer = computed(() =>
 const moveTopicOptions = computed(() =>
   (boardsQuery.data.value ?? []).filter((board) => board.slug !== topic.value?.boardSlug),
 );
-const boardSwipeTopicsQuery = useBoardTopics(
-  () => topic.value?.boardSlug ?? "",
-  "latest",
-  TOPIC_SWIPE_TOPIC_LIMIT,
-);
-const boardSwipeTopics = computed(() => boardSwipeTopicsQuery.data.value ?? []);
-const relatedTopics = computed(() =>
-  boardSwipeTopics.value
-    .filter((candidate) => candidate.id !== topic.value?.id)
-    .slice(0, 3),
-);
-const currentSwipeTopicIndex = computed(() =>
-  boardSwipeTopics.value.findIndex((candidate) => candidate.id === topic.value?.id),
-);
-const previousSwipeTopic = computed(() => {
-  const index = currentSwipeTopicIndex.value;
-  return index > 0 ? boardSwipeTopics.value[index - 1] : null;
-});
-const nextSwipeTopic = computed(() => {
-  const index = currentSwipeTopicIndex.value;
-  return index >= 0 && index < boardSwipeTopics.value.length - 1 ? boardSwipeTopics.value[index + 1] : null;
-});
 const flagTopicMutation = useCreateFlag();
 const topicModerationMutation = useContentModerationMutation({ awaitInvalidation: false });
 const lifecycleMutation = useTopicLifecycle(topicId);
@@ -170,8 +138,6 @@ const canFlagTopic = computed(() => Boolean(topic.value?.id));
 const flagTopicPending = computed(() => flagTopicMutation.isPending.value);
 const deleteTopicPending = computed(() => topicModerationMutation.isPending.value);
 const reportModalOpen = ref(false);
-const TOPIC_HORIZONTAL_SWIPE_MIN_PX = 72;
-const TOPIC_HORIZONTAL_SWIPE_RATIO = 1.35;
 const lifecyclePending = computed(
   () =>
     lifecycleMutation.isPending.value ||
@@ -216,19 +182,6 @@ const {
   readCount: (response) => response.count,
   onDisabled: () => requireLogin("请先登录后再点赞主题。"),
   mockWhenDisabled: false,
-});
-
-const topicStats = computed(() => {
-  if (!topic.value) {
-    return [];
-  }
-
-  return [
-    { label: "回复", value: compactNumber(topic.value.replyCount) },
-    { label: "浏览", value: compactNumber(topic.value.viewCount) },
-    { label: "赞同", value: compactNumber(topicLikeCount.value) },
-    { label: "收藏", value: compactNumber(bookmarkCount.value) },
-  ];
 });
 
 watch(
@@ -477,89 +430,6 @@ async function copyTopicLink() {
   setToolbarStatus(copied ? "已复制主题链接" : "无法访问剪贴板，已更新地址栏锚点");
 }
 
-// Records the start point for topic-level horizontal swipe navigation.
-// Key parameter: `event` is the user's touch start. Return value: none; side
-// effect: stores coordinates unless the gesture begins on an interactive control.
-function handleTopicTouchStart(event: TouchEvent) {
-  if (event.touches.length !== 1 || isTopicSwipeIgnoredTarget(event.target)) {
-    topicSwipeStart.value = null;
-    return;
-  }
-
-  const touch = event.touches[0];
-  if (!touch) {
-    topicSwipeStart.value = null;
-    return;
-  }
-  topicSwipeStart.value = { x: touch.clientX, y: touch.clientY };
-}
-
-// Converts a clear horizontal swipe into previous/next topic navigation.
-// Key parameter: `event` is the touch end. Return value: none; side effect:
-// routes to the adjacent topic only when horizontal movement dominates vertical scroll.
-function handleTopicTouchEnd(event: TouchEvent) {
-  const start = topicSwipeStart.value;
-  topicSwipeStart.value = null;
-  const touch = event.changedTouches[0];
-  if (!start || !touch) {
-    return;
-  }
-
-  const deltaX = touch.clientX - start.x;
-  const deltaY = touch.clientY - start.y;
-  const absX = Math.abs(deltaX);
-  const absY = Math.abs(deltaY);
-  if (absX < TOPIC_HORIZONTAL_SWIPE_MIN_PX || absX < absY * TOPIC_HORIZONTAL_SWIPE_RATIO) {
-    return;
-  }
-
-  navigateSwipeTopic(deltaX > 0 ? "previous" : "next");
-}
-
-// Checks whether topic swipe navigation should ignore a gesture target.
-// Key parameter: `target` is the event target. Return value is true for real
-// controls, editors, and custom interactive regions. Side effect: none.
-function isTopicSwipeIgnoredTarget(target: EventTarget | null) {
-  if (!(target instanceof Element)) {
-    return false;
-  }
-
-  return Boolean(
-    target.closest(
-      [
-        "a",
-        "button",
-        "input",
-        "textarea",
-        "select",
-        "summary",
-        "pre",
-        "table",
-        "[contenteditable='true']",
-        "[role='button']",
-        "[role='link']",
-        ".ant-dropdown",
-        ".ant-modal",
-        ".ant-drawer",
-        ".comic-reader",
-        ".md-editor",
-      ].join(","),
-    ),
-  );
-}
-
-// Navigates to the previous or next topic in the current board's latest feed.
-// Key parameter: `direction` selects the adjacent topic. Return value: none; side effect: routes to another topic detail.
-function navigateSwipeTopic(direction: "previous" | "next") {
-  const target = direction === "previous" ? previousSwipeTopic.value : nextSwipeTopic.value;
-  if (!target) {
-    setToolbarStatus(direction === "previous" ? "已经是最新主题" : "没有更多主题");
-    return;
-  }
-
-  replyComposerOpen.value = false;
-  void router.push(topicDetailRoute(target));
-}
 
 // Checks whether a hash points into the always-visible reply area.
 // Key parameter: `hash` is a route hash. Return value: true when the page should scroll to replies; no side effects.
@@ -710,12 +580,7 @@ function flagTopic() {
 </script>
 
 <template>
-  <div
-    class="topic-detail-page"
-    :class="{ 'topic-detail-page--comic-reader': comicReader }"
-    @touchstart.passive="handleTopicTouchStart"
-    @touchend.passive="handleTopicTouchEnd"
-  >
+  <div class="topic-detail-page" :class="{ 'topic-detail-page--comic-reader': comicReader }">
     <UiCard v-if="topicQuery.isLoading.value" class="topic-state" role="status">
       正在加载主题…
     </UiCard>
@@ -729,7 +594,7 @@ function flagTopic() {
     </UiEmptyState>
 
     <template v-else-if="topic">
-      <TopicDetailHero :topic="topic" :stats="topicStats" />
+      <TopicDetailHero :topic="topic" />
 
       <div class="topic-layout">
         <main class="post-stream" aria-label="主题正文与回复">
@@ -747,6 +612,7 @@ function flagTopic() {
                 :post="firstPost"
                 variant="article"
                 :comic-reader="comicReader"
+                hide-header
                 :current-user-id="currentUserId"
                 :current-user-role="currentUserRole"
                 :can-manage-solution="canManageSolution"
@@ -782,22 +648,6 @@ function flagTopic() {
               @toggle-topic-pinned="toggleTopicPinned"
               @move-topic="openMoveTopicDialog"
               @delete-topic="deleteTopic"
-            />
-
-            <details v-if="!isDetailSidebarVisible" class="topic-mobile-jump-nav" open>
-              <summary>目录与相关主题</summary>
-              <TopicDetailSidebar
-                :topic="topic"
-                :posts="displayedPosts"
-                :related-topics="relatedTopics"
-              />
-            </details>
-
-            <TopicSwipeNavigator
-              :previous-topic="previousSwipeTopic"
-              :next-topic="nextSwipeTopic"
-              :loading="boardSwipeTopicsQuery.isFetching.value"
-              @navigate="navigateSwipeTopic"
             />
 
             <UiCard v-if="hiddenRelationshipPostCount > 0" class="topic-state topic-state--muted" role="status">
@@ -855,13 +705,6 @@ function flagTopic() {
           <p v-if="replyStatus" class="reply-status" role="status">{{ replyStatus }}</p>
           <span id="topic-end" class="topic-end-anchor" aria-hidden="true" />
         </main>
-
-        <TopicDetailSidebar
-          v-if="isDetailSidebarVisible"
-          :topic="topic"
-          :posts="displayedPosts"
-          :related-topics="relatedTopics"
-        />
       </div>
       <ReportModal
         v-if="topic && reportModalOpen"
