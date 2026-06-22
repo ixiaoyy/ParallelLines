@@ -4,7 +4,7 @@
 
 ### 1. Scope / Trigger
 
-- Trigger: adding Docker Compose, CI, Playwright smoke tests, API metrics, worker runtime, and operations documentation.
+- Trigger: adding Docker Compose, CI quality gates, optional Playwright smoke tests, API metrics, worker runtime, and operations documentation.
 - Applies to `docker-compose.yml`, `apps/api/Dockerfile`, `apps/web/Dockerfile`, `.github/workflows/ci.yml`, `README.md`, `app/main.py`, and `app/workers/`.
 
 ### 2. Signatures
@@ -37,7 +37,7 @@ Email verification env:
 | `TWO_FACTOR_CHALLENGE_MINUTES` | Login second-factor challenge token expiry. |
 | `TWO_FACTOR_ISSUER` | Issuer label embedded in TOTP `otpauth://` URLs. |
 | `OAUTH_ENABLED_PROVIDERS` | JSON/list of configured OAuth provider names exposed by `/auth/oauth/providers`. |
-| `CORS_ORIGINS` | JSON/list of web origins allowed by the API. CI smoke must include the Vite origin used by `PLAYWRIGHT_BASE_URL`. |
+| `CORS_ORIGINS` | JSON/list of web origins allowed by the API. Local Playwright smoke runs must include the Vite origin used by `PLAYWRIGHT_BASE_URL`. |
 | `RATE_LIMIT_WINDOW_SECONDS` | Sliding-window size for DB-backed anti-spam counters. |
 | `RATE_LIMIT_REGISTER_IP` / `RATE_LIMIT_REGISTER_EMAIL` | Registration throttle by source IP and email. |
 | `RATE_LIMIT_LOGIN_IP` / `RATE_LIMIT_LOGIN_ACCOUNT` | Login throttle by source IP and account string. |
@@ -92,7 +92,7 @@ CI commands:
 - A lightweight `changes` job gates expensive jobs by changed path.
 - Backend: `uv sync --frozen`, `uv run ruff check app tests`, `uv run pytest -q`; runs only for `apps/api/**` or CI workflow changes.
 - Frontend: `pnpm install --frozen-lockfile`, `pnpm --dir apps/web lint`, `typecheck`, `build`; runs only for `apps/web/**`, root frontend dependency files, or CI workflow changes.
-- Smoke: `pnpm --dir apps/web test:smoke` against a running API/web pair; runs only for API/frontend/dependency/workflow changes after required jobs pass or are skipped. The smoke API env must set `CORS_ORIGINS` to include the Vite web origin.
+- Playwright smoke is not part of the default CI gate; run `pnpm --dir apps/web test:smoke` manually against a running API/web pair when validating the full browser happy path.
 
 ### 3. Contracts
 
@@ -104,7 +104,7 @@ CI commands:
   bind-mounted host directories; otherwise DB metadata will point at files the cleanup handler, backup
   handler, or API cannot see.
 - `VITE_API_BASE_URL` is a build-time frontend contract; Docker build args and CI env must set it explicitly when not using the default.
-- CI may start MySQL for isolated migration/smoke gates; production Docker Compose
+- CI may start MySQL for isolated backend migration/test gates; production Docker Compose
   must not start a local MySQL service when the operator has configured a remote database.
 - Compose API and worker services must use only `apps/api/.env` as their env file and
   must not set `DATABASE_URL` or `REDIS_URL` in `environment`, otherwise deployment can
@@ -126,10 +126,10 @@ CI commands:
 | Existing content database | Compose does not rewrite users, boards, topics, or posts |
 | API dependency down | Compose healthchecks keep dependent services waiting |
 | Frontend built with wrong API URL | README troubleshooting points to `VITE_API_BASE_URL` |
-| Smoke web origin missing from CORS | API preflight requests fail before registration; CI must align `CORS_ORIGINS` with `PLAYWRIGHT_BASE_URL` |
+| Local smoke web origin missing from CORS | API preflight requests fail before registration; align `CORS_ORIGINS` with `PLAYWRIGHT_BASE_URL` before running Playwright smoke |
 | Slow request | Structured warning log includes method, path, status, duration, threshold |
-| Smoke registration conflicts | Test uses unique usernames/boards per run |
-| CI lint/type/test failure | Workflow fails before smoke promotion |
+| Local smoke registration conflicts | Test uses unique usernames/boards per run |
+| CI lint/type/test failure | Workflow fails before deploy promotion |
 | SMTP not configured in real delivery mode | Email job retries then enters dead-letter state; no SMTP secret is logged. |
 | Verification code invalid/expired | Account remains pending; login returns `email_not_verified`. |
 | Password-reset unknown email | API still returns `200` with the same shape as known emails; no account existence leak. |
@@ -140,9 +140,9 @@ CI commands:
 
 ### 5. Good/Base/Bad Cases
 
-- Good: operator sets `apps/api/.env`, runs `docker compose up --build`, opens web against the configured database, checks `/metrics`, and can run smoke tests.
-- Base: CI first detects changed areas, runs only relevant backend/frontend quality gates, then starts temporary API/web servers and executes the lightweight Playwright happy path when API or frontend code changed.
-- Bad: a Docker entrypoint creates users/content before migrations, or CI runs smoke tests against a frontend build pointing at a different API URL.
+- Good: operator sets `apps/api/.env`, runs `docker compose up --build`, opens web against the configured database, checks `/metrics`, and can run optional smoke tests.
+- Base: CI first detects changed areas, then runs only relevant backend/frontend quality gates. Playwright smoke remains available as an explicit manual/local validation.
+- Bad: a Docker entrypoint creates users/content before migrations, or local smoke tests run against a frontend build pointing at a different API URL.
 - Bad: deploying with `EMAIL_DELIVERY_MODE=memory`, which exposes a dev-only verification code in API responses.
 - Bad: adding a second standalone worker service instead of a `JOB_HANDLERS` entry in the unified worker.
 
@@ -150,9 +150,9 @@ CI commands:
 
 - Backend: `ruff check app tests` and `pytest -q` when backend paths changed.
 - Frontend: `pnpm --dir apps/web lint`, `typecheck`, and `build` when frontend paths or dependency files changed.
-- CI path gate: `.github/workflows/ci.yml` changes force backend, frontend, and smoke jobs to run.
+- CI path gate: `.github/workflows/ci.yml` changes force backend and frontend jobs to run.
 - Config sanity: `docker compose config`.
-- Smoke contract: `pnpm --dir apps/web test:smoke` after API/web are running and Playwright browsers are installed.
+- Smoke contract: manual `pnpm --dir apps/web test:smoke` after API/web are running and Playwright browsers are installed.
 - Auth contract: backend tests assert register → pending, login blocked, verify → token, resend rate limit, and `/auth/me` rejects pending users.
 - Account security contract: backend tests assert password reset no-enumeration, expiring/one-time reset tokens, email-change tokens, 2FA challenge, and active session revocation.
 - Spam prevention contract: backend tests assert registration/topic rate limits, screened email/URL rules, auto-silence, admin screened-rule CRUD, and spam action visibility.

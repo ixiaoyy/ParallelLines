@@ -97,7 +97,7 @@
 
 - `pnpm --dir apps/web lint`
 - `pnpm --dir apps/web typecheck`
-- `pnpm --dir apps/web test:smoke` against a real API and Vite server should verify the lightweight auth path: UI register, email-code activation, logout, UI login, topic publish, and reply publish.
+- Manual `pnpm --dir apps/web test:smoke` against a real API and Vite server verifies the lightweight auth path when needed: UI register, email-code activation, logout, UI login, topic publish, and reply publish.
 - Focused or extended Playwright suites should cover profile navigation, content counts, reply edit flows, only-author filtering, and broader session regressions when those areas change.
 
 ### 7. Wrong vs Correct

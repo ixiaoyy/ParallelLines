@@ -6,7 +6,7 @@
 
 - Trigger: Playwright tests validating the shortest production-critical user path against a running API and web app.
 - Applies to `apps/web/playwright.config.ts`, `apps/web/tests/smoke/`, and package `test:smoke` scripts.
-- Default CI smoke must stay lightweight. Visual/performance checks, seeded persona checks, accessibility sweeps, and broad regression journeys belong to an explicit extended command, not the deploy gate.
+- Default CI no longer runs Playwright smoke. Keep the lightweight command available for explicit local/manual validation; visual/performance checks, seeded persona checks, accessibility sweeps, and broad regression journeys belong to an explicit extended command.
 
 ### 2. Signatures
 
@@ -40,14 +40,14 @@
 ### 5. Good/Base/Bad Cases
 
 - Good: register/login through UI, create a unique board with the UI token, publish a topic from `/new-topic`, reply from topic detail, and assert the visible topic/reply.
-- Base: CI starts MySQL, API, and Vite web server, installs Chromium, then runs `test:smoke`.
+- Base: a developer or release operator starts MySQL, API, and Vite web server, installs Chromium, then runs `test:smoke` explicitly when a browser happy-path check is needed.
 - Bad: default smoke depends on a fixed seeded username, a static board slug, existing topics, visual-performance checks, or long multi-page regression coverage.
 
 ### 6. Tests Required
 
 - `pnpm --dir apps/web lint` must continue to pass with smoke files present.
 - `pnpm --dir apps/web test:smoke -- --list` should list only the lightweight MVP smoke test.
-- `pnpm --dir apps/web test:smoke` should run in CI after API and web servers are healthy.
+- `pnpm --dir apps/web test:smoke` is optional/manual and should run only after API and web servers are healthy.
 - `pnpm --dir apps/web test:smoke:extended` is optional/manual for heavier regression suites.
 
 ### 7. Wrong vs Correct

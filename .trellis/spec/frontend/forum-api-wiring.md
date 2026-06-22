@@ -96,7 +96,7 @@ Query composables:
 - `pnpm --dir apps/web typecheck` verifies DTO/VM and query composable types.
 - `pnpm --dir apps/web lint` verifies no direct fetches outside API modules and no template issues.
 - `pnpm --dir apps/web build` verifies route-level dynamic imports compile.
-- `pnpm --dir apps/web test:smoke` must verify the lightweight UI-created auth/topic/reply path against the real API; broader board/tag discovery regressions belong in focused or extended Playwright suites.
+- Manual `pnpm --dir apps/web test:smoke` verifies the lightweight UI-created auth/topic/reply path against the real API when full browser validation is needed; broader board/tag discovery regressions belong in focused or extended Playwright suites.
 - Backend tests for board/topic/post endpoints must keep passing when frontend contracts depend on fields.
 - Backend tests for `GET /api/v1/tags` must verify tag responses are real DB rows ordered by usage.
 - Backend `test_topic_lifecycle.py` and frontend `typecheck` must stay in sync for `TopicLifecycle*` payload/response fields.
