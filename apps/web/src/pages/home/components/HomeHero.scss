@@ -74,17 +74,32 @@
 
 .hero-search {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.62rem;
   align-items: center;
   max-width: 47rem;
   margin-top: 0.1rem;
+}
+
+.hero-search__field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.48rem;
+  align-items: center;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  padding: 0.24rem 0.3rem 0.24rem 0.75rem;
+  padding: 0.22rem 0.82rem;
   color: var(--muted);
   background: var(--bg-surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 0.72rem 1.5rem rgb(15 23 42 / 6%);
+}
+
+.hero-search :deep(svg) {
+  flex: 0 0 auto;
+  width: 0.92rem;
+  height: 0.92rem;
+  color: var(--muted);
 }
 
 .hero-search input {
@@ -97,9 +112,6 @@
   font: inherit;
 }
 
-.hero-search input::placeholder {
-  color: var(--muted);
-}
 
 .hero-search button,
 .btn {
@@ -110,7 +122,8 @@
 
 .hero-search button {
   border: 1px solid var(--btn-primary-border);
-  padding: 0.42rem 0.85rem;
+  min-height: 2.36rem;
+  padding: 0.42rem 0.92rem;
   color: var(--btn-primary-fg);
   background: var(--btn-primary-bg);
   box-shadow: var(--btn-primary-shadow);
@@ -134,9 +147,11 @@
   opacity: 0.48;
 }
 
-.hero-search:focus-within {
-  border-color: var(--theme-soft-border-hover);
-  box-shadow: var(--shadow-card), 0 0 0 3px var(--theme-focus-ring);
+.hero-search:focus-within .hero-search__field {
+  border-color: rgb(64 158 255 / 46%);
+  box-shadow:
+    0 0.72rem 1.5rem rgb(15 23 42 / 7%),
+    0 0 0 2px rgb(64 158 255 / 16%);
 }
 
 .hero-cta {
@@ -250,13 +265,15 @@
   }
 
   .hero-search {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    border-radius: 1.25rem;
-    padding-right: 0.26rem;
+    gap: 0.5rem;
+  }
+
+  .hero-search__field {
+    border-radius: 1.15rem;
   }
 
   .hero-search button {
-    min-width: 4.6rem;
+    min-width: 3.8rem;
     padding-inline: 0.72rem;
   }
 
@@ -303,21 +320,31 @@
   }
 
   .hero-search {
-    gap: 0.32rem;
+    gap: 0.4rem;
     margin-top: 0;
-    border-radius: 1rem;
-    padding: 0.2rem 0.24rem 0.2rem 0.62rem;
+  }
+
+  .hero-search__field {
+    gap: 0.36rem;
+    border-radius: 0.95rem;
+    padding: 0.16rem 0.54rem;
+  }
+
+  .hero-search :deep(svg) {
+    width: 0.82rem;
+    height: 0.82rem;
   }
 
   .hero-search input {
-    padding-block: 0.38rem;
+    padding-block: 0.34rem;
     font-size: 0.86rem;
   }
 
   .hero-search button {
-    min-height: 2.05rem;
-    min-width: 3.9rem;
-    padding: 0.32rem 0.58rem;
+    min-height: 2rem;
+    min-width: 3.2rem;
+    padding: 0.28rem 0.56rem;
+    font-size: 0.88rem;
   }
 
   .hero-cta {

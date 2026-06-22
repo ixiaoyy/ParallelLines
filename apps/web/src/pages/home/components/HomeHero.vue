@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { SearchOutlined } from "@ant-design/icons-vue";
 import { defineAsyncComponent } from "vue";
 
 import { useMediaQuery } from "@/shared/lib/useMediaQuery";
@@ -32,10 +33,12 @@ function updateSearch(event: Event) {
           <span class="hero-title__line">让不同方向的思考，</span>
           <span class="hero-title__line"> 在<em class="hero-brand">平行线</em>上汇合。 </span>
         </h1>
-        <form class="hero-search" role="search" aria-label="筛选首页主题标题" @submit.prevent="emit('submitSearch')">
-          <span aria-hidden="true">⌕</span>
-          <input :value="props.search" type="search" placeholder="筛选本页标题" @input="updateSearch" />
-          <button type="submit" :disabled="!props.search.trim()">筛选标题</button>
+        <form class="hero-search" role="search" aria-label="搜索首页主题" @submit.prevent="emit('submitSearch')">
+          <label class="hero-search__field">
+            <SearchOutlined aria-hidden="true" />
+            <input :value="props.search" type="search" aria-label="搜索主题" @input="updateSearch" />
+          </label>
+          <button type="submit" :disabled="!props.search.trim()">搜索</button>
         </form>
         <div class="hero-cta">
           <RouterLink class="btn btn-primary" :to="{ name: 'new-topic' }">发布主题</RouterLink>
