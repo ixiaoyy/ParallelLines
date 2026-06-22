@@ -44,9 +44,11 @@ issued.
 
 The production deploy workflow is path-aware: frontend-only pushes rebuild the web container,
 backend pushes rebuild API and worker containers, Nginx changes rebuild only the entrypoint, and
-Compose or deploy workflow changes fall back to a full `docker compose up -d --build`. Each deploy
-prints per-stage timings (`checkout`, storage directory check, Compose deploy, certificate check,
-image prune, and total) so slow runs can be diagnosed from GitHub Actions logs instead of guessed.
+Compose changes fall back to a full `docker compose up -d --build`. Deploy workflow or Docker ignore
+changes do not deploy the runtime by themselves; the next runtime-affecting deploy will pick them up.
+Each runtime deploy prints per-stage timings (`checkout`, storage directory check, Compose deploy,
+certificate check, image prune, and total) so slow runs can be diagnosed from GitHub Actions logs
+instead of guessed.
 
 ## Local Development without Docker
 

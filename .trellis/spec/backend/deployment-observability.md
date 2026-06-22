@@ -96,9 +96,10 @@ CI commands:
 
 Production deploy workflow:
 
-- Deploy runs only for runtime-affecting paths: Docker context ignores, API, web, deploy assets, Compose, root frontend dependency files, or the deploy workflow itself.
-- Deploy detects changed service groups before SSH: frontend changes rebuild `web`, backend changes rebuild `api` and `worker`, Nginx changes rebuild `nginx`, and Compose/deploy workflow changes fall back to full `docker compose up -d --build`.
-- Deploy logs elapsed seconds for checkout, storage directory check, Compose deploy, certificate check, image prune, and total duration.
+- Deploy runs only for runtime-affecting paths: API, web, deploy assets, Compose, or root frontend dependency files.
+- Deploy workflow and Docker ignore changes do not deploy runtime services by themselves; they are picked up by the next runtime-affecting deploy.
+- Deploy detects changed service groups before SSH: frontend changes rebuild `web`, backend changes rebuild `api` and `worker`, Nginx changes rebuild `nginx`, Compose changes fall back to full `docker compose up -d --build`, and zero runtime service changes use `noop` without Compose rebuild, certificate checks, or image prune.
+- Runtime deploys log elapsed seconds for checkout, storage directory check, Compose deploy, certificate check, image prune, and total duration.
 - Deploy must not run Let's Encrypt `certonly` on every push. It may bootstrap the certificate only when the persisted certificate files are missing; routine renewals belong to the Compose `certbot` service.
 
 ### 3. Contracts

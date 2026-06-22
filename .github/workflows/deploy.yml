@@ -5,7 +5,6 @@ on:
     branches:
       - main
     paths:
-      - ".dockerignore"
       - "apps/api/**"
       - "apps/web/**"
       - "deploy/**"
@@ -13,7 +12,6 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
-      - ".github/workflows/deploy.yml"
 
 concurrency:
   group: deploy-production
@@ -40,22 +38,17 @@ jobs:
             backend:
               - 'apps/api/**'
               - 'docker-compose.yml'
-              - '.dockerignore'
             frontend:
               - 'apps/web/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'docker-compose.yml'
-              - '.dockerignore'
             nginx:
               - 'deploy/nginx/**'
               - 'docker-compose.yml'
-              - '.dockerignore'
             compose:
               - 'docker-compose.yml'
-              - '.dockerignore'
-              - '.github/workflows/deploy.yml'
 
   deploy:
     name: Deploy changed services
@@ -116,8 +109,10 @@ jobs:
             fi
 
             DEPLOY_MODE="targeted"
-            if [ "${COMPOSE_CHANGED}" = "true" ] || [ -z "${TARGET_SERVICES}" ]; then
+            if [ "${COMPOSE_CHANGED}" = "true" ]; then
               DEPLOY_MODE="full"
+            elif [ -z "${TARGET_SERVICES}" ]; then
+              DEPLOY_MODE="noop"
             elif ! $COMPOSE ps --services --status running 2>/dev/null | grep -qx nginx; then
               DEPLOY_MODE="full"
             fi
@@ -125,6 +120,8 @@ jobs:
             if [ "${DEPLOY_MODE}" = "full" ]; then
               echo "[deploy] running full compose build"
               $COMPOSE up -d --build
+            elif [ "${DEPLOY_MODE}" = "noop" ]; then
+              echo "[deploy] no runtime service changes; skipping compose build"
             else
               echo "[deploy] rebuilding changed services:${TARGET_SERVICES}"
               if [ "${BACKEND_CHANGED}" = "true" ]; then
@@ -140,24 +137,28 @@ jobs:
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] compose ${DEPLOY_MODE} deploy took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
-            STEP_STARTED_AT=$(date +%s)
-            if sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/fullchain.pem && sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/privkey.pem; then
-              echo "[deploy] certificate already exists; skipping certbot bootstrap"
+            if [ "${DEPLOY_MODE}" = "noop" ]; then
+              echo "[deploy] no runtime service changes; skipping certificate check and image prune"
             else
-              echo "[deploy] certificate missing; requesting initial Let's Encrypt certificate"
-              if $COMPOSE run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
-                $COMPOSE exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
+              STEP_STARTED_AT=$(date +%s)
+              if sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/fullchain.pem && sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/privkey.pem; then
+                echo "[deploy] certificate already exists; skipping certbot bootstrap"
               else
-                echo "::warning::Let's Encrypt certificate request failed; Nginx is running with a temporary self-signed certificate."
+                echo "[deploy] certificate missing; requesting initial Let's Encrypt certificate"
+                if $COMPOSE run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
+                  $COMPOSE exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
+                else
+                  echo "::warning::Let's Encrypt certificate request failed; Nginx is running with a temporary self-signed certificate."
+                fi
               fi
-            fi
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] certificate check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
+              STEP_FINISHED_AT=$(date +%s)
+              echo "[deploy] certificate check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
-            STEP_STARTED_AT=$(date +%s)
-            sudo docker image prune -f
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] image prune took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
+              STEP_STARTED_AT=$(date +%s)
+              sudo docker image prune -f
+              STEP_FINISHED_AT=$(date +%s)
+              echo "[deploy] image prune took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
+            fi
 
             DEPLOY_FINISHED_AT=$(date +%s)
             echo "[deploy] total took $((DEPLOY_FINISHED_AT - DEPLOY_STARTED_AT))s"
