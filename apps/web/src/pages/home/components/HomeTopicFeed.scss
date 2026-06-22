@@ -8,15 +8,17 @@
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  justify-content: flex-start;
+  gap: 0.5rem;
   border-bottom: 1px solid var(--border);
   padding: 0.95rem 1rem;
 }
 
 .tab-list {
   display: flex;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   gap: 0.45rem;
   min-width: 0;
@@ -51,12 +53,19 @@
   background: var(--theme-soft-bg-hover);
 }
 
-.tab.active,
-.filter-toggle-button.active {
+.tab.active {
   color: var(--btn-primary-fg);
   border: 1px solid var(--btn-primary-border);
   background: var(--btn-primary-bg);
   box-shadow: var(--btn-primary-shadow);
+  outline: none;
+}
+
+.filter-toggle-button.active {
+  border-color: var(--theme-soft-border-hover);
+  color: var(--theme-soft-fg-hover);
+  background: var(--theme-soft-bg-hover);
+  box-shadow: none;
   outline: none;
 }
 
@@ -370,12 +379,18 @@
 
 @media (max-width: 720px) {
   .tabs {
-    align-items: stretch;
-    flex-direction: column;
+    gap: 0.42rem;
+    padding: 0.82rem 0.9rem;
   }
 
+  .tab-list {
+    gap: 0.36rem;
+  }
+
+  .tab,
   .filter-toggle-button {
-    width: 100%;
+    padding: 0.48rem 0.66rem;
+    font-size: 0.86rem;
   }
 
   .topic-filter-panel {

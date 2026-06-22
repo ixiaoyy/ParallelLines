@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import type { LocationQueryRaw } from "vue-router";
 
 import type { TopicCardVM } from "@/entities/topic/model";
+import { useCurrentUser } from "@/features/auth/queries";
 import { useBoards } from "@/features/boards/queries";
 import { useTags } from "@/features/tags/queries";
 import type { TopicSort } from "@/features/topics/model";
@@ -32,6 +33,8 @@ const router = useRouter();
 const route = useRoute();
 const isDesktopRailVisible = useMediaQuery("(min-width: 981px)", true);
 const filtersDataRequested = ref(false);
+const currentUserQuery = useCurrentUser();
+const canPublishTopic = computed(() => Boolean(currentUserQuery.data.value));
 
 const feedSort = computed<TopicSort>(() =>
   activeTab.value === "hot" ? "hot" : activeTab.value === "top" ? "top" : "latest",
@@ -276,6 +279,7 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
         <HomeHero
           v-model:search="heroSearch"
           class="home-hero-slot"
+          :can-publish-topic="canPublishTopic"
           @submit-search="submitHeroSearch"
         />
 
@@ -290,6 +294,7 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
           :title-filter="titleFilter"
           :board-filter="boardFilter"
           :tag-filter="tagFilter"
+          :can-publish-topic="canPublishTopic"
           :loading="topicFeedLoading"
           :error="topicsQuery.isError.value"
           @select-tab="setActiveTab"

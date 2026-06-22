@@ -17,6 +17,7 @@ const props = defineProps<{
   titleFilter: string;
   boardFilter: string;
   tagFilter: string;
+  canPublishTopic: boolean;
   loading: boolean;
   error: boolean;
 }>();
@@ -114,6 +115,17 @@ onUnmounted(() => observer?.disconnect());
 <template>
   <section class="home-topic-feed" aria-label="主题发现流">
     <div class="tabs">
+      <button
+        type="button"
+        class="filter-toggle-button"
+        :class="{ active: filtersOpen }"
+        :aria-expanded="filtersOpen"
+        :aria-label="filtersOpen ? '收起筛选' : '展开筛选'"
+        aria-controls="topic-feed-filters"
+        @click="filtersOpen = !filtersOpen"
+      >
+        筛选
+      </button>
       <div class="tab-list" role="tablist" aria-label="主题筛选">
         <button
           v-for="tab in tabs"
@@ -127,16 +139,6 @@ onUnmounted(() => observer?.disconnect());
           {{ tab.label }}
         </button>
       </div>
-      <button
-        type="button"
-        class="filter-toggle-button"
-        :class="{ active: filtersOpen }"
-        :aria-expanded="filtersOpen"
-        aria-controls="topic-feed-filters"
-        @click="filtersOpen = !filtersOpen"
-      >
-        {{ filtersOpen ? "收起筛选" : "筛选" }}
-      </button>
     </div>
 
     <div v-if="filtersOpen" id="topic-feed-filters" class="topic-filter-panel" aria-label="主题过滤">
@@ -205,7 +207,7 @@ onUnmounted(() => observer?.disconnect());
       <p>{{ emptyDescription }}</p>
       <div class="feed-empty__actions">
         <button v-if="hasActiveFilters" type="button" @click="emit('clearFilters')">清空筛选</button>
-        <RouterLink :to="{ name: 'new-topic' }">发布主题</RouterLink>
+        <RouterLink v-if="canPublishTopic" :to="{ name: 'new-topic' }">发布主题</RouterLink>
         <RouterLink :to="{ name: 'board-directory' }">浏览版块</RouterLink>
       </div>
     </div>

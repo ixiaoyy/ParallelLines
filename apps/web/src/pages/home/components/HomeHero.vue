@@ -10,6 +10,7 @@ const HeroMeetVisual = defineAsyncComponent(() => import("@/pages/home/component
 
 const props = defineProps<{
   search: string;
+  canPublishTopic: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -36,13 +37,13 @@ function updateSearch(event: Event) {
         <form class="hero-search" role="search" aria-label="搜索首页主题" @submit.prevent="emit('submitSearch')">
           <label class="hero-search__field">
             <SearchOutlined aria-hidden="true" />
-            <input :value="props.search" type="search" aria-label="搜索主题" @input="updateSearch" />
+            <input :value="props.search" type="search" placeholder="搜索主题" aria-label="搜索主题" @input="updateSearch" />
           </label>
           <button type="submit" :disabled="!props.search.trim()">搜索</button>
+          <RouterLink v-if="props.canPublishTopic" class="hero-publish-link" :to="{ name: 'new-topic' }">
+            发布主题
+          </RouterLink>
         </form>
-        <div class="hero-cta">
-          <RouterLink class="btn btn-primary" :to="{ name: 'new-topic' }">发布主题</RouterLink>
-        </div>
         <ul class="hero-proof" aria-label="社区能力">
           <li>让思考发光</li>
           <li>让善意回响</li>
