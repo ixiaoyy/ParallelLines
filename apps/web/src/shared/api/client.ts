@@ -1,7 +1,8 @@
 import { readonly, ref } from "vue";
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
-
+const API_UPLOAD_DELIVERY_PATH_PATTERN =
+  /^\/(?:api\/v1\/)?uploads\/(?:[1-9][0-9]*|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/(?:content|thumbnail)$/i;
 export interface ApiEnvelope<T> {
   data: T;
   meta?: Record<string, unknown>;
@@ -46,12 +47,47 @@ export function getApiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
 
+// Return the origin/root that owns the configured API prefix.
+// Key parameters: none. Return value is an absolute or same-origin root without `/api/v1`; side effect: none.
+function apiRootUrl(): string {
+  return API_BASE_URL.replace(/\/api\/v1\/?$/, "");
+}
+
+// Rewrite legacy absolute upload delivery URLs to the currently configured API base.
+// Key parameter: `url` may point at an old API host/IP. Return value is the normalized
+// delivery URL when the path is a known upload endpoint, otherwise undefined. Side effect: none.
+function resolveLegacyApiUploadUrl(url: string): string | undefined {
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    return undefined;
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+    if (!API_UPLOAD_DELIVERY_PATH_PATTERN.test(parsedUrl.pathname)) {
+      return undefined;
+    }
+
+    const pathAndSuffix = `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+    if (parsedUrl.pathname.startsWith("/api/v1/")) {
+      return `${apiRootUrl()}${pathAndSuffix}`;
+    }
+    return getApiUrl(pathAndSuffix);
+  } catch {
+    return undefined;
+  }
+}
+
 export function resolveApiAssetUrl(url: string): string;
 export function resolveApiAssetUrl(url: null | undefined): undefined;
 export function resolveApiAssetUrl(url: string | null | undefined): string | undefined;
 export function resolveApiAssetUrl(url: string | null | undefined): string | undefined {
   if (!url) {
     return undefined;
+  }
+
+  const legacyUploadUrl = resolveLegacyApiUploadUrl(url);
+  if (legacyUploadUrl) {
+    return legacyUploadUrl;
   }
 
   if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
@@ -63,8 +99,7 @@ export function resolveApiAssetUrl(url: string | null | undefined): string | und
   }
 
   if (url.startsWith("/api/v1/")) {
-    const apiRoot = API_BASE_URL.replace(/\/api\/v1\/?$/, "");
-    return `${apiRoot}${url}`;
+    return `${apiRootUrl()}${url}`;
   }
 
   return url;
