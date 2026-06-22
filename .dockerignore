@@ -1,5 +1,15 @@
 .git
+.github
 .trellis
+.agents
+.codex
+.claude
+.idea
+.pytest_cache
+.ruff_cache
+.uv-cache
+.tmp
+tmp
 node_modules
 apps/web/node_modules
 apps/web/dist
@@ -8,3 +18,8 @@ apps/web/playwright-report
 apps/api/.venv
 apps/api/.pytest_cache
 apps/api/.ruff_cache
+*.log
+.tmp*
+CURRENT_HOME.png
+docs
+参考

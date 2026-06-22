@@ -36,9 +36,17 @@ sync with `MYSQL_PASSWORD` in `apps/api/.env`.
 Production Compose exposes ports 80 and 443 through the Nginx entrypoint. Nginx serves the HTTP-01
 challenge from `/opt/parallellines/var/certbot`, persists certificates under
 `/opt/parallellines/var/letsencrypt`, and redirects normal HTTP traffic to HTTPS. The deploy
-workflow requests a Let's Encrypt certificate for `pingxingxian.space` and `www.pingxingxian.space`
-after the containers start; until that succeeds, Nginx starts with a temporary self-signed fallback
-certificate so the deployment does not fail before the first certificate is issued.
+workflow bootstraps a Let's Encrypt certificate for `pingxingxian.space` and
+`www.pingxingxian.space` only when the persisted certificate is missing; routine renewals are handled
+by the Compose `certbot` service. Until the first certificate succeeds, Nginx starts with a temporary
+self-signed fallback certificate so the deployment does not fail before the first certificate is
+issued.
+
+The production deploy workflow is path-aware: frontend-only pushes rebuild the web container,
+backend pushes rebuild API and worker containers, Nginx changes rebuild only the entrypoint, and
+Compose or deploy workflow changes fall back to a full `docker compose up -d --build`. Each deploy
+prints per-stage timings (`checkout`, storage directory check, Compose deploy, certificate check,
+image prune, and total) so slow runs can be diagnosed from GitHub Actions logs instead of guessed.
 
 ## Local Development without Docker
 

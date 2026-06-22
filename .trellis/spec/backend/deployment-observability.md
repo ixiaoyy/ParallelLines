@@ -94,6 +94,13 @@ CI commands:
 - Frontend: `pnpm install --frozen-lockfile`, `pnpm --dir apps/web lint`, `typecheck`, `build`; runs only for `apps/web/**`, root frontend dependency files, or CI workflow changes.
 - Playwright smoke is not part of the default CI gate; run `pnpm --dir apps/web test:smoke` manually against a running API/web pair when validating the full browser happy path.
 
+Production deploy workflow:
+
+- Deploy runs only for runtime-affecting paths: Docker context ignores, API, web, deploy assets, Compose, root frontend dependency files, or the deploy workflow itself.
+- Deploy detects changed service groups before SSH: frontend changes rebuild `web`, backend changes rebuild `api` and `worker`, Nginx changes rebuild `nginx`, and Compose/deploy workflow changes fall back to full `docker compose up -d --build`.
+- Deploy logs elapsed seconds for checkout, storage directory check, Compose deploy, certificate check, image prune, and total duration.
+- Deploy must not run Let's Encrypt `certonly` on every push. It may bootstrap the certificate only when the persisted certificate files are missing; routine renewals belong to the Compose `certbot` service.
+
 ### 3. Contracts
 
 - Docker Compose must read API configuration from `apps/api/.env`; `DATABASE_URL`
