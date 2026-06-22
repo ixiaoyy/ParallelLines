@@ -9,7 +9,6 @@ import { useTags } from "@/features/tags/queries";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicFeed } from "@/features/topics/queries";
 import HomeHero from "@/pages/home/components/HomeHero.vue";
-import HomeMobileDiscovery from "@/pages/home/components/HomeMobileDiscovery.vue";
 import HomeTopicFeed from "@/pages/home/components/HomeTopicFeed.vue";
 import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
 import {
@@ -32,7 +31,6 @@ const heroSearch = ref("");
 const router = useRouter();
 const route = useRoute();
 const isDesktopRailVisible = useMediaQuery("(min-width: 981px)", true);
-const isMobileDiscoveryVisible = computed(() => !isDesktopRailVisible.value);
 const filtersDataRequested = ref(false);
 
 const feedSort = computed<TopicSort>(() =>
@@ -62,7 +60,6 @@ const tagFilter = computed({
 });
 const shouldLoadTaxonomy = computed(() =>
   isDesktopRailVisible.value ||
-  isMobileDiscoveryVisible.value ||
   filtersDataRequested.value ||
   Boolean(titleFilter.value.trim() || boardFilter.value.trim() || tagFilter.value.trim()),
 );
@@ -280,16 +277,6 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
           v-model:search="heroSearch"
           class="home-hero-slot"
           @submit-search="submitHeroSearch"
-        />
-
-        <HomeMobileDiscovery
-          class="mobile-discovery-slot"
-          :boards="railBoards"
-          :tags="topTags"
-          :boards-loading="railBoardsLoading"
-          :boards-error="boardsQuery.isError.value"
-          :tags-loading="railTagsLoading"
-          :tags-error="tagsQuery.isError.value"
         />
 
         <HomeTopicFeed

@@ -266,34 +266,35 @@
   }
 
   .toolbar-actions {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.32rem;
     align-items: center;
   }
 
   .toolbar-icon-button,
   .toolbar-more summary {
-    width: 100%;
-    min-width: 0;
-    padding-inline: 0;
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 2.18rem;
+    padding-inline: 0.48rem;
   }
 
   .notification-control {
-    grid-column: 1 / span 5;
-    width: 100%;
-    min-width: 0;
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 6.4rem;
+    max-width: calc(100% - 2.5rem);
     padding-left: 0.54rem;
   }
 
   .notification-control select {
-    width: 100%;
+    width: 4.15rem;
   }
 
   .toolbar-more {
-    grid-column: 6;
-    width: 100%;
-    margin-left: 0;
+    flex: 0 0 auto;
+    margin-left: auto;
   }
 
   .toolbar-more-menu {
@@ -302,7 +303,8 @@
   }
 
   .toolbar-filter-button {
-    grid-column: span 3;
+    flex: 1 1 calc(50% - 0.16rem);
+    min-width: min(8.6rem, 100%);
     padding-inline: 0.56rem;
   }
 
