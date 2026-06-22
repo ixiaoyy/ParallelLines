@@ -37,6 +37,7 @@ Email verification env:
 | `TWO_FACTOR_CHALLENGE_MINUTES` | Login second-factor challenge token expiry. |
 | `TWO_FACTOR_ISSUER` | Issuer label embedded in TOTP `otpauth://` URLs. |
 | `OAUTH_ENABLED_PROVIDERS` | JSON/list of configured OAuth provider names exposed by `/auth/oauth/providers`. |
+| `CORS_ORIGINS` | JSON/list of web origins allowed by the API. CI smoke must include the Vite origin used by `PLAYWRIGHT_BASE_URL`. |
 | `RATE_LIMIT_WINDOW_SECONDS` | Sliding-window size for DB-backed anti-spam counters. |
 | `RATE_LIMIT_REGISTER_IP` / `RATE_LIMIT_REGISTER_EMAIL` | Registration throttle by source IP and email. |
 | `RATE_LIMIT_LOGIN_IP` / `RATE_LIMIT_LOGIN_ACCOUNT` | Login throttle by source IP and account string. |
@@ -91,7 +92,7 @@ CI commands:
 - A lightweight `changes` job gates expensive jobs by changed path.
 - Backend: `uv sync --frozen`, `uv run ruff check app tests`, `uv run pytest -q`; runs only for `apps/api/**` or CI workflow changes.
 - Frontend: `pnpm install --frozen-lockfile`, `pnpm --dir apps/web lint`, `typecheck`, `build`; runs only for `apps/web/**`, root frontend dependency files, or CI workflow changes.
-- Smoke: `pnpm --dir apps/web test:smoke` against a running API/web pair; runs only for API/frontend/dependency/workflow changes after required jobs pass or are skipped.
+- Smoke: `pnpm --dir apps/web test:smoke` against a running API/web pair; runs only for API/frontend/dependency/workflow changes after required jobs pass or are skipped. The smoke API env must set `CORS_ORIGINS` to include the Vite web origin.
 
 ### 3. Contracts
 
@@ -125,6 +126,7 @@ CI commands:
 | Existing content database | Compose does not rewrite users, boards, topics, or posts |
 | API dependency down | Compose healthchecks keep dependent services waiting |
 | Frontend built with wrong API URL | README troubleshooting points to `VITE_API_BASE_URL` |
+| Smoke web origin missing from CORS | API preflight requests fail before registration; CI must align `CORS_ORIGINS` with `PLAYWRIGHT_BASE_URL` |
 | Slow request | Structured warning log includes method, path, status, duration, threshold |
 | Smoke registration conflicts | Test uses unique usernames/boards per run |
 | CI lint/type/test failure | Workflow fails before smoke promotion |
