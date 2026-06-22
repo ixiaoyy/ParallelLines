@@ -11,11 +11,6 @@ import { useCurrentUser } from "@/features/auth/queries";
 import { setTopicBookmark, setTopicLike } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
 import { useContentModerationMutation, useCreateFlag } from "@/features/moderation/queries";
-import type { NotificationLevel } from "@/features/notifications/model";
-import {
-  useTopicNotificationLevel,
-  useUpdateTopicNotificationLevel,
-} from "@/features/notifications/queries";
 import type { PostSort } from "@/features/posts/api";
 import PostItem from "@/features/posts/components/PostItem.vue";
 import { useCreatePost, useTopicPosts } from "@/features/posts/queries";
@@ -76,8 +71,6 @@ const createPost = useCreatePost(topicId);
 const currentUserQuery = useCurrentUser();
 const boardsQuery = useBoards();
 const siteSettingsQuery = usePublicSiteSettings();
-const topicNotificationQuery = useTopicNotificationLevel(topicId);
-const updateTopicNotificationMutation = useUpdateTopicNotificationLevel(topicId);
 const topic = computed(() => topicQuery.data.value);
 const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
@@ -98,7 +91,6 @@ useSeoMeta(
   ),
 );
 const posts = computed(() => postsQuery.data.value ?? []);
-const onlyAuthor = ref(false);
 const toolbarStatus = ref("");
 const replyStatus = ref("");
 const replyResetToken = ref(0);
@@ -118,14 +110,7 @@ const canManageTopic = computed(
 const canManageSolution = computed(
   () => Boolean(topic.value && currentUserId.value && currentUserId.value === topic.value.authorId) || canManageTopic.value,
 );
-const qaSort = computed(() => postSort.value === "qa");
-const displayedPosts = computed(() => {
-  if (!onlyAuthor.value || !topic.value) {
-    return posts.value;
-  }
-
-  return posts.value.filter((post) => post.userId === topic.value?.authorId);
-});
+const displayedPosts = computed(() => posts.value);
 const firstPost = computed(() => displayedPosts.value.find((post) => post.floor === 1) ?? displayedPosts.value[0] ?? null);
 const replyPosts = computed(() => displayedPosts.value.filter((post) => post.id !== firstPost.value?.id));
 const hiddenRelationshipPostCount = computed(() => {
@@ -185,13 +170,6 @@ const canFlagTopic = computed(() => Boolean(topic.value?.id));
 const flagTopicPending = computed(() => flagTopicMutation.isPending.value);
 const deleteTopicPending = computed(() => topicModerationMutation.isPending.value);
 const reportModalOpen = ref(false);
-const topicNotificationLevel = computed<NotificationLevel>(
-  () => topicNotificationQuery.data.value?.notification_level ?? "normal",
-);
-const topicNotificationPending = computed(
-  () => topicNotificationQuery.isFetching.value || updateTopicNotificationMutation.isPending.value,
-);
-const canSetTopicNotification = computed(() => Boolean(topic.value?.id) && hasAccessToken());
 const TOPIC_HORIZONTAL_SWIPE_MIN_PX = 72;
 const TOPIC_HORIZONTAL_SWIPE_RATIO = 1.35;
 const lifecyclePending = computed(
@@ -342,30 +320,6 @@ function toggleTopicPinned() {
   );
 }
 
-function setTopicNotificationLevel(level: NotificationLevel) {
-  if (!topic.value?.id) {
-    return;
-  }
-
-  if (!hasAccessToken()) {
-    setToolbarStatus("请先登录后再设置主题通知。");
-    void router.push({ name: "auth", query: { redirect: route.fullPath } });
-    return;
-  }
-
-  updateTopicNotificationMutation.mutate(level, {
-    onSuccess: (response) => {
-      setToolbarStatus(`主题通知已设为${notificationLevelLabel(response.notification_level)}`);
-    },
-    onError: () => setToolbarStatus("主题通知设置失败，请稍后重试"),
-  });
-}
-
-function toggleQaSort() {
-  postSort.value = postSort.value === "qa" ? "chronological" : "qa";
-  setToolbarStatus(postSort.value === "qa" ? "已切换为问答排序" : "已按发布时间排序");
-}
-
 function togglePostSolution(post: PostItemVM) {
   if (!topic.value?.id || !canManageSolution.value) {
     return;
@@ -401,10 +355,6 @@ function votePoll(optionIds: string[]) {
       onError: () => setToolbarStatus("Poll 投票失败，可能已截止或选项无效"),
     },
   );
-}
-
-function notificationLevelLabel(level: NotificationLevel): string {
-  return level === "muted" ? "静音" : "关注";
 }
 
 // Opens the managed topic-move dialog and preselects the first valid board.
@@ -525,19 +475,6 @@ async function copyTopicLink() {
   }
 
   setToolbarStatus(copied ? "已复制主题链接" : "无法访问剪贴板，已更新地址栏锚点");
-}
-
-function openInviteCenter() {
-  if (!hasAccessToken()) {
-    requireLogin("请先登录后再邀请成员。");
-    return;
-  }
-  void router.push({ name: "my-invites" });
-}
-
-function toggleOnlyAuthor() {
-  onlyAuthor.value = !onlyAuthor.value;
-  setToolbarStatus(onlyAuthor.value ? "已切换为只看楼主" : "已显示全部楼层");
 }
 
 // Records the start point for topic-level horizontal swipe navigation.
@@ -823,10 +760,6 @@ function flagTopic() {
             </div>
 
             <TopicThreadToolbar
-              :visible-count="displayedPosts.length"
-              :total-count="posts.length"
-              :only-author="onlyAuthor"
-              :qa-sort="qaSort"
               :bookmarked="bookmarked"
               :bookmark-count="bookmarkCount"
               :bookmark-pending="bookmarkPending"
@@ -840,18 +773,11 @@ function flagTopic() {
               :topic-pinned="Boolean(topic.pinned)"
               :lifecycle-pending="lifecyclePending"
               :delete-topic-pending="deleteTopicPending"
-              :notification-level="topicNotificationLevel"
-              :notification-pending="topicNotificationPending"
-              :can-set-notification="canSetTopicNotification"
               :status="toolbarStatus"
-              @toggle-only-author="toggleOnlyAuthor"
-              @toggle-qa-sort="toggleQaSort"
               @toggle-bookmark="toggleBookmark"
               @toggle-topic-like="toggleTopicLike"
               @copy-link="copyTopicLink"
-              @open-invites="openInviteCenter"
               @flag-topic="flagTopic"
-              @set-notification-level="setTopicNotificationLevel"
               @set-topic-status="setTopicStatus"
               @toggle-topic-pinned="toggleTopicPinned"
               @move-topic="openMoveTopicDialog"

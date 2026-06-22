@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import {
-  BellOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  CommentOutlined,
   DeleteOutlined,
   EllipsisOutlined,
   FlagOutlined,
@@ -12,31 +10,18 @@ import {
   HeartOutlined,
   LinkOutlined,
   PushpinOutlined,
-  RocketOutlined,
   StarFilled,
   StarOutlined,
-  UserOutlined,
-  UserAddOutlined,
 } from "@ant-design/icons-vue";
-import { computed, ref } from "vue";
+import { ref } from "vue";
 
-import type { NotificationLevel } from "@/features/notifications/model";
 import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
 import UiCard from "@/shared/ui/Card.vue";
 
 type TopicStatus = "open" | "closed" | "archived" | "hidden";
 type TopicLifecycleStatus = "open" | "closed";
 
-const notificationOptions: Array<{ value: NotificationLevel; label: string; description: string }> = [
-  { value: "watching", label: "关注", description: "接收这个主题的新楼层提醒。" },
-  { value: "muted", label: "静音", description: "不接收这个主题的提醒。" },
-];
-
-const props = defineProps<{
-  visibleCount: number;
-  totalCount: number;
-  onlyAuthor: boolean;
-  qaSort: boolean;
+defineProps<{
   bookmarked: boolean;
   bookmarkCount: number;
   bookmarkPending: boolean;
@@ -50,42 +35,23 @@ const props = defineProps<{
   topicPinned: boolean;
   lifecyclePending: boolean;
   deleteTopicPending: boolean;
-  notificationLevel: NotificationLevel;
-  notificationPending: boolean;
-  canSetNotification: boolean;
   status: string;
 }>();
 
 const emit = defineEmits<{
-  toggleOnlyAuthor: [];
-  toggleQaSort: [];
   toggleBookmark: [];
   toggleTopicLike: [];
   copyLink: [];
-  openInvites: [];
   flagTopic: [];
   setTopicStatus: [status: TopicLifecycleStatus];
   toggleTopicPinned: [];
   moveTopic: [];
   deleteTopic: [];
-  setNotificationLevel: [level: NotificationLevel];
 }>();
-
-const notificationSelectValue = computed<NotificationLevel>(() =>
-  props.notificationLevel === "muted" ? "muted" : "watching",
-);
-const selectedNotificationOption = computed(
-  () => notificationOptions.find((option) => option.value === notificationSelectValue.value) ?? notificationOptions[0],
-);
 
 const toolbarMoreRef = ref<HTMLDetailsElement | null>(null);
 
 useOutsidePointerDown(toolbarMoreRef, closeMoreMenu, () => Boolean(toolbarMoreRef.value?.open));
-
-function onNotificationChange(event: Event) {
-  const target = event.target as HTMLSelectElement;
-  emit("setNotificationLevel", target.value as NotificationLevel);
-}
 
 function closeMoreMenu() {
   if (toolbarMoreRef.value) {
@@ -121,35 +87,7 @@ function deleteTopic() {
 
 <template>
   <UiCard class="topic-thread-toolbar">
-    <div class="toolbar-summary">
-      <CommentOutlined aria-hidden="true" />
-      <strong>{{ visibleCount }}/{{ totalCount }} 楼层</strong>
-    </div>
     <div class="toolbar-actions" aria-label="主题操作">
-      <button
-        class="toolbar-icon-button toolbar-filter-button"
-        :class="{ 'is-active': onlyAuthor }"
-        type="button"
-        :title="onlyAuthor ? '显示全部楼层' : '只看楼主'"
-        :aria-label="onlyAuthor ? '显示全部楼层' : '只看楼主'"
-        :aria-pressed="onlyAuthor"
-        @click="emit('toggleOnlyAuthor')"
-      >
-        <UserOutlined aria-hidden="true" />
-        <span class="toolbar-button-label">只看楼主</span>
-      </button>
-      <button
-        class="toolbar-icon-button toolbar-filter-button"
-        :class="{ 'is-active': qaSort }"
-        type="button"
-        :title="qaSort ? '按时间排序' : '问答排序'"
-        :aria-label="qaSort ? '按时间排序' : '问答排序'"
-        :aria-pressed="qaSort"
-        @click="emit('toggleQaSort')"
-      >
-        <RocketOutlined aria-hidden="true" />
-        <span class="toolbar-button-label">问答排序</span>
-      </button>
       <button
         class="toolbar-icon-button"
         :class="{ 'is-active': topicLiked }"
@@ -181,22 +119,6 @@ function deleteTopic() {
       <button class="toolbar-icon-button" type="button" title="复制主题链接" aria-label="复制主题链接" @click="emit('copyLink')">
         <LinkOutlined aria-hidden="true" />
       </button>
-      <button class="toolbar-icon-button" type="button" title="邀请成员" aria-label="邀请成员" @click="emit('openInvites')">
-        <UserAddOutlined aria-hidden="true" />
-      </button>
-      <label class="notification-control" :title="selectedNotificationOption.description">
-        <BellOutlined aria-hidden="true" />
-        <select
-          :value="notificationSelectValue"
-          :disabled="notificationPending || !canSetNotification"
-          aria-label="设置主题通知级别"
-          @change="onNotificationChange"
-        >
-          <option v-for="option in notificationOptions" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
-        </select>
-      </label>
       <details ref="toolbarMoreRef" class="toolbar-more" @keydown.esc="closeMoreMenu">
         <summary title="更多主题操作" aria-label="更多主题操作">
           <EllipsisOutlined aria-hidden="true" />
