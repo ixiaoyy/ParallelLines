@@ -22,12 +22,16 @@ Services:
 - API: <http://127.0.0.1:8000> for local debugging, and `/api/` via Nginx
 - API health: <http://localhost/healthz>
 - API metrics: <http://localhost/metrics>
+- MySQL: `127.0.0.1:3306` for local administration only, persisted under `/opt/parallellines/var/mysql`
 - Redis: `127.0.0.1:6379` for local debugging only
 
-`docker compose up` reads `apps/api/.env`, runs Alembic migrations against the configured
-`DATABASE_URL`, builds the frontend with `VITE_API_BASE_URL=/api/v1`, then starts Redis, the
-API, the static web Nginx container, the public Nginx entrypoint, and the unified background job
-worker. Compose uses only that configured database and does not create users/content automatically.
+`docker compose up` reads `apps/api/.env`, starts the bundled MySQL and Redis services, runs
+Alembic migrations against the configured `DATABASE_URL`, builds the frontend with
+`VITE_API_BASE_URL=/api/v1`, then starts the API, the static web Nginx container, the public Nginx
+entrypoint, and the unified background job worker. For Compose deployments, set
+`DATABASE_URL` to the internal MySQL service name, for example
+`mysql+asyncmy://appuser:<password>@db:3306/parallellines?charset=utf8mb4`; keep that password in
+sync with `MYSQL_PASSWORD` in `apps/api/.env`.
 
 Production Compose exposes ports 80 and 443 through the Nginx entrypoint. Nginx serves the HTTP-01
 challenge from `/opt/parallellines/var/certbot`, persists certificates under
@@ -48,9 +52,11 @@ uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
-For Docker, `apps/api/.env` is the single API configuration file. Set `DATABASE_URL` to the
-actual database for the target environment. If the database is remote, keep its remote host in
-that file; Compose will not start or override a local MySQL service.
+For Docker, `apps/api/.env` is the single API configuration file. The bundled MySQL service reads
+`MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, and `MYSQL_PASSWORD` from the same file; the
+API and worker should connect through `DATABASE_URL` using host `db`. If you intentionally use a
+remote managed database instead, set that remote host in `DATABASE_URL` and remove or ignore the
+Compose `db` service for that deployment.
 
 Useful commands:
 
@@ -195,12 +201,13 @@ uv run python -m app.migrate_uploads_to_s3 --apply
 生产本地存储由 `docker-compose.yml` 固定挂载：
 
 ```text
+/opt/parallellines/var/mysql    -> /var/lib/mysql
 /opt/parallellines/var/uploads  -> /var/lib/parallellines/uploads
 /opt/parallellines/var/backups  -> /var/lib/parallellines/backups
 ```
 
-部署脚本会先创建目录并赋予读写权限；不要执行 `docker compose down -v` 或
-`docker system prune --volumes` 清理历史 MySQL 命名卷，除非已确认没有待迁移的旧数据或上传文件。
+部署脚本会先创建目录并赋予读写权限；不要删除 `/opt/parallellines/var/mysql`，也不要执行
+`docker compose down -v` 或 `docker system prune --volumes` 清理历史数据，除非已确认没有待迁移的旧数据库、备份或上传文件。
 
 ## Smoke Tests
 

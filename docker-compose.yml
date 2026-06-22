@@ -1,4 +1,27 @@
 services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    env_file:
+      - ./apps/api/.env
+    environment:
+      MYSQL_DATABASE: parallellines
+      MYSQL_USER: appuser
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max-connections=60
+      - --innodb-buffer-pool-size=1G
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - /opt/parallellines/var/mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -25,6 +48,8 @@ services:
       - /opt/parallellines/var/uploads:/var/lib/parallellines/uploads
       - /opt/parallellines/var/backups:/var/lib/parallellines/backups
     depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
     command: >
@@ -55,6 +80,10 @@ services:
       - /opt/parallellines/var/uploads:/var/lib/parallellines/uploads
       - /opt/parallellines/var/backups:/var/lib/parallellines/backups
     depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
       api:
         condition: service_healthy
     command: python -m app.workers.background_jobs
