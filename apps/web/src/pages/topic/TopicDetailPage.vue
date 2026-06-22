@@ -8,25 +8,20 @@ import type { PostItemVM } from "@/entities/post/model";
 import { publicSettingString } from "@/features/admin/model";
 import { usePublicSiteSettings } from "@/features/admin/queries";
 import { useCurrentUser } from "@/features/auth/queries";
-import { setTopicBookmark, setTopicLike } from "@/features/interactions/api";
-import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
-import { useContentModerationMutation, useCreateFlag } from "@/features/moderation/queries";
 import type { PostSort } from "@/features/posts/api";
 import PostItem from "@/features/posts/components/PostItem.vue";
 import { useCreatePost, useTopicPosts } from "@/features/posts/queries";
 import { setUserRelationship } from "@/features/social/api";
-import { useBoards } from "@/features/boards/queries";
 import TopicRepliesPanel from "@/features/topics/components/TopicRepliesPanel.vue";
 import TopicDetailHero from "@/features/topics/components/TopicDetailHero.vue";
-import TopicThreadToolbar from "@/features/topics/components/TopicThreadToolbar.vue";
+import TopicSwipeNavigator from "@/features/topics/components/TopicSwipeNavigator.vue";
 import {
-  useMoveTopic,
+  useBoardTopics,
   useSetTopicSolution,
   useTopicDetail,
-  useTopicLifecycle,
   useVotePoll,
 } from "@/features/topics/queries";
-import { ApiError, hasAccessToken } from "@/shared/api/client";
+import { hasAccessToken } from "@/shared/api/client";
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { queryKeys } from "@/shared/api/queryKeys";
 import { useMediaQuery } from "@/shared/lib/useMediaQuery";
@@ -38,6 +33,7 @@ import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
 const COMIC_READER_TAG = "漫画阅读";
+const TOPIC_SWIPE_TOPIC_LIMIT = 24;
 
 // Loads the reply composer only when the desktop bottom composer is visible or a mobile user opens it.
 // Key parameters: none. Return value is the ComposerDrawer component; side effect is deferred editor-shell loading.
@@ -47,9 +43,6 @@ const ComposerDrawer = defineAsyncComponent(() => import("@/features/topics/comp
 // Key parameters: none. Return value is the PollPanel component; side effect is deferred poll chunk loading.
 const PollPanel = defineAsyncComponent(() => import("@/features/topics/components/PollPanel.vue"));
 
-// Loads report dialog only when the user opens the report flow.
-// Key parameters: none. Return value is the ReportModal component; side effect is deferred moderation dialog loading.
-const ReportModal = defineAsyncComponent(() => import("@/features/moderation/components/ReportModal.vue"));
 
 const route = useRoute();
 const router = useRouter();
@@ -61,7 +54,6 @@ const topicQuery = useTopicDetail(topicId);
 const postsQuery = useTopicPosts(topicId, postSort);
 const createPost = useCreatePost(topicId);
 const currentUserQuery = useCurrentUser();
-const boardsQuery = useBoards();
 const siteSettingsQuery = usePublicSiteSettings();
 const topic = computed(() => topicQuery.data.value);
 const siteTitle = computed(() =>
@@ -82,15 +74,11 @@ useSeoMeta(
   ),
 );
 const posts = computed(() => postsQuery.data.value ?? []);
-const toolbarStatus = ref("");
 const replyStatus = ref("");
 const replyResetToken = ref(0);
 const replyComposerOpen = ref(false);
 const replyInsertText = ref("");
 const replyInsertToken = ref(0);
-const moveTopicDialogOpen = ref(false);
-const moveTopicBoardSlug = ref("");
-const moveTopicStatus = ref("");
 const currentUserId = computed(() => currentUserQuery.data.value?.id ?? null);
 const currentUserRole = computed(() => currentUserQuery.data.value?.role ?? null);
 const comicReader = computed(() => topic.value?.tags.includes(COMIC_READER_TAG) ?? false);
@@ -112,13 +100,23 @@ const isReplyAuthChecking = computed(() => hasAccessToken() && currentUserQuery.
 const shouldRenderReplyComposer = computed(() =>
   topic.value?.status === "open" && canReply.value && (isDesktopReplyComposer.value || replyComposerOpen.value),
 );
-const moveTopicOptions = computed(() =>
-  (boardsQuery.data.value ?? []).filter((board) => board.slug !== topic.value?.boardSlug),
+const boardSwipeTopicsQuery = useBoardTopics(
+  () => topic.value?.boardSlug ?? "",
+  "latest",
+  TOPIC_SWIPE_TOPIC_LIMIT,
 );
-const flagTopicMutation = useCreateFlag();
-const topicModerationMutation = useContentModerationMutation({ awaitInvalidation: false });
-const lifecycleMutation = useTopicLifecycle(topicId);
-const moveTopicMutation = useMoveTopic(topicId);
+const boardSwipeTopics = computed(() => boardSwipeTopicsQuery.data.value ?? []);
+const currentSwipeTopicIndex = computed(() =>
+  boardSwipeTopics.value.findIndex((candidate) => candidate.id === topic.value?.id),
+);
+const previousSwipeTopic = computed(() => {
+  const index = currentSwipeTopicIndex.value;
+  return index > 0 ? boardSwipeTopics.value[index - 1] : null;
+});
+const nextSwipeTopic = computed(() => {
+  const index = currentSwipeTopicIndex.value;
+  return index >= 0 && index < boardSwipeTopics.value.length - 1 ? boardSwipeTopics.value[index + 1] : null;
+});
 const solutionMutation = useSetTopicSolution(topicId);
 const pollVoteMutation = useVotePoll(topicId);
 const blockAuthorMutation = useMutation({
@@ -134,56 +132,6 @@ const blockAuthorMutation = useMutation({
     void queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
   },
 });
-const canFlagTopic = computed(() => Boolean(topic.value?.id));
-const flagTopicPending = computed(() => flagTopicMutation.isPending.value);
-const deleteTopicPending = computed(() => topicModerationMutation.isPending.value);
-const reportModalOpen = ref(false);
-const lifecyclePending = computed(
-  () =>
-    lifecycleMutation.isPending.value ||
-    moveTopicMutation.isPending.value,
-);
-const {
-  active: bookmarked,
-  count: bookmarkCount,
-  pending: bookmarkPending,
-  toggle: toggleBookmark,
-} = useOptimisticToggle({
-  active: () => Boolean(topic.value?.bookmarkedByMe),
-  count: () => topic.value?.bookmarkCount ?? 0,
-  enabled: hasAccessToken,
-  commit: async (active) => {
-    const response = await setTopicBookmark(topic.value?.id ?? "", active);
-    void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topic.value?.id ?? "") });
-    return response;
-  },
-  readActive: (response) => response.active,
-  readCount: (response) => response.count,
-  onDisabled: () => requireLogin("请先登录后再收藏主题。"),
-  mockWhenDisabled: false,
-});
-const {
-  active: topicLiked,
-  count: topicLikeCount,
-  pending: topicLikePending,
-  toggle: toggleTopicLike,
-} = useOptimisticToggle({
-  active: () => Boolean(topic.value?.likedByMe),
-  count: () => topic.value?.likeCount ?? 0,
-  enabled: hasAccessToken,
-  commit: async (active) => {
-    const response = await setTopicLike(topic.value?.id ?? "", active);
-    void queryClient.invalidateQueries({ queryKey: queryKeys.topic(topic.value?.id ?? "") });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:hot") });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.topics("feed:top") });
-    return response;
-  },
-  readActive: (response) => response.active,
-  readCount: (response) => response.count,
-  onDisabled: () => requireLogin("请先登录后再点赞主题。"),
-  mockWhenDisabled: false,
-});
-
 watch(
   topic,
   (current) => {
@@ -249,30 +197,6 @@ function requireLogin(message: string) {
   void router.push({ name: "auth", query: { redirect: route.fullPath } });
 }
 
-function setTopicStatus(status: "open" | "closed") {
-  lifecycleMutation.mutate(
-    { status, note: "从主题页工具栏更新状态" },
-    {
-      onSuccess: () => setToolbarStatus(status === "open" ? "主题已重新打开" : "主题已关闭"),
-      onError: () => setToolbarStatus("主题状态更新失败，请确认权限"),
-    },
-  );
-}
-
-function toggleTopicPinned() {
-  if (!topic.value) {
-    return;
-  }
-
-  lifecycleMutation.mutate(
-    { pinned: !topic.value.pinned, note: "从主题页工具栏更新置顶" },
-    {
-      onSuccess: () => setToolbarStatus(topic.value?.pinned ? "已取消置顶" : "主题已置顶"),
-      onError: () => setToolbarStatus("置顶状态更新失败，请确认权限"),
-    },
-  );
-}
-
 function togglePostSolution(post: PostItemVM) {
   if (!topic.value?.id || !canManageSolution.value) {
     return;
@@ -310,126 +234,18 @@ function votePoll(optionIds: string[]) {
   );
 }
 
-// Opens the managed topic-move dialog and preselects the first valid board.
-// Key parameters: none. Side effects: updates local dialog state only.
-function openMoveTopicDialog() {
-  if (!canManageTopic.value) {
+// Navigates to the previous or next topic in the current board's latest feed.
+// Key parameter: `direction` selects the adjacent topic. Return value: none; side effect: routes to another topic detail.
+function navigateSwipeTopic(direction: "previous" | "next") {
+  const target = direction === "previous" ? previousSwipeTopic.value : nextSwipeTopic.value;
+  if (!target) {
+    setToolbarStatus(direction === "previous" ? "已经是最新主题" : "没有更多主题");
     return;
   }
 
-  const firstTarget = moveTopicOptions.value[0];
-  if (!moveTopicOptions.value.some((board) => board.slug === moveTopicBoardSlug.value)) {
-    moveTopicBoardSlug.value = firstTarget?.slug ?? "";
-  }
-  moveTopicStatus.value = boardsQuery.isError.value ? "版块列表暂时不可用，请稍后重试。" : "";
-  moveTopicDialogOpen.value = true;
+  replyComposerOpen.value = false;
+  void router.push(topicDetailRoute(target));
 }
-
-// Closes the topic-move dialog after cancellation or success.
-// Key parameters: none. Side effect: hides the local dialog.
-function closeMoveTopicDialog() {
-  if (moveTopicMutation.isPending.value) {
-    return;
-  }
-  moveTopicDialogOpen.value = false;
-  moveTopicStatus.value = "";
-}
-
-// Submits the selected board slug to the topic move mutation.
-// Key parameters: none. Side effects: calls the API, updates status copy, and routes to the moved topic.
-function submitMoveTopic() {
-  const normalized = moveTopicBoardSlug.value.trim();
-  if (!normalized) {
-    moveTopicStatus.value = "请选择目标版块。";
-    return;
-  }
-
-  moveTopicStatus.value = "";
-  moveTopicMutation.mutate(
-    { board_slug: normalized, note: "从主题页工具栏更换主题版块" },
-    {
-      onSuccess: (movedTopic) => {
-        moveTopicDialogOpen.value = false;
-        setToolbarStatus(`主题已移动到 ${movedTopic.board_name}`);
-        void router.replace(topicDetailRoute(movedTopic));
-      },
-      onError: (error) => {
-        moveTopicStatus.value = moveTopicErrorMessage(error);
-      },
-    },
-  );
-}
-
-// Converts topic-move API failures into user-facing zh-CN copy.
-// Key parameter: `error` is the normalized API error. Return value: visible status text.
-function moveTopicErrorMessage(error: unknown) {
-  if (error instanceof ApiError) {
-    if (error.code === "board_not_found" || error.status === 404) {
-      return "目标版块不存在，或当前账号不可见。";
-    }
-    if (error.code === "moderation_forbidden" || error.status === 403) {
-      return "你没有权限把主题移动到这个版块。";
-    }
-    if (error.code === "topic_already_in_board") {
-      return "主题已经在这个版块中。";
-    }
-  }
-
-  return "移动失败，请稍后重试。";
-}
-
-function deleteTopic() {
-  if (!topic.value?.id || !canManageTopic.value || deleteTopicPending.value) {
-    return;
-  }
-
-  const deletedTopicId = topic.value.id;
-  Modal.confirm({
-    title: "删除这个主题？",
-    content: "删除后主题会从公开页面隐藏，可在审核后台恢复。",
-    okText: "删除主题",
-    cancelText: "取消",
-    okType: "danger",
-    onOk: () => {
-      topicModerationMutation.mutate(
-        {
-          targetType: "topic",
-          targetId: deletedTopicId,
-          hidden: true,
-          note: "从主题详情页删除主题",
-        },
-        {
-          onSuccess: async () => {
-            queryClient.removeQueries({ queryKey: queryKeys.topic(deletedTopicId), exact: true });
-            queryClient.removeQueries({ queryKey: queryKeys.posts(deletedTopicId) });
-            void queryClient.invalidateQueries({ queryKey: queryKeys.boards });
-            void queryClient.invalidateQueries({ queryKey: queryKeys.topicsRoot });
-            void queryClient.invalidateQueries({ queryKey: queryKeys.tagsRoot });
-            await router.replace({ name: "home" });
-            message.success("主题已删除，已返回首页并刷新列表。");
-            void queryClient.refetchQueries({ queryKey: queryKeys.topicsRoot, type: "active" });
-          },
-          onError: () => setToolbarStatus("删除失败，请确认管理员权限"),
-        },
-      );
-    },
-  });
-}
-
-async function copyTopicLink() {
-  const url =
-    topic.value?.shareUrl
-      ? new URL(topic.value.shareUrl, window.location.origin).href
-      : window.location.href.split("#")[0];
-  const copied = await writeClipboard(url);
-
-  if (!copied) {
-    window.location.hash = "topic-link-copied";
-  }
-
-  setToolbarStatus(copied ? "已复制主题链接" : "无法访问剪贴板，已更新地址栏锚点");
-}
-
 
 // Checks whether a hash points into the always-visible reply area.
 // Key parameter: `hash` is a route hash. Return value: true when the page should scroll to replies; no side effects.
@@ -549,34 +365,10 @@ async function scrollReplyComposerIntoView() {
   }, 180);
 }
 
-async function writeClipboard(value: string) {
-  try {
-    await navigator.clipboard.writeText(value);
-    return true;
-  } catch {
-    return false;
-  }
+function setToolbarStatus(content: string) {
+  void message.open({ key: "topic-detail-status", type: "info", content, duration: 2.6 });
 }
 
-function setToolbarStatus(message: string) {
-  toolbarStatus.value = message;
-  window.setTimeout(() => {
-    if (toolbarStatus.value === message) {
-      toolbarStatus.value = "";
-    }
-  }, 2600);
-}
-
-function flagTopic() {
-  if (!topic.value || !canFlagTopic.value) {
-    return;
-  }
-  if (!hasAccessToken()) {
-    requireLogin("请先登录后再举报主题。");
-    return;
-  }
-  reportModalOpen.value = true;
-}
 </script>
 
 <template>
@@ -624,30 +416,11 @@ function flagTopic() {
                 @block-author="blockPostAuthor"
               />
             </div>
-
-            <TopicThreadToolbar
-              :bookmarked="bookmarked"
-              :bookmark-count="bookmarkCount"
-              :bookmark-pending="bookmarkPending"
-              :topic-liked="topicLiked"
-              :topic-like-count="topicLikeCount"
-              :topic-like-pending="topicLikePending"
-              :can-flag-topic="canFlagTopic"
-              :flag-topic-pending="flagTopicPending"
-              :can-manage-topic="canManageTopic"
-              :topic-status="topic.status"
-              :topic-pinned="Boolean(topic.pinned)"
-              :lifecycle-pending="lifecyclePending"
-              :delete-topic-pending="deleteTopicPending"
-              :status="toolbarStatus"
-              @toggle-bookmark="toggleBookmark"
-              @toggle-topic-like="toggleTopicLike"
-              @copy-link="copyTopicLink"
-              @flag-topic="flagTopic"
-              @set-topic-status="setTopicStatus"
-              @toggle-topic-pinned="toggleTopicPinned"
-              @move-topic="openMoveTopicDialog"
-              @delete-topic="deleteTopic"
+            <TopicSwipeNavigator
+              :previous-topic="previousSwipeTopic"
+              :next-topic="nextSwipeTopic"
+              :loading="boardSwipeTopicsQuery.isFetching.value"
+              @navigate="navigateSwipeTopic"
             />
 
             <UiCard v-if="hiddenRelationshipPostCount > 0" class="topic-state topic-state--muted" role="status">
@@ -706,54 +479,7 @@ function flagTopic() {
           <span id="topic-end" class="topic-end-anchor" aria-hidden="true" />
         </main>
       </div>
-      <ReportModal
-        v-if="topic && reportModalOpen"
-        :open="reportModalOpen"
-        target-type="topic"
-        :target-id="topic.id"
-        @close="reportModalOpen = false"
-        @success="setToolbarStatus('主题举报已提交')"
-      />
-      <div
-        v-if="moveTopicDialogOpen"
-        class="move-topic-dialog-overlay"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="move-topic-title"
-        @click.self="closeMoveTopicDialog"
-      >
-        <UiCard class="move-topic-dialog">
-          <form @submit.prevent="submitMoveTopic">
-            <header>
-              <strong id="move-topic-title">更换主题版块</strong>
-              <button type="button" :disabled="moveTopicMutation.isPending.value" @click="closeMoveTopicDialog">
-                关闭
-              </button>
-            </header>
 
-            <label>
-              <span>目标版块</span>
-              <select v-model="moveTopicBoardSlug" :disabled="boardsQuery.isLoading.value || moveTopicMutation.isPending.value">
-                <option value="" disabled>{{ boardsQuery.isLoading.value ? "正在加载版块…" : "请选择版块" }}</option>
-                <option v-for="board in moveTopicOptions" :key="board.id" :value="board.slug">
-                  {{ board.parentBoardName ? `${board.parentBoardName} / ` : "" }}{{ board.name }}
-                </option>
-              </select>
-            </label>
-
-            <p v-if="moveTopicStatus" class="move-topic-dialog__status" role="status">{{ moveTopicStatus }}</p>
-
-            <footer>
-              <UiButton type="button" tone="subtle" :disabled="moveTopicMutation.isPending.value" @click="closeMoveTopicDialog">
-                取消
-              </UiButton>
-              <UiButton type="submit" tone="primary" :disabled="moveTopicMutation.isPending.value || boardsQuery.isLoading.value || !moveTopicOptions.length">
-                {{ moveTopicMutation.isPending.value ? "移动中…" : "确认更换" }}
-              </UiButton>
-            </footer>
-          </form>
-        </UiCard>
-      </div>
     </template>
 
     <UiEmptyState v-else title="没有找到这个主题" description="主题可能已被移动、隐藏或不存在，回到首页继续浏览。">
