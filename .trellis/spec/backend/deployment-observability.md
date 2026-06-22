@@ -87,9 +87,11 @@ API ops endpoints:
 
 CI commands:
 
-- Backend: `uv sync --frozen`, `uv run ruff check app tests`, `uv run pytest -q`.
-- Frontend: `pnpm install --frozen-lockfile`, `pnpm --dir apps/web lint`, `typecheck`, `build`.
-- Smoke: `pnpm --dir apps/web test:smoke` against a running API/web pair.
+- CI runs are concurrency-gated by ref so a newer push cancels older in-progress CI on the same branch.
+- A lightweight `changes` job gates expensive jobs by changed path.
+- Backend: `uv sync --frozen`, `uv run ruff check app tests`, `uv run pytest -q`; runs only for `apps/api/**` or CI workflow changes.
+- Frontend: `pnpm install --frozen-lockfile`, `pnpm --dir apps/web lint`, `typecheck`, `build`; runs only for `apps/web/**`, root frontend dependency files, or CI workflow changes.
+- Smoke: `pnpm --dir apps/web test:smoke` against a running API/web pair; runs only for API/frontend/dependency/workflow changes after required jobs pass or are skipped.
 
 ### 3. Contracts
 
@@ -137,15 +139,16 @@ CI commands:
 ### 5. Good/Base/Bad Cases
 
 - Good: operator sets `apps/api/.env`, runs `docker compose up --build`, opens web against the configured database, checks `/metrics`, and can run smoke tests.
-- Base: CI runs backend and frontend quality gates, then starts temporary API/web servers and executes Playwright happy path.
+- Base: CI first detects changed areas, runs only relevant backend/frontend quality gates, then starts temporary API/web servers and executes the lightweight Playwright happy path when API or frontend code changed.
 - Bad: a Docker entrypoint creates users/content before migrations, or CI runs smoke tests against a frontend build pointing at a different API URL.
 - Bad: deploying with `EMAIL_DELIVERY_MODE=memory`, which exposes a dev-only verification code in API responses.
 - Bad: adding a second standalone worker service instead of a `JOB_HANDLERS` entry in the unified worker.
 
 ### 6. Tests Required
 
-- Backend: `ruff check app tests` and `pytest -q`.
-- Frontend: `pnpm --dir apps/web lint`, `typecheck`, and `build`.
+- Backend: `ruff check app tests` and `pytest -q` when backend paths changed.
+- Frontend: `pnpm --dir apps/web lint`, `typecheck`, and `build` when frontend paths or dependency files changed.
+- CI path gate: `.github/workflows/ci.yml` changes force backend, frontend, and smoke jobs to run.
 - Config sanity: `docker compose config`.
 - Smoke contract: `pnpm --dir apps/web test:smoke` after API/web are running and Playwright browsers are installed.
 - Auth contract: backend tests assert register → pending, login blocked, verify → token, resend rate limit, and `/auth/me` rejects pending users.
