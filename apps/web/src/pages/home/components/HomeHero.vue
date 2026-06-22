@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SearchOutlined } from "@ant-design/icons-vue";
+import { SearchOutlined, SlidersOutlined } from "@ant-design/icons-vue";
 import { defineAsyncComponent } from "vue";
 
 import { useMediaQuery } from "@/shared/lib/useMediaQuery";
@@ -10,12 +10,14 @@ const HeroMeetVisual = defineAsyncComponent(() => import("@/pages/home/component
 
 const props = defineProps<{
   search: string;
-  canPublishTopic: boolean;
+  filtersOpen: boolean;
+  hasActiveFilters: boolean;
 }>();
 
 const emit = defineEmits<{
   "update:search": [value: string];
   submitSearch: [];
+  toggleFilters: [];
 }>();
 
 const shouldShowHeroVisual = useMediaQuery("(min-width: 561px)", true);
@@ -36,13 +38,20 @@ function updateSearch(event: Event) {
         </h1>
         <form class="hero-search" role="search" aria-label="搜索首页主题" @submit.prevent="emit('submitSearch')">
           <label class="hero-search__field">
-            <SearchOutlined aria-hidden="true" />
-            <input :value="props.search" type="search" placeholder="搜索主题" aria-label="搜索主题" @input="updateSearch" />
+            <SearchOutlined class="hero-search__search-icon" aria-hidden="true" />
+            <input :value="props.search" type="search" placeholder="搜索" aria-label="搜索" @input="updateSearch" />
           </label>
-          <button type="submit" :disabled="!props.search.trim()">搜索</button>
-          <RouterLink v-if="props.canPublishTopic" class="hero-publish-link" :to="{ name: 'new-topic' }">
-            发布主题
-          </RouterLink>
+          <button
+            type="button"
+            class="hero-filter-button"
+            :class="{ active: props.filtersOpen, 'has-filters': props.hasActiveFilters }"
+            :aria-pressed="props.filtersOpen"
+            :aria-label="props.filtersOpen ? '收起筛选' : '展开筛选'"
+            aria-controls="topic-feed-filters"
+            @click="emit('toggleFilters')"
+          >
+            <SlidersOutlined aria-hidden="true" />
+          </button>
         </form>
         <ul class="hero-proof" aria-label="社区能力">
           <li>让思考发光</li>

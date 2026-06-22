@@ -8,10 +8,8 @@
 
 .tabs {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-start;
-  gap: 0.5rem;
   border-bottom: 1px solid var(--border);
   padding: 0.95rem 1rem;
 }
@@ -24,8 +22,7 @@
   min-width: 0;
 }
 
-.tab,
-.filter-toggle-button {
+.tab {
   border: 0;
   border-radius: var(--radius-pill);
   padding: 0.55rem 0.75rem;
@@ -37,17 +34,8 @@
   font-weight: 800;
 }
 
-.filter-toggle-button {
-  flex: 0 0 auto;
-  border: 1px solid var(--theme-soft-border);
-  color: var(--primary);
-  background: var(--theme-soft-bg);
-}
-
 .tab:hover,
-.tab:focus-visible,
-.filter-toggle-button:hover,
-.filter-toggle-button:focus-visible {
+.tab:focus-visible {
   color: var(--theme-soft-fg-hover);
   outline: none;
   background: var(--theme-soft-bg-hover);
@@ -58,14 +46,6 @@
   border: 1px solid var(--btn-primary-border);
   background: var(--btn-primary-bg);
   box-shadow: var(--btn-primary-shadow);
-  outline: none;
-}
-
-.filter-toggle-button.active {
-  border-color: var(--theme-soft-border-hover);
-  color: var(--theme-soft-fg-hover);
-  background: var(--theme-soft-bg-hover);
-  box-shadow: none;
   outline: none;
 }
 
@@ -387,8 +367,7 @@
     gap: 0.36rem;
   }
 
-  .tab,
-  .filter-toggle-button {
+  .tab {
     padding: 0.48rem 0.66rem;
     font-size: 0.86rem;
   }

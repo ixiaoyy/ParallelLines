@@ -18,6 +18,7 @@ const props = defineProps<{
   boardFilter: string;
   tagFilter: string;
   canPublishTopic: boolean;
+  filtersOpen: boolean;
   loading: boolean;
   error: boolean;
 }>();
@@ -27,13 +28,13 @@ const emit = defineEmits<{
   updateTitleFilter: [value: string];
   updateBoardFilter: [value: string];
   updateTagFilter: [value: string];
+  updateFiltersOpen: [open: boolean];
   filtersVisibilityChange: [open: boolean];
   clearFilters: [];
 }>();
 
 const displayLimit = ref(5);
 const infiniteScrollActive = ref(false);
-const filtersOpen = ref(false);
 const scrollTriggerRef = ref<HTMLElement | null>(null);
 const slicedTopics = computed(() => props.topics.slice(0, displayLimit.value));
 const hasActiveFilters = computed(() =>
@@ -81,6 +82,12 @@ function setupObserver() {
   observer.observe(scrollTriggerRef.value);
 }
 
+// Requests the parent-owned filter panel visibility so the hero icon and feed panel stay synchronized.
+// Key parameters: `open` is the desired panel state. Side effect: emits the requested state to HomePage.
+function requestFiltersOpen(open: boolean) {
+  emit("updateFiltersOpen", open);
+}
+
 watch([infiniteScrollActive, scrollTriggerRef], setupObserver);
 
 watch(
@@ -94,15 +101,15 @@ watch(
 watch(
   hasActiveFilters,
   (active) => {
-    if (active) {
-      filtersOpen.value = true;
+    if (active && !props.filtersOpen) {
+      requestFiltersOpen(true);
     }
   },
   { immediate: true },
 );
 
 watch(
-  filtersOpen,
+  () => props.filtersOpen,
   (open) => {
     emit("filtersVisibilityChange", open);
   },
@@ -115,17 +122,6 @@ onUnmounted(() => observer?.disconnect());
 <template>
   <section class="home-topic-feed" aria-label="主题发现流">
     <div class="tabs">
-      <button
-        type="button"
-        class="filter-toggle-button"
-        :class="{ active: filtersOpen }"
-        :aria-expanded="filtersOpen"
-        :aria-label="filtersOpen ? '收起筛选' : '展开筛选'"
-        aria-controls="topic-feed-filters"
-        @click="filtersOpen = !filtersOpen"
-      >
-        筛选
-      </button>
       <div class="tab-list" role="tablist" aria-label="主题筛选">
         <button
           v-for="tab in tabs"

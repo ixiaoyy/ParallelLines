@@ -33,6 +33,7 @@ const router = useRouter();
 const route = useRoute();
 const isDesktopRailVisible = useMediaQuery("(min-width: 981px)", true);
 const filtersDataRequested = ref(false);
+const filtersOpen = ref(false);
 const currentUserQuery = useCurrentUser();
 const canPublishTopic = computed(() => Boolean(currentUserQuery.data.value));
 
@@ -61,10 +62,14 @@ const tagFilter = computed({
   get: () => readRouteParam(route.query.tag as string | string[] | undefined),
   set: (value: string) => updateFilterQuery("tag", value),
 });
+const hasActiveTopicFilters = computed(() =>
+  Boolean(titleFilter.value.trim() || boardFilter.value.trim() || tagFilter.value.trim()),
+);
 const shouldLoadTaxonomy = computed(() =>
   isDesktopRailVisible.value ||
+  filtersOpen.value ||
   filtersDataRequested.value ||
-  Boolean(titleFilter.value.trim() || boardFilter.value.trim() || tagFilter.value.trim()),
+  hasActiveTopicFilters.value,
 );
 const boardsQuery = useBoards(shouldLoadTaxonomy);
 const tagsQuery = useTags(30, shouldLoadTaxonomy);
@@ -207,6 +212,15 @@ function clearTopicFilters() {
   });
 }
 
+// Keeps the hero filter icon, feed panel, and lazy taxonomy loading in one shared state.
+// Key parameters: `open` is the requested panel visibility. Side effect: records that filter data should load once opened.
+function setFiltersOpen(open: boolean) {
+  filtersOpen.value = open;
+  if (open) {
+    filtersDataRequested.value = true;
+  }
+}
+
 // Applies the hero search to the real home feed title filter and scrolls to the filtered results.
 // Key parameters: none; it reads `heroSearch`. Side effect: updates URL query state and moves the viewport to the feed.
 function submitHeroSearch() {
@@ -279,8 +293,10 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
         <HomeHero
           v-model:search="heroSearch"
           class="home-hero-slot"
-          :can-publish-topic="canPublishTopic"
+          :filters-open="filtersOpen"
+          :has-active-filters="hasActiveTopicFilters"
           @submit-search="submitHeroSearch"
+          @toggle-filters="setFiltersOpen(!filtersOpen)"
         />
 
         <HomeTopicFeed
@@ -295,12 +311,14 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
           :board-filter="boardFilter"
           :tag-filter="tagFilter"
           :can-publish-topic="canPublishTopic"
+          :filters-open="filtersOpen"
           :loading="topicFeedLoading"
           :error="topicsQuery.isError.value"
           @select-tab="setActiveTab"
           @update-title-filter="setTitleFilter"
           @update-board-filter="setBoardFilter"
           @update-tag-filter="setTagFilter"
+          @update-filters-open="setFiltersOpen"
           @filters-visibility-change="filtersDataRequested = filtersDataRequested || $event"
           @clear-filters="clearTopicFilters"
         />
