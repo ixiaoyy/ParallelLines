@@ -97,13 +97,8 @@
 
 - `pnpm --dir apps/web lint`
 - `pnpm --dir apps/web typecheck`
-- `pnpm --dir apps/web test:smoke` against a real API and Vite server should verify:
-  - UI register, email-code activation, logout, UI login.
-  - Topbar username links to `/u/:username`.
-  - Profile shows authored topic and content counts payload can omit email.
-  - Current-user/profile DTOs include `level`, and admin/moderation UI uses shared permission helpers.
-  - Reply/edit flows work after verified login.
-  - Unrelated user replies are hidden by only-author filtering.
+- `pnpm --dir apps/web test:smoke` against a real API and Vite server should verify the lightweight auth path: UI register, email-code activation, logout, UI login, topic publish, and reply publish.
+- Focused or extended Playwright suites should cover profile navigation, content counts, reply edit flows, only-author filtering, and broader session regressions when those areas change.
 
 ### 7. Wrong vs Correct
 
