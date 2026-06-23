@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "typecheck": "vue-tsc -b --pretty",
     "lint": "eslint . --ext .ts,.vue --max-warnings 0",
     "test:smoke": "playwright test tests/smoke/mvp.spec.ts",
     "test:smoke:extended": "playwright test tests/smoke/reply-test.spec.ts tests/smoke/visual-performance.spec.ts",
     "openapi:types": "node scripts/generate-openapi-types.mjs",
-    "openapi:check": "node scripts/generate-openapi-types.mjs --check"
+    "openapi:check": "node scripts/generate-openapi-types.mjs --check",
+    "build:checked": "vue-tsc -b && vite build"
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",

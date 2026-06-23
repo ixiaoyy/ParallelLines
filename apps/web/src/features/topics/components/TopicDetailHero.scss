@@ -39,8 +39,9 @@
 .topic-detail-hero h1 {
   max-width: min(58rem, 100%);
   margin: 0;
-  color: var(--title);
+  color: #1f2a44;
   font-size: clamp(1.75rem, 2.55vw, 2.45rem);
+  font-weight: 900;
   line-height: 1.15;
   letter-spacing: 0;
   overflow-wrap: anywhere;
@@ -50,6 +51,19 @@
   gap: 0.46rem;
 }
 
+.topic-taxonomy .tone-chip {
+  border-color: rgba(var(--primary-rgb), 0.2);
+  color: #1f2a44;
+  background: rgba(255, 255, 255, 0.72);
+  font-weight: 840;
+}
+
+.topic-taxonomy .tone-chip:hover,
+.topic-taxonomy .tone-chip:focus-visible {
+  border-color: rgba(var(--primary-rgb), 0.32);
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.08);
+}
 @media (max-width: 680px) {
   .topic-detail-hero {
     gap: 0.34rem;

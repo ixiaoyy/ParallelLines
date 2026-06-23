@@ -485,7 +485,7 @@
 
 .post-item--article .post-body :deep(.markdown-body) {
   max-width: min(100%, 72ch);
-  color: var(--text);
+  color: #26364f;
   font-family: inherit;
   font-size: clamp(0.96rem, 0.9vw, 1rem);
   line-height: 1.78;
@@ -494,7 +494,7 @@
 .post-item--article .post-body :deep(.markdown-body h1) {
   max-width: 42rem;
   margin-bottom: 0.72rem;
-  color: var(--title);
+  color: #1f2a44;
   font-family: inherit;
   font-size: clamp(1.38rem, 1.85vw, 1.7rem);
   font-weight: 780;

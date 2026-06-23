@@ -28,7 +28,6 @@ import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import { readRouteParam } from "@/shared/router/params";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import { useSeoMeta } from "@/shared/seo/meta";
-import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
@@ -96,7 +95,6 @@ const hiddenRelationshipPostCount = computed(() => {
   return Math.max(0, expectedPostCount - posts.value.length);
 });
 const canReply = computed(() => Boolean(currentUserId.value));
-const isReplyAuthChecking = computed(() => hasAccessToken() && currentUserQuery.isLoading.value);
 const shouldRenderReplyComposer = computed(() =>
   topic.value?.status === "open" && canReply.value && (isDesktopReplyComposer.value || replyComposerOpen.value),
 );
@@ -170,8 +168,7 @@ function handleReply(rawMd: string) {
     return;
   }
   if (!currentUserId.value) {
-    replyStatus.value = "请先登录后再发布回复，草稿已保留。";
-    void router.push({ name: "auth", query: { redirect: route.fullPath } });
+    confirmLogin("登录后才能发布回复，草稿会继续保留在当前页面。");
     return;
   }
 
@@ -193,8 +190,21 @@ function handleReply(rawMd: string) {
 }
 
 function requireLogin(message: string) {
-  setToolbarStatus(message);
-  void router.push({ name: "auth", query: { redirect: route.fullPath } });
+  confirmLogin(message);
+}
+
+// Shows the shared login confirmation before redirecting gated interactions.
+// Key parameter: `content` explains the blocked action. Side effect: may route to auth after user confirmation.
+function confirmLogin(content: string) {
+  Modal.confirm({
+    title: "登录后继续",
+    content,
+    okText: "去登录",
+    cancelText: "先看看",
+    centered: true,
+    class: "auth-gate-modal",
+    onOk: () => router.push({ name: "auth", query: { redirect: route.fullPath } }),
+  });
 }
 
 function togglePostSolution(post: PostItemVM) {
@@ -220,8 +230,7 @@ function votePoll(optionIds: string[]) {
   }
 
   if (!hasAccessToken()) {
-    setToolbarStatus("请先登录后再参与投票，当前选择已保留。");
-    void router.push({ name: "auth", query: { redirect: route.fullPath } });
+    confirmLogin("登录后才能参与投票，当前选择会留在页面上。");
     return;
   }
 
@@ -329,8 +338,7 @@ function htmlToPlainText(html: string) {
 // Key parameters: none. Return value is none. Side effect: flips the local composer-open state.
 function openReplyComposer() {
   if (!canReply.value) {
-    replyStatus.value = "登录后才能发布回复，当前页面会在登录后继续打开。";
-    void router.push({ name: "auth", query: { redirect: route.fullPath } });
+    confirmLogin("登录后才能回复，回来后可以继续阅读这个主题。");
     return;
   }
 
@@ -462,15 +470,6 @@ function setToolbarStatus(content: string) {
                 @submit="handleReply"
               />
             </div>
-            <UiCard v-else class="reply-compose-prompt">
-              <div>
-                <strong>{{ canReply ? "想补充一句？" : isReplyAuthChecking ? "正在确认登录状态" : "登录后参与回复" }}</strong>
-                <span>{{ canReply ? "点开后再加载编辑器，先把阅读速度留给正文。" : "登录后才能打开编辑器；回来后可以继续阅读这个主题。" }}</span>
-              </div>
-              <UiButton tone="primary" :disabled="isReplyAuthChecking" @click="openReplyComposer">
-                {{ canReply ? "参与回复" : "登录/注册" }}
-              </UiButton>
-            </UiCard>
           </template>
           <UiCard v-else class="topic-state" role="status">
             主题当前为已关闭状态，暂不接受新回复。

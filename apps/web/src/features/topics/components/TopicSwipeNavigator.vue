@@ -28,8 +28,10 @@ const hasNavigation = computed(() => Boolean(props.previousTopic || props.nextTo
       @click="emit('navigate', 'previous')"
     >
       <LeftOutlined class="topic-swipe-button__icon" aria-hidden="true" />
-      <span class="topic-swipe-button__label">上一篇</span>
-      <strong>{{ previousTopic?.title ?? "已经是最新" }}</strong>
+      <span class="topic-swipe-button__text">
+        <span class="topic-swipe-button__label">上一篇</span>
+        <strong>{{ previousTopic?.title ?? "已经是最新" }}</strong>
+      </span>
       <small v-if="previousTopic">
         {{ compactNumber(previousTopic.replyCount) }} 回复 · {{ relativeTime(previousTopic.lastPostedAt) }}
       </small>
@@ -46,12 +48,14 @@ const hasNavigation = computed(() => Boolean(props.previousTopic || props.nextTo
       :disabled="!nextTopic"
       @click="emit('navigate', 'next')"
     >
-      <RightOutlined class="topic-swipe-button__icon" aria-hidden="true" />
-      <span class="topic-swipe-button__label">下一篇</span>
-      <strong>{{ nextTopic?.title ?? "没有更多主题" }}</strong>
+      <span class="topic-swipe-button__text">
+        <span class="topic-swipe-button__label">下一篇</span>
+        <strong>{{ nextTopic?.title ?? "没有更多主题" }}</strong>
+      </span>
       <small v-if="nextTopic">
         {{ compactNumber(nextTopic.replyCount) }} 回复 · {{ relativeTime(nextTopic.lastPostedAt) }}
       </small>
+      <RightOutlined class="topic-swipe-button__icon" aria-hidden="true" />
     </button>
   </UiCard>
 </template>

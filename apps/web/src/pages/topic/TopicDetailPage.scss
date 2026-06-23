@@ -85,33 +85,40 @@
   scroll-margin-top: 5.8rem;
 }
 
-.reply-compose-prompt :deep(.ant-card-body) {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.9rem;
-  padding: 1rem;
+:global(.auth-gate-modal .ant-modal-content) {
+  overflow: hidden;
+  border: 1px solid rgba(var(--primary-rgb), 0.12);
+  border-radius: 1rem;
+  box-shadow: 0 24px 72px rgba(var(--shadow-rgb), 0.16);
 }
 
-.reply-compose-prompt div {
-  display: grid;
-  gap: 0.2rem;
-  min-width: 0;
+:global(.auth-gate-modal .ant-modal-confirm-body-wrapper) {
+  padding: 1.15rem 1.2rem 1.1rem;
 }
 
-.reply-compose-prompt strong {
-  color: var(--title);
-  font-size: 1rem;
+:global(.auth-gate-modal .ant-modal-confirm-title) {
+  color: #1f2a44;
+  font-size: 1.05rem;
   font-weight: 880;
+  line-height: 1.35;
 }
 
-.reply-compose-prompt span {
-  color: var(--muted);
-  font-size: 0.88rem;
-  line-height: 1.55;
+:global(.auth-gate-modal .ant-modal-confirm-content) {
+  margin-top: 0.42rem;
+  color: #475569;
+  font-size: 0.94rem;
+  line-height: 1.65;
 }
 
+:global(.auth-gate-modal .ant-modal-confirm-btns) {
+  margin-top: 1.05rem;
+}
 
+:global(.auth-gate-modal .ant-btn-primary) {
+  border-color: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
+}
 .topic-end-anchor {
   scroll-margin-top: 6.5rem;
 }
@@ -140,15 +147,7 @@
   .post-stream {
     gap: 0.68rem;
   }
-
-
-  .reply-compose-prompt :deep(.ant-card-body) {
-    display: grid;
-    justify-items: start;
-    padding: 0.95rem;
-  }
-
-  .reply-composer-anchor {
+.reply-composer-anchor {
     scroll-margin-top: 4.2rem;
   }
 

@@ -210,6 +210,39 @@ jobs:
       (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
 
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build frontend image on runner
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          build-args: VITE_API_BASE_URL=/api/v1
+          tags: parallellines-web:latest
+          load: true
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: Export frontend image archive
+        run: docker save parallellines-web:latest | gzip > "/tmp/parallellines-web-${GITHUB_SHA}.tar.gz"
+
+      - name: Upload frontend image archive to server
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${DEPLOY_SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          PORT="${DEPLOY_PORT:-22}"
+          ssh-keyscan -p "${PORT}" "${DEPLOY_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          scp -P "${PORT}" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "/tmp/parallellines-web-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/parallellines-web-${GITHUB_SHA}.tar.gz"
+
       - name: Deploy frontend service to server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -221,6 +254,7 @@ jobs:
           script: |
             set -e
             DEPLOY_STARTED_AT=$(date +%s)
+            WEB_IMAGE_ARCHIVE="/tmp/parallellines-web-${{ github.sha }}.tar.gz"
             echo "[deploy] mode=frontend service=web"
 
             STEP_STARTED_AT=$(date +%s)
@@ -236,6 +270,11 @@ jobs:
             sudo chmod 0775 /opt/parallellines/var/uploads /opt/parallellines/var/backups /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] storage directory check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
+            STEP_STARTED_AT=$(date +%s)
+            sudo docker load -i "${WEB_IMAGE_ARCHIVE}"
+            rm -f "${WEB_IMAGE_ARCHIVE}"
+            STEP_FINISHED_AT=$(date +%s)
+            echo "[deploy] image load took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
             if sudo docker compose version >/dev/null 2>&1; then
@@ -251,9 +290,12 @@ jobs:
             if ! $COMPOSE ps --services --status running 2>/dev/null | grep -qx nginx; then
               echo "[deploy] nginx is not running; falling back to full bootstrap"
               FULL_BOOTSTRAP=true
-              $COMPOSE up -d --build
+              $COMPOSE up -d --build db redis api worker
+              $COMPOSE up -d --no-deps --no-build --force-recreate web
+              $COMPOSE up -d --no-deps --build nginx
+              $COMPOSE up -d --no-deps certbot
             else
-              $COMPOSE up -d --no-deps --build web
+              $COMPOSE up -d --no-deps --no-build --force-recreate web
               $COMPOSE exec -T nginx nginx -s reload
             fi
             STEP_FINISHED_AT=$(date +%s)

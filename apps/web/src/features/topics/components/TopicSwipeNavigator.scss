@@ -5,53 +5,53 @@
 
 .topic-swipe-navigator :deep(.ant-card-body) {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: 0.55rem;
-  align-items: stretch;
-  padding: 0.62rem;
-  background: rgba(255, 255, 255, 0.88);
+  gap: 0;
+  padding: 0.34rem;
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(18px);
 }
 
 .topic-swipe-button {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas:
-    "icon label"
-    "icon title"
-    "icon meta";
-  gap: 0.1rem 0.55rem;
-  align-content: center;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.52rem;
+  align-items: center;
   min-width: 0;
-  min-height: 4.1rem;
-  border: 1px solid rgba(var(--primary-rgb), 0.14);
-  border-radius: 0.9rem;
-  padding: 0.64rem 0.72rem;
-  color: var(--text);
-  background: rgba(248, 250, 252, 0.78);
+  min-height: 2.76rem;
+  border: 0;
+  border-radius: 0.82rem;
+  padding: 0.42rem 0.58rem;
+  color: #1f2a44;
+  background: transparent;
   cursor: pointer;
   text-align: left;
   font: inherit;
   transition:
-    border-color 150ms ease,
     background 150ms ease,
     transform 150ms ease;
 }
 
 .topic-swipe-button__icon {
-  grid-area: icon;
   display: inline-grid;
   place-items: center;
-  align-self: center;
-  justify-self: center;
-  width: 1.25rem;
+  width: 1.72rem;
+  height: 1.72rem;
+  border-radius: 999px;
   color: var(--primary);
-  font-size: 1.1rem;
+  background: rgba(var(--primary-rgb), 0.08);
+  font-size: 1rem;
   line-height: 1;
 }
 
+.topic-swipe-button__text {
+  display: flex;
+  gap: 0.42rem;
+  align-items: baseline;
+  min-width: 0;
+}
+
 .topic-swipe-button__label {
-  grid-area: label;
+  flex: 0 0 auto;
   color: var(--primary);
   font-size: 0.74rem;
   font-weight: 900;
@@ -59,9 +59,9 @@
 }
 
 .topic-swipe-button strong {
-  grid-area: title;
   overflow: hidden;
-  color: var(--title);
+  min-width: 0;
+  color: #1f2a44;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.9rem;
@@ -69,20 +69,17 @@
 }
 
 .topic-swipe-button small {
-  grid-area: meta;
-  overflow: hidden;
-  color: var(--muted);
-  text-overflow: ellipsis;
+  flex: 0 0 auto;
+  color: #64748b;
   white-space: nowrap;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 760;
 }
 
 .topic-swipe-button:hover,
 .topic-swipe-button:focus-visible {
-  border-color: rgba(var(--primary-rgb), 0.28);
   outline: none;
-  background: var(--theme-soft-bg, rgba(var(--primary-rgb), 0.1));
+  background: rgba(var(--primary-rgb), 0.07);
   transform: translateY(-1px);
 }
 
@@ -92,18 +89,26 @@
   transform: none;
 }
 
+.topic-swipe-button--next {
+  text-align: right;
+}
+
+.topic-swipe-button--next .topic-swipe-button__text {
+  justify-content: flex-end;
+}
+
 .topic-swipe-divider {
   display: grid;
   place-items: center;
-  width: 1.4rem;
+  min-height: 1px;
+  margin: 0 0.58rem;
   color: var(--muted);
 }
 
 .topic-swipe-divider span {
-  width: 1px;
-  height: 100%;
-  min-height: 2.2rem;
-  background: rgba(var(--muted-rgb), 0.22);
+  width: 100%;
+  height: 1px;
+  background: rgba(var(--muted-rgb), 0.18);
 }
 
 @media (max-width: 720px) {
@@ -112,19 +117,28 @@
   }
 
   .topic-swipe-navigator :deep(.ant-card-body) {
-    grid-template-columns: 1fr;
-    gap: 0.42rem;
-    padding: 0.48rem;
-  }
-
-  .topic-swipe-divider {
-    display: none;
+    padding: 0.3rem;
   }
 
   .topic-swipe-button {
-    min-height: 3.35rem;
-    border-radius: 0.8rem;
-    padding: 0.54rem 0.62rem;
+    min-height: 2.64rem;
+    gap: 0.42rem;
+    border-radius: 0.76rem;
+    padding: 0.4rem 0.46rem;
+  }
+
+  .topic-swipe-button small {
+    display: none;
+  }
+
+  .topic-swipe-button__icon {
+    width: 1.58rem;
+    height: 1.58rem;
+    font-size: 0.94rem;
+  }
+
+  .topic-swipe-button__label {
+    font-size: 0.72rem;
   }
 
   .topic-swipe-button strong {
