@@ -5,23 +5,23 @@
 
 .topic-swipe-navigator :deep(.ant-card-body) {
   display: grid;
-  gap: 0;
-  padding: 0.34rem;
-  background: rgba(255, 255, 255, 0.9);
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  align-items: stretch;
+  padding: 0.42rem;
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(18px);
 }
 
 .topic-swipe-button {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 0.52rem;
-  align-items: center;
+  gap: 0.16rem;
+  align-content: center;
   min-width: 0;
-  min-height: 2.76rem;
+  min-height: 3.35rem;
   border: 0;
-  border-radius: 0.82rem;
-  padding: 0.42rem 0.58rem;
-  color: #1f2a44;
+  border-radius: 0.78rem;
+  padding: 0.5rem 0.72rem;
+  color: var(--title);
   background: transparent;
   cursor: pointer;
   text-align: left;
@@ -31,61 +31,43 @@
     transform 150ms ease;
 }
 
-.topic-swipe-button__icon {
-  display: inline-grid;
-  place-items: center;
-  width: 1.72rem;
-  height: 1.72rem;
-  border-radius: 999px;
-  color: var(--primary);
-  background: rgba(var(--primary-rgb), 0.08);
-  font-size: 1rem;
-  line-height: 1;
-}
-
-.topic-swipe-button__text {
-  display: flex;
-  gap: 0.42rem;
-  align-items: baseline;
-  min-width: 0;
-}
-
 .topic-swipe-button__label {
-  flex: 0 0 auto;
+  display: inline-flex;
+  gap: 0.22rem;
+  align-items: center;
+  min-width: 0;
   color: var(--primary);
-  font-size: 0.74rem;
-  font-weight: 900;
+  font-size: 0.73rem;
+  font-weight: 880;
   line-height: 1.2;
+}
+
+.topic-swipe-button__label :deep(svg) {
+  width: 0.82rem;
+  height: 0.82rem;
 }
 
 .topic-swipe-button strong {
   overflow: hidden;
   min-width: 0;
-  color: #1f2a44;
+  color: var(--title);
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.9rem;
-  font-weight: 880;
-}
-
-.topic-swipe-button small {
-  flex: 0 0 auto;
-  color: #64748b;
-  white-space: nowrap;
-  font-size: 0.72rem;
-  font-weight: 760;
+  font-weight: 860;
+  line-height: 1.3;
 }
 
 .topic-swipe-button:hover,
 .topic-swipe-button:focus-visible {
   outline: none;
-  background: rgba(var(--primary-rgb), 0.07);
+  background: rgba(var(--primary-rgb), 0.06);
   transform: translateY(-1px);
 }
 
 .topic-swipe-button:disabled {
   cursor: default;
-  opacity: 0.58;
+  opacity: 0.55;
   transform: none;
 }
 
@@ -93,21 +75,21 @@
   text-align: right;
 }
 
-.topic-swipe-button--next .topic-swipe-button__text {
-  justify-content: flex-end;
+.topic-swipe-button--next .topic-swipe-button__label {
+  justify-self: end;
 }
 
 .topic-swipe-divider {
   display: grid;
   place-items: center;
-  min-height: 1px;
-  margin: 0 0.58rem;
+  align-self: stretch;
+  margin-block: 0.34rem;
   color: var(--muted);
 }
 
 .topic-swipe-divider span {
-  width: 100%;
-  height: 1px;
+  width: 1px;
+  height: 100%;
   background: rgba(var(--muted-rgb), 0.18);
 }
 
@@ -117,24 +99,13 @@
   }
 
   .topic-swipe-navigator :deep(.ant-card-body) {
-    padding: 0.3rem;
+    padding: 0.36rem;
   }
 
   .topic-swipe-button {
-    min-height: 2.64rem;
-    gap: 0.42rem;
-    border-radius: 0.76rem;
-    padding: 0.4rem 0.46rem;
-  }
-
-  .topic-swipe-button small {
-    display: none;
-  }
-
-  .topic-swipe-button__icon {
-    width: 1.58rem;
-    height: 1.58rem;
-    font-size: 0.94rem;
+    min-height: 3.08rem;
+    border-radius: 0.72rem;
+    padding: 0.46rem 0.54rem;
   }
 
   .topic-swipe-button__label {
@@ -142,6 +113,6 @@
   }
 
   .topic-swipe-button strong {
-    font-size: 0.86rem;
+    font-size: 0.84rem;
   }
 }

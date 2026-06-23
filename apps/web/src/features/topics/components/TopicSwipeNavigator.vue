@@ -3,7 +3,6 @@ import { LeftOutlined, LoadingOutlined, RightOutlined } from "@ant-design/icons-
 import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
-import { compactNumber, relativeTime } from "@/shared/lib/format";
 import UiCard from "@/shared/ui/Card.vue";
 
 const props = defineProps<{
@@ -22,19 +21,16 @@ const hasNavigation = computed(() => Boolean(props.previousTopic || props.nextTo
 <template>
   <UiCard v-if="hasNavigation || loading" class="topic-swipe-navigator" aria-label="同版块主题导航">
     <button
-      class="topic-swipe-button"
+      class="topic-swipe-button topic-swipe-button--previous"
       type="button"
       :disabled="!previousTopic"
       @click="emit('navigate', 'previous')"
     >
-      <LeftOutlined class="topic-swipe-button__icon" aria-hidden="true" />
-      <span class="topic-swipe-button__text">
-        <span class="topic-swipe-button__label">上一篇</span>
-        <strong>{{ previousTopic?.title ?? "已经是最新" }}</strong>
+      <span class="topic-swipe-button__label">
+        <LeftOutlined aria-hidden="true" />
+        上一篇
       </span>
-      <small v-if="previousTopic">
-        {{ compactNumber(previousTopic.replyCount) }} 回复 · {{ relativeTime(previousTopic.lastPostedAt) }}
-      </small>
+      <strong>{{ previousTopic?.title ?? "已经是最新" }}</strong>
     </button>
 
     <div class="topic-swipe-divider" aria-hidden="true">
@@ -48,14 +44,11 @@ const hasNavigation = computed(() => Boolean(props.previousTopic || props.nextTo
       :disabled="!nextTopic"
       @click="emit('navigate', 'next')"
     >
-      <span class="topic-swipe-button__text">
-        <span class="topic-swipe-button__label">下一篇</span>
-        <strong>{{ nextTopic?.title ?? "没有更多主题" }}</strong>
+      <span class="topic-swipe-button__label">
+        下一篇
+        <RightOutlined aria-hidden="true" />
       </span>
-      <small v-if="nextTopic">
-        {{ compactNumber(nextTopic.replyCount) }} 回复 · {{ relativeTime(nextTopic.lastPostedAt) }}
-      </small>
-      <RightOutlined class="topic-swipe-button__icon" aria-hidden="true" />
+      <strong>{{ nextTopic?.title ?? "没有更多主题" }}</strong>
     </button>
   </UiCard>
 </template>
