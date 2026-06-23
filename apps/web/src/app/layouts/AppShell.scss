@@ -578,7 +578,11 @@
 
 @media (max-width: 620px) {
   .topbar {
+    position: fixed;
     top: 0;
+    right: 0;
+    left: 0;
+    z-index: 40;
     grid-template-columns: minmax(0, 1fr) auto auto;
     gap: 0.5rem;
     width: 100%;
@@ -696,7 +700,7 @@
 
   .shell-main {
     width: 100%;
-    padding: 0.85rem 0.5rem calc(4.5rem + env(safe-area-inset-bottom));
+    padding: 4.7rem 0.5rem calc(1rem + env(safe-area-inset-bottom));
   }
 
   .app-shell--mobile-fullscreen .topbar {

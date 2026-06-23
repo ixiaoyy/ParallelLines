@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CloseOutlined } from "@ant-design/icons-vue";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { message, Modal } from "ant-design-vue";
 import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
@@ -24,7 +25,6 @@ import {
 import { hasAccessToken } from "@/shared/api/client";
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { queryKeys } from "@/shared/api/queryKeys";
-import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import { readRouteParam } from "@/shared/router/params";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import { useSeoMeta } from "@/shared/seo/meta";
@@ -34,7 +34,7 @@ import UiEmptyState from "@/shared/ui/EmptyState.vue";
 const COMIC_READER_TAG = "漫画阅读";
 const TOPIC_SWIPE_TOPIC_LIMIT = 24;
 
-// Loads the reply composer only when the desktop bottom composer is visible or a mobile user opens it.
+// Loads the reply composer only after a signed-in user opens the full-page reply surface.
 // Key parameters: none. Return value is the ComposerDrawer component; side effect is deferred editor-shell loading.
 const ComposerDrawer = defineAsyncComponent(() => import("@/features/topics/components/ComposerDrawer.vue"));
 
@@ -58,7 +58,6 @@ const topic = computed(() => topicQuery.data.value);
 const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
 );
-const isDesktopReplyComposer = useMediaQuery("(min-width: 721px)", true);
 useSeoMeta(
   computed(() =>
     topic.value
@@ -96,7 +95,7 @@ const hiddenRelationshipPostCount = computed(() => {
 });
 const canReply = computed(() => Boolean(currentUserId.value));
 const shouldRenderReplyComposer = computed(() =>
-  topic.value?.status === "open" && canReply.value && (isDesktopReplyComposer.value || replyComposerOpen.value),
+  topic.value?.status === "open" && canReply.value && replyComposerOpen.value,
 );
 const boardSwipeTopicsQuery = useBoardTopics(
   () => topic.value?.boardSlug ?? "",
@@ -161,6 +160,7 @@ watch(
   { immediate: true },
 );
 
+
 function handleReply(rawMd: string) {
   replyStatus.value = "";
   if (topic.value?.status !== "open") {
@@ -178,6 +178,7 @@ function handleReply(rawMd: string) {
       onSuccess: () => {
         replyResetToken.value += 1;
         replyStatus.value = "回复已发布。";
+        replyComposerOpen.value = false;
       },
       onError: (error) => {
         replyStatus.value = contentPolicyMessage(
@@ -287,7 +288,7 @@ function quotePost(post: PostItemVM) {
 }
 
 // Opens the reply composer without injecting quoted text.
-// Key parameter: `post` is the floor that initiated the action. Side effect: reveals and scrolls to the composer.
+// Key parameter: `post` is the floor that initiated the action. Side effect: reveals the full-page composer.
 function replyToPost(post: PostItemVM) {
   clearReplyInsertRequest();
   openReplyComposer();
@@ -334,7 +335,7 @@ function htmlToPlainText(html: string) {
   return template.content.textContent ?? "";
 }
 
-// Opens the mobile reply composer on demand so entering a topic does not download the editor bundle.
+// Opens the full-page reply composer on demand so entering a topic does not download the editor bundle.
 // Key parameters: none. Return value is none. Side effect: flips the local composer-open state.
 function openReplyComposer() {
   if (!canReply.value) {
@@ -343,7 +344,16 @@ function openReplyComposer() {
   }
 
   replyComposerOpen.value = true;
-  void scrollReplyComposerIntoView();
+}
+
+// Closes the full-page reply composer while leaving any saved local draft intact.
+// Key parameters: none. Return value: none. Side effect: hides the composer surface.
+function closeReplyComposer() {
+  if (createPost.isPending.value) {
+    return;
+  }
+
+  replyComposerOpen.value = false;
 }
 
 // Queues quoted text for ComposerDrawer before or after the editor is mounted.
@@ -359,19 +369,6 @@ function clearReplyInsertRequest() {
   replyInsertText.value = "";
 }
 
-// Scrolls the revealed reply composer into view and focuses its editable area when mounted.
-// Key parameters: none. Return value: promise with no value. Side effect: scrolls and focuses browser UI.
-async function scrollReplyComposerIntoView() {
-  await nextTick();
-  const composer = document.getElementById("reply-composer");
-  composer?.scrollIntoView({ block: "start", behavior: "smooth" });
-  const focusTarget = composer?.querySelector<HTMLElement>(
-    ".cm-content, textarea, [contenteditable='true']",
-  );
-  window.setTimeout(() => {
-    focusTarget?.focus();
-  }, 180);
-}
 
 function setToolbarStatus(content: string) {
   void message.open({ key: "topic-detail-status", type: "info", content, duration: 2.6 });
@@ -456,21 +453,53 @@ function setToolbarStatus(content: string) {
             />
           </template>
 
-          <template v-if="topic.status === 'open'">
-            <div v-if="shouldRenderReplyComposer" id="reply-composer" class="reply-composer-anchor">
-              <ComposerDrawer
-                mode="reply"
-                :topic-title="topic.title"
-                :board-name="topic.boardName"
-                :submitting="createPost.isPending.value"
-                :reset-token="replyResetToken"
-                :draft-storage-key="`parallellines:reply-draft:${topic.id}`"
-                :insert-text="replyInsertText"
-                :insert-token="replyInsertToken"
-                @submit="handleReply"
-              />
+          <Teleport v-if="topic.status === 'open'" to="body">
+            <div
+              v-if="shouldRenderReplyComposer"
+              class="reply-composer-overlay"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="reply-composer-title"
+              tabindex="-1"
+              @click.self="closeReplyComposer"
+              @keydown.esc="closeReplyComposer"
+            >
+              <section id="reply-composer" class="reply-composer-sheet">
+                <header class="reply-composer-sheet__header">
+                  <div class="reply-composer-sheet__title">
+                    <span>回复</span>
+                    <h2 id="reply-composer-title">{{ topic.title }}</h2>
+                  </div>
+                  <button
+                    class="reply-composer-sheet__close"
+                    type="button"
+                    aria-label="关闭回复编辑器"
+                    :disabled="createPost.isPending.value"
+                    @click="closeReplyComposer"
+                  >
+                    <CloseOutlined aria-hidden="true" />
+                  </button>
+                </header>
+
+                <div class="reply-composer-sheet__body">
+                  <ComposerDrawer
+                    class="reply-composer-sheet__composer"
+                    mode="reply"
+                    compact
+                    :topic-title="topic.title"
+                    :board-name="topic.boardName"
+                    :submitting="createPost.isPending.value"
+                    :reset-token="replyResetToken"
+                    :draft-storage-key="`parallellines:reply-draft:${topic.id}`"
+                    :insert-text="replyInsertText"
+                    :insert-token="replyInsertToken"
+                    @submit="handleReply"
+                  />
+                  <p v-if="replyStatus" class="reply-composer-sheet__status" role="status">{{ replyStatus }}</p>
+                </div>
+              </section>
             </div>
-          </template>
+          </Teleport>
           <UiCard v-else class="topic-state" role="status">
             主题当前为已关闭状态，暂不接受新回复。
           </UiCard>

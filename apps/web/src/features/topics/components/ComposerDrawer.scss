@@ -178,12 +178,14 @@ footer {
     rgba(255, 255, 255, 0.88);
 }
 
-.composer--reply .composer-md-editor {
-  height: 18rem;
+.composer--reply .composer-md-editor,
+.composer--compact .composer-md-editor {
+  height: 16rem;
 }
 
-.composer--compact .composer-md-editor {
-  height: 18rem;
+.composer--reply .composer-md-editor :deep(.cm-content),
+.composer--compact .composer-md-editor :deep(.cm-content) {
+  min-height: 10rem;
 }
 
 @media (max-width: 560px) {
