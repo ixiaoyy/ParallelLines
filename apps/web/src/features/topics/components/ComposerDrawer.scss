@@ -822,22 +822,23 @@ footer {
 }
 
 .composer--reply .composer-reply-action {
-  grid-template-columns: 2.7rem minmax(0, 1fr);
+  grid-template-columns: 2.35rem minmax(0, 1fr);
   min-height: 4.05rem;
   border-radius: 1rem;
-  padding: 0.72rem 0.85rem;
+  padding: 0.72rem 1rem;
+  text-align: left;
 }
 
 .composer--reply .composer-reply-action > :deep(.anticon) {
-  justify-self: center;
+  justify-self: start;
   width: 1.36rem;
   height: 1.36rem;
   font-size: 1.36rem;
 }
 
 .composer--reply .composer-reply-action__copy {
-  justify-items: center;
-  text-align: center;
+  justify-items: start;
+  text-align: left;
 }
 
 .composer--reply .composer-reply-action strong {

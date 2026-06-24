@@ -954,17 +954,28 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
           </div>
         </div>
         <div class="post-header-actions">
-          <UiButton v-if="canEdit" class="post-header-edit" tone="subtle" @click="startEdit">
+          <button
+            v-if="canEdit"
+            class="post-header-edit icon-action"
+            type="button"
+            title="编辑"
+            aria-label="编辑楼层"
+            @click="startEdit"
+          >
             <EditOutlined aria-hidden="true" />
-            编辑
-          </UiButton>
+          </button>
         </div>
       </header>
       <div v-if="hideHeader && canEdit" class="post-inline-actions">
-        <UiButton class="post-header-edit" tone="subtle" @click="startEdit">
+        <button
+          class="post-header-edit icon-action"
+          type="button"
+          title="编辑"
+          aria-label="编辑楼层"
+          @click="startEdit"
+        >
           <EditOutlined aria-hidden="true" />
-          编辑
-        </UiButton>
+        </button>
       </div>
       <div v-if="post.acceptedAnswer" class="accepted-answer-badge">✓ 已采纳解决方案</div>
       <div v-if="post.deleted" class="deleted-copy">该楼层已删除或隐藏。</div>

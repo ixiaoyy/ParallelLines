@@ -105,15 +105,28 @@
   justify-content: flex-end;
 }
 
-.post-header-edit {
-  min-height: 2rem;
-  padding-inline: 0.72rem !important;
+.post-header-edit.icon-action {
+  width: 2.25rem;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  border: 1px solid rgba(var(--muted-rgb), 0.16);
+  padding: 0;
+  color: color-mix(in srgb, var(--muted) 88%, var(--title));
+  background: rgba(var(--muted-rgb), 0.06);
+}
+
+.post-header-edit.icon-action:hover,
+.post-header-edit.icon-action:focus-visible {
+  border-color: rgba(var(--primary-rgb), 0.24);
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.08);
 }
 
 .post-inline-actions {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 0.25rem;
+  margin: -0.2rem 0 0.15rem;
 }
 
 .accepted-answer-badge {
@@ -1212,8 +1225,9 @@
 
   .post-header {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.55rem;
+    align-items: flex-start;
     margin-bottom: 0.58rem;
   }
 
@@ -1224,13 +1238,14 @@
   }
 
   .post-header-actions {
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
 
-  .post-header-edit {
-    min-height: 1.92rem;
-    padding-inline: 0.62rem !important;
-    font-size: 0.84rem;
+  .post-header-edit.icon-action {
+    width: 2.12rem;
+    min-width: 2.12rem;
+    height: 2.12rem;
+    min-height: 2.12rem;
   }
 
   .post-author-copy,
