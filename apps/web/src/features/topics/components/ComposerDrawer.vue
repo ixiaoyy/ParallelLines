@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
   BoldOutlined,
-  CodeOutlined,
   EnterOutlined,
   FileDoneOutlined,
   ItalicOutlined,
@@ -10,7 +9,6 @@ import {
   PaperClipOutlined,
   SafetyCertificateOutlined,
   SmileOutlined,
-  UnorderedListOutlined,
 } from "@ant-design/icons-vue";
 import type { ExposeParam, ToolbarNames } from "md-editor-v3";
 import DOMPurify from "dompurify";
@@ -39,7 +37,8 @@ interface ReplyDraft {
 }
 
 type UploadImageCallback = (images: string[]) => void;
-type ComposerMarkupKind = "bold" | "italic" | "quote" | "unorderedList" | "code" | "link";
+type ComposerMarkupKind = "bold" | "italic" | "quote" | "link";
+const REPLY_EMOJIS = ["😊", "😂", "👍", "🙏", "🎉", "❤️", "🤔", "👏", "🔥", "😄", "😅", "💡"];
 
 const props = withDefaults(
   defineProps<{
@@ -77,6 +76,7 @@ const tags = ref("fastapi, 排障");
 const composerEditorRef = ref<ExposeParam | null>(null);
 const isDragActive = ref(false);
 const uploadStatusMessage = ref("");
+const emojiPickerOpen = ref(false);
 
 const currentVersion = ref(1);
 const showConflictBanner = ref(false);
@@ -105,12 +105,7 @@ const topicEditorToolbars: ToolbarNames[] = [
 const replyEditorToolbars: ToolbarNames[] = [
   "bold",
   "italic",
-  "strikeThrough",
   "quote",
-  "unorderedList",
-  "orderedList",
-  "codeRow",
-  "code",
   "link",
   "image",
   "revoke",
@@ -238,6 +233,7 @@ function flushPendingExternalInsert() {
  * @returns Nothing. Side effect: mutates the draft and focuses the async editor when mounted.
  */
 function insertComposerMarkup(kind: ComposerMarkupKind) {
+  emojiPickerOpen.value = false;
   const editor = composerEditorRef.value;
   if (!editor) {
     insertDraftText(buildComposerMarkup(kind, ""));
@@ -270,19 +266,31 @@ function buildComposerMarkup(kind: ComposerMarkupKind, selectedText: string) {
       ? selected.split("\n").map((line) => `> ${line}`).join("\n")
       : "> 引用内容";
   }
-  if (kind === "unorderedList") {
-    return selected
-      ? selected.split("\n").map((line) => `- ${line || "列表项"}`).join("\n")
-      : "- 列表项";
-  }
-
-  if (kind === "code") {
-    return selected.includes("\n")
-      ? "```\n" + selected + "\n```"
-      : "`" + (selected || "代码") + "`";
-  }
 
   return `[${selected || "链接文字"}](https://)`;
+}
+
+// Toggles the compact emoji panel used by reply mode.
+// Key parameters: none. Return value: none; side effect: shows or hides emoji buttons near the toolbar.
+function toggleEmojiPicker() {
+  emojiPickerOpen.value = !emojiPickerOpen.value;
+  composerEditorRef.value?.focus();
+}
+
+// Inserts a selected emoji into the reply draft at the editor cursor when available.
+// Key parameter: `emoji` is the chosen emoji character. Return value: none; side effect: mutates the draft/editor content.
+function insertReplyEmoji(emoji: string) {
+  emojiPickerOpen.value = false;
+  const editor = composerEditorRef.value;
+  if (!editor) {
+    draft.value = `${draft.value}${emoji}`;
+    return;
+  }
+
+  editor.insert((selectedText) => ({
+    targetValue: `${selectedText}${emoji}`,
+  }));
+  editor.focus();
 }
 
 function handleDragEnter(event: DragEvent) {
@@ -667,6 +675,19 @@ async function handleSaveDraft() {
 
       <span v-if="isReplyMode" class="composer-editor-count">{{ characterCount }} / 20000</span>
 
+      <div v-if="isReplyMode && emojiPickerOpen" id="reply-emoji-panel" class="composer-emoji-panel" aria-label="选择表情">
+        <button
+          v-for="emoji in REPLY_EMOJIS"
+          :key="emoji"
+          type="button"
+          class="composer-emoji-panel__item"
+          :aria-label="`插入表情 ${emoji}`"
+          @click="insertReplyEmoji(emoji)"
+        >
+          {{ emoji }}
+        </button>
+      </div>
+
       <div v-if="isReplyMode" class="composer-mobile-tools" aria-label="回复工具">
         <button type="button" aria-label="加粗" @click="insertComposerMarkup('bold')">
           <BoldOutlined aria-hidden="true" />
@@ -682,15 +703,15 @@ async function handleSaveDraft() {
           <EnterOutlined aria-hidden="true" />
           <span>引用</span>
         </button>
-        <button type="button" class="composer-mobile-tools__text" aria-label="列表" @click="insertComposerMarkup('unorderedList')">
-          <UnorderedListOutlined aria-hidden="true" />
-          <span>列表</span>
-        </button>
-        <button type="button" class="composer-mobile-tools__text" aria-label="代码" @click="insertComposerMarkup('code')">
-          <CodeOutlined aria-hidden="true" />
-          <span>代码</span>
-        </button>
-        <button type="button" aria-label="表情">
+        <button
+          type="button"
+          class="composer-mobile-tools__emoji-trigger"
+          :class="{ 'is-active': emojiPickerOpen }"
+          aria-label="表情"
+          aria-controls="reply-emoji-panel"
+          :aria-expanded="emojiPickerOpen"
+          @click="toggleEmojiPicker"
+        >
           <SmileOutlined aria-hidden="true" />
         </button>
       </div>
