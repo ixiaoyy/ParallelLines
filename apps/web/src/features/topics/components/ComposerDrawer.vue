@@ -3,7 +3,6 @@ import {
   BoldOutlined,
   CodeOutlined,
   EnterOutlined,
-  EyeOutlined,
   FileDoneOutlined,
   ItalicOutlined,
   LinkOutlined,
@@ -78,7 +77,6 @@ const tags = ref("fastapi, 排障");
 const composerEditorRef = ref<ExposeParam | null>(null);
 const isDragActive = ref(false);
 const uploadStatusMessage = ref("");
-const composerPreviewVisible = ref(false);
 
 const currentVersion = ref(1);
 const showConflictBanner = ref(false);
@@ -117,7 +115,6 @@ const replyEditorToolbars: ToolbarNames[] = [
   "image",
   "revoke",
   "next",
-  "preview",
 ];
 const editorFooters: [] = [];
 
@@ -188,21 +185,15 @@ function submitFromParent() {
   handleSubmit();
 }
 
-// Toggles preview from the full-screen sheet header so the mobile top action matches the reply design.
-// Key parameters: none. Return value: none; side effect: switches md-editor-v3 preview mode.
-function togglePreviewFromParent() {
-  toggleComposerPreview();
-}
-
 defineExpose({
   submitFromParent,
-  togglePreviewFromParent,
 });
 
 function insertMarkdownUpload(markdown: string) {
   insertDraftText(markdown);
-  composerPreviewVisible.value = true;
-  composerEditorRef.value?.togglePreview(true);
+  if (!isReplyMode.value) {
+    composerEditorRef.value?.togglePreview(true);
+  }
 }
 
 // Inserts Markdown into the current draft without depending on the editor bundle being loaded.
@@ -294,18 +285,6 @@ function buildComposerMarkup(kind: ComposerMarkupKind, selectedText: string) {
   return `[${selected || "链接文字"}](https://)`;
 }
 
-/**
- * Toggles the reply editor preview pane from the custom mobile controls.
- * Key parameters: none. Return value: none. Side effect: updates md-editor-v3 preview state.
- */
-function toggleComposerPreview() {
-  composerPreviewVisible.value = !composerPreviewVisible.value;
-  composerEditorRef.value?.togglePreview(composerPreviewVisible.value);
-  if (!composerPreviewVisible.value) {
-    composerEditorRef.value?.focus();
-  }
-}
-
 function handleDragEnter(event: DragEvent) {
   if (eventHasFiles(event)) {
     isDragActive.value = true;
@@ -383,8 +362,9 @@ async function handleEditorImageUpload(files: File[], callback: UploadImageCallb
       images.push(resolveApiAssetUrl(upload.url) ?? upload.url);
     }
     callback(images);
-    composerPreviewVisible.value = true;
-    composerEditorRef.value?.togglePreview(true);
+    if (!isReplyMode.value) {
+      composerEditorRef.value?.togglePreview(true);
+    }
     uploadStatusMessage.value = "";
   } catch (error) {
     uploadStatusMessage.value = uploadErrorMessage(error);
@@ -734,11 +714,6 @@ async function handleSaveDraft() {
           @insert="insertMarkdownUpload"
         />
       </div>
-      <button type="button" class="composer-reply-action composer-reply-action--preview" @click="toggleComposerPreview">
-        <EyeOutlined aria-hidden="true" />
-        <span>{{ composerPreviewVisible ? "继续编辑" : "预览效果" }}</span>
-        <small>查看回复预览</small>
-      </button>
     </div>
 
     <span v-if="isReplyMode && uploadStatusMessage" class="composer-upload-status composer-upload-status--reply" role="status">

@@ -195,7 +195,7 @@ footer {
 
 .composer-reply-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.7rem;
 }
 
@@ -229,27 +229,22 @@ footer {
   height: 1em;
 }
 
-.composer-reply-action__copy,
-.composer-reply-action--preview {
+.composer-reply-action__copy {
   min-width: 0;
 }
 
-.composer-reply-action__copy,
-.composer-reply-action--preview span,
-.composer-reply-action--preview small {
+.composer-reply-action__copy {
   display: grid;
 }
 
-.composer-reply-action strong,
-.composer-reply-action--preview span {
+.composer-reply-action strong {
   color: var(--title);
   font-size: 0.93rem;
   font-weight: 880;
   line-height: 1.25;
 }
 
-.composer-reply-action__copy span,
-.composer-reply-action--preview small {
+.composer-reply-action__copy span {
   margin-top: 0.18rem;
   color: var(--muted);
   font-size: 0.76rem;
@@ -257,14 +252,7 @@ footer {
   line-height: 1.25;
 }
 
-.composer-reply-action--preview {
-  width: 100%;
-  border: 1px solid rgba(var(--primary-rgb), 0.12);
-  text-align: left;
-  cursor: pointer;
-}
 
-.composer-reply-action--preview:focus-visible,
 .composer-mobile-tools button:focus-visible {
   outline: 2px solid rgba(var(--primary-rgb), 0.42);
   outline-offset: 2px;
@@ -588,7 +576,7 @@ footer {
   }
 
   .composer-reply-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.62rem;
   }
 
@@ -604,13 +592,11 @@ footer {
     font-size: 1.2rem;
   }
 
-  .composer-reply-action strong,
-  .composer-reply-action--preview span {
+  .composer-reply-action strong {
     font-size: 0.88rem;
   }
 
-  .composer-reply-action__copy span,
-  .composer-reply-action--preview small {
+  .composer-reply-action__copy span {
     font-size: 0.72rem;
   }
 
@@ -810,15 +796,12 @@ footer {
   font-size: 1.36rem;
 }
 
-.composer--reply .composer-reply-action__copy,
-.composer--reply .composer-reply-action--preview span,
-.composer--reply .composer-reply-action--preview small {
+.composer--reply .composer-reply-action__copy {
   justify-items: center;
   text-align: center;
 }
 
-.composer--reply .composer-reply-action strong,
-.composer--reply .composer-reply-action--preview span {
+.composer--reply .composer-reply-action strong {
   color: var(--primary);
   font-size: 0.9rem;
   font-weight: 900;

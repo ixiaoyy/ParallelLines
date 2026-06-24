@@ -36,7 +36,6 @@ const TOPIC_SWIPE_TOPIC_LIMIT = 24;
 
 interface ReplyComposerExpose {
   submitFromParent: () => void;
-  togglePreviewFromParent: () => void;
 }
 
 // Loads the reply composer only after a signed-in user opens the full-page reply surface.
@@ -386,12 +385,6 @@ function publishReplyComposer() {
   replyComposerRef.value?.submitFromParent();
 }
 
-// Toggles the mounted reply composer preview from the full-screen sheet header.
-// Key parameters: none. Return value: none. Side effect: delegates preview state to ComposerDrawer.
-function previewReplyComposer() {
-  replyComposerRef.value?.togglePreviewFromParent();
-}
-
 // Queues quoted text for ComposerDrawer before or after the editor is mounted.
 // Key parameter: `prefix` is Markdown to prepend. Side effect: updates insert props and focuses any mounted editor input.
 function insertReplyDraft(prefix: string) {
@@ -515,9 +508,6 @@ function setToolbarStatus(content: string) {
                     <h2 id="reply-composer-title">回复主题</h2>
                     <span>{{ topic.title }} ›</span>
                   </div>
-                  <button class="reply-composer-sheet__preview" type="button" @click="previewReplyComposer">
-                    预览
-                  </button>
                   <button
                     class="reply-composer-sheet__publish"
                     type="button"
