@@ -2,6 +2,7 @@
 import { computed, ref, watch } from "vue";
 
 import { resolveApiAssetUrl } from "@/shared/api/client";
+import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
 
 const props = defineProps<{
   src?: string | null;
@@ -18,6 +19,14 @@ const imageFailed = ref(false);
 const initials = computed(() => props.name.trim().slice(0, 1).toUpperCase() || "?");
 const resolvedSrc = computed(() => resolveApiAssetUrl(props.src));
 const displaySrc = computed(() => (imageFailed.value ? undefined : resolvedSrc.value));
+const frameStyle = computed(() => ({
+  "--avatar-frame-level-1": cssUrl(staticAssetUrl("/avatar-frames/level-1.webp")),
+  "--avatar-frame-level-2": cssUrl(staticAssetUrl("/avatar-frames/level-2.webp")),
+  "--avatar-frame-level-3": cssUrl(staticAssetUrl("/avatar-frames/level-3.webp")),
+  "--avatar-frame-level-4": cssUrl(staticAssetUrl("/avatar-frames/level-4.webp")),
+  "--avatar-frame-level-5": cssUrl(staticAssetUrl("/avatar-frames/level-5.webp")),
+  "--avatar-frame-ultimate": cssUrl(staticAssetUrl("/avatar-frames/ultimate-animated.webp")),
+}));
 const frame = computed<AvatarFrame>(() => {
   if (props.role === "admin") {
     return "ultimate";
@@ -69,6 +78,7 @@ function handleImageError() {
       { 'avatar--level-frame': hasLevelFrame },
     ]"
     :title="name"
+    :style="frameStyle"
   >
     <img v-if="displaySrc" :src="displaySrc" alt="" aria-hidden="true" @error="handleImageError" />
     <span v-else class="ant-avatar-string">{{ initials }}</span>
@@ -175,7 +185,7 @@ function handleImageError() {
 }
 
 .avatar--frame-level-1::after {
-  background-image: url("../assets/avatar-frames/level-1.webp");
+  background-image: var(--avatar-frame-level-1);
 }
 
 .avatar--frame-level-2 {
@@ -183,7 +193,7 @@ function handleImageError() {
 }
 
 .avatar--frame-level-2::after {
-  background-image: url("../assets/avatar-frames/level-2.webp");
+  background-image: var(--avatar-frame-level-2);
 }
 
 .avatar--frame-level-3 {
@@ -191,7 +201,7 @@ function handleImageError() {
 }
 
 .avatar--frame-level-3::after {
-  background-image: url("../assets/avatar-frames/level-3.webp");
+  background-image: var(--avatar-frame-level-3);
 }
 
 .avatar--frame-level-4 {
@@ -199,7 +209,7 @@ function handleImageError() {
 }
 
 .avatar--frame-level-4::after {
-  background-image: url("../assets/avatar-frames/level-4.webp");
+  background-image: var(--avatar-frame-level-4);
 }
 
 .avatar--frame-level-5,
@@ -237,11 +247,11 @@ function handleImageError() {
 }
 
 .avatar--frame-level-5::after {
-  background-image: url("../assets/avatar-frames/level-5.webp");
+  background-image: var(--avatar-frame-level-5);
 }
 
 .avatar--frame-ultimate::after {
-  background-image: url("../assets/avatar-frames/ultimate-animated.webp");
+  background-image: var(--avatar-frame-ultimate);
   animation-duration: 2.2s;
 }
 

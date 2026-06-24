@@ -30,6 +30,7 @@ import {
   useVerifyEmail,
 } from "@/features/auth/queries";
 import { ApiError } from "@/shared/api/client";
+import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
 import UiButton from "@/shared/ui/Button.vue";
 
 type AuthTab = "login" | "register" | "forgot";
@@ -44,6 +45,11 @@ interface OAuthProviderOption {
 const USERNAME_PATTERN = /^[\p{L}\p{N}_.-]+$/u;
 const USERNAME_HELPER = "用户名需为 3-32 位，可使用中文、字母、数字、点、下划线或短横线。";
 const shouldUseDevVerificationCode = import.meta.env.DEV;
+const authMarkUrl = staticAssetUrl("/auth-visual/auth-mark.png");
+const authPageStyle = computed(() => ({
+  "--auth-pc-bg": cssUrl(staticAssetUrl("/auth-visual/parallel-auth-pc-bg.png")),
+  "--auth-h5-bg": cssUrl(staticAssetUrl("/auth-visual/parallel-auth-h5-bg.png")),
+}));
 
 const OAUTH_PROVIDER_OPTIONS: Record<string, OAuthProviderOption> = {
   wechat: { id: "wechat", label: "微信", icon: WechatFilled, tone: "wechat" },
@@ -446,10 +452,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 </script>
 
 <template>
-  <div class="auth-page" :class="`auth-page--${activeTab}`">
+  <div class="auth-page" :class="`auth-page--${activeTab}`" :style="authPageStyle">
     <nav class="auth-topbar" aria-label="认证页导航">
       <RouterLink class="auth-topbar__brand" to="/" aria-label="返回首页">
-        <img src="/auth-visual/auth-mark.png" alt="" class="auth-logo-mark" />
+        <img :src="authMarkUrl" alt="" class="auth-logo-mark" />
         <span>ParallelLines</span>
       </RouterLink>
       <div class="auth-topbar__actions">
@@ -465,7 +471,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     <section class="auth-stage" aria-label="ParallelLines 登录注册">
       <aside class="auth-brand-panel">
         <div class="auth-brand-panel__lockup">
-          <img src="/auth-visual/auth-mark.png" alt="" class="auth-brand-panel__mark" />
+          <img :src="authMarkUrl" alt="" class="auth-brand-panel__mark" />
           <strong>ParallelLines</strong>
         </div>
         <h1>每一条平行线<br />都在这里相遇</h1>
@@ -492,7 +498,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       <main class="auth-panel" aria-label="账号认证">
         <div class="auth-card" :class="{ 'auth-card--dense': activeTab !== 'login' || twoFactorChallengeToken }">
           <div class="auth-card__brand">
-            <img src="/auth-visual/auth-mark.png" alt="" class="auth-card__mark" />
+            <img :src="authMarkUrl" alt="" class="auth-card__mark" />
             <strong>ParallelLines</strong>
             <span>连接思想，启发未来</span>
           </div>
