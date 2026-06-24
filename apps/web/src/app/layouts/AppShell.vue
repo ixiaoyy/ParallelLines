@@ -354,9 +354,10 @@ function isNavItemActive(item: NavItem) {
     :class="{
       'is-route-navigating': isRouteNavigating,
       'app-shell--mobile-fullscreen': isMobileFullscreenRoute,
+      'app-shell--auth-immersive': isAuthRoute,
     }"
   >
-    <header ref="topbarRef" class="topbar" @keydown.esc="closeNavigation">
+    <header v-if="!isAuthRoute" ref="topbarRef" class="topbar" @keydown.esc="closeNavigation">
       <RouterLink class="brand" to="/" :aria-label="brandHomeLabel" :title="brandHomeLabel" @click="handleBrandClick">
         <span class="brand-mark">
           <img class="brand-logo" :src="brandLogoUrl" alt="" aria-hidden="true" />

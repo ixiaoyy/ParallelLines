@@ -188,6 +188,193 @@ footer {
   min-height: 10rem;
 }
 
+
+.composer-mobile-tools {
+  display: none;
+}
+
+.composer-reply-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.composer-reply-action {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: center;
+  min-width: 0;
+  min-height: 4.25rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.12);
+  border-radius: 1rem;
+  padding: 0.78rem 0.88rem;
+  color: var(--title);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 14px 34px rgba(var(--shadow-rgb), 0.06);
+}
+
+.composer-reply-action > :deep(.anticon) {
+  display: inline-grid;
+  place-items: center;
+  width: 1.28rem;
+  height: 1.28rem;
+  color: var(--primary);
+  font-size: 1.28rem;
+}
+
+.composer-reply-action > :deep(.anticon svg) {
+  width: 1em;
+  height: 1em;
+}
+
+.composer-reply-action__copy,
+.composer-reply-action--preview {
+  min-width: 0;
+}
+
+.composer-reply-action__copy,
+.composer-reply-action--preview span,
+.composer-reply-action--preview small {
+  display: grid;
+}
+
+.composer-reply-action strong,
+.composer-reply-action--preview span {
+  color: var(--title);
+  font-size: 0.93rem;
+  font-weight: 880;
+  line-height: 1.25;
+}
+
+.composer-reply-action__copy span,
+.composer-reply-action--preview small {
+  margin-top: 0.18rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 760;
+  line-height: 1.25;
+}
+
+.composer-reply-action--preview {
+  width: 100%;
+  border: 1px solid rgba(var(--primary-rgb), 0.12);
+  text-align: left;
+  cursor: pointer;
+}
+
+.composer-reply-action--preview:focus-visible,
+.composer-mobile-tools button:focus-visible {
+  outline: 2px solid rgba(var(--primary-rgb), 0.42);
+  outline-offset: 2px;
+}
+
+.composer-reply-action--upload :deep(.markdown-upload) {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  margin: 0;
+  opacity: 0;
+}
+
+.composer-reply-action--upload :deep(.ui-button) {
+  width: 100%;
+  height: 100%;
+}
+
+.composer-upload-status--reply {
+  display: block;
+  padding-inline: 0.2rem;
+}
+
+.composer-reply-tips {
+  border: 1px solid rgba(var(--primary-rgb), 0.1);
+  border-radius: 1.05rem;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 14px 34px rgba(var(--shadow-rgb), 0.06);
+}
+
+.composer-reply-tips {
+  position: relative;
+  overflow: hidden;
+  padding: 0.95rem;
+}
+
+.composer-reply-tips__heading {
+  display: grid;
+  gap: 0.12rem;
+  margin-bottom: 0.65rem;
+}
+
+.composer-reply-tips__heading strong {
+  color: var(--title);
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+.composer-reply-tips__heading span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.composer-reply-tips ul {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.52rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.composer-reply-tips li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 780;
+}
+
+.composer-reply-tips li :deep(.anticon) {
+  display: inline-grid;
+  place-items: center;
+  width: 1.02rem;
+  height: 1.02rem;
+  color: var(--primary);
+  font-size: 1.02rem;
+}
+
+.composer-reply-tips__planet {
+  position: absolute;
+  right: 1.1rem;
+  bottom: 0.9rem;
+  width: 3.2rem;
+  height: 3.2rem;
+  border: 0.18rem solid rgba(var(--primary-rgb), 0.16);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 40% 38%, rgba(var(--primary-rgb), 0.28), transparent 18%),
+    radial-gradient(circle, rgba(var(--primary-rgb), 0.08), rgba(255, 255, 255, 0.3));
+}
+
+.composer-reply-tips__planet::before {
+  position: absolute;
+  inset: 1rem -0.38rem;
+  border: 0.14rem solid rgba(16, 185, 129, 0.2);
+  border-right-color: transparent;
+  border-left-color: transparent;
+  border-radius: 50%;
+  content: "";
+  transform: rotate(-16deg);
+}
+
+
+
+
 @media (max-width: 560px) {
   .composer {
     gap: 0.62rem;
@@ -280,6 +467,162 @@ footer {
   }
 }
 
+
+@media (max-width: 720px) {
+  .composer--reply {
+    gap: 0.72rem;
+    overflow: visible;
+    padding: 0;
+    background: transparent;
+  }
+
+  .composer--reply :deep(.ant-card-body) {
+    display: grid;
+    gap: 0.72rem;
+    padding: 0;
+  }
+
+  .composer--reply .composer-editor {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+  }
+
+  .composer--reply .composer-md-editor {
+    height: min(52dvh, 31rem);
+    min-height: 22rem;
+    border: 2px solid transparent;
+    border-radius: 1.28rem;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 252, 255, 0.96)) padding-box,
+      linear-gradient(135deg, rgba(64, 158, 255, 0.42), rgba(168, 139, 250, 0.32), rgba(16, 185, 129, 0.24)) border-box;
+    box-shadow: 0 18px 44px rgba(var(--shadow-rgb), 0.08);
+  }
+
+  .composer--reply .composer-md-editor :deep(.md-editor-toolbar-wrapper) {
+    display: none;
+  }
+
+  .composer--reply .composer-md-editor :deep(.cm-editor),
+  .composer--reply .composer-md-editor :deep(.md-editor-input-wrapper),
+  .composer--reply .composer-md-editor :deep(.md-editor-content),
+  .composer--reply .composer-md-editor :deep(.md-editor-content-wrapper) {
+    height: 100%;
+    background: transparent;
+  }
+
+  .composer--reply .composer-md-editor :deep(.cm-scroller) {
+    min-height: 0;
+  }
+
+  .composer--reply .composer-md-editor :deep(.cm-content) {
+    min-height: 100%;
+    padding: 1.28rem 1.22rem 5.35rem;
+    color: var(--title);
+    font-size: 16px;
+    line-height: 1.72;
+  }
+
+  .composer-mobile-tools {
+    position: absolute;
+    right: 1rem;
+    bottom: 0.78rem;
+    left: 1rem;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 0.28rem;
+    border-top: 1px solid rgba(var(--muted-rgb), 0.14);
+    padding-top: 0.72rem;
+    color: var(--muted);
+  }
+
+  .composer-mobile-tools button {
+    display: inline-grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 2.08rem;
+    height: 2.08rem;
+    border: 0;
+    border-radius: 0.7rem;
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .composer-mobile-tools button:hover {
+    color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.08);
+  }
+
+  .composer-mobile-tools button :deep(.anticon) {
+    display: inline-grid;
+    place-items: center;
+    width: 1.08rem;
+    height: 1.08rem;
+    font-size: 1.08rem;
+  }
+
+  .composer-mobile-tools button :deep(.anticon svg) {
+    width: 1em;
+    height: 1em;
+  }
+
+  .composer-mobile-tools__divider {
+    flex: 0 0 1px;
+    width: 1px;
+    height: 1.45rem;
+    margin-inline: 0.12rem;
+    background: rgba(var(--muted-rgb), 0.18);
+  }
+
+  .composer-mobile-tools__count {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 780;
+    white-space: nowrap;
+  }
+
+  .composer-reply-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.62rem;
+  }
+
+  .composer-reply-action {
+    min-height: 4.05rem;
+    border-radius: 1rem;
+    padding: 0.75rem;
+  }
+
+  .composer-reply-action > :deep(.anticon) {
+    width: 1.2rem;
+    height: 1.2rem;
+    font-size: 1.2rem;
+  }
+
+  .composer-reply-action strong,
+  .composer-reply-action--preview span {
+    font-size: 0.88rem;
+  }
+
+  .composer-reply-action__copy span,
+  .composer-reply-action--preview small {
+    font-size: 0.72rem;
+  }
+
+  .composer-reply-tips {
+    padding: 0.9rem;
+  }
+
+  .composer-reply-tips__planet {
+    opacity: 0.72;
+  }
+}
+
 .conflict-banner {
   display: flex;
   align-items: center;
@@ -308,4 +651,242 @@ footer {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Reply composer: keep the custom compact toolbar consistent on mobile and wide screens. */
+.composer--reply {
+  overflow: visible;
+  padding: 0;
+  background: transparent;
+}
+
+.composer--reply :deep(.ant-card-body) {
+  display: grid;
+  gap: 0.72rem;
+  padding: 0;
+}
+
+.composer--reply .composer-editor {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.composer--reply .composer-md-editor,
+.composer--reply.composer--compact .composer-md-editor {
+  height: clamp(18rem, 42dvh, 30rem);
+  min-height: 18rem;
+  border: 2px solid transparent;
+  border-radius: 1.28rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 252, 255, 0.96)) padding-box,
+    linear-gradient(135deg, rgba(64, 158, 255, 0.42), rgba(168, 139, 250, 0.32), rgba(16, 185, 129, 0.24)) border-box;
+  box-shadow: 0 18px 44px rgba(var(--shadow-rgb), 0.08);
+}
+
+.composer--reply .composer-md-editor :deep(.md-editor-toolbar-wrapper) {
+  display: none;
+}
+
+.composer--reply .composer-md-editor :deep(.cm-editor),
+.composer--reply .composer-md-editor :deep(.md-editor-input-wrapper),
+.composer--reply .composer-md-editor :deep(.md-editor-content),
+.composer--reply .composer-md-editor :deep(.md-editor-content-wrapper) {
+  height: 100%;
+  background: transparent;
+}
+
+.composer--reply .composer-md-editor :deep(.cm-scroller) {
+  min-height: 0;
+}
+
+.composer--reply .composer-md-editor :deep(.cm-content),
+.composer--reply.composer--compact .composer-md-editor :deep(.cm-content) {
+  min-height: 100%;
+  padding: 1.28rem 1.22rem 5.35rem;
+  color: var(--title);
+  font-size: 16px;
+  line-height: 1.72;
+}
+
+.composer--reply .composer-mobile-tools {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.78rem;
+  left: 1rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.28rem;
+  overflow-x: auto;
+  border-top: 1px solid rgba(var(--muted-rgb), 0.14);
+  padding-top: 0.72rem;
+  color: var(--muted);
+  scrollbar-width: none;
+}
+
+.composer--reply .composer-mobile-tools::-webkit-scrollbar {
+  display: none;
+}
+
+.composer--reply .composer-mobile-tools button {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 2.08rem;
+  height: 2.08rem;
+  border: 0;
+  border-radius: 0.7rem;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.composer--reply .composer-mobile-tools button:hover {
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.composer--reply .composer-mobile-tools button :deep(.anticon) {
+  display: inline-grid;
+  place-items: center;
+  width: 1.08rem;
+  height: 1.08rem;
+  font-size: 1.08rem;
+}
+
+.composer--reply .composer-mobile-tools button :deep(.anticon svg) {
+  width: 1em;
+  height: 1em;
+}
+
+.composer--reply .composer-mobile-tools__text {
+  grid-template-columns: auto auto;
+  gap: 0.22rem;
+  width: auto;
+  min-width: 3.2rem;
+  padding-inline: 0.28rem;
+  color: var(--title);
+  font-size: 0.82rem;
+  font-weight: 840;
+}
+
+.composer--reply .composer-mobile-tools__text :deep(.anticon) {
+  color: currentColor;
+}
+
+.composer--reply .composer-mobile-tools__divider {
+  flex: 0 0 1px;
+  width: 1px;
+  height: 1.45rem;
+  margin-inline: 0.12rem;
+  background: rgba(var(--muted-rgb), 0.18);
+}
+
+.composer--reply .composer-mobile-tools__count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 780;
+  white-space: nowrap;
+}
+
+.composer--reply .composer-reply-action {
+  grid-template-columns: 2.7rem minmax(0, 1fr);
+  min-height: 4.05rem;
+  border-radius: 1rem;
+  padding: 0.72rem 0.85rem;
+}
+
+.composer--reply .composer-reply-action > :deep(.anticon) {
+  justify-self: center;
+  width: 1.36rem;
+  height: 1.36rem;
+  font-size: 1.36rem;
+}
+
+.composer--reply .composer-reply-action__copy,
+.composer--reply .composer-reply-action--preview span,
+.composer--reply .composer-reply-action--preview small {
+  justify-items: center;
+  text-align: center;
+}
+
+.composer--reply .composer-reply-action strong,
+.composer--reply .composer-reply-action--preview span {
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+@media (max-width: 720px) {
+  .composer--reply .composer-md-editor,
+  .composer--reply.composer--compact .composer-md-editor {
+    height: min(44dvh, 25rem);
+    min-height: 17.5rem;
+  }
+
+  .composer--reply .composer-mobile-tools {
+    gap: 0.16rem;
+  }
+
+  .composer--reply .composer-mobile-tools__count {
+    font-size: 0.68rem;
+  }
+}
+
+.composer--reply .composer-mobile-tools__text span {
+  white-space: nowrap;
+}
+
+.composer--reply .composer-mobile-tools__text {
+  flex-basis: auto;
+  min-width: 3.55rem;
+}
+
+.composer--reply .composer-mobile-tools__count {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 420px) {
+  .composer--reply .composer-mobile-tools button {
+    width: 1.92rem;
+    height: 1.92rem;
+  }
+
+  .composer--reply .composer-mobile-tools__text {
+    min-width: 3.35rem;
+    font-size: 0.76rem;
+  }
+
+  .composer--reply .composer-mobile-tools button :deep(.anticon) {
+    width: 1rem;
+    height: 1rem;
+    font-size: 1rem;
+  }
+}
+
+.composer--reply .composer-mobile-tools__count {
+  position: absolute;
+  top: -2.05rem;
+  right: 0;
+  margin-left: 0;
+  padding: 0.1rem 0.12rem;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.composer--reply .composer-editor-count {
+  position: absolute;
+  right: 1.08rem;
+  bottom: 3.72rem;
+  z-index: 3;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 780;
+  white-space: nowrap;
 }

@@ -1,4 +1,18 @@
 <script setup lang="ts">
+import {
+  BoldOutlined,
+  CodeOutlined,
+  EnterOutlined,
+  EyeOutlined,
+  FileDoneOutlined,
+  ItalicOutlined,
+  LinkOutlined,
+  MessageOutlined,
+  PaperClipOutlined,
+  SafetyCertificateOutlined,
+  SmileOutlined,
+  UnorderedListOutlined,
+} from "@ant-design/icons-vue";
 import type { ExposeParam, ToolbarNames } from "md-editor-v3";
 import DOMPurify from "dompurify";
 import { computed, defineAsyncComponent, nextTick, onMounted, ref, watch } from "vue";
@@ -26,6 +40,7 @@ interface ReplyDraft {
 }
 
 type UploadImageCallback = (images: string[]) => void;
+type ComposerMarkupKind = "bold" | "italic" | "quote" | "unorderedList" | "code" | "link";
 
 const props = withDefaults(
   defineProps<{
@@ -63,6 +78,7 @@ const tags = ref("fastapi, 排障");
 const composerEditorRef = ref<ExposeParam | null>(null);
 const isDragActive = ref(false);
 const uploadStatusMessage = ref("");
+const composerPreviewVisible = ref(false);
 
 const currentVersion = ref(1);
 const showConflictBanner = ref(false);
@@ -108,10 +124,11 @@ const editorFooters: [] = [];
 const isReplyMode = computed(() => props.mode === "reply");
 const heading = computed(() => (isReplyMode.value ? "回复" : "发一条新主题"));
 const placeholder = computed(() =>
-  isReplyMode.value ? "输入回复内容" : "输入正文",
+  isReplyMode.value ? "写下你的回复..." : "输入正文",
 );
 const editorToolbars = computed(() => (isReplyMode.value ? replyEditorToolbars : topicEditorToolbars));
 const canSubmit = computed(() => draft.value.trim().length > 0 && !props.submitting);
+const characterCount = computed(() => draft.value.length);
 
 const targetId = computed(() => {
   if (props.mode === "reply" && props.draftStorageKey) {
@@ -165,8 +182,26 @@ function handleSubmit() {
   emit("submit", rawMd);
 }
 
+// Submits the current reply when the full-screen mobile sheet top bar asks this child editor to publish.
+// Key parameters: none. Return value: none; side effect: emits the submit event through the normal validation path.
+function submitFromParent() {
+  handleSubmit();
+}
+
+// Toggles preview from the full-screen sheet header so the mobile top action matches the reply design.
+// Key parameters: none. Return value: none; side effect: switches md-editor-v3 preview mode.
+function togglePreviewFromParent() {
+  toggleComposerPreview();
+}
+
+defineExpose({
+  submitFromParent,
+  togglePreviewFromParent,
+});
+
 function insertMarkdownUpload(markdown: string) {
   insertDraftText(markdown);
+  composerPreviewVisible.value = true;
   composerEditorRef.value?.togglePreview(true);
 }
 
@@ -203,6 +238,72 @@ function flushPendingExternalInsert() {
   const insert = pendingExternalInsert;
   pendingExternalInsert = null;
   applyExternalInsert(insert.markdown, insert.token);
+}
+
+/**
+ * Inserts Markdown snippets from the compact mobile reply toolbar.
+ *
+ * @param kind - Formatting action requested by the tapped toolbar icon.
+ * @returns Nothing. Side effect: mutates the draft and focuses the async editor when mounted.
+ */
+function insertComposerMarkup(kind: ComposerMarkupKind) {
+  const editor = composerEditorRef.value;
+  if (!editor) {
+    insertDraftText(buildComposerMarkup(kind, ""));
+    return;
+  }
+
+  editor.insert((selectedText) => ({
+    targetValue: buildComposerMarkup(kind, selectedText),
+  }));
+  editor.focus();
+}
+
+/**
+ * Builds Markdown used by the reply toolbar while preserving selected text where possible.
+ *
+ * @param kind - Formatting action to translate into Markdown.
+ * @param selectedText - Current md-editor-v3 selection.
+ * @returns Markdown string to insert into the draft.
+ */
+function buildComposerMarkup(kind: ComposerMarkupKind, selectedText: string) {
+  const selected = selectedText.trim();
+  if (kind === "bold") {
+    return `**${selected || "加粗文字"}**`;
+  }
+  if (kind === "italic") {
+    return `*${selected || "斜体文字"}*`;
+  }
+  if (kind === "quote") {
+    return selected
+      ? selected.split("\n").map((line) => `> ${line}`).join("\n")
+      : "> 引用内容";
+  }
+  if (kind === "unorderedList") {
+    return selected
+      ? selected.split("\n").map((line) => `- ${line || "列表项"}`).join("\n")
+      : "- 列表项";
+  }
+
+  if (kind === "code") {
+    return selected.includes("\n")
+      ? "```\n" + selected + "\n```"
+      : "`" + (selected || "代码") + "`";
+  }
+
+  return `[${selected || "链接文字"}](https://)`;
+}
+
+/**
+ * Toggles the reply editor preview pane from the custom mobile controls.
+ * Key parameters: none. Return value: none. Side effect: updates md-editor-v3 preview state.
+ */
+function toggleComposerPreview() {
+  composerPreviewVisible.value = !composerPreviewVisible.value;
+  composerEditorRef.value?.togglePreview(composerPreviewVisible.value);
+  if (!composerPreviewVisible.value) {
+    composerEditorRef.value?.focus();
+  }
 }
 
 function handleDragEnter(event: DragEvent) {
@@ -282,6 +383,7 @@ async function handleEditorImageUpload(files: File[], callback: UploadImageCallb
       images.push(resolveApiAssetUrl(upload.url) ?? upload.url);
     }
     callback(images);
+    composerPreviewVisible.value = true;
     composerEditorRef.value?.togglePreview(true);
     uploadStatusMessage.value = "";
   } catch (error) {
@@ -583,12 +685,89 @@ async function handleSaveDraft() {
         @onUploadImg="handleEditorImageUpload"
       />
 
+      <span v-if="isReplyMode" class="composer-editor-count">{{ characterCount }} / 20000</span>
+
+      <div v-if="isReplyMode" class="composer-mobile-tools" aria-label="回复工具">
+        <button type="button" aria-label="加粗" @click="insertComposerMarkup('bold')">
+          <BoldOutlined aria-hidden="true" />
+        </button>
+        <button type="button" aria-label="斜体" @click="insertComposerMarkup('italic')">
+          <ItalicOutlined aria-hidden="true" />
+        </button>
+        <button type="button" aria-label="链接" @click="insertComposerMarkup('link')">
+          <LinkOutlined aria-hidden="true" />
+        </button>
+        <span class="composer-mobile-tools__divider" aria-hidden="true"></span>
+        <button type="button" class="composer-mobile-tools__text" aria-label="引用" @click="insertComposerMarkup('quote')">
+          <EnterOutlined aria-hidden="true" />
+          <span>引用</span>
+        </button>
+        <button type="button" class="composer-mobile-tools__text" aria-label="列表" @click="insertComposerMarkup('unorderedList')">
+          <UnorderedListOutlined aria-hidden="true" />
+          <span>列表</span>
+        </button>
+        <button type="button" class="composer-mobile-tools__text" aria-label="代码" @click="insertComposerMarkup('code')">
+          <CodeOutlined aria-hidden="true" />
+          <span>代码</span>
+        </button>
+        <button type="button" aria-label="表情">
+          <SmileOutlined aria-hidden="true" />
+        </button>
+      </div>
+
       <div v-if="isDragActive" class="composer-drop-hint" aria-hidden="true">
         松开上传
       </div>
     </section>
 
-    <div class="composer-upload-row">
+    <div v-if="isReplyMode" class="composer-reply-actions">
+      <div class="composer-reply-action composer-reply-action--upload">
+        <PaperClipOutlined aria-hidden="true" />
+        <div class="composer-reply-action__copy">
+          <strong>上传附件</strong>
+          <span>支持图片、文件等</span>
+        </div>
+        <MarkdownUploadButton
+          compact
+          label="上传附件"
+          :disabled="uploadMutation.isPending.value"
+          @insert="insertMarkdownUpload"
+        />
+      </div>
+      <button type="button" class="composer-reply-action composer-reply-action--preview" @click="toggleComposerPreview">
+        <EyeOutlined aria-hidden="true" />
+        <span>{{ composerPreviewVisible ? "继续编辑" : "预览效果" }}</span>
+        <small>查看回复预览</small>
+      </button>
+    </div>
+
+    <span v-if="isReplyMode && uploadStatusMessage" class="composer-upload-status composer-upload-status--reply" role="status">
+      {{ uploadStatusMessage }}
+    </span>
+
+    <section v-if="isReplyMode" class="composer-reply-tips" aria-label="回复小贴士">
+      <div class="composer-reply-tips__heading">
+        <strong>回复小贴士</strong>
+      </div>
+      <ul>
+        <li>
+          <MessageOutlined aria-hidden="true" />
+          <span>引用重点，回应具体问题</span>
+        </li>
+        <li>
+          <FileDoneOutlined aria-hidden="true" />
+          <span>资料和链接可以直接贴进正文</span>
+        </li>
+        <li>
+          <SafetyCertificateOutlined aria-hidden="true" />
+          <span>保留友善语气，避免人身攻击</span>
+        </li>
+      </ul>
+      <div class="composer-reply-tips__planet" aria-hidden="true"></div>
+    </section>
+
+
+    <div v-if="!isReplyMode" class="composer-upload-row">
       <MarkdownUploadButton :compact="compact" :disabled="uploadMutation.isPending.value" @insert="insertMarkdownUpload" />
       <span v-if="uploadStatusMessage" class="composer-upload-status" role="status">{{ uploadStatusMessage }}</span>
     </div>
@@ -598,7 +777,7 @@ async function handleSaveDraft() {
       <input v-model="tags" placeholder="输入标签" />
     </label>
 
-    <footer>
+    <footer v-if="!isReplyMode">
       <UiButton tone="ghost" @click="handleSaveDraft">保存草稿</UiButton>
       <UiButton tone="primary" :disabled="!canSubmit" @click="handleSubmit">
         {{ submitting ? "发布中…" : isReplyMode ? "发布回复" : "创建主题" }}

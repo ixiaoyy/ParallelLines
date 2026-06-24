@@ -12,13 +12,14 @@ const props = withDefaults(
   defineProps<{
     disabled?: boolean;
     compact?: boolean;
+    label?: string;
   }>(),
   {
     disabled: false,
     compact: false,
+    label: "上传图片/附件",
   },
 );
-
 const emit = defineEmits<{ insert: [markdown: string] }>();
 
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -64,7 +65,7 @@ async function handleFileChange(event: Event) {
       @change="handleFileChange"
     />
     <UiButton type="button" tone="ghost" :disabled="!canChooseFile" @click="openFilePicker">
-      {{ uploadMutation.isPending.value ? "上传中…" : "上传图片/附件" }}
+      {{ uploadMutation.isPending.value ? "上传中…" : label }}
     </UiButton>
     <span v-if="statusMessage" class="markdown-upload__status" role="status">{{ statusMessage }}</span>
   </div>

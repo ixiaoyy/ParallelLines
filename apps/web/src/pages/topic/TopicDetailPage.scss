@@ -347,3 +347,305 @@
     height: clamp(12rem, 38vh, 18rem);
   }
 }
+
+/* Reply composer redesign: full-screen writing surface based on the mobile reference. */
+.reply-composer-overlay {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(64, 158, 255, 0.12), transparent 26rem),
+    radial-gradient(circle at 84% 18%, rgba(16, 185, 129, 0.12), transparent 24rem),
+    linear-gradient(180deg, #f7fbff 0%, #eef7ff 100%);
+  backdrop-filter: none;
+}
+
+.reply-composer-sheet {
+  width: min(100%, 720px);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.reply-composer-sheet__header {
+  display: grid;
+  grid-template-columns: 2.8rem minmax(0, 1fr) auto auto;
+  gap: 0.62rem;
+  align-items: center;
+  border-bottom: 0;
+  padding: 0.35rem 0.2rem 0.9rem;
+  background: transparent;
+}
+
+.reply-composer-sheet__back,
+.reply-composer-sheet__preview,
+.reply-composer-sheet__publish {
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.reply-composer-sheet__back {
+  width: 2.56rem;
+  height: 2.56rem;
+  border-radius: 999px;
+  color: var(--primary);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 12px 30px rgba(var(--shadow-rgb), 0.08);
+}
+
+.reply-composer-sheet__back :deep(.anticon) {
+  font-size: 1.12rem;
+}
+
+.reply-composer-sheet__title {
+  justify-items: center;
+  gap: 0.08rem;
+  text-align: center;
+}
+
+.reply-composer-sheet__title h2 {
+  color: var(--title);
+  font-size: 1.08rem;
+  font-weight: 900;
+  line-height: 1.22;
+}
+
+.reply-composer-sheet__title span {
+  max-width: min(100%, 18rem);
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 760;
+  line-height: 1.24;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reply-composer-sheet__preview {
+  min-width: 2.7rem;
+  height: 2.36rem;
+  border-radius: 999px;
+  color: var(--primary);
+  background: transparent;
+  font-size: 0.86rem;
+  font-weight: 840;
+}
+
+.reply-composer-sheet__publish {
+  min-width: 4.35rem;
+  height: 2.45rem;
+  border-radius: 999px;
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
+  box-shadow: 0 12px 26px rgba(var(--primary-rgb), 0.22);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.reply-composer-sheet__publish:disabled,
+.reply-composer-sheet__back:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.reply-composer-sheet__body {
+  gap: 0.78rem;
+  padding: 0;
+  background: transparent;
+}
+
+.reply-composer-sheet :deep(.reply-composer-sheet__composer.composer) {
+  overflow: visible;
+}
+
+.reply-composer-sheet__composer :deep(.composer-editor) {
+  background: transparent;
+}
+
+.reply-composer-sheet__composer :deep(footer) {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .reply-composer-overlay {
+    position: fixed;
+    isolation: isolate;
+    overflow-x: hidden;
+  }
+
+  .reply-composer-overlay::before,
+  .reply-composer-overlay::after {
+    position: fixed;
+    z-index: -1;
+    border: 1px solid rgba(64, 158, 255, 0.1);
+    border-radius: 999px;
+    content: "";
+    pointer-events: none;
+  }
+
+  .reply-composer-overlay::before {
+    top: -8rem;
+    right: -7rem;
+    width: 20rem;
+    height: 20rem;
+  }
+
+  .reply-composer-overlay::after {
+    top: 4rem;
+    left: -10rem;
+    width: 24rem;
+    height: 24rem;
+    border-color: rgba(16, 185, 129, 0.1);
+  }
+
+  .reply-composer-sheet {
+    width: 100%;
+    min-height: 100dvh;
+    overflow: visible;
+    padding: calc(0.72rem + env(safe-area-inset-top)) 0.86rem calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .reply-composer-sheet__header {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    margin-inline: -0.18rem;
+    padding: 0 0 0.92rem;
+  }
+
+  .reply-composer-sheet__title h2 {
+    font-size: 1rem;
+  }
+
+  .reply-composer-sheet__publish {
+    min-width: 3.85rem;
+    height: 2.32rem;
+    font-size: 0.86rem;
+  }
+
+  .reply-composer-sheet__preview {
+    min-width: 2.2rem;
+    height: 2.18rem;
+    font-size: 0.82rem;
+  }
+
+  .reply-composer-sheet__body {
+    padding: 0;
+  }
+
+  .reply-composer-sheet__composer :deep(.composer-md-editor) {
+    height: min(52dvh, 31rem);
+  }
+}
+
+/* Reply target card: mirrors the selected floor before the full-screen editor. */
+.reply-composer-target {
+  position: relative;
+  overflow: hidden;
+  min-height: 6.8rem;
+  border: 1px solid rgba(var(--primary-rgb), 0.14);
+  border-radius: 1.28rem;
+  padding: 1rem 4.2rem 0.96rem 1rem;
+  color: var(--text);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(249, 252, 255, 0.92));
+  box-shadow: 0 14px 36px rgba(var(--shadow-rgb), 0.07);
+}
+
+.reply-composer-target__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.32rem 0.48rem;
+  align-items: center;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 820;
+  line-height: 1.35;
+}
+
+.reply-composer-target__meta strong {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.reply-composer-target__dot {
+  flex: 0 0 auto;
+  width: 0.54rem;
+  height: 0.54rem;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 0 0.28rem rgba(var(--primary-rgb), 0.11);
+}
+
+.reply-composer-target p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0.7rem 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+  font-weight: 760;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.reply-composer-target__quote {
+  position: absolute;
+  right: 1.2rem;
+  bottom: -0.42rem;
+  color: rgba(var(--primary-rgb), 0.14);
+  font-family: Georgia, serif;
+  font-size: 4.8rem;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.reply-composer-sheet {
+  max-height: none;
+  overflow: visible;
+}
+
+.reply-composer-sheet__body {
+  overflow: visible;
+}
+
+.reply-composer-sheet__header {
+  grid-template-columns: 2.72rem minmax(0, 1fr) auto auto;
+}
+
+.reply-composer-sheet__preview {
+  color: var(--primary);
+}
+
+@media (min-width: 721px) {
+  .reply-composer-overlay {
+    padding-block: 1.1rem;
+  }
+
+  .reply-composer-sheet {
+    width: min(100%, 760px);
+  }
+}
+
+@media (max-width: 720px) {
+  .reply-composer-sheet {
+    box-sizing: border-box;
+  }
+
+  .reply-composer-target {
+    min-height: 6.4rem;
+    border-radius: 1.12rem;
+    padding: 0.86rem 3.25rem 0.84rem 0.84rem;
+  }
+
+  .reply-composer-target p {
+    margin-top: 0.62rem;
+    font-size: 0.82rem;
+  }
+
+  .reply-composer-target__quote {
+    right: 0.86rem;
+    font-size: 4rem;
+  }
+}

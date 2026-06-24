@@ -3,6 +3,8 @@ import { fileURLToPath, URL } from "node:url";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
 
+const devApiProxyTarget = process.env.VITE_DEV_API_PROXY_TARGET;
+
 export default defineConfig({
   plugins: [vue()],
   build: {
@@ -59,5 +61,14 @@ export default defineConfig({
   },
   server: {
     port: 5174,
+    proxy: devApiProxyTarget
+      ? {
+          "/api": {
+            target: devApiProxyTarget,
+            changeOrigin: true,
+            secure: true,
+          },
+        }
+      : undefined,
   },
 });

@@ -537,6 +537,17 @@
   box-sizing: border-box;
 }
 
+.app-shell--auth-immersive {
+  background: #020612;
+}
+
+.app-shell--auth-immersive .shell-main {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
 @media (max-width: 920px) {
   .topbar {
     top: 0.5rem;

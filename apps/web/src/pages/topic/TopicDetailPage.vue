@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CloseOutlined } from "@ant-design/icons-vue";
+import { ArrowLeftOutlined } from "@ant-design/icons-vue";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { message, Modal } from "ant-design-vue";
 import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
@@ -33,6 +33,11 @@ import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
 const COMIC_READER_TAG = "漫画阅读";
 const TOPIC_SWIPE_TOPIC_LIMIT = 24;
+
+interface ReplyComposerExpose {
+  submitFromParent: () => void;
+  togglePreviewFromParent: () => void;
+}
 
 // Loads the reply composer only after a signed-in user opens the full-page reply surface.
 // Key parameters: none. Return value is the ComposerDrawer component; side effect is deferred editor-shell loading.
@@ -75,6 +80,8 @@ const posts = computed(() => postsQuery.data.value ?? []);
 const replyStatus = ref("");
 const replyResetToken = ref(0);
 const replyComposerOpen = ref(false);
+const replyComposerRef = ref<ReplyComposerExpose | null>(null);
+const replyTargetPost = ref<PostItemVM | null>(null);
 const replyInsertText = ref("");
 const replyInsertToken = ref(0);
 const currentUserId = computed(() => currentUserQuery.data.value?.id ?? null);
@@ -97,6 +104,20 @@ const canReply = computed(() => Boolean(currentUserId.value));
 const shouldRenderReplyComposer = computed(() =>
   topic.value?.status === "open" && canReply.value && replyComposerOpen.value,
 );
+// Summarizes the floor being replied to for the full-screen composer context card.
+// Key parameters: none. Return value: display-ready floor metadata; side effect: none.
+const replyComposerTarget = computed(() => {
+  const target = replyTargetPost.value;
+  if (!target) {
+    return null;
+  }
+
+  return {
+    authorName: target.authorName,
+    excerpt: buildQuoteExcerpt(target),
+    floor: target.floor,
+  };
+});
 const boardSwipeTopicsQuery = useBoardTopics(
   () => topic.value?.boardSlug ?? "",
   "latest",
@@ -179,6 +200,7 @@ function handleReply(rawMd: string) {
         replyResetToken.value += 1;
         replyStatus.value = "回复已发布。";
         replyComposerOpen.value = false;
+        replyTargetPost.value = null;
       },
       onError: (error) => {
         replyStatus.value = contentPolicyMessage(
@@ -282,6 +304,7 @@ function quotePost(post: PostItemVM) {
 
   const excerpt = buildQuoteExcerpt(post);
   const quoteText = `> ${post.authorName} #${post.floor}\n> ${excerpt}\n\n`;
+  replyTargetPost.value = post;
   insertReplyDraft(quoteText);
   openReplyComposer();
   setToolbarStatus(`已引用 ${post.authorName} #${post.floor}`);
@@ -291,6 +314,7 @@ function quotePost(post: PostItemVM) {
 // Key parameter: `post` is the floor that initiated the action. Side effect: reveals the full-page composer.
 function replyToPost(post: PostItemVM) {
   clearReplyInsertRequest();
+  replyTargetPost.value = post;
   openReplyComposer();
   if (canReply.value) {
     setToolbarStatus(`正在回复 ${post.authorName} #${post.floor}`);
@@ -354,6 +378,18 @@ function closeReplyComposer() {
   }
 
   replyComposerOpen.value = false;
+}
+
+// Publishes the mounted reply composer from the full-screen sheet header.
+// Key parameters: none. Return value: none. Side effect: delegates to ComposerDrawer submit validation.
+function publishReplyComposer() {
+  replyComposerRef.value?.submitFromParent();
+}
+
+// Toggles the mounted reply composer preview from the full-screen sheet header.
+// Key parameters: none. Return value: none. Side effect: delegates preview state to ComposerDrawer.
+function previewReplyComposer() {
+  replyComposerRef.value?.togglePreviewFromParent();
 }
 
 // Queues quoted text for ComposerDrawer before or after the editor is mounted.
@@ -466,23 +502,44 @@ function setToolbarStatus(content: string) {
             >
               <section id="reply-composer" class="reply-composer-sheet">
                 <header class="reply-composer-sheet__header">
-                  <div class="reply-composer-sheet__title">
-                    <span>回复</span>
-                    <h2 id="reply-composer-title">{{ topic.title }}</h2>
-                  </div>
                   <button
-                    class="reply-composer-sheet__close"
+                    class="reply-composer-sheet__back"
                     type="button"
                     aria-label="关闭回复编辑器"
                     :disabled="createPost.isPending.value"
                     @click="closeReplyComposer"
                   >
-                    <CloseOutlined aria-hidden="true" />
+                    <ArrowLeftOutlined aria-hidden="true" />
+                  </button>
+                  <div class="reply-composer-sheet__title">
+                    <h2 id="reply-composer-title">回复主题</h2>
+                    <span>{{ topic.title }} ›</span>
+                  </div>
+                  <button class="reply-composer-sheet__preview" type="button" @click="previewReplyComposer">
+                    预览
+                  </button>
+                  <button
+                    class="reply-composer-sheet__publish"
+                    type="button"
+                    :disabled="createPost.isPending.value"
+                    @click="publishReplyComposer"
+                  >
+                    {{ createPost.isPending.value ? "发布中" : "发布" }}
                   </button>
                 </header>
 
                 <div class="reply-composer-sheet__body">
+                  <section v-if="replyComposerTarget" class="reply-composer-target" aria-label="回复目标">
+                    <div class="reply-composer-target__meta">
+                      <span class="reply-composer-target__dot" aria-hidden="true"></span>
+                      <strong>#{{ replyComposerTarget.floor }} 楼层</strong>
+                      <span>回复给 {{ replyComposerTarget.authorName }}</span>
+                    </div>
+                    <p>{{ replyComposerTarget.excerpt }}</p>
+                    <span class="reply-composer-target__quote" aria-hidden="true">“</span>
+                  </section>
                   <ComposerDrawer
+                    ref="replyComposerRef"
                     class="reply-composer-sheet__composer"
                     mode="reply"
                     compact
