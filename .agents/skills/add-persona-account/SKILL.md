@@ -1,6 +1,6 @@
 ---
 name: add-persona-account
-description: "Add or update a ParallelLines persona/alt account. Use when the user asks to add a 马甲账号, 预设账号, persona user, seeded user, bot-like ordinary user, login test account, or account with generated/static avatar, including Alembic user seeding, persona script updates, password hash validation, and avatar asset placement."
+description: "Add or update a ParallelLines persona/alt account. Use when the user asks to add a 马甲账号, 预设账号, persona user, seeded user, bot-like ordinary user, login test account, or account with generated/static avatar, including Alembic user seeding, persona script updates, password hash validation, compressed avatar asset placement, and login smoke-test credentials."
 ---
 
 # Add Persona Account
@@ -29,6 +29,12 @@ Use this workflow to add one durable ordinary persona account to ParallelLines.
    - If the user asks to generate an avatar, use `$imagegen` built-in mode.
    - Inspect the generated result.
    - Copy the selected image into `apps/web/public/avatars/<ascii-slug>.png`; leave the original generated image in place.
+   - Compress the copied avatar before wiring it into the account:
+     ```powershell
+     python -c "from pathlib import Path; from PIL import Image; p=Path('apps/web/public/avatars/<ascii-slug>.png'); im=Image.open(p).convert('RGB'); im.thumbnail((256, 256), Image.Resampling.LANCZOS); im.save(p, format='PNG', optimize=True, compress_level=9); print(p, p.stat().st_size, Image.open(p).size)"
+     ```
+   - Target `256x256` truecolor PNG and under `150KB`; use `320x320` only when the avatar has fine detail that visibly degrades at 256px, and call that out in the final response.
+   - Re-open or inspect the compressed file before committing; do not keep multi-megabyte generated/source images under `apps/web/public/avatars`.
    - Store user `avatar_url` as `/avatars/<ascii-slug>.png`; `resolveApiAssetUrl()` will use this as a same-origin static asset.
    - Do not modify protected logo/favicon assets.
 5. User seed migration:
@@ -57,13 +63,14 @@ Use this workflow to add one durable ordinary persona account to ParallelLines.
    Do not run `pnpm test:api` unless the user explicitly says the local test database is ready.
 8. Final review:
    - Search username/email/avatar path again.
+   - Confirm the final avatar dimensions and byte size are appropriate for small `UiAvatar` display.
    - Check `git status --short` and call out unrelated dirty files.
    - Report login username, email, avatar URL, migration path, persona script path, and validations.
 
 ## Output
 
 - Username/email and whether the account is login-capable.
-- Avatar asset path and `avatar_url`.
+- Avatar asset path, `avatar_url`, dimensions, and byte size.
 - Alembic migration path.
 - Persona script update, if any.
 - Validation results.
