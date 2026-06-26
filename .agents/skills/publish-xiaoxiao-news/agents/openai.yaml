@@ -1,0 +1,4 @@
+interface:
+  display_name: "Publish Xiaoxiao News"
+  short_description: "Post verified news as 小小资讯"
+  default_prompt: "Use $publish-xiaoxiao-news to publish this verified news article as 小小资讯."
