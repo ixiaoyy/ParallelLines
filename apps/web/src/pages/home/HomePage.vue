@@ -24,8 +24,8 @@ import { readRouteParam } from "@/shared/router/params";
 import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 
 // Defers desktop-only rail icons and markup so mobile first paint does not download hidden navigation.
-// Key parameters: none. Return value is the HomeLeftRail component; side effect is lazy chunk loading on desktop.
-const HomeLeftRail = defineAsyncComponent(() => import("@/pages/home/components/HomeLeftRail.vue"));
+// Key parameters: none. Return value is the ForumLeftRail component; side effect is lazy chunk loading on desktop.
+const ForumLeftRail = defineAsyncComponent(() => import("@/features/navigation/components/ForumLeftRail.vue"));
 
 const activeTab = ref<DiscoveryTab["key"]>("latest");
 const heroSearch = ref("");
@@ -279,7 +279,7 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
 <template>
   <div id="top" class="forum-home">
     <div class="home-grid">
-      <HomeLeftRail
+      <ForumLeftRail
         v-if="isDesktopRailVisible"
         :boards="railBoards"
         :tags="topTags"

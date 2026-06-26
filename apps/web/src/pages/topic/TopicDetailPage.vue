@@ -9,6 +9,8 @@ import type { PostItemVM } from "@/entities/post/model";
 import { publicSettingString } from "@/features/admin/model";
 import { usePublicSiteSettings } from "@/features/admin/queries";
 import { useCurrentUser } from "@/features/auth/queries";
+import { useBoards } from "@/features/boards/queries";
+import { useTags } from "@/features/tags/queries";
 import type { PostSort } from "@/features/posts/api";
 import PostItem from "@/features/posts/components/PostItem.vue";
 import { useCreatePost, useTopicPosts } from "@/features/posts/queries";
@@ -25,6 +27,7 @@ import {
 import { hasAccessToken } from "@/shared/api/client";
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { queryKeys } from "@/shared/api/queryKeys";
+import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import { readRouteParam } from "@/shared/router/params";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import { useSeoMeta } from "@/shared/seo/meta";
@@ -46,10 +49,15 @@ const ComposerDrawer = defineAsyncComponent(() => import("@/features/topics/comp
 // Key parameters: none. Return value is the PollPanel component; side effect is deferred poll chunk loading.
 const PollPanel = defineAsyncComponent(() => import("@/features/topics/components/PollPanel.vue"));
 
+// Loads the reusable desktop forum rail only when the topic detail layout can show it.
+// Key parameters: none. Return value is the ForumLeftRail component; side effect is deferred navigation chunk loading.
+const ForumLeftRail = defineAsyncComponent(() => import("@/features/navigation/components/ForumLeftRail.vue"));
+
 
 const route = useRoute();
 const router = useRouter();
 const queryClient = useQueryClient();
+const isDesktopRailVisible = useMediaQuery("(min-width: 981px)", true);
 
 const topicId = computed(() => readRouteParam(route.params.id));
 const postSort = ref<PostSort>("chronological");
@@ -58,7 +66,11 @@ const postsQuery = useTopicPosts(topicId, postSort);
 const createPost = useCreatePost(topicId);
 const currentUserQuery = useCurrentUser();
 const siteSettingsQuery = usePublicSiteSettings();
+const boardsQuery = useBoards(isDesktopRailVisible);
+const tagsQuery = useTags(30, isDesktopRailVisible);
 const topic = computed(() => topicQuery.data.value);
+const railBoards = computed(() => boardsQuery.data.value ?? []);
+const railTags = computed(() => tagsQuery.data.value?.slice(0, 10) ?? []);
 const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
 );
@@ -420,25 +432,68 @@ function setToolbarStatus(content: string) {
     </UiEmptyState>
 
     <template v-else-if="topic">
-      <TopicDetailHero :topic="topic" />
-
       <div class="topic-layout">
-        <main class="post-stream" aria-label="主题正文与回复">
-          <UiCard v-if="postsQuery.isLoading.value" class="topic-state" role="status">
-            正在加载正文…
-          </UiCard>
+        <ForumLeftRail
+          v-if="isDesktopRailVisible"
+          class="topic-layout__rail"
+          :boards="railBoards"
+          :tags="railTags"
+          :boards-loading="boardsQuery.isLoading.value"
+          :boards-error="boardsQuery.isError.value"
+          :tags-loading="tagsQuery.isLoading.value"
+          :tags-error="tagsQuery.isError.value"
+        />
 
-          <UiCard v-else-if="postsQuery.isError.value" class="topic-state topic-state--error" role="alert">
-            楼层暂时加载失败，请稍后刷新。
-          </UiCard>
+        <div class="topic-content">
+          <TopicDetailHero :topic="topic" />
 
-          <template v-else>
-            <div v-if="firstPost" :id="`post-${firstPost.floor}`" class="post-anchor topic-original">
-              <PostItem
-                :post="firstPost"
-                variant="article"
-                :comic-reader="comicReader"
-                hide-header
+          <main class="post-stream" aria-label="主题正文与回复">
+            <UiCard v-if="postsQuery.isLoading.value" class="topic-state" role="status">
+              正在加载正文…
+            </UiCard>
+
+            <UiCard v-else-if="postsQuery.isError.value" class="topic-state topic-state--error" role="alert">
+              楼层暂时加载失败，请稍后刷新。
+            </UiCard>
+
+            <template v-else>
+              <div v-if="firstPost" :id="`post-${firstPost.floor}`" class="post-anchor topic-original">
+                <PostItem
+                  :post="firstPost"
+                  variant="article"
+                  :comic-reader="comicReader"
+                  hide-header
+                  :current-user-id="currentUserId"
+                  :current-user-role="currentUserRole"
+                  :can-manage-solution="canManageSolution"
+                  :solution-pending="solutionMutation.isPending.value"
+                  @quote="quotePost"
+                  @reply="replyToPost"
+                  @require-login="requireLogin"
+                  @toggle-solution="togglePostSolution"
+                  @block-author="blockPostAuthor"
+                />
+              </div>
+              <TopicSwipeNavigator
+                :previous-topic="previousSwipeTopic"
+                :next-topic="nextSwipeTopic"
+                :loading="boardSwipeTopicsQuery.isFetching.value"
+                @navigate="navigateSwipeTopic"
+              />
+
+              <UiCard v-if="hiddenRelationshipPostCount > 0" class="topic-state topic-state--muted" role="status">
+                已隐藏 {{ hiddenRelationshipPostCount }} 条来自已屏蔽用户的楼层。
+              </UiCard>
+
+              <PollPanel
+                v-if="topic.poll"
+                :poll="topic.poll"
+                :pending="pollVoteMutation.isPending.value"
+                @vote="votePoll"
+              />
+
+              <TopicRepliesPanel
+                :replies="replyPosts"
                 :current-user-id="currentUserId"
                 :current-user-role="currentUserRole"
                 :can-manage-solution="canManageSolution"
@@ -449,110 +504,80 @@ function setToolbarStatus(content: string) {
                 @toggle-solution="togglePostSolution"
                 @block-author="blockPostAuthor"
               />
-            </div>
-            <TopicSwipeNavigator
-              :previous-topic="previousSwipeTopic"
-              :next-topic="nextSwipeTopic"
-              :loading="boardSwipeTopicsQuery.isFetching.value"
-              @navigate="navigateSwipeTopic"
-            />
+            </template>
 
-            <UiCard v-if="hiddenRelationshipPostCount > 0" class="topic-state topic-state--muted" role="status">
-              已隐藏 {{ hiddenRelationshipPostCount }} 条来自已屏蔽用户的楼层。
-            </UiCard>
-
-            <PollPanel
-              v-if="topic.poll"
-              :poll="topic.poll"
-              :pending="pollVoteMutation.isPending.value"
-              @vote="votePoll"
-            />
-
-            <TopicRepliesPanel
-              :replies="replyPosts"
-              :current-user-id="currentUserId"
-              :current-user-role="currentUserRole"
-              :can-manage-solution="canManageSolution"
-              :solution-pending="solutionMutation.isPending.value"
-              @quote="quotePost"
-              @reply="replyToPost"
-              @require-login="requireLogin"
-              @toggle-solution="togglePostSolution"
-              @block-author="blockPostAuthor"
-            />
-          </template>
-
-          <Teleport v-if="topic.status === 'open'" to="body">
-            <div
-              v-if="shouldRenderReplyComposer"
-              class="reply-composer-overlay"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="reply-composer-title"
-              tabindex="-1"
-              @click.self="closeReplyComposer"
-              @keydown.esc="closeReplyComposer"
-            >
-              <section id="reply-composer" class="reply-composer-sheet">
-                <header class="reply-composer-sheet__header">
-                  <button
-                    class="reply-composer-sheet__back"
-                    type="button"
-                    aria-label="关闭回复编辑器"
-                    :disabled="createPost.isPending.value"
-                    @click="closeReplyComposer"
-                  >
-                    <ArrowLeftOutlined aria-hidden="true" />
-                  </button>
-                  <div class="reply-composer-sheet__title">
-                    <h2 id="reply-composer-title">回复主题</h2>
-                    <span>{{ topic.title }} ›</span>
-                  </div>
-                  <button
-                    class="reply-composer-sheet__publish"
-                    type="button"
-                    :disabled="createPost.isPending.value"
-                    @click="publishReplyComposer"
-                  >
-                    {{ createPost.isPending.value ? "发布中" : "发布" }}
-                  </button>
-                </header>
-
-                <div class="reply-composer-sheet__body">
-                  <section v-if="replyComposerTarget" class="reply-composer-target" aria-label="回复目标">
-                    <div class="reply-composer-target__meta">
-                      <span class="reply-composer-target__dot" aria-hidden="true"></span>
-                      <strong>#{{ replyComposerTarget.floor }} 楼层</strong>
-                      <span>回复给 {{ replyComposerTarget.authorName }}</span>
+            <Teleport v-if="topic.status === 'open'" to="body">
+              <div
+                v-if="shouldRenderReplyComposer"
+                class="reply-composer-overlay"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="reply-composer-title"
+                tabindex="-1"
+                @click.self="closeReplyComposer"
+                @keydown.esc="closeReplyComposer"
+              >
+                <section id="reply-composer" class="reply-composer-sheet">
+                  <header class="reply-composer-sheet__header">
+                    <button
+                      class="reply-composer-sheet__back"
+                      type="button"
+                      aria-label="关闭回复编辑器"
+                      :disabled="createPost.isPending.value"
+                      @click="closeReplyComposer"
+                    >
+                      <ArrowLeftOutlined aria-hidden="true" />
+                    </button>
+                    <div class="reply-composer-sheet__title">
+                      <h2 id="reply-composer-title">回复主题</h2>
+                      <span>{{ topic.title }} ›</span>
                     </div>
-                    <p>{{ replyComposerTarget.excerpt }}</p>
-                    <span class="reply-composer-target__quote" aria-hidden="true">“</span>
-                  </section>
-                  <ComposerDrawer
-                    ref="replyComposerRef"
-                    class="reply-composer-sheet__composer"
-                    mode="reply"
-                    compact
-                    :topic-title="topic.title"
-                    :board-name="topic.boardName"
-                    :submitting="createPost.isPending.value"
-                    :reset-token="replyResetToken"
-                    :draft-storage-key="`parallellines:reply-draft:${topic.id}`"
-                    :insert-text="replyInsertText"
-                    :insert-token="replyInsertToken"
-                    @submit="handleReply"
-                  />
-                  <p v-if="replyStatus" class="reply-composer-sheet__status" role="status">{{ replyStatus }}</p>
-                </div>
-              </section>
-            </div>
-          </Teleport>
-          <UiCard v-else class="topic-state" role="status">
-            主题当前为已关闭状态，暂不接受新回复。
-          </UiCard>
-          <p v-if="replyStatus" class="reply-status" role="status">{{ replyStatus }}</p>
-          <span id="topic-end" class="topic-end-anchor" aria-hidden="true" />
-        </main>
+                    <button
+                      class="reply-composer-sheet__publish"
+                      type="button"
+                      :disabled="createPost.isPending.value"
+                      @click="publishReplyComposer"
+                    >
+                      {{ createPost.isPending.value ? "发布中" : "发布" }}
+                    </button>
+                  </header>
+
+                  <div class="reply-composer-sheet__body">
+                    <section v-if="replyComposerTarget" class="reply-composer-target" aria-label="回复目标">
+                      <div class="reply-composer-target__meta">
+                        <span class="reply-composer-target__dot" aria-hidden="true"></span>
+                        <strong>#{{ replyComposerTarget.floor }} 楼层</strong>
+                        <span>回复给 {{ replyComposerTarget.authorName }}</span>
+                      </div>
+                      <p>{{ replyComposerTarget.excerpt }}</p>
+                      <span class="reply-composer-target__quote" aria-hidden="true">“</span>
+                    </section>
+                    <ComposerDrawer
+                      ref="replyComposerRef"
+                      class="reply-composer-sheet__composer"
+                      mode="reply"
+                      compact
+                      :topic-title="topic.title"
+                      :board-name="topic.boardName"
+                      :submitting="createPost.isPending.value"
+                      :reset-token="replyResetToken"
+                      :draft-storage-key="`parallellines:reply-draft:${topic.id}`"
+                      :insert-text="replyInsertText"
+                      :insert-token="replyInsertToken"
+                      @submit="handleReply"
+                    />
+                    <p v-if="replyStatus" class="reply-composer-sheet__status" role="status">{{ replyStatus }}</p>
+                  </div>
+                </section>
+              </div>
+            </Teleport>
+            <UiCard v-else class="topic-state" role="status">
+              主题当前为已关闭状态，暂不接受新回复。
+            </UiCard>
+            <p v-if="replyStatus" class="reply-status" role="status">{{ replyStatus }}</p>
+            <span id="topic-end" class="topic-end-anchor" aria-hidden="true" />
+          </main>
+        </div>
       </div>
 
     </template>

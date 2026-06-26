@@ -123,26 +123,34 @@ const featuredTags = computed(() => {
   });
 });
 
+// Picks the decorative icon used by one featured tag.
+// Key parameter: `tagName` is the display name from the taxonomy API. Return value: a Vue icon component; side effect: none.
 function tagIcon(tagName: string): Component {
   return tagIcons[tagName] ?? TagsOutlined;
 }
 
+// Picks the decorative icon used by one public board shortcut.
+// Key parameter: `board` provides the board slug. Return value: a Vue icon component; side effect: none.
 function boardIcon(board: BoardSummary): Component {
   return boardIcons[board.slug] ?? TagsOutlined;
 }
 
+// Builds the accessible label for a board shortcut.
+// Key parameter: `board` is the summary shown in the rail. Return value: spoken label text; side effect: none.
 function boardAccessibleLabel(board: BoardSummary): string {
   const description = board.description ? `，${board.description}` : "";
   return `${board.name}${description}，${compactNumber(board.topicCount)} 个主题`;
 }
 
+// Exposes a tag accent CSS variable for the rail tag pill.
+// Key parameter: `tagName` is the display name from the taxonomy API. Return value: inline CSS variables; side effect: none.
 function tagAccentStyle(tagName: string): Record<string, string> {
   return { "--tag-accent": tagAccentColors[tagName] ?? "var(--primary)" };
 }
 </script>
 
 <template>
-  <aside class="home-left-rail" aria-label="论坛导航">
+  <aside class="forum-left-rail" aria-label="论坛导航">
     <RouterLink class="rail-action" :to="{ name: 'new-topic' }">新建主题</RouterLink>
 
     <section class="rail-section" aria-labelledby="rail-boards-title">
@@ -198,4 +206,4 @@ function tagAccentStyle(tagName: string): Record<string, string> {
   </aside>
 </template>
 
-<style scoped lang="scss" src="./HomeLeftRail.scss"></style>
+<style scoped lang="scss" src="./ForumLeftRail.scss"></style>
