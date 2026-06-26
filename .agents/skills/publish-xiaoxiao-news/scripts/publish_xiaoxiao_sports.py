@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from publish_xiaoxiao_news import main as publish_main
+
+SPORTS_DEFAULT_ARGS = [
+    "--author-username",
+    "小小鸡仔",
+    "--ensure-author",
+    "--author-email",
+    "xiaoxiao-jizai@pingxingxian.space",
+    "--author-display-name",
+    "小小鸡仔",
+    "--author-avatar-file",
+    "apps/web/public/avatars/xiaoxiao-jizai.png",
+    "--board-slug",
+    "sports",
+    "--board-name",
+    "体坛快讯",
+    "--board-description",
+    "聚合赛事新闻、球员动态、赛后热点与转会消息。",
+    "--board-color",
+    "#16A34A",
+    "--tags",
+    "乒乓球,体坛快讯",
+    "--source-prefix",
+    "manual-xiaoxiao-sports",
+]
+
+
+# Run the Xiaoxiao Chick sports publisher with caller-provided overrides last.
+# Key parameter `argv` is optional CLI argv. Return value: publisher exit code. Side effect: preview/publish API calls.
+def main(argv: list[str] | None = None) -> int:
+    return publish_main([*SPORTS_DEFAULT_ARGS, *(argv if argv is not None else sys.argv[1:])])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

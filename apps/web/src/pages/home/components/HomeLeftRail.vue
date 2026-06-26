@@ -44,6 +44,7 @@ const boardIcons: Record<string, Component> = {
   reading: ReadOutlined,
   comics: ReadOutlined,
   health: HeartOutlined,
+  sports: TrophyOutlined,
   news: BulbOutlined,
   experience: TrophyOutlined,
   qna: QuestionCircleOutlined,

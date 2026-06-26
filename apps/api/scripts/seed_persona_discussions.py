@@ -83,6 +83,7 @@ PERSONAS: tuple[PersonaSpec, ...] = (
         "xiaomanjia@parallellines.cn",
         "每天翻几页漫画，看到好玩的分镜就想分享。",
     ),
+    PersonaSpec("小小鸡仔", "xiaoxiao-jizai@pingxingxian.space", "小小鸡仔，偶尔啄两句。"),
 )
 
 LEGACY_PERSONA_RENAMES: tuple[tuple[str, str], ...] = (

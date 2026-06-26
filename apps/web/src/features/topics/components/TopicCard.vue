@@ -3,6 +3,7 @@ import { CheckCircleOutlined, LockOutlined } from "@ant-design/icons-vue";
 import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
+import { resolveApiAssetUrl } from "@/shared/api/client";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import { boardToneClass, tagToneClass } from "@/shared/theme/boardPalette";
@@ -81,7 +82,7 @@ const answerState = computed(() => {
 
       <div class="participant-strip" aria-label="发起人">
         <UiAvatar
-          :src="topic.authorAvatarUrl"
+          :src="resolveApiAssetUrl(topic.authorAvatarUrl)"
           :name="topic.authorName"
           :role="topic.authorRole"
           :level="topic.authorLevel"

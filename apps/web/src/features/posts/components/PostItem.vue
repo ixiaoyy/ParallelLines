@@ -930,7 +930,7 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
       <header v-if="!hideHeader" class="post-header">
         <div class="post-author-line">
           <UiAvatar
-            :src="post.authorAvatarUrl"
+            :src="resolveApiAssetUrl(post.authorAvatarUrl)"
             :name="post.authorName"
             :role="post.authorRole"
             :level="post.authorLevel"

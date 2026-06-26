@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TopicCardVM } from "@/entities/topic/model";
+import { resolveApiAssetUrl } from "@/shared/api/client";
 import { boardToneClass, tagToneClass } from "@/shared/theme/boardPalette";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
@@ -20,7 +21,7 @@ defineProps<{ topic: TopicCardVM }>();
     <div class="topic-main">
       <div class="author-avatar-wrapper" aria-hidden="true">
         <UiAvatar
-          :src="topic.authorAvatarUrl"
+          :src="resolveApiAssetUrl(topic.authorAvatarUrl)"
           :name="topic.authorName"
           :role="topic.authorRole"
           :level="topic.authorLevel"

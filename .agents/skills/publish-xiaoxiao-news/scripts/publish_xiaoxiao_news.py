@@ -2,17 +2,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import mimetypes
 import os
 import re
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 import jwt
+
+API_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/126.0 Safari/537.36"
+)
 
 
 # Resolve the ParallelLines repository root from this skill script location.
@@ -45,7 +53,7 @@ def request_json(
     timeout: int = 30,
 ) -> dict[str, Any]:
     body = None
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json", "User-Agent": API_USER_AGENT}
     if payload is not None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers["Content-Type"] = "application/json; charset=utf-8"
@@ -61,11 +69,60 @@ def request_json(
     return json.loads(response_body or "{}")
 
 
+# Upload one multipart file and parse the JSON API response.
+# Key parameters are URL, bearer token, form field name, and file path. Side effect: network I/O.
+def request_multipart_file_json(
+    url: str,
+    *,
+    token: str,
+    field_name: str,
+    file_path: Path,
+    timeout: int = 60,
+) -> dict[str, Any]:
+    boundary = f"----ParallelLines{uuid4().hex}"
+    media_type = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
+    file_content = file_path.read_bytes()
+    body = b"".join(
+        [
+            f"--{boundary}\r\n".encode("ascii"),
+            (
+                f'Content-Disposition: form-data; name="{field_name}"; '
+                f'filename="{file_path.name}"\r\n'
+            ).encode("utf-8"),
+            f"Content-Type: {media_type}\r\n\r\n".encode("ascii"),
+            file_content,
+            b"\r\n",
+            f"--{boundary}--\r\n".encode("ascii"),
+        ]
+    )
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {token}",
+        "Content-Type": f"multipart/form-data; boundary={boundary}",
+        "Content-Length": str(len(body)),
+        "User-Agent": API_USER_AGENT,
+    }
+    request = Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urlopen(request, timeout=timeout) as response:  # noqa: S310 - configured project API.
+            response_body = response.read().decode("utf-8")
+    except HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {exc.code} from {url}: {error_body[:800]}") from exc
+    return json.loads(response_body or "{}")
+
+
+# Look up a public user profile and return its id after optional role validation.
+# Key parameters are public base URL and username. Return value: profile data. Side effect: network I/O.
+def public_user_profile(base_url: str, username: str) -> dict[str, Any]:
+    profile = request_json("GET", f"{base_url}/api/v1/users/{quote(username)}")
+    return dict(profile.get("data") or {})
+
+
 # Look up a public user profile and return its id after optional role validation.
 # Key parameters are public base URL, username, and expected role. Side effect: network I/O.
 def public_user_id(base_url: str, username: str, *, expected_role: str | None = None) -> str:
-    profile = request_json("GET", f"{base_url}/api/v1/users/{quote(username)}")
-    data = dict(profile.get("data") or {})
+    data = public_user_profile(base_url, username)
     if expected_role and data.get("role") != expected_role:
         raise RuntimeError(f"{username} role is {data.get('role')!r}, expected {expected_role!r}")
     user_id = str(data.get("id") or "")
@@ -74,8 +131,8 @@ def public_user_id(base_url: str, username: str, *, expected_role: str | None = 
     return user_id
 
 
-# Build a short-lived admin access token from the local API JWT settings.
-# Key parameters are admin user id and env values. Return value: JWT string. Side effect: none.
+# Build a short-lived access token from the local API JWT settings.
+# Key parameters are user id and env values. Return value: JWT string. Side effect: none.
 def make_admin_token(admin_id: str, env_values: dict[str, str]) -> str:
     secret = env_values.get("JWT_SECRET_KEY")
     if not secret:
@@ -111,13 +168,44 @@ def fallback_slug(title: str) -> str:
     return "manual-news-" + datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
 
 
+# Build optional user records for persona accounts that may not exist yet.
+# Key parameter `args` is the parsed CLI namespace. Return value: migration user rows. Side effect: none.
+def author_user_records(args: argparse.Namespace) -> list[dict[str, str]]:
+    if not args.ensure_author:
+        return []
+    email = args.author_email.strip()
+    if not email:
+        raise RuntimeError("--author-email is required when --ensure-author is set")
+    display_name = args.author_display_name.strip() or args.author_username.strip()
+    return [
+        {
+            "username": args.author_username.strip(),
+            "email": email,
+            "display_name": display_name,
+        }
+    ]
+
+
+# Resolve and validate the optional author avatar file.
+# Key parameter `args` is the parsed CLI namespace. Return value: file path or None. Side effect: none.
+def author_avatar_path(args: argparse.Namespace) -> Path | None:
+    if not args.author_avatar_file:
+        return None
+    avatar_path = Path(args.author_avatar_file)
+    if not avatar_path.is_absolute():
+        avatar_path = project_root() / avatar_path
+    if not avatar_path.is_file():
+        raise RuntimeError(f"Author avatar file does not exist: {avatar_path}")
+    return avatar_path
+
+
 # Build the migration import payload accepted by ParallelLines admin APIs.
 # Key parameters are CLI args and Markdown body. Return value: request payload. Side effect: none.
 def build_payload(args: argparse.Namespace, body: str, *, source: str) -> dict[str, Any]:
     slug = args.slug.strip() if args.slug else fallback_slug(args.title)
     return {
         "source": source,
-        "users": [],
+        "users": author_user_records(args),
         "boards": [
             {
                 "slug": args.board_slug,
@@ -173,11 +261,48 @@ def verify_public_topic(base_url: str, title: str) -> None:
         )
 
 
+# Upload an optional author avatar after the topic has been published.
+# Key parameters are base URL, CLI args, and env values. Return value: none. Side effect: API upload.
+def upload_author_avatar_if_requested(
+    base_url: str,
+    args: argparse.Namespace,
+    env_values: dict[str, str],
+) -> None:
+    avatar_path = author_avatar_path(args)
+    if avatar_path is None:
+        return
+    profile = public_user_profile(base_url, args.author_username)
+    existing_avatar_url = str(profile.get("avatar_url") or "")
+    if existing_avatar_url and not args.force_author_avatar:
+        print(f"Avatar: {profile.get('username')} {existing_avatar_url} (skipped)")
+        return
+    author_id = str(profile.get("id") or "")
+    if not author_id:
+        raise RuntimeError(f"Could not resolve user id for {args.author_username}")
+    author_token = make_admin_token(author_id, env_values)
+    try:
+        response = request_multipart_file_json(
+            f"{base_url}/api/v1/uploads/avatar",
+            token=author_token,
+            field_name="file",
+            file_path=avatar_path,
+        )
+        data = dict(response.get("data") or {})
+        print(f"Avatar: {data.get('username')} {data.get('avatar_url')}")
+    except RuntimeError:
+        refreshed = public_user_profile(base_url, args.author_username)
+        refreshed_avatar_url = str(refreshed.get("avatar_url") or "")
+        if refreshed_avatar_url and refreshed_avatar_url != existing_avatar_url:
+            print(f"Avatar: {refreshed.get('username')} {refreshed_avatar_url} (verified after response error)")
+            return
+        raise
+
+
 # Parse CLI arguments for one preview or publish operation.
 # Key parameter `argv` is optional CLI argv. Return value: parsed args. Side effect: may print help.
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Preview or publish a ParallelLines frontier news post as Xiaoxiao.",
+        description="Preview or publish a ParallelLines topic through the admin migration API.",
     )
     parser.add_argument("--title", required=True, help="Post title.")
     parser.add_argument("--body-file", required=True, help="Markdown body file path, or '-' for stdin.")
@@ -188,6 +313,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--env-file", default=str(project_root() / "apps/api/.env"), help="API .env path.")
     parser.add_argument("--admin-username", default="多动脑子z", help="Admin username for signing token.")
     parser.add_argument("--author-username", default="小小资讯", help="Topic author username.")
+    parser.add_argument(
+        "--ensure-author",
+        action="store_true",
+        help="Create the author as a normal user through migration import when missing.",
+    )
+    parser.add_argument("--author-email", default="", help="Author email used with --ensure-author.")
+    parser.add_argument(
+        "--author-display-name",
+        default="",
+        help="Author display name used with --ensure-author; defaults to username.",
+    )
+    parser.add_argument(
+        "--author-avatar-file",
+        default="apps/web/public/avatars/xiaoxiao-zixun.png",
+        help="Optional avatar image to upload for the author after a successful --run publish.",
+    )
+    parser.add_argument(
+        "--force-author-avatar",
+        action="store_true",
+        help="Upload the author avatar even when the public profile already has one.",
+    )
     parser.add_argument("--board-slug", default="frontier", help="Target board slug.")
     parser.add_argument("--board-name", default="热点资讯", help="Target board display name.")
     parser.add_argument(
@@ -197,6 +343,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--board-color", default="#6366F1", help="Board color used by migration payload.")
     parser.add_argument("--external-id", default="", help="Optional stable migration external id.")
+    parser.add_argument(
+        "--source-prefix",
+        default="manual-xiaoxiao-news",
+        help="Migration source prefix; '-preview' is appended for dry-run preview.",
+    )
     return parser.parse_args(argv)
 
 
@@ -208,13 +359,16 @@ def main(argv: list[str] | None = None) -> int:
     body = sys.stdin.read() if args.body_file == "-" else body_path.read_text(encoding="utf-8")
     if not body.strip():
         raise RuntimeError("Body is empty")
+    if args.run:
+        author_avatar_path(args)
 
     env_values = load_env(Path(args.env_file))
     base_url = args.base_url.rstrip("/")
     admin_id = public_user_id(base_url, args.admin_username, expected_role="admin")
     token = make_admin_token(admin_id, env_values)
 
-    preview_payload = build_payload(args, body, source="manual-xiaoxiao-news-preview")
+    source_prefix = args.source_prefix.strip() or "manual-xiaoxiao-news"
+    preview_payload = build_payload(args, body, source=f"{source_prefix}-preview")
     preview = request_json(
         "POST",
         f"{base_url}/api/v1/admin/migrations/import/preview",
@@ -231,7 +385,7 @@ def main(argv: list[str] | None = None) -> int:
     if not any(row.get("resource") == "topic" and row.get("action") == "created" for row in preview_data.get("rows") or []):
         raise RuntimeError("Preview did not create a topic; refusing to run")
 
-    run_payload = build_payload(args, body, source="manual-xiaoxiao-news")
+    run_payload = build_payload(args, body, source=source_prefix)
     result = request_json(
         "POST",
         f"{base_url}/api/v1/admin/migrations/import/run",
@@ -239,6 +393,7 @@ def main(argv: list[str] | None = None) -> int:
         payload=run_payload,
     )
     print_import_result("Run", result)
+    upload_author_avatar_if_requested(base_url, args, env_values)
     verify_public_topic(base_url, args.title.strip())
     return 0
 

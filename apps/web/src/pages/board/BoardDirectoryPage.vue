@@ -41,7 +41,7 @@ const boardsQuery = useBoards();
 const tagsQuery = useTags(60);
 
 const RECOMMENDED_BOARD_LIMIT = 4;
-const featuredBoardSlugs = ["qna", "resources", "frontier", "news", "experience", "dev"];
+const featuredBoardSlugs = ["qna", "resources", "frontier", "sports", "news", "experience", "dev"];
 const featuredTagNames = [
   "AI 科技",
   "社会热点",
@@ -69,6 +69,7 @@ const boardIcons: Record<string, Component> = {
   reading: ReadOutlined,
   comics: ReadOutlined,
   health: HeartOutlined,
+  sports: TrophyOutlined,
   news: BulbOutlined,
   frontier: BulbOutlined,
   experience: TrophyOutlined,
@@ -236,6 +237,7 @@ function boardPurpose(board: BoardSummary) {
     support: "快速提问与问题排查",
     resources: "工具、资料与学习路径",
     frontier: "AI 科技与社会热点",
+    sports: "赛事新闻与体坛动态",
     news: "AI 科技与社会热点",
     experience: "实践复盘、踩坑记录",
     dev: "接口设计与架构方案",

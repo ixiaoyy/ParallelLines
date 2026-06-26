@@ -3,6 +3,7 @@ import { computed } from "vue";
 
 import type { PostItemVM } from "@/entities/post/model";
 import type { TopicCardVM } from "@/entities/topic/model";
+import { resolveApiAssetUrl } from "@/shared/api/client";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
 import { tagToneClass } from "@/shared/theme/boardPalette";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
@@ -101,7 +102,7 @@ function toPlainText(value: string) {
         <UiAvatar
           v-for="poster in topic.posterNames"
           :key="poster"
-          :src="poster === topic.authorName ? topic.authorAvatarUrl : null"
+          :src="poster === topic.authorName ? resolveApiAssetUrl(topic.authorAvatarUrl) : null"
           :name="poster"
           :role="poster === topic.authorName ? topic.authorRole : undefined"
           :level="poster === topic.authorName ? topic.authorLevel : undefined"

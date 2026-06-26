@@ -31,7 +31,7 @@ export const BOARD_PALETTE: BoardToneDefinition[] = [
   },
   {
     tone: 2,
-    slugs: ["health", "qna", "questions", "support"],
+    slugs: ["health", "sports", "qna", "questions", "support"],
     accent: "#65a30d",
     accentRgb: "132, 204, 22",
     tintBg: "color-mix(in srgb, #f7fee7 82%, #ffffff)",

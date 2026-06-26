@@ -1,11 +1,14 @@
 ---
 name: publish-xiaoxiao-news
-description: "Publish a verified news post to ParallelLines 热点资讯 using the 小小资讯 account. Use when the user asks to use 小小资讯, 小小资讯账号, or xiaoxiao to post/publish a news article, especially after asking Codex to search, summarize, and publish AI/tech news."
+description: "Publish a verified news/sports post to ParallelLines using prepared persona channels: 小小资讯 -> 热点资讯, or 小小鸡仔 -> 体坛快讯. Use when the user asks to use 小小资讯, 小小鸡仔, xiaoxiao, 热点资讯, or 体坛快讯 to post/publish sourced news."
 ---
 
 # Publish Xiaoxiao News
 
-Use this project-local workflow to publish one news post as `小小资讯` to the public `frontier` board (`热点资讯`) on `https://www.pingxingxian.space`.
+Use this project-local workflow to publish one sourced post to `https://www.pingxingxian.space` through a prepared persona channel:
+
+- `小小资讯` -> `frontier` / `热点资讯`
+- `小小鸡仔` -> `sports` / `体坛快讯`
 
 ## Workflow
 
@@ -16,9 +19,12 @@ Use this project-local workflow to publish one news post as `小小资讯` to th
 2. Prepare:
    - `title`: 4-180 chars.
    - `body`: Markdown, under 20,000 chars.
-   - `tags`: usually `动态,大模型,前沿资讯` plus specific tags.
+   - `tags`: comma-separated. For news, usually `动态,大模型,前沿资讯` plus specifics. For sports, usually `乒乓球,体坛快讯` plus specifics.
    - `slug`: short ASCII slug, for example `ai-model-release-news`.
-3. Preview with the helper script. Preview is required before publishing:
+3. Choose the channel script.
+4. Preview with the helper script. Preview is required before publishing:
+
+   `小小资讯` -> `热点资讯`:
    ```powershell
    python .agents/skills/publish-xiaoxiao-news/scripts/publish_xiaoxiao_news.py `
      --title "<title>" `
@@ -26,7 +32,18 @@ Use this project-local workflow to publish one news post as `小小资讯` to th
      --tags "动态,大模型,前沿资讯,openai" `
      --body-file path/to/body.md
    ```
-4. Publish only after preview returns `errors=0` and the topic row says `created`:
+
+   `小小鸡仔` -> `体坛快讯`:
+   ```powershell
+   python .agents/skills/publish-xiaoxiao-news/scripts/publish_xiaoxiao_sports.py `
+     --title "<title>" `
+     --slug "<ascii-slug>" `
+     --tags "乒乓球,体坛快讯,WTT" `
+     --body-file path/to/body.md
+   ```
+5. Publish only after preview returns `errors=0` and the topic row says `created`:
+
+   `小小资讯` -> `热点资讯`:
    ```powershell
    python .agents/skills/publish-xiaoxiao-news/scripts/publish_xiaoxiao_news.py `
      --title "<title>" `
@@ -35,14 +52,28 @@ Use this project-local workflow to publish one news post as `小小资讯` to th
      --body-file path/to/body.md `
      --run
    ```
-5. Verify after publish:
+
+   `小小鸡仔` -> `体坛快讯`:
+   ```powershell
+   python .agents/skills/publish-xiaoxiao-news/scripts/publish_xiaoxiao_sports.py `
+     --title "<title>" `
+     --slug "<ascii-slug>" `
+     --tags "乒乓球,体坛快讯,WTT" `
+     --body-file path/to/body.md `
+     --run
+   ```
+6. Verify after publish:
    - Confirm the script prints a public topic match.
-   - If needed, check `/api/v1/boards/frontier/topics?sort=latest&limit=5`.
+   - If needed, check `/api/v1/boards/<board-slug>/topics?sort=latest&limit=5`.
    - Report the public URL to the user.
 
 ## Notes
 
 - The normal public create-topic API has returned 500 for `小小资讯` because that account currently has a `.local` email that breaks some `UserPublic.email` serialization paths.
 - The helper script uses the admin migration import API, which was preview-tested for this workflow. It creates the topic, first post, tags, counts, and search index.
+- `publish_xiaoxiao_news.py` defaults the `小小资讯` avatar to `apps/web/public/avatars/xiaoxiao-zixun.png`. On `--run`, it skips upload when the profile already has an avatar unless `--force-author-avatar` is passed.
+- `publish_xiaoxiao_sports.py` wraps the shared publisher with defaults for `小小鸡仔`, `sports`, and `apps/web/public/avatars/xiaoxiao-jizai.png`. On `--run`, it uploads the avatar after a successful publish.
+- Avatar upload for legacy accounts may return HTTP 500 after the database write if the response serializer hits old profile data. The helper re-checks the public profile and treats a changed `avatar_url` as success.
+- The shared publisher sends a browser-like `User-Agent` because production Cloudflare blocks Python's default urllib signature.
 - The script loads `apps/api/.env` only to sign a short-lived admin JWT. Never print or disclose `JWT_SECRET_KEY`, generated tokens, or publisher passwords.
 - Do not publish to legacy, SSH-only, or non-public environments; verify against `https://www.pingxingxian.space`.
