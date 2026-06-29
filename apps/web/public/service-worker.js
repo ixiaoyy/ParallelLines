@@ -1,4 +1,4 @@
-const CACHE_NAME = "parallellines-pwa-v2";
+const CACHE_NAME = "parallellines-pwa-v3";
 const OFFLINE_URL = "/offline.html";
 const APP_SHELL = [OFFLINE_URL, "/manifest.webmanifest", "/favicon.svg"];
 

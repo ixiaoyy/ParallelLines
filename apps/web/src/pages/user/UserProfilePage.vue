@@ -629,57 +629,62 @@ function socialErrorMessage(error: unknown): string {
       </div>
       <template v-else-if="profile">
         <div class="profile-hero__main">
-          <div class="profile-avatar-panel">
-            <div class="profile-avatar-frame">
-              <UiAvatar
-                :name="profile.username"
-                :src="resolveApiAssetUrl(profile.avatar_url)"
-                :role="profile.role"
-                :level="profile.level"
-                size="lg"
-              />
-              <span class="profile-avatar-status" aria-hidden="true"></span>
-              <input
-                v-if="isOwnProfile"
-                ref="avatarInput"
-                class="avatar-upload__input"
-                type="file"
-                accept="image/png,image/jpeg,image/gif,image/webp"
-                @change="handleAvatarChange"
-              />
+          <div class="profile-identity-card">
+            <div class="profile-avatar-panel">
+              <div class="profile-avatar-frame">
+                <UiAvatar
+                  :name="profile.username"
+                  :src="resolveApiAssetUrl(profile.avatar_url)"
+                  :role="null"
+                  :level="null"
+                  size="lg"
+                />
+                <span class="profile-avatar-status" aria-hidden="true"></span>
+                <input
+                  v-if="isOwnProfile"
+                  ref="avatarInput"
+                  class="avatar-upload__input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  @change="handleAvatarChange"
+                />
+              </div>
+              <div v-if="isOwnProfile" class="avatar-upload">
+                <UiButton type="button" tone="ghost" @click="openAvatarPicker">
+                  {{ avatarMutation.isPending.value ? "上传中…" : "更换头像" }}
+                </UiButton>
+                <span v-if="avatarStatus" role="status">{{ avatarStatus }}</span>
+              </div>
             </div>
-            <div v-if="isOwnProfile" class="avatar-upload">
-              <UiButton type="button" tone="ghost" @click="openAvatarPicker">
-                {{ avatarMutation.isPending.value ? "上传中…" : "更换头像" }}
-              </UiButton>
-              <span v-if="avatarStatus" role="status">{{ avatarStatus }}</span>
-            </div>
-          </div>
 
-          <div class="profile-copy">
-            <div class="profile-kicker">
-              <UiBadge tone="blue">{{ isAccountRoute ? "个人中心" : "公开资料" }}</UiBadge>
-              <UiBadge tone="green">{{ roleLabel(profile.role) }}</UiBadge>
-              <UiBadge tone="blue" :title="`社区等级 ${profile.level}，由参与和贡献累计提升。`">等级 {{ profile.level }}</UiBadge>
-              <UiBadge tone="amber" :title="`信任等级 ${profile.trust_level}：${profile.trust_level_label}`">信任 {{ profile.trust_level }}</UiBadge>
-              <span class="profile-status">
-                <span class="profile-status__dot"></span>
-                {{ statusLabel(profile.status) }}
-              </span>
-            </div>
-            <h1>{{ displayName }}</h1>
-            <p class="profile-meta">
-              @{{ profile.username }} · 加入 {{ joinedAt }} · {{ profileVisibilityLabel(profile.profile_visibility) }}
-            </p>
-            <p v-if="profileSummary" class="profile-summary">{{ profileSummary }}</p>
-            <p v-else-if="isOwnProfile" class="profile-summary profile-summary--empty">
-              这里还没有简介。写一句话，别人打开你的公开资料时会更快知道你关注什么。
-            </p>
-            <div v-if="profile.website_url || profile.location" class="profile-links">
-              <a v-if="profile.website_url" :href="profile.website_url" target="_blank" rel="noopener noreferrer">
-                {{ profile.website_url }}
-              </a>
-              <span v-if="profile.location">{{ profile.location }}</span>
+            <div class="profile-copy">
+              <div class="profile-kicker">
+                <UiBadge tone="blue">{{ isAccountRoute ? "个人中心" : "公开资料" }}</UiBadge>
+                <UiBadge tone="green">{{ roleLabel(profile.role) }}</UiBadge>
+                <UiBadge tone="blue" :title="`社区等级 ${profile.level}，由参与和贡献累计提升。`">等级 {{ profile.level }}</UiBadge>
+                <UiBadge tone="amber" :title="`信任等级 ${profile.trust_level}：${profile.trust_level_label}`">信任 {{ profile.trust_level }}</UiBadge>
+                <span class="profile-status">
+                  <span class="profile-status__dot"></span>
+                  {{ statusLabel(profile.status) }}
+                </span>
+              </div>
+              <h1>{{ displayName }}</h1>
+              <p class="profile-meta">
+                @{{ profile.username }} · 加入 {{ joinedAt }} · {{ profileVisibilityLabel(profile.profile_visibility) }}
+              </p>
+              <p v-if="profileSummary" class="profile-summary">{{ profileSummary }}</p>
+              <p v-else-if="isOwnProfile" class="profile-summary profile-summary--empty">
+                这里还没有简介。写一句话，别人打开你的公开资料时会更快知道你关注什么。
+              </p>
+              <p v-else class="profile-summary profile-summary--empty">
+                这个成员还没有填写简介。
+              </p>
+              <div v-if="profile.website_url || profile.location" class="profile-links">
+                <a v-if="profile.website_url" :href="profile.website_url" target="_blank" rel="noopener noreferrer">
+                  {{ profile.website_url }}
+                </a>
+                <span v-if="profile.location">{{ profile.location }}</span>
+              </div>
             </div>
           </div>
 
