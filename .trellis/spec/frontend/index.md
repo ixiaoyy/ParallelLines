@@ -24,8 +24,8 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F8FAF
 | [Smoke Tests](./smoke-tests.md) | Playwright MVP smoke flow and environment contract | Filled |
 | [Post Actions](./post-actions.md) | Topic detail and post action button behavior | Filled |
 | [Auth and User Session](./auth-user-session.md) | Login/register UI, verified session state, profile DTOs, and draft persistence | Filled |
-| [User Profile Settings, Directory, and Activity UI](./user-profile-settings-directory.md) | Editable profile form, member directory, privacy-aware activity tabs, and profile query invalidation | Filled |
-| [Account Security UI](./account-security.md) | Forgot-password, 2FA login, security settings, sessions, and OAuth provider discovery UI contracts | Filled |
+| [User Profile Settings, Directory, and Activity UI](./user-profile-settings-directory.md) | Editable profile/account settings, member directory, privacy-aware activity tabs, and profile query invalidation | Filled |
+| [Account Security UI](./account-security.md) | Forgot-password, 2FA login, personal-center account settings, deferred sessions, and OAuth provider discovery UI contracts | Filled |
 | [Topic Lifecycle UI](./topic-lifecycle.md) | Moderator toolbar, lifecycle mutations, cache invalidation, and closed-topic composer behavior | Filled |
 | [Topic Solved, Voting, and Polls UI](./topic-solved-voting-polls.md) | Accepted answer controls, score voting, Q&A order, and poll voting UI contracts | Filled |
 | [Admin Dashboard](./admin-dashboard.md) | Admin dashboard, site settings UI, public setting refresh, user management, system health, and audit/mail panels | Filled |

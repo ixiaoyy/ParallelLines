@@ -127,7 +127,6 @@ interface NavItem {
     | "home"
     | "boards"
     | "users"
-    | "security"
     | "email"
     | "messages"
     | "events"
@@ -141,7 +140,6 @@ const navItems = computed<NavItem[]>(() => [
   { key: "home", label: t("nav.home", "首页"), to: "/" },
   { key: "boards", label: t("nav.boards", "版块"), to: "/boards" },
   { key: "users", label: t("nav.users", "成员"), to: { name: "user-directory" } },
-  { key: "security", label: t("nav.security", "安全"), to: { name: "security" } },
   { key: "email", label: t("nav.email", "邮件"), to: { name: "email-preferences" } },
   { key: "messages", label: t("nav.messages", "私信"), to: { name: "messages" } },
   { key: "events", label: t("nav.events", "活动"), to: { name: "events" } },
@@ -151,10 +149,6 @@ const navItems = computed<NavItem[]>(() => [
 
 const visibleNavItems = computed(() =>
   navItems.value.filter((item) => {
-    if (item.key === "security") {
-      return Boolean(currentUser.value);
-    }
-
     if (item.key === "email") {
       return Boolean(currentUser.value);
     }
@@ -322,10 +316,6 @@ function isNavItemActive(item: NavItem) {
     return route.name === "user-directory" || route.name === "user-profile";
   }
 
-  if (item.key === "security") {
-    return route.name === "security";
-  }
-
   if (item.key === "email") {
     return route.name === "email-preferences";
   }
@@ -433,7 +423,7 @@ function isNavItemActive(item: NavItem) {
               <RouterLink
                 class="account-menu__item account-menu__item--profile"
                 :to="{ name: 'my-profile' }"
-                :class="{ 'is-active': isCurrentUserProfileActive }"
+                :class="{ 'is-active': isCurrentUserProfileActive && route.query.panel !== 'settings' }"
                 @click="closeAccountMenu"
               >
                 <span>{{ t("nav.profile", "个人中心") }}</span>
@@ -459,11 +449,11 @@ function isNavItemActive(item: NavItem) {
               </RouterLink>
               <RouterLink
                 class="account-menu__item"
-                :to="{ name: 'security' }"
-                :class="{ 'is-active': route.name === 'security' }"
+                :to="{ name: 'my-profile', query: { panel: 'settings', section: 'account' } }"
+                :class="{ 'is-active': isCurrentUserProfileActive && route.query.panel === 'settings' }"
                 @click="closeAccountMenu"
               >
-                {{ t("nav.security", "账号安全") }}
+                {{ t("nav.account_settings", "账号设置") }}
               </RouterLink>
               <RouterLink
                 class="account-menu__item"

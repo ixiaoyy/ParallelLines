@@ -112,6 +112,8 @@ export const router = createRouter({
         return {
           name: "user-profile",
           params: { username: currentUser.username },
+          query: to.query,
+          hash: to.hash,
         };
       },
     },
@@ -172,20 +174,6 @@ export const router = createRouter({
           title: "邀请 · {siteTitle}",
           description: "管理平行线账号邀请记录和邀请链接。",
           canonicalPath: "/invites",
-          robots: NOINDEX_ROBOTS,
-        },
-      },
-    },
-    {
-      path: "/security",
-      name: "security",
-      component: () => import("@/pages/security/SecurityPage.vue"),
-      meta: {
-        requiredAccess: "authenticated",
-        seo: {
-          title: "账号安全 · {siteTitle}",
-          description: "管理平行线账号密码、两步验证和登录会话。",
-          canonicalPath: "/security",
           robots: NOINDEX_ROBOTS,
         },
       },
