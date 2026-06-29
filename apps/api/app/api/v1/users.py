@@ -112,6 +112,22 @@ async def update_my_profile(
     return ApiResponse(data=profile)
 
 
+# get_user_profile_by_id 用途：按稳定用户 ID 返回公开资料，供浏览器 `/members/:id` 使用。
+# 关键参数：user_id 来自成员页路由，current_user 用于隐私字段可见性判定。
+# 返回值/副作用：返回用户资料响应，无写入副作用。
+@router.get("/id/{user_id}", response_model=ApiResponse[UserProfileResponse])
+async def get_user_profile_by_id(
+    user_id: str,
+    session: SessionDep,
+    current_user: OptionalCurrentUserDep,
+) -> ApiResponse[UserProfileResponse]:
+    profile = await UserProfileService(session).get_profile_by_id(
+        user_id,
+        current_user=current_user,
+    )
+    return ApiResponse(data=profile)
+
+
 @router.get("/{username}/relationship", response_model=ApiResponse[UserRelationshipStateResponse])
 async def get_user_relationship(
     username: str,

@@ -2498,6 +2498,9 @@ export interface paths {
     "/api/v1/users/directory": {
       get: { response: components["schemas"]["ApiResponse_list_UserDirectoryResponse__"]; operationId: "list_user_directory_api_v1_users_directory_get" };
     };
+    "/api/v1/users/id/{user_id}": {
+      get: { response: components["schemas"]["ApiResponse_UserProfileResponse_"]; operationId: "get_user_profile_by_id_api_v1_users_id__user_id__get" };
+    };
     "/api/v1/users/me": {
       delete: { response: components["schemas"]["ApiResponse_PrivacyActionResponse_"]; operationId: "delete_current_user_api_v1_users_me_delete" };
     };

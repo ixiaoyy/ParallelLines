@@ -5,6 +5,8 @@ export const queryKeys = {
   oauthProviders: ["auth", "oauth", "providers"] as const,
   usersRoot: ["users"] as const,
   user: (username: string) => ["users", username] as const,
+  // userById 用途：缓存公开成员页按稳定用户 ID 读取的资料；参数为用户 ID，返回稳定 query key 且无副作用。
+  userById: (userId: string) => ["users", "id", userId] as const,
   userTopics: (username: string) => ["users", username, "topics"] as const,
   userActivity: (username: string, type: string) => ["users", username, "activity", type] as const,
   userDirectoryRoot: ["users", "directory"] as const,

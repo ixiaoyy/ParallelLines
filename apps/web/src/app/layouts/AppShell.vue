@@ -102,8 +102,11 @@ const isCurrentUserProfileActive = computed(() => {
   }
 
   return (
-    route.name === "my-profile" ||
-    (route.name === "user-profile" && String(route.params.username ?? "") === currentUser.value.username)
+    route.name === "account-home" ||
+    route.name === "account-profile" ||
+    route.name === "account-settings" ||
+    route.name === "account-preferences" ||
+    (route.name === "user-profile" && String(route.params.id ?? "") === currentUser.value.id)
   );
 });
 let routeFeedbackTimer: number | undefined;
@@ -140,7 +143,7 @@ const navItems = computed<NavItem[]>(() => [
   { key: "home", label: t("nav.home", "首页"), to: "/" },
   { key: "boards", label: t("nav.boards", "版块"), to: "/boards" },
   { key: "users", label: t("nav.users", "成员"), to: { name: "user-directory" } },
-  { key: "email", label: t("nav.email", "邮件"), to: { name: "email-preferences" } },
+  { key: "email", label: t("nav.email", "邮件"), to: { name: "account-preferences" } },
   { key: "messages", label: t("nav.messages", "私信"), to: { name: "messages" } },
   { key: "events", label: t("nav.events", "活动"), to: { name: "events" } },
   { key: "admin", label: t("nav.admin", "后台"), to: { name: "admin-dashboard" } },
@@ -317,7 +320,7 @@ function isNavItemActive(item: NavItem) {
   }
 
   if (item.key === "email") {
-    return route.name === "email-preferences";
+    return route.name === "account-preferences";
   }
 
   if (item.key === "messages") {
@@ -422,8 +425,8 @@ function isNavItemActive(item: NavItem) {
             <div class="account-menu__panel">
               <RouterLink
                 class="account-menu__item account-menu__item--profile"
-                :to="{ name: 'my-profile' }"
-                :class="{ 'is-active': isCurrentUserProfileActive && route.query.panel !== 'settings' }"
+                :to="{ name: 'account-home' }"
+                :class="{ 'is-active': route.name === 'account-home' || route.name === 'account-profile' }"
                 @click="closeAccountMenu"
               >
                 <span>{{ t("nav.profile", "个人中心") }}</span>
@@ -449,16 +452,16 @@ function isNavItemActive(item: NavItem) {
               </RouterLink>
               <RouterLink
                 class="account-menu__item"
-                :to="{ name: 'my-profile', query: { panel: 'settings', section: 'account' } }"
-                :class="{ 'is-active': isCurrentUserProfileActive && route.query.panel === 'settings' }"
+                :to="{ name: 'account-settings' }"
+                :class="{ 'is-active': route.name === 'account-settings' }"
                 @click="closeAccountMenu"
               >
                 {{ t("nav.account_settings", "账号设置") }}
               </RouterLink>
               <RouterLink
                 class="account-menu__item"
-                :to="{ name: 'email-preferences' }"
-                :class="{ 'is-active': route.name === 'email-preferences' }"
+                :to="{ name: 'account-preferences' }"
+                :class="{ 'is-active': route.name === 'account-preferences' }"
                 @click="closeAccountMenu"
               >
                 {{ t("nav.email", "邮件偏好") }}

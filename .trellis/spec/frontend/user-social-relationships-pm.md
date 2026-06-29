@@ -25,12 +25,12 @@ Frontend APIs/composables:
 Routes:
 
 - `/messages`: authenticated private-message inbox; unauthenticated state shows login CTA.
-- `/u/:username`: shows relationship actions for other users.
+- `/members/:id`: shows relationship actions for other users.
 
 ### 3. Contracts
 
 - Relationship server state stays in TanStack Query under `queryKeys.userRelationship(username)`.
-- `/u/:username` must not show relationship controls for own profile.
+- `/members/:id` must not show relationship controls for own profile.
 - Unauthenticated relationship/PM actions route to `/auth?redirect=<current path>`.
 - Blocking and ignoring update visible helper copy and invalidate profile/user topics/notifications.
 - Topic detail post rows may expose a “屏蔽用户” action for other authors; it must use the

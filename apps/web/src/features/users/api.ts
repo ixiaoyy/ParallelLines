@@ -14,6 +14,11 @@ export function fetchUserProfile(username: string): Promise<UserProfile> {
   return apiGet<UserProfile>(`/users/${encodeURIComponent(username)}`);
 }
 
+// fetchUserProfileById 用途：按稳定用户 ID 读取公开资料，供 `/members/:id` 页面使用；返回用户资料且无本地副作用。
+export function fetchUserProfileById(userId: string): Promise<UserProfile> {
+  return apiGet<UserProfile>(`/users/id/${encodeURIComponent(userId)}`);
+}
+
 export function fetchUserTopics(username: string): Promise<TopicResponse[]> {
   return apiGet<TopicResponse[]>(`/users/${encodeURIComponent(username)}/topics`);
 }

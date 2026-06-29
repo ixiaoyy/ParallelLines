@@ -41,7 +41,7 @@ const deniedCopy = computed(() => {
         <RouterLink v-if="requiredAccess === 'moderation'" :to="{ name: 'my-reviewables' }">
           <UiButton tone="subtle">我的审核</UiButton>
         </RouterLink>
-        <RouterLink :to="{ name: 'my-profile' }">
+        <RouterLink :to="{ name: 'account-home' }">
           <UiButton tone="ghost">个人中心</UiButton>
         </RouterLink>
       </div>

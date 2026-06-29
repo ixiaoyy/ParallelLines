@@ -19706,6 +19706,53 @@
         ]
       }
     },
+    "/api/v1/users/id/{user_id}": {
+      "get": {
+        "operationId": "get_user_profile_by_id_api_v1_users_id__user_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UserProfileResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get User Profile By Id",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/api/v1/users/me": {
       "delete": {
         "operationId": "delete_current_user_api_v1_users_me_delete",

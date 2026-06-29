@@ -60,6 +60,25 @@ class UserProfileService:
             current_user=current_user,
         )
 
+    # get_profile_by_id 用途：按稳定用户 ID 读取公开资料，避免浏览器成员页依赖可变用户名。
+    # 关键参数：user_id 为用户主键，current_user 用于隐私字段可见性判定。
+    # 返回值/副作用：返回资料响应对象，不写入数据库。
+    async def get_profile_by_id(
+        self,
+        user_id: str,
+        *,
+        current_user: User | None = None,
+    ) -> UserProfileResponse:
+        user = await self._user_by_id(user_id)
+        counts = await self._content_counts(user.id)
+        relationship_counts = await self._relationship_counts(user.id)
+        return await self._profile_response(
+            user,
+            counts=counts,
+            relationship_counts=relationship_counts,
+            current_user=current_user,
+        )
+
     async def update_my_profile(
         self,
         payload: UserProfileUpdateRequest,
@@ -479,6 +498,17 @@ class UserProfileService:
             .options(selectinload(Post.topic))
             .where(Post.id == post_id, Post.deleted_at.is_(None), *self._public_topic_conditions())
         )
+
+    # _user_by_id 用途：按用户主键读取未删除用户。
+    # 关键参数：user_id 为用户 ID；返回 User 模型，找不到时抛出 NotFoundError。
+    # 返回值/副作用：只读数据库，无写入副作用。
+    async def _user_by_id(self, user_id: str) -> User:
+        user = await self.session.scalar(
+            select(User).where(User.id == user_id, User.status != "deleted")
+        )
+        if user is None:
+            raise NotFoundError("user_not_found", "User not found")
+        return user
 
     async def _user_by_username(self, username: str) -> User:
         user = await self.session.scalar(

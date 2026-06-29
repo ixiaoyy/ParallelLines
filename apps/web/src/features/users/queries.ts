@@ -5,7 +5,14 @@ import type { MaybeRefOrGetter } from "vue";
 import { toTopicCard } from "@/features/topics/model";
 import { queryKeys } from "@/shared/api/queryKeys";
 
-import { fetchUserActivity, fetchUserDirectory, fetchUserProfile, fetchUserTopics, updateMyProfile } from "./api";
+import {
+  fetchUserActivity,
+  fetchUserDirectory,
+  fetchUserProfile,
+  fetchUserProfileById,
+  fetchUserTopics,
+  updateMyProfile,
+} from "./api";
 import type { UserActivityType, UserDirectorySort, UserProfile, UserProfileUpdateRequest } from "./model";
 
 export function useUserProfile(username: MaybeRefOrGetter<string>) {
@@ -13,6 +20,17 @@ export function useUserProfile(username: MaybeRefOrGetter<string>) {
     queryKey: computed(() => queryKeys.user(toValue(username))),
     queryFn: () => fetchUserProfile(toValue(username)),
     enabled: computed(() => Boolean(toValue(username))),
+    retry: false,
+    staleTime: 60_000,
+  });
+}
+
+// useUserProfileById 用途：为公开成员页按稳定用户 ID 管理资料查询；参数为用户 ID ref/getter，返回 TanStack Query 状态且无写入副作用。
+export function useUserProfileById(userId: MaybeRefOrGetter<string>) {
+  return useQuery({
+    queryKey: computed(() => queryKeys.userById(toValue(userId))),
+    queryFn: () => fetchUserProfileById(toValue(userId)),
+    enabled: computed(() => Boolean(toValue(userId))),
     retry: false,
     staleTime: 60_000,
   });

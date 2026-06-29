@@ -68,7 +68,7 @@ The frontend is a responsive forum interface with a calm tech aesthetic: `#F8FAF
 14. Read `account-security.md` before changing forgot-password, 2FA login, security settings, or session revocation UI.
 15. Read `topic-lifecycle.md` before changing close/open, pin, move, split, merge, or closed-topic composer behavior.
 16. Read `admin-dashboard.md` before changing `/admin`, public site settings, user management, system health, or admin navigation.
-17. Read `email-preferences.md` before changing `/email-preferences`, email preference API wiring, or mail navigation.
+17. Read `email-preferences.md` before changing `/account/preferences`, the legacy `/email-preferences` redirect, email preference API wiring, or mail navigation.
 18. Read `user-social-relationships-pm.md` before changing profile relationship actions, PM creation, or `/messages`.
 19. Read `topic-solved-voting-polls.md` before changing accepted answer controls, score voting, Q&A ordering, or polls.
 20. Read `badges-trust-levels.md` before changing trust/badge profile, author metadata, or admin badge UI.

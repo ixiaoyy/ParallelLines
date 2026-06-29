@@ -64,7 +64,7 @@ class SeoService:
         )
         urls.extend(
             SitemapUrl(
-                loc=absolute_url(base_url, f"/u/{encode_path_segment(user.username)}"),
+                loc=absolute_url(base_url, f"/members/{encode_path_segment(user.id)}"),
                 lastmod=user.updated_at,
                 changefreq="weekly",
                 priority=0.5,
@@ -81,7 +81,6 @@ class SeoService:
                 "Allow: /",
                 "Disallow: /admin",
                 "Disallow: /messages",
-                "Disallow: /security",
                 f"Sitemap: {sitemap_url}",
                 "",
             ]
@@ -106,9 +105,9 @@ class SeoService:
         if normalized.startswith("/b/"):
             slug = normalized.removeprefix("/b/").split("/", 1)[0]
             return await self.board_meta(slug, base_url)
-        if normalized.startswith("/u/"):
-            username = normalized.removeprefix("/u/").split("/", 1)[0]
-            return await self.user_meta(username, base_url)
+        if normalized.startswith("/members/"):
+            user_id = normalized.removeprefix("/members/").split("/", 1)[0]
+            return await self.user_meta(user_id, base_url)
         topic_id = topic_id_from_path(normalized)
         if topic_id:
             return await self.topic_meta(topic_id, base_url)
@@ -135,13 +134,16 @@ class SeoService:
             description=truncate_text(board.description, 180),
         )
 
-    async def user_meta(self, username: str, base_url: str) -> SeoMetaResponse:
-        user = await self._active_user(username)
+    # user_meta 用途：按稳定用户 ID 生成公开成员页 SEO 元数据。
+    # 关键参数：user_id 来自 `/members/{user_id}`，base_url 用于生成绝对 canonical URL。
+    # 返回值/副作用：返回 SEO 响应对象，不写入数据库。
+    async def user_meta(self, user_id: str, base_url: str) -> SeoMetaResponse:
+        user = await self._active_user(user_id)
         topic_count = await self._public_topic_count_for_user(user.id)
         description = f"{user.username} 在平行线发布了 {topic_count} 个公开主题。"
         return self._site_meta(
             base_url,
-            f"/u/{encode_path_segment(user.username)}",
+            f"/members/{encode_path_segment(user.id)}",
             title=f"{user.username} 的公开档案 · {SITE_TITLE_FALLBACK}",
             description=description,
         )
@@ -244,9 +246,12 @@ class SeoService:
             raise NotFoundError("topic_not_found", "Topic not found")
         return topic
 
-    async def _active_user(self, username: str) -> User:
+    # _active_user 用途：按用户 ID 读取可索引的活跃用户。
+    # 关键参数：user_id 为用户主键；找不到时抛出 NotFoundError。
+    # 返回值/副作用：返回 User 模型，无写入副作用。
+    async def _active_user(self, user_id: str) -> User:
         user = await self.session.scalar(
-            select(User).where(User.username == username, User.status == "active")
+            select(User).where(User.id == user_id, User.status == "active")
         )
         if user is None:
             raise NotFoundError("user_not_found", "User not found")

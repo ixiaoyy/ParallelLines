@@ -4,7 +4,7 @@
 
 ### 1. Scope / Trigger
 
-- Applies to `/auth`, topbar session state, `/u/:username`, authenticated composers, and browser smoke tests.
+- Applies to `/auth`, topbar session state, `/members/:id`, `/account`, authenticated composers, and browser smoke tests.
 - Trigger: any change to token storage, `/auth/me` usage, login/register forms, profile DTOs, or unauthenticated publish/reply behavior.
 
 ### 2. Signatures
@@ -12,7 +12,8 @@
 - Routes:
   - `/auth?mode=register&redirect=/target`
   - `/auth?redirect=/target`
-  - `/u/:username`
+  - `/members/:id`
+  - `/account`
 - Registration API:
   - `POST /auth/register` accepts `{ username, email, password }` and returns `RegistrationStartResponse`.
   - `POST /auth/verify-email` accepts `{ email, code }` and returns `TokenPair`.
@@ -55,7 +56,9 @@
 - `redirect` is honored only for same-site paths beginning with `/`.
 - Authenticated reply drafts must not be cleared until the post mutation succeeds.
 - Unauthenticated replies must guide to login and preserve the current draft using a topic-scoped draft storage key.
-- Public profile pages call `/users/{username}` and `/users/{username}/topics`; they show content counts from the public profile payload.
+- Public profile pages at `/members/:id` call `/users/id/{user_id}` first, then use the returned
+  username for `/users/{username}` content endpoints; they show content counts from the public
+  profile payload.
 - User role helpers live in `features/auth/permissions.ts`; do not scatter string checks like `role === 'admin'` across page components.
 - User `level` defaults to `0` and is display/session metadata; admin permissions remain role-based.
 - User-facing growth displays should prioritize `points_balance` as "可用积分" for future exchange

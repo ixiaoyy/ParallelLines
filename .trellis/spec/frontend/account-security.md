@@ -4,7 +4,7 @@
 
 ### 1. Scope / Trigger
 
-- Trigger: any change to `features/auth/*`, `/auth`, `/me?panel=settings`, topbar auth navigation,
+- Trigger: any change to `features/auth/*`, `/auth`, `/account/settings`, topbar auth navigation,
   or `UserPublic`/`TokenPair` DTOs.
 - The UI must keep no-enumeration semantics for password reset and must not persist tokens until
   login, email verification, or 2FA verification returns a full `TokenPair`.
@@ -16,7 +16,7 @@ Routes:
 - `/auth?mode=forgot`
 - `/auth?mode=register`
 - `/auth?redirect=/target`
-- `/me?panel=settings&section=account`
+- `/account/settings`
 
 Auth model additions:
 
@@ -51,9 +51,9 @@ Composables:
   "验证码已发送，请查收邮件。"; avoid exposing expiry minutes in the page notice.
 - Password creation/change inputs should use a right-side show/hide eye affordance while preserving
   native autocomplete values.
-- Password/email account settings live in the own-profile settings panel, not a standalone security
-  page. App-shell account navigation may link to `/me?panel=settings&section=account`; the primary
-  nav should not show a separate "安全" page.
+- Password/email account settings live in the personal-center account route, not a standalone
+  security page. App-shell account navigation links to `/account/settings`; the primary nav should
+  not show a separate "安全" page.
 - There is no `/security` route; do not reintroduce a standalone security entry unless product scope
   changes.
 - Account settings panels:
@@ -80,7 +80,7 @@ Composables:
 | Change password succeeds | Clear fields; show "密码已更新。" |
 | Email exists | Show "该邮箱已被其他账号使用" |
 | Invalid email-change token | Show invalid/expired token message |
-| `/me?panel=settings&section=account` authenticated view | Show password and email forms inside personal-center settings; do not render 2FA, active session, OAuth, or SSO cards/copy |
+| `/account/settings` authenticated view | Show password and email forms inside personal-center settings; do not render 2FA, active session, OAuth, or SSO cards/copy |
 
 ### 5. Good/Base/Bad Cases
 
@@ -105,7 +105,7 @@ Composables:
 - Browser/manual checks:
   - `/auth?mode=forgot` request and confirm forms render and validate;
   - 2FA login challenge does not mark topbar as logged in until verification succeeds;
-  - `/me?panel=settings&section=account` renders password/email forms inside personal-center
+  - `/account/settings` renders password/email forms inside personal-center
     settings and does not show deferred 2FA, active session, OAuth, or SSO panels;
   - `/security` is not registered as a route;
   - topbar/mobile primary nav does not show a separate `安全` item.

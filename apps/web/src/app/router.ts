@@ -92,33 +92,67 @@ export const router = createRouter({
       },
     },
     {
-      path: "/me",
-      name: "my-profile",
+      path: "/account",
+      name: "account-home",
       component: () => import("@/pages/user/UserProfilePage.vue"),
       meta: {
+        requiredAccess: "authenticated",
         seo: {
           title: "个人中心 · {siteTitle}",
-          description: "管理平行线账号资料、头像、成长轨迹和公开活动。",
-          canonicalPath: "/me",
+          description: "查看自己的讨论、资料、成长和账号设置。",
+          canonicalPath: "/account",
           robots: NOINDEX_ROBOTS,
         },
       },
-      beforeEnter: async (to) => {
-        const currentUser = await loadCurrentUserForRoute();
-        if (!currentUser) {
-          return loginRedirect(to);
-        }
-
-        return {
-          name: "user-profile",
-          params: { username: currentUser.username },
-          query: to.query,
-          hash: to.hash,
-        };
+    },
+    {
+      path: "/account/profile",
+      name: "account-profile",
+      component: () => import("@/pages/user/UserProfilePage.vue"),
+      meta: {
+        requiredAccess: "authenticated",
+        seo: {
+          title: "资料设置 · {siteTitle}",
+          description: "管理平行线公开资料、头像、简介和个人偏好。",
+          canonicalPath: "/account/profile",
+          robots: NOINDEX_ROBOTS,
+        },
       },
     },
     {
-      path: "/u/:username",
+      path: "/account/settings",
+      name: "account-settings",
+      component: () => import("@/pages/user/UserProfilePage.vue"),
+      meta: {
+        requiredAccess: "authenticated",
+        seo: {
+          title: "账号设置 · {siteTitle}",
+          description: "管理平行线账号密码和登录邮箱。",
+          canonicalPath: "/account/settings",
+          robots: NOINDEX_ROBOTS,
+        },
+      },
+    },
+    {
+      path: "/account/preferences",
+      name: "account-preferences",
+      component: () => import("@/pages/email/EmailPreferencesPage.vue"),
+      meta: {
+        requiredAccess: "authenticated",
+        seo: {
+          title: "偏好设置 · {siteTitle}",
+          description: "管理平行线邮件通知、摘要和订阅偏好。",
+          canonicalPath: "/account/preferences",
+          robots: NOINDEX_ROBOTS,
+        },
+      },
+    },
+    {
+      path: "/me",
+      redirect: { name: "account-home" },
+    },
+    {
+      path: "/members/:id",
       name: "user-profile",
       component: () => import("@/pages/user/UserProfilePage.vue"),
       meta: {
@@ -180,17 +214,7 @@ export const router = createRouter({
     },
     {
       path: "/email-preferences",
-      name: "email-preferences",
-      component: () => import("@/pages/email/EmailPreferencesPage.vue"),
-      meta: {
-        requiredAccess: "authenticated",
-        seo: {
-          title: "邮件偏好 · {siteTitle}",
-          description: "管理平行线邮件通知、摘要和订阅偏好。",
-          canonicalPath: "/email-preferences",
-          robots: NOINDEX_ROBOTS,
-        },
-      },
+      redirect: { name: "account-preferences" },
     },
     {
       path: "/messages",

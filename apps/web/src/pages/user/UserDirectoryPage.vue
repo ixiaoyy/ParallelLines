@@ -48,7 +48,7 @@ const sortOptions: { label: string; value: UserDirectorySort; description: strin
       成员目录暂时不可用，请稍后重试。
     </UiCard>
     <section v-else class="directory-grid" aria-label="公开成员列表">
-      <RouterLink v-for="user in users" :key="user.id" class="directory-card" :to="{ name: 'user-profile', params: { username: user.username } }">
+      <RouterLink v-for="user in users" :key="user.id" class="directory-card" :to="{ name: 'user-profile', params: { id: user.id } }">
         <UiAvatar
           :name="user.username"
           :src="resolveApiAssetUrl(user.avatar_url)"

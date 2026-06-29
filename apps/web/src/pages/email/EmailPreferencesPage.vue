@@ -157,7 +157,7 @@ function toPreferenceError(error: unknown): string {
     <UiCard v-if="!currentUser" class="email-empty">
       <h2>登录后管理邮件偏好</h2>
       <p>你可以关闭某类提醒、选择摘要频率，或在退信恢复后重新开启邮件。</p>
-      <RouterLink :to="{ name: 'auth', query: { redirect: '/email-preferences' } }">前往登录</RouterLink>
+      <RouterLink :to="{ name: 'auth', query: { redirect: '/account/preferences' } }">前往登录</RouterLink>
     </UiCard>
 
     <div v-else-if="draft" class="email-grid">

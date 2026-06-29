@@ -116,8 +116,8 @@ CLI tools:
 
 - Good: upload image → insert `![diagram](https://api/api/v1/uploads/{id}/content)` →
   create topic → service attaches upload to first post → refreshed post renders `<img>`.
-- Base: user uploads avatar with `POST /uploads/avatar`, then `/auth/me` and
-  `/users/{username}` return the same `avatar_url`.
+- Base: user uploads avatar with `POST /uploads/avatar`, then `/auth/me`, `/users/id/{user_id}`,
+  and `/users/{username}` return the same `avatar_url`.
 - Good: `python -m app.migrate_uploads_to_s3 --apply --limit 100` uploads originals and existing
   thumbnails using unchanged keys, then marks only successful rows as `storage_backend="s3"`.
 - Bad: frontend hides the link to a private attachment but `GET /uploads/{id}/content`

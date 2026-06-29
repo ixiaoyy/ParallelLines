@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import type { RouteLocationRaw } from "vue-router";
 
 import { publicSettingString } from "@/features/admin/model";
 import { usePublicSiteSettings } from "@/features/admin/queries";
@@ -30,6 +31,7 @@ import {
   useUpdateMyProfile,
   useUserActivity,
   useUserProfile,
+  useUserProfileById,
   useUserTopics,
 } from "@/features/users/queries";
 import { ApiError, hasAccessToken, resolveApiAssetUrl } from "@/shared/api/client";
@@ -43,11 +45,11 @@ import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 import PasswordField from "@/shared/ui/PasswordField.vue";
 
-type ProfilePanel = "topics" | "activity" | "social" | "settings";
+type ProfilePanel = "topics" | "activity" | "social" | "profile" | "account";
 
+const ACCOUNT_ROUTE_NAMES = new Set(["account-home", "account-profile", "account-settings"]);
 const route = useRoute();
 const router = useRouter();
-const username = computed(() => String(route.params.username ?? ""));
 const avatarInput = ref<HTMLInputElement | null>(null);
 const avatarStatus = ref("");
 const socialStatus = ref("");
@@ -70,15 +72,42 @@ const emailPassword = ref("");
 const emailToken = ref("");
 const currentUserQuery = useCurrentUser();
 const siteSettingsQuery = usePublicSiteSettings();
-const profileQuery = useUserProfile(username);
+const isAccountRoute = computed(() => ACCOUNT_ROUTE_NAMES.has(String(route.name ?? "")));
+const accountUsername = computed(() => (isAccountRoute.value ? currentUserQuery.data.value?.username ?? "" : ""));
+const publicUserId = computed(() => (isAccountRoute.value ? "" : String(route.params.id ?? "")));
+const accountProfileQuery = useUserProfile(accountUsername);
+const publicProfileQuery = useUserProfileById(publicUserId);
+const activeProfileQuery = computed(() => (isAccountRoute.value ? accountProfileQuery : publicProfileQuery));
+const profile = computed(() => activeProfileQuery.value.data.value ?? null);
+const username = computed(() => profile.value?.username ?? accountUsername.value);
 const topicsQuery = useUserTopics(username);
-const profile = computed(() => profileQuery.data.value ?? null);
 const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
 );
 const isOwnProfile = computed(
-  () => currentUserQuery.data.value?.username === profile.value?.username,
+  () => Boolean(profile.value && currentUserQuery.data.value?.id === profile.value.id),
 );
+const isProfileLoading = computed(
+  () =>
+    activeProfileQuery.value.isLoading.value ||
+    (isAccountRoute.value && (currentUserQuery.isLoading.value || !accountUsername.value)),
+);
+const isProfileError = computed(() => activeProfileQuery.value.isError.value);
+const routePanel = computed<ProfilePanel | null>(() => {
+  if (route.name === "account-profile") {
+    return "profile";
+  }
+
+  if (route.name === "account-settings") {
+    return "account";
+  }
+
+  if (route.name === "account-home") {
+    return "topics";
+  }
+
+  return null;
+});
 const profileDraft = reactive({
   display_name: "",
   bio: "",
@@ -90,19 +119,31 @@ const profileDraft = reactive({
   locale: "zh-CN" as "zh-CN" | "en-US",
 });
 useSeoMeta(
-  computed(() =>
-    profile.value
-      ? {
-          title: isOwnProfile.value
-            ? `${profileDisplayName(profile.value)} 的个人中心 · ${siteTitle.value}`
-            : `${profileDisplayName(profile.value)} 的公开档案 · ${siteTitle.value}`,
-          description: isOwnProfile.value
-            ? "管理头像、公开资料、账号密码、登录邮箱、成长轨迹和公开活动。"
-            : `${profileDisplayName(profile.value)} 在平行线发布了 ${profile.value.topic_count} 个公开主题、${profile.value.post_count} 条公开回复。`,
-          canonicalPath: `/u/${profile.value.username}`,
-        }
-      : null,
-  ),
+  computed(() => {
+    if (!profile.value) {
+      return null;
+    }
+
+    const accountCanonical =
+      route.name === "account-profile"
+        ? "/account/profile"
+        : route.name === "account-settings"
+          ? "/account/settings"
+          : "/account";
+
+    return {
+      title: isOwnProfile.value
+        ? `${profileDisplayName(profile.value)} 的个人中心 · ${siteTitle.value}`
+        : `${profileDisplayName(profile.value)} 的公开档案 · ${siteTitle.value}`,
+      description: isOwnProfile.value
+        ? "查看自己的讨论、资料、成长记录，并管理账号密码和登录邮箱。"
+        : `${profileDisplayName(profile.value)} 在平行线发布了 ${profile.value.topic_count} 个公开主题、${profile.value.post_count} 条公开回复。`,
+      canonicalPath: isAccountRoute.value
+        ? accountCanonical
+        : `/members/${encodeURIComponent(profile.value.id)}`,
+      robots: isAccountRoute.value ? "noindex,nofollow" : undefined,
+    };
+  }),
 );
 const avatarMutation = useUploadAvatar(() => profile.value?.username ?? username.value);
 const updateProfileMutation = useUpdateMyProfile(username);
@@ -151,7 +192,7 @@ const profilePanels = computed<Array<{ key: ProfilePanel; label: string }>>(() =
   }
 
   if (isOwnProfile.value) {
-    panels.push({ key: "settings", label: "设置" });
+    panels.push({ key: "profile", label: "资料" }, { key: "account", label: "账号" });
   }
 
   return panels;
@@ -177,15 +218,7 @@ const profileStats = computed(() => {
 });
 
 const profileBadges = computed(() => profile.value?.badges ?? []);
-
-const profileSummary = computed(() => {
-  if (profile.value?.bio) {
-    return profile.value.bio;
-  }
-
-  return "";
-});
-
+const profileSummary = computed(() => profile.value?.bio?.trim() ?? "");
 const socialPanelTitle = computed(() => (isOwnProfile.value ? "我的关注" : "关注关系"));
 const socialFollowingLabel = computed(() => (isOwnProfile.value ? "我关注的" : "TA 关注的"));
 const socialFollowersLabel = computed(() => (isOwnProfile.value ? "关注我的" : "关注 TA 的"));
@@ -203,17 +236,6 @@ const accountSettingsBusy = computed(
     requestEmailChangeMutation.isPending.value ||
     confirmEmailChangeMutation.isPending.value,
 );
-// requestedProfilePanel 用途：解析路由 query 中希望打开的个人中心面板；无参数，返回合法面板 key 或 null 且无副作用。
-const requestedProfilePanel = computed<ProfilePanel | null>(() => {
-  const panel = route.query.panel;
-  const nextPanel = Array.isArray(panel) ? panel[0] : panel;
-  return nextPanel === "topics" ||
-    nextPanel === "activity" ||
-    nextPanel === "social" ||
-    nextPanel === "settings"
-    ? nextPanel
-    : null;
-});
 
 watch(
   [profile, () => currentUserQuery.data.value],
@@ -242,28 +264,23 @@ watch(
 );
 
 watch(
-  [requestedProfilePanel, isOwnProfile, canViewRelationshipLists, profile],
-  ([requestedPanel, ownProfile, canViewLists, loadedProfile]) => {
+  [routePanel, isOwnProfile, canViewRelationshipLists, profile],
+  ([nextPanel, ownProfile, canViewLists, loadedProfile]) => {
     if (!loadedProfile) {
       return;
     }
 
-    if (requestedPanel === "settings") {
-      activeProfilePanel.value = ownProfile ? "settings" : "topics";
+    if (nextPanel === "profile" || nextPanel === "account") {
+      activeProfilePanel.value = ownProfile ? nextPanel : "topics";
       return;
     }
 
-    if (requestedPanel === "social") {
-      activeProfilePanel.value = canViewLists ? "social" : "topics";
+    if (nextPanel === "topics") {
+      activeProfilePanel.value = "topics";
       return;
     }
 
-    if (requestedPanel === "topics" || requestedPanel === "activity") {
-      activeProfilePanel.value = requestedPanel;
-      return;
-    }
-
-    if (!ownProfile && activeProfilePanel.value === "settings") {
+    if (!ownProfile && (activeProfilePanel.value === "profile" || activeProfilePanel.value === "account")) {
       activeProfilePanel.value = "topics";
     }
 
@@ -274,6 +291,7 @@ watch(
   { immediate: true },
 );
 
+// roleLabel 用途：把后端角色值转换为中文展示文案；参数为角色枚举字符串，返回标签文案且无副作用。
 function roleLabel(role: string): string {
   const labels: Record<string, string> = {
     admin: "管理员",
@@ -284,6 +302,7 @@ function roleLabel(role: string): string {
   return labels[role] ?? role;
 }
 
+// statusLabel 用途：把后端账号状态转换为中文展示文案；参数为状态枚举字符串，返回标签文案且无副作用。
 function statusLabel(status: string): string {
   const labels: Record<string, string> = {
     active: "正常",
@@ -295,6 +314,45 @@ function statusLabel(status: string): string {
   return labels[status] ?? status;
 }
 
+// profilePanelRoute 用途：把个人中心设置面板映射到稳定路由；参数为面板 key，返回路由目标或 null 且无副作用。
+function profilePanelRoute(panel: ProfilePanel): RouteLocationRaw | null {
+  if (!isOwnProfile.value) {
+    return null;
+  }
+
+  if (panel === "profile") {
+    return { name: "account-profile" };
+  }
+
+  if (panel === "account") {
+    return { name: "account-settings" };
+  }
+
+  if (panel === "topics" && isAccountRoute.value) {
+    return { name: "account-home" };
+  }
+
+  return null;
+}
+
+// selectProfilePanel 用途：切换个人中心主面板并在设置页保持稳定 URL；参数为目标面板，副作用是更新本地面板或触发路由跳转。
+async function selectProfilePanel(panel: ProfilePanel) {
+  const targetRoute = profilePanelRoute(panel);
+  if (targetRoute) {
+    await router.push(targetRoute);
+    if (panel !== "topics") {
+      return;
+    }
+  }
+
+  if (isOwnProfile.value && isAccountRoute.value && route.name !== "account-home" && panel !== "profile" && panel !== "account") {
+    await router.push({ name: "account-home" });
+  }
+
+  activeProfilePanel.value = panel;
+}
+
+// openAvatarPicker 用途：打开头像上传文件选择器；无参数，副作用是触发隐藏 input 的点击。
 function openAvatarPicker() {
   if (avatarMutation.isPending.value) {
     return;
@@ -303,6 +361,7 @@ function openAvatarPicker() {
   avatarInput.value?.click();
 }
 
+// requireLogin 用途：社交操作前确认登录状态；无参数，未登录时跳转登录并返回 true，已登录返回 false。
 function requireLogin() {
   if (hasAccessToken()) {
     return false;
@@ -312,6 +371,7 @@ function requireLogin() {
   return true;
 }
 
+// toggleRelationship 用途：关注、忽略或屏蔽公开成员；参数为关系类型和目标开关状态，副作用是调用关系接口并更新提示。
 function toggleRelationship(kind: "follow" | "ignore" | "block", active: boolean) {
   if (!profile.value || isOwnProfile.value || requireLogin()) {
     return;
@@ -341,6 +401,7 @@ function toggleRelationship(kind: "follow" | "ignore" | "block", active: boolean
   );
 }
 
+// openMessageForm 用途：展开私信创建表单；无参数，副作用是预填标题并显示表单，未登录时跳转登录。
 function openMessageForm() {
   if (!profile.value || isOwnProfile.value || requireLogin()) {
     return;
@@ -350,6 +411,7 @@ function openMessageForm() {
   messageFormOpen.value = true;
 }
 
+// sendPrivateMessage 用途：创建与当前成员的私信主题；无参数，副作用是调用私信接口、清理表单并跳转到主题。
 async function sendPrivateMessage() {
   if (!profile.value || !messageBody.value.trim()) {
     socialStatus.value = "请先写下私信内容。";
@@ -374,6 +436,7 @@ async function sendPrivateMessage() {
   }
 }
 
+// saveProfile 用途：保存当前账号的公开资料和界面偏好；无参数，副作用是调用资料接口、刷新缓存和本地偏好。
 async function saveProfile() {
   const payload: UserProfileUpdateRequest = {
     display_name: profileDraft.display_name.trim() || null,
@@ -391,7 +454,7 @@ async function saveProfile() {
     await updateProfileMutation.mutateAsync(payload);
     setLocale(profileDraft.locale);
     setInterfaceTheme(profileDraft.interface_theme);
-    await profileQuery.refetch();
+    await activeProfileQuery.value.refetch();
     profileStatus.value = "资料设置已保存。";
   } catch (error) {
     profileStatus.value = profileErrorMessage(error);
@@ -469,6 +532,7 @@ async function confirmEmailChange() {
   }
 }
 
+// handleAvatarChange 用途：处理头像文件选择结果；参数为 input change 事件，副作用是上传头像并刷新个人资料。
 async function handleAvatarChange(event: Event) {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
@@ -480,7 +544,7 @@ async function handleAvatarChange(event: Event) {
   avatarStatus.value = "";
   try {
     await avatarMutation.mutateAsync(file);
-    await profileQuery.refetch();
+    await activeProfileQuery.value.refetch();
     avatarStatus.value = "头像已更新。";
   } catch (error) {
     avatarStatus.value = avatarErrorMessage(error);
@@ -510,6 +574,7 @@ function accountErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
+// avatarErrorMessage 用途：把头像上传错误转换成用户可读文案；参数为异常对象，返回错误字符串且无副作用。
 function avatarErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === "avatar_must_be_image") {
@@ -525,6 +590,7 @@ function avatarErrorMessage(error: unknown): string {
   return "头像上传失败，请确认已登录且文件类型安全。";
 }
 
+// profileErrorMessage 用途：把资料保存错误转换成用户可读文案；参数为异常对象，返回错误字符串且无副作用。
 function profileErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === "invalid_profile_url") {
@@ -538,6 +604,7 @@ function profileErrorMessage(error: unknown): string {
   return "资料保存失败，请稍后重试。";
 }
 
+// socialErrorMessage 用途：把社交接口错误转换成用户可读文案；参数为异常对象，返回错误字符串且无副作用。
 function socialErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.code === "relationship_blocked") {
@@ -556,21 +623,13 @@ function socialErrorMessage(error: unknown): string {
 <template>
   <div class="user-profile-page">
     <UiCard class="profile-hero">
-      <span class="profile-hero__glow profile-hero__glow--cyan" aria-hidden="true"></span>
-      <span class="profile-hero__glow profile-hero__glow--lime" aria-hidden="true"></span>
-      <div class="profile-lines" aria-hidden="true">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-
-      <div v-if="profileQuery.isLoading.value" class="profile-state">正在加载用户资料…</div>
-      <div v-else-if="profileQuery.isError.value" class="profile-state profile-state--error" role="alert">
+      <div v-if="isProfileLoading" class="profile-state">正在加载用户资料…</div>
+      <div v-else-if="isProfileError" class="profile-state profile-state--error" role="alert">
         用户资料暂时不可用。请稍后重试，或确认用户是否存在。
       </div>
       <template v-else-if="profile">
-        <div class="profile-identity">
-          <div class="profile-avatar-stack">
+        <div class="profile-hero__main">
+          <div class="profile-avatar-panel">
             <div class="profile-avatar-frame">
               <UiAvatar
                 :name="profile.username"
@@ -579,6 +638,7 @@ function socialErrorMessage(error: unknown): string {
                 :level="profile.level"
                 size="lg"
               />
+              <span class="profile-avatar-status" aria-hidden="true"></span>
               <input
                 v-if="isOwnProfile"
                 ref="avatarInput"
@@ -598,10 +658,10 @@ function socialErrorMessage(error: unknown): string {
 
           <div class="profile-copy">
             <div class="profile-kicker">
-              <UiBadge tone="blue">{{ isOwnProfile ? "个人中心" : "公开资料" }}</UiBadge>
+              <UiBadge tone="blue">{{ isAccountRoute ? "个人中心" : "公开资料" }}</UiBadge>
               <UiBadge tone="green">{{ roleLabel(profile.role) }}</UiBadge>
               <UiBadge tone="blue" :title="`社区等级 ${profile.level}，由参与和贡献累计提升。`">等级 {{ profile.level }}</UiBadge>
-              <UiBadge tone="amber" :title="`信任等级 ${profile.trust_level}：${profile.trust_level_label}`">信任等级 {{ profile.trust_level }}</UiBadge>
+              <UiBadge tone="amber" :title="`信任等级 ${profile.trust_level}：${profile.trust_level_label}`">信任 {{ profile.trust_level }}</UiBadge>
               <span class="profile-status">
                 <span class="profile-status__dot"></span>
                 {{ statusLabel(profile.status) }}
@@ -612,29 +672,58 @@ function socialErrorMessage(error: unknown): string {
               @{{ profile.username }} · 加入 {{ joinedAt }} · {{ profileVisibilityLabel(profile.profile_visibility) }}
             </p>
             <p v-if="profileSummary" class="profile-summary">{{ profileSummary }}</p>
+            <p v-else-if="isOwnProfile" class="profile-summary profile-summary--empty">
+              这里还没有简介。写一句话，别人打开你的公开资料时会更快知道你关注什么。
+            </p>
             <div v-if="profile.website_url || profile.location" class="profile-links">
               <a v-if="profile.website_url" :href="profile.website_url" target="_blank" rel="noopener noreferrer">
                 {{ profile.website_url }}
               </a>
               <span v-if="profile.location">{{ profile.location }}</span>
             </div>
-            <div v-if="isOwnProfile" class="profile-primary-actions" aria-label="个人中心快捷操作">
-              <UiButton
-                type="button"
-                tone="primary"
-                @click="activeProfilePanel = 'settings'"
-              >
-                资料设置
-              </UiButton>
-              <RouterLink
-                class="profile-action-link"
-                :to="{ name: 'my-profile', query: { panel: 'settings', section: 'account' } }"
-              >
-                账号设置
-              </RouterLink>
-              <RouterLink class="profile-action-link" :to="{ name: 'email-preferences' }">邮件偏好</RouterLink>
+          </div>
+
+          <dl class="profile-stats" aria-label="用户内容统计">
+            <div v-for="stat in profileStats" :key="stat.label">
+              <dt>{{ stat.label }}</dt>
+              <dd>{{ stat.value }}</dd>
+              <span>{{ stat.note }}</span>
             </div>
-            <div v-else class="profile-primary-actions profile-primary-actions--social" aria-label="用户社交操作">
+          </dl>
+        </div>
+
+        <div class="profile-hero__footer">
+          <div class="profile-insights" aria-label="账号概览">
+            <div class="profile-insight">
+              <span>成长</span>
+              <strong>等级 {{ profile.level }} · {{ profile.points_balance }} 可用积分</strong>
+            </div>
+            <div class="profile-insight profile-insight--trust">
+              <span>信任</span>
+              <strong>信任等级 {{ profile.trust_level }} · {{ profile.trust_level_label }}</strong>
+              <div v-if="profileBadges.length" class="profile-badges-list">
+                <span v-for="badge in profileBadges.slice(0, 3)" :key="badge.id" class="profile-badge-chip">
+                  <em>{{ badge.icon }}</em>
+                  {{ badge.name }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="isOwnProfile" class="profile-primary-actions" aria-label="个人中心快捷操作">
+            <RouterLink class="profile-action-link profile-action-link--primary" :to="{ name: 'account-profile' }">
+              编辑资料
+            </RouterLink>
+            <RouterLink class="profile-action-link" :to="{ name: 'account-settings' }">
+              账号设置
+            </RouterLink>
+            <RouterLink class="profile-action-link" :to="{ name: 'account-preferences' }">
+              邮件偏好
+            </RouterLink>
+          </div>
+          <div v-else class="profile-public-actions" aria-label="用户社交操作">
+            <p class="profile-relationship-copy">关系状态：{{ socialSummary }}</p>
+            <div class="profile-primary-actions profile-primary-actions--social">
               <UiButton
                 type="button"
                 :tone="relationship?.following ? 'success' : 'primary'"
@@ -644,42 +733,9 @@ function socialErrorMessage(error: unknown): string {
                 {{ relationship?.blocked ? "已屏蔽" : relationship?.following ? "已关注" : "关注" }}
               </UiButton>
               <UiButton type="button" tone="subtle" @click="openMessageForm">私信</UiButton>
-            </div>
-          </div>
-        </div>
-
-        <div class="profile-dashboard" aria-label="用户内容统计">
-          <dl class="profile-stats">
-            <div v-for="stat in profileStats" :key="stat.label">
-              <dt>{{ stat.label }}</dt>
-              <dd>{{ stat.value }}</dd>
-              <span>{{ stat.note }}</span>
-            </div>
-          </dl>
-
-          <div class="profile-overview-card">
-            <span>成长</span>
-            <strong>等级 {{ profile.level }} · {{ profile.points_balance }} 可用积分</strong>
-          </div>
-
-          <div class="profile-overview-card">
-            <span>信任</span>
-            <strong>信任等级 {{ profile.trust_level }} · {{ profile.trust_level_label }}</strong>
-            <div v-if="profileBadges.length" class="profile-badges-list">
-              <span v-for="badge in profileBadges.slice(0, 3)" :key="badge.id" class="profile-badge-chip">
-                <em>{{ badge.icon }}</em>
-                {{ badge.name }}
-              </span>
-            </div>
-          </div>
-
-          <div v-if="!isOwnProfile" class="profile-social-card">
-            <span>关系边界</span>
-            <strong>{{ socialSummary }}</strong>
-            <div class="profile-social-actions">
               <UiButton
                 type="button"
-                tone="subtle"
+                tone="ghost"
                 :disabled="relationshipMutation.isPending.value"
                 @click="toggleRelationship('ignore', !relationship?.ignored)"
               >
@@ -687,7 +743,7 @@ function socialErrorMessage(error: unknown): string {
               </UiButton>
               <UiButton
                 type="button"
-                tone="subtle"
+                tone="ghost"
                 :disabled="relationshipMutation.isPending.value"
                 @click="toggleRelationship('block', !relationship?.blocked)"
               >
@@ -733,7 +789,7 @@ function socialErrorMessage(error: unknown): string {
         :key="panel.key"
         type="button"
         :class="{ active: activeProfilePanel === panel.key }"
-        @click="activeProfilePanel = panel.key"
+        @click="selectProfilePanel(panel.key)"
       >
         {{ panel.label }}
       </button>
@@ -849,7 +905,7 @@ function socialErrorMessage(error: unknown): string {
           v-for="relatedUser in relationshipUsers"
           :key="relatedUser.id"
           class="profile-social-user"
-          :to="{ name: 'user-profile', params: { username: relatedUser.username } }"
+          :to="{ name: 'user-profile', params: { id: relatedUser.id } }"
         >
           <UiAvatar
             :name="relatedUser.display_name?.trim() || relatedUser.username"
@@ -878,144 +934,155 @@ function socialErrorMessage(error: unknown): string {
     </section>
 
     <section
-      v-else-if="profile && isOwnProfile && activeProfilePanel === 'settings'"
+      v-else-if="profile && isOwnProfile && activeProfilePanel === 'profile'"
       class="profile-settings-section"
       aria-labelledby="profile-settings-title"
     >
       <header>
         <div>
-          <h2 id="profile-settings-title">个人中心设置</h2>
-          <p>公开资料、界面偏好、密码和登录邮箱集中在这里。</p>
+          <h2 id="profile-settings-title">资料设置</h2>
+          <p>管理公开昵称、简介、个人链接、可见范围和界面偏好。</p>
         </div>
       </header>
 
-      <div class="profile-settings-grid">
-        <UiCard class="profile-settings-card">
-          <div class="profile-settings-card__head">
-            <span>公开资料</span>
-            <strong>别人看到的你</strong>
-            <p>昵称、简介、个人链接和可见性会影响公开档案。</p>
+      <UiCard class="profile-settings-card">
+        <div class="profile-settings-card__head">
+          <span>公开资料</span>
+          <strong>别人看到的你</strong>
+          <p>这些内容会出现在公开成员页和讨论上下文里。</p>
+        </div>
+        <p v-if="profileStatus" class="profile-form-status" role="status">{{ profileStatus }}</p>
+        <div class="profile-settings-form">
+          <label>
+            <span>公开昵称</span>
+            <input v-model="profileDraft.display_name" type="text" maxlength="80" />
+          </label>
+          <label>
+            <span>个人简介</span>
+            <textarea v-model="profileDraft.bio" rows="4" maxlength="1000"></textarea>
+          </label>
+          <label>
+            <span>个人链接</span>
+            <input v-model="profileDraft.website_url" type="url" placeholder="https://example.com" />
+          </label>
+          <label>
+            <span>位置/时区</span>
+            <input v-model="profileDraft.location" type="text" maxlength="120" />
+          </label>
+          <label>
+            <span>资料可见性</span>
+            <select v-model="profileDraft.profile_visibility">
+              <option value="public">公开</option>
+              <option value="members">仅登录用户</option>
+              <option value="private">仅自己</option>
+            </select>
+          </label>
+          <label class="profile-settings-form__toggle">
+            <input v-model="profileDraft.show_activity" type="checkbox" />
+            <span>展示公开活动流</span>
+          </label>
+          <label>
+            <span>界面偏好</span>
+            <select v-model="profileDraft.interface_theme">
+              <option value="system">跟随系统</option>
+              <option value="light">明亮</option>
+              <option value="colorful">多彩</option>
+            </select>
+          </label>
+          <label>
+            <span>语言</span>
+            <select v-model="profileDraft.locale">
+              <option value="zh-CN">简体中文</option>
+              <option value="en-US">English</option>
+            </select>
+          </label>
+          <div class="profile-message-actions">
+            <UiButton
+              type="button"
+              tone="primary"
+              :disabled="updateProfileMutation.isPending.value"
+              @click="saveProfile"
+            >
+              {{ updateProfileMutation.isPending.value ? "保存中…" : "保存资料" }}
+            </UiButton>
           </div>
-          <p v-if="profileStatus" class="profile-form-status" role="status">{{ profileStatus }}</p>
-          <div class="profile-settings-form">
-            <label>
-              <span>公开昵称</span>
-              <input v-model="profileDraft.display_name" type="text" maxlength="80" />
-            </label>
-            <label>
-              <span>个人简介</span>
-              <textarea v-model="profileDraft.bio" rows="4" maxlength="1000"></textarea>
-            </label>
-            <label>
-              <span>个人链接</span>
-              <input v-model="profileDraft.website_url" type="url" placeholder="https://example.com" />
-            </label>
-            <label>
-              <span>位置/时区</span>
-              <input v-model="profileDraft.location" type="text" maxlength="120" />
-            </label>
-            <label>
-              <span>资料可见性</span>
-              <select v-model="profileDraft.profile_visibility">
-                <option value="public">公开</option>
-                <option value="members">仅登录用户</option>
-                <option value="private">仅自己</option>
-              </select>
-            </label>
-            <label class="profile-settings-form__toggle">
-              <input v-model="profileDraft.show_activity" type="checkbox" />
-              <span>展示公开活动流</span>
-            </label>
-            <label>
-              <span>界面偏好</span>
-              <select v-model="profileDraft.interface_theme">
-                <option value="system">跟随系统</option>
-                <option value="light">明亮</option>
-                <option value="colorful">多彩</option>
-              </select>
-            </label>
-            <label>
-              <span>语言</span>
-              <select v-model="profileDraft.locale">
-                <option value="zh-CN">简体中文</option>
-                <option value="en-US">English</option>
-              </select>
-            </label>
-            <div class="profile-message-actions">
-              <UiButton
-                type="button"
-                tone="primary"
-                :disabled="updateProfileMutation.isPending.value"
-                @click="saveProfile"
-              >
-                {{ updateProfileMutation.isPending.value ? "保存中…" : "保存资料" }}
-              </UiButton>
-            </div>
-          </div>
-        </UiCard>
+        </div>
+      </UiCard>
+    </section>
 
-        <UiCard id="profile-account-settings" class="profile-settings-card profile-settings-card--account">
-          <div class="profile-settings-card__head">
-            <span>账号设置</span>
-            <strong>密码与登录邮箱</strong>
-            <p>当前登录邮箱：{{ currentUserQuery.data.value?.email }}</p>
-          </div>
-          <div class="profile-account-grid">
-            <form class="profile-account-form" @submit.prevent="submitPasswordChange">
-              <header>
-                <h3>修改密码</h3>
-                <p>请使用至少 8 位的新密码。</p>
-              </header>
+    <section
+      v-else-if="profile && isOwnProfile && activeProfilePanel === 'account'"
+      class="profile-settings-section"
+      aria-labelledby="profile-account-title"
+    >
+      <header>
+        <div>
+          <h2 id="profile-account-title">账号设置</h2>
+          <p>只保留密码和登录邮箱；二次验证、活跃会话、OAuth / SSO 暂不展示。</p>
+        </div>
+      </header>
+
+      <UiCard class="profile-settings-card profile-settings-card--account">
+        <div class="profile-settings-card__head">
+          <span>登录安全</span>
+          <strong>密码与邮箱</strong>
+          <p>当前登录邮箱：{{ currentUserQuery.data.value?.email }}</p>
+        </div>
+        <div class="profile-account-grid">
+          <form class="profile-account-form" @submit.prevent="submitPasswordChange">
+            <header>
+              <h3>修改密码</h3>
+              <p>请使用至少 8 位的新密码。</p>
+            </header>
+            <label>
+              <span>当前密码</span>
+              <PasswordField v-model="currentPassword" autocomplete="current-password" />
+            </label>
+            <label>
+              <span>新密码</span>
+              <PasswordField v-model="newPassword" autocomplete="new-password" />
+            </label>
+            <label>
+              <span>确认新密码</span>
+              <PasswordField v-model="confirmNewPassword" autocomplete="new-password" />
+            </label>
+            <p v-if="passwordError" class="profile-form-status profile-form-status--error" role="alert">
+              {{ passwordError }}
+            </p>
+            <p v-if="passwordStatus" class="profile-form-status" role="status">{{ passwordStatus }}</p>
+            <UiButton type="submit" tone="primary" :disabled="accountSettingsBusy">保存密码</UiButton>
+          </form>
+
+          <div class="profile-account-form">
+            <header>
+              <h3>修改邮箱</h3>
+              <p>确认令牌会发送到新邮箱。</p>
+            </header>
+            <form class="profile-account-subform" @submit.prevent="requestEmailChange">
+              <label>
+                <span>新邮箱</span>
+                <input v-model="newEmail" type="email" autocomplete="email" />
+              </label>
               <label>
                 <span>当前密码</span>
-                <PasswordField v-model="currentPassword" autocomplete="current-password" />
+                <PasswordField v-model="emailPassword" autocomplete="current-password" />
               </label>
-              <label>
-                <span>新密码</span>
-                <PasswordField v-model="newPassword" autocomplete="new-password" />
-              </label>
-              <label>
-                <span>确认新密码</span>
-                <PasswordField v-model="confirmNewPassword" autocomplete="new-password" />
-              </label>
-              <p v-if="passwordError" class="profile-form-status profile-form-status--error" role="alert">
-                {{ passwordError }}
-              </p>
-              <p v-if="passwordStatus" class="profile-form-status" role="status">{{ passwordStatus }}</p>
-              <UiButton type="submit" tone="primary" :disabled="accountSettingsBusy">保存密码</UiButton>
+              <UiButton type="submit" tone="primary" :disabled="accountSettingsBusy">发送确认令牌</UiButton>
             </form>
-
-            <div class="profile-account-form">
-              <header>
-                <h3>修改邮箱</h3>
-                <p>确认令牌会发送到新邮箱。</p>
-              </header>
-              <form class="profile-account-subform" @submit.prevent="requestEmailChange">
-                <label>
-                  <span>新邮箱</span>
-                  <input v-model="newEmail" type="email" autocomplete="email" />
-                </label>
-                <label>
-                  <span>当前密码</span>
-                  <PasswordField v-model="emailPassword" autocomplete="current-password" />
-                </label>
-                <UiButton type="submit" tone="primary" :disabled="accountSettingsBusy">发送确认令牌</UiButton>
-              </form>
-              <form class="profile-account-subform profile-account-subform--confirm" @submit.prevent="confirmEmailChange">
-                <label>
-                  <span>邮箱确认令牌</span>
-                  <input v-model="emailToken" autocomplete="one-time-code" />
-                </label>
-                <UiButton type="submit" tone="subtle" :disabled="accountSettingsBusy">确认邮箱变更</UiButton>
-              </form>
-              <p v-if="emailError" class="profile-form-status profile-form-status--error" role="alert">
-                {{ emailError }}
-              </p>
-              <p v-if="emailStatus" class="profile-form-status" role="status">{{ emailStatus }}</p>
-            </div>
+            <form class="profile-account-subform profile-account-subform--confirm" @submit.prevent="confirmEmailChange">
+              <label>
+                <span>邮箱确认令牌</span>
+                <input v-model="emailToken" autocomplete="one-time-code" />
+              </label>
+              <UiButton type="submit" tone="subtle" :disabled="accountSettingsBusy">确认邮箱变更</UiButton>
+            </form>
+            <p v-if="emailError" class="profile-form-status profile-form-status--error" role="alert">
+              {{ emailError }}
+            </p>
+            <p v-if="emailStatus" class="profile-form-status" role="status">{{ emailStatus }}</p>
           </div>
-        </UiCard>
-      </div>
+        </div>
+      </UiCard>
     </section>
   </div>
 </template>

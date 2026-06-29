@@ -8,13 +8,14 @@ Applies to public user profile reads, authored topic lists, and post editing und
 
 | Endpoint | Auth | Purpose |
 |---|---|---|
+| `GET /api/v1/users/id/{user_id}` | public | Return public user profile by stable ID without email. |
 | `GET /api/v1/users/{username}` | public | Return public user profile without email. |
 | `GET /api/v1/users/{username}/topics?limit=` | public | Return visible topics authored by username using `TopicResponse`. |
 | `PATCH /api/v1/posts/{post_id}` | active user | Update post Markdown/rendered HTML and optionally save `edit_reason` into revision history. |
 
 ## Response Contracts
 
-`GET /users/{username}` returns:
+`GET /users/id/{user_id}` and `GET /users/{username}` return:
 
 - `id`, `username`, `avatar_url`, `role`, `status`, `created_at`
 - `topic_count`: count of non-hidden topics authored by the user
@@ -45,7 +46,7 @@ Applies to public user profile reads, authored topic lists, and post editing und
 
 ## Tests Required
 
-- Public user profile does not leak email.
+- Public user profile by ID or username does not leak email.
 - Authored topic list filters hidden topics.
 - Author can edit own post.
 - Ordinary user cannot edit another user's post.

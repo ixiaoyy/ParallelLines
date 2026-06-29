@@ -15,8 +15,9 @@ API routes:
 |---|---|---:|---|
 | `PATCH` | `/api/v1/users/me/profile` | user | Update own profile, privacy, and UI preference fields |
 | `GET` | `/api/v1/users/directory?sort=active|level|contribution&limit=` | public | Public member directory without email |
-| `GET` | `/api/v1/users/{username}/activity?type=posts|likes|bookmarks` | privacy-aware | Public activity feed if enabled/visible |
+| `GET` | `/api/v1/users/id/{user_id}` | public/optional user | Privacy-filtered profile response by stable user ID |
 | `GET` | `/api/v1/users/{username}` | public/optional user | Privacy-filtered profile response |
+| `GET` | `/api/v1/users/{username}/activity?type=posts|likes|bookmarks` | privacy-aware | Public activity feed if enabled/visible |
 
 User columns:
 
@@ -29,6 +30,9 @@ User columns:
 ### 3. Contracts
 
 - Public profile and directory responses must never include `email`.
+- Browser-facing member pages use `/members/{user_id}` and should fetch profiles via
+  `/api/v1/users/id/{user_id}`; username-based endpoints remain available for existing content,
+  activity, and relationship APIs.
 - `profile_visibility=public` exposes editable profile fields to everyone.
 - `profile_visibility=members` exposes editable fields only to logged-in users, self, or admins.
 - `profile_visibility=private` exposes editable fields only to self/admins.

@@ -45,7 +45,7 @@ Canonical browser paths:
 
 - Topic: `/topics/{topic.id}/{topic.slug}`
 - Board: `/b/{board.slug}`
-- User: `/u/{profile.username}`
+- User: `/members/{profile.id}`
 
 ### 3. Contracts
 
@@ -65,7 +65,7 @@ Canonical browser paths:
 | Topic loads | Title, canonical, OG, and Twitter metadata point to `/topics/{id}/{slug}`. |
 | Topic route has stale slug | Existing route replacement updates path; metadata uses loaded current slug. |
 | Board loads | Canonical points to `/b/{slug}` and description uses board description. |
-| User profile loads | Canonical points to `/u/{username}` and description uses public content counts. |
+| User profile loads | Canonical points to `/members/{user_id}` and description uses public content counts. |
 | Page query errors | Existing default/previous metadata remains; no route-param-only private data is exposed. |
 
 ### 5. Good/Base/Bad Cases

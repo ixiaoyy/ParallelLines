@@ -61,7 +61,7 @@ async function enablePush() {
   await registration.showNotification("平行线推送已开启", {
     body: "以后重要通知会遵守你的通知偏好和免打扰设置。",
     icon: "/logo-icon.png",
-    data: { url: "/email-preferences" },
+    data: { url: "/account/preferences" },
   });
   status.value = "Push 订阅已保存。";
 }

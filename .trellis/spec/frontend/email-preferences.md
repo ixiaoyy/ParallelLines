@@ -4,7 +4,7 @@
 
 ### 1. Scope / Trigger
 
-- Trigger: changing `/email-preferences`, email preference API wiring, notification email toggles, or digest frequency UI.
+- Trigger: changing `/account/preferences`, the legacy `/email-preferences` redirect, email preference API wiring, notification email toggles, or digest frequency UI.
 - Applies to `features/email-preferences/`, `pages/email/EmailPreferencesPage.vue`, router entries, app-shell navigation, and shared query keys.
 
 ### 2. Signatures
@@ -13,7 +13,8 @@ Routes and API:
 
 | Item | Contract |
 |---|---|
-| `/email-preferences` | Authenticated preference page; unauthenticated users see a login CTA |
+| `/account/preferences` | Authenticated preference page; unauthenticated users see a login CTA |
+| `/email-preferences` | Legacy redirect to `/account/preferences` |
 | `fetchEmailPreferences()` | `GET /email/preferences` |
 | `updateEmailPreferences(payload)` | `PUT /email/preferences` |
 | `queryKeys.emailPreferences` | TanStack Query key for preference server state |
@@ -61,7 +62,7 @@ Payload fields:
 - Good: user disables replied emails, keeps mentions on, selects weekly digest, and saves once.
 - Good: user enables quiet hours from 22:00 UTC to 07:00 UTC; the page sends both hour fields and
   preserves all per-event toggles.
-- Base: user lands unauthenticated from `/email-preferences` and can go to `/auth?redirect=/email-preferences`.
+- Base: user lands unauthenticated from `/account/preferences` and can go to `/auth?redirect=/account/preferences`.
 - Bad: mirroring preference state in Pinia or localStorage instead of TanStack Query.
 
 ### 6. Tests Required
@@ -69,7 +70,7 @@ Payload fields:
 - `pnpm --dir apps/web lint`
 - `pnpm --dir apps/web typecheck`
 - `pnpm --dir apps/web build`
-- Browser/static verification should confirm `/email-preferences` renders the hero and unauthenticated login CTA.
+- Browser/static verification should confirm `/account/preferences` renders the hero and unauthenticated login CTA.
 - Browser/static verification should confirm quiet-hours controls render, can be enabled/disabled,
   and do not clear event toggles before save.
 

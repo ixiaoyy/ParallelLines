@@ -4,7 +4,7 @@
 
 ### 1. Scope / Trigger
 
-- Trigger: changing `/u/:username`, `/me`, `/users`, profile edit forms, account settings embedded in
+- Trigger: changing `/members/:id`, `/account`, `/users`, profile edit forms, account settings embedded in
   the profile page, user directory calls, or activity feed UI.
 - Applies to `features/users/`, `pages/user/UserProfilePage.vue`, `pages/user/UserDirectoryPage.vue`,
   router, app shell navigation, and query keys.
@@ -16,6 +16,7 @@ Frontend APIs/composables:
 | Function / Composable | Backend endpoint | Purpose |
 |---|---|---|
 | `updateMyProfile(payload)` | `PATCH /users/me/profile` | Save own profile/privacy/UI prefs |
+| `fetchUserProfileById(userId)` | `GET /users/id/{user_id}` | Load public profile by stable user ID |
 | `fetchUserDirectory(sort)` | `GET /users/directory` | Public member directory |
 | `fetchUserActivity(username, type)` | `GET /users/{username}/activity` | Privacy-aware activity list |
 | `useUpdateMyProfile(username)` | mutation | Update profile and invalidate profile/current-user/directory |
@@ -26,20 +27,25 @@ Frontend APIs/composables:
 
 Routes:
 
-- `/me` → authenticated convenience entry that loads `/auth/me` and redirects to `/u/{currentUser.username}`;
-  unauthenticated users are sent through the normal login redirect; query/hash are preserved so
-  `/me?panel=settings&section=account` opens the settings panel after redirect.
+- `/account` → authenticated personal center for the current user; loads `/auth/me` first and then
+  reads the current user's profile through the existing user profile API.
+- `/account/profile` → current user's public profile form and interface preferences.
+- `/account/settings` → current user's password and login-email settings.
+- `/account/preferences` → current user's email notification preferences.
+- `/me` → compatibility redirect to `/account`; new navigation must not generate `/me?panel=...`.
 - `/users` → member directory.
-- `/u/:username` → profile, edit form for self, public topics and activity sections.
+- `/members/:id` → public member profile, topics, activity, relationship actions, and relationship
+  lists. The page first calls `GET /users/id/{user_id}` for stable routing, then uses the returned
+  `username` for existing topics/activity/relationship endpoints.
 
 ### 3. Contracts
 
 - User directory cards must not render email and must use API-provided public fields only.
-- Own profile may show the edit form; other profiles must not show edit controls.
+- Own account routes show edit forms; public member routes for other users must not show edit controls.
 - App shell current-user navigation should label the own profile entry as “个人中心” and link through
-  `/me`/`my-profile`, while public member links continue to use `/u/:username`.
+  `/account`, while public member links continue to use `/members/:id`.
 - Own-profile settings are grouped by purpose: public profile settings and account settings. Password
-  and login-email forms live in the settings panel; there is no standalone `/security` route.
+  and login-email forms live under `/account/settings`; there is no standalone `/security` route.
 - Profile save errors preserve form fields and show visible zh-CN copy, especially invalid URL.
 - Avatar display still uses `resolveApiAssetUrl()`.
 - Activity tabs should query `posts`, `likes`, and `bookmarks`; if privacy hides the feed, show an honest state.
@@ -49,10 +55,10 @@ Routes:
 
 | Case | Expected UI behavior |
 |---|---|
-| Own profile | Shows profile settings form and save button |
+| Own account profile route | Shows profile settings form and save button |
 | Other profile | Shows no edit form |
-| Own profile account settings | Shows password and login-email forms in the settings panel |
-| `/me?panel=settings&section=account` | Redirects to own `/u/:username` with the settings panel active |
+| Own account settings route | Shows password and login-email forms under `/account/settings` |
+| `/me` | Redirects to `/account` without preserving old settings panel query semantics |
 | Invalid URL save | Shows URL-specific error; draft remains |
 | Directory load | Cards show username/display name/level/contribution, never email |
 | Activity private | Shows private/unavailable state, not fake empty data |
@@ -75,9 +81,9 @@ Default roadmap scope is downgraded unless detailed testing is requested:
 
 - `npm run typecheck` in `apps/web`
 - `npm run lint` in `apps/web`
-- Focused manual smoke when practical: open `/users`, open own `/u/:username`, open
-  `/me?panel=settings&section=account`, edit bio/link/privacy, switch activity tabs, and confirm
-  account forms render only for own profile.
+- Focused manual smoke when practical: open `/users`, open `/members/:id`, open
+  `/account/profile`, open `/account/settings`, edit bio/link/privacy, switch activity tabs, and confirm
+  account forms render only for the authenticated user's account routes.
 
 ### 7. Wrong vs Correct
 

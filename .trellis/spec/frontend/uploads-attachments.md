@@ -72,7 +72,7 @@ Components/composables:
 | Disallowed/mismatched file | Shows "文件类型不被允许，或内容与扩展名不一致" |
 | Upload success in composer | Markdown is inserted into the textarea and draft autosave continues |
 | Create topic/reply after upload | API persists raw Markdown with upload URL; refreshed post displays image/link |
-| Avatar upload success | `/auth/me` cache and `/u/:username` profile show the new avatar |
+| Avatar upload success | `/auth/me` cache, `/account`, and `/members/:id` profile show the new avatar |
 | Avatar upload invalid type | Shows avatar-specific image-only error |
 
 ### 5. Good/Base/Bad Cases

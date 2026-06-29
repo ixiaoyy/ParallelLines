@@ -38,7 +38,7 @@ Canonical paths:
 
 - Topic: `/topics/{topic_id}/{topic_slug}`
 - Board: `/b/{board_slug}`
-- User: `/u/{username}`
+- User: `/members/{user_id}`
 
 ### 3. Contracts
 
