@@ -1,4 +1,19 @@
 <script setup lang="ts">
+import {
+  ArrowLeftOutlined,
+  BellOutlined,
+  CompassOutlined,
+  EditFilled,
+  EllipsisOutlined,
+  FileTextOutlined,
+  HomeOutlined,
+  MessageOutlined,
+  SearchOutlined,
+  TeamOutlined,
+  TrophyOutlined,
+  UserOutlined,
+  UserAddOutlined,
+} from "@ant-design/icons-vue";
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { RouteLocationRaw } from "vue-router";
@@ -210,15 +225,40 @@ const profileStats = computed(() => {
   const followerCount = profile.value?.follower_count ?? 0;
 
   return [
-    { label: "主题", value: topicCount, note: topicCount > 0 ? "已发起讨论" : "等待首帖" },
-    { label: "回复", value: postCount, note: postCount > 0 ? "参与讨论" : "还没有回复" },
-    { label: "关注", value: followingCount, note: followingCount > 0 ? "正在关注" : "还未关注" },
-    { label: "粉丝", value: followerCount, note: followerCount > 0 ? "关注者" : "等待关注" },
+    { label: "主题", value: topicCount, note: topicCount > 0 ? "已发起讨论" : "等待首帖", icon: FileTextOutlined },
+    { label: "回复", value: postCount, note: postCount > 0 ? "参与讨论" : "还没有回复", icon: MessageOutlined },
+    { label: "关注", value: followingCount, note: followingCount > 0 ? "正在关注" : "还未关注", icon: UserAddOutlined },
+    { label: "粉丝", value: followerCount, note: followerCount > 0 ? "关注者" : "等待关注", icon: TeamOutlined },
   ];
 });
 
 const profileBadges = computed(() => profile.value?.badges ?? []);
 const profileSummary = computed(() => profile.value?.bio?.trim() ?? "");
+// levelProgressPercent 用途：把后端等级进度限制到 0-100，供进度条样式使用；无参数，返回百分比数字且无副作用。
+const levelProgressPercent = computed(() => Math.min(100, Math.max(0, profile.value?.level_progress_percent ?? 0)));
+// levelProgressStyle 用途：把等级进度写入局部 CSS 变量；无参数，返回样式对象且无副作用。
+const levelProgressStyle = computed(() => ({ "--profile-level-progress": `${levelProgressPercent.value}%` }));
+// activeBoardSummaries 用途：从用户公开主题列表聚合参与版块；无参数，返回最多三个真实版块摘要且无副作用。
+const activeBoardSummaries = computed(() => {
+  const boards = new Map<string, { slug: string; name: string; color: string; topicCount: number; replyCount: number }>();
+
+  for (const topic of topicsQuery.data.value ?? []) {
+    const existing = boards.get(topic.boardSlug) ?? {
+      slug: topic.boardSlug,
+      name: topic.boardName,
+      color: topic.boardColor,
+      topicCount: 0,
+      replyCount: 0,
+    };
+    existing.topicCount += 1;
+    existing.replyCount += topic.replyCount;
+    boards.set(topic.boardSlug, existing);
+  }
+
+  return Array.from(boards.values())
+    .sort((left, right) => right.topicCount + right.replyCount - (left.topicCount + left.replyCount))
+    .slice(0, 3);
+});
 const socialPanelTitle = computed(() => (isOwnProfile.value ? "我的关注" : "关注关系"));
 const socialFollowingLabel = computed(() => (isOwnProfile.value ? "我关注的" : "TA 关注的"));
 const socialFollowersLabel = computed(() => (isOwnProfile.value ? "关注我的" : "关注 TA 的"));
@@ -350,6 +390,16 @@ async function selectProfilePanel(panel: ProfilePanel) {
   }
 
   activeProfilePanel.value = panel;
+}
+
+// handleMobileBack 用途：移动端资料页返回按钮；无参数，副作用是优先浏览器后退，缺少历史时返回首页。
+function handleMobileBack() {
+  if (window.history.length > 1) {
+    router.back();
+    return;
+  }
+
+  void router.push({ name: "home" });
 }
 
 // openAvatarPicker 用途：打开头像上传文件选择器；无参数，副作用是触发隐藏 input 的点击。
@@ -622,6 +672,20 @@ function socialErrorMessage(error: unknown): string {
 
 <template>
   <div class="user-profile-page">
+    <header class="profile-mobile-header" aria-label="移动端个人资料导航">
+      <button type="button" aria-label="返回上一页" @click="handleMobileBack">
+        <ArrowLeftOutlined aria-hidden="true" />
+      </button>
+      <div class="profile-mobile-header__actions">
+        <RouterLink :to="{ name: 'search' }" aria-label="搜索">
+          <SearchOutlined aria-hidden="true" />
+        </RouterLink>
+        <button type="button" aria-label="更多操作">
+          <EllipsisOutlined aria-hidden="true" />
+        </button>
+      </div>
+    </header>
+
     <UiCard class="profile-hero">
       <div v-if="isProfileLoading" class="profile-state">正在加载用户资料…</div>
       <div v-else-if="isProfileError" class="profile-state profile-state--error" role="alert">
@@ -690,9 +754,14 @@ function socialErrorMessage(error: unknown): string {
 
           <dl class="profile-stats" aria-label="用户内容统计">
             <div v-for="stat in profileStats" :key="stat.label">
-              <dt>{{ stat.label }}</dt>
+              <dt>
+                {{ stat.label }}
+                <span class="profile-stat-icon">
+                  <component :is="stat.icon" aria-hidden="true" />
+                </span>
+              </dt>
               <dd>{{ stat.value }}</dd>
-              <span>{{ stat.note }}</span>
+              <span class="profile-stat-note">{{ stat.note }}</span>
             </div>
           </dl>
         </div>
@@ -702,6 +771,10 @@ function socialErrorMessage(error: unknown): string {
             <div class="profile-insight">
               <span>成长</span>
               <strong>等级 {{ profile.level }} · {{ profile.points_balance }} 可用积分</strong>
+              <div class="profile-level-meter" :style="levelProgressStyle" aria-hidden="true">
+                <span></span>
+              </div>
+              <small>{{ profile.experience_total }} 经验 · {{ levelProgressPercent }}%</small>
             </div>
             <div class="profile-insight profile-insight--trust">
               <span>信任</span>
@@ -788,17 +861,19 @@ function socialErrorMessage(error: unknown): string {
       </template>
     </UiCard>
 
-    <nav v-if="profile" class="profile-section-switcher" aria-label="个人中心内容">
-      <button
-        v-for="panel in profilePanels"
-        :key="panel.key"
-        type="button"
-        :class="{ active: activeProfilePanel === panel.key }"
-        @click="selectProfilePanel(panel.key)"
-      >
-        {{ panel.label }}
-      </button>
-    </nav>
+    <div v-if="profile" class="profile-content-layout">
+      <main class="profile-content-main">
+        <nav class="profile-section-switcher" aria-label="个人中心内容">
+          <button
+            v-for="panel in profilePanels"
+            :key="panel.key"
+            type="button"
+            :class="{ active: activeProfilePanel === panel.key }"
+            @click="selectProfilePanel(panel.key)"
+          >
+            {{ panel.label }}
+          </button>
+        </nav>
 
     <section v-if="profile && activeProfilePanel === 'topics'" class="profile-topics" aria-labelledby="profile-topics-title">
       <header>
@@ -1089,6 +1164,79 @@ function socialErrorMessage(error: unknown): string {
         </div>
       </UiCard>
     </section>
+      </main>
+
+      <aside class="profile-sidebar" aria-label="个人资料侧栏">
+        <UiCard class="profile-side-card profile-side-card--badges">
+          <header>
+            <h2>个人勋章</h2>
+            <TrophyOutlined aria-hidden="true" />
+          </header>
+          <div v-if="profileBadges.length" class="profile-side-badges">
+            <span v-for="badge in profileBadges.slice(0, 6)" :key="badge.id" :title="badge.description">
+              <em>{{ badge.icon }}</em>
+              <strong>{{ badge.name }}</strong>
+            </span>
+          </div>
+          <p v-else class="profile-side-empty">还没有公开勋章。</p>
+          <span class="profile-side-mobile-copy">
+            查看全部 {{ profileBadges.length }} 个勋章
+          </span>
+          <span v-if="profileBadges.length > 6" class="profile-side-link profile-side-link--muted">
+            已展示 6 / {{ profileBadges.length }} 个勋章
+          </span>
+        </UiCard>
+
+        <UiCard class="profile-side-card">
+          <header>
+            <h2>参与版块</h2>
+            <FileTextOutlined aria-hidden="true" />
+          </header>
+          <div v-if="topicsQuery.isLoading.value" class="profile-side-empty">正在读取版块…</div>
+          <div v-else-if="activeBoardSummaries.length" class="profile-board-list">
+            <RouterLink
+              v-for="board in activeBoardSummaries"
+              :key="board.slug"
+              :to="{ name: 'board-detail', params: { slug: board.slug } }"
+            >
+              <span class="profile-board-dot" :style="{ backgroundColor: board.color }" aria-hidden="true"></span>
+              <strong>{{ board.name }}</strong>
+              <em>{{ board.topicCount }} 主题 · {{ board.replyCount }} 回复</em>
+            </RouterLink>
+          </div>
+          <p v-else class="profile-side-empty">发布主题后，这里会展示真实参与过的版块。</p>
+          <span class="profile-side-mobile-copy">查看全部参与的版块</span>
+          <RouterLink class="profile-side-link" to="/boards">查看全部版块</RouterLink>
+        </UiCard>
+      </aside>
+
+      <RouterLink class="profile-mobile-publish" :to="{ name: 'new-topic' }">
+        <EditFilled aria-hidden="true" />
+        <span>发布主题</span>
+      </RouterLink>
+
+      <nav class="profile-mobile-bottom-nav" aria-label="移动端主导航">
+        <RouterLink :to="{ name: 'home' }">
+          <HomeOutlined aria-hidden="true" />
+          <span>首页</span>
+        </RouterLink>
+        <RouterLink :to="{ name: 'board-directory' }">
+          <CompassOutlined aria-hidden="true" />
+          <span>发现</span>
+        </RouterLink>
+        <RouterLink class="profile-mobile-bottom-nav__create" :to="{ name: 'new-topic' }" aria-label="发布主题">
+          <span class="profile-mobile-bottom-nav__plus" aria-hidden="true"></span>
+        </RouterLink>
+        <RouterLink :to="{ name: 'messages' }">
+          <BellOutlined aria-hidden="true" />
+          <span>消息</span>
+        </RouterLink>
+        <RouterLink :to="{ name: 'account-home' }">
+          <UserOutlined aria-hidden="true" />
+          <span>我的</span>
+        </RouterLink>
+      </nav>
+    </div>
   </div>
 </template>
 

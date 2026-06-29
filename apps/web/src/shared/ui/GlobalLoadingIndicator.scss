@@ -69,6 +69,28 @@
   white-space: nowrap;
 }
 
+@media (max-width: 620px) {
+  .global-loading-indicator {
+    right: auto;
+    bottom: calc(5.85rem + env(safe-area-inset-bottom));
+    left: max(0.85rem, env(safe-area-inset-left));
+    padding: 0.34rem 0.5rem 0.34rem 0.34rem;
+  }
+
+  .global-loading-indicator__mark {
+    width: 1.55rem;
+    height: 1.55rem;
+  }
+
+  .global-loading-indicator__mark i {
+    width: 0.9rem;
+  }
+
+  .global-loading-indicator__copy {
+    font-size: 0.72rem;
+  }
+}
+
 .global-loading-enter-active,
 .global-loading-leave-active {
   transition:

@@ -60,6 +60,13 @@ const currentUser = computed(() => currentUserQuery.data.value);
 // Auth route already renders the login/register form, so the guest CTA is hidden there to avoid duplicate entry points.
 const isAuthRoute = computed(() => route.name === "auth");
 const isMobileFullscreenRoute = computed(() => route.name === "admin-moderation");
+// isProfileScreenRoute 用途：标记用户资料/个人中心路由，供移动端切换为设计稿式页面外壳；无参数，返回布尔值且无副作用。
+const isProfileScreenRoute = computed(() =>
+  route.name === "user-profile" ||
+  route.name === "account-home" ||
+  route.name === "account-profile" ||
+  route.name === "account-settings",
+);
 const isRouteNavigating = ref(false);
 const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
@@ -348,6 +355,7 @@ function isNavItemActive(item: NavItem) {
       'is-route-navigating': isRouteNavigating,
       'app-shell--mobile-fullscreen': isMobileFullscreenRoute,
       'app-shell--auth-immersive': isAuthRoute,
+      'app-shell--profile-screen': isProfileScreenRoute,
     }"
   >
     <header v-if="!isAuthRoute" ref="topbarRef" class="topbar" @keydown.esc="closeNavigation">
