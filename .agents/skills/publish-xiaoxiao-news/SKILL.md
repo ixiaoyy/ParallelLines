@@ -23,6 +23,10 @@ Use this project-local workflow to publish one sourced post to `https://www.ping
    - `slug`: short ASCII slug, for example `ai-model-release-news`.
 3. Choose the channel script.
 4. Preview with the helper script. Preview is required before publishing:
+   - If production rejects the legacy unsigned-session admin token, provide a session-backed admin token:
+     - `--admin-token-file .tmp/xiaoxiao-admin-token.txt`, or
+     - `PARALLELLINES_ADMIN_ACCOUNT` / `PARALLELLINES_ADMIN_PASSWORD` for a normal admin login.
+   - Do not print admin tokens or passwords in chat or logs.
 
    `小小资讯` -> `热点资讯`:
    ```powershell
@@ -75,5 +79,5 @@ Use this project-local workflow to publish one sourced post to `https://www.ping
 - `publish_xiaoxiao_sports.py` wraps the shared publisher with defaults for `小小鸡仔`, `sports`, and `apps/web/public/avatars/xiaoxiao-jizai.png`. On `--run`, it uploads the avatar after a successful publish.
 - Avatar upload for legacy accounts may return HTTP 500 after the database write if the response serializer hits old profile data. The helper re-checks the public profile and treats a changed `avatar_url` as success.
 - The shared publisher sends a browser-like `User-Agent` because production Cloudflare blocks Python's default urllib signature.
-- The script loads `apps/api/.env` only to sign a short-lived admin JWT. Never print or disclose `JWT_SECRET_KEY`, generated tokens, or publisher passwords.
+- The script can load `apps/api/.env` to sign a short-lived legacy admin JWT, but production may require a session-backed admin token with `sid`. Prefer `--admin-token-file` or admin login environment variables when publishing to production. Never print or disclose `JWT_SECRET_KEY`, generated tokens, or publisher passwords.
 - Do not publish to legacy, SSH-only, or non-public environments; verify against `https://www.pingxingxian.space`.

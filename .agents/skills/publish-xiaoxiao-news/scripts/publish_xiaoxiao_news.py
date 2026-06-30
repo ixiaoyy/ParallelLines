@@ -148,6 +148,58 @@ def make_admin_token(admin_id: str, env_values: dict[str, str]) -> str:
     return jwt.encode(payload, secret, algorithm=algorithm)
 
 
+# Read an admin access token from CLI text, a file, a login request, or the legacy signer.
+# Key parameters are base URL, CLI args, and env values. Return value: admin JWT. Side effect: optional network login.
+def resolve_admin_token(base_url: str, args: argparse.Namespace, env_values: dict[str, str]) -> str:
+    token = args.admin_token.strip()
+    if token:
+        return token
+    if args.admin_token_file:
+        token_path = Path(args.admin_token_file)
+        if not token_path.is_absolute():
+            token_path = project_root() / token_path
+        token = token_path.read_text(encoding="utf-8").strip()
+        if not token:
+            raise RuntimeError(f"Admin token file is empty: {token_path}")
+        return token
+    if args.admin_account and args.admin_password:
+        return login_admin_token(base_url, args.admin_account, args.admin_password)
+    admin_id = public_user_id(base_url, args.admin_username, expected_role="admin")
+    return make_admin_token(admin_id, env_values)
+
+
+# Log in through the public auth API and return its session-backed access token.
+# Key parameters are base URL, admin account, and password. Return value: access token. Side effect: creates a server session.
+def login_admin_token(base_url: str, account: str, password: str) -> str:
+    response = request_json(
+        "POST",
+        f"{base_url}/api/v1/auth/login",
+        payload={"account": account, "password": password},
+    )
+    data = dict(response.get("data") or {})
+    if data.get("two_factor_required"):
+        raise RuntimeError("Admin account has 2FA enabled; provide --admin-token-file instead")
+    token = str(data.get("access_token") or "")
+    if not token:
+        raise RuntimeError("Admin login succeeded without an access token")
+    return token
+
+
+# Confirm the chosen token belongs to an active admin before invoking admin imports.
+# Key parameters are base URL and token. Return value: none. Side effect: network validation request.
+def validate_admin_token(base_url: str, token: str) -> None:
+    try:
+        response = request_json("GET", f"{base_url}/api/v1/auth/me", token=token)
+    except RuntimeError as exc:
+        raise RuntimeError(
+            "Admin token was rejected by the production API. "
+            "Use --admin-account/--admin-password or --admin-token-file with a session-backed admin token."
+        ) from exc
+    data = dict(response.get("data") or {})
+    if data.get("role") != "admin":
+        raise RuntimeError(f"Authenticated token role is {data.get('role')!r}, expected 'admin'")
+
+
 # Normalize comma-separated tags while preserving user-specified order.
 # Key parameter `raw_tags` is the CLI tag string. Return value: unique tag list. Side effect: none.
 def normalize_tags(raw_tags: str) -> list[str]:
@@ -312,6 +364,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--base-url", default="https://www.pingxingxian.space", help="Public site URL.")
     parser.add_argument("--env-file", default=str(project_root() / "apps/api/.env"), help="API .env path.")
     parser.add_argument("--admin-username", default="多动脑子z", help="Admin username for signing token.")
+    parser.add_argument(
+        "--admin-token",
+        default=os.getenv("PARALLELLINES_ADMIN_ACCESS_TOKEN", ""),
+        help="Session-backed admin access token. Prefer --admin-token-file to avoid shell history.",
+    )
+    parser.add_argument(
+        "--admin-token-file",
+        default=os.getenv("PARALLELLINES_ADMIN_TOKEN_FILE", ""),
+        help="Path to a file containing a session-backed admin access token.",
+    )
+    parser.add_argument(
+        "--admin-account",
+        default=os.getenv("PARALLELLINES_ADMIN_ACCOUNT", ""),
+        help="Admin account used to obtain a session-backed access token.",
+    )
+    parser.add_argument(
+        "--admin-password",
+        default=os.getenv("PARALLELLINES_ADMIN_PASSWORD", ""),
+        help="Admin password used with --admin-account. Prefer environment variables.",
+    )
     parser.add_argument("--author-username", default="小小资讯", help="Topic author username.")
     parser.add_argument(
         "--ensure-author",
@@ -364,8 +436,8 @@ def main(argv: list[str] | None = None) -> int:
 
     env_values = load_env(Path(args.env_file))
     base_url = args.base_url.rstrip("/")
-    admin_id = public_user_id(base_url, args.admin_username, expected_role="admin")
-    token = make_admin_token(admin_id, env_values)
+    token = resolve_admin_token(base_url, args, env_values)
+    validate_admin_token(base_url, token)
 
     source_prefix = args.source_prefix.strip() or "manual-xiaoxiao-news"
     preview_payload = build_payload(args, body, source=f"{source_prefix}-preview")
