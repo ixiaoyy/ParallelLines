@@ -5,6 +5,7 @@ import { createApp } from "vue";
 
 import App from "@/app/App.vue";
 import { router } from "@/app/router";
+import { installSiteVisitTracker } from "@/features/analytics/siteVisitTracker";
 import { queryClient } from "@/shared/api/queryClient";
 import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
 import "@/shared/styles/base.scss";
@@ -18,6 +19,7 @@ import "@/shared/styles/tone-utilities.scss";
 
 injectBoardPalette();
 applyStoredInterfaceTheme();
+installSiteVisitTracker(router);
 
 createApp(App)
   .use(createPinia())

@@ -16,6 +16,7 @@ from starlette.requests import Request
 
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
 from app.core.permissions import BOARD_MODERATOR_ROLES, is_admin, is_global_moderator
+from app.core.visitors import visitor_key_for_anonymous, visitor_key_for_user
 from app.db.base import new_random_suffix, utcnow
 from app.models.forum import (
     Board,
@@ -72,7 +73,6 @@ SLUG_SEPARATOR_PATTERN = re.compile(r"[^a-z0-9]+")
 TAG_SEPARATOR_PATTERN = re.compile(r"[^a-z0-9一-鿿_.-]+")
 MENTION_PATTERN = re.compile(r"(?<![A-Za-z0-9_.-])@([A-Za-z0-9_.-]{3,32})")
 LIKE_ESCAPE_PATTERN = re.compile(r"([%_\\])")
-VISITOR_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.:-]{8,128}$")
 NEWS_CARD_START = ":::news-card"
 NEWS_CARD_END = ":::"
 INLINE_MARKDOWN_LINK_PATTERN = re.compile(
@@ -1329,14 +1329,8 @@ class ForumService:
         """
 
         if current_user is not None:
-            digest = sha256(str(current_user.id).encode("utf-8")).hexdigest()
-            return f"user:{digest}"
-
-        normalized_visitor_id = (visitor_id or "").strip()
-        if not VISITOR_ID_PATTERN.fullmatch(normalized_visitor_id):
-            return None
-        digest = sha256(normalized_visitor_id.encode("utf-8")).hexdigest()
-        return f"anon:{digest}"
+            return visitor_key_for_user(current_user.id)
+        return visitor_key_for_anonymous(visitor_id)
 
     async def list_posts(
         self,

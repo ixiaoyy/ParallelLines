@@ -49,6 +49,21 @@ async def test_admin_analytics_overview_reports_and_csv_export() -> None:
         denied = await client.get("/api/v1/admin/analytics", headers=user_headers)
         assert denied.status_code == 403
         assert denied.json()["error"]["code"] == "admin_required"
+        denied_reports = await client.get("/api/v1/admin/analytics/reports", headers=user_headers)
+        assert denied_reports.status_code == 403
+        assert denied_reports.json()["error"]["code"] == "admin_required"
+        denied_report = await client.get(
+            "/api/v1/admin/analytics/reports/daily_activity",
+            headers=user_headers,
+        )
+        assert denied_report.status_code == 403
+        assert denied_report.json()["error"]["code"] == "admin_required"
+        denied_export = await client.get(
+            "/api/v1/admin/analytics/reports/daily_activity/export.csv",
+            headers=user_headers,
+        )
+        assert denied_export.status_code == 403
+        assert denied_export.json()["error"]["code"] == "admin_required"
 
         board = await client.post(
             "/api/v1/boards",
@@ -80,6 +95,30 @@ async def test_admin_analytics_overview_reports_and_csv_export() -> None:
         )
         assert flag.status_code == 201
 
+        campaign_visit = await client.post(
+            "/api/v1/site/visits",
+            headers={"X-ParallelLines-Visitor": "visitor-alpha"},
+            json={
+                "path": "/?utm_source=zhihu&utm_medium=social&utm_campaign=launch",
+                "title": "平行线",
+                "referrer": "https://www.zhihu.com/question/1",
+            },
+        )
+        assert campaign_visit.status_code == 202
+        assert campaign_visit.json()["data"]["recorded"] is True
+
+        search_visit = await client.post(
+            "/api/v1/site/visits",
+            headers=admin_headers,
+            json={
+                "path": "/b/analytics",
+                "title": "运营分析",
+                "referrer": "https://www.google.com/search?q=parallel+lines",
+            },
+        )
+        assert search_visit.status_code == 202
+        assert search_visit.json()["data"]["recorded"] is True
+
         overview = await client.get(
             "/api/v1/admin/analytics",
             headers=admin_headers,
@@ -91,11 +130,24 @@ async def test_admin_analytics_overview_reports_and_csv_export() -> None:
         assert overview_data["totals"]["topics"] >= 1
         assert overview_data["totals"]["likes"] >= 1
         assert overview_data["totals"]["flags"] >= 1
+        assert overview_data["totals"]["page_views"] >= 2
+        assert overview_data["totals"]["unique_visitors"] >= 2
+        assert overview_data["totals"]["external_referrals"] >= 2
         assert overview_data["top_boards"][0]["slug"] == "analytics"
+        assert {source["source_type"] for source in overview_data["traffic_sources"]} >= {
+            "campaign",
+            "search",
+        }
+        assert any(
+            page["path"].startswith("/?utm_source=zhihu") for page in overview_data["entry_pages"]
+        )
 
         reports = await client.get("/api/v1/admin/analytics/reports", headers=admin_headers)
         assert reports.status_code == 200
-        assert "daily_activity" in [report["id"] for report in reports.json()["data"]]
+        report_ids = [report["id"] for report in reports.json()["data"]]
+        assert "daily_activity" in report_ids
+        assert "traffic_sources" in report_ids
+        assert "entry_pages" in report_ids
 
         report = await client.get(
             "/api/v1/admin/analytics/reports/daily_activity",
@@ -104,6 +156,15 @@ async def test_admin_analytics_overview_reports_and_csv_export() -> None:
         )
         assert report.status_code == 200
         assert report.json()["data"]["rows"][0]["topics"] >= 1
+        assert report.json()["data"]["rows"][0]["page_views"] >= 2
+
+        source_report = await client.get(
+            "/api/v1/admin/analytics/reports/traffic_sources",
+            headers=admin_headers,
+            params={"start_date": today, "end_date": today},
+        )
+        assert source_report.status_code == 200
+        assert source_report.json()["data"]["rows"][0]["visit_count"] >= 1
 
         export = await client.get(
             "/api/v1/admin/analytics/reports/daily_activity/export.csv",

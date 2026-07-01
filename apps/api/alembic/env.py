@@ -39,6 +39,7 @@ from app.models import (  # noqa: F401
     ScreenedRule,
     SearchDocument,
     SearchLog,
+    SiteVisit,
     SiteSetting,
     SpamAction,
     Tag,

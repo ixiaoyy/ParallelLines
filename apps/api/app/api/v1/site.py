@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response, status
 
-from app.api.v1.dependencies import SessionDep, SettingsDep
+from app.api.v1.dependencies import OptionalCurrentUserDep, SessionDep, SettingsDep
 from app.core.response_cache import ResponseHotCache, cached_json_response
 from app.schemas.admin import PublicSiteSettingsResponse
+from app.schemas.analytics import SiteVisitCreateRequest, SiteVisitRecordResponse
 from app.schemas.common import ApiResponse
 from app.schemas.plugins import PluginUiExtensionResponse
 from app.services.admin import SiteSettingService
 from app.services.plugins import PluginService
+from app.services.site_visits import SiteVisitService
 
 router = APIRouter(prefix="/site", tags=["site"])
 
@@ -82,3 +84,31 @@ async def public_site_extensions(
         cache_control=cache_control,
         cache_status="miss",
     )
+
+
+@router.post(
+    "/visits",
+    response_model=ApiResponse[SiteVisitRecordResponse],
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def record_site_visit(
+    payload: SiteVisitCreateRequest,
+    request: Request,
+    session: SessionDep,
+    current_user: OptionalCurrentUserDep,
+) -> ApiResponse[SiteVisitRecordResponse]:
+    """Record a public page-view event for site traffic analytics.
+
+    Key parameters are the browser payload, visitor header, optional user, and
+    request origin/host. Return value confirms whether the event was accepted.
+    Side effect: writes one `site_visits` row when the visitor identity is valid.
+    """
+
+    data = await SiteVisitService(session).record_visit(
+        payload,
+        visitor_id=request.headers.get("X-ParallelLines-Visitor"),
+        current_user=current_user,
+        origin=request.headers.get("origin"),
+        request_host=request.url.hostname,
+    )
+    return ApiResponse(data=data)

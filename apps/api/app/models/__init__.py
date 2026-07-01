@@ -2,6 +2,7 @@ from app.db.base import Base
 from app.db.schema_comments import apply_schema_comments
 from app.models.admin import SiteSetting
 from app.models.ai import AiTopicSummary
+from app.models.analytics import SiteVisit
 from app.models.background_job import BackgroundJob, BackgroundJobLog
 from app.models.backup import BackupArtifact
 from app.models.badge import BadgeDefinition, UserBadge, UserTrustLevelEvent
@@ -99,6 +100,7 @@ __all__ = [
     "SearchDocument",
     "SearchLog",
     "SiteSetting",
+    "SiteVisit",
     "SpamAction",
     "Tag",
     "Topic",

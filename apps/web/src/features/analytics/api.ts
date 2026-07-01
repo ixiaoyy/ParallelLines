@@ -7,6 +7,12 @@ export interface AnalyticsRangeParams {
   endDate: string;
 }
 
+export interface SiteVisitPayload {
+  path: string;
+  title?: string | null;
+  referrer?: string | null;
+}
+
 function rangeQuery(params: AnalyticsRangeParams, extra?: Record<string, string | number>) {
   const query = new URLSearchParams({
     start_date: params.startDate,
@@ -47,4 +53,19 @@ export async function exportDataExplorerReport(
     throw new Error("analytics_export_failed");
   }
   return response.blob();
+}
+
+// Sends a browser page-view event without involving the global request loading state.
+// Key parameter `payload` is the current route path/title/referrer. Return value is none.
+// Side effect: performs a fire-and-forget analytics POST.
+export async function recordSiteVisit(payload: SiteVisitPayload): Promise<void> {
+  const response = await fetch(getApiUrl("/site/visits"), {
+    method: "POST",
+    headers: createApiHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(payload),
+    keepalive: true,
+  });
+  if (!response.ok) {
+    throw new Error("site_visit_record_failed");
+  }
 }

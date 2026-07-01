@@ -14,17 +14,20 @@ from sqlalchemy.orm import selectinload
 from app.core.exceptions import NotFoundError, PermissionDeniedError, ValidationError
 from app.core.permissions import is_admin
 from app.db.base import utcnow
+from app.models.analytics import SiteVisit
 from app.models.forum import Board, Post, Topic
 from app.models.interaction import Reaction
 from app.models.moderation import AuditLog, Flag
 from app.models.user import User
 from app.schemas.analytics import (
+    AnalyticsEntryPageResponse,
     AnalyticsMetricPoint,
     AnalyticsOverviewResponse,
     AnalyticsTopBoardResponse,
     AnalyticsTopTopicResponse,
     AnalyticsTopUserResponse,
     AnalyticsTotalsResponse,
+    AnalyticsTrafficSourceResponse,
     DataExplorerReportResponse,
     DataExplorerReportSummary,
 )
@@ -44,8 +47,30 @@ REPORTS: dict[str, ReportDefinition] = {
     "daily_activity": ReportDefinition(
         id="daily_activity",
         name="每日活跃趋势",
-        description="按天输出 DAU、注册、发帖、回复、点赞和举报。",
-        columns=("day", "dau", "registrations", "topics", "posts", "likes", "flags"),
+        description="按天输出 PV、UV、DAU、注册、发帖、回复、点赞和举报。",
+        columns=(
+            "day",
+            "page_views",
+            "unique_visitors",
+            "dau",
+            "registrations",
+            "topics",
+            "posts",
+            "likes",
+            "flags",
+        ),
+    ),
+    "traffic_sources": ReportDefinition(
+        id="traffic_sources",
+        name="访问来源",
+        description="按来源类型和来源名称聚合 PV 与 UV。",
+        columns=("source_type", "source_name", "visit_count", "unique_visitors"),
+    ),
+    "entry_pages": ReportDefinition(
+        id="entry_pages",
+        name="入口页",
+        description="按访问落地页聚合 PV 与 UV。",
+        columns=("path", "title", "visit_count", "unique_visitors"),
     ),
     "top_topics": ReportDefinition(
         id="top_topics",
@@ -83,6 +108,9 @@ class AnalyticsService:
         start, end = self._range(start_date, end_date)
         series = await self._series(start, end)
         totals = AnalyticsTotalsResponse(
+            page_views=sum(point.page_views for point in series),
+            unique_visitors=await self._unique_site_visitors(start, end),
+            external_referrals=await self._external_referrals(start, end),
             dau=max((point.dau for point in series), default=0),
             mau=await self._active_users(start, end),
             registrations=sum(point.registrations for point in series),
@@ -96,6 +124,8 @@ class AnalyticsService:
             end_date=end,
             totals=totals,
             series=series,
+            traffic_sources=await self._traffic_sources(start, end),
+            entry_pages=await self._entry_pages(start, end),
             top_boards=await self._top_boards(),
             top_topics=await self._top_topics(start, end),
             top_users=await self._top_users(start, end),
@@ -189,6 +219,7 @@ class AnalyticsService:
         await self._fill_count(points, Reaction.created_at, "likes", start, end)
         await self._fill_count(points, Flag.created_at, "flags", start, end)
         await self._fill_active_users(points, start, end)
+        await self._fill_site_visits(points, start, end)
         return list(points.values())
 
     async def _fill_count(
@@ -228,11 +259,73 @@ class AnalyticsService:
             if day in points:
                 points[day].dau = int(count)
 
+    async def _fill_site_visits(
+        self,
+        points: dict[date, AnalyticsMetricPoint],
+        start: date,
+        end: date,
+    ) -> None:
+        """Fill daily PV and UV values from immutable site visit events.
+
+        Key parameters are the day-indexed metric points and inclusive date
+        range. Return value is none. Side effect: mutates matching points.
+        """
+
+        visit_day = func.date(SiteVisit.created_at)
+        rows = await self.session.execute(
+            select(
+                visit_day,
+                func.count(SiteVisit.id),
+                func.count(distinct(SiteVisit.visitor_key)),
+            )
+            .where(
+                SiteVisit.created_at >= self._start_dt(start),
+                SiteVisit.created_at <= self._end_dt(end),
+            )
+            .group_by(visit_day)
+        )
+        for day_value, page_views, unique_visitors in rows:
+            day = self._coerce_day(day_value)
+            if day in points:
+                points[day].page_views = int(page_views)
+                points[day].unique_visitors = int(unique_visitors)
+
     async def _active_users(self, start: date, end: date) -> int:
         count = await self.session.scalar(
             select(func.count(distinct(User.id))).where(
                 User.last_seen_at >= self._start_dt(start),
                 User.last_seen_at <= self._end_dt(end),
+            )
+        )
+        return int(count or 0)
+
+    async def _unique_site_visitors(self, start: date, end: date) -> int:
+        """Count unique site visitors across an inclusive date range.
+
+        Key parameters are start and end dates. Return value is UV based on the
+        privacy-preserving visitor key. Side effect: none.
+        """
+
+        count = await self.session.scalar(
+            select(func.count(distinct(SiteVisit.visitor_key))).where(
+                SiteVisit.created_at >= self._start_dt(start),
+                SiteVisit.created_at <= self._end_dt(end),
+            )
+        )
+        return int(count or 0)
+
+    async def _external_referrals(self, start: date, end: date) -> int:
+        """Count acquisition visits from external or campaign sources.
+
+        Key parameters are start and end dates. Return value is PV from UTM,
+        search, social, and referral sources. Side effect: none.
+        """
+
+        count = await self.session.scalar(
+            select(func.count(SiteVisit.id)).where(
+                SiteVisit.created_at >= self._start_dt(start),
+                SiteVisit.created_at <= self._end_dt(end),
+                SiteVisit.source_type.in_(("campaign", "search", "social", "referral")),
             )
         )
         return int(count or 0)
@@ -314,6 +407,84 @@ class AnalyticsService:
             for user, post_count in users
         ]
 
+    async def _traffic_sources(
+        self,
+        start: date,
+        end: date,
+        limit: int = 8,
+    ) -> list[AnalyticsTrafficSourceResponse]:
+        """Return top traffic sources for acquisition and direct/internal mix.
+
+        Key parameters are start/end dates and row limit. Return value is a
+        visit-count sorted source list. Side effect: none.
+        """
+
+        visit_count = func.count(SiteVisit.id)
+        unique_visitors = func.count(distinct(SiteVisit.visitor_key))
+        rows = await self.session.execute(
+            select(
+                SiteVisit.source_type,
+                SiteVisit.source_name,
+                visit_count,
+                unique_visitors,
+            )
+            .where(
+                SiteVisit.created_at >= self._start_dt(start),
+                SiteVisit.created_at <= self._end_dt(end),
+            )
+            .group_by(SiteVisit.source_type, SiteVisit.source_name)
+            .order_by(desc(visit_count))
+            .limit(limit)
+        )
+        return [
+            AnalyticsTrafficSourceResponse(
+                source_type=source_type,
+                source_name=source_name,
+                visit_count=int(row_visit_count),
+                unique_visitors=int(row_unique_visitors),
+            )
+            for source_type, source_name, row_visit_count, row_unique_visitors in rows
+        ]
+
+    async def _entry_pages(
+        self,
+        start: date,
+        end: date,
+        limit: int = 8,
+    ) -> list[AnalyticsEntryPageResponse]:
+        """Return the most visited landing pages for the selected range.
+
+        Key parameters are start/end dates and row limit. Return value is a
+        visit-count sorted path list. Side effect: none.
+        """
+
+        visit_count = func.count(SiteVisit.id)
+        unique_visitors = func.count(distinct(SiteVisit.visitor_key))
+        rows = await self.session.execute(
+            select(
+                SiteVisit.path,
+                func.max(SiteVisit.title),
+                visit_count,
+                unique_visitors,
+            )
+            .where(
+                SiteVisit.created_at >= self._start_dt(start),
+                SiteVisit.created_at <= self._end_dt(end),
+            )
+            .group_by(SiteVisit.path)
+            .order_by(desc(visit_count))
+            .limit(limit)
+        )
+        return [
+            AnalyticsEntryPageResponse(
+                path=path,
+                title=title,
+                visit_count=int(row_visit_count),
+                unique_visitors=int(row_unique_visitors),
+            )
+            for path, title, row_visit_count, row_unique_visitors in rows
+        ]
+
     async def _topic_counts_for_users(
         self,
         user_ids: Sequence[str],
@@ -342,6 +513,16 @@ class AnalyticsService:
     ) -> list[dict[str, Any]]:
         if report_id == "daily_activity":
             return [point.model_dump(mode="json") for point in await self._series(start, end)]
+        if report_id == "traffic_sources":
+            return [
+                source.model_dump(mode="json")
+                for source in await self._traffic_sources(start, end, limit)
+            ]
+        if report_id == "entry_pages":
+            return [
+                entry.model_dump(mode="json")
+                for entry in await self._entry_pages(start, end, limit)
+            ]
         if report_id == "top_topics":
             return [
                 {

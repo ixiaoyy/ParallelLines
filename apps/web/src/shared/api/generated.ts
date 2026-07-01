@@ -97,23 +97,33 @@ export interface components {
       role?: "user" | "moderator" | "admin" | null;
       status?: "active" | "silenced" | "suspended" | "deleted" | null;
     };
+    AnalyticsEntryPageResponse: {
+      path: string;
+      title?: string | null;
+      unique_visitors: number;
+      visit_count: number;
+    };
     AnalyticsMetricPoint: {
       dau?: number;
       day: string;
       flags?: number;
       likes?: number;
+      page_views?: number;
       posts?: number;
       registrations?: number;
       topics?: number;
+      unique_visitors?: number;
     };
     AnalyticsOverviewResponse: {
       end_date: string;
+      entry_pages?: Array<components["schemas"]["AnalyticsEntryPageResponse"]>;
       series: Array<components["schemas"]["AnalyticsMetricPoint"]>;
       start_date: string;
       top_boards: Array<components["schemas"]["AnalyticsTopBoardResponse"]>;
       top_topics: Array<components["schemas"]["AnalyticsTopTopicResponse"]>;
       top_users: Array<components["schemas"]["AnalyticsTopUserResponse"]>;
       totals: components["schemas"]["AnalyticsTotalsResponse"];
+      traffic_sources?: Array<components["schemas"]["AnalyticsTrafficSourceResponse"]>;
     };
     AnalyticsTopBoardResponse: {
       id: string;
@@ -140,12 +150,21 @@ export interface components {
     };
     AnalyticsTotalsResponse: {
       dau: number;
+      external_referrals: number;
       flags: number;
       likes: number;
       mau: number;
+      page_views: number;
       posts: number;
       registrations: number;
       topics: number;
+      unique_visitors: number;
+    };
+    AnalyticsTrafficSourceResponse: {
+      source_name: string;
+      source_type: string;
+      unique_visitors: number;
+      visit_count: number;
     };
     ApiKeyCreateRequest: {
       expires_at?: string | null;
@@ -462,6 +481,9 @@ export interface components {
       [key: string]: unknown;
     };
     ApiResponse_SiteSettingResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_SiteVisitRecordResponse_: {
       [key: string]: unknown;
     };
     ApiResponse_TokenPair_: {
@@ -1605,6 +1627,14 @@ export interface components {
     SiteSettingUpdateRequest: {
       value: unknown;
     };
+    SiteVisitCreateRequest: {
+      path: string;
+      referrer?: string | null;
+      title?: string | null;
+    };
+    SiteVisitRecordResponse: {
+      recorded: boolean;
+    };
     SpamActionResponse: {
       action: string;
       created_at: string;
@@ -2390,6 +2420,9 @@ export interface paths {
     };
     "/api/v1/site/settings": {
       get: { response: components["schemas"]["ApiResponse_PublicSiteSettingsResponse_"]; operationId: "public_site_settings_api_v1_site_settings_get" };
+    };
+    "/api/v1/site/visits": {
+      post: { response: unknown; operationId: "record_site_visit_api_v1_site_visits_post" };
     };
     "/api/v1/tags": {
       get: { response: components["schemas"]["ApiResponse_list_TagResponse__"]; operationId: "list_tags_api_v1_tags_get" };

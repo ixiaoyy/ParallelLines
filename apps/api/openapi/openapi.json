@@ -547,6 +547,40 @@
         "title": "AdminUserUpdateRequest",
         "type": "object"
       },
+      "AnalyticsEntryPageResponse": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "unique_visitors": {
+            "title": "Unique Visitors",
+            "type": "integer"
+          },
+          "visit_count": {
+            "title": "Visit Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "visit_count",
+          "unique_visitors"
+        ],
+        "title": "AnalyticsEntryPageResponse",
+        "type": "object"
+      },
       "AnalyticsMetricPoint": {
         "properties": {
           "dau": {
@@ -569,6 +603,11 @@
             "title": "Likes",
             "type": "integer"
           },
+          "page_views": {
+            "default": 0,
+            "title": "Page Views",
+            "type": "integer"
+          },
           "posts": {
             "default": 0,
             "title": "Posts",
@@ -582,6 +621,11 @@
           "topics": {
             "default": 0,
             "title": "Topics",
+            "type": "integer"
+          },
+          "unique_visitors": {
+            "default": 0,
+            "title": "Unique Visitors",
             "type": "integer"
           }
         },
@@ -597,6 +641,13 @@
             "format": "date",
             "title": "End Date",
             "type": "string"
+          },
+          "entry_pages": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsEntryPageResponse"
+            },
+            "title": "Entry Pages",
+            "type": "array"
           },
           "series": {
             "items": {
@@ -633,6 +684,13 @@
           },
           "totals": {
             "$ref": "#/components/schemas/AnalyticsTotalsResponse"
+          },
+          "traffic_sources": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsTrafficSourceResponse"
+            },
+            "title": "Traffic Sources",
+            "type": "array"
           }
         },
         "required": [
@@ -762,6 +820,10 @@
             "title": "Dau",
             "type": "integer"
           },
+          "external_referrals": {
+            "title": "External Referrals",
+            "type": "integer"
+          },
           "flags": {
             "title": "Flags",
             "type": "integer"
@@ -772,6 +834,10 @@
           },
           "mau": {
             "title": "Mau",
+            "type": "integer"
+          },
+          "page_views": {
+            "title": "Page Views",
             "type": "integer"
           },
           "posts": {
@@ -785,9 +851,16 @@
           "topics": {
             "title": "Topics",
             "type": "integer"
+          },
+          "unique_visitors": {
+            "title": "Unique Visitors",
+            "type": "integer"
           }
         },
         "required": [
+          "page_views",
+          "unique_visitors",
+          "external_referrals",
           "dau",
           "mau",
           "registrations",
@@ -797,6 +870,34 @@
           "flags"
         ],
         "title": "AnalyticsTotalsResponse",
+        "type": "object"
+      },
+      "AnalyticsTrafficSourceResponse": {
+        "properties": {
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "unique_visitors": {
+            "title": "Unique Visitors",
+            "type": "integer"
+          },
+          "visit_count": {
+            "title": "Visit Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source_type",
+          "source_name",
+          "visit_count",
+          "unique_visitors"
+        ],
+        "title": "AnalyticsTrafficSourceResponse",
         "type": "object"
       },
       "ApiKeyCreateRequest": {
@@ -1217,6 +1318,10 @@
         "type": "object"
       },
       "ApiResponse_SiteSettingResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_SiteVisitRecordResponse_": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -8134,6 +8239,58 @@
           "value"
         ],
         "title": "SiteSettingUpdateRequest",
+        "type": "object"
+      },
+      "SiteVisitCreateRequest": {
+        "properties": {
+          "path": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          },
+          "referrer": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referrer"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 180,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "SiteVisitCreateRequest",
+        "type": "object"
+      },
+      "SiteVisitRecordResponse": {
+        "properties": {
+          "recorded": {
+            "title": "Recorded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "recorded"
+        ],
+        "title": "SiteVisitRecordResponse",
         "type": "object"
       },
       "SpamActionResponse": {
@@ -17945,6 +18102,53 @@
           }
         },
         "summary": "Public Site Settings",
+        "tags": [
+          "site"
+        ]
+      }
+    },
+    "/api/v1/site/visits": {
+      "post": {
+        "description": "Record a public page-view event for site traffic analytics.\n\nKey parameters are the browser payload, visitor header, optional user, and\nrequest origin/host. Return value confirms whether the event was accepted.\nSide effect: writes one `site_visits` row when the visitor identity is valid.",
+        "operationId": "record_site_visit_api_v1_site_visits_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteVisitCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SiteVisitRecordResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Record Site Visit",
         "tags": [
           "site"
         ]
