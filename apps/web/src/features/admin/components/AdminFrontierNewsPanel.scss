@@ -155,17 +155,21 @@
 
 .items-head {
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 0.65rem;
   align-items: center;
 }
 
 .items-head select {
+  min-height: 2.15rem;
+  min-width: 7.25rem;
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 0.45rem 0.75rem;
+  padding: 0.42rem 0.78rem;
   color: var(--text);
   background: var(--bg-surface);
+  font-weight: 700;
 }
 
 .item-list {
@@ -273,6 +277,14 @@
   .frontier-news-panel__sources,
   .frontier-news-panel__items {
     gap: 0.7rem;
+  }
+
+  .items-head {
+    align-items: flex-start;
+  }
+
+  .items-head select {
+    width: 100%;
   }
 
   .source-grid {
