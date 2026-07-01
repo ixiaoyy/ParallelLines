@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { BarChartOutlined, SafetyCertificateOutlined } from "@ant-design/icons-vue";
 import { computed } from "vue";
 
 import AdminFrontierNewsPanel from "@/features/admin/components/AdminFrontierNewsPanel.vue";
@@ -23,7 +24,16 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
   <div class="admin-dashboard-page">
     <section class="admin-hero" aria-labelledby="admin-title">
       <h1 id="admin-title">站点后台</h1>
-      <RouterLink class="hero-link" :to="{ name: 'admin-moderation' }">审核台</RouterLink>
+      <div class="admin-hero__actions">
+        <a class="hero-link hero-link--subtle" href="#admin-analytics">
+          <BarChartOutlined />
+          访问看板
+        </a>
+        <RouterLink class="hero-link" :to="{ name: 'admin-moderation' }">
+          <SafetyCertificateOutlined />
+          审核台
+        </RouterLink>
+      </div>
     </section>
 
     <UiCard v-if="!currentUserQuery.data.value" class="admin-empty">
@@ -39,7 +49,9 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
     <template v-else>
       <AdminSystemPanel />
       <AdminFrontierNewsPanel />
-      <AdminAnalyticsPanel />
+      <div id="admin-analytics" class="admin-dashboard-page__anchor">
+        <AdminAnalyticsPanel />
+      </div>
       <section class="admin-main-grid">
         <AdminSettingsPanel />
         <AdminUserManagementPanel />
