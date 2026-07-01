@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Modal } from "ant-design-vue";
 import { computed, ref } from "vue";
 
 import {
@@ -9,6 +10,7 @@ import {
 import {
   useCollectFrontierNews,
   useCollectFrontierNewsSource,
+  useDeleteFrontierNewsSource,
   useEnrichFrontierNewsItem,
   useFrontierNewsItems,
   useFrontierNewsSources,
@@ -28,6 +30,7 @@ const itemsQuery = useFrontierNewsItems(() => ({ status: itemStatus.value, limit
 const updateSourceMutation = useUpdateFrontierNewsSource();
 const collectAllMutation = useCollectFrontierNews();
 const collectSourceMutation = useCollectFrontierNewsSource();
+const deleteSourceMutation = useDeleteFrontierNewsSource();
 const enrichMutation = useEnrichFrontierNewsItem();
 const queueMutation = useQueueFrontierNewsItem();
 
@@ -37,6 +40,7 @@ const pending = computed(
   () =>
     collectAllMutation.isPending.value ||
     collectSourceMutation.isPending.value ||
+    deleteSourceMutation.isPending.value ||
     updateSourceMutation.isPending.value ||
     enrichMutation.isPending.value ||
     queueMutation.isPending.value,
@@ -53,9 +57,35 @@ function sourceKindLabel(kind: string): string {
     rss: "RSS/Atom",
     arxiv: "arXiv",
     hacker_news: "Hacker News",
-    github_search: "GitHub Search",
+    github_search: "GitHub",
+    xai_news: "xAI",
+    arena_leaderboard: "榜单",
+    news_html_index: "网页索引",
   };
   return labels[kind] ?? kind;
+}
+
+/**
+ * Converts raw network exceptions into compact source-card status text.
+ *
+ * @param error - Last upstream fetch error returned by the admin API.
+ * @returns Short localized error label for visible UI.
+ */
+function sourceErrorLabel(error: string): string {
+  const normalized = error.toLowerCase();
+  if (normalized.includes("timed out") || normalized.includes("timeout")) {
+    return "连接超时";
+  }
+  if (normalized.includes("certificate") || normalized.includes("ssl")) {
+    return "证书连接失败";
+  }
+  if (normalized.includes("http error 403")) {
+    return "来源拒绝访问";
+  }
+  if (normalized.includes("http error 404")) {
+    return "来源不存在";
+  }
+  return "采集失败";
 }
 
 /**
@@ -147,6 +177,32 @@ function toggleSource(source: FrontierNewsSourceResponse) {
 }
 
 /**
+ * Confirms and removes one source from the admin material source list.
+ *
+ * @param source - Source row whose ID is sent to the delete endpoint.
+ * Side effect: opens a confirmation dialog and refreshes frontier caches after deletion.
+ */
+function deleteSource(source: FrontierNewsSourceResponse) {
+  Modal.confirm({
+    title: "删除这个信息源？",
+    content: "删除后将停止后续采集，历史素材保留。",
+    okText: "删除",
+    cancelText: "取消",
+    okType: "danger",
+    onOk: () => {
+      deleteSourceMutation.mutate(source.id, {
+        onSuccess: () => {
+          actionNotice.value = `${source.name} 已删除。`;
+        },
+        onError: (error) => {
+          actionNotice.value = `${source.name} 删除失败：${error.message}`;
+        },
+      });
+    },
+  });
+}
+
+/**
  * Re-runs deterministic AI整理 for one material.
  *
  * @param item - Material row whose ID is sent to the enrichment endpoint.
@@ -207,12 +263,15 @@ function queueItem(item: FrontierNewsItemResponse) {
           </div>
           <UiBadge :tone="source.enabled ? 'green' : 'gray'">{{ source.enabled ? "启用" : "停用" }}</UiBadge>
           <p class="source-url">{{ source.url }}</p>
-          <p v-if="source.last_error" class="source-error">{{ source.last_error }}</p>
+          <p v-if="source.last_error" class="source-error" :title="source.last_error">
+            {{ sourceErrorLabel(source.last_error) }}
+          </p>
           <div class="source-card__actions">
             <UiButton tone="subtle" :disabled="pending" @click="collectSource(source)">采集此源</UiButton>
             <UiButton tone="ghost" :disabled="pending" @click="toggleSource(source)">
               {{ source.enabled ? "停用" : "启用" }}
             </UiButton>
+            <UiButton tone="danger" :disabled="pending" @click="deleteSource(source)">删除</UiButton>
           </div>
         </article>
       </div>

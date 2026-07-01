@@ -2101,6 +2101,7 @@ export interface paths {
       post: { response: components["schemas"]["ApiResponse_FrontierNewsSourceResponse_"]; operationId: "create_frontier_news_source_api_v1_admin_frontier_news_sources_post" };
     };
     "/api/v1/admin/frontier-news/sources/{source_id}": {
+      delete: { response: components["schemas"]["ApiResponse_FrontierNewsSourceResponse_"]; operationId: "delete_frontier_news_source_api_v1_admin_frontier_news_sources__source_id__delete" };
       put: { response: components["schemas"]["ApiResponse_FrontierNewsSourceResponse_"]; operationId: "update_frontier_news_source_api_v1_admin_frontier_news_sources__source_id__put" };
     };
     "/api/v1/admin/frontier-news/sources/{source_id}/collect": {

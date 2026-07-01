@@ -346,7 +346,10 @@ class FrontierNewsService:
         await self.session.commit()
         statement = (
             select(FrontierNewsSource)
-            .where(FrontierNewsSource.key.notin_(RETIRED_FRONTIER_SOURCE_KEYS))
+            .where(
+                FrontierNewsSource.deleted_at.is_(None),
+                FrontierNewsSource.key.notin_(RETIRED_FRONTIER_SOURCE_KEYS),
+            )
             .order_by(FrontierNewsSource.name)
         )
         sources = list(await self.session.scalars(statement))
@@ -370,6 +373,19 @@ class FrontierNewsService:
             select(FrontierNewsSource).where(FrontierNewsSource.key == key)
         )
         if existing:
+            if existing.deleted_at is not None:
+                existing.name = payload.name.strip()
+                existing.kind = payload.kind
+                existing.url = payload.url.strip()
+                existing.config = payload.config
+                existing.enabled = payload.enabled
+                existing.trust_level = payload.trust_level
+                existing.fetch_interval_minutes = payload.fetch_interval_minutes
+                existing.last_error = None
+                existing.deleted_at = None
+                await self.session.commit()
+                await self.session.refresh(existing)
+                return FrontierNewsSourceResponse.from_model(existing)
             raise ConflictError("frontier_source_exists", "Frontier news source already exists")
         source = FrontierNewsSource(
             key=key,
@@ -382,6 +398,22 @@ class FrontierNewsService:
             fetch_interval_minutes=payload.fetch_interval_minutes,
         )
         self.session.add(source)
+        await self.session.commit()
+        await self.session.refresh(source)
+        return FrontierNewsSourceResponse.from_model(source)
+
+    async def delete_source(
+        self,
+        source_id: str,
+        current_user: User,
+    ) -> FrontierNewsSourceResponse:
+        """Soft-delete one source so default source seeding does not recreate it."""
+
+        self._require_admin(current_user)
+        source = await self._get_source(source_id)
+        source.enabled = False
+        source.last_error = None
+        source.deleted_at = utcnow()
         await self.session.commit()
         await self.session.refresh(source)
         return FrontierNewsSourceResponse.from_model(source)
@@ -450,6 +482,7 @@ class FrontierNewsService:
         await self.ensure_default_sources()
         statement = select(FrontierNewsSource).where(
             FrontierNewsSource.enabled.is_(True),
+            FrontierNewsSource.deleted_at.is_(None),
             FrontierNewsSource.key.notin_(RETIRED_FRONTIER_SOURCE_KEYS),
         )
         sources = list(await self.session.scalars(statement.order_by(FrontierNewsSource.name)))
@@ -1680,11 +1713,21 @@ class FrontierNewsService:
             min(6, (self._max_items(source) + safe_category_count - 1) // safe_category_count),
         )
 
-    async def _get_source(self, source_id: str) -> FrontierNewsSource:
-        """Load one source or raise a typed not-found error."""
+    async def _get_source(
+        self,
+        source_id: str,
+        *,
+        include_deleted: bool = False,
+    ) -> FrontierNewsSource:
+        """Load one source or raise a typed not-found error.
+
+        Key parameter `source_id` is the API ID to load; `include_deleted`
+        allows internal callers to inspect soft-deleted rows. Return value is
+        the source row. Side effect: reads the database session.
+        """
 
         source = await self.session.get(FrontierNewsSource, source_id)
-        if not source:
+        if not source or (source.deleted_at is not None and not include_deleted):
             raise NotFoundError("frontier_source_not_found", "Frontier news source not found")
         return source
 

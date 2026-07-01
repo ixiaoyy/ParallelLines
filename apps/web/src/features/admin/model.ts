@@ -297,7 +297,14 @@ export function adminStatusLabel(status: string): string {
   return labels[status] ?? status;
 }
 
-export type FrontierNewsSourceKind = "rss" | "arxiv" | "hacker_news" | "github_search";
+export type FrontierNewsSourceKind =
+  | "rss"
+  | "arxiv"
+  | "hacker_news"
+  | "github_search"
+  | "xai_news"
+  | "arena_leaderboard"
+  | "news_html_index";
 
 export interface FrontierNewsSourceCreateRequest {
   key: string;

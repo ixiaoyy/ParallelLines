@@ -101,6 +101,10 @@ class FrontierNewsSource(IntegerPrimaryKeyMixin, TimestampMixin, Base):
         Text,
         comment="最近一次抓取失败摘要；成功后清空。",
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        comment="管理员删除该来源的时间；为空表示仍在后台可见并可被采集。",
+    )
 
     items: Mapped[list[FrontierNewsItem]] = relationship(
         "FrontierNewsItem",

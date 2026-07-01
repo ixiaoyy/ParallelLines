@@ -16,6 +16,7 @@ import {
   createFrontierNewsSource,
   createAdminApiKey,
   createAdminWebhook,
+  deleteFrontierNewsSource,
   disableAdminApiKey,
   disableAdminWebhook,
   enrichFrontierNewsItem,
@@ -285,6 +286,25 @@ export function useUpdateFrontierNewsSource() {
   >({
     mutationFn: ({ sourceId, payload }) => updateFrontierNewsSource(sourceId, payload),
     onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.adminFrontierNewsRoot });
+    },
+  });
+}
+
+/**
+ * Deletes one frontier source and refreshes the source/material views afterward.
+ *
+ * @returns Mutation accepting the source ID to remove.
+ */
+export function useDeleteFrontierNewsSource() {
+  const queryClient = useQueryClient();
+  return useMutation<FrontierNewsSourceResponse, Error, string>({
+    mutationFn: deleteFrontierNewsSource,
+    onSuccess: async (deletedSource) => {
+      queryClient.setQueryData<FrontierNewsSourceResponse[]>(
+        queryKeys.adminFrontierNewsSources,
+        (current) => current?.filter((source) => source.id !== deletedSource.id) ?? current,
+      );
       await queryClient.invalidateQueries({ queryKey: queryKeys.adminFrontierNewsRoot });
     },
   });

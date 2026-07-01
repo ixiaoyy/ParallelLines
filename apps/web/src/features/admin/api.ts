@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut } from "@/shared/api/client";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/shared/api/client";
 
 import type { BadgeGrantRequest, BadgeResponse, BadgeRevokeRequest } from "@/features/badges/model";
 import type {
@@ -168,6 +168,16 @@ export function updateFrontierNewsSource(
     `/admin/frontier-news/sources/${sourceId}`,
     payload,
   );
+}
+
+/**
+ * Removes one frontier source from the admin source list.
+ *
+ * @param sourceId - Source ID returned by the admin source list.
+ * @returns Promise resolving to the removed source row.
+ */
+export function deleteFrontierNewsSource(sourceId: string): Promise<FrontierNewsSourceResponse> {
+  return apiDelete<FrontierNewsSourceResponse>(`/admin/frontier-news/sources/${sourceId}`);
 }
 
 /**

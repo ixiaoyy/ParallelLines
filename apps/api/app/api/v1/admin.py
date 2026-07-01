@@ -262,6 +262,23 @@ async def create_frontier_news_source(
     )
 
 
+@router.delete(
+    "/frontier-news/sources/{source_id}",
+    response_model=ApiResponse[FrontierNewsSourceResponse],
+)
+async def delete_frontier_news_source(
+    source_id: str,
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[FrontierNewsSourceResponse]:
+    """Remove one frontier source from admin lists and scheduled collection."""
+
+    return ApiResponse(
+        data=await FrontierNewsService(session, settings).delete_source(source_id, current_user)
+    )
+
+
 @router.put(
     "/frontier-news/sources/{source_id}",
     response_model=ApiResponse[FrontierNewsSourceResponse],

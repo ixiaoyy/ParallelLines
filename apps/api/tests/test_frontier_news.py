@@ -1,11 +1,14 @@
+from types import SimpleNamespace
 from typing import cast
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
+from app.core.exceptions import NotFoundError
 from app.db.base import utcnow
 from app.models.news import FrontierNewsItem, FrontierNewsSource
+from app.models.user import User
 from app.services.forum import _topic_list_excerpt, render_markdown
 from app.services.frontier_news import (
     DEFAULT_FRONTIER_SOURCES,
@@ -13,6 +16,75 @@ from app.services.frontier_news import (
     RETIRED_FRONTIER_SOURCE_KEYS,
     FrontierNewsService,
 )
+
+
+class _FrontierSourceSession:
+    """Minimal async session double for source soft-delete service tests."""
+
+    def __init__(self, source: FrontierNewsSource) -> None:
+        """Store the source row returned by `get`.
+
+        Key parameter `source` is the only row exposed by this fake session.
+        Return value: none. Side effect: initializes commit/refresh flags.
+        """
+
+        self.source = source
+        self.committed = False
+        self.refreshed = False
+
+    async def get(self, model: object, source_id: str) -> FrontierNewsSource | None:
+        """Return the stored source for matching FrontierNewsSource lookups.
+
+        Key parameters are the ORM model and requested ID. Return value is the
+        stored source or None. Side effect: none.
+        """
+
+        if model is FrontierNewsSource and source_id == self.source.id:
+            return self.source
+        return None
+
+    async def commit(self) -> None:
+        """Record that the service committed the soft-delete mutation.
+
+        Key parameters: none. Return value: none. Side effect: flips
+        `committed` for test assertions.
+        """
+
+        self.committed = True
+
+    async def refresh(self, source: FrontierNewsSource) -> None:
+        """Record that the service refreshed the deleted source row.
+
+        Key parameter `source` is the row passed by the service. Return value:
+        none. Side effect: flips `refreshed` when it is the stored source.
+        """
+
+        self.refreshed = source is self.source
+
+
+def _source_for_delete_test() -> FrontierNewsSource:
+    """Build a complete frontier source row for soft-delete unit tests.
+
+    Key parameters: none. Return value: an in-memory source with timestamps.
+    Side effect: none.
+    """
+
+    now = utcnow()
+    source = FrontierNewsSource(
+        key="delete_test_source",
+        name="Delete Test Source",
+        kind="rss",
+        url="https://example.com/feed.xml",
+        config={},
+        enabled=True,
+        trust_level=50,
+        fetch_interval_minutes=60,
+        last_error="The read operation timed out",
+        created_at=now,
+        updated_at=now,
+    )
+    source.id = "42"
+    return source
 
 
 def test_frontier_news_review_batch_size_defaults_and_bounds() -> None:
@@ -55,6 +127,41 @@ def test_frontier_news_review_batch_size_defaults_and_bounds() -> None:
         fetch_interval_minutes=60,
     )
     assert service._review_batch_size(high_source) == 10
+
+
+@pytest.mark.asyncio
+async def test_frontier_source_get_hides_soft_deleted_rows() -> None:
+    """Verify soft-deleted sources behave as not found for normal admin actions."""
+
+    source = _source_for_delete_test()
+    source.deleted_at = utcnow()
+    service = FrontierNewsService(
+        cast(AsyncSession, _FrontierSourceSession(source)),
+        Settings(_env_file=None),
+    )
+
+    with pytest.raises(NotFoundError):
+        await service._get_source(source.id)
+
+    assert await service._get_source(source.id, include_deleted=True) is source
+
+
+@pytest.mark.asyncio
+async def test_delete_frontier_source_soft_deletes_and_disables_row() -> None:
+    """Verify deleting a source records a tombstone instead of hard-deleting history."""
+
+    source = _source_for_delete_test()
+    session = _FrontierSourceSession(source)
+    service = FrontierNewsService(cast(AsyncSession, session), Settings(_env_file=None))
+
+    response = await service.delete_source(source.id, cast(User, SimpleNamespace(role="admin")))
+
+    assert response.id == source.id
+    assert source.enabled is False
+    assert source.last_error is None
+    assert source.deleted_at is not None
+    assert session.committed is True
+    assert session.refreshed is True
 
 
 def test_frontier_news_default_sources_exclude_retired_caiwen_keys() -> None:
