@@ -51,10 +51,8 @@ async function enableTheme() {
   <UiCard class="theme-marketplace-panel">
     <div class="section-head">
       <div>
-        <span class="panel-kicker">Theme marketplace</span>
         <h2>主题市场与安全沙箱</h2>
       </div>
-      <small>当前支持内置主题包预览、启用与浏览器级回滚；拒绝脚本和不安全资源。</small>
     </div>
 
     <div class="theme-grid">
@@ -64,7 +62,6 @@ async function enableTheme() {
           <span :style="{ background: theme.settings.brand_accent_color }"></span>
         </div>
         <strong>{{ theme.name }}</strong>
-        <p>{{ theme.description }}</p>
         <div class="theme-actions">
           <UiButton tone="ghost" @click="previewTheme(theme)">预览</UiButton>
           <UiButton tone="subtle" @click="selectedThemeId = theme.id">选择</UiButton>

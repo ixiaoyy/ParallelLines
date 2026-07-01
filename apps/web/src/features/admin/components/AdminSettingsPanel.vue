@@ -148,7 +148,6 @@ function colorInputValue(setting: SiteSettingResponse) {
   <UiCard class="settings-panel">
     <div class="section-head">
       <div>
-        <span class="panel-kicker">Site settings</span>
         <h2>站点设置</h2>
       </div>
       <div class="settings-actions">
@@ -167,8 +166,6 @@ function colorInputValue(setting: SiteSettingResponse) {
         <article v-for="setting in group.items" :key="setting.key" class="setting-row">
           <div>
             <strong>{{ setting.key }}</strong>
-            <span>{{ setting.description }}</span>
-            <small v-if="setting.public">公开设置，保存后普通页面会自动刷新。</small>
           </div>
           <label v-if="setting.data_type === 'boolean'" class="setting-control setting-control--toggle">
             <input

@@ -97,9 +97,7 @@ function downloadExportSnapshot() {
   <UiCard class="admin-migration-tools-panel">
     <div class="panel-heading">
       <div>
-        <span class="panel-kicker">Migration tools</span>
         <h2>导入、导出与迁移工具</h2>
-        <p>支持 JSON 预检、幂等导入和脱敏迁移快照；大批量迁移前先运行预检。</p>
       </div>
       <button type="button" class="secondary-action" :disabled="exportLoading" @click="loadExport">
         {{ exportLoading ? "导出中..." : "生成导出快照" }}

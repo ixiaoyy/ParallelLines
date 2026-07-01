@@ -183,9 +183,7 @@ function queueItem(item: FrontierNewsItemResponse) {
   <UiCard class="frontier-news-panel">
     <div class="section-head frontier-news-panel__head">
       <div class="title-area">
-        <span class="panel-kicker">Hot News</span>
         <h2>热点资讯素材池</h2>
-        <p>定时任务采集白名单来源，AI 先整理成中文，再进入现有审核台；通过后自动由「小小资讯」发布。</p>
       </div>
       <div class="frontier-news-panel__actions">
         <RouterLink class="review-link" :to="{ name: 'admin-moderation' }">去审核台</RouterLink>
@@ -205,7 +203,7 @@ function queueItem(item: FrontierNewsItemResponse) {
         <article v-for="source in sources" :key="source.id" class="source-card">
           <div>
             <strong>{{ source.name }}</strong>
-            <span>{{ sourceKindLabel(source.kind) }} · 每 {{ source.fetch_interval_minutes }} 分钟</span>
+            <span>{{ sourceKindLabel(source.kind) }}</span>
           </div>
           <UiBadge :tone="source.enabled ? 'green' : 'gray'">{{ source.enabled ? "启用" : "停用" }}</UiBadge>
           <p class="source-url">{{ source.url }}</p>

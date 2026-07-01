@@ -3,7 +3,7 @@ import { DownloadOutlined, ReloadOutlined } from "@ant-design/icons-vue";
 import { computed, ref, watch } from "vue";
 
 import { formatMetric, reportCell } from "@/features/analytics/model";
-import type { AnalyticsMetricPoint, DataExplorerReportSummary } from "@/features/analytics/model";
+import type { AnalyticsMetricPoint } from "@/features/analytics/model";
 import {
   useAnalyticsOverview,
   useDataExplorerReport,
@@ -65,9 +65,6 @@ const exportReport = useExportDataExplorerReport();
 const maxPageViews = computed(() =>
   Math.max(1, ...(overview.value?.series ?? []).map((point) => pageViews(point))),
 );
-const selectedReport = computed<DataExplorerReportSummary | null>(
-  () => reports.value.find((item) => item.id === selectedReportId.value) ?? null,
-);
 const rangeDayCount = computed(() => (isDateRangeInvalid.value ? 0 : selectedRangeDays.value));
 const activePresetDays = computed(
   () => presetRanges.find((item) => item.days === rangeDayCount.value)?.days ?? null,
@@ -87,28 +84,24 @@ const summaryMetrics = computed(() => {
       id: "page-views",
       label: "PV",
       value: formatMetric(totals?.page_views),
-      helper: "站点页面浏览，不再混用帖子浏览",
       tone: "blue",
     },
     {
       id: "unique-visitors",
       label: "UV",
       value: formatMetric(totals?.unique_visitors),
-      helper: "按登录用户或匿名访客去重",
       tone: "green",
     },
     {
       id: "external-referrals",
       label: "引流访问",
       value: formatMetric(totals?.external_referrals),
-      helper: "UTM、搜索、社媒和外链来源",
       tone: "violet",
     },
     {
       id: "content-growth",
       label: "新增内容",
       value: formatMetric(totalContentItems.value),
-      helper: `${formatMetric(totals?.topics)} 主题 / ${formatMetric(totals?.posts)} 回复`,
       tone: "orange",
     },
   ];
@@ -202,9 +195,7 @@ function exportCsv(): void {
   <UiCard class="admin-analytics-panel">
     <section class="analytics-hero" aria-labelledby="analytics-title">
       <div class="analytics-hero__copy">
-        <span class="analytics-kicker">Site analytics</span>
-        <h2 id="analytics-title">访问与运营看板</h2>
-        <p>把站点 PV/UV、引流来源、入口页和社区转化放在同一屏。</p>
+        <h2 id="analytics-title">访问看板</h2>
       </div>
       <div class="analytics-hero__aside">
         <span class="range-chip">{{ rangeDayCount || "—" }} 天</span>
@@ -237,7 +228,6 @@ function exportCsv(): void {
           <input v-model="endDate" type="date" />
         </label>
       </div>
-      <span class="toolbar-note">CSV 导出会写入后台审计日志。</span>
     </section>
 
     <div v-if="isDateRangeInvalid" class="analytics-state analytics-state--error" role="alert">
@@ -254,7 +244,6 @@ function exportCsv(): void {
         <article v-for="metric in summaryMetrics" :key="metric.id" :class="`metric-card metric-card--${metric.tone}`">
           <span>{{ metric.label }}</span>
           <strong>{{ metric.value }}</strong>
-          <small>{{ metric.helper }}</small>
         </article>
       </section>
 
@@ -279,7 +268,6 @@ function exportCsv(): void {
           </div>
           <div class="trend-legend" aria-label="趋势说明">
             <span><i></i>PV</span>
-            <span>UV 按登录用户或匿名访客去重</span>
           </div>
         </article>
 
@@ -287,7 +275,6 @@ function exportCsv(): void {
           <div class="section-heading">
             <div>
               <strong>来源渠道</strong>
-              <span>按 PV 排序，包含直接访问与引流来源</span>
             </div>
           </div>
           <ol v-if="trafficSources.length" class="topic-rank-list">
@@ -310,7 +297,6 @@ function exportCsv(): void {
         <article>
           <div class="section-heading">
             <strong>入口页</strong>
-            <span>新访客第一眼落在哪</span>
           </div>
           <ol v-if="entryPages.length">
             <li v-for="page in entryPages" :key="page.path">
@@ -323,7 +309,6 @@ function exportCsv(): void {
         <article>
           <div class="section-heading">
             <strong>热门主题</strong>
-            <span>按回复、点赞与浏览排序</span>
           </div>
           <ol v-if="overview.top_topics.length">
             <li v-for="topic in overview.top_topics" :key="topic.id">
@@ -336,7 +321,6 @@ function exportCsv(): void {
         <article>
           <div class="section-heading">
             <strong>转化信号</strong>
-            <span>访客变成社区动作</span>
           </div>
           <dl class="governance-list">
             <div>
@@ -363,8 +347,7 @@ function exportCsv(): void {
     <section class="data-explorer" aria-label="Data Explorer">
       <div class="section-heading data-explorer__heading">
         <div>
-          <strong>Data Explorer</strong>
-          <span>{{ selectedReport?.description ?? "选择一个预设报表运行" }}</span>
+          <strong>数据报表</strong>
         </div>
         <UiButton
           tone="subtle"
@@ -372,7 +355,7 @@ function exportCsv(): void {
           @click="exportCsv"
         >
           <template #icon><DownloadOutlined /></template>
-          导出 CSV
+          导出
         </UiButton>
       </div>
       <div v-if="reportsQuery.isLoading.value" class="analytics-state" role="status">正在读取预设报表…</div>

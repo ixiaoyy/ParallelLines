@@ -244,14 +244,10 @@ function revokeBadge(badge: UserBadgeResponse) {
         <span>调整备注</span>
         <input v-model="userDraft.adjustmentReason" type="text" maxlength="500" placeholder="人工调整原因（可选）" />
       </label>
-      <p class="growth-adjust-note">
-        可用积分可用于后续兑换/解锁；成长值只用于等级进度，兑换不会导致等级倒退。
-      </p>
       <UiButton :disabled="updateUserMutation.isPending.value" @click="saveUser">保存用户变更</UiButton>
 
       <section class="user-badge-section" aria-label="徽章管理">
         <div class="section-head">
-          <span class="panel-kicker">Badges</span>
           <strong>{{ selectedUser.badges.length }} 个有效徽章</strong>
         </div>
         <div v-if="selectedUser.badges.length" class="user-badge-list">

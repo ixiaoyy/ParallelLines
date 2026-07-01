@@ -43,16 +43,7 @@
   color: var(--title);
 }
 
-.panel-kicker {
-  color: var(--primary);
-  font-size: 0.72rem;
-  font-weight: 920;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
 .panel-state,
-.service-card span,
 .compact-list span,
 .audit-timeline span {
   color: var(--muted);
@@ -100,10 +91,21 @@
 }
 
 .service-card {
-  display: grid;
-  gap: 0.32rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
   min-width: 0;
   padding: 0.72rem;
+}
+
+.service-card--degraded {
+  border-color: rgba(var(--warning-rgb), 0.38);
+  background: rgba(var(--warning-rgb), 0.12);
+}
+
+.service-card--unknown {
+  background: var(--bg-subtle);
 }
 
 .service-card strong,
@@ -156,9 +158,7 @@
 }
 
 .queue-overview {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  min-width: 0;
 }
 
 .queue-stats {
@@ -187,37 +187,6 @@
     &.has-dead {
       color: var(--danger);
     }
-  }
-}
-
-.queue-config-grid {
-  border: 1px solid var(--border);
-  border-radius: 0.92rem;
-  background: rgba(255, 255, 255, 0.76);
-  padding: 0.6rem 0.8rem;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.4rem;
-  align-content: center;
-}
-
-.config-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.6rem;
-  min-width: 0;
-  font-size: 0.78rem;
-
-  .config-label {
-    color: var(--muted);
-  }
-
-  .config-value {
-    color: var(--title);
-    font-family: monospace;
-    font-weight: 500;
-    overflow-wrap: anywhere;
-    text-align: right;
   }
 }
 
@@ -294,7 +263,6 @@
   }
 
   .section-head {
-    flex-direction: column;
     align-items: flex-start;
     gap: 0.35rem;
   }
@@ -311,7 +279,6 @@
   }
 
   .panel-state,
-  .service-card span,
   .compact-list span,
   .audit-timeline span {
     font-size: 0.86rem;
@@ -322,21 +289,7 @@
     grid-template-columns: 1fr;
   }
 
-  .queue-overview {
-    grid-template-columns: 1fr;
-  }
-
   .queue-stats {
     grid-template-columns: 1fr;
-  }
-
-  .title-area,
-  .config-item {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .config-item .config-value {
-    text-align: left;
   }
 }

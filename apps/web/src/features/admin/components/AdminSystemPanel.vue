@@ -24,6 +24,42 @@ const statCards = computed(() => {
   ];
 });
 
+// Maps backend service identifiers to labels used in the admin dashboard.
+// Key parameter `name` is the API service id. Return value is a Chinese display label; side effect: none.
+function serviceNameLabel(name: string): string {
+  const labels: Record<string, string> = {
+    cache: "缓存",
+    database: "数据库",
+    mail: "邮件",
+    workers: "任务",
+  };
+  return labels[name] ?? name;
+}
+
+// Maps backend service status values to short dashboard labels.
+// Key parameter `status` is the API status value. Return value is display text; side effect: none.
+function serviceStatusLabel(status: string): string {
+  if (status === "ok") {
+    return "正常";
+  }
+  if (status === "degraded") {
+    return "异常";
+  }
+  return "未知";
+}
+
+// Returns a compact class suffix for service status styling.
+// Key parameter `status` is the API status value. Return value is a stable class suffix; side effect: none.
+function serviceStatusClass(status: string): string {
+  if (status === "ok") {
+    return "ok";
+  }
+  if (status === "degraded") {
+    return "degraded";
+  }
+  return "unknown";
+}
+
 function serviceTone(status: string): "green" | "amber" | "gray" {
   if (status === "ok") {
     return "green";
@@ -43,7 +79,6 @@ function serviceTone(status: string): "green" | "amber" | "gray" {
           <h2>系统面板</h2>
           <span v-if="system" class="system-meta">v{{ system.version }} · {{ system.environment }}</span>
         </div>
-        <span class="panel-kicker">System</span>
       </div>
       <p v-if="systemQuery.isLoading.value" class="panel-state" role="status">正在读取系统状态…</p>
       <p v-else-if="systemQuery.isError.value" class="panel-state panel-state--error" role="alert">
@@ -57,18 +92,21 @@ function serviceTone(status: string): "green" | "amber" | "gray" {
           </div>
         </div>
         <div class="service-grid">
-          <article v-for="service in system.services" :key="service.name" class="service-card">
-            <UiBadge :tone="serviceTone(service.status)">{{ service.status }}</UiBadge>
-            <strong>{{ service.name }}</strong>
-            <span>{{ service.detail }}</span>
+          <article
+            v-for="service in system.services"
+            :key="service.name"
+            :class="`service-card service-card--${serviceStatusClass(service.status)}`"
+          >
+            <UiBadge :tone="serviceTone(service.status)">{{ serviceStatusLabel(service.status) }}</UiBadge>
+            <strong>{{ serviceNameLabel(service.name) }}</strong>
           </article>
         </div>
         <div class="queue-status-section">
-          <h3>后台队列与调度</h3>
+          <h3>任务队列</h3>
           <div class="queue-overview">
             <div class="queue-stats">
               <div class="queue-stat-pill">
-                <span>排队中</span>
+                <span>待执行</span>
                 <strong>{{ system.queue.queued ?? 0 }}</strong>
               </div>
               <div class="queue-stat-pill">
@@ -76,30 +114,8 @@ function serviceTone(status: string): "green" | "amber" | "gray" {
                 <strong>{{ system.queue.running ?? 0 }}</strong>
               </div>
               <div class="queue-stat-pill">
-                <span>已失效 (Dead)</span>
+                <span>失败</span>
                 <strong :class="{ 'has-dead': (system.queue.dead ?? 0) > 0 }">{{ system.queue.dead ?? 0 }}</strong>
-              </div>
-            </div>
-            <div class="queue-config-grid">
-              <div class="config-item">
-                <span class="config-label">Worker 模块</span>
-                <span class="config-value">{{ system.queue.worker }}</span>
-              </div>
-              <div class="config-item">
-                <span class="config-label">轮询间隔 / 批次</span>
-                <span class="config-value">{{ system.queue.poll_seconds }}s / {{ system.queue.batch_size }}条</span>
-              </div>
-              <div class="config-item">
-                <span class="config-label">热度排行调度</span>
-                <span class="config-value">每 {{ system.queue.hot_rank_interval_seconds }}s</span>
-              </div>
-              <div class="config-item">
-                <span class="config-label">上传清理调度</span>
-                <span class="config-value">每 {{ system.queue.upload_cleanup_interval_seconds }}s</span>
-              </div>
-              <div class="config-item">
-                <span class="config-label">热点资讯采集</span>
-                <span class="config-value">每 {{ system.queue.frontier_news_interval_seconds ?? 0 }}s</span>
               </div>
             </div>
           </div>
@@ -112,7 +128,6 @@ function serviceTone(status: string): "green" | "amber" | "gray" {
         <div class="title-area">
           <h2>邮件日志</h2>
         </div>
-        <span class="panel-kicker">Mail</span>
       </div>
       <ol v-if="system?.recent_email_logs.length" class="compact-list">
         <li v-for="email in system.recent_email_logs" :key="`${email.kind}-${email.sent_at}`">
@@ -120,7 +135,7 @@ function serviceTone(status: string): "green" | "amber" | "gray" {
           <span>{{ email.to_email }} · {{ relativeTime(email.sent_at) }}</span>
         </li>
       </ol>
-      <p v-else class="panel-state">暂无本地邮件记录。</p>
+      <p v-else class="panel-state">暂无邮件记录。</p>
     </UiCard>
   </section>
 
@@ -130,7 +145,6 @@ function serviceTone(status: string): "green" | "amber" | "gray" {
         <div class="title-area">
           <h2>最近审计</h2>
         </div>
-        <span class="panel-kicker">Audit</span>
       </div>
       <ol v-if="system.recent_audit_logs.length" class="audit-timeline">
         <li v-for="log in system.recent_audit_logs" :key="log.id">
@@ -146,7 +160,6 @@ function serviceTone(status: string): "green" | "amber" | "gray" {
         <div class="title-area">
           <h2>最近错误</h2>
         </div>
-        <span class="panel-kicker">Errors</span>
       </div>
       <ol v-if="system.recent_errors.length" class="compact-list">
         <li v-for="err in system.recent_errors" :key="String(err.id)">

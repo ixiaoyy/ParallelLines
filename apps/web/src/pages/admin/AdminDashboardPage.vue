@@ -22,12 +22,8 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
 <template>
   <div class="admin-dashboard-page">
     <section class="admin-hero" aria-labelledby="admin-title">
-      <div>
-        <span class="panel-kicker">Operations cockpit</span>
-        <h1 id="admin-title">站点后台中枢</h1>
-        <p>把站点设置、用户治理、系统健康、邮件日志与审计线索聚合到一个可运营面板。</p>
-      </div>
-      <RouterLink class="hero-link" :to="{ name: 'admin-moderation' }">进入审核台</RouterLink>
+      <h1 id="admin-title">站点后台</h1>
+      <RouterLink class="hero-link" :to="{ name: 'admin-moderation' }">审核台</RouterLink>
     </section>
 
     <UiCard v-if="!currentUserQuery.data.value" class="admin-empty">

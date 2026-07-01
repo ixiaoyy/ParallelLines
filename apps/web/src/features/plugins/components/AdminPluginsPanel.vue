@@ -26,10 +26,7 @@ function togglePlugin(pluginId: string, enabled: boolean) {
       <article v-for="plugin in plugins" :key="plugin.id" class="plugin-card">
         <div>
           <strong>{{ plugin.name }}</strong>
-          <span>{{ plugin.description }}</span>
-          <small>
-            v{{ plugin.version }} · 事件 {{ plugin.events.length }} · UI 入口 {{ plugin.ui_extensions.length }}
-          </small>
+          <small>v{{ plugin.version }}</small>
         </div>
         <button
           class="plugin-toggle"
