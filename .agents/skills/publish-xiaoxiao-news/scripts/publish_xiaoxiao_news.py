@@ -23,6 +23,30 @@ API_USER_AGENT = (
 )
 
 
+# Load ignored local publisher credentials when present so automations can reuse
+# one local secret file without printing it.
+def load_local_publisher_env() -> None:
+    env_path = project_root() / ".tmp" / "frontier-publisher.env"
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip())
+
+
+# Return the first non-empty environment variable from a priority list.
+# Key parameter `names` is the lookup order. Return value: trimmed string. Side effect: none.
+def first_env(*names: str) -> str:
+    for name in names:
+        value = os.getenv(name, "").strip()
+        if value:
+            return value
+    return ""
+
+
 # Resolve the ParallelLines repository root from this skill script location.
 # Key parameters: none. Return value: repository root path. Side effect: none.
 def project_root() -> Path:
@@ -119,6 +143,13 @@ def public_user_profile(base_url: str, username: str) -> dict[str, Any]:
     return dict(profile.get("data") or {})
 
 
+# Read the currently authenticated public profile for one access token.
+# Key parameters are public base URL and bearer token. Return value: profile data. Side effect: network I/O.
+def authenticated_profile(base_url: str, token: str) -> dict[str, Any]:
+    response = request_json("GET", f"{base_url}/api/v1/auth/me", token=token)
+    return dict(response.get("data") or {})
+
+
 # Look up a public user profile and return its id after optional role validation.
 # Key parameters are public base URL, username, and expected role. Side effect: network I/O.
 def public_user_id(base_url: str, username: str, *, expected_role: str | None = None) -> str:
@@ -185,6 +216,23 @@ def login_admin_token(base_url: str, account: str, password: str) -> str:
     return token
 
 
+# Log in through the public auth API for a normal publisher account.
+# Key parameters are base URL, account, and password. Return value: access token. Side effect: creates a server session.
+def login_publisher_token(base_url: str, account: str, password: str) -> str:
+    response = request_json(
+        "POST",
+        f"{base_url}/api/v1/auth/login",
+        payload={"account": account, "password": password},
+    )
+    data = dict(response.get("data") or {})
+    if data.get("two_factor_required"):
+        raise RuntimeError("Publisher account has 2FA enabled; provide a non-2FA publishing account")
+    token = str(data.get("access_token") or "")
+    if not token:
+        raise RuntimeError("Publisher login succeeded without an access token")
+    return token
+
+
 # Confirm the chosen token belongs to an active admin before invoking admin imports.
 # Key parameters are base URL and token. Return value: none. Side effect: network validation request.
 def validate_admin_token(base_url: str, token: str) -> None:
@@ -198,6 +246,21 @@ def validate_admin_token(base_url: str, token: str) -> None:
     data = dict(response.get("data") or {})
     if data.get("role") != "admin":
         raise RuntimeError(f"Authenticated token role is {data.get('role')!r}, expected 'admin'")
+
+
+# Confirm the chosen token belongs to the expected publishing account.
+# Key parameters are base URL, token, and expected username. Return value: authenticated profile. Side effect: network validation request.
+def validate_public_author_token(base_url: str, token: str, expected_username: str) -> dict[str, Any]:
+    data = authenticated_profile(base_url, token)
+    username = str(data.get("username") or "")
+    if username != expected_username:
+        raise RuntimeError(
+            f"Publisher token belongs to {username or '<unknown>'!r}, expected author {expected_username!r}. "
+            "Use the persona account credentials for public publishing."
+        )
+    if data.get("status") != "active":
+        raise RuntimeError(f"Publisher account {expected_username!r} is not active")
+    return data
 
 
 # Normalize comma-separated tags while preserving user-specified order.
@@ -293,6 +356,98 @@ def print_import_result(label: str, response: dict[str, Any]) -> None:
         print(f"- {row.get('resource')} {row.get('key')}: {row.get('action')} ({row.get('message')})")
 
 
+# Print a compact preview or run result for the public topic API using the same
+# shape as migration preview logs.
+# Key parameters are a label and synthetic response payload. Return value: none. Side effect: console output.
+def print_public_result(label: str, response: dict[str, Any]) -> None:
+    print_import_result(label, {"data": response})
+
+
+# Return recent board topics for duplicate detection before public publishing.
+# Key parameters are base URL and board slug. Return value: topic list. Side effect: network I/O.
+def recent_board_topics(base_url: str, board_slug: str, *, limit: int = 20) -> list[dict[str, Any]]:
+    response = request_json(
+        "GET",
+        f"{base_url}/api/v1/boards/{quote(board_slug)}/topics?sort=latest&limit={limit}",
+        timeout=20,
+    )
+    return [dict(item) for item in response.get("data") or []]
+
+
+# Find an exact-title recent topic in the target board.
+# Key parameters are base URL, board slug, and title. Return value: topic object or None. Side effect: network I/O.
+def find_recent_same_title_topic(base_url: str, board_slug: str, title: str) -> dict[str, Any] | None:
+    for topic in recent_board_topics(base_url, board_slug):
+        if str(topic.get("title") or "") == title:
+            return topic
+    return None
+
+
+# Build a synthetic preview result for public topic publishing without writing.
+# Key parameters are CLI args, body, and authenticated author profile. Return value: preview payload. Side effect: optional duplicate read.
+def build_public_preview(
+    base_url: str,
+    args: argparse.Namespace,
+    body: str,
+    author_profile: dict[str, Any],
+) -> dict[str, Any]:
+    duplicate = None if args.force else find_recent_same_title_topic(base_url, args.board_slug, args.title.strip())
+    if duplicate:
+        return {
+            "dry_run": True,
+            "created": 0,
+            "updated": 0,
+            "skipped": 1,
+            "errors": 0,
+            "rows": [
+                {
+                    "resource": "topic",
+                    "key": args.title.strip(),
+                    "action": "skipped",
+                    "message": f"Recent same-title topic exists: {duplicate.get('share_url')}",
+                }
+            ],
+        }
+    return {
+        "dry_run": True,
+        "created": 1,
+        "updated": 0,
+        "skipped": 0,
+        "errors": 0,
+        "rows": [
+            {
+                "resource": "topic",
+                "key": args.title.strip(),
+                "action": "created",
+                "message": f"Public API ready as {author_profile.get('username')}",
+            }
+        ],
+    }
+
+
+# Create one topic through the public board topic API.
+# Key parameters are base URL, auth token, and CLI args/body. Return value: created topic object. Side effect: remote write.
+def create_public_topic(
+    base_url: str,
+    token: str,
+    args: argparse.Namespace,
+    body: str,
+) -> dict[str, Any]:
+    response = request_json(
+        "POST",
+        f"{base_url}/api/v1/boards/{quote(args.board_slug)}/topics",
+        token=token,
+        payload={
+            "title": args.title.strip(),
+            "raw_md": body.strip(),
+            "tags": normalize_tags(args.tags),
+            "pinned": False,
+            "featured": False,
+        },
+    )
+    return dict(response.get("data") or {})
+
+
 # Search the public API for the newly published topic and print matching URLs.
 # Key parameters are base URL and title. Return value: none. Side effect: network I/O and console output.
 def verify_public_topic(base_url: str, title: str) -> None:
@@ -350,9 +505,35 @@ def upload_author_avatar_if_requested(
         raise
 
 
+# Upload an optional author avatar using the same public author session token.
+# Key parameters are base URL, CLI args, and author token. Return value: none. Side effect: API upload.
+def upload_author_avatar_with_public_token(
+    base_url: str,
+    args: argparse.Namespace,
+    token: str,
+) -> None:
+    avatar_path = author_avatar_path(args)
+    if avatar_path is None:
+        return
+    profile = public_user_profile(base_url, args.author_username)
+    existing_avatar_url = str(profile.get("avatar_url") or "")
+    if existing_avatar_url and not args.force_author_avatar:
+        print(f"Avatar: {profile.get('username')} {existing_avatar_url} (skipped)")
+        return
+    response = request_multipart_file_json(
+        f"{base_url}/api/v1/uploads/avatar",
+        token=token,
+        field_name="file",
+        file_path=avatar_path,
+    )
+    data = dict(response.get("data") or {})
+    print(f"Avatar: {data.get('username')} {data.get('avatar_url')}")
+
+
 # Parse CLI arguments for one preview or publish operation.
 # Key parameter `argv` is optional CLI argv. Return value: parsed args. Side effect: may print help.
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    load_local_publisher_env()
     parser = argparse.ArgumentParser(
         description="Preview or publish a ParallelLines topic through the admin migration API.",
     )
@@ -361,6 +542,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--slug", default="", help="Short ASCII topic slug.")
     parser.add_argument("--tags", default="动态,大模型,前沿资讯", help="Comma-separated tags.")
     parser.add_argument("--run", action="store_true", help="Actually publish after a successful preview.")
+    parser.add_argument(
+        "--publish-mode",
+        choices=("auto", "admin", "public"),
+        default="auto",
+        help="Publish via admin migration import or normal public create-topic API.",
+    )
     parser.add_argument("--base-url", default="https://www.pingxingxian.space", help="Public site URL.")
     parser.add_argument("--env-file", default=str(project_root() / "apps/api/.env"), help="API .env path.")
     parser.add_argument("--admin-username", default="多动脑子z", help="Admin username for signing token.")
@@ -383,6 +570,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--admin-password",
         default=os.getenv("PARALLELLINES_ADMIN_PASSWORD", ""),
         help="Admin password used with --admin-account. Prefer environment variables.",
+    )
+    parser.add_argument(
+        "--account",
+        default=first_env("PARALLELLINES_NEWS_PUBLISH_ACCOUNT", "PARALLELLINES_PUBLISH_ACCOUNT"),
+        help="Normal publisher account for public create-topic mode.",
+    )
+    parser.add_argument(
+        "--password",
+        default=first_env("PARALLELLINES_NEWS_PUBLISH_PASSWORD", "PARALLELLINES_PUBLISH_PASSWORD"),
+        help="Publisher password used with --account. Prefer environment variables.",
     )
     parser.add_argument("--author-username", default="小小资讯", help="Topic author username.")
     parser.add_argument(
@@ -416,6 +613,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--board-color", default="#6366F1", help="Board color used by migration payload.")
     parser.add_argument("--external-id", default="", help="Optional stable migration external id.")
     parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Publish even if a recent same-title topic already exists in the board.",
+    )
+    parser.add_argument(
         "--source-prefix",
         default="manual-xiaoxiao-news",
         help="Migration source prefix; '-preview' is appended for dry-run preview.",
@@ -423,9 +625,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+# Decide which publishing path to use for this invocation.
+# Key parameters are CLI args. Return value: "admin" or "public". Side effect: none.
+def resolve_publish_mode(args: argparse.Namespace) -> str:
+    if args.publish_mode != "auto":
+        return args.publish_mode
+    if args.admin_token or args.admin_token_file or (args.admin_account and args.admin_password):
+        return "admin"
+    if args.account and args.password:
+        return "public"
+    return "admin"
+
+
 # Execute preview and, when requested, publish via the migration import API.
 # Key parameter `argv` is optional CLI argv. Return value: process exit code. Side effect: API writes only with --run.
 def main(argv: list[str] | None = None) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8")
     args = parse_args(argv)
     body_path = Path(args.body_file)
     body = sys.stdin.read() if args.body_file == "-" else body_path.read_text(encoding="utf-8")
@@ -436,6 +654,43 @@ def main(argv: list[str] | None = None) -> int:
 
     env_values = load_env(Path(args.env_file))
     base_url = args.base_url.rstrip("/")
+    mode = resolve_publish_mode(args)
+
+    if mode == "public":
+        if not args.account or not args.password:
+            raise RuntimeError("Public publish mode requires --account/--password or PARALLELLINES_PUBLISH_* env vars")
+        token = login_publisher_token(base_url, args.account, args.password)
+        author_profile = validate_public_author_token(base_url, token, args.author_username)
+        preview_data = build_public_preview(base_url, args, body, author_profile)
+        print_public_result("Preview", preview_data)
+        if int(preview_data.get("errors") or 0) > 0:
+            raise RuntimeError("Preview returned errors; aborting")
+        if not args.run:
+            print("Preview only. Re-run with --run to publish.")
+            return 0
+        if not any(row.get("resource") == "topic" and row.get("action") == "created" for row in preview_data.get("rows") or []):
+            raise RuntimeError("Preview did not create a topic; refusing to run")
+        topic = create_public_topic(base_url, token, args, body)
+        run_data = {
+            "dry_run": False,
+            "created": 1,
+            "updated": 0,
+            "skipped": 0,
+            "errors": 0,
+            "rows": [
+                {
+                    "resource": "topic",
+                    "key": args.title.strip(),
+                    "action": "created",
+                    "message": f"{topic.get('id')} {topic.get('share_url')}",
+                }
+            ],
+        }
+        print_public_result("Run", run_data)
+        upload_author_avatar_with_public_token(base_url, args, token)
+        verify_public_topic(base_url, args.title.strip())
+        return 0
+
     token = resolve_admin_token(base_url, args, env_values)
     validate_admin_token(base_url, token)
 

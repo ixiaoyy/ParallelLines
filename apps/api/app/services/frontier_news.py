@@ -37,6 +37,7 @@ from app.schemas.news import (
 from app.services.moderation import ModerationService
 
 FRONTIER_NEWS_PROMPT_VERSION = "frontier-v1"
+LEGACY_FRONTIER_NEWS_BOT_EMAIL = "frontier-news-bot@parallellines.local"
 DEFAULT_REVIEW_BATCH_SIZE = 3
 OPEN_REVIEW_STATUSES = {"pending", "claimed", "appealed"}
 TERMINAL_ITEM_STATUSES = {"published", "rejected", "duplicate"}
@@ -609,12 +610,22 @@ class FrontierNewsService:
         email = self.settings.frontier_news_bot_email
         by_username = await self.session.scalar(select(User).where(User.username == username))
         by_email = await self.session.scalar(select(User).where(User.email == email))
-        if by_username and by_email and by_username.id != by_email.id:
+        by_legacy_email = None
+        if email != LEGACY_FRONTIER_NEWS_BOT_EMAIL:
+            by_legacy_email = await self.session.scalar(
+                select(User).where(User.email == LEGACY_FRONTIER_NEWS_BOT_EMAIL)
+            )
+        matched_ids = {
+            str(user.id)
+            for user in (by_username, by_email, by_legacy_email)
+            if user is not None
+        }
+        if len(matched_ids) > 1:
             raise ConflictError(
                 "frontier_news_bot_conflict",
                 "Frontier news bot username and email belong to different users",
             )
-        bot = by_username or by_email
+        bot = by_username or by_email or by_legacy_email
         if bot is None:
             bot = User(
                 username=username,
@@ -636,7 +647,7 @@ class FrontierNewsService:
             self.session.add(bot)
             await self.session.flush()
             return bot
-        if bot.email != email:
+        if bot.email not in {email, LEGACY_FRONTIER_NEWS_BOT_EMAIL}:
             raise ConflictError(
                 "frontier_news_bot_conflict",
                 "Frontier news bot email is already used by another account",
@@ -648,6 +659,8 @@ class FrontierNewsService:
                     "Frontier news bot username is already used by another account",
                 )
             bot.username = username
+        if bot.email != email:
+            bot.email = email
         bot.display_name = username
         bot.role = "user"
         bot.status = "active"

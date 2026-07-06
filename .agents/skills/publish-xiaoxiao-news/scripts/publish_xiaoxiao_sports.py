@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -8,6 +9,17 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from publish_xiaoxiao_news import main as publish_main
+
+
+# Read the first non-empty environment variable from the provided names.
+# Key parameter `names` is the lookup order. Return value: trimmed env value or empty string. Side effect: none.
+def first_env(*names: str) -> str:
+    for name in names:
+        value = os.getenv(name, "").strip()
+        if value:
+            return value
+    return ""
+
 
 SPORTS_DEFAULT_ARGS = [
     "--author-username",
@@ -33,11 +45,20 @@ SPORTS_DEFAULT_ARGS = [
     "manual-xiaoxiao-sports",
 ]
 
+SPORTS_PUBLIC_CREDENTIAL_ARGS = [
+    "--account",
+    first_env("PARALLELLINES_SPORTS_PUBLISH_ACCOUNT", "PARALLELLINES_PUBLISH_ACCOUNT"),
+    "--password",
+    first_env("PARALLELLINES_SPORTS_PUBLISH_PASSWORD", "PARALLELLINES_PUBLISH_PASSWORD"),
+]
+
 
 # Run the Xiaoxiao Chick sports publisher with caller-provided overrides last.
 # Key parameter `argv` is optional CLI argv. Return value: publisher exit code. Side effect: preview/publish API calls.
 def main(argv: list[str] | None = None) -> int:
-    return publish_main([*SPORTS_DEFAULT_ARGS, *(argv if argv is not None else sys.argv[1:])])
+    return publish_main(
+        [*SPORTS_DEFAULT_ARGS, *SPORTS_PUBLIC_CREDENTIAL_ARGS, *(argv if argv is not None else sys.argv[1:])]
+    )
 
 
 if __name__ == "__main__":
