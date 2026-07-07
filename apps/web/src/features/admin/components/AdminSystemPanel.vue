@@ -7,6 +7,15 @@ import { relativeTime } from "@/shared/lib/format";
 import UiBadge from "@/shared/ui/Badge.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
+interface RecentErrorSummary {
+  key: string;
+  taskLabel: string;
+  count: number;
+  lastOccurredAt: string;
+  message: string;
+  action: string;
+}
+
 const systemQuery = useAdminSystem();
 const system = computed(() => systemQuery.data.value);
 const statCards = computed(() => {
@@ -23,6 +32,7 @@ const statCards = computed(() => {
     { label: "审计记录", value: stats.audit_logs },
   ];
 });
+const recentErrorSummaries = computed(() => summarizeRecentErrors(system.value?.recent_errors ?? []));
 
 // Maps backend service identifiers to labels used in the admin dashboard.
 // Key parameter `name` is the API service id. Return value is a Chinese display label; side effect: none.
@@ -68,6 +78,107 @@ function serviceTone(status: string): "green" | "amber" | "gray" {
     return "amber";
   }
   return "gray";
+}
+
+// Collapses raw dead-letter rows into operator-friendly task summaries.
+// Key parameter `errors` is the `/admin/system` recent_errors payload. Return value is
+// grouped Chinese summaries sorted by most recent occurrence; side effect: none.
+function summarizeRecentErrors(errors: Record<string, unknown>[]): RecentErrorSummary[] {
+  const groups = new Map<string, RecentErrorSummary>();
+  for (const error of errors) {
+    const taskName = stringValue(error.task_name, "unknown_task");
+    const rawError = stringValue(error.error);
+    const occurredAt = stringValue(error.occurred_at);
+    const category = errorCategory(rawError);
+    const key = `${taskName}:${category}`;
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.count += 1;
+      if (isLater(occurredAt, existing.lastOccurredAt)) {
+        existing.lastOccurredAt = occurredAt;
+      }
+      continue;
+    }
+
+    groups.set(key, {
+      key,
+      taskLabel: taskNameLabel(taskName),
+      count: 1,
+      lastOccurredAt: occurredAt,
+      message: errorMessage(category),
+      action: errorAction(category),
+    });
+  }
+
+  return Array.from(groups.values()).sort((left, right) =>
+    Date.parse(right.lastOccurredAt) - Date.parse(left.lastOccurredAt),
+  );
+}
+
+// Reads an unknown API field as a string while keeping template rendering predictable.
+// Key parameter `value` is an untyped API field; `fallback` is returned for absent values.
+// Return value is a string; side effect: none.
+function stringValue(value: unknown, fallback = ""): string {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+// Maps background task identifiers to labels suitable for the admin dashboard.
+// Key parameter `taskName` is a worker task id. Return value is Chinese display text; side effect: none.
+function taskNameLabel(taskName: string): string {
+  const labels: Record<string, string> = {
+    collect_frontier_news: "资讯采集任务",
+    send_digest_emails: "邮件摘要任务",
+    send_notification_email: "通知邮件任务",
+    create_notification: "站内通知任务",
+    deliver_webhook: "Webhook 投递任务",
+    recompute_hot_scores: "热度计算任务",
+    cleanup_expired_uploads: "临时上传清理",
+    cleanup_expired_sessions: "登录会话清理",
+  };
+  return labels[taskName] ?? "后台任务";
+}
+
+// Classifies raw worker errors into stable UI copy buckets.
+// Key parameter `rawError` is the backend last_error text. Return value names a known category; side effect: none.
+function errorCategory(rawError: string): string {
+  if (rawError.includes("offset-naive") && rawError.includes("offset-aware")) {
+    return "timezone";
+  }
+  return "unknown";
+}
+
+// Converts a worker error category into a concise Chinese summary.
+// Key parameter `category` is produced by errorCategory. Return value is operator-facing text; side effect: none.
+function errorMessage(category: string): string {
+  if (category === "timezone") {
+    return "历史失败：任务时间格式不一致，本次更新已兼容。";
+  }
+  return "后台任务执行失败。";
+}
+
+// Converts a worker error category into a next-step hint for administrators.
+// Key parameter `category` is produced by errorCategory. Return value is Chinese guidance; side effect: none.
+function errorAction(category: string): string {
+  if (category === "timezone") {
+    return "等待下一轮定时任务自动运行；旧失败记录会保留在任务日志中。";
+  }
+  return "如持续出现，请查看后台任务日志定位具体原因。";
+}
+
+// Compares two optional ISO-like timestamp strings for summary ordering.
+// Key parameters are display timestamps from the API. Return value is true when `candidate`
+// is later than `current`; side effect: none.
+function isLater(candidate: string, current: string): boolean {
+  const candidateTime = Date.parse(candidate);
+  const currentTime = Date.parse(current);
+  if (Number.isNaN(candidateTime)) {
+    return false;
+  }
+  if (Number.isNaN(currentTime)) {
+    return true;
+  }
+  return candidateTime > currentTime;
 }
 </script>
 
@@ -158,19 +269,25 @@ function serviceTone(status: string): "green" | "amber" | "gray" {
     <UiCard class="error-card">
       <div class="section-head">
         <div class="title-area">
-          <h2>最近错误</h2>
+          <h2>任务提醒</h2>
         </div>
       </div>
-      <ol v-if="system.recent_errors.length" class="compact-list">
-        <li v-for="err in system.recent_errors" :key="String(err.id)">
-          <div class="error-header">
-            <strong>{{ err.task_name }}</strong>
-            <span class="error-time">{{ relativeTime(String(err.occurred_at)) }}</span>
+      <ol v-if="recentErrorSummaries.length" class="task-alert-list">
+        <li v-for="error in recentErrorSummaries" :key="error.key" class="task-alert">
+          <div class="task-alert__header">
+            <strong>{{ error.taskLabel }}</strong>
+            <div>
+              <UiBadge tone="amber">{{ error.count }} 次</UiBadge>
+              <span v-if="error.lastOccurredAt" class="error-time">
+                最近 {{ relativeTime(error.lastOccurredAt) }}
+              </span>
+            </div>
           </div>
-          <pre class="error-detail">{{ err.error }}</pre>
+          <p>{{ error.message }}</p>
+          <span>{{ error.action }}</span>
         </li>
       </ol>
-      <p v-else class="panel-state">暂无关键错误。</p>
+      <p v-else class="panel-state">后台任务运行正常。</p>
     </UiCard>
   </div>
 </template>

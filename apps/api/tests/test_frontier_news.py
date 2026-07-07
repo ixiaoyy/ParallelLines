@@ -1,3 +1,4 @@
+from datetime import timedelta
 from types import SimpleNamespace
 from typing import cast
 
@@ -170,6 +171,25 @@ def test_frontier_news_default_sources_exclude_retired_caiwen_keys() -> None:
     default_keys = {source.key for source in DEFAULT_FRONTIER_SOURCES}
 
     assert default_keys.isdisjoint(RETIRED_FRONTIER_SOURCE_KEYS)
+
+
+def test_frontier_source_due_accepts_naive_last_checked_time() -> None:
+    """Verify source scheduling accepts MySQL-returned naive datetime values."""
+
+    service = FrontierNewsService(cast(AsyncSession, object()), Settings(_env_file=None))
+    source = FrontierNewsSource(
+        key="naive_checked",
+        name="Naive Checked Source",
+        kind="rss",
+        url="https://example.com/feed.xml",
+        config={},
+        enabled=True,
+        trust_level=50,
+        fetch_interval_minutes=60,
+        last_checked_at=(utcnow() - timedelta(minutes=90)).replace(tzinfo=None),
+    )
+
+    assert service._source_due(source) is True
 
 
 def test_frontier_news_source_kind_drives_item_classification() -> None:

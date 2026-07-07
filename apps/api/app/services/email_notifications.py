@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import Settings, get_settings
 from app.core.exceptions import NotFoundError
-from app.db.base import utcnow
+from app.db.base import as_utc_datetime, utcnow
 from app.models.admin import SiteSetting
 from app.models.email import EmailDeliveryEvent, InboundEmail, UserEmailPreference
 from app.models.forum import Topic
@@ -398,14 +398,14 @@ class EmailNotificationService:
     def _digest_due(self, preference: UserEmailPreference) -> bool:
         if preference.last_digest_sent_at is None:
             return True
-        elapsed = utcnow() - preference.last_digest_sent_at
+        elapsed = utcnow() - as_utc_datetime(preference.last_digest_sent_at)
         if preference.digest_frequency == "weekly":
             return elapsed >= timedelta(days=7)
         return elapsed >= timedelta(days=1)
 
     def _digest_period_start(self, preference: UserEmailPreference) -> datetime:
         if preference.last_digest_sent_at:
-            return preference.last_digest_sent_at
+            return as_utc_datetime(preference.last_digest_sent_at)
         days = 7 if preference.digest_frequency == "weekly" else 1
         return utcnow() - timedelta(days=days)
 

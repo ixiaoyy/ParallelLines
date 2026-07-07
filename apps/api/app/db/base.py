@@ -42,6 +42,19 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+def as_utc_datetime(value: datetime) -> datetime:
+    """Return a timezone-aware UTC datetime from persisted or request-provided values.
+
+    Key parameter `value` may be timezone-aware or a naive MySQL DATETIME value. The
+    return value is UTC-aware; side effect is none. Naive values are treated as UTC
+    because the application stores timestamps in UTC.
+    """
+
+    if value.tzinfo is None or value.utcoffset() is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
 SHANGHAI_TZ = timezone(timedelta(hours=8), "Asia/Shanghai")
 
 
@@ -52,9 +65,7 @@ def as_shanghai_datetime(value: datetime) -> datetime:
     timezone-aware in Asia/Shanghai; side effect is none.
     """
 
-    if value.tzinfo is None or value.utcoffset() is None:
-        value = value.replace(tzinfo=UTC)
-    return value.astimezone(SHANGHAI_TZ)
+    return as_utc_datetime(value).astimezone(SHANGHAI_TZ)
 
 
 class Base(DeclarativeBase):

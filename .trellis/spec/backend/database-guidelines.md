@@ -17,6 +17,10 @@
   the API boundary instead of making every foreign key a UUID string.
 - Tables use plural snake_case names: `boards`, `topics`, `posts`, `topic_reads`.
 - Timestamps: `created_at`, `updated_at`; soft deletable rows also have `deleted_at` and optionally `deleted_by_id`.
+- MySQL may return `DateTime(timezone=True)` values as naive Python datetimes. Before
+  Python-side comparison, subtraction, scheduling, or display conversion, normalize
+  persisted values with `app.db.base.as_utc_datetime(value)`. Do not directly subtract
+  a model timestamp from `utcnow()` unless the model timestamp has been normalized.
 - Slugs are stored separately from titles/names and must be unique within their natural scope.
 - Counter caches are allowed for hot paths: `boards.topic_count`, `topics.reply_count`, `topics.hot_score`. Update them in services/jobs only.
 

@@ -110,12 +110,14 @@
 
 .service-card strong,
 .compact-list,
-.audit-timeline {
+.audit-timeline,
+.task-alert-list {
   margin: 0;
 }
 
 .compact-list,
-.audit-timeline {
+.audit-timeline,
+.task-alert-list {
   display: grid;
   gap: 0.75rem;
   padding: 0;
@@ -123,7 +125,8 @@
 }
 
 .compact-list li,
-.audit-timeline li {
+.audit-timeline li,
+.task-alert {
   display: grid;
   gap: 0.16rem;
   min-width: 0;
@@ -190,7 +193,7 @@
   }
 }
 
-// Logs grid and errors card
+// Logs grid and task alerts
 .log-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -199,31 +202,37 @@
   margin-top: 1rem;
 }
 
-.error-header {
+.task-alert {
+  border: 1px solid rgba(var(--warning-rgb), 0.28);
+  border-radius: 0.92rem;
+  background: rgba(var(--warning-rgb), 0.08);
+}
+
+.task-alert__header {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 0.5rem;
 }
 
-.error-time {
-  font-size: 0.72rem;
-  color: var(--muted);
+.task-alert__header > div {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
 }
 
-.error-detail {
-  margin: 0.25rem 0 0 0;
-  padding: 0.5rem;
-  background: rgba(239, 68, 68, 0.08); // Dark red tint
-  border: 1px solid rgba(239, 68, 68, 0.16);
-  color: #ef4444; // Warning red
-  font-family: Consolas, Monaco, monospace;
-  font-size: 0.75rem;
-  border-radius: 0.46rem;
-  overflow: auto;
-  max-height: 8rem;
-  white-space: pre-wrap;
-  word-break: break-all;
+.task-alert p {
+  margin: 0.1rem 0 0;
+  color: var(--title);
+  line-height: 1.5;
+}
+
+.task-alert > span,
+.error-time {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 // Media Queries
@@ -280,7 +289,8 @@
 
   .panel-state,
   .compact-list span,
-  .audit-timeline span {
+  .audit-timeline span,
+  .task-alert > span {
     font-size: 0.86rem;
     line-height: 1.5;
   }

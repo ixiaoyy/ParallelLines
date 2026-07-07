@@ -22,7 +22,7 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
 from app.core.permissions import is_admin
 from app.core.security import hash_password
-from app.db.base import as_shanghai_datetime, utcnow
+from app.db.base import as_shanghai_datetime, as_utc_datetime, utcnow
 from app.models.forum import Board
 from app.models.moderation import Reviewable
 from app.models.news import FrontierNewsAiRun, FrontierNewsItem, FrontierNewsSource
@@ -1465,7 +1465,8 @@ class FrontierNewsService:
 
         if source.last_checked_at is None:
             return True
-        return source.last_checked_at <= utcnow() - timedelta(minutes=source.fetch_interval_minutes)
+        last_checked_at = as_utc_datetime(source.last_checked_at)
+        return last_checked_at <= utcnow() - timedelta(minutes=source.fetch_interval_minutes)
 
     def _classify_item(self, item: FrontierNewsItem, text: str) -> str:
         """Classify material from source kind first, then text keywords for safe fallbacks."""

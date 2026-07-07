@@ -1,11 +1,18 @@
+from datetime import timedelta
+from typing import cast
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.api.v1.dependencies import get_session
+from app.core.config import Settings
+from app.db.base import utcnow
 from app.main import create_app
+from app.models.email import UserEmailPreference
 from app.services.background_jobs import BackgroundJobService
 from app.services.email import EMAIL_OUTBOX, clear_email_outbox
+from app.services.email_notifications import EmailNotificationService
 from tests.helpers import (
     drain_background_jobs,
     get_test_database_url,
@@ -19,6 +26,20 @@ async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], objec
     async with engine.begin() as conn:
         await reset_test_database(conn)
     return async_sessionmaker(engine, expire_on_commit=False), engine
+
+
+def test_digest_due_accepts_naive_last_digest_time() -> None:
+    """Verify digest scheduling accepts MySQL-returned naive datetime values."""
+
+    service = EmailNotificationService(cast(AsyncSession, object()), Settings(_env_file=None))
+    preference = UserEmailPreference(
+        user_id="1",
+        digest_frequency="daily",
+        last_digest_sent_at=(utcnow() - timedelta(days=2)).replace(tzinfo=None),
+    )
+
+    assert service._digest_due(preference) is True
+    assert service._digest_period_start(preference).tzinfo is not None
 
 
 async def register_user(client: AsyncClient, username: str) -> dict[str, str]:
