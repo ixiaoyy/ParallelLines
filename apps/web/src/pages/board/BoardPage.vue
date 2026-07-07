@@ -15,6 +15,7 @@ import { useCurrentUser } from "@/features/auth/queries";
 import { useBoardDetail } from "@/features/boards/queries";
 import TopicList from "@/features/topics/components/TopicList.vue";
 import { useBoardTopics } from "@/features/topics/queries";
+import { useAdminTopicDelete } from "@/features/topics/useAdminTopicDelete";
 import { readRouteParam } from "@/shared/router/params";
 import { useSeoMeta } from "@/shared/seo/meta";
 import { boardToneClass } from "@/shared/theme/boardPalette";
@@ -120,6 +121,10 @@ const canManageBoard = computed(
     Boolean(board.value?.ownerId && board.value.ownerId === currentUserQuery.data.value?.id) ||
     isAdmin(currentUserQuery.data.value),
 );
+const canDeleteTopics = computed(() => isAdmin(currentUserQuery.data.value));
+const { deletingTopicId, requestDeleteTopic } = useAdminTopicDelete({
+  note: "前台版块列表管理员删除主题。",
+});
 
 const searchQuery = computed<string>({
   get() {
@@ -319,6 +324,9 @@ function updateQuery(patch: Record<string, string | undefined>) {
             :topics="boardTopics"
             empty-title="还没有主题"
             :empty-description="emptyTopicDescription"
+            :can-delete-topics="canDeleteTopics"
+            :deleting-topic-id="deletingTopicId"
+            @delete-topic="requestDeleteTopic"
           />
           <RouterLink
             v-if="!topicsQuery.isLoading.value && !boardTopics.length && !searchQuery && board.canCreateTopic"

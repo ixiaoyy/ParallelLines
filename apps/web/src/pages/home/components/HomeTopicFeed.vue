@@ -20,6 +20,8 @@ const props = defineProps<{
   boardFilter: string;
   tagFilter: string;
   canPublishTopic: boolean;
+  canDeleteTopics: boolean;
+  deletingTopicId?: string | null;
   filtersOpen: boolean;
   loading: boolean;
   error: boolean;
@@ -33,6 +35,7 @@ const emit = defineEmits<{
   updateFiltersOpen: [open: boolean];
   filtersVisibilityChange: [open: boolean];
   clearFilters: [];
+  deleteTopic: [topic: TopicCardVM];
 }>();
 
 const displayLimit = ref(5);
@@ -226,11 +229,12 @@ onUnmounted(() => observer?.disconnect());
       </datalist>
     </div>
 
-    <div class="feed-header" aria-hidden="true">
+    <div class="feed-header" :class="{ 'feed-header--with-admin-actions': canDeleteTopics }" aria-hidden="true">
       <span>主题</span>
       <span>回复</span>
       <span>浏览</span>
       <span>活动</span>
+      <span v-if="canDeleteTopics">管理</span>
     </div>
 
     <div v-if="loading" class="feed-skeleton" role="status" aria-label="正在加载主题">
@@ -256,7 +260,14 @@ onUnmounted(() => observer?.disconnect());
       </div>
     </div>
     <template v-else>
-      <HomeTopicRow v-for="topic in slicedTopics" :key="topic.id" :topic="topic" />
+      <HomeTopicRow
+        v-for="topic in slicedTopics"
+        :key="topic.id"
+        :topic="topic"
+        :can-delete-topic="canDeleteTopics"
+        :deleting-topic="deletingTopicId === topic.id"
+        @delete-topic="emit('deleteTopic', $event)"
+      />
 
       <div class="feed-load-container">
         <div v-if="topics.length > displayLimit" class="load-more-action">

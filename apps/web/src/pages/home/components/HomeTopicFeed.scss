@@ -235,6 +235,10 @@
   font-weight: 850;
 }
 
+.feed-header--with-admin-actions {
+  grid-template-columns: minmax(0, 1fr) 4.5rem 4.5rem 6.25rem auto;
+}
+
 .feed-header span:not(:first-child) {
   text-align: right;
 }

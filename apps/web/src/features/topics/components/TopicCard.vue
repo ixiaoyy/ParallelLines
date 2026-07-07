@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircleOutlined, LockOutlined } from "@ant-design/icons-vue";
+import { CheckCircleOutlined, DeleteOutlined, LockOutlined } from "@ant-design/icons-vue";
 import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
@@ -10,7 +10,21 @@ import { boardToneClass, tagToneClass } from "@/shared/theme/boardPalette";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiBadge from "@/shared/ui/Badge.vue";
 
-const props = defineProps<{ topic: TopicCardVM }>();
+const props = withDefaults(
+  defineProps<{
+    topic: TopicCardVM;
+    canDeleteTopic?: boolean;
+    deletingTopic?: boolean;
+  }>(),
+  {
+    canDeleteTopic: false,
+    deletingTopic: false,
+  },
+);
+
+const emit = defineEmits<{
+  deleteTopic: [topic: TopicCardVM];
+}>();
 
 const topicRoute = computed(() => topicDetailRoute(props.topic));
 
@@ -37,10 +51,26 @@ const answerState = computed(() => {
 
   return { tone: "open", label: "讨论中", helper: "继续跟进" };
 });
+
+// Emits the selected topic to the parent-owned destructive delete flow.
+// Key parameters: none. Return value: none; side effect is an event when the button is available.
+function requestDeleteTopic() {
+  if (!props.canDeleteTopic || props.deletingTopic) {
+    return;
+  }
+
+  emit("deleteTopic", props.topic);
+}
 </script>
 
 <template>
-  <article class="topic-row" :class="[boardToneClass(topic.boardSlug), { 'topic-row--pinned': topic.pinned }]">
+  <article
+    class="topic-row"
+    :class="[
+      boardToneClass(topic.boardSlug),
+      { 'topic-row--pinned': topic.pinned, 'topic-row--with-admin-actions': canDeleteTopic },
+    ]"
+  >
     <RouterLink
       class="topic-row-hit"
       :to="topicRoute"
@@ -110,6 +140,20 @@ const answerState = computed(() => {
     <div class="topic-activity">
       <strong>{{ relativeTime(topic.lastPostedAt) }}</strong>
       <span>{{ topic.authorName }}</span>
+    </div>
+
+    <div v-if="canDeleteTopic" class="topic-admin-actions">
+      <button
+        class="topic-delete-button"
+        type="button"
+        :disabled="deletingTopic"
+        :aria-label="`删除主题：${topic.title}`"
+        :title="`删除主题：${topic.title}`"
+        @click.stop.prevent="requestDeleteTopic"
+      >
+        <DeleteOutlined aria-hidden="true" />
+        <span>{{ deletingTopic ? "删除中" : "删除" }}</span>
+      </button>
     </div>
   </article>
 </template>

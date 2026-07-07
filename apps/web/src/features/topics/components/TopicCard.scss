@@ -37,6 +37,10 @@
   border-left-width: 4px;
 }
 
+.topic-row--with-admin-actions {
+  grid-template-columns: minmax(0, 1fr) 6.4rem 4.4rem 6.8rem auto;
+}
+
 .topic-main {
   position: relative;
   min-width: 0;
@@ -229,9 +233,50 @@
   }
 }
 
+.topic-admin-actions {
+  position: relative;
+  z-index: 2;
+  justify-self: end;
+}
+
+.topic-delete-button {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-pill);
+  padding: 0.32rem 0.58rem;
+  color: var(--danger);
+  background: var(--danger-bg);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.topic-delete-button:hover:not(:disabled),
+.topic-delete-button:focus-visible:not(:disabled) {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--danger-border));
+  outline: none;
+  background: color-mix(in srgb, var(--danger-bg) 72%, var(--bg-surface));
+}
+
+.topic-delete-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
 @media (max-width: 920px) {
   .topic-row {
     grid-template-columns: minmax(0, 1fr) 5.8rem 4rem 6rem;
+  }
+
+  .topic-row--with-admin-actions {
+    grid-template-columns: minmax(0, 1fr) 5.8rem 4rem 6rem auto;
   }
 }
 
@@ -264,4 +309,7 @@
     gap: 0.45rem;
   }
 
+  .topic-admin-actions {
+    justify-self: start;
+  }
 }

@@ -4,11 +4,13 @@ import { useRoute, useRouter } from "vue-router";
 import type { LocationQueryRaw } from "vue-router";
 
 import type { TopicCardVM } from "@/entities/topic/model";
+import { isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser } from "@/features/auth/queries";
 import { useBoards } from "@/features/boards/queries";
 import { useTags } from "@/features/tags/queries";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicFeed } from "@/features/topics/queries";
+import { useAdminTopicDelete } from "@/features/topics/useAdminTopicDelete";
 import HomeHero from "@/pages/home/components/HomeHero.vue";
 import HomeTopicFeed from "@/pages/home/components/HomeTopicFeed.vue";
 import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
@@ -36,6 +38,10 @@ const filtersDataRequested = ref(false);
 const filtersOpen = ref(false);
 const currentUserQuery = useCurrentUser();
 const canPublishTopic = computed(() => Boolean(currentUserQuery.data.value));
+const canDeleteTopics = computed(() => isAdmin(currentUserQuery.data.value));
+const { deletingTopicId, requestDeleteTopic } = useAdminTopicDelete({
+  note: "前台首页列表管理员删除主题。",
+});
 
 const feedSort = computed<TopicSort>(() =>
   activeTab.value === "hot" ? "hot" : activeTab.value === "top" ? "top" : "latest",
@@ -311,6 +317,8 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
           :board-filter="boardFilter"
           :tag-filter="tagFilter"
           :can-publish-topic="canPublishTopic"
+          :can-delete-topics="canDeleteTopics"
+          :deleting-topic-id="deletingTopicId"
           :filters-open="filtersOpen"
           :loading="topicFeedLoading"
           :error="topicsQuery.isError.value"
@@ -321,6 +329,7 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
           @update-filters-open="setFiltersOpen"
           @filters-visibility-change="filtersDataRequested = filtersDataRequested || $event"
           @clear-filters="clearTopicFilters"
+          @delete-topic="requestDeleteTopic"
         />
       </main>
 

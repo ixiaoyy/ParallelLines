@@ -20,6 +20,7 @@ import type { RouteLocationRaw } from "vue-router";
 
 import { publicSettingString } from "@/features/admin/model";
 import { usePublicSiteSettings } from "@/features/admin/queries";
+import { isAdmin } from "@/features/auth/permissions";
 import {
   useChangePassword,
   useConfirmEmailChange,
@@ -34,6 +35,7 @@ import {
   useUserRelationshipUsers,
 } from "@/features/social/queries";
 import TopicList from "@/features/topics/components/TopicList.vue";
+import { useAdminTopicDelete } from "@/features/topics/useAdminTopicDelete";
 import { useUploadAvatar } from "@/features/uploads/queries";
 import {
   activityTypeLabel,
@@ -102,6 +104,10 @@ const siteTitle = computed(() =>
 const isOwnProfile = computed(
   () => Boolean(profile.value && currentUserQuery.data.value?.id === profile.value.id),
 );
+const canDeleteTopics = computed(() => isAdmin(currentUserQuery.data.value));
+const { deletingTopicId, requestDeleteTopic } = useAdminTopicDelete({
+  note: "前台个人主题列表管理员删除主题。",
+});
 const isProfileLoading = computed(
   () =>
     activeProfileQuery.value.isLoading.value ||
@@ -894,7 +900,13 @@ function socialErrorMessage(error: unknown): string {
         </div>
         <RouterLink class="profile-empty__link" to="/boards">去看看版块</RouterLink>
       </UiCard>
-      <TopicList v-else :topics="topicsQuery.data.value" />
+      <TopicList
+        v-else
+        :topics="topicsQuery.data.value"
+        :can-delete-topics="canDeleteTopics"
+        :deleting-topic-id="deletingTopicId"
+        @delete-topic="requestDeleteTopic"
+      />
     </section>
 
     <section v-else-if="profile && activeProfilePanel === 'activity'" class="profile-activity" aria-labelledby="profile-activity-title">

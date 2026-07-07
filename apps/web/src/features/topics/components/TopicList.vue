@@ -9,12 +9,20 @@ const props = withDefaults(
     topics: TopicCardVM[];
     emptyTitle?: string;
     emptyDescription?: string;
+    canDeleteTopics?: boolean;
+    deletingTopicId?: string | null;
   }>(),
   {
     emptyTitle: "还没有主题",
     emptyDescription: "可以稍后再来看看。",
+    canDeleteTopics: false,
+    deletingTopicId: null,
   },
 );
+
+const emit = defineEmits<{
+  deleteTopic: [topic: TopicCardVM];
+}>();
 
 // orderedTopics 用途：在最终渲染层确保置顶帖优先展示，同时保持同组内原有顺序；无参数，返回排序后的展示列表且不修改源数组。
 const orderedTopics = computed(() =>
@@ -36,7 +44,14 @@ const orderedTopics = computed(() =>
     </header>
 
     <div v-if="orderedTopics.length" class="topic-list">
-      <TopicCard v-for="topic in orderedTopics" :key="topic.id" :topic="topic" />
+      <TopicCard
+        v-for="topic in orderedTopics"
+        :key="topic.id"
+        :topic="topic"
+        :can-delete-topic="canDeleteTopics"
+        :deleting-topic="deletingTopicId === topic.id"
+        @delete-topic="emit('deleteTopic', $event)"
+      />
     </div>
 
     <div v-else class="topic-list-empty">

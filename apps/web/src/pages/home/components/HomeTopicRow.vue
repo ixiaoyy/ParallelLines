@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { DeleteOutlined } from "@ant-design/icons-vue";
+
 import type { TopicCardVM } from "@/entities/topic/model";
 import { resolveApiAssetUrl } from "@/shared/api/client";
 import { boardToneClass, tagToneClass } from "@/shared/theme/boardPalette";
@@ -6,11 +8,38 @@ import { compactNumber, relativeTime } from "@/shared/lib/format";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 
-defineProps<{ topic: TopicCardVM }>();
+const props = withDefaults(
+  defineProps<{
+    topic: TopicCardVM;
+    canDeleteTopic?: boolean;
+    deletingTopic?: boolean;
+  }>(),
+  {
+    canDeleteTopic: false,
+    deletingTopic: false,
+  },
+);
+
+const emit = defineEmits<{
+  deleteTopic: [topic: TopicCardVM];
+}>();
+
+// Emits the row topic to the parent-owned administrator delete flow.
+// Key parameters: none. Return value: none; side effect is a deleteTopic event when available.
+function requestDeleteTopic() {
+  if (!props.canDeleteTopic || props.deletingTopic) {
+    return;
+  }
+
+  emit("deleteTopic", props.topic);
+}
 </script>
 
 <template>
-  <article class="home-topic-row" :class="boardToneClass(topic.boardSlug)">
+  <article
+    class="home-topic-row"
+    :class="[boardToneClass(topic.boardSlug), { 'home-topic-row--with-admin-actions': canDeleteTopic }]"
+  >
     <RouterLink
       class="home-topic-hit"
       :to="topicDetailRoute(topic)"
@@ -60,6 +89,19 @@ defineProps<{ topic: TopicCardVM }>();
     <div class="metric">{{ compactNumber(topic.replyCount) }}</div>
     <div class="metric">{{ compactNumber(topic.viewCount) }}</div>
     <div class="activity">{{ relativeTime(topic.lastPostedAt) }}</div>
+    <div v-if="canDeleteTopic" class="admin-topic-actions">
+      <button
+        class="admin-topic-delete"
+        type="button"
+        :disabled="deletingTopic"
+        :aria-label="`删除主题：${topic.title}`"
+        :title="`删除主题：${topic.title}`"
+        @click.stop.prevent="requestDeleteTopic"
+      >
+        <DeleteOutlined aria-hidden="true" />
+        <span>{{ deletingTopic ? "删除中" : "删除" }}</span>
+      </button>
+    </div>
   </article>
 </template>
 

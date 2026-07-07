@@ -2,9 +2,12 @@
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import { isAdmin } from "@/features/auth/permissions";
+import { useCurrentUser } from "@/features/auth/queries";
 import TopicList from "@/features/topics/components/TopicList.vue";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicSearch } from "@/features/topics/queries";
+import { useAdminTopicDelete } from "@/features/topics/useAdminTopicDelete";
 import { useBoards } from "@/features/boards/queries";
 import { readRouteParam } from "@/shared/router/params";
 import UiBadge from "@/shared/ui/Badge.vue";
@@ -12,6 +15,7 @@ import UiCard from "@/shared/ui/Card.vue";
 
 const route = useRoute();
 const router = useRouter();
+const currentUserQuery = useCurrentUser();
 
 interface FilterChip {
   key: "board" | "tag" | "author";
@@ -57,6 +61,10 @@ const searchParams = computed(() => ({
 
 const searchQuery = useTopicSearch(searchParams);
 const topics = computed(() => searchQuery.data.value ?? []);
+const canDeleteTopics = computed(() => isAdmin(currentUserQuery.data.value));
+const { deletingTopicId, requestDeleteTopic } = useAdminTopicDelete({
+  note: "前台搜索列表管理员删除主题。",
+});
 const hasQuery = computed(() => Boolean(q.value.trim()));
 const filterChips = computed<FilterChip[]>(() => {
   const chips: FilterChip[] = [];
@@ -165,7 +173,13 @@ const sortTabs: Array<{ key: TopicSort; label: string }> = [
       <span>正在整理相关主题。</span>
     </UiCard>
 
-    <TopicList v-else-if="hasQuery && topics.length" :topics="topics" />
+    <TopicList
+      v-else-if="hasQuery && topics.length"
+      :topics="topics"
+      :can-delete-topics="canDeleteTopics"
+      :deleting-topic-id="deletingTopicId"
+      @delete-topic="requestDeleteTopic"
+    />
 
     <UiCard v-else class="search-state search-state--empty">
       <strong>{{ emptyTitle }}</strong>

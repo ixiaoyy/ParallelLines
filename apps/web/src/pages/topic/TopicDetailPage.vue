@@ -8,6 +8,7 @@ import { useRoute, useRouter } from "vue-router";
 import type { PostItemVM } from "@/entities/post/model";
 import { publicSettingString } from "@/features/admin/model";
 import { usePublicSiteSettings } from "@/features/admin/queries";
+import { isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser } from "@/features/auth/queries";
 import { useBoards } from "@/features/boards/queries";
 import { useTags } from "@/features/tags/queries";
@@ -24,6 +25,7 @@ import {
   useTopicDetail,
   useVotePoll,
 } from "@/features/topics/queries";
+import { useAdminTopicDelete } from "@/features/topics/useAdminTopicDelete";
 import { hasAccessToken } from "@/shared/api/client";
 import { contentPolicyMessage } from "@/shared/api/errors";
 import { queryKeys } from "@/shared/api/queryKeys";
@@ -101,6 +103,7 @@ const comicReader = computed(() => topic.value?.tags.includes(COMIC_READER_TAG) 
 const canManageTopic = computed(
   () => currentUserRole.value === "admin" || currentUserRole.value === "moderator",
 );
+const canDeleteTopic = computed(() => isAdmin(currentUserQuery.data.value));
 const canManageSolution = computed(
   () => Boolean(topic.value && currentUserId.value && currentUserId.value === topic.value.authorId) || canManageTopic.value,
 );
@@ -148,6 +151,19 @@ const nextSwipeTopic = computed(() => {
 });
 const solutionMutation = useSetTopicSolution(topicId);
 const pollVoteMutation = useVotePoll(topicId);
+const {
+  deletingTopicId,
+  requestDeleteTopic: requestAdminDeleteTopic,
+} = useAdminTopicDelete({
+  note: "前台主题详情管理员删除主题。",
+  successMessage: "主题已删除，已返回所在版块。",
+  onDeleted: async (deletedTopic) => {
+    await router.push({ name: "board-detail", params: { slug: deletedTopic.boardSlug } });
+  },
+});
+const deletingCurrentTopic = computed(() =>
+  Boolean(topic.value && deletingTopicId.value === topic.value.id),
+);
 const blockAuthorMutation = useMutation({
   mutationFn: (username: string) => setUserRelationship(username, "block", true),
   onSuccess: (response) => {
@@ -359,6 +375,16 @@ function blockPostAuthor(post: PostItemVM) {
   });
 }
 
+// Deletes the current topic from the public detail page after the shared admin confirmation.
+// Key parameters: none. Return value: none; side effect hides the topic and navigates back to its board on success.
+function deleteCurrentTopic() {
+  if (!topic.value || !canDeleteTopic.value) {
+    return;
+  }
+
+  requestAdminDeleteTopic(topic.value);
+}
+
 function buildQuoteExcerpt(post: PostItemVM) {
   const source = post.rawMd || htmlToPlainText(post.cookedHtml);
   return source.replace(/\s+/g, " ").trim().slice(0, 180) || "（无正文）";
@@ -466,11 +492,14 @@ function setToolbarStatus(content: string) {
                   :current-user-id="currentUserId"
                   :current-user-role="currentUserRole"
                   :can-manage-solution="canManageSolution"
+                  :can-delete-topic="canDeleteTopic"
+                  :topic-delete-pending="deletingCurrentTopic"
                   :solution-pending="solutionMutation.isPending.value"
                   @quote="quotePost"
                   @reply="replyToPost"
                   @require-login="requireLogin"
                   @toggle-solution="togglePostSolution"
+                  @delete-topic="deleteCurrentTopic"
                   @block-author="blockPostAuthor"
                 />
               </div>

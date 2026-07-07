@@ -72,13 +72,18 @@ const props = withDefaults(defineProps<{
   comicReader?: boolean;
   variant?: "article" | "reply";
   hideHeader?: boolean;
+  canDeleteTopic?: boolean;
+  topicDeletePending?: boolean;
 }>(), {
   comicReader: false,
   variant: "reply",
   hideHeader: false,
+  canDeleteTopic: false,
+  topicDeletePending: false,
 });
 const emit = defineEmits<{
   blockAuthor: [post: PostItemVM];
+  deleteTopic: [post: PostItemVM];
   quote: [post: PostItemVM];
   reply: [post: PostItemVM];
   requireLogin: [message: string];
@@ -110,6 +115,9 @@ const canModerateGlobally = computed(
 const canEdit = computed(() => Boolean(isOwnPost.value && !props.post.deleted));
 const canDelete = computed(() =>
   Boolean(!props.post.deleted && props.post.floor > 1 && (isOwnPost.value || canModerateGlobally.value)),
+);
+const canDeleteTopicFromPost = computed(() =>
+  Boolean(!props.post.deleted && props.post.floor === 1 && props.canDeleteTopic),
 );
 const canFlag = computed(() => !props.post.deleted);
 const canBlockAuthor = computed(() => Boolean(!props.post.deleted && !isOwnPost.value));
@@ -510,6 +518,17 @@ function deleteReply() {
       });
     },
   });
+}
+
+// Requests deletion of the whole topic when the original post is shown in the public detail view.
+// Key parameters: none. Return value: none; side effect is a parent event that owns the confirmation and mutation.
+function deleteTopic() {
+  if (!canDeleteTopicFromPost.value || props.topicDeletePending) {
+    return;
+  }
+
+  closeMoreMenu();
+  emit("deleteTopic", props.post);
 }
 
 function flagPost() {
@@ -1249,6 +1268,15 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
             <button v-if="canDelete" type="button" :disabled="deletingPost" @click="deleteReply">
               <DeleteOutlined aria-hidden="true" />
               {{ deletingPost ? "删除中…" : "删除" }}
+            </button>
+            <button
+              v-if="canDeleteTopicFromPost"
+              type="button"
+              :disabled="topicDeletePending"
+              @click="deleteTopic"
+            >
+              <DeleteOutlined aria-hidden="true" />
+              {{ topicDeletePending ? "删除中…" : "删除主题" }}
             </button>
           </div>
         </details>
