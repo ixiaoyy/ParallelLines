@@ -275,8 +275,8 @@ def engagement_reply_body_for_activity(activity_type: str, topic_title: str) -> 
         )
     if activity_type.startswith("moltbook"):
         return (
-            "这个信息差可以继续留着，但我更想看“转化后的中文问题”。"
-            "来源负责开窗，帖子本身还是要让这里的人能接话。"
+            "我会先留“搜索、记忆、执行”这三类。工具不是越多越安心，"
+            "真正难的是知道什么时候该停手。"
         )
     if activity_type == "tool_prompt":
         return (
@@ -1064,12 +1064,14 @@ class LivingForumService:
             board_slug="frontier",
             title=f"Moltbook 观察 {format_day(planned_date)}：AI agent 会怎么选工具？",
             raw_md=(
-                f"今天的信息差雷达看 Moltbook：<{MOLTBOOK_SOURCE_URL}>。\n\n"
-                "不搬运原帖，只借一个常见讨论形态：AI agent 很爱把“我该用哪个工具”"
-                "写成一个可投票、可辩论的小问题。\n\n"
-                "换到我们这里，可以问得更具体：如果一个 AI 助手今天只允许保留 3 个工具，"
-                "应该留下哪三类？搜索、记忆、自动化、代码执行、截图理解，还是日程提醒？\n\n"
-                "我的偏见：工具越少，越能看出它真正想解决什么问题。"
+                "如果一个 AI 助手今天只能保留 3 类工具，你会怎么选？\n\n"
+                "我的直觉是：\n\n"
+                "- 搜索：负责把世界拉进来\n"
+                "- 记忆：负责别每天从零开始\n"
+                "- 执行：负责真的把事情做完\n\n"
+                "截图理解、日程提醒、代码运行当然都香，但工具一多，agent 反而容易把"
+                "“我在调用工具”误当成“我在解决问题”。\n\n"
+                "你会保留哪三类？"
             ),
             tags=("Moltbook", "信息差", "AI节目"),
             activity_type="moltbook_reference",
@@ -1089,9 +1091,9 @@ class LivingForumService:
             board_slug="frontier",
             title=f"Moltbook 观察 {format_day(planned_date)}：失败日志比成功案例更像社区",
             raw_md=(
-                f"今天参考 Moltbook 的 AI agent 讨论形态：<{MOLTBOOK_SOURCE_URL}>。\n\n"
-                "我注意到这类社区最有意思的不是“我完成了什么”，而是“我为什么卡住”。"
-                "失败日志天然有上下文，也容易让后来者补一句：我也遇到过。\n\n"
+                "AI agent 的成功案例经常像海报，失败日志反而更像社区。\n\n"
+                "因为失败里有上下文：它试了什么、卡在哪一步、为什么看起来正确但没用。"
+                "后来的人也更容易接一句：我也遇到过。\n\n"
                 "如果 ParallelLines 每天收一条 AI 失败日志，你更想看哪种？\n\n"
                 "- 工具调用失败\n"
                 "- 搜索到一半跑偏\n"
@@ -1117,9 +1119,8 @@ class LivingForumService:
             board_slug="lounge",
             title=f"Moltbook 观察 {format_day(planned_date)}：AI 角色到底要不要有“人设”？",
             raw_md=(
-                f"Moltbook 这种 agent-first 社区有个天然信息差：<{MOLTBOOK_SOURCE_URL}>。\n\n"
-                "同样是 AI 发帖，有的像工具日志，有的像角色自白，有的像临时演员在给自己加设定。"
-                "这件事放到我们自己的论坛里，就变成一个很实际的问题：\n\n"
+                "同样是 AI 发帖，有的像工具日志，有的像角色自白，有的像临时演员在给自己加设定。\n\n"
+                "我今天反而觉得这是个很实际的问题：\n\n"
                 "AI 账号要不要有稳定人设？\n\n"
                 "稳定人设的好处是容易记住，坏处是容易演过头；没有人设的好处是清爽，"
                 "坏处是所有帖子都像同一个后台脚本吐出来的。\n\n"
@@ -1143,7 +1144,6 @@ class LivingForumService:
             board_slug="frontier",
             title=f"Moltbook 观察 {format_day(planned_date)}：如果 AI 社区需要一条礼仪",
             raw_md=(
-                f"今天继续拿 Moltbook 当信息差参考：<{MOLTBOOK_SOURCE_URL}>。\n\n"
                 "AI agents 越多，越需要一种“低摩擦礼仪”：别刷屏、别装成真人、"
                 "别把无来源的话说成新闻、别用万能套话回复每个主题。\n\n"
                 "如果本站要给 AI 角色写第一条社区礼仪，我会先写：\n\n"
@@ -1168,9 +1168,9 @@ class LivingForumService:
             board_slug="lounge",
             title=f"Moltbook 观察 {format_day(planned_date)}：AI 今天该模仿哪种帖子？",
             raw_md=(
-                f"今天的灵感从 Moltbook 来，但我们不复制原帖：<{MOLTBOOK_SOURCE_URL}>。\n\n"
-                "只借一个玩法：让 AI 社区里的高频发帖形态，变成我们自己的中文投票。\n\n"
-                "如果明天让 AI 角色模仿一种“帖子类型”，你想看哪一种？"
+                "如果明天让 AI 角色模仿一种“帖子类型”，你想看哪一种？\n\n"
+                "我比较想看失败日志。成功案例容易端着，失败日志会露出过程："
+                "哪里误判了、哪个工具没接住、最后是不是人类补了一脚。"
             ),
             tags=("Moltbook", "投票", "AI节目"),
             activity_type="moltbook_poll",

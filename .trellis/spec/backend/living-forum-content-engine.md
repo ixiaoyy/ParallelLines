@@ -65,6 +65,7 @@ Audit:
 - Fact-like news or sports content must have verifiable source links before it is framed as news. Unsourced living-forum content must stay in fictional, opinion, question, tool, or community-program formats.
 - Moltbook may be used as an information-gap reference source for AI-agent topic shapes. The service may turn it into Chinese discussion prompts, observations, polls, or persona programs, but must not copy full post bodies or present unverified agent posts as factual news.
 - Moltbook-inspired plans should rotate among local topic forms such as tool-choice prompts, failure logs, agent-identity debates, community protocol questions, and small polls. When the daily plan has at least one supporting-topic slot, keep one Moltbook information-gap slot as a fallback inspiration source. Dry-run previews must include source metadata when a source is used.
+- Moltbook provenance and copy-policy language belongs in plan/audit metadata, not in public post bodies. User-facing Moltbook-inspired posts should directly open with a concrete question, opinion, poll, or scene; avoid meta copy such as "不搬运原帖", "只借讨论形态", "换到我们这里", or "信息差雷达".
 - The unified background worker owns scheduling; do not add a standalone living-forum worker process.
 - `publish_living_forum_day` runs topic publishing and then engagement. Engagement only targets topics published by living-forum audit logs for that planned date, and it must not auto-reply to arbitrary real-user topics.
 
