@@ -21,7 +21,7 @@ Service signatures:
 
 - `BackgroundJobService.enqueue(task_name, payload=None, queue="default", idempotency_key=None, run_at=None, priority=100, max_attempts=3, commit=True) -> BackgroundJob`
 - `BackgroundJobService.run_next(handlers, worker_id, queues=("default",), retry_delay_seconds=60) -> BackgroundJob | None`
-- `BackgroundJobService.enqueue_due_scheduled_jobs(background_hot_rank_interval_seconds, background_upload_cleanup_interval_seconds, background_session_cleanup_interval_seconds, background_digest_interval_seconds, now=None) -> list[BackgroundJob]`
+- `BackgroundJobService.enqueue_due_scheduled_jobs(background_hot_rank_interval_seconds, background_upload_cleanup_interval_seconds, background_session_cleanup_interval_seconds, background_digest_interval_seconds, background_frontier_news_interval_seconds=0, background_living_forum_interval_seconds=0, now=None) -> list[BackgroundJob]`
 - `BackgroundJobService.list_jobs(status=None, limit=50) -> list[BackgroundJob]`
 - `BackgroundJobService.list_logs(job_id) -> list[BackgroundJobLog]`
 
@@ -50,6 +50,7 @@ Runtime env:
 | `BACKGROUND_UPLOAD_CLEANUP_INTERVAL_SECONDS` | Scheduled temporary upload cleanup bucket size |
 | `BACKGROUND_SESSION_CLEANUP_INTERVAL_SECONDS` | Scheduled expired session cleanup bucket size |
 | `BACKGROUND_DIGEST_INTERVAL_SECONDS` | Scheduled email digest dispatcher bucket size |
+| `BACKGROUND_LIVING_FORUM_INTERVAL_SECONDS` | Scheduled living-forum daily program bucket size; `0` disables enqueueing |
 | `FRONTIER_NEWS_REQUEST_TIMEOUT_SECONDS` | Per-request timeout for frontier upstream RSS/API fetches |
 
 Frontier source `config` keys:
@@ -79,6 +80,7 @@ Frontier source `kind` values:
 ### 3. Contracts
 
 - The unified worker owns all backend async work: mail delivery, notification creation, digest dispatch, hot-score recompute, search index rebuilds, temporary upload cleanup, and stale session cleanup.
+- The unified worker also owns living-forum daily program publishing and persona reply engagement through `publish_living_forum_day`; do not add a standalone daemon for AI-operated programs.
 - Site backup generation is also a unified worker task via `create_site_backup`; admin request handlers only enqueue it.
 - Do not add new `app/workers/<single-purpose>.py` daemons or Compose services for background work; add a handler to `JOB_HANDLERS` instead.
 - `idempotency_key` is globally unique when non-null. Re-enqueueing the same key returns the existing row and must not duplicate side effects.

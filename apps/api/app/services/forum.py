@@ -1080,7 +1080,17 @@ class ForumService:
         request: Request | None = None,
         *,
         skip_spam_checks: bool = False,
+        skip_review_queue: bool = False,
     ) -> Topic:
+        """Create a public board topic through the canonical write path.
+
+        Key parameters include the target board slug, validated topic payload,
+        actor user, optional request context for human spam checks, and trusted
+        internal flags. Return value is the decorated topic. Side effects:
+        writes the topic, first post, tags, poll, counters, notifications,
+        growth events, integrations, plugin event, search index, and commits.
+        """
+
         board = await self.get_board_by_slug(board_slug, current_user=current_user)
         if not self.can_create_topic_in_board(board, current_user):
             raise PermissionDeniedError(
@@ -1097,20 +1107,25 @@ class ForumService:
         normalized_tags = self._normalized_unique_tags(payload.tags)
         self._validate_board_topic_tags(board, normalized_tags)
         try:
-            filtered = await self._moderate_or_queue_content(
-                {"title": payload.title, "raw_md": payload.raw_md},
-                current_user=current_user,
-                reviewable_type="queued_topic",
-                board=board,
-                data={
-                    "title": payload.title,
-                    "raw_md": payload.raw_md,
-                    "tags": normalized_tags,
-                    "pinned": payload.pinned,
-                    "featured": payload.featured,
-                    "board_slug": board.slug,
-                },
-            )
+            if skip_review_queue:
+                filtered = self._sanitize_trusted_content(
+                    {"title": payload.title, "raw_md": payload.raw_md}
+                )
+            else:
+                filtered = await self._moderate_or_queue_content(
+                    {"title": payload.title, "raw_md": payload.raw_md},
+                    current_user=current_user,
+                    reviewable_type="queued_topic",
+                    board=board,
+                    data={
+                        "title": payload.title,
+                        "raw_md": payload.raw_md,
+                        "tags": normalized_tags,
+                        "pinned": payload.pinned,
+                        "featured": payload.featured,
+                        "board_slug": board.slug,
+                    },
+                )
         except ValidationError as e:
             if e.code == "content_pending_review":
                 from app.services.draft import DraftService
@@ -1742,7 +1757,17 @@ class ForumService:
         request: Request | None = None,
         *,
         skip_spam_checks: bool = False,
+        skip_review_queue: bool = False,
     ) -> Post:
+        """Create a reply through the canonical post write path.
+
+        Key parameters include topic id, validated post payload, actor user,
+        optional request context for spam checks, and trusted internal flags.
+        Return value is the persisted post. Side effects: writes the post,
+        counters, read state, uploads, notifications, search index, growth,
+        badges, integrations, draft cleanup, and commits.
+        """
+
         topic = await self.get_topic(topic_id, current_user=current_user)
         if topic.status != "open":
             raise ValidationError("topic_closed", "This topic is closed")
@@ -1760,19 +1785,22 @@ class ForumService:
                 raw_md=payload.raw_md,
             )
         try:
-            filtered = await self._moderate_or_queue_content(
-                {"raw_md": payload.raw_md},
-                current_user=current_user,
-                reviewable_type="queued_post",
-                board=topic.board,
-                topic=topic,
-                data={
-                    "raw_md": payload.raw_md,
-                    "parent_post_id": payload.parent_post_id,
-                    "topic_title": topic.title,
-                    "topic_slug": topic.slug,
-                },
-            )
+            if skip_review_queue:
+                filtered = self._sanitize_trusted_content({"raw_md": payload.raw_md})
+            else:
+                filtered = await self._moderate_or_queue_content(
+                    {"raw_md": payload.raw_md},
+                    current_user=current_user,
+                    reviewable_type="queued_post",
+                    board=topic.board,
+                    topic=topic,
+                    data={
+                        "raw_md": payload.raw_md,
+                        "parent_post_id": payload.parent_post_id,
+                        "topic_title": topic.title,
+                        "topic_slug": topic.slug,
+                    },
+                )
         except ValidationError as e:
             if e.code == "content_pending_review":
                 from app.services.draft import DraftService
@@ -2497,6 +2525,27 @@ class ForumService:
                     "reviewable_id": reviewable.id,
                     "fields": list(result.review_fields),
                     "appeal_available": True,
+                },
+            )
+        return result.sanitized_fields
+
+    def _sanitize_trusted_content(self, fields: Mapping[str, str]) -> dict[str, str]:
+        """Apply block/mask content safety for trusted internal publishers.
+
+        Key parameter `fields` contains raw title/body text. Return value is the
+        sanitized text mapping. Side effect: none. Unlike normal user writes,
+        review-only matches are allowed so scheduled persona content can publish
+        without creating moderation queue work during cold start.
+        """
+
+        result = moderate_text_fields(fields)
+        if result.blocked_fields:
+            raise ValidationError(
+                "content_policy_violation",
+                "Content violates community safety rules; please edit and retry",
+                {
+                    "action": "blocked",
+                    "fields": list(result.blocked_fields),
                 },
             )
         return result.sanitized_fields

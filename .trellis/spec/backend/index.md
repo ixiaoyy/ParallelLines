@@ -44,6 +44,7 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 | [Site Theme, Branding, and Text Overrides](./site-theme-i18n-branding.md) | Public/admin branding settings, theme color validation, i18n text overrides, and email templates | Filled |
 | [External Integrations](./external-integrations.md) | GitHub/Zendesk/Patreon provider config, inbound webhooks, retryable events, and issue unfurling | Filled |
 | [AI Forum Assistant](./ai-forum-assistant.md) | Deterministic topic summaries, similar-topic hints, and moderation advice guardrails | Filled |
+| [Living Forum Content Engine](./living-forum-content-engine.md) | AI-operated daily programs, trusted persona publishing, API migration publishing, idempotent scheduling, and homepage signal metadata | Filled |
 | [Mobile Push and PWA](./mobile-push-pwa.md) | Web Push subscription storage and notification preference integration | Filled |
 | [Import, Export, and Migration Tools](./import-export-migration-tools.md) | Admin JSON migration preview/run/export contracts and idempotency | Filled |
 | [Localization and Multilingual Content](./localization-multilingual-content.md) | Locale validation, localizable topic/board fields, and fallback behavior | Filled |
@@ -89,7 +90,8 @@ The backend exposes a REST JSON API under `/api/v1`, generates OpenAPI from Fast
 33. Read `site-theme-i18n-branding.md` before changing public/admin branding settings, theme colors, text overrides, or email template keys.
 34. Read `external-integrations.md` before changing external provider configs, inbound webhooks, retries, or unfurling.
 35. Read `ai-forum-assistant.md` before changing summaries, similar-topic recommendations, or moderation advice.
-36. Read `mobile-push-pwa.md` before changing push subscriptions or push delivery contracts.
-37. Read `import-export-migration-tools.md` before changing migration import/export formats or idempotency.
-38. Read `localization-multilingual-content.md` before changing locale validation or localizable content fields.
-39. For cross-layer features, read `../guides/cross-layer-thinking-guide.md`.
+36. Read `living-forum-content-engine.md` before changing AI-operated daily programs, trusted persona auto-publishing, or living-forum schedule settings.
+37. Read `mobile-push-pwa.md` before changing push subscriptions or push delivery contracts.
+38. Read `import-export-migration-tools.md` before changing migration import/export formats or idempotency.
+39. Read `localization-multilingual-content.md` before changing locale validation or localizable content fields.
+40. For cross-layer features, read `../guides/cross-layer-thinking-guide.md`.

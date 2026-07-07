@@ -96,6 +96,12 @@
   background: var(--cyan-soft);
 }
 
+.topic-status--program {
+  border-color: var(--theme-soft-border);
+  color: var(--theme-soft-fg);
+  background: var(--theme-soft-bg);
+}
+
 .topic-status--solved {
   border-color: rgba(var(--success-rgb), 0.34);
   color: var(--success);

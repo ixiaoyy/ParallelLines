@@ -1,0 +1,70 @@
+{
+  "id": "living-forum-content-engine",
+  "name": "living-forum-content-engine",
+  "title": "brainstorm: 活着的论坛内容运营引擎",
+  "description": "实现每日 AI 节目计划器、可信 persona 自动发布、统一 worker 调度和首页今日节目入口。",
+  "status": "completed",
+  "dev_type": "fullstack",
+  "scope": "living-forum",
+  "package": null,
+  "priority": "P2",
+  "creator": "lijin",
+  "assignee": "lijin",
+  "createdAt": "2026-07-07",
+  "completedAt": "2026-07-07",
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "current_phase": 6,
+  "next_action": [
+    {
+      "phase": 1,
+      "action": "brainstorm"
+    },
+    {
+      "phase": 2,
+      "action": "research"
+    },
+    {
+      "phase": 3,
+      "action": "implement"
+    },
+    {
+      "phase": 4,
+      "action": "check"
+    },
+    {
+      "phase": 5,
+      "action": "update-spec"
+    },
+    {
+      "phase": 6,
+      "action": "record-session"
+    }
+  ],
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "apps/api/app/services/living_forum.py",
+    "apps/api/alembic/versions/0064_rebuild_persona_login_accounts.py",
+    "apps/api/scripts/seed_persona_discussions.py",
+    "apps/api/scripts/plan_living_forum_day.py",
+    "apps/api/scripts/publish_living_forum_api.py",
+    "apps/api/app/services/forum.py",
+    "apps/api/app/workers/background_jobs.py",
+    "apps/api/app/services/background_jobs.py",
+    "apps/api/app/core/config.py",
+    "apps/web/src/pages/home/components/HomeTopicFeed.vue",
+    "apps/web/src/pages/home/components/HomeTopicFeed.scss",
+    "apps/web/src/pages/home/components/HomeTopicRow.vue",
+    "apps/web/src/pages/home/components/HomeTopicRow.scss",
+    ".trellis/spec/backend/living-forum-content-engine.md",
+    ".trellis/spec/backend/background-jobs.md",
+    ".trellis/spec/frontend/component-guidelines.md"
+  ],
+  "notes": "V1 ships deterministic daily programs with trusted AI persona publishing, no default review queue, audit-log idempotency, admin/system visibility, CLI dry-run/run support, and a homepage daily-program highlight. Moltbook is included as a daily information-gap reference slot whenever support-topic quota exists, with rotating local topic forms, source metadata, and no copied source-post bodies. Persona auto-replies now run after the daily publish job and only target living-forum audit topics; reply limit 0 disables them. A no-local-service API publisher now builds the same daily plan into admin migration payloads, defaults to local-only preview, supports remote preview/run, uses stable slugs for idempotency, creates missing persona rows through migration import, and converts planned polls to Markdown prompts because migration import does not create real Poll rows. When admin credentials are unavailable, the publisher can fall back to normal public topic/reply APIs and now defaults to mapped real persona accounts. Migration 0064 rebuilds all configured seeded persona accounts except admin users into login-capable ordinary accounts with @pingxingxian.space emails, the shared smoke-test password hash, active status, and cleared stale auth artifacts.",
+  "meta": {}
+}

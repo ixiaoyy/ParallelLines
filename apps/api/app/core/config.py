@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     background_session_cleanup_interval_seconds: int = 3600
     background_digest_interval_seconds: int = 3600
     background_frontier_news_interval_seconds: int = 3600
+    background_living_forum_interval_seconds: int = 86400
+    living_forum_publish_mode: Literal["auto", "review", "sample_review", "off"] = "auto"
+    living_forum_daily_topic_limit: int = 5
+    living_forum_daily_reply_limit: int = 2
     frontier_news_board_slug: str = "frontier"
     frontier_news_bot_username: str = "小小资讯"
     frontier_news_bot_email: str = "xiaoxiao-zixun@pingxingxian.space"

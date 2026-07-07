@@ -32,6 +32,7 @@ defineProps<{ topic: TopicCardVM }>();
         <div class="topic-title-line">
           <RouterLink class="topic-title" :to="topicDetailRoute(topic)">{{ topic.title }}</RouterLink>
           <span v-if="topic.pinned" class="topic-status">置顶</span>
+          <span v-if="topic.tags.includes('今日节目')" class="topic-status topic-status--program">今日节目</span>
           <span v-if="topic.featured" class="topic-status topic-status--signal">精选</span>
           <span v-if="topic.solved" class="topic-status topic-status--solved">已解决</span>
         </div>

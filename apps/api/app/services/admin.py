@@ -622,6 +622,12 @@ class AdminService:
                 "frontier_news_interval_seconds": (
                     self.settings.background_frontier_news_interval_seconds
                 ),
+                "living_forum_interval_seconds": (
+                    self.settings.background_living_forum_interval_seconds
+                ),
+                "living_forum_publish_mode": self.settings.living_forum_publish_mode,
+                "living_forum_daily_topic_limit": self.settings.living_forum_daily_topic_limit,
+                "living_forum_daily_reply_limit": self.settings.living_forum_daily_reply_limit,
             },
             recent_audit_logs=await self.list_audit_logs(current_user, limit=8),
             recent_email_logs=self.email_logs(limit=8),

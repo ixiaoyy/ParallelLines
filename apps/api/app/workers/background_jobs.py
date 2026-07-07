@@ -23,6 +23,7 @@ from app.services.email_notifications import EmailNotificationService
 from app.services.forum import calculate_hot_score
 from app.services.frontier_news import FrontierNewsService
 from app.services.integrations import IntegrationService
+from app.services.living_forum import LivingForumService
 from app.services.search import SearchIndexService
 from app.services.uploads import UploadService
 
@@ -171,6 +172,28 @@ async def handle_collect_frontier_news(
     return result.model_dump()
 
 
+async def handle_publish_living_forum_day(
+    session: AsyncSession,
+    _payload: dict[str, object],
+) -> dict[str, object]:
+    """Publish the daily AI-operated forum program through the unified worker."""
+
+    settings = get_settings()
+    service = LivingForumService(session, settings)
+    publish_result = await service.publish_day(
+        limit=settings.living_forum_daily_topic_limit,
+        publish_mode=settings.living_forum_publish_mode,
+    )
+    engagement_result = await service.engage_day(
+        limit=settings.living_forum_daily_reply_limit,
+        dry_run=settings.living_forum_publish_mode != "auto",
+    )
+    return {
+        "publish": publish_result,
+        "engagement": engagement_result,
+    }
+
+
 JOB_HANDLERS: dict[str, BackgroundJobHandler] = {
     "recompute_hot_scores": handle_recompute_hot_scores,
     "cleanup_expired_uploads": handle_cleanup_expired_uploads,
@@ -183,6 +206,7 @@ JOB_HANDLERS: dict[str, BackgroundJobHandler] = {
     "rebuild_search_index": handle_rebuild_search_index,
     "deliver_webhook": handle_deliver_webhook,
     "collect_frontier_news": handle_collect_frontier_news,
+    "publish_living_forum_day": handle_publish_living_forum_day,
 }
 
 WORKER_QUEUES = ("mail", "notifications", "maintenance", "webhooks", "default")
@@ -217,6 +241,9 @@ async def run_once(
                 ),
                 background_frontier_news_interval_seconds=(
                     runtime_settings.background_frontier_news_interval_seconds
+                ),
+                background_living_forum_interval_seconds=(
+                    runtime_settings.background_living_forum_interval_seconds
                 ),
             )
         for _ in range(runtime_settings.background_job_batch_size):

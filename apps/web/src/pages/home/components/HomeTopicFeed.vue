@@ -7,6 +7,8 @@ import type { TopicCardVM } from "@/entities/topic/model";
 import type { TagItemVM } from "@/features/tags/model";
 import HomeTopicRow from "@/pages/home/components/HomeTopicRow.vue";
 import type { DiscoveryTab } from "@/pages/home/discovery";
+import { relativeTime } from "@/shared/lib/format";
+import { topicDetailRoute } from "@/shared/router/topicRoutes";
 
 const props = defineProps<{
   tabs: DiscoveryTab[];
@@ -51,6 +53,12 @@ const boardOptions = computed(() =>
   sortBoardsWithFeedbackLast(props.boards, (left, right) => left.name.localeCompare(right.name, "zh-Hans-CN")),
 );
 const tagOptions = computed(() => props.tags.map((tag) => tag.name));
+const todayProgramTopic = computed(() => props.topics.find((topic) => isTodayProgram(topic)) ?? null);
+const todayProgramTags = computed(() =>
+  (todayProgramTopic.value?.tags ?? [])
+    .filter((tag) => tag !== "今日节目" && tag !== "AI节目")
+    .slice(0, 3),
+);
 let observer: IntersectionObserver | null = null;
 
 function handleLoadMore() {
@@ -86,6 +94,22 @@ function setupObserver() {
 // Key parameters: `open` is the desired panel state. Side effect: emits the requested state to HomePage.
 function requestFiltersOpen(open: boolean) {
   emit("updateFiltersOpen", open);
+}
+
+// Detects AI-operated daily program topics from durable tags and local activity date.
+// Key parameter: mapped topic card. Return value: true when the row should be promoted in today's home feed.
+function isTodayProgram(topic: TopicCardVM) {
+  return topic.tags.includes("今日节目") && isSameLocalDate(topic.lastPostedAt, new Date());
+}
+
+// Compares an ISO timestamp with the viewer's current local calendar day for lightweight home labeling.
+function isSameLocalDate(value: string, now: Date) {
+  const parsed = new Date(value);
+  return (
+    parsed.getFullYear() === now.getFullYear() &&
+    parsed.getMonth() === now.getMonth() &&
+    parsed.getDate() === now.getDate()
+  );
 }
 
 watch([infiniteScrollActive, scrollTriggerRef], setupObserver);
@@ -136,6 +160,30 @@ onUnmounted(() => observer?.disconnect());
         </button>
       </div>
     </div>
+
+    <section
+      v-if="todayProgramTopic"
+      class="daily-program"
+      aria-labelledby="daily-program-title"
+    >
+      <div class="daily-program__copy">
+        <span class="daily-program__kicker">今日 AI 在搞什么</span>
+        <h2 id="daily-program-title">
+          <RouterLink :to="topicDetailRoute(todayProgramTopic)">
+            {{ todayProgramTopic.title }}
+          </RouterLink>
+        </h2>
+        <p>{{ todayProgramTopic.excerpt }}</p>
+        <div class="daily-program__meta">
+          <span>{{ todayProgramTopic.authorName }}</span>
+          <span>{{ relativeTime(todayProgramTopic.lastPostedAt) }}</span>
+          <span v-for="tag in todayProgramTags" :key="tag">#{{ tag }}</span>
+        </div>
+      </div>
+      <RouterLink class="daily-program__action" :to="topicDetailRoute(todayProgramTopic)">
+        去看看
+      </RouterLink>
+    </section>
 
     <div v-if="filtersOpen" id="topic-feed-filters" class="topic-filter-panel" aria-label="主题过滤">
       <label class="topic-filter-field topic-filter-field--title">

@@ -194,6 +194,10 @@ export interface AdminQueueOverview {
   session_cleanup_interval_seconds: number;
   digest_interval_seconds?: number;
   frontier_news_interval_seconds?: number;
+  living_forum_interval_seconds?: number;
+  living_forum_publish_mode?: "auto" | "review" | "sample_review" | "off";
+  living_forum_daily_topic_limit?: number;
+  living_forum_daily_reply_limit?: number;
   counts?: Record<string, number>;
 }
 
