@@ -25,66 +25,6 @@
   overflow-wrap: anywhere;
 }
 
-.admin-hero__actions {
-  display: flex;
-  flex: none;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.hero-link {
-  display: inline-flex;
-  flex: none;
-  gap: 0.42rem;
-  align-items: center;
-  justify-content: center;
-  min-height: 2.35rem;
-  border: 1px solid var(--btn-primary-border);
-  border-radius: 999px;
-  padding: 0.56rem 0.9rem;
-  color: var(--btn-primary-fg);
-  background: var(--btn-primary-bg);
-  font-weight: 860;
-  text-decoration: none;
-  box-shadow: var(--btn-primary-shadow);
-  transition:
-    color 160ms ease,
-    border-color 160ms ease,
-    background 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.hero-link:hover,
-.hero-link:focus-visible {
-  border-color: var(--btn-primary-border-hover);
-  color: var(--btn-primary-fg-hover);
-  background: var(--btn-primary-bg-hover);
-  box-shadow: var(--btn-primary-shadow-hover);
-  outline: none;
-}
-
-.hero-link--subtle {
-  border-color: var(--theme-soft-border);
-  color: var(--primary);
-  background: var(--theme-soft-bg);
-  box-shadow: none;
-}
-
-.hero-link--subtle:hover,
-.hero-link--subtle:focus-visible {
-  border-color: var(--theme-soft-border-hover);
-  color: var(--theme-soft-fg-hover);
-  background: var(--theme-soft-bg-hover);
-  box-shadow: none;
-}
-
-.admin-dashboard-page__anchor {
-  min-width: 0;
-  scroll-margin-top: 1rem;
-}
-
 .admin-empty {
   display: grid;
   gap: 0.85rem;
@@ -99,17 +39,54 @@
   color: var(--muted);
 }
 
-.admin-main-grid {
+.admin-shortcuts {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
-  gap: 1rem;
-  align-items: start;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
   min-width: 0;
 }
 
+.admin-shortcut {
+  display: grid;
+  gap: 0.42rem;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 0.9rem;
+  color: var(--text);
+  background: var(--bg-surface);
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.admin-shortcut:hover,
+.admin-shortcut:focus-visible {
+  border-color: var(--theme-soft-border-hover);
+  background: var(--theme-soft-bg-hover);
+  outline: none;
+}
+
+.admin-shortcut svg {
+  color: var(--primary);
+  font-size: 1.2rem;
+}
+
+.admin-shortcut strong {
+  color: var(--title);
+  font-size: 1rem;
+}
+
+.admin-shortcut span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 @media (max-width: 1120px) {
-  .admin-main-grid {
-    grid-template-columns: 1fr;
+  .admin-shortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -129,16 +106,7 @@
     line-height: 1.12;
   }
 
-  .admin-hero__actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-    justify-content: stretch;
-  }
-
-  .hero-link {
-    width: 100%;
-    min-height: 2.5rem;
-    padding-block: 0.5rem;
+  .admin-shortcuts {
+    grid-template-columns: 1fr;
   }
 }

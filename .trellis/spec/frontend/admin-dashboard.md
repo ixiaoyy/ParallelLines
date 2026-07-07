@@ -1,10 +1,10 @@
 # Frontend Admin Dashboard Contract
 
-## Scenario: Operational admin dashboard and public site settings
+## Scenario: Operational admin dashboard and public setting consumption
 
 ### 1. Scope / Trigger
 
-- Trigger: wiring admin-only operational UI, public site settings, user management,
+- Trigger: wiring admin-only operational UI, public site setting consumption, user management,
   system health, mail logs, or audit logs.
 - Applies to `features/admin/`, `pages/admin/AdminDashboardPage.vue`, router,
   `AppShell.vue`, and admin navigation.
@@ -16,8 +16,6 @@ Frontend API functions:
 | Function | Backend endpoint | Return |
 |---|---|---|
 | `fetchPublicSiteSettings()` | `GET /api/v1/site/settings` | `PublicSiteSettingsResponse` |
-| `fetchAdminSettings()` | `GET /api/v1/admin/settings` | `SiteSettingResponse[]` |
-| `updateAdminSetting(key, payload)` | `PUT /api/v1/admin/settings/{key}` | `SiteSettingResponse` |
 | `fetchAdminUsers(params)` | `GET /api/v1/admin/users?...` | `AdminUserResponse[]` |
 | `updateAdminUser(userId, payload)` | `PUT /api/v1/admin/users/{id}` | `AdminUserResponse` |
 | `fetchAdminSystem()` | `GET /api/v1/admin/system` | `AdminSystemOverviewResponse` |
@@ -25,8 +23,6 @@ Frontend API functions:
 Query composables:
 
 - `usePublicSiteSettings()`
-- `useAdminSettings()`
-- `useUpdateAdminSetting()`
 - `useAdminUsers(params)`
 - `useUpdateAdminUser()`
 - `useAdminSystem()`
@@ -34,24 +30,25 @@ Query composables:
 Routes:
 
 - `/admin` → admin dashboard.
+- `/admin/analytics` → access analytics.
+- `/admin/users` → user management.
 - `/admin/moderation` → existing moderation queue.
 
 ### 3. Contracts
 
 - Public settings belong in TanStack Query under `queryKeys.siteSettingsPublic`;
   app shell may use only public keys such as `site_title` and `site_tagline`.
+- Admin UI does not expose a generic site settings editor. Do not reintroduce
+  `/admin/settings`, `AdminSettingsPanel`, or a raw key/value renderer without a
+  new product decision for a specific setting workflow.
 - Admin routes must show explicit login/permission states. Do not render an empty
   dashboard when the backend returns 403.
 - Admin navigation must distinguish admin dashboard access from moderation access:
   admins see 后台, moderators may still see 审核.
 - DTOs stay snake_case at the API boundary. UI helpers may map labels for roles,
   statuses, and setting categories.
-- Setting forms must preserve type:
-  - boolean uses checkbox and sends bool;
-  - integer uses number input and sends number;
-  - string sends trimmed/editable string.
-- Mutations invalidate `queryKeys.adminRoot`; setting mutations also invalidate
-  `queryKeys.siteSettingsPublic` so public branding refreshes.
+- Admin mutations invalidate `queryKeys.adminRoot`; public settings are refreshed
+  only by `usePublicSiteSettings()` and cache helpers.
 - User management changes role/status/level and optional `points_delta` / `experience_delta`
   through `updateAdminUser`; pages must not infer admin powers from `level`.
 - Admin growth adjustments display current usable points/growth value/progress from `AdminUserResponse` and send
@@ -63,20 +60,23 @@ Routes:
 |---|---|
 | No token visits `/admin` | Login-required card is shown |
 | Moderator visits `/admin` | Permission card is shown, not a fake empty dashboard |
-| Admin updates `site_title` | Public settings query invalidates and app shell title updates |
+| Admin visits `/admin/settings` | No admin settings route exists; router falls through instead of rendering a raw settings editor |
 | Backend returns cache degraded in system overview | Dashboard shows degraded badge, not a hard failure |
 | User list is empty for filters | User detail is not submitted without a selected user |
 | Admin enters growth deltas | Payload uses `points_delta` / `experience_delta` and keeps backend as source of truth for recalculated level; usable points and growth value stay separate |
-| Setting save is pending | Save buttons are disabled to prevent duplicate writes |
 
 ### 5. Good/Base/Bad Cases
 
 - Good: `AppShell.vue` reads `usePublicSiteSettings()` and falls back to checked-in
   Chinese defaults if the public settings API fails.
-- Base: admin opens `/admin`, sees system counters, edits a setting, selects a user,
+- Good: `/admin` links only to focused operational tools such as access statistics,
+  user management, moderation, and system status.
+- Base: admin opens `/admin`, sees system counters, selects a user,
   changes role/status/level or growth deltas, then confirms audit timeline updated after refetch.
 - Bad: admin page imports `apiPut` directly instead of using `features/admin/api.ts`.
 - Bad: public settings query is stored in Pinia and drifts from backend state.
+- Bad: a generic settings page renders every backend `site_settings` key including
+  brand colors, email templates, upload limits, plugins JSON, or text overrides.
 
 ### 6. Tests Required
 
@@ -84,18 +84,23 @@ Routes:
 - `pnpm --dir apps/web typecheck`
 - `pnpm --dir apps/web build`
 - Backend `tests/test_admin.py` remains source of truth for permission, audit,
-  setting-type, registration-gate, and system-panel contracts.
+  registration-gate, and system-panel contracts.
 
 ### 7. Wrong vs Correct
 
 #### Wrong
 
-```ts
-await apiPut(`/admin/settings/${key}`, { value: input.value });
+```vue
+<section v-for="setting in settings">
+  <strong>{{ setting.key }}</strong>
+  <input :value="setting.value" />
+</section>
 ```
 
 #### Correct
 
-```ts
-updateSettingMutation.mutate({ key, payload: { value: typedSettingValue } });
+```vue
+<RouterLink :to="{ name: 'admin-analytics' }">访问统计</RouterLink>
+<RouterLink :to="{ name: 'admin-users' }">用户管理</RouterLink>
+<RouterLink :to="{ name: 'admin-moderation' }">审核台</RouterLink>
 ```

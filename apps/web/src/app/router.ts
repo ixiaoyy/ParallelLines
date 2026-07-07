@@ -281,8 +281,36 @@ export const router = createRouter({
         requiredAccess: "admin",
         seo: {
           title: "后台 · {siteTitle}",
-          description: "管理平行线站点设置、用户、内容安全和系统状态。",
+          description: "查看平行线访问统计、用户管理、内容安全和系统状态。",
           canonicalPath: "/admin",
+          robots: NOINDEX_ROBOTS,
+        },
+      },
+    },
+    {
+      path: "/admin/analytics",
+      name: "admin-analytics",
+      component: () => import("@/pages/admin/AdminAnalyticsPage.vue"),
+      meta: {
+        requiredAccess: "admin",
+        seo: {
+          title: "访问统计 · {siteTitle}",
+          description: "查看平行线站点访问量、访客、来源渠道和入口页统计。",
+          canonicalPath: "/admin/analytics",
+          robots: NOINDEX_ROBOTS,
+        },
+      },
+    },
+    {
+      path: "/admin/users",
+      name: "admin-users",
+      component: () => import("@/pages/admin/AdminUsersPage.vue"),
+      meta: {
+        requiredAccess: "admin",
+        seo: {
+          title: "用户管理 · {siteTitle}",
+          description: "管理平行线用户角色、状态、等级和徽章。",
+          canonicalPath: "/admin/users",
           robots: NOINDEX_ROBOTS,
         },
       },

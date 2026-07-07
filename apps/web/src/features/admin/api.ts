@@ -18,8 +18,6 @@ import type {
   FrontierNewsSourceResponse,
   FrontierNewsSourceUpdateRequest,
   PublicSiteSettingsResponse,
-  SiteSettingResponse,
-  SiteSettingUpdateRequest,
   WebhookDeliveryResponse,
   WebhookEndpointCreateRequest,
   WebhookEndpointCreateResponse,
@@ -28,17 +26,6 @@ import type {
 
 export function fetchPublicSiteSettings(): Promise<PublicSiteSettingsResponse> {
   return apiGet<PublicSiteSettingsResponse>("/site/settings");
-}
-
-export function fetchAdminSettings(): Promise<SiteSettingResponse[]> {
-  return apiGet<SiteSettingResponse[]>("/admin/settings");
-}
-
-export function updateAdminSetting(
-  key: string,
-  payload: SiteSettingUpdateRequest,
-): Promise<SiteSettingResponse> {
-  return apiPut<SiteSettingResponse, SiteSettingUpdateRequest>(`/admin/settings/${key}`, payload);
 }
 
 export function fetchAdminUsers(params: AdminUsersParams): Promise<AdminUserResponse[]> {

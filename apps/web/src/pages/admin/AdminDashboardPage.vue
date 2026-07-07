@@ -1,19 +1,14 @@
 <script setup lang="ts">
-import { BarChartOutlined, SafetyCertificateOutlined } from "@ant-design/icons-vue";
+import {
+  BarChartOutlined,
+  SafetyCertificateOutlined,
+  UserOutlined,
+} from "@ant-design/icons-vue";
 import { computed } from "vue";
 
-import AdminFrontierNewsPanel from "@/features/admin/components/AdminFrontierNewsPanel.vue";
-import AdminIntegrationsPanel from "@/features/admin/components/AdminIntegrationsPanel.vue";
-import AdminExternalIntegrationsPanel from "@/features/external-integrations/components/AdminExternalIntegrationsPanel.vue";
-import AdminSettingsPanel from "@/features/admin/components/AdminSettingsPanel.vue";
 import AdminSystemPanel from "@/features/admin/components/AdminSystemPanel.vue";
-import AdminUserManagementPanel from "@/features/admin/components/AdminUserManagementPanel.vue";
-import AdminAnalyticsPanel from "@/features/analytics/components/AdminAnalyticsPanel.vue";
 import { isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser } from "@/features/auth/queries";
-import AdminMigrationToolsPanel from "@/features/migrations/components/AdminMigrationToolsPanel.vue";
-import AdminPluginsPanel from "@/features/plugins/components/AdminPluginsPanel.vue";
-import AdminThemeMarketplacePanel from "@/features/themes/components/AdminThemeMarketplacePanel.vue";
 import UiCard from "@/shared/ui/Card.vue";
 
 const currentUserQuery = useCurrentUser();
@@ -24,16 +19,6 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
   <div class="admin-dashboard-page">
     <section class="admin-hero" aria-labelledby="admin-title">
       <h1 id="admin-title">站点后台</h1>
-      <div class="admin-hero__actions">
-        <a class="hero-link hero-link--subtle" href="#admin-analytics">
-          <BarChartOutlined />
-          访问看板
-        </a>
-        <RouterLink class="hero-link" :to="{ name: 'admin-moderation' }">
-          <SafetyCertificateOutlined />
-          审核台
-        </RouterLink>
-      </div>
     </section>
 
     <UiCard v-if="!currentUserQuery.data.value" class="admin-empty">
@@ -43,24 +28,29 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
 
     <UiCard v-else-if="!canAccessAdmin" class="admin-empty">
       <strong>当前账号没有后台权限</strong>
-      <span>后台设置和用户管理仅限管理员；版主可继续使用审核台。</span>
+      <span>后台统计和用户管理仅限管理员；版主可继续使用审核台。</span>
     </UiCard>
 
     <template v-else>
-      <AdminSystemPanel />
-      <AdminFrontierNewsPanel />
-      <div id="admin-analytics" class="admin-dashboard-page__anchor">
-        <AdminAnalyticsPanel />
-      </div>
-      <section class="admin-main-grid">
-        <AdminSettingsPanel />
-        <AdminUserManagementPanel />
+      <section class="admin-shortcuts" aria-label="后台功能入口">
+        <RouterLink class="admin-shortcut" :to="{ name: 'admin-analytics' }">
+          <BarChartOutlined />
+          <strong>访问统计</strong>
+          <span>访问量、访客、来源和入口页</span>
+        </RouterLink>
+        <RouterLink class="admin-shortcut" :to="{ name: 'admin-users' }">
+          <UserOutlined />
+          <strong>用户管理</strong>
+          <span>用户、角色、状态和成长调整</span>
+        </RouterLink>
+        <RouterLink class="admin-shortcut" :to="{ name: 'admin-moderation' }">
+          <SafetyCertificateOutlined />
+          <strong>审核台</strong>
+          <span>举报、待审内容和处理记录</span>
+        </RouterLink>
       </section>
-      <AdminIntegrationsPanel />
-      <AdminExternalIntegrationsPanel />
-      <AdminPluginsPanel />
-      <AdminThemeMarketplacePanel />
-      <AdminMigrationToolsPanel />
+
+      <AdminSystemPanel />
     </template>
   </div>
 </template>

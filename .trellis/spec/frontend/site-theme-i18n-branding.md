@@ -1,11 +1,11 @@
 # Site Theme, Branding, and i18n Text Frontend Contract
 
-## Scenario: Applying public branding settings and admin preview/rollback
+## Scenario: Applying public branding settings without an admin editor
 
 ### 1. Scope / Trigger
 
-- Trigger: changing app shell branding, logo/favicons, public setting text fallbacks, theme variable injection, or admin settings preview.
-- Applies to `AppShell.vue`, `features/admin/model.ts`, `features/admin/components/AdminSettingsPanel.vue`,
+- Trigger: changing app shell branding, logo/favicons, public setting text fallbacks, or theme variable injection.
+- Applies to `AppShell.vue`, `features/admin/model.ts`,
   `shared/theme/siteBranding.ts`, and protected files under `apps/web/public/*logo*` or `apps/web/public/favicon.*`.
 
 ### 2. Signatures
@@ -21,8 +21,10 @@ Helpers:
 
 Admin UI:
 
-- `AdminSettingsPanel` supports `string`, `integer`, `boolean`, and `json` settings.
-- Public `brand`/`text` settings can be previewed locally before save and rolled back to server values.
+- There is no current admin UI for editing site settings, brand colors, logo URLs,
+  favicon URLs, or i18n text overrides.
+- Do not reintroduce `/admin/settings` or a generic `AdminSettingsPanel` without a
+  specific product decision and a focused UI for the needed setting.
 
 Protected brand assets:
 
@@ -46,9 +48,9 @@ Protected brand assets:
   defaults, app shell rendering, public assets, and focused verification in the same change set.
 - `applySiteBranding()` must validate hex colors before writing CSS variables and must update favicon
   only to safe site-relative or `http(s)` URLs.
-- Theme preview is browser-local. It must not call mutation APIs until the admin clicks `保存`.
-- Rollback preview reapplies `usePublicSiteSettings().data.settings` and clears preview state.
-- JSON settings are edited as formatted JSON text; invalid JSON shows visible status and does not submit.
+- Public settings are consumed as runtime configuration, not edited through a
+  raw key/value dashboard. Backend defaults and database migrations remain the
+  source of truth unless a dedicated editor is explicitly added.
 
 ### 4. Validation & Error Matrix
 
@@ -58,21 +60,21 @@ Protected brand assets:
 | Public settings query fails | App shell keeps default title/logo/colors |
 | Public `brand_logo_url` is `/logo-lines.png` or `/favicon.svg` | App shell displays `/logo-lines-mark.png` |
 | Unrelated UI/theme/performance change edits logo asset or default path | Reject or split into an explicit logo-change task |
-| Admin edits color and clicks preview | CSS variables update in current browser only |
-| Admin clicks rollback | CSS variables/favicon/title return to server values |
-| Invalid JSON override | Status explains invalid JSON; no save mutation runs |
-| Save public setting succeeds | Admin/public settings queries invalidate and app shell refreshes |
+| Admin visits `/admin/settings` | No site settings editor is rendered |
 
 ### 5. Good/Base/Bad Cases
 
 - Good: `siteText(siteSettingsQuery.data.value, "nav.home", "首页")` in app shell labels.
 - Good: keep CSS variable and favicon mutation in `shared/theme/siteBranding.ts`.
 - Good: preserve `DEFAULT_BRAND_LOGO_URL = "/logo-lines-mark.png"` while optimizing app shell render code.
-- Base: admin previews `brand_primary_color`, rolls back, then saves `site_title`.
+- Base: app shell loads public settings, applies title/tagline/logo/color fallbacks,
+  and keeps rendering if the public settings API fails.
 - Bad: replacing `/logo-lines-mark.png` while doing an unrelated homepage or bundle-size cleanup.
 - Bad: using `/favicon.svg` as the topbar logo because it is already available.
 - Bad: hardcoding new global navigation labels directly in templates.
 - Bad: injecting arbitrary CSS from site settings.
+- Bad: exposing a raw settings table for `brand_primary_color`,
+  `site_text_overrides`, email templates, upload limits, or plugin JSON.
 
 ### 6. Tests Required
 
@@ -82,8 +84,8 @@ Default roadmap scope is downgraded unless detailed testing is requested:
 - `npm run lint` in `apps/web`
 - For app shell/logo changes: assert `DEFAULT_BRAND_LOGO_URL` remains `/logo-lines-mark.png`, legacy values
   still map to it, and favicon changes do not alter the topbar logo.
-- Focused manual/browser smoke when practical: open `/admin`, preview a color/text override, rollback,
-  then save one public setting and refresh.
+- Focused manual/browser smoke when practical: open `/admin` and confirm no
+  site settings shortcut or `/admin/settings` editor is reachable.
 
 ### 7. Wrong vs Correct
 

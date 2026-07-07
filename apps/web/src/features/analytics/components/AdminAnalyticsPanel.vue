@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { DownloadOutlined, ReloadOutlined } from "@ant-design/icons-vue";
-import { computed, ref, watch } from "vue";
+import { ReloadOutlined } from "@ant-design/icons-vue";
+import { LineChart } from "echarts/charts";
+import { GridComponent, LegendComponent, TooltipComponent } from "echarts/components";
+import * as echarts from "echarts/core";
+import type { ECharts, EChartsCoreOption } from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
-import { formatMetric, reportCell } from "@/features/analytics/model";
+import { formatMetric, sourceNameLabel, sourceTypeLabel } from "@/features/analytics/model";
 import type { AnalyticsMetricPoint } from "@/features/analytics/model";
-import {
-  useAnalyticsOverview,
-  useDataExplorerReport,
-  useDataExplorerReports,
-  useExportDataExplorerReport,
-} from "@/features/analytics/queries";
+import { useAnalyticsOverview } from "@/features/analytics/queries";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
+
+echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const today = new Date();
@@ -19,7 +21,9 @@ const prior = new Date(today);
 prior.setDate(today.getDate() - 29);
 const startDate = ref(toDateInput(prior));
 const endDate = ref(toDateInput(today));
-const selectedReportId = ref("");
+const trendChartElement = ref<HTMLDivElement | null>(null);
+let trendChart: ECharts | null = null;
+let trendResizeObserver: ResizeObserver | null = null;
 const presetRanges = [
   { label: "7 天", days: 7 },
   { label: "30 天", days: 30 },
@@ -51,20 +55,6 @@ const overviewQuery = useAnalyticsOverview(range, computed(() => !isDateRangeInv
 const overview = computed(() => overviewQuery.data.value);
 const trafficSources = computed(() => overview.value?.traffic_sources ?? []);
 const entryPages = computed(() => overview.value?.entry_pages ?? []);
-const reportsQuery = useDataExplorerReports();
-const reports = computed(() => reportsQuery.data.value ?? []);
-const reportQuery = useDataExplorerReport(
-  selectedReportId,
-  range,
-  computed(() => Boolean(selectedReportId.value) && !isDateRangeInvalid.value),
-);
-const report = computed(() => reportQuery.data.value);
-const reportColumns = computed(() => report.value?.columns ?? []);
-const reportRows = computed(() => report.value?.rows ?? []);
-const exportReport = useExportDataExplorerReport();
-const maxPageViews = computed(() =>
-  Math.max(1, ...(overview.value?.series ?? []).map((point) => pageViews(point))),
-);
 const rangeDayCount = computed(() => (isDateRangeInvalid.value ? 0 : selectedRangeDays.value));
 const activePresetDays = computed(
   () => presetRanges.find((item) => item.days === rangeDayCount.value)?.days ?? null,
@@ -77,18 +67,31 @@ const latestPoint = computed(() => {
   const series = overview.value?.series ?? [];
   return series[series.length - 1] ?? null;
 });
+const latestPointLabel = computed(() => {
+  const point = latestPoint.value;
+  if (!point) {
+    return "";
+  }
+  return `${formatMetric(point.page_views)} 次访问 / ${formatMetric(point.unique_visitors)} 位访客`;
+});
+const trendChartLabel = computed(() => {
+  if (!overview.value) {
+    return "每日访问量与独立访客趋势";
+  }
+  return `每日访问量与独立访客趋势，${overview.value.start_date} 至 ${overview.value.end_date}`;
+});
 const summaryMetrics = computed(() => {
   const totals = overview.value?.totals;
   return [
     {
       id: "page-views",
-      label: "PV",
+      label: "访问量",
       value: formatMetric(totals?.page_views),
       tone: "blue",
     },
     {
       id: "unique-visitors",
-      label: "UV",
+      label: "独立访客",
       value: formatMetric(totals?.unique_visitors),
       tone: "green",
     },
@@ -107,15 +110,24 @@ const summaryMetrics = computed(() => {
   ];
 });
 
+onMounted(() => {
+  void nextTick(() => {
+    initTrendChart();
+    renderTrendChart();
+  });
+});
+
 watch(
-  reports,
-  (items) => {
-    if (!selectedReportId.value && items[0]) {
-      selectedReportId.value = items[0].id;
-    }
+  () => overview.value?.series,
+  () => {
+    void nextTick(renderTrendChart);
   },
-  { immediate: true },
+  { deep: true },
 );
+
+onBeforeUnmount(() => {
+  disposeTrendChart();
+});
 
 // Formats a Date for native date inputs.
 // Key parameter `date` is local browser time; return value is `YYYY-MM-DD`; side effect: none.
@@ -123,25 +135,10 @@ function toDateInput(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-// Returns the page-view value used by the compact trend bars.
-// Key parameter `point` is one backend analytics day; return value is PV count; side effect: none.
+// Returns the page-view value used by the trend chart.
+// Key parameter `point` is one backend analytics day; return value is the visit count. Side effect: none.
 function pageViews(point: AnalyticsMetricPoint): number {
   return point.page_views ?? 0;
-}
-
-// Converts backend source identifiers into compact Chinese labels for the dashboard.
-// Key parameter `sourceType` is the normalized backend source type; return value is display text.
-// Side effect: none.
-function sourceTypeLabel(sourceType: string): string {
-  const labels: Record<string, string> = {
-    campaign: "活动",
-    direct: "直接",
-    internal: "站内",
-    referral: "外链",
-    search: "搜索",
-    social: "社媒",
-  };
-  return labels[sourceType] ?? sourceType;
 }
 
 // Chooses the most readable entry-page label while keeping the path available as fallback.
@@ -161,34 +158,158 @@ function applyPresetRange(days: number): void {
 }
 
 // Refreshes visible analytics queries without changing the selected range.
-// Key parameters: none. Return value is none; side effect: asks TanStack Query to refetch active reports.
+// Key parameters: none. Return value is none. Side effect: asks TanStack Query to refetch the overview.
 function refreshDashboard(): void {
   void overviewQuery.refetch();
-  if (selectedReportId.value) {
-    void reportQuery.refetch();
+}
+
+// Creates the ECharts instance for the trend line chart when its container is mounted.
+// Key parameters: none. Return value is none. Side effect: initializes chart and resize observer.
+function initTrendChart(): void {
+  if (!trendChartElement.value || trendChart) {
+    return;
+  }
+  trendChart = echarts.init(trendChartElement.value);
+  if (typeof ResizeObserver !== "undefined") {
+    trendResizeObserver = new ResizeObserver(() => trendChart?.resize());
+    trendResizeObserver.observe(trendChartElement.value);
   }
 }
 
-// Downloads the selected Data Explorer report with authenticated headers.
-// Key parameters: none. Return value is none; side effect: creates and clicks a temporary download link.
-function exportCsv(): void {
-  if (!selectedReportId.value) {
+// Releases the chart instance and observer before Vue removes the component.
+// Key parameters: none. Return value is none. Side effect: disconnects observer and disposes ECharts.
+function disposeTrendChart(): void {
+  trendResizeObserver?.disconnect();
+  trendResizeObserver = null;
+  trendChart?.dispose();
+  trendChart = null;
+}
+
+// Renders the latest analytics series into the ECharts line chart.
+// Key parameters: none. Return value is none. Side effect: updates the chart instance.
+function renderTrendChart(): void {
+  if (!overview.value || !trendChartElement.value) {
     return;
   }
-  exportReport.mutate(
-    { reportId: selectedReportId.value, params: range.value },
-    {
-      onSuccess: (blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${selectedReportId.value}.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
-      },
-    },
+  initTrendChart();
+  trendChart?.setOption(
+    buildTrendChartOption(overview.value.series ?? [], trendChartElement.value),
+    { notMerge: true },
   );
 }
+
+// Builds the localized line-chart option from backend metric points and current CSS tokens.
+// Key parameters are the backend `points` and chart `element`. Return value is ECharts config. Side effect: none.
+function buildTrendChartOption(
+  points: AnalyticsMetricPoint[],
+  element: HTMLElement,
+): EChartsCoreOption {
+  const primary = readCssVar(element, "--primary", "#409eff");
+  const visitor = readCssVar(element, "--accent-geek", "#10b981");
+  const text = readCssVar(element, "--text", "#475569");
+  const muted = readCssVar(element, "--muted", "#94a3b8");
+  const border = readCssVar(element, "--border", "#e2e8f0");
+  const labels = points.map((point) => point.day.slice(5).replace("-", "/"));
+
+  return {
+    animationDuration: 180,
+    color: [primary, visitor],
+    grid: { bottom: 42, containLabel: true, left: 8, right: 14, top: 22 },
+    legend: {
+      bottom: 0,
+      data: ["访问量", "独立访客"],
+      icon: "roundRect",
+      itemHeight: 6,
+      itemWidth: 12,
+      left: 0,
+      textStyle: { color: muted, fontSize: 12 },
+    },
+    series: [
+      {
+        areaStyle: { color: primary, opacity: 0.08 },
+        data: points.map(pageViews),
+        emphasis: { focus: "series" },
+        itemStyle: { color: primary },
+        lineStyle: { color: primary, width: 3 },
+        name: "访问量",
+        showSymbol: points.length <= 14,
+        smooth: true,
+        symbol: "circle",
+        symbolSize: 6,
+        type: "line",
+      },
+      {
+        data: points.map((point) => point.unique_visitors ?? 0),
+        emphasis: { focus: "series" },
+        itemStyle: { color: visitor },
+        lineStyle: { color: visitor, width: 2 },
+        name: "独立访客",
+        showSymbol: points.length <= 14,
+        smooth: true,
+        symbol: "circle",
+        symbolSize: 5,
+        type: "line",
+      },
+    ],
+    textStyle: { color: text, fontFamily: "inherit" },
+    tooltip: {
+      confine: true,
+      formatter: formatChartTooltip,
+      trigger: "axis",
+    },
+    xAxis: {
+      axisLabel: { color: muted, fontSize: 11, hideOverlap: true },
+      axisLine: { lineStyle: { color: border } },
+      axisTick: { show: false },
+      boundaryGap: false,
+      data: labels,
+      type: "category",
+    },
+    yAxis: {
+      axisLabel: { color: muted, formatter: (value: number) => formatMetric(value) },
+      min: 0,
+      minInterval: 1,
+      splitLine: { lineStyle: { color: border, opacity: 0.6 } },
+      type: "value",
+    },
+  };
+}
+
+// Reads a CSS custom property from the chart host with a token-safe fallback.
+// Key parameters are the DOM `element`, CSS variable name, and fallback. Return value is a color/string. Side effect: none.
+function readCssVar(element: HTMLElement, variableName: string, fallback: string): string {
+  return getComputedStyle(element).getPropertyValue(variableName).trim() || fallback;
+}
+
+interface ChartTooltipItem {
+  axisValueLabel?: string;
+  data?: unknown;
+  marker?: string;
+  seriesName?: string;
+}
+
+// Narrows ECharts tooltip callback values to the object shape used by axis tooltips.
+// Key parameter `value` is the callback payload. Return value reports whether it is usable. Side effect: none.
+function isChartTooltipItem(value: unknown): value is ChartTooltipItem {
+  return typeof value === "object" && value !== null;
+}
+
+// Formats the ECharts tooltip in Chinese without exposing PV/UV terminology.
+// Key parameter `params` is the ECharts tooltip payload. Return value is HTML text for the library tooltip. Side effect: none.
+function formatChartTooltip(params: unknown): string {
+  const items = (Array.isArray(params) ? params : [params]).filter(isChartTooltipItem);
+  const title = items[0]?.axisValueLabel ? String(items[0].axisValueLabel) : "";
+  const rows = items.map((item) => {
+    const numericValue = typeof item.data === "number" ? item.data : Number(item.data);
+    const value = Number.isFinite(numericValue)
+      ? formatMetric(numericValue)
+      : String(item.data ?? "—");
+    const unit = item.seriesName === "独立访客" ? " 位" : " 次";
+    return `${item.marker ?? ""}${item.seriesName ?? ""}: ${value}${unit}`;
+  });
+  return [title, ...rows].filter(Boolean).join("<br/>");
+}
+
 </script>
 
 <template>
@@ -254,21 +375,9 @@ function exportCsv(): void {
               <strong>站点访问趋势</strong>
               <span>{{ overview.start_date }} → {{ overview.end_date }}</span>
             </div>
-            <small v-if="latestPoint">
-              最新 {{ formatMetric(pageViews(latestPoint)) }} PV
-            </small>
+            <small v-if="latestPointLabel">最新 {{ latestPointLabel }}</small>
           </div>
-          <div class="trend-bars" role="img" aria-label="每日站点 PV 趋势">
-            <span
-              v-for="point in overview.series"
-              :key="point.day"
-              :style="{ height: `${Math.max(8, (pageViews(point) / maxPageViews) * 100)}%` }"
-              :title="`${point.day}: ${formatMetric(point.page_views)} PV / ${formatMetric(point.unique_visitors)} UV`"
-            ></span>
-          </div>
-          <div class="trend-legend" aria-label="趋势说明">
-            <span><i></i>PV</span>
-          </div>
+          <div ref="trendChartElement" class="trend-chart" role="img" :aria-label="trendChartLabel"></div>
         </article>
 
         <article class="top-topics-panel">
@@ -282,18 +391,18 @@ function exportCsv(): void {
               v-for="source in trafficSources"
               :key="`${source.source_type}:${source.source_name}`"
             >
-              <span class="rank-title">{{ source.source_name }}</span>
+              <span class="rank-title">{{ sourceNameLabel(source.source_name) }}</span>
               <span class="rank-board">
-                {{ sourceTypeLabel(source.source_type) }} · {{ formatMetric(source.unique_visitors) }} UV
+                {{ sourceTypeLabel(source.source_type) }} · {{ formatMetric(source.unique_visitors) }} 位访客
               </span>
-              <strong>{{ formatMetric(source.visit_count) }} PV</strong>
+              <strong>{{ formatMetric(source.visit_count) }} 次访问</strong>
             </li>
           </ol>
           <p v-else class="analytics-state">当前范围内暂无访问来源。</p>
         </article>
       </section>
 
-      <section class="top-grid" aria-label="运营榜单">
+      <section class="analytics-list-grid" aria-label="入口页统计">
         <article>
           <div class="section-heading">
             <strong>入口页</strong>
@@ -301,98 +410,13 @@ function exportCsv(): void {
           <ol v-if="entryPages.length">
             <li v-for="page in entryPages" :key="page.path">
               <span :title="page.path">{{ entryPageLabel(page.title, page.path) }}</span>
-              <strong>{{ formatMetric(page.visit_count) }} PV</strong>
+              <strong>{{ formatMetric(page.visit_count) }} 次访问</strong>
             </li>
           </ol>
           <p v-else class="analytics-state">暂无入口页数据。</p>
         </article>
-        <article>
-          <div class="section-heading">
-            <strong>热门主题</strong>
-          </div>
-          <ol v-if="overview.top_topics.length">
-            <li v-for="topic in overview.top_topics" :key="topic.id">
-              <span>{{ topic.title }}</span>
-              <strong>{{ formatMetric(topic.view_count) }} 浏览</strong>
-            </li>
-          </ol>
-          <p v-else class="analytics-state">暂无热门主题。</p>
-        </article>
-        <article>
-          <div class="section-heading">
-            <strong>转化信号</strong>
-          </div>
-          <dl class="governance-list">
-            <div>
-              <dt>注册</dt>
-              <dd>{{ formatMetric(overview.totals.registrations) }}</dd>
-            </div>
-            <div>
-              <dt>主题</dt>
-              <dd>{{ formatMetric(overview.totals.topics) }}</dd>
-            </div>
-            <div>
-              <dt>回复</dt>
-              <dd>{{ formatMetric(overview.totals.posts) }}</dd>
-            </div>
-            <div>
-              <dt>峰值 DAU</dt>
-              <dd>{{ formatMetric(overview.totals.dau) }}</dd>
-            </div>
-          </dl>
-        </article>
       </section>
     </template>
-
-    <section class="data-explorer" aria-label="Data Explorer">
-      <div class="section-heading data-explorer__heading">
-        <div>
-          <strong>数据报表</strong>
-        </div>
-        <UiButton
-          tone="subtle"
-          :disabled="!selectedReportId || exportReport.isPending.value"
-          @click="exportCsv"
-        >
-          <template #icon><DownloadOutlined /></template>
-          导出
-        </UiButton>
-      </div>
-      <div v-if="reportsQuery.isLoading.value" class="analytics-state" role="status">正在读取预设报表…</div>
-      <div v-else class="report-tabs" aria-label="预设报表">
-        <button
-          v-for="item in reports"
-          :key="item.id"
-          type="button"
-          :class="{ active: item.id === selectedReportId }"
-          @click="selectedReportId = item.id"
-        >
-          {{ item.name }}
-        </button>
-      </div>
-      <div v-if="reportsQuery.isError.value" class="analytics-state analytics-state--error">
-        预设报表读取失败。
-      </div>
-      <div v-else-if="reportQuery.isLoading.value" class="analytics-state" role="status">正在运行报表…</div>
-      <div v-else-if="report" class="report-table-wrap">
-        <table v-if="reportColumns.length" class="report-table">
-          <thead>
-            <tr>
-              <th v-for="column in reportColumns" :key="column">{{ column }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, index) in reportRows" :key="index">
-              <td v-for="column in reportColumns" :key="column">{{ reportCell(row[column]) }}</td>
-            </tr>
-            <tr v-if="!reportRows.length">
-              <td :colspan="reportColumns.length">当前范围内没有报表行。</td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-else class="analytics-state">这个预设报表没有返回列定义。</p>
-      </div>
-    </section>
   </UiCard>
 </template>
 

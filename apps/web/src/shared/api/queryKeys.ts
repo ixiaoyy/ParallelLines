@@ -39,13 +39,9 @@ export const queryKeys = {
   siteSettingsPublic: ["site", "settings", "public"] as const,
   siteExtensions: ["site", "extensions"] as const,
   adminRoot: ["admin"] as const,
-  adminSettings: ["admin", "settings"] as const,
   adminPlugins: ["admin", "plugins"] as const,
   adminAnalytics: (startDate: string, endDate: string) =>
     ["admin", "analytics", startDate, endDate] as const,
-  adminAnalyticsReports: ["admin", "analytics", "reports"] as const,
-  adminAnalyticsReport: (reportId: string, startDate: string, endDate: string) =>
-    ["admin", "analytics", "reports", reportId, startDate, endDate] as const,
   adminBadges: ["admin", "badges"] as const,
   adminApiKeys: ["admin", "api-keys"] as const,
   adminExternalIntegrations: ["admin", "external-integrations"] as const,

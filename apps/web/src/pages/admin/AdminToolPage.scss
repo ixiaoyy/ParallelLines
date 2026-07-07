@@ -1,0 +1,57 @@
+.admin-tool-page {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.admin-tool-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 1rem;
+  background: var(--bg-surface);
+}
+
+.admin-tool-hero > * {
+  min-width: 0;
+}
+
+.admin-tool-hero h1 {
+  margin: 0.3rem 0 0;
+  color: var(--title);
+  font-size: 1.65rem;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+
+.admin-tool-back {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  color: var(--primary);
+  font-weight: 760;
+  text-decoration: none;
+}
+
+.admin-tool-back:hover,
+.admin-tool-back:focus-visible {
+  color: var(--primary-hover);
+  outline: none;
+}
+
+@media (max-width: 720px) {
+  .admin-tool-page {
+    gap: 0.75rem;
+  }
+
+  .admin-tool-hero {
+    padding: 0.85rem;
+  }
+
+  .admin-tool-hero h1 {
+    font-size: 1.35rem;
+  }
+}

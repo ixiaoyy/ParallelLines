@@ -13,27 +13,9 @@ export type SiteSettingValue =
   | Record<string, unknown>
   | unknown[];
 
-export interface SiteSettingResponse {
-  id: string;
-  key: string;
-  value: SiteSettingValue;
-  data_type: "string" | "boolean" | "integer" | "json" | string;
-  category: string;
-  description: string;
-  public: boolean;
-  updated_by_id: string | null;
-  updated_by_name: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface PublicSiteSettingsResponse {
   settings: Record<string, SiteSettingValue>;
   updated_at: string | null;
-}
-
-export interface SiteSettingUpdateRequest {
-  value: SiteSettingValue;
 }
 
 export interface AdminUserResponse {
@@ -264,18 +246,6 @@ export function siteText(
     overrides[key] ??
     builtinSiteText(key, fallback, locale)
   );
-}
-
-export function settingCategoryLabel(category: string): string {
-  const labels: Record<string, string> = {
-    access: "访问控制",
-    brand: "品牌",
-    email: "邮件模板",
-    text: "站点文案",
-    theme: "主题",
-    uploads: "上传",
-  };
-  return labels[category] ?? category;
 }
 
 export function adminRoleLabel(role: string): string {

@@ -36,6 +36,13 @@ export default defineConfig({
           }
 
           if (
+            normalizedId.includes("/node_modules/echarts/") ||
+            normalizedId.includes("/node_modules/zrender/")
+          ) {
+            return "vendor-echarts";
+          }
+
+          if (
             normalizedId.includes("/node_modules/vue/") ||
             normalizedId.includes("/node_modules/vue-router/") ||
             normalizedId.includes("/node_modules/pinia/") ||

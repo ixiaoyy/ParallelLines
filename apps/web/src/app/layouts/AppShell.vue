@@ -101,6 +101,17 @@ const publishLinkTarget = computed<RouteLocationRaw>(() => {
 const adminLinkLabel = computed(() =>
   isAdmin(currentUser.value) ? t("nav.admin", "后台") : t("nav.moderation", "审核"),
 );
+const ADMIN_ROUTE_NAMES = new Set([
+  "admin-dashboard",
+  "admin-analytics",
+  "admin-users",
+]);
+const isAdminLinkActive = computed(() => {
+  if (!isAdmin(currentUser.value)) {
+    return route.name === "admin-moderation";
+  }
+  return typeof route.name === "string" && ADMIN_ROUTE_NAMES.has(route.name);
+});
 const showSeparateModerationLink = computed(() => isAdmin(currentUser.value));
 const canSubmitGlobalSearch = computed(() => Boolean(globalSearch.value.trim()));
 const isCurrentUserProfileActive = computed(() => {
@@ -339,7 +350,7 @@ function isNavItemActive(item: NavItem) {
   }
 
   if (item.key === "admin") {
-    return route.name === "admin-dashboard";
+    return typeof route.name === "string" && ADMIN_ROUTE_NAMES.has(route.name);
   }
 
   return route.name === "admin-moderation";
@@ -444,7 +455,7 @@ function isNavItemActive(item: NavItem) {
                 v-if="canAccessModeration(currentUser)"
                 class="account-menu__item"
                 :to="adminLinkTarget"
-                :class="{ 'is-active': route.name === (isAdmin(currentUser) ? 'admin-dashboard' : 'admin-moderation') }"
+                :class="{ 'is-active': isAdminLinkActive }"
                 @click="closeAccountMenu"
               >
                 {{ adminLinkLabel }}

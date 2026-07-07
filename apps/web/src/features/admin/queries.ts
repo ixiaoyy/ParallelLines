@@ -24,7 +24,6 @@ import {
   fetchAdminBadges,
   fetchAdminAuditLogs,
   fetchAdminEmailLogs,
-  fetchAdminSettings,
   fetchAdminSystem,
   fetchAdminUsers,
   fetchAdminWebhookDeliveries,
@@ -36,7 +35,6 @@ import {
   queueFrontierNewsItem,
   revokeAdminUserBadge,
   updateFrontierNewsSource,
-  updateAdminSetting,
   updateAdminUser,
 } from "./api";
 import type {
@@ -56,8 +54,6 @@ import type {
   FrontierNewsSourceResponse,
   FrontierNewsSourceUpdateRequest,
   PublicSiteSettingsResponse,
-  SiteSettingResponse,
-  SiteSettingUpdateRequest,
   WebhookDeliveryResponse,
   WebhookEndpointCreateRequest,
   WebhookEndpointCreateResponse,
@@ -79,27 +75,6 @@ export function usePublicSiteSettings() {
     placeholderData: () => readCachedPublicSiteSettings() ?? undefined,
     retry: false,
     staleTime: 300_000,
-  });
-}
-
-export function useAdminSettings() {
-  return useQuery<SiteSettingResponse[], Error>({
-    queryKey: queryKeys.adminSettings,
-    queryFn: fetchAdminSettings,
-    enabled: computed(() => hasAccessToken()),
-    retry: false,
-    staleTime: 30_000,
-  });
-}
-
-export function useUpdateAdminSetting() {
-  const queryClient = useQueryClient();
-  return useMutation<SiteSettingResponse, Error, { key: string; payload: SiteSettingUpdateRequest }>({
-    mutationFn: ({ key, payload }) => updateAdminSetting(key, payload),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.siteSettingsPublic });
-    },
   });
 }
 
