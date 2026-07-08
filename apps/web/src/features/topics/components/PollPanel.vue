@@ -30,14 +30,19 @@ watch(
 );
 
 const selectedSet = computed(() => new Set(selectedIds.value));
+const hasVoted = computed(() => props.poll.selectedOptionIds.length > 0);
+const isLocked = computed(() => props.poll.closed || props.pending || hasVoted.value);
 const hasChanged = computed(() => sortedIds(selectedIds.value) !== sortedIds(props.poll.selectedOptionIds));
 const canSubmit = computed(
-  () => !props.poll.closed && !props.pending && selectedIds.value.length > 0 && hasChanged.value,
+  () => !isLocked.value && selectedIds.value.length > 0 && hasChanged.value,
 );
 const pollMeta = computed(() => {
   const type = props.poll.multipleChoice ? "可多选" : "单选";
   if (props.poll.closed) {
     return `${type} · 已截止`;
+  }
+  if (hasVoted.value) {
+    return `${type} · 已投票`;
   }
 
   return props.poll.closesAt ? `${type} · ${relativeTime(props.poll.closesAt)}截止` : `${type} · 长期开放`;
@@ -48,7 +53,7 @@ function isSelected(optionId: string) {
 }
 
 function toggleOption(optionId: string) {
-  if (props.poll.closed || props.pending) {
+  if (isLocked.value) {
     return;
   }
 
@@ -93,13 +98,13 @@ function sortedIds(ids: string[]) {
       <UiBadge :tone="poll.closed ? 'gray' : 'blue'">{{ pollMeta }}</UiBadge>
     </div>
 
-    <fieldset class="poll-options" :disabled="poll.closed || pending">
+    <fieldset class="poll-options" :disabled="isLocked">
       <legend>选择投票选项</legend>
       <label
         v-for="option in poll.options"
         :key="option.id"
         class="poll-option"
-        :class="{ selected: isSelected(option.id) }"
+        :class="{ selected: isSelected(option.id), locked: isLocked }"
       >
         <input
           :type="poll.multipleChoice ? 'checkbox' : 'radio'"
@@ -118,9 +123,11 @@ function sortedIds(ids: string[]) {
     </fieldset>
 
     <div class="poll-panel__footer">
-      <span>{{ poll.totalVotes }} 人参与 · 已选 {{ selectedIds.length }} 项</span>
+      <span>
+        {{ poll.totalVotes }} 人参与 · {{ hasVoted ? "已投票，无法修改" : `已选 ${selectedIds.length} 项` }}
+      </span>
       <UiButton tone="primary" :disabled="!canSubmit" @click="submitVote">
-        {{ pending ? "提交中…" : poll.closed ? "投票已截止" : "提交投票" }}
+        {{ pending ? "提交中…" : poll.closed ? "投票已截止" : hasVoted ? "已投票" : "提交投票" }}
       </UiButton>
     </div>
   </UiCard>

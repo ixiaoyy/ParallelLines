@@ -65,18 +65,26 @@
     transform 160ms ease;
 }
 
-.poll-option:hover,
-.poll-option:focus-within,
+.poll-option:not(.locked):hover,
+.poll-option:not(.locked):focus-within,
 .poll-option.selected {
   transform: translateY(-1px);
   border-color: rgba(var(--primary-rgb), 0.32);
   box-shadow: 0 12px 24px rgba(var(--primary-rgb), 0.1);
 }
 
+.poll-option.locked {
+  cursor: default;
+}
+
 .poll-option input {
   width: 1.05rem;
   height: 1.05rem;
   accent-color: var(--primary);
+}
+
+.poll-option input:disabled {
+  cursor: default;
 }
 
 .poll-option__copy {

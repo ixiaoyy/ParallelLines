@@ -1480,6 +1480,10 @@ class ForumService:
         )
         existing_option_ids = {vote.option_id for vote in existing_votes}
         next_option_ids = set(option_ids)
+        if existing_votes:
+            if existing_option_ids == next_option_ids:
+                return await self.get_topic_poll(topic_id, current_user=current_user)
+            raise ValidationError("poll_already_voted", "Poll vote cannot be changed")
         for vote in existing_votes:
             if vote.option_id not in next_option_ids:
                 await self.session.delete(vote)

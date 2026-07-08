@@ -200,7 +200,7 @@ async def test_topic_and_post_votes_are_idempotent_and_counted() -> None:
 
 
 @pytest.mark.asyncio
-async def test_poll_vote_replacement_and_closed_poll_rejection() -> None:
+async def test_poll_vote_locks_selection_and_rejects_closed_poll() -> None:
     session_factory, engine = await create_test_session()
 
     async def override_session():
@@ -254,18 +254,39 @@ async def test_poll_vote_replacement_and_closed_poll_rejection() -> None:
         assert first_vote.status_code == 200
         assert first_vote.json()["data"]["selected_option_ids"] == [option_ids[0]]
 
-        replacement = await client.put(
+        repeated_vote = await client.put(
+            f"/api/v1/topics/{topic.json()['data']['id']}/poll/vote",
+            headers={"Authorization": voter["auth"]},
+            json={"option_ids": [option_ids[0]]},
+        )
+        assert repeated_vote.status_code == 200
+        repeated_data = repeated_vote.json()["data"]
+        assert repeated_data["total_votes"] == 1
+        assert repeated_data["selected_option_ids"] == [option_ids[0]]
+        repeated_counts = {
+            option["id"]: option["vote_count"] for option in repeated_data["options"]
+        }
+        assert repeated_counts[option_ids[0]] == 1
+
+        change_attempt = await client.put(
             f"/api/v1/topics/{topic.json()['data']['id']}/poll/vote",
             headers={"Authorization": voter["auth"]},
             json={"option_ids": [option_ids[1]]},
         )
-        assert replacement.status_code == 200
-        replacement_data = replacement.json()["data"]
-        assert replacement_data["total_votes"] == 1
-        assert replacement_data["selected_option_ids"] == [option_ids[1]]
-        counts = {option["id"]: option["vote_count"] for option in replacement_data["options"]}
-        assert counts[option_ids[0]] == 0
-        assert counts[option_ids[1]] == 1
+        assert change_attempt.status_code == 422
+        assert change_attempt.json()["error"]["code"] == "poll_already_voted"
+
+        unchanged = await client.get(
+            f"/api/v1/topics/{topic.json()['data']['id']}/poll",
+            headers={"Authorization": voter["auth"]},
+        )
+        assert unchanged.status_code == 200
+        unchanged_data = unchanged.json()["data"]
+        assert unchanged_data["total_votes"] == 1
+        assert unchanged_data["selected_option_ids"] == [option_ids[0]]
+        counts = {option["id"]: option["vote_count"] for option in unchanged_data["options"]}
+        assert counts[option_ids[0]] == 1
+        assert counts[option_ids[1]] == 0
 
         async with session_factory() as session:
             poll_row = await session.scalar(select(Poll))

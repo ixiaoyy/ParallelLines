@@ -34,7 +34,7 @@ VM additions:
 - Score-vote API wrappers may remain for feed ranking/backward compatibility, but `TopicThreadToolbar` and `PostItem` must not render up/down arrow score-vote controls unless a new product decision explicitly re-enables them.
 - Topic/post detail social actions should prioritize existing like/bookmark/copy controls; do not add a second visible "赞成/反对" rail next to those actions.
 - Q&A order is an explicit topic-detail toggle that changes the post query key to `chronological` or `qa`.
-- Poll cards preserve the selected options locally until the mutation succeeds or the backend returns validation errors; closed polls disable controls and show final counts.
+- Poll cards preserve the selected options locally until the first vote mutation succeeds or the backend returns validation errors; once `selectedOptionIds` is non-empty, controls stay disabled and the UI must not offer vote changes.
 - Topic composer may attach one simple poll to a new topic; it must send snake_case `multiple_choice` and `closes_at` fields.
 
 ### 4. Validation & Error Matrix
@@ -46,6 +46,7 @@ VM additions:
 | Q&A sort active | First post remains first; accepted/high-score replies appear earlier |
 | Anonymous poll attempt | Shows login guidance; current draft/selection is preserved |
 | Poll expired | Options disabled and backend `poll_closed` copy shown if user tries to submit |
+| Poll already voted | Options disabled; direct API retry with a different option shows no fake local change |
 | Build/type errors | Block finish until `pnpm --dir apps/web typecheck`, `lint`, and `build` pass |
 
 ### 5. Tests / Verification

@@ -18,7 +18,7 @@ import {
   votePoll,
 } from "./api";
 import type { TopicSearchParams } from "./api";
-import { toTopicCard } from "./model";
+import { toPollVM, toTopicCard } from "./model";
 import type {
   CreateTopicRequest,
   PollResponse,
@@ -169,8 +169,11 @@ export function useVotePoll(topicId: MaybeRefOrGetter<string>) {
 
       return votePoll(id, payload);
     },
-    onSuccess: () => {
+    onSuccess: (poll) => {
       const id = toValue(topicId);
+      queryClient.setQueryData<TopicCardVM | undefined>(queryKeys.topic(id), (current) =>
+        current ? { ...current, poll: toPollVM(poll) } : current,
+      );
       void queryClient.invalidateQueries({ queryKey: queryKeys.topic(id) });
     },
   });

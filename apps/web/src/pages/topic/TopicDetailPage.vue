@@ -27,7 +27,7 @@ import {
 } from "@/features/topics/queries";
 import { useAdminTopicDelete } from "@/features/topics/useAdminTopicDelete";
 import { hasAccessToken } from "@/shared/api/client";
-import { contentPolicyMessage } from "@/shared/api/errors";
+import { contentPolicyMessage, isApiErrorCode } from "@/shared/api/errors";
 import { queryKeys } from "@/shared/api/queryKeys";
 import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import { readRouteParam } from "@/shared/router/params";
@@ -287,8 +287,13 @@ function votePoll(optionIds: string[]) {
   pollVoteMutation.mutate(
     { option_ids: optionIds },
     {
-      onSuccess: () => setToolbarStatus("Poll 投票已更新"),
-      onError: () => setToolbarStatus("Poll 投票失败，可能已截止或选项无效"),
+      onSuccess: () => setToolbarStatus("投票已提交，提交后不可修改"),
+      onError: (error) =>
+        setToolbarStatus(
+          isApiErrorCode(error, "poll_already_voted")
+            ? "你已经投过票，不能修改选择"
+            : "投票失败，可能已截止或选项无效",
+        ),
     },
   );
 }

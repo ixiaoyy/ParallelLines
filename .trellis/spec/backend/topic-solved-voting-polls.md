@@ -39,7 +39,7 @@ Request/response fields:
 - Post Q&A ordering keeps the first post first, then sorts replies by accepted-answer status, `vote_score`, and `post_number`.
 - Polls are created with the first topic post. Options are normalized by trimming text and preserving order.
 - Poll voting permissions follow topic visibility; authenticated users who can access the topic can vote before `closes_at`.
-- Closed/expired polls reject votes with `poll_closed`; single-choice polls replace the user's previous selection, while multi-choice polls replace the whole selected set.
+- Closed/expired polls reject votes with `poll_closed`; poll votes are one-shot per user. A repeated request with the same selected option set is idempotent, while any attempt to change the selected option set fails with `poll_already_voted`.
 - All new API errors use `AppError` subclasses and the standard `{ error: { code, message, details } }` response shape.
 
 ### 4. Validation & Error Matrix
@@ -54,6 +54,8 @@ Request/response fields:
 | Poll has fewer than 2 options | Pydantic validation rejects request |
 | Poll closes in the past on creation | `poll_closes_at_past` / 422 |
 | Vote after `closes_at` | `poll_closed` / 422 |
+| Vote again with same poll option set | Existing poll response; counters unchanged |
+| Vote again with different poll option set | `poll_already_voted` / 422 |
 | Single-choice poll receives multiple option ids | `poll_single_choice_required` / 422 |
 | Poll option id is foreign/missing | `poll_option_not_found` / 404 |
 
@@ -70,6 +72,6 @@ Request/response fields:
 - API tests for solution permission, clearing, and list/detail marker fields.
 - API/service tests for topic and post vote idempotency and cached counters.
 - API tests for Q&A post ordering.
-- API tests for poll voting, single vs multi-choice replacement, and closed poll rejection.
+- API tests for poll voting, repeated same-option idempotency, attempted vote changes, and closed poll rejection.
 - Regression tests: `pytest tests/test_topic_solved_voting_polls.py tests/test_interactions_notifications.py tests/test_topic_lifecycle.py -q` plus full backend suite before finishing.
 - Migration verification on a clean MySQL database URL before release.
