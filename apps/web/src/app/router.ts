@@ -294,8 +294,8 @@ export const router = createRouter({
       meta: {
         requiredAccess: "admin",
         seo: {
-          title: "访问统计 · {siteTitle}",
-          description: "查看平行线站点访问量、访客、来源渠道和入口页统计。",
+          title: "访问与用户增长 · {siteTitle}",
+          description: "查看平行线访问表现、真实用户增长、来源渠道和入口页统计。",
           canonicalPath: "/admin/analytics",
           robots: NOINDEX_ROBOTS,
         },
@@ -311,6 +311,20 @@ export const router = createRouter({
           title: "用户管理 · {siteTitle}",
           description: "管理平行线用户角色、状态、等级和徽章。",
           canonicalPath: "/admin/users",
+          robots: NOINDEX_ROBOTS,
+        },
+      },
+    },
+    {
+      path: "/admin/system",
+      name: "admin-system",
+      component: () => import("@/pages/admin/AdminSystemPage.vue"),
+      meta: {
+        requiredAccess: "admin",
+        seo: {
+          title: "系统运行 · {siteTitle}",
+          description: "查看平行线核心服务、后台任务、邮件和审计运行状态。",
+          canonicalPath: "/admin/system",
           robots: NOINDEX_ROBOTS,
         },
       },

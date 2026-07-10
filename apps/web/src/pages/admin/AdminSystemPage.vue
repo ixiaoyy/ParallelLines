@@ -2,7 +2,7 @@
 import { computed } from "vue";
 
 import AdminAccessState from "@/features/admin/components/AdminAccessState.vue";
-import AdminWorkbenchPanel from "@/features/admin/components/AdminWorkbenchPanel.vue";
+import AdminSystemPanel from "@/features/admin/components/AdminSystemPanel.vue";
 import { isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser } from "@/features/auth/queries";
 import UiButton from "@/shared/ui/Button.vue";
@@ -21,15 +21,9 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
   <AdminAccessState
     v-else-if="!currentUserQuery.data.value"
     kind="login"
-    :action-to="{ path: '/auth', query: { redirect: '/admin' } }"
+    :action-to="{ path: '/auth', query: { redirect: '/admin/system' } }"
     action-label="前往登录"
   />
-  <AdminAccessState
-    v-else-if="!canAccessAdmin"
-    kind="forbidden"
-    description="后台数据和用户管理仅限管理员；版主可继续使用审核台。"
-    :action-to="{ name: 'admin-moderation' }"
-    action-label="前往审核台"
-  />
-  <AdminWorkbenchPanel v-else />
+  <AdminAccessState v-else-if="!canAccessAdmin" kind="forbidden" />
+  <AdminSystemPanel v-else />
 </template>

@@ -42,6 +42,11 @@ export const queryKeys = {
   adminPlugins: ["admin", "plugins"] as const,
   adminAnalytics: (startDate: string, endDate: string) =>
     ["admin", "analytics", startDate, endDate] as const,
+  adminAnalyticsReports: ["admin", "analytics", "reports"] as const,
+  // Builds a range-aware cache key for one backend-owned Data Explorer preset.
+  // Key parameters are report ID and inclusive dates; return value is a stable query key. Side effect: none.
+  adminAnalyticsReport: (reportId: string, startDate: string, endDate: string) =>
+    ["admin", "analytics", "reports", reportId, startDate, endDate] as const,
   adminBadges: ["admin", "badges"] as const,
   adminApiKeys: ["admin", "api-keys"] as const,
   adminExternalIntegrations: ["admin", "external-integrations"] as const,

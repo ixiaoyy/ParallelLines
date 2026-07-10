@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import {
+  ArrowLeftOutlined,
+  CheckCircleOutlined,
+  SearchOutlined,
+  SafetyCertificateOutlined,
+  TeamOutlined,
+} from "@ant-design/icons-vue";
 import { computed, nextTick, reactive, ref, watch } from "vue";
 
 import type { UserBadgeResponse } from "@/features/badges/model";
@@ -12,8 +19,8 @@ import {
   useUpdateAdminUser,
 } from "@/features/admin/queries";
 import { relativeTime } from "@/shared/lib/format";
+import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiButton from "@/shared/ui/Button.vue";
-import UiCard from "@/shared/ui/Card.vue";
 
 const updateUserMutation = useUpdateAdminUser();
 const grantBadgeMutation = useGrantAdminUserBadge();
@@ -34,6 +41,7 @@ const searchInputElement = ref<HTMLInputElement | null>(null);
 const detailBackButtonElement = ref<HTMLButtonElement | null>(null);
 const selectedUserId = ref<string | null>(null);
 const activePanel = ref<"list" | "detail">("list");
+
 // Resolves the selected row without silently replacing a missing selection; a null selection may initialize to the first result.
 // Key parameters: none. Return value: the selected admin row or null. Side effect: none.
 const selectedUser = computed(() => {
@@ -43,6 +51,7 @@ const selectedUser = computed(() => {
   }
   return selectedUserId.value === null ? (users.value[0] ?? null) : null;
 });
+
 const userDraft = reactive({
   role: "user" as "user" | "moderator" | "admin",
   status: "active" as "active" | "silenced" | "suspended" | "deleted",
@@ -119,8 +128,13 @@ function focusUserListTarget(): void {
 }
 
 // Selects the user being edited and opens the detail pane on compact layouts.
-// Key parameter `user` is the admin user row. Return value: none. Side effect: updates local state, scrolls compact layouts, and moves focus to the detail back button.
-function selectUser(user: AdminUserResponse) {
+// Key parameter `user` is the admin user row. Return value: none. Side effect: updates local state, mutation feedback, scrolling, and focus.
+function selectUser(user: AdminUserResponse): void {
+  if (selectedUserId.value !== user.id) {
+    updateUserMutation.reset();
+    grantBadgeMutation.reset();
+    revokeBadgeMutation.reset();
+  }
   selectedUserId.value = user.id;
   activePanel.value = "detail";
   if (isCompactUserLayout()) {
@@ -143,7 +157,9 @@ function showUserList(): void {
   }
 }
 
-function saveUser() {
+// Sends role, status, level, and optional point/growth deltas for the selected user.
+// Key parameters: none. Return value: none. Side effect: invokes updateAdminUser and refreshes admin queries on success.
+function saveUser(): void {
   if (!selectedUser.value) {
     return;
   }
@@ -170,7 +186,9 @@ function saveUser() {
   });
 }
 
-function grantBadge() {
+// Grants the selected catalog badge to the active user through the admin badge mutation.
+// Key parameters: none. Return value: none. Side effect: updates the user badge list after invalidation.
+function grantBadge(): void {
   if (!selectedUser.value || !badgeDraft.badgeSlug) {
     return;
   }
@@ -183,7 +201,9 @@ function grantBadge() {
   });
 }
 
-function revokeBadge(badge: UserBadgeResponse) {
+// Revokes one active badge from the selected user and records the administrator's reason.
+// Key parameter `badge` is the active badge row. Return value: none. Side effect: invokes the revoke mutation.
+function revokeBadge(badge: UserBadgeResponse): void {
   if (!selectedUser.value) {
     return;
   }
@@ -194,6 +214,21 @@ function revokeBadge(badge: UserBadgeResponse) {
       reason: badgeDraft.revokeReason.trim() || "管理员手动撤销",
     },
   });
+}
+
+// Returns a semantic class for account state pills while preserving unknown backend values.
+// Key parameter `status` is the API account state. Return value is a CSS suffix; side effect: none.
+function accountStatusClass(status: string): string {
+  if (status === "active") {
+    return "success";
+  }
+  if (status === "silenced") {
+    return "warning";
+  }
+  if (status === "suspended" || status === "deleted") {
+    return "danger";
+  }
+  return "neutral";
 }
 </script>
 
@@ -206,62 +241,71 @@ function revokeBadge(badge: UserBadgeResponse) {
   >
     <header class="users-panel__header">
       <div>
+        <span class="users-panel__context">成员与权限</span>
         <h1 id="admin-users-title">用户管理</h1>
-        <p>搜索用户，维护账号权限、积分成长与徽章。</p>
+        <p>查询账号，维护角色、状态、积分成长与徽章。</p>
       </div>
-      <span
-        v-if="!usersQuery.isLoading.value && !usersQuery.isError.value"
-        class="user-result-count"
-      >
-        当前显示 {{ users.length }} 人
+      <span v-if="!usersQuery.isLoading.value && !usersQuery.isError.value" class="user-result-count">
+        当前显示 <strong>{{ users.length }}</strong> 人
       </span>
     </header>
 
+    <div class="user-toolbar" aria-label="用户筛选">
+      <label class="filter-field filter-field--search">
+        <span class="filter-field__label">搜索用户</span>
+        <span class="search-control">
+          <SearchOutlined aria-hidden="true" />
+          <input
+            ref="searchInputElement"
+            v-model="userFilters.query"
+            type="search"
+            placeholder="搜索用户名或邮箱"
+          />
+        </span>
+      </label>
+      <label class="filter-field">
+        <span class="filter-field__label">角色</span>
+        <select v-model="userFilters.role">
+          <option value="">全部角色</option>
+          <option value="admin">管理员</option>
+          <option value="moderator">版主</option>
+          <option value="user">用户</option>
+        </select>
+      </label>
+      <label class="filter-field">
+        <span class="filter-field__label">状态</span>
+        <select v-model="userFilters.status">
+          <option value="">全部状态</option>
+          <option value="active">正常</option>
+          <option value="silenced">禁言</option>
+          <option value="suspended">停用</option>
+          <option value="deleted">已删除</option>
+        </select>
+      </label>
+    </div>
+
     <div class="user-management-layout">
-      <UiCard class="user-search-card">
-        <header class="panel-heading">
+      <aside class="user-list-pane" aria-label="用户列表">
+        <header class="pane-heading">
           <div>
             <h2>用户列表</h2>
-            <p>按用户名、邮箱、角色或状态筛选</p>
+            <p>最多显示 50 条匹配记录</p>
           </div>
+          <TeamOutlined aria-hidden="true" />
         </header>
 
-        <div class="user-filters">
-          <label class="filter-field filter-field--search">
-            <span>搜索用户</span>
-            <input
-              ref="searchInputElement"
-              v-model="userFilters.query"
-              type="search"
-              placeholder="用户名或邮箱"
-            />
-          </label>
-          <label class="filter-field">
-            <span>角色</span>
-            <select v-model="userFilters.role">
-              <option value="">全部角色</option>
-              <option value="admin">管理员</option>
-              <option value="moderator">版主</option>
-              <option value="user">用户</option>
-            </select>
-          </label>
-          <label class="filter-field">
-            <span>状态</span>
-            <select v-model="userFilters.status">
-              <option value="">全部状态</option>
-              <option value="active">正常</option>
-              <option value="silenced">禁言</option>
-              <option value="suspended">停用</option>
-              <option value="deleted">已删除</option>
-            </select>
-          </label>
+        <div v-if="usersQuery.isLoading.value" class="user-list-skeleton" role="status">
+          <span class="sr-only">用户列表加载中…</span>
+          <i v-for="index in 7" :key="index" />
         </div>
-
-        <p v-if="usersQuery.isLoading.value" class="panel-state" role="status">用户列表加载中…</p>
-        <p v-else-if="usersQuery.isError.value" class="panel-state panel-state--error" role="alert">
-          用户列表加载失败。
-        </p>
-        <div v-else-if="users.length" class="user-list" aria-label="用户列表">
+        <div v-else-if="usersQuery.isError.value" class="panel-state panel-state--error" role="alert">
+          <strong>用户列表加载失败</strong>
+          <span>请检查网络或管理员权限后重试。</span>
+          <UiButton tone="subtle" :disabled="usersQuery.isFetching.value" @click="usersQuery.refetch()">
+            {{ usersQuery.isFetching.value ? "重试中…" : "重新加载" }}
+          </UiButton>
+        </div>
+        <div v-else-if="users.length" class="user-list">
           <button
             v-for="user in users"
             :key="user.id"
@@ -270,32 +314,47 @@ function revokeBadge(badge: UserBadgeResponse) {
             :aria-pressed="user.id === selectedUser?.id"
             @click="selectUser(user)"
           >
-            <strong>{{ user.username }}</strong>
-            <span>{{ adminRoleLabel(user.role) }} · {{ adminStatusLabel(user.status) }}</span>
+            <UiAvatar :src="user.avatar_url" :name="user.username" :role="user.role" :level="user.level" size="sm" />
+            <span class="user-list__identity">
+              <strong>{{ user.username }}</strong>
+              <small>{{ user.email }}</small>
+            </span>
+            <span class="user-list__meta">
+              <em>{{ adminRoleLabel(user.role) }}</em>
+              <i :class="`is-${accountStatusClass(user.status)}`">{{ adminStatusLabel(user.status) }}</i>
+            </span>
           </button>
         </div>
-        <p v-else class="panel-state">没有符合筛选条件的用户。</p>
-      </UiCard>
+        <div v-else class="panel-state">
+          <strong>没有符合条件的用户</strong>
+          <span>尝试清空搜索词或切换角色、状态筛选。</span>
+        </div>
+      </aside>
 
-      <UiCard v-if="selectedUser" class="user-detail-card">
-        <button
-          ref="detailBackButtonElement"
-          type="button"
-          class="user-detail-back"
-          @click="showUserList"
-        >
-          <span aria-hidden="true">←</span>
+      <article v-if="selectedUser" class="user-detail-pane">
+        <button ref="detailBackButtonElement" type="button" class="user-detail-back" @click="showUserList">
+          <ArrowLeftOutlined aria-hidden="true" />
           返回用户列表
         </button>
 
         <header class="user-detail-header">
-          <div>
-            <h2>{{ selectedUser.username }}</h2>
-            <p>
-              {{ selectedUser.email }} · {{ adminRoleLabel(selectedUser.role) }} ·
-              {{ adminStatusLabel(selectedUser.status) }}
-            </p>
+          <UiAvatar
+            :src="selectedUser.avatar_url"
+            :name="selectedUser.username"
+            :role="selectedUser.role"
+            :level="selectedUser.level"
+            size="lg"
+          />
+          <div class="user-detail-header__identity">
+            <div>
+              <h2>{{ selectedUser.username }}</h2>
+              <span :class="`account-status is-${accountStatusClass(selectedUser.status)}`">
+                {{ adminStatusLabel(selectedUser.status) }}
+              </span>
+            </div>
+            <p>{{ selectedUser.email }}</p>
           </div>
+          <span class="role-pill"><SafetyCertificateOutlined aria-hidden="true" />{{ adminRoleLabel(selectedUser.role) }}</span>
         </header>
 
         <dl class="user-facts">
@@ -313,7 +372,11 @@ function revokeBadge(badge: UserBadgeResponse) {
           </div>
           <div>
             <dt>可用积分</dt>
-            <dd>{{ selectedUser.points_balance }} 分 · 等级进度 {{ selectedUser.level_progress_percent }}%</dd>
+            <dd>{{ selectedUser.points_balance }} 分</dd>
+          </div>
+          <div>
+            <dt>升级进度</dt>
+            <dd>{{ selectedUser.level_progress_percent }}% · 还需 {{ selectedUser.experience_to_next_level }}</dd>
           </div>
           <div>
             <dt>最后活跃</dt>
@@ -323,8 +386,10 @@ function revokeBadge(badge: UserBadgeResponse) {
 
         <section class="user-editor-section" aria-labelledby="account-permissions-title">
           <header class="form-section-heading">
-            <h3 id="account-permissions-title">账号权限</h3>
-            <p>设置用户的角色、账号状态与等级。</p>
+            <div>
+              <h3 id="account-permissions-title">账号权限</h3>
+              <p>角色决定管理范围，状态用于限制账号访问。</p>
+            </div>
           </header>
           <div class="editor-fields editor-fields--account">
             <label>
@@ -346,23 +411,25 @@ function revokeBadge(badge: UserBadgeResponse) {
             </label>
             <label>
               <span>等级</span>
-              <input v-model.number="userDraft.level" type="number" min="0" max="5" />
+              <input v-model.number="userDraft.level" type="number" min="0" max="5" step="1" />
             </label>
           </div>
         </section>
 
         <section class="user-editor-section" aria-labelledby="growth-adjustment-title">
           <header class="form-section-heading">
-            <h3 id="growth-adjustment-title">积分与成长</h3>
-            <p>输入本次增减值；保存后由后端重新计算余额和等级。</p>
+            <div>
+              <h3 id="growth-adjustment-title">积分与成长</h3>
+              <p>仅提交本次增减值；余额、成长值和等级均由后端重新计算。</p>
+            </div>
           </header>
           <div class="editor-fields editor-fields--growth">
             <label>
-              <span>积分调整</span>
+              <span>积分增减</span>
               <input v-model.number="userDraft.pointsDelta" type="number" min="-100000" max="100000" />
             </label>
             <label>
-              <span>成长值调整</span>
+              <span>成长值增减</span>
               <input v-model.number="userDraft.experienceDelta" type="number" min="-100000" max="100000" />
             </label>
             <label class="editor-field--wide">
@@ -371,20 +438,29 @@ function revokeBadge(badge: UserBadgeResponse) {
                 v-model="userDraft.adjustmentReason"
                 type="text"
                 maxlength="500"
-                placeholder="人工调整原因（可选）"
+                placeholder="记录人工调整原因（可选）"
               />
             </label>
           </div>
+          <div class="user-detail-actions">
+            <p v-if="updateUserMutation.isSuccess.value" class="mutation-message is-success" role="status">
+              <CheckCircleOutlined aria-hidden="true" /> 用户信息已保存，最新余额以服务端返回为准。
+            </p>
+            <p v-else-if="updateUserMutation.isError.value" class="mutation-message is-error" role="alert">
+              {{ updateUserMutation.error.value?.message || "保存失败，请稍后重试。" }}
+            </p>
+            <UiButton :disabled="updateUserMutation.isPending.value" @click="saveUser">
+              {{ updateUserMutation.isPending.value ? "保存中…" : "保存用户变更" }}
+            </UiButton>
+          </div>
         </section>
 
-        <div class="user-detail-actions">
-          <UiButton :disabled="updateUserMutation.isPending.value" @click="saveUser">保存用户变更</UiButton>
-        </div>
-
-        <section class="user-badge-section" aria-labelledby="badge-management-title">
+        <section class="user-editor-section user-badge-section" aria-labelledby="badge-management-title">
           <header class="form-section-heading">
-            <h3 id="badge-management-title">徽章管理</h3>
-            <p>{{ selectedUser.badges.length }} 个有效徽章</p>
+            <div>
+              <h3 id="badge-management-title">徽章管理</h3>
+              <p>{{ selectedUser.badges.length }} 个有效徽章</p>
+            </div>
           </header>
           <div v-if="selectedUser.badges.length" class="user-badge-list">
             <span v-for="badge in selectedUser.badges" :key="badge.id" class="user-badge-chip">
@@ -395,11 +471,11 @@ function revokeBadge(badge: UserBadgeResponse) {
               </button>
             </span>
           </div>
-          <p v-else class="growth-adjust-note">暂无有效徽章。</p>
+          <p v-else class="panel-state is-inline">该用户暂无有效徽章。</p>
           <div class="badge-admin-form">
             <label>
               <span>授予徽章</span>
-              <select v-model="badgeDraft.badgeSlug">
+              <select v-model="badgeDraft.badgeSlug" :disabled="badgesQuery.isLoading.value">
                 <option v-for="badge in badgeCatalog" :key="badge.slug" :value="badge.slug">
                   {{ badge.icon }} {{ badge.name }}（TL{{ badge.trust_level_required }}）
                 </option>
@@ -421,11 +497,21 @@ function revokeBadge(badge: UserBadgeResponse) {
               {{ grantBadgeMutation.isPending.value ? "授予中…" : "授予徽章" }}
             </UiButton>
           </div>
-          <p v-if="badgesQuery.isError.value" class="panel-state panel-state--error" role="alert">
-            徽章目录加载失败。
+          <p v-if="badgesQuery.isError.value" class="mutation-message is-error" role="alert">徽章目录加载失败。</p>
+          <p v-else-if="grantBadgeMutation.isError.value" class="mutation-message is-error" role="alert">
+            {{ grantBadgeMutation.error.value?.message || "授予徽章失败。" }}
+          </p>
+          <p v-else-if="revokeBadgeMutation.isError.value" class="mutation-message is-error" role="alert">
+            {{ revokeBadgeMutation.error.value?.message || "撤销徽章失败。" }}
           </p>
         </section>
-      </UiCard>
+      </article>
+
+      <div v-else class="user-detail-empty">
+        <TeamOutlined aria-hidden="true" />
+        <strong>选择一位用户查看详情</strong>
+        <span>用户的权限、成长数据与徽章将在这里显示。</span>
+      </div>
     </div>
   </section>
 </template>

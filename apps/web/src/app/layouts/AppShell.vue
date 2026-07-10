@@ -33,6 +33,12 @@ const NotificationBell = defineAsyncComponent(() =>
   runWhenBrowserIdle(2_000).then(() => import("@/features/notifications/components/NotificationBell.vue")),
 );
 
+// Keeps the administration shell out of the public-site bundle until an admin route is opened.
+// No parameters; return value is the lazily loaded shell component and the side effect is chunk loading on demand.
+const AdminConsoleShell = defineAsyncComponent(() =>
+  import("@/features/admin/components/AdminConsoleShell.vue"),
+);
+
 // Loads optional plugin navigation only when the visible desktop bar or opened mobile menu needs it.
 // Key parameters: none. Return value is the PluginSlot component; side effect is deferred chunk loading.
 const PluginSlot = defineAsyncComponent(() => import("@/features/plugins/components/PluginSlot.vue"));
@@ -59,6 +65,9 @@ const IDLE_PREFETCH_TIMEOUT_MS = 4_000;
 const currentUser = computed(() => currentUserQuery.data.value);
 // Auth route already renders the login/register form, so the guest CTA is hidden there to avoid duplicate entry points.
 const isAuthRoute = computed(() => route.name === "auth");
+// Marks protected administration pages so they render in the dedicated operations-console shell.
+// No parameters; return value follows the current route and has no side effects.
+const isAdminConsoleRoute = computed(() => route.path === "/admin" || route.path.startsWith("/admin/"));
 const isMobileFullscreenRoute = computed(() => route.name === "admin-moderation");
 // isProfileScreenRoute 用途：标记用户资料/个人中心路由，供移动端切换为设计稿式页面外壳；无参数，返回布尔值且无副作用。
 const isProfileScreenRoute = computed(() =>
@@ -360,7 +369,17 @@ function isNavItemActive(item: NavItem) {
 
 
 <template>
+  <AdminConsoleShell v-if="isAdminConsoleRoute">
+    <Transition name="route-progress">
+      <div v-if="isRouteNavigating" class="route-progress" aria-hidden="true">
+        <span />
+      </div>
+    </Transition>
+    <slot />
+  </AdminConsoleShell>
+
   <div
+    v-else
     class="app-shell"
     :class="{
       'is-route-navigating': isRouteNavigating,

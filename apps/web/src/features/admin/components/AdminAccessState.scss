@@ -1,0 +1,80 @@
+.admin-access-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  min-height: 12rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 2rem;
+  color: var(--text);
+  background: var(--bg-surface);
+}
+
+.admin-access-state__icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 0.625rem;
+  color: var(--primary);
+  background: var(--theme-soft-bg);
+  font-size: 1.15rem;
+}
+
+.admin-access-state.is-error .admin-access-state__icon,
+.admin-access-state.is-forbidden .admin-access-state__icon {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.admin-access-state h1,
+.admin-access-state p {
+  margin: 0;
+}
+
+.admin-access-state h1 {
+  color: var(--title);
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.admin-access-state p {
+  margin-top: 0.35rem;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.admin-access-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-top: 1.25rem;
+}
+
+.admin-access-state__link {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  border-radius: 0.25rem;
+  padding: 0 0.875rem;
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.admin-access-state__link:hover,
+.admin-access-state__link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  background: var(--btn-primary-bg-hover);
+}
+
+@media (max-width: 620px) {
+  .admin-access-state {
+    min-height: 10rem;
+    padding: 1.25rem;
+  }
+}

@@ -7,7 +7,7 @@
 - Trigger: wiring admin-only operational UI, public site setting consumption, user management,
   system health, mail logs, or audit logs.
 - Applies to `features/admin/`, `pages/admin/AdminDashboardPage.vue`, router,
-  `AppShell.vue`, and admin navigation.
+  `AppShell.vue`, `features/admin/components/AdminConsoleShell.vue`, and admin navigation.
 
 ### 2. Signatures
 
@@ -33,6 +33,7 @@ Routes:
 - `/admin/analytics` → access analytics.
 - `/admin/users` → user management.
 - `/admin/moderation` → existing moderation queue.
+- `/admin/system` → system health, task queue, mail logs, and audit records.
 
 ### 3. Contracts
 
@@ -43,8 +44,14 @@ Routes:
   new product decision for a specific setting workflow.
 - Admin routes must show explicit login/permission states. Do not render an empty
   dashboard when the backend returns 403.
+- All `/admin*` routes render inside the dedicated `AdminConsoleShell`; they must not
+  reuse the public search/publish/profile topbar. Desktop uses the operations sidebar,
+  while compact layouts expose the same authorized routes through the drawer and bottom navigation.
+- The console shell consumes runtime `site_title` and `brand_logo_url`, retains
+  `/logo-lines-mark.png` as the protected fallback, and keeps legacy logo values mapped
+  to that fallback.
 - Admin navigation must distinguish admin dashboard access from moderation access:
-  admins see 后台, moderators may still see 审核.
+  admins see workbench, analytics, users, moderation, and system; moderators see only moderation.
 - DTOs stay snake_case at the API boundary. UI helpers may map labels for roles,
   statuses, and setting categories.
 - Admin mutations invalidate `queryKeys.adminRoot`; public settings are refreshed
@@ -61,6 +68,8 @@ Routes:
 | No token visits `/admin` | Login-required card is shown |
 | Moderator visits `/admin` | Permission card is shown, not a fake empty dashboard |
 | Admin visits `/admin/settings` | No admin settings route exists; router falls through instead of rendering a raw settings editor |
+| Admin opens `/admin/system` from sidebar or workbench | Named route `admin-system` renders `AdminSystemPage.vue` inside the console shell |
+| Moderator opens `/admin/moderation` on compact viewport | Drawer/bottom navigation exposes only moderation and does not overlap fixed bulk actions |
 | Backend returns cache degraded in system overview | Dashboard shows degraded badge, not a hard failure |
 | User list is empty for filters | User detail is not submitted without a selected user |
 | Admin enters growth deltas | Payload uses `points_delta` / `experience_delta` and keeps backend as source of truth for recalculated level; usable points and growth value stay separate |
@@ -71,6 +80,8 @@ Routes:
   Chinese defaults if the public settings API fails.
 - Good: `/admin` links only to focused operational tools such as access statistics,
   user management, moderation, and system status.
+- Good: admin navigation and workbench both target the registered `admin-system` route;
+  system health is not embedded as an unrouteable visual-only card.
 - Base: admin opens `/admin`, sees system counters, selects a user,
   changes role/status/level or growth deltas, then confirms audit timeline updated after refetch.
 - Bad: admin page imports `apiPut` directly instead of using `features/admin/api.ts`.
@@ -103,4 +114,5 @@ Routes:
 <RouterLink :to="{ name: 'admin-analytics' }">访问统计</RouterLink>
 <RouterLink :to="{ name: 'admin-users' }">用户管理</RouterLink>
 <RouterLink :to="{ name: 'admin-moderation' }">审核台</RouterLink>
+<RouterLink :to="{ name: 'admin-system' }">系统运行</RouterLink>
 ```

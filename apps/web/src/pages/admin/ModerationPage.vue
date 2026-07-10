@@ -99,6 +99,30 @@ const flags = computed(() => queueQuery.data.value ?? []);
 const reviewables = computed(() => reviewablesQuery.data.value ?? []);
 const auditLogs = computed(() => auditQuery.data.value ?? []);
 
+// Returns the number of records in the active staff workspace. Key parameters: none.
+// Return value is the current queue/log count; side effect: none.
+const visibleQueueCount = computed(() => {
+  if (activeTab.value === "reviewables") {
+    return reviewables.value.length;
+  }
+  if (activeTab.value === "flags") {
+    return flags.value.length;
+  }
+  return auditLogs.value.length;
+});
+
+// Maps the active staff workspace to a short count label. Key parameters: none.
+// Return value is display copy only; side effect: none.
+const visibleQueueLabel = computed(() => {
+  if (activeTab.value === "reviewables") {
+    return "待审内容";
+  }
+  if (activeTab.value === "flags") {
+    return "用户举报";
+  }
+  return "审计记录";
+});
+
 const queueError = computed(() =>
   (flagsTabActive.value && queueQuery.isError.value) ||
   (reviewablesTabActive.value && reviewablesQuery.isError.value) ||
@@ -926,11 +950,15 @@ function mutationErrorMessage(error: unknown) {
   <div class="moderation-page">
     <section class="moderation-hero" aria-labelledby="moderation-title">
       <div>
-        <span class="panel-kicker">审核台</span>
+        <span class="panel-kicker">社区治理</span>
         <h1 id="moderation-title">内容审核</h1>
-        <p>这里分两件事：审核内容是否发布；查看用户举报原因，并处理被举报的主题或楼层。</p>
+        <p>按提交顺序处理待发布内容、用户举报和审计记录。</p>
       </div>
-      <RouterLink class="hero-link" to="/admin">返回后台</RouterLink>
+      <div class="moderation-hero__stat" aria-live="polite">
+        <span>{{ visibleQueueLabel }}</span>
+        <strong>{{ visibleQueueCount }}</strong>
+        <small>{{ queueError ? "当前不可用" : "当前视图" }}</small>
+      </div>
     </section>
 
     <UiCard v-if="!hasToken" class="moderation-empty">
@@ -962,13 +990,28 @@ function mutationErrorMessage(error: unknown) {
 
       <!-- Navigation Tabs -->
       <nav class="moderation-tabs" aria-label="审核台导航">
-        <button :class="{ active: activeTab === 'reviewables' }" @click="activeTab = 'reviewables'">
+        <button
+          type="button"
+          :class="{ active: activeTab === 'reviewables' }"
+          :aria-pressed="activeTab === 'reviewables'"
+          @click="activeTab = 'reviewables'"
+        >
           <EyeOutlined /> 内容发布审核
         </button>
-        <button :class="{ active: activeTab === 'flags' }" @click="activeTab = 'flags'">
+        <button
+          type="button"
+          :class="{ active: activeTab === 'flags' }"
+          :aria-pressed="activeTab === 'flags'"
+          @click="activeTab = 'flags'"
+        >
           <FlagOutlined /> 用户举报审核
         </button>
-        <button :class="{ active: activeTab === 'audit' }" @click="activeTab = 'audit'">
+        <button
+          type="button"
+          :class="{ active: activeTab === 'audit' }"
+          :aria-pressed="activeTab === 'audit'"
+          @click="activeTab = 'audit'"
+        >
           <HistoryOutlined /> 日志
         </button>
       </nav>
@@ -987,7 +1030,7 @@ function mutationErrorMessage(error: unknown) {
 
       <section class="moderation-layout" :class="{ 'moderation-layout--single': activeTab !== 'audit' }">
         <!-- Main Column -->
-        <main class="queue-column">
+        <div class="queue-column">
           <!-- Tab 1: Reviewables -->
           <div v-if="activeTab === 'reviewables'">
             <div class="reviewable-mobile-reviewbar" aria-label="内容审核状态">
@@ -995,23 +1038,25 @@ function mutationErrorMessage(error: unknown) {
                 type="button"
                 class="reviewable-mobile-reviewbar__tab"
                 :class="{ active: reviewableStatusFilter === 'pending' }"
+                :aria-pressed="reviewableStatusFilter === 'pending'"
                 @click="reviewableStatusFilter = 'pending'"
               >
                 <span>待处理</span>
                 <b>{{ reviewableStatusFilter === 'pending' ? reviewables.length : "·" }}</b>
               </button>
-              <button
-                type="button"
+              <output
                 class="reviewable-mobile-reviewbar__tab"
                 :class="{ active: bulkSelectionActive }"
+                aria-live="polite"
               >
                 <span>已选</span>
                 <b>{{ selectedReviewableCount }}</b>
-              </button>
+              </output>
               <button
                 type="button"
                 class="reviewable-mobile-reviewbar__tab"
                 :class="{ active: reviewableStatusFilter === 'approved' }"
+                :aria-pressed="reviewableStatusFilter === 'approved'"
                 @click="reviewableStatusFilter = 'approved'"
               >
                 <span>已通过</span>
@@ -1376,7 +1421,7 @@ function mutationErrorMessage(error: unknown) {
               <p v-else>暂无审计记录。</p>
             </UiCard>
           </div>
-        </main>
+        </div>
 
         <!-- Sidebar Column (User Management, quick stats) -->
         <aside v-if="activeTab === 'audit'" class="side-column" aria-label="管理工具">

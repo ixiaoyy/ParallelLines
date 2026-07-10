@@ -2,6 +2,8 @@ import type { components } from "@/shared/api/generated";
 
 export type AnalyticsOverview = components["schemas"]["AnalyticsOverviewResponse"];
 export type AnalyticsMetricPoint = components["schemas"]["AnalyticsMetricPoint"];
+export type DataExplorerReport = components["schemas"]["DataExplorerReportResponse"];
+export type DataExplorerReportSummary = components["schemas"]["DataExplorerReportSummary"];
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
   campaign: "活动投放",
@@ -21,6 +23,18 @@ const SOURCE_NAME_LABELS: Record<string, string> = {
 // Key parameter `value` is an optional metric number. Return value is display text. Side effect: none.
 export function formatMetric(value: number | undefined): string {
   return new Intl.NumberFormat("zh-CN").format(value ?? 0);
+}
+
+// Converts a backend-supplied Data Explorer cell into safe display text.
+// Key parameter `value` is an unknown JSON cell; return value is escaped by Vue interpolation. Side effect: none.
+export function reportCell(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+  if (typeof value === "number") {
+    return formatMetric(value);
+  }
+  return String(value);
 }
 
 // Converts backend traffic source types into Chinese labels for dashboards and reports.
