@@ -15,7 +15,12 @@ from app.db.base import utcnow
 from app.models.forum import Board, Post, Topic
 from app.models.moderation import AuditLog
 from app.models.user import User
-from app.schemas.forum import PollCreateRequest, PostCreateRequest, TopicCreateRequest
+from app.schemas.forum import (
+    PollCreateRequest,
+    PollVoteRequest,
+    PostCreateRequest,
+    TopicCreateRequest,
+)
 from app.services.forum import ForumService
 
 LIVING_FORUM_AUDIT_ACTION = "living_forum_topic_published"
@@ -268,6 +273,11 @@ def engagement_reply_body_for_activity(activity_type: str, topic_title: str) -> 
             "这个按钮我会留给“召唤两位角色辩论”。比起直接给答案，"
             "让两个角色各执一词更像每天能回来看的节目。"
         )
+    if activity_type == "moltbook_poll":
+        return (
+            "我先投 `失败日志`。成功案例容易端着，失败过程反而最能看出 agent"
+            "到底卡在工具、判断，还是目标本身。"
+        )
     if activity_type == "mystery":
         return (
             "我猜第三个收藏不是消失了，而是被挪进了“专注计时”这个场景里。"
@@ -301,6 +311,23 @@ def engagement_reason_for_activity(activity_type: str, interaction_mode: str) ->
     if interaction_mode == "poll":
         return "给投票节目一个首个分支立场。"
     return "给自动主题补一个可继续接话的角色回应。"
+
+
+def engagement_poll_choice_labels_for_activity(activity_type: str) -> tuple[str, ...]:
+    """Return the preferred poll option labels for one auto-engagement activity.
+
+    Key parameter `activity_type` is the planned topic kind. Return value is an
+    ordered tuple of option labels that the responder should choose; an empty
+    tuple means this activity has no automatic poll vote. Side effect: none.
+    """
+
+    if activity_type == "choice_story":
+        return ("工具",)
+    if activity_type == "absurd_poll":
+        return ("召唤两位角色辩论",)
+    if activity_type == "moltbook_poll":
+        return ("失败日志",)
+    return ()
 
 
 class LivingForumService:
@@ -621,18 +648,27 @@ class LivingForumService:
     ) -> LivingForumEngagementResult:
         """Create one planned persona reply if it has not already been written."""
 
-        existing_post_id = await self._existing_engagement_post_id(plan.seed_key)
-        if existing_post_id:
-            return LivingForumEngagementResult(
-                seed_key=plan.seed_key,
-                topic_id=plan.topic_id,
-                responder=plan.responder,
-                status="existing",
-                post_id=existing_post_id,
-            )
-
         try:
             responder = await self._ensure_persona(plan.responder)
+            topic = await self.session.get(Topic, plan.topic_id)
+            if topic is None or topic.user_id == responder.id:
+                return LivingForumEngagementResult(
+                    seed_key=plan.seed_key,
+                    topic_id=plan.topic_id,
+                    responder=plan.responder,
+                    status="skipped",
+                    reason="missing_topic_or_self_reply",
+                )
+            await self._ensure_engagement_poll_vote(topic, responder)
+            existing_post_id = await self._existing_engagement_post_id(plan.seed_key)
+            if existing_post_id:
+                return LivingForumEngagementResult(
+                    seed_key=plan.seed_key,
+                    topic_id=plan.topic_id,
+                    responder=plan.responder,
+                    status="existing",
+                    post_id=existing_post_id,
+                )
             matching_post_id = await self._matching_reply_id(plan, responder.id)
             if matching_post_id:
                 await self._record_engagement_audit(plan, matching_post_id, responder.id)
@@ -642,15 +678,6 @@ class LivingForumService:
                     responder=plan.responder,
                     status="existing",
                     post_id=matching_post_id,
-                )
-            topic = await self.session.get(Topic, plan.topic_id)
-            if topic is None or topic.user_id == responder.id:
-                return LivingForumEngagementResult(
-                    seed_key=plan.seed_key,
-                    topic_id=plan.topic_id,
-                    responder=plan.responder,
-                    status="skipped",
-                    reason="missing_topic_or_self_reply",
                 )
             post = await ForumService(self.session).reply_to_topic(
                 plan.topic_id,
@@ -716,6 +743,38 @@ class LivingForumService:
             .limit(1)
         )
         return str(post_id) if post_id else None
+
+    async def _ensure_engagement_poll_vote(self, topic: Topic, responder: User) -> None:
+        """Cast the planned persona poll vote before reply creation when needed.
+
+        Key parameters are the target `topic` and the `responder` persona user.
+        Return value is none. Side effect: may write/update one poll vote
+        through `ForumService.vote_topic_poll`, which also commits poll counts.
+        """
+
+        if topic.poll is None:
+            return
+        activity_type = self._topic_activity_type(topic)
+        option_labels = engagement_poll_choice_labels_for_activity(activity_type)
+        if not option_labels:
+            return
+        forum_service = ForumService(self.session)
+        poll = await forum_service.get_topic_poll(topic.id, current_user=responder)
+        selected_option_ids = {
+            str(option_id) for option_id in getattr(poll, "selected_option_ids", []) if option_id
+        }
+        desired_option_ids = [
+            option.id for option in poll.options if option.label in option_labels
+        ]
+        if not desired_option_ids:
+            return
+        if selected_option_ids == set(desired_option_ids):
+            return
+        await forum_service.vote_topic_poll(
+            topic.id,
+            PollVoteRequest(option_ids=desired_option_ids),
+            responder,
+        )
 
     async def _record_engagement_audit(
         self,
@@ -824,6 +883,24 @@ class LivingForumService:
         activity_type = str(data.get("activity_type") or "")
         interaction_mode = str(data.get("interaction_mode") or "")
         return engagement_reason_for_activity(activity_type, interaction_mode)
+
+    def _topic_activity_type(self, topic: Topic) -> str:
+        """Return the planned activity type for one published living-forum topic.
+
+        Key parameter `topic` is the persisted forum topic. Return value is the
+        audit-carried activity type string, or an empty string when no matching
+        living-forum audit row exists. Side effect: none beyond reading loaded
+        audit relationships.
+        """
+
+        for audit in sorted(topic.audit_logs, key=lambda item: item.created_at, reverse=True):
+            if (
+                audit.action == LIVING_FORUM_AUDIT_ACTION
+                and audit.target_type == LIVING_FORUM_AUDIT_TARGET
+                and (audit.data or {}).get("topic_id") == topic.id
+            ):
+                return str((audit.data or {}).get("activity_type") or "")
+        return ""
 
     def _main_program(self, planned_date: date) -> LivingForumTopicPlan:
         """Select one rotating main program for the given date."""

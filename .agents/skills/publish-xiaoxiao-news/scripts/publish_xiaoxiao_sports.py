@@ -8,7 +8,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from publish_xiaoxiao_news import main as publish_main
+from publish_xiaoxiao_news import load_local_publisher_env, main as publish_main
 
 
 # Read the first non-empty environment variable from the provided names.
@@ -45,19 +45,18 @@ SPORTS_DEFAULT_ARGS = [
     "manual-xiaoxiao-sports",
 ]
 
-SPORTS_PUBLIC_CREDENTIAL_ARGS = [
-    "--account",
-    first_env("PARALLELLINES_SPORTS_PUBLISH_ACCOUNT", "PARALLELLINES_PUBLISH_ACCOUNT"),
-    "--password",
-    first_env("PARALLELLINES_SPORTS_PUBLISH_PASSWORD", "PARALLELLINES_PUBLISH_PASSWORD"),
-]
-
-
 # Run the Xiaoxiao Chick sports publisher with caller-provided overrides last.
 # Key parameter `argv` is optional CLI argv. Return value: publisher exit code. Side effect: preview/publish API calls.
 def main(argv: list[str] | None = None) -> int:
+    load_local_publisher_env()
+    sports_public_credential_args = [
+        "--account",
+        first_env("PARALLELLINES_SPORTS_PUBLISH_ACCOUNT", "PARALLELLINES_PUBLISH_ACCOUNT"),
+        "--password",
+        first_env("PARALLELLINES_SPORTS_PUBLISH_PASSWORD", "PARALLELLINES_PUBLISH_PASSWORD"),
+    ]
     return publish_main(
-        [*SPORTS_DEFAULT_ARGS, *SPORTS_PUBLIC_CREDENTIAL_ARGS, *(argv if argv is not None else sys.argv[1:])]
+        [*SPORTS_DEFAULT_ARGS, *sports_public_credential_args, *(argv if argv is not None else sys.argv[1:])]
     )
 
 

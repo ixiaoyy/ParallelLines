@@ -26,6 +26,7 @@ from app.services.living_forum import (  # noqa: E402
     PERSONAS,
     LivingForumTopicPlan,
     build_living_forum_day,
+    engagement_poll_choice_labels_for_activity,
     engagement_reason_for_activity,
     engagement_reply_body_for_activity,
     engagement_responder_for_activity,
@@ -813,11 +814,67 @@ def create_public_reply(site_url: str, token: str, topic_id: str, raw_md: str) -
     return dict(response.get("data") or {})
 
 
+def public_topic_poll(site_url: str, token: str, topic_id: str) -> dict[str, Any]:
+    """Return one topic poll envelope through the authenticated public API.
+
+    Key parameters are the site URL, persona access token, and `topic_id`.
+    Return value is the decoded poll object. Side effect: one read request.
+    """
+
+    response = request_json(
+        "GET",
+        f"{site_url}/api/v1/topics/{quote(topic_id)}/poll",
+        token=token,
+        timeout=20,
+    )
+    return dict(response.get("data") or {})
+
+
+def vote_public_topic_poll(
+    site_url: str,
+    token: str,
+    topic_id: str,
+    option_ids: list[str],
+) -> dict[str, Any]:
+    """Submit one persona's poll vote through the normal public topic API.
+
+    Key parameters are the site URL, persona token, `topic_id`, and selected
+    `option_ids`. Return value is the updated poll envelope. Side effect: one
+    write request that persists/replaces the user's vote.
+    """
+
+    response = request_json(
+        "PUT",
+        f"{site_url}/api/v1/topics/{quote(topic_id)}/poll/vote",
+        token=token,
+        payload={"option_ids": option_ids},
+    )
+    return dict(response.get("data") or {})
+
+
 def public_topic_url(site_url: str, topic: dict[str, Any]) -> str:
     """Return a printable absolute URL for a topic-like API object."""
 
     share_url = str(topic.get("share_url") or "")
     return f"{site_url}{share_url}" if share_url.startswith("/") else share_url
+
+
+def desired_poll_option_ids(plan: LivingForumTopicPlan, poll: dict[str, Any]) -> list[str]:
+    """Return the planned poll option ids for one living-forum poll topic.
+
+    Key parameters are the topic `plan` and authenticated poll payload. Return
+    value is the ordered option-id list the responder should choose. Side
+    effect: none.
+    """
+
+    desired_labels = engagement_poll_choice_labels_for_activity(plan.activity_type)
+    if not desired_labels:
+        return []
+    return [
+        str(option.get("id") or "")
+        for option in poll.get("options") or []
+        if str(option.get("label") or "") in desired_labels and str(option.get("id") or "")
+    ]
 
 
 def run_public_api_mode(
@@ -940,6 +997,29 @@ def run_public_replies(
         if not topic_id:
             print(f"- reply pending: topic not available yet -> {plan.seed_key}")
             continue
+        if plan.interaction_mode == "poll":
+            poll = public_topic_poll(site_url, token, topic_id)
+            option_ids = desired_poll_option_ids(plan, poll)
+            selected_option_ids = {
+                str(option_id) for option_id in poll.get("selected_option_ids") or [] if option_id
+            }
+            if option_ids:
+                if selected_option_ids == set(option_ids):
+                    print(
+                        f"- vote existing: as {credential.username} "
+                        f"for {responder} -> topic {topic_id}"
+                    )
+                elif not args.run:
+                    print(
+                        f"- vote would create: as {credential.username} "
+                        f"for {responder} -> topic {topic_id}"
+                    )
+                else:
+                    vote_public_topic_poll(site_url, token, topic_id, option_ids)
+                    print(
+                        f"- vote created: as {credential.username} "
+                        f"for {responder} -> topic {topic_id}"
+                    )
         existing = find_matching_public_reply(
             site_url,
             topic_id,
