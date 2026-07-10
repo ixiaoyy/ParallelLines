@@ -447,7 +447,8 @@ function formatChartTooltip(params: unknown): string {
   <UiCard class="admin-analytics-panel">
     <section class="analytics-hero" aria-labelledby="analytics-title">
       <div class="analytics-hero__copy">
-        <h2 id="analytics-title">访问看板</h2>
+        <h1 id="analytics-title">访问统计</h1>
+        <p>查看所选日期范围内的访问表现与真实用户增长。</p>
       </div>
       <div class="analytics-hero__aside">
         <span class="range-chip">{{ rangeDayCount || "—" }} 天</span>
@@ -492,51 +493,10 @@ function formatChartTooltip(params: unknown): string {
       报表暂时不可用，请确认当前账号具备管理员权限。
     </div>
     <template v-else-if="overview">
-      <section class="metric-grid" aria-label="访问核心指标">
-        <article v-for="metric in summaryMetrics" :key="metric.id" :class="`metric-card metric-card--${metric.tone}`">
-          <span>{{ metric.label }}</span>
-          <strong>{{ metric.value }}</strong>
-        </article>
-      </section>
-
-      <section class="analytics-main-grid" aria-label="访问趋势与内容榜单">
-        <article class="trend-panel">
-          <div class="section-heading">
-            <div>
-              <strong>站点访问趋势</strong>
-              <span>{{ overview.start_date }} → {{ overview.end_date }}</span>
-            </div>
-            <small v-if="latestPointLabel">最新 {{ latestPointLabel }}</small>
-          </div>
-          <div ref="trendChartElement" class="trend-chart" role="img" :aria-label="trendChartLabel"></div>
-        </article>
-
-        <article class="top-topics-panel">
-          <div class="section-heading">
-            <div>
-              <strong>来源渠道</strong>
-            </div>
-          </div>
-          <ol v-if="trafficSources.length" class="topic-rank-list">
-            <li
-              v-for="source in trafficSources"
-              :key="`${source.source_type}:${source.source_name}`"
-            >
-              <span class="rank-title">{{ sourceNameLabel(source.source_name) }}</span>
-              <span class="rank-board">
-                {{ sourceTypeLabel(source.source_type) }} · {{ formatMetric(source.unique_visitors) }} 位访客
-              </span>
-              <strong>{{ formatMetric(source.visit_count) }} 次访问</strong>
-            </li>
-          </ol>
-          <p v-else class="analytics-state">当前范围内暂无访问来源。</p>
-        </article>
-      </section>
-
       <section class="user-growth-panel" aria-labelledby="user-growth-title">
         <div class="section-heading">
           <div>
-            <strong id="user-growth-title">用户增长</strong>
+            <h2 id="user-growth-title">用户增长看板</h2>
             <span>{{ overview.start_date }} → {{ overview.end_date }} · 不含马甲账号</span>
           </div>
         </div>
@@ -562,10 +522,51 @@ function formatChartTooltip(params: unknown): string {
         </div>
       </section>
 
+      <section class="metric-grid" aria-label="访问核心指标">
+        <article v-for="metric in summaryMetrics" :key="metric.id" :class="`metric-card metric-card--${metric.tone}`">
+          <span>{{ metric.label }}</span>
+          <strong>{{ metric.value }}</strong>
+        </article>
+      </section>
+
+      <section class="analytics-main-grid" aria-label="访问趋势与内容榜单">
+        <article class="trend-panel">
+          <div class="section-heading">
+            <div>
+              <h2>站点访问趋势</h2>
+              <span>{{ overview.start_date }} → {{ overview.end_date }}</span>
+            </div>
+            <small v-if="latestPointLabel">最新 {{ latestPointLabel }}</small>
+          </div>
+          <div ref="trendChartElement" class="trend-chart" role="img" :aria-label="trendChartLabel"></div>
+        </article>
+
+        <article class="top-topics-panel">
+          <div class="section-heading">
+            <div>
+              <h2>来源渠道</h2>
+            </div>
+          </div>
+          <ol v-if="trafficSources.length" class="topic-rank-list">
+            <li
+              v-for="source in trafficSources"
+              :key="`${source.source_type}:${source.source_name}`"
+            >
+              <span class="rank-title">{{ sourceNameLabel(source.source_name) }}</span>
+              <span class="rank-board">
+                {{ sourceTypeLabel(source.source_type) }} · {{ formatMetric(source.unique_visitors) }} 位访客
+              </span>
+              <strong>{{ formatMetric(source.visit_count) }} 次访问</strong>
+            </li>
+          </ol>
+          <p v-else class="analytics-state">当前范围内暂无访问来源。</p>
+        </article>
+      </section>
+
       <section class="analytics-list-grid" aria-label="入口页统计">
         <article>
           <div class="section-heading">
-            <strong>入口页</strong>
+            <h2>入口页</h2>
           </div>
           <ol v-if="entryPages.length">
             <li v-for="page in entryPages" :key="page.path">

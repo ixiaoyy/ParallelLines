@@ -35,8 +35,8 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
       <section class="admin-shortcuts" aria-label="后台功能入口">
         <RouterLink class="admin-shortcut" :to="{ name: 'admin-analytics' }">
           <BarChartOutlined />
-          <strong>访问统计</strong>
-          <span>访问量、访客、来源和入口页</span>
+          <strong>访问与用户增长</strong>
+          <span>访问量、访客、真实用户增长、来源和入口页</span>
         </RouterLink>
         <RouterLink class="admin-shortcut" :to="{ name: 'admin-users' }">
           <UserOutlined />
