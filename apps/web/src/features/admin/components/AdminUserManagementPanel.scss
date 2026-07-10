@@ -1,6 +1,6 @@
 .users-panel {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--admin-page-section-gap, 2.75rem);
   min-width: 0;
   color: var(--text);
   scroll-margin-top: 5rem;
@@ -12,8 +12,7 @@
   justify-content: space-between;
   gap: 1rem;
   min-width: 0;
-  padding: 0.25rem 0 1.25rem;
-  border-bottom: 1px solid var(--border);
+  padding: 0.25rem 0 0;
 }
 
 .users-panel__header > div {
@@ -71,10 +70,10 @@
   grid-template-columns: minmax(15rem, 1fr) 11rem 11rem;
   gap: 0.75rem;
   min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: 0.625rem;
-  padding: 0.875rem;
-  background: var(--bg-subtle);
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
 }
 
 .filter-field,
@@ -159,20 +158,21 @@
 .user-management-layout {
   display: grid;
   grid-template-columns: minmax(18rem, 21rem) minmax(0, 1fr);
+  gap: 3rem;
   min-width: 0;
-  min-height: 42rem;
+  min-height: 0;
 }
 
 .user-list-pane {
   min-width: 0;
-  padding-right: 1.25rem;
-  border-right: 1px solid var(--border);
+  padding-right: 0;
+  border-right: 0;
 }
 
 .user-detail-pane,
 .user-detail-empty {
   min-width: 0;
-  padding-left: 1.75rem;
+  padding-left: 0;
 }
 
 .pane-heading {
@@ -180,9 +180,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  min-height: 3.75rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border);
+  min-height: 0;
+  padding-bottom: 1rem;
 }
 
 .pane-heading h2 {
@@ -203,9 +202,8 @@
 }
 
 .user-list {
-  max-height: 44rem;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
+  max-height: none;
+  overflow: visible;
 }
 
 .user-list button {
@@ -334,8 +332,7 @@
   align-items: center;
   gap: 0.875rem;
   min-height: 5.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
+  padding-bottom: 1.5rem;
 }
 
 .user-detail-header__identity {
@@ -388,14 +385,14 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 0;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--border);
+  gap: 1rem 1.5rem;
+  padding: 0 0 1.5rem;
 }
 
 .user-facts > div {
   min-width: 0;
-  padding: 0.25rem 1rem;
-  border-right: 1px solid var(--border);
+  padding: 0.25rem 0;
+  border-right: 0;
 }
 
 .user-facts > div:nth-child(3n + 1) {
@@ -407,7 +404,7 @@
 }
 
 .user-facts > div:nth-child(n + 4) {
-  margin-top: 1rem;
+  margin-top: 0;
 }
 
 .user-facts dt {
@@ -428,8 +425,8 @@
   grid-template-columns: minmax(10rem, 0.28fr) minmax(0, 1fr);
   gap: 1.5rem;
   min-width: 0;
-  padding: 1.5rem 0;
-  border-bottom: 1px solid var(--border);
+  padding: 1.5rem 0 0;
+  border-bottom: 0;
 }
 
 .form-section-heading h3 {
@@ -640,7 +637,15 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1080px) {
+  .user-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filter-field--search {
+    grid-column: 1 / -1;
+  }
+
   .user-management-layout {
     display: block;
     min-height: 0;
@@ -676,13 +681,13 @@
 
 @media (max-width: 680px) {
   .users-panel {
-    gap: 1rem;
+    gap: 2.25rem;
   }
 
   .users-panel__header {
     display: grid;
     gap: 0.75rem;
-    padding-inline: 0.5rem;
+    padding-inline: 0;
   }
 
   .users-panel__header h1 {
@@ -695,9 +700,9 @@
 
   .user-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    border-inline: 0;
+    border: 0;
     border-radius: 0;
-    padding-inline: 0.5rem;
+    padding: 0;
   }
 
   .filter-field--search {
@@ -706,7 +711,7 @@
 
   .user-list-pane,
   .user-detail-pane {
-    padding-inline: 0.5rem;
+    padding-inline: 0;
   }
 
   .user-detail-header {
@@ -726,8 +731,8 @@
   .user-facts > div:nth-child(3n + 1),
   .user-facts > div:nth-child(3n) {
     margin-top: 0;
-    padding: 0.5rem 0.75rem;
-    border-right: 1px solid var(--border);
+    padding: 0.5rem 0;
+    border-right: 0;
   }
 
   .user-facts > div:nth-child(2n + 1) {

@@ -1126,7 +1126,7 @@ function mutationErrorMessage(error: unknown) {
                 </button>
               </div>
 
-              <ol class="reviewable-list">
+              <ol class="reviewable-list" :class="{ 'has-bulk-actions': bulkSelectionActive }">
                 <li
                   v-for="rev in reviewables"
                   :key="rev.id"

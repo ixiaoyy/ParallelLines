@@ -1,6 +1,6 @@
 .system-panel {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--admin-page-section-gap, 2.75rem);
   min-width: 0;
   color: var(--text);
 }
@@ -11,8 +11,7 @@
   justify-content: space-between;
   gap: 1.25rem;
   min-width: 0;
-  padding: 0.25rem 0 1.25rem;
-  border-bottom: 1px solid var(--border);
+  padding: 0.25rem 0 0;
 }
 
 .system-panel__header > div {
@@ -88,8 +87,13 @@
   align-items: center;
   gap: 0.875rem;
   min-height: 5.25rem;
-  padding: 0.875rem 0;
-  border-bottom: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem 1.125rem;
+  background: color-mix(in srgb, var(--bg-subtle) 72%, var(--bg-surface));
+}
+
+.system-overall-status.has-issues {
+  background: color-mix(in srgb, var(--coral-soft) 58%, var(--bg-surface));
 }
 
 .system-overall-status__signal {
@@ -131,18 +135,17 @@
 .system-stat-strip {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1.5rem 2rem;
   min-width: 0;
-  border-block: 1px solid var(--border);
 }
 
 .system-stat-strip > div {
   display: grid;
   gap: 0.3rem;
   min-width: 0;
-  min-height: 5.25rem;
+  min-height: 4.5rem;
   align-content: center;
-  padding: 0.75rem 1rem;
-  border-right: 1px solid var(--border);
+  padding: 0.5rem 0;
 }
 
 .system-stat-strip > div:last-child {
@@ -169,12 +172,11 @@
 
 .system-section__header {
   display: flex;
-  min-height: 3.75rem;
+  min-height: 0;
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
-  padding-bottom: 0.875rem;
-  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
 }
 
 .system-section__header h2 {
@@ -194,6 +196,7 @@
 .system-service-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 2.5rem;
 }
 
 .system-service-row {
@@ -203,16 +206,16 @@
   gap: 0.75rem;
   min-width: 0;
   min-height: 5rem;
-  padding: 0.75rem 1.25rem 0.75rem 0;
-  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
 }
 
 .system-service-row:nth-child(odd) {
-  border-right: 1px solid var(--border);
+  border-right: 0;
 }
 
 .system-service-row:nth-child(even) {
-  padding-left: 1.25rem;
+  padding-left: 0;
 }
 
 .system-service-row__icon {
@@ -315,7 +318,7 @@
   gap: 0;
   align-content: start;
   margin: 0;
-  border-top: 1px solid var(--border);
+  border-top: 0;
 }
 
 .system-queue-overview dl > div {
@@ -411,13 +414,13 @@
 .system-log-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2rem;
+  gap: 3.5rem;
   min-width: 0;
 }
 
 .system-log-grid > .system-section + .system-section {
-  padding-left: 2rem;
-  border-left: 1px solid var(--border);
+  padding-left: 0;
+  border-left: 0;
 }
 
 .system-log-list li {
@@ -521,7 +524,7 @@
   }
 
   .system-stat-strip > div:nth-child(n + 4) {
-    border-top: 1px solid var(--border);
+    border-top: 0;
   }
 
   .system-queue-overview {
@@ -543,26 +546,26 @@
   }
 
   .system-log-grid {
-    gap: 1.5rem;
+    gap: 2.5rem;
   }
 
   .system-log-grid > .system-section + .system-section {
-    padding-top: 1.5rem;
+    padding-top: 0;
     padding-left: 0;
-    border-top: 1px solid var(--border);
+    border-top: 0;
     border-left: 0;
   }
 }
 
 @media (max-width: 680px) {
   .system-panel {
-    gap: 1rem;
+    gap: 2.25rem;
   }
 
   .system-panel__header {
     display: grid;
     gap: 0.875rem;
-    padding-inline: 0.5rem;
+    padding-inline: 0;
   }
 
   .system-panel__header h1 {
@@ -576,7 +579,7 @@
   .system-overall-status,
   .system-section,
   .system-log-grid {
-    margin-inline: 0.5rem;
+    margin-inline: 0;
   }
 
   .system-overall-status {
@@ -589,12 +592,12 @@
 
   .system-stat-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem 1.5rem;
   }
 
   .system-stat-strip > div,
   .system-stat-strip > div:nth-child(3) {
-    border-top: 1px solid var(--border);
-    border-right: 1px solid var(--border);
+    border: 0;
   }
 
   .system-stat-strip > div:nth-child(-n + 2) {

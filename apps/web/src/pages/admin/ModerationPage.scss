@@ -1,9 +1,9 @@
 .moderation-page {
   display: grid;
-  gap: 0;
+  gap: 1.5rem;
   min-width: 0;
   color: var(--text);
-  background: var(--bg-surface);
+  background: transparent;
 }
 
 .moderation-hero {
@@ -11,8 +11,8 @@
   justify-content: space-between;
   gap: 2rem;
   align-items: flex-start;
-  border-bottom: 1px solid var(--border);
-  padding: 1.9rem 0 1.35rem;
+  border-bottom: 0;
+  padding: 0.25rem 0 0.5rem;
   background: transparent;
 }
 
@@ -47,8 +47,8 @@
   align-items: baseline;
   gap: 0.32rem 0.75rem;
   min-width: 9.5rem;
-  border-left: 1px solid var(--border);
-  padding: 0.35rem 0 0 1.35rem;
+  border-left: 0;
+  padding: 0.35rem 0 0;
 }
 
 .moderation-hero__stat span,
@@ -108,9 +108,9 @@
   justify-content: space-between;
   gap: 1rem;
   align-items: center;
-  min-height: 4.4rem;
-  border-bottom: 1px solid var(--border);
-  padding: 0.75rem 0;
+  min-height: 0;
+  border-bottom: 0;
+  padding: 0.5rem 0 1rem;
 }
 
 .section-toolbar h2,
@@ -145,7 +145,7 @@
 
 .flag-list {
   display: grid;
-  gap: 0;
+  gap: 0.75rem;
 }
 
 .flag-card,
@@ -159,7 +159,7 @@
 
 .flag-card {
   border: 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
   border-radius: 0;
   background: var(--bg-surface);
   box-shadow: none;
@@ -311,7 +311,7 @@
   gap: 1.75rem;
   min-height: 3.65rem;
   align-items: stretch;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
   padding: 0;
   margin: 0;
 
@@ -345,11 +345,13 @@
 
 .moderation-feedback {
   display: flex;
+  width: fit-content;
+  max-width: 100%;
   align-items: center;
   gap: 0.55rem;
-  border: 1px solid var(--border);
-  border-radius: 0.35rem;
-  padding: 0.7rem 0.85rem;
+  border: 0;
+  border-radius: 0;
+  padding: 0.25rem 0;
   color: var(--text);
   background: var(--bg-surface);
   box-shadow: none;
@@ -367,17 +369,22 @@
 }
 
 .moderation-feedback--working {
-  border-color: var(--btn-primary-border);
-  background: var(--theme-soft-bg);
+  border-color: transparent;
+  background: transparent;
 }
 
 .moderation-feedback--success {
-  border-color: color-mix(in srgb, var(--accent-geek) 28%, transparent);
-  background: color-mix(in srgb, var(--accent-geek) 8%, transparent);
+  border-color: transparent;
+  background: transparent;
 }
 
 .moderation-feedback--error {
+  width: 100%;
   border-color: color-mix(in srgb, var(--danger) 28%, transparent);
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 0.5rem;
+  padding: 0.75rem 0.875rem;
   background: color-mix(in srgb, var(--danger) 8%, transparent);
 }
 
@@ -406,12 +413,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0;
   margin-bottom: 0;
   background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-right: 0;
-  border-left: 0;
+  border: 0;
   border-radius: 0;
   font-size: 0.88rem;
   color: var(--text);
@@ -450,10 +455,14 @@
 
 .reviewable-list {
   display: grid;
-  gap: 0;
+  gap: 0.25rem;
   margin: 0;
-  padding: 0 0 5.75rem;
+  padding: 0;
   list-style: none;
+}
+
+.reviewable-list.has-bulk-actions {
+  padding-bottom: 5.75rem;
 }
 
 .reviewable-list-item {
@@ -463,8 +472,8 @@
   gap: 0.9rem;
   align-items: center;
   border: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
+  border-bottom: 0;
+  border-radius: 0.5rem;
   padding: 1rem 1.1rem;
   background: var(--bg-surface);
   box-shadow: none;
@@ -667,7 +676,7 @@
     bottom: calc(4.75rem + env(safe-area-inset-bottom));
   }
 
-  .reviewable-list {
+  .reviewable-list.has-bulk-actions {
     padding-bottom: calc(5.7rem + env(safe-area-inset-bottom));
   }
 }
@@ -675,7 +684,7 @@
 @media (max-width: 680px) {
   .moderation-page {
     padding-bottom: 0;
-    background: var(--bg-surface);
+    background: transparent;
   }
 
   .reviewable-mobile-appbar {
@@ -685,12 +694,12 @@
   .moderation-hero {
     display: flex;
     gap: 1rem;
-    padding: 1.2rem 0 1rem;
+    padding: 0.25rem 0 0;
   }
 
   .moderation-hero__stat {
     min-width: auto;
-    padding-left: 0.9rem;
+    padding-left: 0;
   }
 
   .moderation-tabs {
@@ -707,10 +716,15 @@
   }
 
   .moderation-feedback {
-    margin: 0.6rem 0.72rem;
-    border-radius: 0.55rem;
-    padding: 0.56rem 0.64rem;
+    margin: 0;
+    border-radius: 0;
+    padding: 0.25rem 0;
     box-shadow: none;
+  }
+
+  .moderation-feedback--error {
+    border-radius: 0.5rem;
+    padding: 0.75rem 0.875rem;
   }
 
   .moderation-layout,
@@ -888,7 +902,11 @@
 
   .reviewable-list {
     gap: 0.66rem;
-    padding: 0 0.78rem calc(5.7rem + env(safe-area-inset-bottom));
+    padding: 0 0.25rem;
+  }
+
+  .reviewable-list.has-bulk-actions {
+    padding-bottom: calc(5.7rem + env(safe-area-inset-bottom));
   }
 
   .reviewable-list-item {

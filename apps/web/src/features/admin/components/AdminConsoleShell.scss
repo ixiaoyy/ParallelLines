@@ -8,6 +8,8 @@
   --admin-border: var(--border);
   --admin-surface: var(--bg-surface);
   --admin-canvas: var(--bg-app);
+  --admin-page-max-width: 96rem;
+  --admin-page-section-gap: 2.75rem;
   min-height: 100dvh;
   color: var(--admin-text);
   background: var(--admin-canvas);
@@ -22,7 +24,7 @@
   min-height: 100dvh;
   flex-direction: column;
   overflow-y: auto;
-  border-right: 1px solid var(--admin-border);
+  border-right: 1px solid color-mix(in srgb, var(--admin-border) 72%, transparent);
   background: var(--admin-surface);
 }
 
@@ -208,6 +210,7 @@
   min-width: 0;
   min-height: 100dvh;
   margin-left: var(--admin-sidebar-width);
+  background: var(--admin-surface);
 }
 
 .admin-console-shell__topbar {
@@ -293,8 +296,11 @@
 }
 
 .admin-console-shell__content {
+  box-sizing: border-box;
+  width: min(100%, var(--admin-page-max-width));
   min-width: 0;
-  padding: 1.5rem 1.75rem 3rem;
+  margin-inline: auto;
+  padding: 2rem 3rem 5rem;
 }
 
 .admin-console-shell__bottom-nav {
@@ -419,7 +425,8 @@
   }
 
   .admin-console-shell__content {
-    padding: 1rem 0.8rem 1.75rem;
+    width: 100%;
+    padding: 1.25rem 1rem 2.5rem;
   }
 
   .admin-console-shell__bottom-nav {

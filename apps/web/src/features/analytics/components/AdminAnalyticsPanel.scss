@@ -2,7 +2,7 @@
   --analytics-muted: color-mix(in srgb, var(--text) 72%, var(--muted));
   display: grid;
   min-width: 0;
-  background: var(--bg-surface);
+  background: transparent;
 }
 
 .analytics-page-header,
@@ -19,9 +19,8 @@
 
 .analytics-page-header {
   align-items: flex-start;
-  min-height: 5.5rem;
-  border-bottom: 1px solid var(--border);
-  padding: 0.15rem 0 1.35rem;
+  min-height: 0;
+  padding: 0.25rem 0 2.25rem;
 }
 
 .analytics-page-header > div:first-child {
@@ -64,8 +63,8 @@
 
 .analytics-toolbar {
   justify-content: flex-start;
-  min-height: 4.75rem;
-  border-bottom: 1px solid var(--border);
+  min-height: 0;
+  padding-bottom: 2.5rem;
 }
 
 .range-presets {
@@ -234,16 +233,16 @@
 .metric-strip {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
+  column-gap: 2rem;
+  row-gap: 1.5rem;
   min-width: 0;
-  border-bottom: 1px solid var(--border);
-  padding: 1.65rem 0;
+  padding: 0 0 3.25rem;
 }
 
 .metric-item {
   min-width: 0;
-  min-height: 4.35rem;
-  border-right: 1px solid var(--border);
-  padding: 0 1.5rem;
+  min-height: 4rem;
+  padding: 0;
 }
 
 .metric-item:first-child {
@@ -312,12 +311,12 @@
 .analytics-table-grid {
   display: grid;
   min-width: 0;
-  border-bottom: 1px solid var(--border);
 }
 
 .analytics-chart-grid {
   grid-template-columns: minmax(0, 1.45fr) minmax(20rem, 0.95fr);
-  padding: 1.65rem 0 1.25rem;
+  gap: 3rem;
+  padding: 0 0 3.5rem;
 }
 
 .analytics-chart-panel,
@@ -326,13 +325,11 @@
 }
 
 .analytics-chart-panel {
-  padding-right: 1.75rem;
+  padding: 0;
 }
 
 .analytics-chart-panel--growth {
-  border-left: 1px solid var(--border);
-  padding-right: 0;
-  padding-left: 1.75rem;
+  border-left: 0;
 }
 
 .section-heading {
@@ -369,19 +366,19 @@
 
 .analytics-table-grid {
   grid-template-columns: minmax(18rem, 0.9fr) minmax(0, 1.25fr);
+  gap: 3rem;
+  padding-bottom: 3.5rem;
 }
 
 .analytics-table-panel {
   display: flex;
-  min-height: 19rem;
-  padding: 1.65rem 1.75rem 1.25rem 0;
+  min-height: 0;
+  padding: 0;
   flex-direction: column;
 }
 
 .analytics-table-panel--entries {
-  border-left: 1px solid var(--border);
-  padding-right: 0;
-  padding-left: 1.75rem;
+  border-left: 0;
 }
 
 .analytics-table-wrap {
@@ -464,7 +461,12 @@
   display: grid;
   gap: 1rem;
   min-width: 0;
-  padding: 1.65rem 0 0.35rem;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.analytics-state + .data-explorer,
+.analytics-loading + .data-explorer {
+  margin-top: 2.75rem;
 }
 
 .data-explorer-heading > div:first-child {
@@ -491,10 +493,10 @@
 
 .data-explorer-content {
   display: grid;
-  gap: 0.85rem;
+  gap: 1.25rem;
   min-width: 0;
-  border-top: 1px solid var(--border);
-  padding-top: 1rem;
+  border-top: 0;
+  padding-top: 0.75rem;
 }
 
 .report-toolbar {
@@ -621,7 +623,7 @@
 @media (max-width: 920px) {
   .analytics-toolbar {
     align-items: flex-start;
-    padding: 1rem 0;
+    padding: 0 0 2rem;
     flex-wrap: wrap;
   }
 
@@ -646,19 +648,20 @@
 
   .analytics-chart-panel--growth,
   .analytics-table-panel--entries {
-    border-top: 1px solid var(--border);
+    border-top: 0;
     border-left: 0;
-    padding: 1.5rem 0 1.25rem;
+    padding: 0;
   }
 
   .analytics-table-panel {
-    min-height: 16rem;
+    min-height: 0;
   }
 }
 
 @media (max-width: 620px) {
   .analytics-page-header {
-    min-height: 6rem;
+    min-height: 0;
+    padding-bottom: 1.75rem;
   }
 
   .analytics-page-header h1 {
@@ -710,30 +713,20 @@
   .metric-strip,
   .loading-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    row-gap: 0;
-    padding: 0.65rem 0;
+    gap: 1.5rem 1.25rem;
+    padding: 0 0 2.5rem;
   }
 
   .metric-item,
   .metric-item:nth-child(3),
   .metric-item:nth-child(4) {
-    min-height: 6rem;
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    padding: 1.2rem 1rem;
+    min-height: 4.75rem;
+    border: 0;
+    padding: 0.75rem 0;
   }
 
   .metric-item:nth-child(even) {
     border-right: 0;
-    padding-right: 0;
-  }
-
-  .metric-item:nth-child(odd) {
-    padding-left: 0;
-  }
-
-  .metric-item:nth-last-child(-n + 2) {
-    border-bottom: 0;
   }
 
   .metric-value {

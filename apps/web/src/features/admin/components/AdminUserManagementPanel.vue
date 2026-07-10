@@ -109,12 +109,12 @@ watch(
 );
 
 // Reports whether user management is using the single-pane compact layout.
-// Key parameters: none. Return value: true at 900px or narrower. Side effect: none.
+// Key parameters: none. Return value: true at 1080px or narrower. Side effect: none.
 function isCompactUserLayout(): boolean {
   return (
     typeof window !== "undefined" &&
     typeof window.matchMedia === "function" &&
-    window.matchMedia("(max-width: 900px)").matches
+    window.matchMedia("(max-width: 1080px)").matches
   );
 }
 
@@ -137,12 +137,12 @@ function selectUser(user: AdminUserResponse): void {
   }
   selectedUserId.value = user.id;
   activePanel.value = "detail";
-  if (isCompactUserLayout()) {
-    void nextTick(() => {
-      usersPanelElement.value?.scrollIntoView({ block: "start" });
+  void nextTick(() => {
+    usersPanelElement.value?.scrollIntoView({ block: "start" });
+    if (isCompactUserLayout()) {
       detailBackButtonElement.value?.focus({ preventScroll: true });
-    });
-  }
+    }
+  });
 }
 
 // Returns compact user management to the list and restores focus to the selected row.
