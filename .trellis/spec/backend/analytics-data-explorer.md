@@ -22,8 +22,10 @@ Backend endpoints:
 
 Metric fields:
 
-- Daily: `dau`, `registrations`, `topics`, `posts`, `likes`, `flags`.
-- Totals: `dau`, `mau`, `registrations`, `topics`, `posts`, `likes`, `flags`.
+- Daily: `dau`, `registrations`, `topics`, `posts`, `likes`, `flags`; `registrations`
+  counts only users where `users.is_persona = false`.
+- Totals: `dau`, `mau`, `registrations`, `topics`, `posts`, `likes`, `flags`;
+  `registrations` is the sum of the filtered daily registration series.
 
 Preset reports:
 
@@ -42,6 +44,11 @@ Preset reports:
 - CSV export must write `audit_logs.action="analytics_csv_exported"` in the same request.
 - Report rows must use ORM-built SQL expressions and bound parameters; never concatenate user input.
 - Private-message topics are excluded from public/top-topic analytics.
+- `users.is_persona` is the durable account-identity flag for growth metrics. Ordinary registration
+  defaults it to `false`; persona seed, living-forum, frontier-news, and migration-import paths must
+  persist `true`. Do not infer persona identity from username patterns, roles, or email domains.
+- The overview series, overview totals, `daily_activity` report, and its CSV export must all reuse
+  the same persona-excluding registration query so the displayed and exported values cannot drift.
 
 ### 4. Validation & Error Matrix
 
@@ -53,6 +60,7 @@ Preset reports:
 | Range over 366 days | `invalid_analytics_range` / 422 |
 | Export CSV | `text/csv` response and audit row is persisted |
 | Empty range | Returns zero-valued series and empty top lists, not 500 |
+| Persona and ordinary user register on the same day | Only the ordinary user increments `registrations` in overview, report, and CSV. |
 
 ### 5. Good/Base/Bad Cases
 
@@ -67,8 +75,9 @@ Preset reports:
 - Default roadmap smoke: `pytest tests/test_analytics.py -q`.
 - Assertions:
   - non-admin gets 403;
-  - overview totals include created activity;
+  - overview totals and daily series include ordinary registrations but exclude `is_persona=true` rows;
   - preset report returns rows;
+  - `daily_activity.registrations` matches the filtered overview series exactly;
   - CSV export returns CSV and writes audit log.
 - Run `ruff check` on touched analytics service/router/schema/test files.
 

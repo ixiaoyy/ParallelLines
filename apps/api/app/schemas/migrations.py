@@ -10,6 +10,7 @@ class MigrationUserRecord(BaseModel):
     username: str = Field(min_length=3, max_length=32)
     email: EmailStr
     display_name: str | None = Field(default=None, max_length=80)
+    is_persona: bool = False
 
 
 class MigrationBoardRecord(BaseModel):

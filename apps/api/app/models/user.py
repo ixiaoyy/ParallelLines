@@ -16,6 +16,7 @@ class User(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("email", name="uq_users_email"),
         UniqueConstraint("username", name="uq_users_username"),
+        Index("ix_users_is_persona_created_at", "is_persona", "created_at"),
     )
 
     username: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
@@ -42,6 +43,12 @@ class User(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     points_balance: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     experience_total: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)
+    is_persona: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="是否为运营维护的马甲账号；真实用户增长统计必须排除。",
+    )
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     two_factor_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     two_factor_secret: Mapped[str | None] = mapped_column(String(64))

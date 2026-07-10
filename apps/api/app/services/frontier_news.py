@@ -638,6 +638,7 @@ class FrontierNewsService:
                 points_balance=0,
                 experience_total=0,
                 status="active",
+                is_persona=True,
                 two_factor_enabled=False,
                 profile_visibility="public",
                 show_activity=True,
@@ -664,6 +665,7 @@ class FrontierNewsService:
         bot.display_name = username
         bot.role = "user"
         bot.status = "active"
+        bot.is_persona = True
         bot.level = 0
         bot.trust_level = 0
         return bot

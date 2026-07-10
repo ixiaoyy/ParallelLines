@@ -157,6 +157,10 @@ class MigrationService:
             )
             if existing:
                 imported[existing.username] = existing
+                if record.is_persona and not existing.is_persona:
+                    existing.is_persona = True
+                    self._row(rows, "user", username, "updated", "已标记为马甲账号")
+                    continue
                 self._row(rows, "user", username, "skipped", "用户已存在")
                 continue
             user = User(
@@ -167,6 +171,7 @@ class MigrationService:
                 role="user",
                 status="active",
                 locale="zh-CN",
+                is_persona=record.is_persona,
             )
             self.session.add(user)
             await self.session.flush()
@@ -423,6 +428,7 @@ class MigrationService:
             "role": user.role,
             "status": user.status,
             "locale": user.locale,
+            "is_persona": user.is_persona,
             "created_at": user.created_at,
         }
 

@@ -560,6 +560,7 @@ class LivingForumService:
             existing.bio = persona.bio
             existing.status = "active"
             existing.role = "user"
+            existing.is_persona = True
             await self.session.flush()
             return existing
 
@@ -571,6 +572,7 @@ class LivingForumService:
             bio=persona.bio,
             role="user",
             status="active",
+            is_persona=True,
         )
         self.session.add(user)
         await self.session.flush()

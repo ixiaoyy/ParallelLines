@@ -12,13 +12,18 @@ Applies when changing admin JSON migration import preview/run/export APIs.
 
 ## Import Format
 
-`MigrationImportRequest` supports `users`, `boards`, `topics`, and `posts` arrays. Topics resolve by `(board_slug, slug)` and optional `external_id`; posts resolve by `topic_external_id` during the same run or by `(board_slug, topic_slug)`.
+`MigrationImportRequest` supports `users`, `boards`, `topics`, and `posts` arrays. User records may
+set `is_persona` (default `false`) so imported persona publishers stay out of real-user growth.
+Topics resolve by `(board_slug, slug)` and optional `external_id`; posts resolve by
+`topic_external_id` during the same run or by `(board_slug, topic_slug)`.
 
 ## Contracts
 
 - All migration APIs require admin role.
 - Preview must not persist data; it uses the same service path and rolls back.
 - Run is idempotent: existing usernames/emails, board slugs, topic slugs, and post numbers are skipped.
+- Importing `is_persona=true` may promote an existing matching user to persona; an omitted or false
+  value must never silently unmark an existing persona. Export preserves the flag for round trips.
 - Errors are reported per row and do not prevent other valid rows from being processed.
 - Export omits password hashes, tokens, secrets, and private-message/private-board content in this phase.
 
@@ -30,6 +35,7 @@ Applies when changing admin JSON migration import preview/run/export APIs.
 | Second run same payload | Duplicate rows skipped. |
 | Missing board/user | Row-level error with no exception leak. |
 | Export | JSON contains users/boards/topics/posts/tags and no secret fields. |
+| Persona user round trip | `is_persona=true` survives import and export; ordinary users default false. |
 
 ## Tests
 

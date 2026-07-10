@@ -22,8 +22,12 @@ prior.setDate(today.getDate() - 29);
 const startDate = ref(toDateInput(prior));
 const endDate = ref(toDateInput(today));
 const trendChartElement = ref<HTMLDivElement | null>(null);
+const growthChartElement = ref<HTMLDivElement | null>(null);
 let trendChart: ECharts | null = null;
 let trendResizeObserver: ResizeObserver | null = null;
+let growthChart: ECharts | null = null;
+let growthResizeObserver: ResizeObserver | null = null;
+const dailyAverageFormatter = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 });
 const presetRanges = [
   { label: "7 天", days: 7 },
   { label: "30 天", days: 30 },
@@ -80,6 +84,19 @@ const trendChartLabel = computed(() => {
   }
   return `每日访问量与独立访客趋势，${overview.value.start_date} 至 ${overview.value.end_date}`;
 });
+const dailyRegistrationAverage = computed(() => {
+  const seriesDayCount = overview.value?.series.length ?? 0;
+  if (!seriesDayCount) {
+    return 0;
+  }
+  return (overview.value?.totals.registrations ?? 0) / seriesDayCount;
+});
+const growthChartLabel = computed(() => {
+  if (!overview.value) {
+    return "每日新增用户趋势，不含马甲账号";
+  }
+  return `每日新增用户趋势，${overview.value.start_date} 至 ${overview.value.end_date}，区间新增 ${formatMetric(overview.value.totals.registrations)} 人，日均新增 ${dailyAverageFormatter.format(dailyRegistrationAverage.value)} 人，不含马甲账号`;
+});
 const summaryMetrics = computed(() => {
   const totals = overview.value?.totals;
   return [
@@ -113,20 +130,43 @@ const summaryMetrics = computed(() => {
 onMounted(() => {
   void nextTick(() => {
     initTrendChart();
+    initGrowthChart();
     renderTrendChart();
+    renderGrowthChart();
   });
 });
 
 watch(
   () => overview.value?.series,
   () => {
-    void nextTick(renderTrendChart);
+    void nextTick(() => {
+      renderTrendChart();
+      renderGrowthChart();
+    });
   },
   { deep: true },
 );
 
+watch(
+  [trendChartElement, growthChartElement],
+  ([trendElement, growthElement]) => {
+    if (trendElement) {
+      renderTrendChart();
+    } else {
+      disposeTrendChart();
+    }
+    if (growthElement) {
+      renderGrowthChart();
+    } else {
+      disposeGrowthChart();
+    }
+  },
+  { flush: "post" },
+);
+
 onBeforeUnmount(() => {
   disposeTrendChart();
+  disposeGrowthChart();
 });
 
 // Formats a Date for native date inputs.
@@ -176,6 +216,19 @@ function initTrendChart(): void {
   }
 }
 
+// Creates the ECharts instance for the user-growth chart when its container is mounted.
+// Key parameters: none. Return value is none. Side effect: initializes the chart and resize observer.
+function initGrowthChart(): void {
+  if (!growthChartElement.value || growthChart) {
+    return;
+  }
+  growthChart = echarts.init(growthChartElement.value);
+  if (typeof ResizeObserver !== "undefined") {
+    growthResizeObserver = new ResizeObserver(() => growthChart?.resize());
+    growthResizeObserver.observe(growthChartElement.value);
+  }
+}
+
 // Releases the chart instance and observer before Vue removes the component.
 // Key parameters: none. Return value is none. Side effect: disconnects observer and disposes ECharts.
 function disposeTrendChart(): void {
@@ -183,6 +236,15 @@ function disposeTrendChart(): void {
   trendResizeObserver = null;
   trendChart?.dispose();
   trendChart = null;
+}
+
+// Releases the user-growth chart instance and observer when its container is removed.
+// Key parameters: none. Return value is none. Side effect: disconnects the observer and disposes ECharts.
+function disposeGrowthChart(): void {
+  growthResizeObserver?.disconnect();
+  growthResizeObserver = null;
+  growthChart?.dispose();
+  growthChart = null;
 }
 
 // Renders the latest analytics series into the ECharts line chart.
@@ -194,6 +256,19 @@ function renderTrendChart(): void {
   initTrendChart();
   trendChart?.setOption(
     buildTrendChartOption(overview.value.series ?? [], trendChartElement.value),
+    { notMerge: true },
+  );
+}
+
+// Renders daily non-persona registrations into the user-growth chart.
+// Key parameters: none. Return value is none. Side effect: updates the growth chart instance.
+function renderGrowthChart(): void {
+  if (!overview.value || !growthChartElement.value) {
+    return;
+  }
+  initGrowthChart();
+  growthChart?.setOption(
+    buildGrowthChartOption(overview.value.series ?? [], growthChartElement.value),
     { notMerge: true },
   );
 }
@@ -275,6 +350,61 @@ function buildTrendChartOption(
   };
 }
 
+// Builds the localized single-series option for daily non-persona registrations.
+// Key parameters are backend metric `points` and the chart `element`. Return value is ECharts config. Side effect: none.
+function buildGrowthChartOption(
+  points: AnalyticsMetricPoint[],
+  element: HTMLElement,
+): EChartsCoreOption {
+  const growth = readCssVar(element, "--accent-violet", "#6366f1");
+  const text = readCssVar(element, "--text", "#475569");
+  const muted = readCssVar(element, "--muted", "#94a3b8");
+  const border = readCssVar(element, "--border", "#e2e8f0");
+  const labels = points.map((point) => point.day.slice(5).replace("-", "/"));
+
+  return {
+    animationDuration: 180,
+    color: [growth],
+    grid: { bottom: 26, containLabel: true, left: 8, right: 14, top: 14 },
+    series: [
+      {
+        areaStyle: { color: growth, opacity: 0.08 },
+        data: points.map((point) => point.registrations ?? 0),
+        emphasis: { focus: "series" },
+        itemStyle: { color: growth },
+        lineStyle: { color: growth, width: 3 },
+        name: "新增用户",
+        showSymbol: points.length <= 14,
+        smooth: true,
+        symbol: "circle",
+        symbolSize: 6,
+        type: "line",
+      },
+    ],
+    textStyle: { color: text, fontFamily: "inherit" },
+    tooltip: {
+      confine: true,
+      formatter: formatChartTooltip,
+      trigger: "axis",
+    },
+    xAxis: {
+      axisLabel: { color: muted, fontSize: 11, hideOverlap: true },
+      axisLine: { lineStyle: { color: border } },
+      axisTick: { show: false },
+      boundaryGap: false,
+      data: labels,
+      type: "category",
+    },
+    yAxis: {
+      axisLabel: { color: muted, formatter: (value: number) => formatMetric(value) },
+      min: 0,
+      minInterval: 1,
+      splitLine: { lineStyle: { color: border, opacity: 0.6 } },
+      type: "value",
+    },
+  };
+}
+
 // Reads a CSS custom property from the chart host with a token-safe fallback.
 // Key parameters are the DOM `element`, CSS variable name, and fallback. Return value is a color/string. Side effect: none.
 function readCssVar(element: HTMLElement, variableName: string, fallback: string): string {
@@ -304,7 +434,8 @@ function formatChartTooltip(params: unknown): string {
     const value = Number.isFinite(numericValue)
       ? formatMetric(numericValue)
       : String(item.data ?? "—");
-    const unit = item.seriesName === "独立访客" ? " 位" : " 次";
+    const unit =
+      item.seriesName === "独立访客" ? " 位" : item.seriesName === "新增用户" ? " 人" : " 次";
     return `${item.marker ?? ""}${item.seriesName ?? ""}: ${value}${unit}`;
   });
   return [title, ...rows].filter(Boolean).join("<br/>");
@@ -400,6 +531,35 @@ function formatChartTooltip(params: unknown): string {
           </ol>
           <p v-else class="analytics-state">当前范围内暂无访问来源。</p>
         </article>
+      </section>
+
+      <section class="user-growth-panel" aria-labelledby="user-growth-title">
+        <div class="section-heading">
+          <div>
+            <strong id="user-growth-title">用户增长</strong>
+            <span>{{ overview.start_date }} → {{ overview.end_date }} · 不含马甲账号</span>
+          </div>
+        </div>
+        <div class="user-growth-layout">
+          <div class="user-growth-summary" aria-label="用户增长汇总">
+            <div>
+              <span>区间新增</span>
+              <strong>{{ formatMetric(overview.totals.registrations) }}</strong>
+              <small>人</small>
+            </div>
+            <div>
+              <span>日均新增</span>
+              <strong>{{ dailyAverageFormatter.format(dailyRegistrationAverage) }}</strong>
+              <small>人</small>
+            </div>
+          </div>
+          <div
+            ref="growthChartElement"
+            class="growth-chart"
+            role="img"
+            :aria-label="growthChartLabel"
+          ></div>
+        </div>
       </section>
 
       <section class="analytics-list-grid" aria-label="入口页统计">

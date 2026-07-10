@@ -500,6 +500,7 @@ async def rename_legacy_personas(session: AsyncSession, *, dry_run: bool) -> int
         old_user.bio = persona.bio
         old_user.role = "user"
         old_user.status = "active"
+        old_user.is_persona = True
     if rename_count and not dry_run:
         await session.flush()
     return rename_count
@@ -528,6 +529,7 @@ async def upsert_personas(session: AsyncSession, *, dry_run: bool) -> dict[str, 
                 existing.bio = persona.bio
                 existing.status = "active"
                 existing.role = "user"
+                existing.is_persona = True
             users[persona.username] = existing
             continue
         if dry_run:
@@ -539,6 +541,7 @@ async def upsert_personas(session: AsyncSession, *, dry_run: bool) -> dict[str, 
                 bio=persona.bio,
                 role="user",
                 status="active",
+                is_persona=True,
             )
             continue
         user = User(
@@ -549,6 +552,7 @@ async def upsert_personas(session: AsyncSession, *, dry_run: bool) -> dict[str, 
             bio=persona.bio,
             role="user",
             status="active",
+            is_persona=True,
         )
         session.add(user)
         await session.flush()

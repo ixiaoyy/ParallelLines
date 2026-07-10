@@ -1179,6 +1179,7 @@ export interface components {
     MigrationUserRecord: {
       display_name?: string | null;
       email: string;
+      is_persona?: boolean;
       username: string;
     };
     ModerationActionResponse: {

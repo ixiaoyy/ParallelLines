@@ -42,7 +42,11 @@ async def test_admin_migration_import_preview_run_export_and_errors() -> None:
         payload = {
             "source": "discourse-json",
             "users": [
-                {"username": "imported_author", "email": "imported_author@example.com"},
+                {
+                    "username": "imported_author",
+                    "email": "imported_author@example.com",
+                    "is_persona": True,
+                },
                 {"username": "reply_author", "email": "reply_author@example.com"},
             ],
             "boards": [{"slug": "imported", "name": "导入版块", "description": "历史内容"}],
@@ -102,6 +106,10 @@ async def test_admin_migration_import_preview_run_export_and_errors() -> None:
         assert any(board["slug"] == "imported" for board in data["boards"])
         assert any(topic["slug"] == "imported-topic" for topic in data["topics"])
         assert not any("hashed_password" in user for user in data["users"])
+        imported_author = next(
+            user for user in data["users"] if user["username"] == "imported_author"
+        )
+        assert imported_author["is_persona"] is True
 
         bad = await client.post(
             "/api/v1/admin/migrations/import/preview",

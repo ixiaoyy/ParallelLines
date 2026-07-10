@@ -524,10 +524,10 @@ def build_migration_payload(
     }
 
 
-def persona_user_records(usernames: Iterable[str]) -> list[dict[str, str]]:
+def persona_user_records(usernames: Iterable[str]) -> list[dict[str, object]]:
     """Build migration user records for all persona accounts used by the payload."""
 
-    records: list[dict[str, str]] = []
+    records: list[dict[str, object]] = []
     seen = set(usernames)
     for username, persona in PERSONAS.items():
         if username not in seen:
@@ -537,6 +537,7 @@ def persona_user_records(usernames: Iterable[str]) -> list[dict[str, str]]:
                 "username": persona.username,
                 "email": persona.email,
                 "display_name": persona.username,
+                "is_persona": True,
             }
         )
     return records

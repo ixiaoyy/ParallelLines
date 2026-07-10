@@ -206,7 +206,14 @@ class AnalyticsService:
             start + timedelta(days=offset): AnalyticsMetricPoint(day=start + timedelta(days=offset))
             for offset in range((end - start).days + 1)
         }
-        await self._fill_count(points, User.created_at, "registrations", start, end)
+        await self._fill_count(
+            points,
+            User.created_at,
+            "registrations",
+            start,
+            end,
+            User.is_persona.is_(False),
+        )
         await self._fill_count(
             points,
             Topic.created_at,

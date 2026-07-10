@@ -5640,6 +5640,11 @@
             "title": "Email",
             "type": "string"
           },
+          "is_persona": {
+            "default": false,
+            "title": "Is Persona",
+            "type": "boolean"
+          },
           "username": {
             "maxLength": 32,
             "minLength": 3,

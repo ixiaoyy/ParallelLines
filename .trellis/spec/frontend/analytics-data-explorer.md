@@ -34,6 +34,9 @@ Query keys:
 
 - Analytics DTOs must use generated OpenAPI component types.
 - Range state stays in component refs and is part of query keys.
+- The user-growth panel reads `totals.registrations` and `series[].registrations` from the same
+  overview response, shows range total plus daily average/trend, and visibly states `不含马甲账号`.
+  Persona filtering is a backend contract; the frontend must not recreate it from usernames.
 - CSV export must use `fetch(getApiUrl(...), { headers: createApiHeaders() })`; `window.open`
   cannot be used because it omits bearer auth headers.
 - Data Explorer UI renders only backend-supplied preset report columns/rows.
@@ -51,12 +54,16 @@ Query keys:
 | CSV export pending | Export button disabled |
 | Empty report rows | Table renders headers without crashing |
 | Date range changes | Overview/report queries refetch via range-aware keys |
+| No real-user registrations in range | Growth summary shows zero and the chart remains readable. |
 
 ### 5. Good/Base/Bad Cases
 
 - Good: admin changes date range and both trend bars and report rows refetch.
+- Good: user-growth total, average, chart, and accessibility label all reflect the selected range
+  and identify that persona accounts are excluded.
 - Base: admin selects `daily_activity`, exports CSV, and backend audit log records the export.
 - Bad: hardcoding report rows in the frontend or downloading CSV via unauthenticated `window.open`.
+- Bad: counting or subtracting persona usernames in the component; only aggregated backend values are available.
 - Bad: accepting arbitrary SQL text in the UI before backend supports a safe sandbox.
 
 ### 6. Tests Required

@@ -32,12 +32,13 @@ DEFAULT_SEED_USERNAME = "今天也想早睡"
 DEFAULT_SEED_EMAIL = "sleepy_today@parallellines.local"
 DEFAULT_DISPLAY_NAME = "今天也想早睡"
 DEFAULT_TITLE = "今天把手机通知关了，舒服多了"
-DEFAULT_BODY = """这几天有点烦，总觉得一会儿就想摸手机。昨晚干脆把几个 App 的通知关了，只留电话和必要消息。
-
-今天明显安静很多，做事没那么碎，也不会刚坐下就被提示音打断。
-
-不知道大家有没有这种感觉：不是手机多好玩，是它老在提醒你。后面我想试试晚上固定半小时再看消息，看看能不能坚持下来。
-"""
+DEFAULT_BODY = (
+    "这几天有点烦，总觉得一会儿就想摸手机。昨晚干脆把几个 App 的通知关了，"
+    "只留电话和必要消息。\n\n"
+    "今天明显安静很多，做事没那么碎，也不会刚坐下就被提示音打断。\n\n"
+    "不知道大家有没有这种感觉：不是手机多好玩，是它老在提醒你。"
+    "后面我想试试晚上固定半小时再看消息，看看能不能坚持下来。\n"
+)
 DEFAULT_TAG = "日常"
 SEED_REVIEW_SOURCE = "persona_content"
 
@@ -199,6 +200,7 @@ async def upsert_seed_author(
         existing.display_name = display_name
         existing.status = "active"
         existing.role = "user"
+        existing.is_persona = True
         return existing, False
 
     user = User(
@@ -209,6 +211,7 @@ async def upsert_seed_author(
         bio="喜欢记录一点日常，也会偶尔分享读到和用到的东西。",
         role="user",
         status="active",
+        is_persona=True,
     )
     session.add(user)
     await session.flush()

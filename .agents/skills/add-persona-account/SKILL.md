@@ -12,6 +12,8 @@ Use this workflow to add one durable ordinary persona account to ParallelLines.
 1. Confirm account intent:
    - Required: username/display name.
    - Default role/status: `role="user"`, `status="active"`.
+   - Every persona account must persist `users.is_persona=true`; ordinary registration keeps the
+     default `false` so analytics can exclude personas without username/email heuristics.
    - Default password for login-capable 马甲 accounts follows existing smoke-test convention: `oldhuai123`, unless the user requests another password.
    - Choose a response-schema-valid email, preferably `ascii-slug@pingxingxian.space`; avoid new `.local` emails for public API users.
 2. Gather evidence first:
@@ -23,6 +25,7 @@ Use this workflow to add one durable ordinary persona account to ParallelLines.
 3. Read only relevant specs:
    - `.trellis/spec/backend/user-profile-settings-directory.md`
    - `.trellis/spec/backend/uploads-attachments.md`
+   - `.trellis/spec/backend/analytics-data-explorer.md`
    - `.trellis/spec/frontend/user-profile-settings-directory.md`
    - `.trellis/spec/frontend/uploads-attachments.md`
 4. Avatar workflow:
@@ -49,10 +52,14 @@ Use this workflow to add one durable ordinary persona account to ParallelLines.
      uv run python -c 'from app.core.security import verify_password; print(verify_password("<password>", "<hash>"))'
      ```
    - Upsert only when username/email match the same row; raise on conflicts.
+   - Include `is_persona` in the lightweight Alembic `users` table and set it to `true` on both
+     insert and update. Migrations after `0065_add_user_persona_flag` may rely on this column.
    - On downgrade, leave the account in place to avoid deleting authored content.
    - Every new helper function needs a docstring covering purpose, key parameters, return value, and side effects.
 6. Persona script update:
    - If this is a general 马甲/persona account, add it to `apps/api/scripts/seed_persona_discussions.py` `PERSONAS`.
+   - Confirm every runtime upsert/create branch for that account writes `is_persona=True`, including
+     existing rows; never rely only on the original data migration backfill.
    - Do not add article content unless the user asks for seeded posts.
 7. Verify:
    ```powershell
@@ -63,6 +70,8 @@ Use this workflow to add one durable ordinary persona account to ParallelLines.
    Do not run `pnpm test:api` unless the user explicitly says the local test database is ready.
 8. Final review:
    - Search username/email/avatar path again.
+   - Search `is_persona` in every changed creator/upsert and confirm the account cannot fall back to
+     the ordinary-user default.
    - Confirm the final avatar dimensions and byte size are appropriate for small `UiAvatar` display.
    - Check `git status --short` and call out unrelated dirty files.
    - Report login username, email, avatar URL, migration path, persona script path, and validations.

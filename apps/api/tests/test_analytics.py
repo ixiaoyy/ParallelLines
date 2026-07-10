@@ -42,7 +42,16 @@ async def test_admin_analytics_overview_reports_and_csv_export() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         user = await register_and_verify_user(client, "analyticsuser")
         admin = await register_and_verify_user(client, "analyticsadmin")
+        persona = await register_and_verify_user(client, "analyticspersona")
         await promote_admin(session_factory, admin["user"]["id"])
+        async with session_factory() as session:
+            regular_user = await session.get(User, user["user"]["id"])
+            persona_user = await session.get(User, persona["user"]["id"])
+            assert regular_user is not None
+            assert persona_user is not None
+            assert regular_user.is_persona is False
+            persona_user.is_persona = True
+            await session.commit()
         user_headers = {"Authorization": f"Bearer {user['access_token']}"}
         admin_headers = {"Authorization": f"Bearer {admin['access_token']}"}
 
@@ -126,7 +135,8 @@ async def test_admin_analytics_overview_reports_and_csv_export() -> None:
         )
         assert overview.status_code == 200
         overview_data = overview.json()["data"]
-        assert overview_data["totals"]["registrations"] >= 2
+        assert overview_data["totals"]["registrations"] == 2
+        assert overview_data["series"][0]["registrations"] == 2
         assert overview_data["totals"]["topics"] >= 1
         assert overview_data["totals"]["likes"] >= 1
         assert overview_data["totals"]["flags"] >= 1
@@ -157,6 +167,7 @@ async def test_admin_analytics_overview_reports_and_csv_export() -> None:
         assert report.status_code == 200
         assert report.json()["data"]["rows"][0]["topics"] >= 1
         assert report.json()["data"]["rows"][0]["page_views"] >= 2
+        assert report.json()["data"]["rows"][0]["registrations"] == 2
 
         source_report = await client.get(
             "/api/v1/admin/analytics/reports/traffic_sources",
