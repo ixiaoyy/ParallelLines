@@ -24,7 +24,7 @@ from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin, id_column_
 if TYPE_CHECKING:
     from app.models.user import User
 
-BoardVisibility = Literal["public", "private", "unlisted"]
+BoardVisibility = Literal["public", "private", "unlisted", "admin"]
 BoardMemberRole = Literal["follower", "moderator", "owner"]
 NotificationLevel = Literal["muted", "normal", "tracking", "watching"]
 BoardDefaultSort = Literal["latest", "hot", "top"]

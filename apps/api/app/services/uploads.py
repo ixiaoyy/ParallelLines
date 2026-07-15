@@ -23,10 +23,11 @@ from starlette.requests import Request
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppError, NotFoundError, PermissionDeniedError, ValidationError
 from app.db.base import new_random_suffix, utcnow
-from app.models.forum import Board, BoardMember, Post, Topic
+from app.models.forum import Board, Post, Topic
 from app.models.upload import Upload
 from app.models.user import User
 from app.services.admin import SiteSettingService
+from app.services.board_access import can_access_board as user_can_access_board
 from app.services.spam import SpamPreventionService
 
 UPLOAD_REFERENCE_PATTERN = re.compile(
@@ -790,19 +791,8 @@ class UploadService:
         return image.convert("RGB")
 
     async def _can_access_board(self, board: Board, current_user: User | None) -> bool:
-        if board.visibility == "public":
-            return True
-        if current_user is None:
-            return False
-        if board.owner_id == current_user.id:
-            return True
-        member = await self.session.scalar(
-            select(BoardMember.id).where(
-                BoardMember.board_id == board.id,
-                BoardMember.user_id == current_user.id,
-            )
-        )
-        return member is not None
+        return await user_can_access_board(self.session, board, current_user)
+
 
 def extract_upload_ids(raw_md: str) -> list[str]:
     """Return API upload IDs referenced by Markdown upload URLs.

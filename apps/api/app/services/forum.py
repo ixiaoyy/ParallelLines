@@ -62,6 +62,15 @@ from app.schemas.forum import (
 from app.schemas.interactions import TopicNotificationLevelResponse
 from app.services.background_jobs import BackgroundJobService
 from app.services.badges import BadgeTrustService
+from app.services.board_access import (
+    board_visible_condition as build_board_visible_condition,
+)
+from app.services.board_access import (
+    can_access_board as user_can_access_board,
+)
+from app.services.board_access import (
+    is_admin_only_board,
+)
 from app.services.content_safety import moderate_text_fields
 from app.services.growth import GrowthService
 from app.services.integrations import IntegrationService
@@ -93,6 +102,7 @@ FEEDBACK_BOARD_SLUG = "feedback"
 
 BOARD_DISPLAY_ORDER = (
     "announcements",
+    "private-space",
     "resources",
     "benefits",
     "reading",
@@ -1240,7 +1250,7 @@ class ForumService:
         return await self.get_topic(topic.id, current_user=current_user)
 
     def can_create_topic_in_board(self, board: Board, current_user: User | None) -> bool:
-        if board.slug in ADMIN_ONLY_TOPIC_BOARD_SLUGS:
+        if is_admin_only_board(board) or board.slug in ADMIN_ONLY_TOPIC_BOARD_SLUGS:
             return current_user is not None and is_admin(current_user)
         return current_user is None or current_user.status == "active"
 
@@ -2124,6 +2134,12 @@ class ForumService:
                 .order_by(desc(BoardInvitation.created_at))
             )
         )
+        if not is_admin(current_user):
+            received = [
+                invitation
+                for invitation in received
+                if not is_admin_only_board(invitation.board)
+            ]
         owned_boards = list(
             await self.session.scalars(
                 select(Board)
@@ -2155,7 +2171,7 @@ class ForumService:
         current_user: User,
     ) -> BoardInvitation:
         board = await self.session.scalar(select(Board).where(Board.id == payload.board_id))
-        if not board or board.visibility == "public":
+        if not board or board.visibility == "public" or is_admin_only_board(board):
             raise NotFoundError("board_not_found", "Board not found")
         if board.owner_id != current_user.id:
             raise PermissionDeniedError("board_invite_forbidden", "Board owner permission required")
@@ -2217,6 +2233,8 @@ class ForumService:
 
     async def accept_board_invite(self, invite_id: str, current_user: User) -> BoardInvitation:
         invitation = await self._get_board_invitation(invite_id)
+        if is_admin_only_board(invitation.board) and not is_admin(current_user):
+            raise NotFoundError("board_invite_not_found", "Board invite not found")
         self._require_invitee(invitation, current_user)
         self._require_pending_invite(invitation)
 
@@ -2276,6 +2294,8 @@ class ForumService:
 
     async def decline_board_invite(self, invite_id: str, current_user: User) -> BoardInvitation:
         invitation = await self._get_board_invitation(invite_id)
+        if is_admin_only_board(invitation.board) and not is_admin(current_user):
+            raise NotFoundError("board_invite_not_found", "Board invite not found")
         self._require_invitee(invitation, current_user)
         self._require_pending_invite(invitation)
         invitation.status = "declined"
@@ -2285,6 +2305,8 @@ class ForumService:
 
     async def revoke_board_invite(self, invite_id: str, current_user: User) -> BoardInvitation:
         invitation = await self._get_board_invitation(invite_id)
+        if is_admin_only_board(invitation.board) and not is_admin(current_user):
+            raise NotFoundError("board_invite_not_found", "Board invite not found")
         if invitation.board.owner_id != current_user.id:
             raise PermissionDeniedError("board_invite_forbidden", "Board owner permission required")
         self._require_pending_invite(invitation)
@@ -2295,17 +2317,7 @@ class ForumService:
         return await self._get_board_invitation(invitation.id)
 
     def _board_visible_condition(self, current_user: User | None):
-        if current_user is None:
-            return Board.visibility == "public"
-        member_exists = (
-            select(BoardMember.id)
-            .where(
-                BoardMember.board_id == Board.id,
-                BoardMember.user_id == current_user.id,
-            )
-            .exists()
-        )
-        return or_(Board.visibility == "public", member_exists)
+        return build_board_visible_condition(current_user)
 
     def _visible_author_condition(self, current_user: User, author_id_column=Topic.user_id):
         hidden_author_exists = (
@@ -2363,19 +2375,7 @@ class ForumService:
         await self.session.commit()
 
     async def _can_access_board(self, board: Board, current_user: User | None) -> bool:
-        if board.visibility == "public":
-            return True
-        if current_user is None:
-            return False
-        if board.owner_id == current_user.id:
-            return True
-        member = await self.session.scalar(
-            select(BoardMember.id).where(
-                BoardMember.board_id == board.id,
-                BoardMember.user_id == current_user.id,
-            )
-        )
-        return member is not None
+        return await user_can_access_board(self.session, board, current_user)
 
     async def _require_can_manage_board_settings(self, current_user: User, board: Board) -> None:
         if is_admin(current_user) or board.owner_id == current_user.id:

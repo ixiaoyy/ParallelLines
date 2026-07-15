@@ -10,7 +10,7 @@ from sqlalchemy.orm import noload, selectinload
 
 from app.core.exceptions import NotFoundError
 from app.db.base import utcnow
-from app.models.forum import Board, BoardMember, Poll, Post, Tag, Topic, topic_tags
+from app.models.forum import Board, Poll, Post, Tag, Topic, topic_tags
 from app.models.interaction import Bookmark, Reaction, Vote
 from app.models.search import SearchDocument, SearchLog
 from app.models.social import UserRelationship
@@ -22,6 +22,12 @@ from app.repositories.forum.topic_search import (
     search_relevance_expression,
 )
 from app.schemas.forum import TopicSort
+from app.services.board_access import (
+    board_visible_condition as build_board_visible_condition,
+)
+from app.services.board_access import (
+    can_access_board as user_can_access_board,
+)
 from app.services.topic_cursor import apply_latest_topic_cursor, parse_topic_cursor
 
 SEARCHABLE_TOPIC_STATUSES = {"open", "closed", "archived"}
@@ -377,17 +383,7 @@ class SearchService:
         await self.session.commit()
 
     def _board_visible_condition(self, current_user: User | None):
-        if current_user is None:
-            return Board.visibility == "public"
-        member_exists = (
-            select(BoardMember.id)
-            .where(
-                BoardMember.board_id == Board.id,
-                BoardMember.user_id == current_user.id,
-            )
-            .exists()
-        )
-        return or_(Board.visibility == "public", member_exists)
+        return build_board_visible_condition(current_user)
 
     def _visible_author_condition(self, current_user: User):
         hidden_author_exists = (
@@ -413,16 +409,4 @@ class SearchService:
         return board
 
     async def _can_access_board(self, board: Board, current_user: User | None) -> bool:
-        if board.visibility == "public":
-            return True
-        if current_user is None:
-            return False
-        if board.owner_id == current_user.id:
-            return True
-        member = await self.session.scalar(
-            select(BoardMember.id).where(
-                BoardMember.board_id == board.id,
-                BoardMember.user_id == current_user.id,
-            )
-        )
-        return member is not None
+        return await user_can_access_board(self.session, board, current_user)

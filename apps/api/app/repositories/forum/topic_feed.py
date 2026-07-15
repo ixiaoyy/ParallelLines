@@ -9,7 +9,7 @@ from sqlalchemy.orm import contains_eager, joinedload, noload, selectinload
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.elements import ColumnElement
 
-from app.models.forum import Board, BoardMember, Poll, Tag, Topic
+from app.models.forum import Poll, Tag, Topic
 from app.models.search import SearchDocument
 from app.models.social import UserRelationship
 from app.models.user import User
@@ -17,6 +17,7 @@ from app.repositories.forum.topic_search import (
     search_match_conditions,
     search_relevance_expression,
 )
+from app.services.board_access import board_visible_condition as build_board_visible_condition
 from app.services.topic_cursor import apply_latest_topic_cursor, parse_topic_cursor
 
 
@@ -155,17 +156,7 @@ class TopicFeedRepository:
         Return value is a SQLAlchemy expression; side effect is none.
         """
 
-        if current_user is None:
-            return Board.visibility == "public"
-        member_exists = (
-            select(BoardMember.id)
-            .where(
-                BoardMember.board_id == Board.id,
-                BoardMember.user_id == current_user.id,
-            )
-            .exists()
-        )
-        return or_(Board.visibility == "public", member_exists)
+        return build_board_visible_condition(current_user)
 
     @staticmethod
     def visible_author_condition(

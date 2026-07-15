@@ -11,6 +11,7 @@ import {
   FolderOpenOutlined,
   HeartOutlined,
   LikeOutlined,
+  LockOutlined,
   NotificationOutlined,
   QuestionCircleOutlined,
   ReadOutlined,
@@ -77,6 +78,7 @@ const boardIcons: Record<string, Component> = {
   questions: QuestionCircleOutlined,
   support: QuestionCircleOutlined,
   feedback: FlagOutlined,
+  "private-space": LockOutlined,
   lounge: CoffeeOutlined,
   community: TeamOutlined,
 };

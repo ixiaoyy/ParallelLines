@@ -71,7 +71,7 @@ export const BOARD_PALETTE: BoardToneDefinition[] = [
   },
   {
     tone: 6,
-    slugs: ["feedback", "lounge", "chat", "community"],
+    slugs: ["feedback", "private-space", "lounge", "chat", "community"],
     accent: "#475569",
     accentRgb: "148, 163, 184",
     tintBg: "color-mix(in srgb, #f1f5f9 88%, #ffffff)",

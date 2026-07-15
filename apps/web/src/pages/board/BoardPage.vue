@@ -67,6 +67,12 @@ const boardIcons: Record<string, string> = {
   community: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <path d="M14 38v8l8-4h18a4 4 0 0 0 4-4V22a4 4 0 0 0-4-4H14a4 4 0 0 0-4 4v12a4 4 0 0 0 4 4z" />
     <path d="M48 18h2a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4h-6l-6 4v-4" />
+  </svg>`,
+  "private-space": `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="13" y="28" width="38" height="28" rx="5" />
+    <path d="M21 28v-8c0-7 4.9-12 11-12s11 5 11 12v8" />
+    <circle cx="32" cy="41" r="3" />
+    <path d="M32 44v5" />
   </svg>`
 };
 

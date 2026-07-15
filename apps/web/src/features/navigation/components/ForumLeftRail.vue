@@ -9,9 +9,11 @@ import {
   FolderOpenOutlined,
   HeartOutlined,
   LikeOutlined,
+  LockOutlined,
   NotificationOutlined,
   QuestionCircleOutlined,
   ReadOutlined,
+  RightOutlined,
   TagsOutlined,
   TeamOutlined,
   TrophyOutlined,
@@ -33,9 +35,12 @@ const props = defineProps<{
   boardsError: boolean;
   tagsLoading: boolean;
   tagsError: boolean;
+  showPrivateSpace?: boolean;
 }>();
 
-const publicBoards = computed(() => sortBoardsWithFeedbackLast(props.boards.filter((board) => board.visibility === "public")));
+const publicBoards = computed(() =>
+  sortBoardsWithFeedbackLast(props.boards.filter((board) => board.visibility === "public")),
+);
 
 const boardIcons: Record<string, Component> = {
   announcements: NotificationOutlined,
@@ -125,7 +130,7 @@ function tagIcon(tagName: string): Component {
   return tagIcons[tagName] ?? TagsOutlined;
 }
 
-// Picks the decorative icon used by one public board shortcut.
+// Picks the decorative icon used by one visible board shortcut.
 // Key parameter: `board` provides the board slug. Return value: a Vue icon component; side effect: none.
 function boardIcon(board: BoardSummary): Component {
   return boardIcons[board.slug] ?? TagsOutlined;
@@ -146,60 +151,79 @@ function tagAccentStyle(tagName: string): Record<string, string> {
 </script>
 
 <template>
-  <aside class="forum-left-rail" aria-label="论坛导航">
-    <RouterLink class="rail-action" :to="{ name: 'new-topic' }">新建主题</RouterLink>
+  <div class="forum-left-rail">
+    <aside class="forum-left-rail__panel" aria-label="论坛导航">
+      <RouterLink class="rail-action" :to="{ name: 'new-topic' }">新建主题</RouterLink>
 
-    <section class="rail-section" aria-labelledby="rail-boards-title">
-      <h2 id="rail-boards-title">公共版块</h2>
-      <div v-if="boardsLoading" class="rail-skeleton" role="status" aria-label="正在加载版块">
-        <span v-for="item in 5" :key="item" class="rail-skeleton-line" aria-hidden="true"></span>
-      </div>
-      <p v-else-if="boardsError" class="rail-state rail-state--error">版块暂时不可用</p>
-      <template v-else>
-        <p v-if="!publicBoards.length" class="rail-state">暂无可见版块</p>
-        <RouterLink
-          v-for="board in publicBoards"
-          :key="board.id"
-          class="rail-board"
-          :class="boardToneClass(board.slug)"
-          :to="{ name: 'board-detail', params: { slug: board.slug } }"
-          :aria-label="boardAccessibleLabel(board)"
-          :title="board.description || board.name"
-        >
-          <component :is="boardIcon(board)" class="rail-board-mark" aria-hidden="true" />
-          <span class="rail-board-copy">
-            <strong>{{ board.name }}</strong>
-          </span>
-        </RouterLink>
-      </template>
-    </section>
-
-    <section class="rail-section rail-section--tags" aria-labelledby="rail-tags-title">
-      <h2 id="rail-tags-title">标签</h2>
-      <div v-if="tagsLoading" class="rail-skeleton rail-skeleton--tags" role="status" aria-label="正在加载标签">
-        <span v-for="item in 4" :key="item" class="rail-skeleton-line" aria-hidden="true"></span>
-      </div>
-      <p v-else-if="tagsError" class="rail-state rail-state--error">标签暂时不可用</p>
-      <template v-else>
-        <div class="rail-tag-list">
-          <RouterLink
-            v-for="tag in featuredTags"
-            :key="tag.id"
-            class="rail-tag"
-            :style="tagAccentStyle(tag.name)"
-            :to="{ name: 'search', query: { q: tag.name, tag: tag.name } }"
-          >
-            <component :is="tagIcon(tag.name)" aria-hidden="true" />
-            <span>{{ tag.name }}</span>
-          </RouterLink>
-          <RouterLink class="rail-tag rail-tag--all" :to="{ name: 'search' }">
-            <UnorderedListOutlined aria-hidden="true" />
-            <span>所有标签</span>
-          </RouterLink>
+      <section class="rail-section" aria-labelledby="rail-boards-title">
+        <h2 id="rail-boards-title">公共版块</h2>
+        <div v-if="boardsLoading" class="rail-skeleton" role="status" aria-label="正在加载版块">
+          <span v-for="item in 5" :key="item" class="rail-skeleton-line" aria-hidden="true"></span>
         </div>
-      </template>
-    </section>
-  </aside>
+        <p v-else-if="boardsError" class="rail-state rail-state--error">版块暂时不可用</p>
+        <template v-else>
+          <p v-if="!publicBoards.length" class="rail-state">暂无可见版块</p>
+          <RouterLink
+            v-for="board in publicBoards"
+            :key="board.id"
+            class="rail-board"
+            :class="boardToneClass(board.slug)"
+            :to="{ name: 'board-detail', params: { slug: board.slug } }"
+            :aria-label="boardAccessibleLabel(board)"
+            :title="board.description || board.name"
+          >
+            <component :is="boardIcon(board)" class="rail-board-mark" aria-hidden="true" />
+            <span class="rail-board-copy">
+              <strong>{{ board.name }}</strong>
+            </span>
+          </RouterLink>
+        </template>
+      </section>
+
+      <section class="rail-section rail-section--tags" aria-labelledby="rail-tags-title">
+        <h2 id="rail-tags-title">标签</h2>
+        <div v-if="tagsLoading" class="rail-skeleton rail-skeleton--tags" role="status" aria-label="正在加载标签">
+          <span v-for="item in 4" :key="item" class="rail-skeleton-line" aria-hidden="true"></span>
+        </div>
+        <p v-else-if="tagsError" class="rail-state rail-state--error">标签暂时不可用</p>
+        <template v-else>
+          <div class="rail-tag-list">
+            <RouterLink
+              v-for="tag in featuredTags"
+              :key="tag.id"
+              class="rail-tag"
+              :style="tagAccentStyle(tag.name)"
+              :to="{ name: 'search', query: { q: tag.name, tag: tag.name } }"
+            >
+              <component :is="tagIcon(tag.name)" aria-hidden="true" />
+              <span>{{ tag.name }}</span>
+            </RouterLink>
+            <RouterLink class="rail-tag rail-tag--all" :to="{ name: 'search' }">
+              <UnorderedListOutlined aria-hidden="true" />
+              <span>所有标签</span>
+            </RouterLink>
+          </div>
+        </template>
+      </section>
+    </aside>
+
+    <RouterLink
+      v-if="showPrivateSpace"
+      class="private-space-entry"
+      :to="{ name: 'board-detail', params: { slug: 'private-space' } }"
+      aria-label="打开仅管理员可见的私密空间"
+    >
+      <span class="private-space-entry__mark" aria-hidden="true">
+        <LockOutlined />
+      </span>
+      <span class="private-space-entry__copy">
+        <small>管理员专属</small>
+        <strong>私密空间</strong>
+        <span>AI 项目联动筹备区</span>
+      </span>
+      <RightOutlined class="private-space-entry__arrow" aria-hidden="true" />
+    </RouterLink>
+  </div>
 </template>
 
 <style scoped lang="scss" src="./ForumLeftRail.scss"></style>

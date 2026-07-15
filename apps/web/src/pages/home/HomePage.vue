@@ -293,6 +293,7 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
         :boards-error="boardsQuery.isError.value"
         :tags-loading="railTagsLoading"
         :tags-error="tagsQuery.isError.value"
+        :show-private-space="canDeleteTopics"
       />
 
       <main class="main-column" aria-label="平行线首页内容">

@@ -20,6 +20,7 @@ from app.schemas.interactions import (
 )
 from app.services.background_jobs import BackgroundJobService
 from app.services.badges import BadgeTrustService
+from app.services.board_access import can_access_board as user_can_access_board
 from app.services.forum import calculate_hot_score, notification_idempotency_key
 from app.services.growth import GrowthService
 
@@ -680,13 +681,7 @@ class InteractionService:
         return post
 
     async def _can_access_board(self, board: Board, current_user: User) -> bool:
-        if board.visibility == "public":
-            return True
-        if board.owner_id == current_user.id:
-            return True
-        member = await self._get_board_member(board.id, current_user.id)
-        return member is not None
-
+        return await user_can_access_board(self.session, board, current_user)
 
     async def _get_vote(self, target_type: str, target_id: str, user_id: str) -> Vote | None:
         return await self.session.scalar(
