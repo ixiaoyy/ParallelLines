@@ -3,6 +3,7 @@ node_modules/
 apps/*/node_modules/
 apps/api/.venv/
 .env
+.env.pre-shared-*
 *.log
 apps/web/dist/
 .pytest_cache/
