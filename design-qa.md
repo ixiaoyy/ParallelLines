@@ -1,37 +1,51 @@
+**Source visual truth**
+
+- `C:/Users/phpxi/.codex/generated_images/019f63dd-a4b1-7e11-9fba-8b74c3cbeda6/exec-8a7f7a18-f3ea-424d-9793-2019ea007c3f.png`
+- Production asset: `apps/web/public/private-space-entry.png`
+
+**Implementation evidence**
+
+- Full page: `C:/Users/phpxi/AppData/Local/Temp/private-space-home-implementation.png`
+- Focused card crop: `C:/Users/phpxi/AppData/Local/Temp/private-space-entry-crop.png`
+- Side-by-side comparison: `C:/Users/phpxi/AppData/Local/Temp/private-space-entry-comparison.png`
+- Viewport: 1280 × 720 desktop, device pixel ratio 2.
+- State: local home page with the admin-only prop temporarily enabled for visual inspection; the prop was restored to the real `canDeleteTopics` permission gate afterward.
+
+**Full-view comparison evidence**
+
+- The card renders beneath the existing left navigation panel at 272 × 103 CSS pixels.
+- The selected raster artwork remains fully visible and preserves its original 2037:772 ratio.
+- The surrounding home layout is unchanged.
+
+**Focused region comparison evidence**
+
+- The side-by-side reference and rendered crop show matching flower placement, title position, arrow, color balance, corner treatment, and image crop.
+- Browser-reported natural image dimensions are 2037 × 772 and the image loaded completely.
+
 **Findings**
-- No actionable P0/P1/P2 findings remain for the `/auth` login state at the checked desktop and mobile viewports.
 
-**Source Visual Truth**
-- PC reference: `D:\work\ParallelLines\参考\注册登录\pc.png`
-- H5 reference: `D:\work\ParallelLines\参考\注册登录\h5.png`
+- Fonts and typography: passed. “私密空间” remains part of the selected raster artwork; no replacement web font or duplicate HTML copy is present.
+- Spacing and layout rhythm: passed. The card uses the source aspect ratio with no clipping or stretching and keeps the existing 1rem rail gap.
+- Colors and visual tokens: passed. The bright pink-purple source colors are preserved; CSS only supplies a matching fallback surface, focus ring, and subtle interaction shadow.
+- Image quality and asset fidelity: passed. The original generated PNG is used directly and remains sharp at the rendered size.
+- Copy and content: passed. Only “私密空间” is visible; the removed administrator and planning copy does not remain in the component.
+- Interaction and accessibility: passed. The whole image is one link, its accessible label identifies the private space, keyboard focus remains visible, and click navigation reached `/b/private-space`.
+- Permission state: passed. After restoring the real permission gate, the signed-out browser rendered zero private-space links.
 
-**Implementation Evidence**
-- Local URL: `http://127.0.0.1:4174/auth`
-- PC screenshot: `D:\work\ParallelLines\tmp\auth-visual-check\auth-pc.png`
-- H5 screenshot: `D:\work\ParallelLines\tmp\auth-visual-check\auth-mobile.png`
-- PC comparison: `D:\work\ParallelLines\tmp\auth-visual-check\comparison-pc.png`
-- H5 comparison: `D:\work\ParallelLines\tmp\auth-visual-check\comparison-mobile.png`
+**Comparison history**
 
-**Viewport And State**
-- PC: `1536x1024`, login tab, unauthenticated state.
-- H5: `393x852`, login tab, unauthenticated state.
+- Initial implementation: no P0/P1/P2 mismatches found in the focused comparison.
+- Final verification: corrected the intrinsic width metadata from 2038 to the browser-observed 2037 pixels; the rendered ratio remains exact.
 
-**Full-View Comparison Evidence**
-- PC composition matches the dark convergence background, top navigation, left headline/features, right glass card, two-tab login/register treatment, gradient CTA, social login row, and footer links.
-- H5 composition matches the dark line-art background, right-weighted brand/hero copy, lower glass card, two-tab treatment, dark inputs, gradient CTA, and social login row.
+**Implementation Checklist**
 
-**Focused Region Comparison Evidence**
-- Form card: card bounds, border glow, dark glass fill, input stroke, tab underline, CTA gradient, and social circles were checked against the reference.
-- Brand/hero: auth-specific mark, headline, subtitle, and feature list were checked against the reference after removing duplicate text from the background asset.
-
-**Patches Made Since Previous QA Pass**
-- Hid the global AppShell topbar and shell padding on `/auth` so the route can render as a full-screen auth experience.
-- Rebuilt `AuthPage` markup for the reference layout while preserving login/register/forgot/verification flows.
-- Added auth-only visual assets under `apps/web/public/auth-visual/`, including masked PC/H5 backgrounds and the reference auth mark.
-- Tuned PC and H5 spacing, mobile typography, card placement, and social icons after screenshot comparison.
+- [x] Use the selected image as the complete visual asset.
+- [x] Remove old lock, administrator label, and planning subtitle.
+- [x] Preserve admin-only visibility and private-space navigation.
+- [x] Verify crop, ratio, image load, focus treatment, click navigation, and signed-out hiding.
 
 **Follow-up Polish**
-- P3: The H5 browser viewport does not include a real OS status/home indicator; the implementation focuses on the web content area rather than faking device chrome.
-- P3: 第三方登录区已改为按 `/auth/oauth/providers` 返回值条件显示；当前默认无 provider 时不渲染，避免展示不可用入口。完整 OAuth start/callback 仍需后端流程与 provider 凭据。
+
+- None required for the selected design.
 
 final result: passed

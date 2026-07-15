@@ -9,11 +9,9 @@ import {
   FolderOpenOutlined,
   HeartOutlined,
   LikeOutlined,
-  LockOutlined,
   NotificationOutlined,
   QuestionCircleOutlined,
   ReadOutlined,
-  RightOutlined,
   TagsOutlined,
   TeamOutlined,
   TrophyOutlined,
@@ -213,15 +211,14 @@ function tagAccentStyle(tagName: string): Record<string, string> {
       :to="{ name: 'board-detail', params: { slug: 'private-space' } }"
       aria-label="打开仅管理员可见的私密空间"
     >
-      <span class="private-space-entry__mark" aria-hidden="true">
-        <LockOutlined />
-      </span>
-      <span class="private-space-entry__copy">
-        <small>管理员专属</small>
-        <strong>私密空间</strong>
-        <span>AI 项目联动筹备区</span>
-      </span>
-      <RightOutlined class="private-space-entry__arrow" aria-hidden="true" />
+      <img
+        src="/private-space-entry.png"
+        alt=""
+        width="2037"
+        height="772"
+        decoding="async"
+        aria-hidden="true"
+      />
     </RouterLink>
   </div>
 </template>
