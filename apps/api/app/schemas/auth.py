@@ -129,3 +129,25 @@ class SessionResponse(BaseModel):
 
 class OAuthProviderResponse(BaseModel):
     providers: list[str]
+
+
+class FableSpaceSsoTicketResponse(BaseModel):
+    redirect_url: str
+    expires_in_seconds: int
+
+
+class FableSpaceSsoExchangeRequest(BaseModel):
+    code: str = Field(min_length=20, max_length=256)
+
+
+class FableSpaceSsoUser(BaseModel):
+    id: str
+    username: str
+    display_name: str | None = None
+    avatar_url: str | None = None
+    role: str
+    locale: str
+
+
+class FableSpaceSsoExchangeResponse(BaseModel):
+    user: FableSpaceSsoUser

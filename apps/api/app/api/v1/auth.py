@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Request, status
+from typing import Annotated
+
+from fastapi import APIRouter, Header, Request, Response, status
 
 from app.api.v1.dependencies import CurrentUserDep, SessionDep, SettingsDep, TokenDep
 from app.core.security import decode_token
@@ -7,6 +9,9 @@ from app.schemas.auth import (
     EmailChangeConfirmRequest,
     EmailChangeRequest,
     EmailChangeStartResponse,
+    FableSpaceSsoExchangeRequest,
+    FableSpaceSsoExchangeResponse,
+    FableSpaceSsoTicketResponse,
     LoginRequest,
     LoginResponse,
     OAuthProviderResponse,
@@ -32,6 +37,39 @@ from app.schemas.users import UserPublic
 from app.services.auth import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post("/fablespace/ticket", response_model=ApiResponse[FableSpaceSsoTicketResponse])
+async def issue_fablespace_ticket(
+    response: Response,
+    session: SessionDep,
+    settings: SettingsDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[FableSpaceSsoTicketResponse]:
+    """Issue an administrator-only, single-use login ticket for FableSpace."""
+    response.headers["Cache-Control"] = "no-store"
+    ticket = await AuthService(session, settings).issue_fablespace_sso_ticket(current_user)
+    return ApiResponse(data=ticket)
+
+
+@router.post("/fablespace/exchange", response_model=ApiResponse[FableSpaceSsoExchangeResponse])
+async def exchange_fablespace_ticket(
+    payload: FableSpaceSsoExchangeRequest,
+    response: Response,
+    session: SessionDep,
+    settings: SettingsDep,
+    service_secret: Annotated[
+        str | None,
+        Header(alias="X-FableSpace-SSO-Secret"),
+    ] = None,
+) -> ApiResponse[FableSpaceSsoExchangeResponse]:
+    """Redeem a ticket from the trusted FableSpace backend and return minimal user data."""
+    response.headers["Cache-Control"] = "no-store"
+    identity = await AuthService(session, settings).exchange_fablespace_sso_ticket(
+        payload,
+        service_secret,
+    )
+    return ApiResponse(data=identity)
 
 
 @router.post(

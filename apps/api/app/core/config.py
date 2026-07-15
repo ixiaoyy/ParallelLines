@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     access_token_minutes: int = 360
     refresh_token_days: int = 30
 
+    # FableSpace SSO uses a one-time ticket plus a backend-only shared secret.
+    fablespace_base_url: str = "http://127.0.0.1:3000"
+    fablespace_sso_service_secret: str = ""
+    fablespace_sso_ticket_ttl_seconds: int = 60
+
     email_delivery_mode: Literal["memory", "smtp"] = "memory"
     smtp_host: str | None = None
     smtp_port: int = 587

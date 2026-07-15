@@ -56,7 +56,7 @@ TABLE_COMMENTS: dict[str, str] = {
     "audit_logs": "审核与管理操作审计日志。",
     "email_verification_codes": "邮箱注册验证码记录，用于账号激活和重发限流。",
     "uploads": "用户上传的头像、帖子图片和附件元数据及存储引用。",
-    "user_security_tokens": "账号找回、邮箱变更等一次性安全令牌记录。",
+    "user_security_tokens": "账号找回、邮箱变更、跨项目登录等一次性安全令牌记录。",
     "user_sessions": "用户登录会话、刷新令牌哈希和设备撤销状态。",
     "user_recovery_codes": "TOTP 二次验证恢复码的哈希与使用状态。",
     "rate_limit_events": "写操作频控事件，用于用户/IP/邮箱等维度的滑动窗口计数。",

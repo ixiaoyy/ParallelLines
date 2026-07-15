@@ -276,6 +276,12 @@ export interface components {
     ApiResponse_ExternalWebhookResponse_: {
       [key: string]: unknown;
     };
+    ApiResponse_FableSpaceSsoExchangeResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_FableSpaceSsoTicketResponse_: {
+      [key: string]: unknown;
+    };
     ApiResponse_FlagResponse_: {
       [key: string]: unknown;
     };
@@ -942,6 +948,24 @@ export interface components {
       provider: string;
       retry_count?: number;
       status: string;
+    };
+    FableSpaceSsoExchangeRequest: {
+      code: string;
+    };
+    FableSpaceSsoExchangeResponse: {
+      user: components["schemas"]["FableSpaceSsoUser"];
+    };
+    FableSpaceSsoTicketResponse: {
+      expires_in_seconds: number;
+      redirect_url: string;
+    };
+    FableSpaceSsoUser: {
+      avatar_url?: string | null;
+      display_name?: string | null;
+      id: string;
+      locale: string;
+      role: string;
+      username: string;
     };
     FlagCreateRequest: {
       detail?: string | null;
@@ -2185,6 +2209,12 @@ export interface paths {
     };
     "/api/v1/auth/email-change/request": {
       post: { response: components["schemas"]["ApiResponse_EmailChangeStartResponse_"]; operationId: "request_email_change_api_v1_auth_email_change_request_post" };
+    };
+    "/api/v1/auth/fablespace/exchange": {
+      post: { response: components["schemas"]["ApiResponse_FableSpaceSsoExchangeResponse_"]; operationId: "exchange_fablespace_ticket_api_v1_auth_fablespace_exchange_post" };
+    };
+    "/api/v1/auth/fablespace/ticket": {
+      post: { response: components["schemas"]["ApiResponse_FableSpaceSsoTicketResponse_"]; operationId: "issue_fablespace_ticket_api_v1_auth_fablespace_ticket_post" };
     };
     "/api/v1/auth/login": {
       post: { response: components["schemas"]["ApiResponse_LoginResponse_"]; operationId: "login_api_v1_auth_login_post" };

@@ -39,6 +39,11 @@ STATIC_ASSETS = (
         media_type="image/png",
     ),
     StaticAsset(
+        source="static/web/private-space-entry.png",
+        key="private-space-entry.png",
+        media_type="image/png",
+    ),
+    StaticAsset(
         source="static/web/avatar-frames/level-1.webp",
         key="avatar-frames/level-1.webp",
         media_type="image/webp",

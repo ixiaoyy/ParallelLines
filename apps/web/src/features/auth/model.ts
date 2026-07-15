@@ -150,3 +150,8 @@ export interface SessionResponse {
 export interface OAuthProviderResponse {
   providers: string[];
 }
+
+export interface FableSpaceSsoTicketResponse {
+  redirect_url: string;
+  expires_in_seconds: number;
+}

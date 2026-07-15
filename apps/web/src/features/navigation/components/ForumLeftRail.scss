@@ -284,17 +284,26 @@
 .private-space-entry {
   position: relative;
   display: block;
+  width: 100%;
   min-width: 0;
-  aspect-ratio: 2037 / 772;
+  padding: 0;
+  border: 0;
+  aspect-ratio: 1024 / 388;
   overflow: hidden;
   border-radius: 1.18rem;
   background: #fff5fd;
   box-shadow: 0 0.55rem 1.5rem rgba(216, 70, 207, 0.13);
+  appearance: none;
+  cursor: pointer;
   text-decoration: none;
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,
     filter 180ms ease;
+}
+
+.private-space-entry:disabled {
+  cursor: wait;
 }
 
 .private-space-entry:hover,

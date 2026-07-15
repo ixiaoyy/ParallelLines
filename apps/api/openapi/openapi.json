@@ -1189,6 +1189,14 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "ApiResponse_FableSpaceSsoExchangeResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_FableSpaceSsoTicketResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ApiResponse_FlagResponse_": {
         "additionalProperties": true,
         "type": "object"
@@ -4111,6 +4119,101 @@
           "processed"
         ],
         "title": "ExternalWebhookResponse",
+        "type": "object"
+      },
+      "FableSpaceSsoExchangeRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 256,
+            "minLength": 20,
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "FableSpaceSsoExchangeRequest",
+        "type": "object"
+      },
+      "FableSpaceSsoExchangeResponse": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/FableSpaceSsoUser"
+          }
+        },
+        "required": [
+          "user"
+        ],
+        "title": "FableSpaceSsoExchangeResponse",
+        "type": "object"
+      },
+      "FableSpaceSsoTicketResponse": {
+        "properties": {
+          "expires_in_seconds": {
+            "title": "Expires In Seconds",
+            "type": "integer"
+          },
+          "redirect_url": {
+            "title": "Redirect Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "redirect_url",
+          "expires_in_seconds"
+        ],
+        "title": "FableSpaceSsoTicketResponse",
+        "type": "object"
+      },
+      "FableSpaceSsoUser": {
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "locale": {
+            "title": "Locale",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "role",
+          "locale"
+        ],
+        "title": "FableSpaceSsoUser",
         "type": "object"
       },
       "FlagCreateRequest": {
@@ -13693,6 +13796,93 @@
           }
         ],
         "summary": "Request Email Change",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/fablespace/exchange": {
+      "post": {
+        "description": "Redeem a ticket from the trusted FableSpace backend and return minimal user data.",
+        "operationId": "exchange_fablespace_ticket_api_v1_auth_fablespace_exchange_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-FableSpace-SSO-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fablespace-Sso-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FableSpaceSsoExchangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_FableSpaceSsoExchangeResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Exchange Fablespace Ticket",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/fablespace/ticket": {
+      "post": {
+        "description": "Issue an administrator-only, single-use login ticket for FableSpace.",
+        "operationId": "issue_fablespace_ticket_api_v1_auth_fablespace_ticket_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_FableSpaceSsoTicketResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Issue Fablespace Ticket",
         "tags": [
           "auth"
         ]

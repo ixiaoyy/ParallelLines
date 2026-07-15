@@ -21,6 +21,7 @@ from app.core.exceptions import (
     RateLimitError,
     ValidationError,
 )
+from app.core.permissions import USER_ROLE_ADMIN
 from app.core.security import create_token, hash_password, verify_password
 from app.db.base import utcnow
 from app.models.user import (
@@ -35,6 +36,10 @@ from app.schemas.auth import (
     EmailChangeConfirmRequest,
     EmailChangeRequest,
     EmailChangeStartResponse,
+    FableSpaceSsoExchangeRequest,
+    FableSpaceSsoExchangeResponse,
+    FableSpaceSsoTicketResponse,
+    FableSpaceSsoUser,
     LoginRequest,
     LoginResponse,
     OAuthProviderResponse,
@@ -64,6 +69,7 @@ from app.services.spam import SpamPreventionService
 
 PASSWORD_RESET_PURPOSE = "password_reset"
 EMAIL_CHANGE_PURPOSE = "email_change"
+FABLESPACE_SSO_PURPOSE = "fablespace_sso"
 TOTP_STEP_SECONDS = 30
 TOTP_DIGITS = 6
 RECOVERY_CODE_COUNT = 10
@@ -73,6 +79,83 @@ class AuthService:
     def __init__(self, session: AsyncSession, settings: Settings) -> None:
         self.session = session
         self.settings = settings
+
+    async def issue_fablespace_sso_ticket(self, user: User) -> FableSpaceSsoTicketResponse:
+        """Create one short-lived, single-use FableSpace login ticket for an administrator."""
+        if user.role != USER_ROLE_ADMIN:
+            raise PermissionDeniedError("admin_required", "Administrator access is required")
+        if len(self.settings.fablespace_sso_service_secret.strip()) < 32:
+            raise ValidationError("fablespace_sso_unavailable", "FableSpace SSO is not configured")
+
+        base_url = self.settings.fablespace_base_url.strip().rstrip("/")
+        if not base_url.startswith(("http://", "https://")):
+            raise ValidationError("fablespace_sso_unavailable", "FableSpace URL is not configured")
+
+        ttl_seconds = max(15, min(self.settings.fablespace_sso_ticket_ttl_seconds, 300))
+        await self._consume_open_security_tokens(user.id, FABLESPACE_SSO_PURPOSE)
+        ticket, ticket_hash = await self._new_security_token(user, FABLESPACE_SSO_PURPOSE)
+        now = utcnow()
+        self.session.add(
+            UserSecurityToken(
+                user_id=user.id,
+                purpose=FABLESPACE_SSO_PURPOSE,
+                token_hash=ticket_hash,
+                email=None,
+                payload=None,
+                sent_at=now,
+                expires_at=now + timedelta(seconds=ttl_seconds),
+            )
+        )
+        await self.session.commit()
+        return FableSpaceSsoTicketResponse(
+            redirect_url=(
+                f"{base_url}/api/v1/auth/parallellines/callback?code={quote(ticket, safe='')}"
+            ),
+            expires_in_seconds=ttl_seconds,
+        )
+
+    async def exchange_fablespace_sso_ticket(
+        self,
+        payload: FableSpaceSsoExchangeRequest,
+        service_secret: str | None,
+    ) -> FableSpaceSsoExchangeResponse:
+        """Consume a FableSpace ticket server-to-server and return a minimal trusted identity."""
+        expected_secret = self.settings.fablespace_sso_service_secret.strip()
+        supplied_secret = (service_secret or "").strip()
+        if len(expected_secret) < 32 or not hmac.compare_digest(expected_secret, supplied_secret):
+            raise AuthenticationError("invalid_sso_client", "Invalid SSO client credentials")
+
+        now = utcnow()
+        token = await self.session.scalar(
+            select(UserSecurityToken)
+            .where(
+                UserSecurityToken.purpose == FABLESPACE_SSO_PURPOSE,
+                UserSecurityToken.token_hash == self._hash_token(payload.code),
+                UserSecurityToken.consumed_at.is_(None),
+            )
+            .with_for_update()
+        )
+        if not token or _as_utc(token.expires_at) <= now:
+            raise AuthenticationError("invalid_sso_ticket", "SSO ticket is invalid or expired")
+
+        user = await self.session.get(User, token.user_id)
+        if not user or user.status != "active" or user.role != USER_ROLE_ADMIN:
+            token.consumed_at = now
+            await self.session.commit()
+            raise AuthenticationError("invalid_sso_ticket", "SSO ticket is invalid or expired")
+
+        token.consumed_at = now
+        await self.session.commit()
+        return FableSpaceSsoExchangeResponse(
+            user=FableSpaceSsoUser(
+                id=user.id,
+                username=user.username,
+                display_name=user.display_name,
+                avatar_url=user.avatar_url,
+                role=user.role,
+                locale=user.locale,
+            )
+        )
 
     async def register(
         self,

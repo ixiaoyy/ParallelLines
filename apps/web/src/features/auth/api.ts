@@ -5,6 +5,7 @@ import type {
   EmailChangeConfirmRequest,
   EmailChangeRequest,
   EmailChangeStartResponse,
+  FableSpaceSsoTicketResponse,
   LoginResponse,
   LoginRequest,
   OAuthProviderResponse,
@@ -134,4 +135,12 @@ export function fetchOAuthProviders(): Promise<OAuthProviderResponse> {
 
 export function logout(): Promise<Record<string, boolean>> {
   return apiPost<Record<string, boolean>, Record<string, never>>("/auth/logout", {});
+}
+
+// Requests a short-lived administrator handoff URL; no user profile or bearer token enters the URL.
+export function requestFableSpaceSsoTicket(): Promise<FableSpaceSsoTicketResponse> {
+  return apiPost<FableSpaceSsoTicketResponse, Record<string, never>>(
+    "/auth/fablespace/ticket",
+    {},
+  );
 }
