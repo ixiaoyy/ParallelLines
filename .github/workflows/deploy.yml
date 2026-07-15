@@ -1,6 +1,13 @@
 name: Deploy
 
 on:
+  workflow_dispatch:
+    inputs:
+      repair_fablespace_sso:
+        description: Repair the shared ParallelLines/FableSpace SSO configuration
+        required: true
+        default: true
+        type: boolean
   push:
     branches:
       - main
@@ -46,6 +53,91 @@ jobs:
               - 'deploy/nginx/**'
             compose:
               - 'docker-compose.yml'
+
+  repair-fablespace-sso:
+    name: Repair FableSpace SSO
+    runs-on: ubuntu-latest
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' && inputs.repair_fablespace_sso
+
+    steps:
+      - name: Validate server configuration
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing required GitHub Actions secret: ${name}"
+              exit 1
+            fi
+          done
+
+      - name: Synchronize SSO configuration and restart backends
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          command_timeout: 20m
+          script: |
+            set -eu
+            FABLESPACE_PATH="/opt/fablespace"
+            cd "${FABLESPACE_PATH}"
+            git remote set-url origin https://github.com/ixiaoyy/FableSpace.git
+            git fetch --prune origin main
+            git reset --hard origin/main
+
+            CONFIG_OUTPUT="$(sudo python3 deploy/server/configure_shared_services.py --cors-origin https://fable.pingxingxian.space)"
+            printf '%s\n' "${CONFIG_OUTPUT}"
+
+            cd /opt/parallellines
+            if sudo docker compose version >/dev/null 2>&1; then
+              PARALLELLINES_COMPOSE="sudo docker compose"
+            else
+              PARALLELLINES_COMPOSE="sudo docker-compose"
+            fi
+            $PARALLELLINES_COMPOSE up -d --no-deps --force-recreate api worker
+            PARALLELLINES_READY=false
+            for ATTEMPT in $(seq 1 30); do
+              if $PARALLELLINES_COMPOSE exec -T api python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3).read()" >/dev/null 2>&1; then
+                PARALLELLINES_READY=true
+                break
+              fi
+              sleep 2
+            done
+            if [ "${PARALLELLINES_READY}" != "true" ]; then
+              $PARALLELLINES_COMPOSE logs --tail=120 api
+              echo "ParallelLines API health check failed after SSO repair"
+              exit 1
+            fi
+
+            cd "${FABLESPACE_PATH}"
+            if sudo docker compose version >/dev/null 2>&1; then
+              FABLESPACE_COMPOSE="sudo docker compose"
+            else
+              FABLESPACE_COMPOSE="sudo docker-compose"
+            fi
+            FABLESPACE_COMPOSE_FILES="-f docker-compose.yml -f deploy/docker-compose.shared.yml"
+            $FABLESPACE_COMPOSE $FABLESPACE_COMPOSE_FILES up -d --build backend
+            FABLESPACE_READY=false
+            for ATTEMPT in $(seq 1 30); do
+              if $FABLESPACE_COMPOSE $FABLESPACE_COMPOSE_FILES exec -T backend python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3).read()" >/dev/null 2>&1; then
+                FABLESPACE_READY=true
+                break
+              fi
+              sleep 2
+            done
+            if [ "${FABLESPACE_READY}" != "true" ]; then
+              $FABLESPACE_COMPOSE $FABLESPACE_COMPOSE_FILES logs --tail=120 backend
+              echo "FableSpace backend health check failed after SSO repair"
+              exit 1
+            fi
+
+            sudo docker image prune -f
 
   deploy-full-stack:
     name: Deploy full stack (compose)
