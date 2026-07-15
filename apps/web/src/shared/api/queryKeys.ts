@@ -3,6 +3,7 @@ export const queryKeys = {
   currentUser: ["auth", "me"] as const,
   sessions: ["auth", "sessions"] as const,
   oauthProviders: ["auth", "oauth", "providers"] as const,
+  fableSpaceAccess: ["auth", "fablespace", "access"] as const,
   usersRoot: ["users"] as const,
   user: (username: string) => ["users", username] as const,
   // userById 用途：缓存公开成员页按稳定用户 ID 读取的资料；参数为用户 ID，返回稳定 query key 且无副作用。
@@ -56,6 +57,8 @@ export const queryKeys = {
   adminWebhooks: ["admin", "webhooks"] as const,
   adminWebhookDeliveries: ["admin", "webhook-deliveries"] as const,
   adminUsers: (params: object) => ["admin", "users", params] as const,
+  adminFableSpaceAccessGrants: (params: object) =>
+    ["admin", "fablespace", "access-grants", params] as const,
   adminSystem: ["admin", "system"] as const,
   adminAudit: ["admin", "audit"] as const,
   adminEmailLogs: ["admin", "email-logs"] as const,

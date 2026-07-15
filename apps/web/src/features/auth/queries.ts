@@ -15,6 +15,7 @@ import {
   disableTwoFactor,
   enableTwoFactor,
   fetchCurrentUser,
+  fetchFableSpaceAccess,
   fetchOAuthProviders,
   fetchSessions,
   login,
@@ -36,6 +37,7 @@ import type {
   EmailChangeConfirmRequest,
   EmailChangeRequest,
   EmailChangeStartResponse,
+  FableSpaceAccessResponse,
   LoginResponse,
   LoginRequest,
   OAuthProviderResponse,
@@ -56,6 +58,18 @@ import type {
   UserPublic,
   VerifyEmailRequest,
 } from "./model";
+
+// Provides the current user's FableSpace entitlement so product entry visibility never depends on the forum role.
+// Parameters: none. Return value: a cached access query enabled only for authenticated browsers. Side effect: may fetch entitlement state.
+export function useFableSpaceAccess() {
+  return useQuery<FableSpaceAccessResponse, Error>({
+    queryKey: queryKeys.fableSpaceAccess,
+    queryFn: fetchFableSpaceAccess,
+    enabled: () => hasAccessToken(),
+    retry: false,
+    staleTime: 30_000,
+  });
+}
 
 export function useCurrentUser() {
   const queryClient = useQueryClient();

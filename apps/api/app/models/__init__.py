@@ -42,6 +42,7 @@ from app.models.moderation import (
     SpamAction,
 )
 from app.models.news import FrontierNewsAiRun, FrontierNewsItem, FrontierNewsSource
+from app.models.product_access import ProductAccessGrant
 from app.models.push import PushSubscription
 from app.models.search import SearchDocument, SearchLog
 from app.models.social import PrivateMessageParticipant, UserRelationship
@@ -91,6 +92,7 @@ __all__ = [
     "Post",
     "PostRevision",
     "PrivateMessageParticipant",
+    "ProductAccessGrant",
     "PushSubscription",
     "RateLimitEvent",
     "Reviewable",

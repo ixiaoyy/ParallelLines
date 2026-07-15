@@ -155,3 +155,13 @@ export interface FableSpaceSsoTicketResponse {
   redirect_url: string;
   expires_in_seconds: number;
 }
+
+export type FableSpaceAccessLevel = "access" | "creator" | "operator" | "admin";
+
+export interface FableSpaceAccessResponse {
+  access_allowed: boolean;
+  capabilities: string[];
+  access_level: FableSpaceAccessLevel | null;
+  expires_at: string | null;
+  authorization_version: number;
+}

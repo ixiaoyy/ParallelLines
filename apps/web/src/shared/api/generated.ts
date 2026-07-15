@@ -276,7 +276,16 @@ export interface components {
     ApiResponse_ExternalWebhookResponse_: {
       [key: string]: unknown;
     };
+    ApiResponse_FableSpaceAccessStatusResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_FableSpaceAdminAccessRow_: {
+      [key: string]: unknown;
+    };
     ApiResponse_FableSpaceSsoExchangeResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_FableSpaceSsoIntrospectResponse_: {
       [key: string]: unknown;
     };
     ApiResponse_FableSpaceSsoTicketResponse_: {
@@ -343,6 +352,9 @@ export interface components {
       [key: string]: unknown;
     };
     ApiResponse_list_ExternalIntegrationResponse__: {
+      [key: string]: unknown;
+    };
+    ApiResponse_list_FableSpaceAdminAccessRow__: {
       [key: string]: unknown;
     };
     ApiResponse_list_FlagResponse__: {
@@ -949,11 +961,57 @@ export interface components {
       retry_count?: number;
       status: string;
     };
+    FableSpaceAccessGrantUpdateRequest: {
+      access_level: "access" | "creator" | "operator" | "admin";
+      expires_at?: string | null;
+    };
+    FableSpaceAccessStatusResponse: {
+      access_allowed: boolean;
+      access_level?: "access" | "creator" | "operator" | "admin" | null;
+      authorization_version: number;
+      capabilities: Array<string>;
+      expires_at?: string | null;
+    };
+    FableSpaceAdminAccessRow: {
+      access_allowed: boolean;
+      access_level?: "access" | "creator" | "operator" | "admin" | null;
+      account_status: string;
+      authorization_version: number;
+      avatar_url?: string | null;
+      capabilities: Array<string>;
+      created_at?: string | null;
+      display_name?: string | null;
+      email: string;
+      expires_at?: string | null;
+      forum_role: string;
+      granted_by_id?: string | null;
+      granted_by_name?: string | null;
+      revoked_at?: string | null;
+      updated_at?: string | null;
+      user_id: string;
+      username: string;
+    };
     FableSpaceSsoExchangeRequest: {
       code: string;
     };
     FableSpaceSsoExchangeResponse: {
+      access_expires_at?: string | null;
+      access_level: string;
+      authorization_version: number;
+      capabilities: Array<string>;
       user: components["schemas"]["FableSpaceSsoUser"];
+    };
+    FableSpaceSsoIntrospectRequest: {
+      user_id: string;
+    };
+    FableSpaceSsoIntrospectResponse: {
+      access_expires_at?: string | null;
+      access_level?: string | null;
+      account_status?: string | null;
+      active: boolean;
+      authorization_version: number;
+      capabilities: Array<string>;
+      user?: components["schemas"]["FableSpaceSsoUser"] | null;
     };
     FableSpaceSsoTicketResponse: {
       expires_in_seconds: number;
@@ -2109,6 +2167,13 @@ export interface paths {
     "/api/v1/admin/external-integrations/events/{event_id}/retry": {
       post: { response: components["schemas"]["ApiResponse_ExternalIntegrationEventResponse_"]; operationId: "retry_external_integration_event_api_v1_admin_external_integrations_events__event_id__retry_post" };
     };
+    "/api/v1/admin/fablespace/access-grants": {
+      get: { response: components["schemas"]["ApiResponse_list_FableSpaceAdminAccessRow__"]; operationId: "list_fablespace_access_grants_api_v1_admin_fablespace_access_grants_get" };
+    };
+    "/api/v1/admin/fablespace/access-grants/{user_id}": {
+      delete: { response: components["schemas"]["ApiResponse_FableSpaceAdminAccessRow_"]; operationId: "revoke_fablespace_access_api_v1_admin_fablespace_access_grants__user_id__delete" };
+      put: { response: components["schemas"]["ApiResponse_FableSpaceAdminAccessRow_"]; operationId: "grant_or_update_fablespace_access_api_v1_admin_fablespace_access_grants__user_id__put" };
+    };
     "/api/v1/admin/frontier-news/collect": {
       post: { response: components["schemas"]["ApiResponse_FrontierNewsCollectResponse_"]; operationId: "collect_all_frontier_news_api_v1_admin_frontier_news_collect_post" };
     };
@@ -2210,8 +2275,14 @@ export interface paths {
     "/api/v1/auth/email-change/request": {
       post: { response: components["schemas"]["ApiResponse_EmailChangeStartResponse_"]; operationId: "request_email_change_api_v1_auth_email_change_request_post" };
     };
+    "/api/v1/auth/fablespace/access": {
+      get: { response: components["schemas"]["ApiResponse_FableSpaceAccessStatusResponse_"]; operationId: "get_fablespace_access_api_v1_auth_fablespace_access_get" };
+    };
     "/api/v1/auth/fablespace/exchange": {
       post: { response: components["schemas"]["ApiResponse_FableSpaceSsoExchangeResponse_"]; operationId: "exchange_fablespace_ticket_api_v1_auth_fablespace_exchange_post" };
+    };
+    "/api/v1/auth/fablespace/introspect": {
+      post: { response: components["schemas"]["ApiResponse_FableSpaceSsoIntrospectResponse_"]; operationId: "introspect_fablespace_access_api_v1_auth_fablespace_introspect_post" };
     };
     "/api/v1/auth/fablespace/ticket": {
       post: { response: components["schemas"]["ApiResponse_FableSpaceSsoTicketResponse_"]; operationId: "issue_fablespace_ticket_api_v1_auth_fablespace_ticket_post" };

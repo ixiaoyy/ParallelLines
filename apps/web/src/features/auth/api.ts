@@ -5,6 +5,7 @@ import type {
   EmailChangeConfirmRequest,
   EmailChangeRequest,
   EmailChangeStartResponse,
+  FableSpaceAccessResponse,
   FableSpaceSsoTicketResponse,
   LoginResponse,
   LoginRequest,
@@ -137,10 +138,16 @@ export function logout(): Promise<Record<string, boolean>> {
   return apiPost<Record<string, boolean>, Record<string, never>>("/auth/logout", {});
 }
 
-// Requests a short-lived administrator handoff URL; no user profile or bearer token enters the URL.
+// Requests a short-lived authorized-user handoff URL; no user profile or bearer token enters the URL.
 export function requestFableSpaceSsoTicket(): Promise<FableSpaceSsoTicketResponse> {
   return apiPost<FableSpaceSsoTicketResponse, Record<string, never>>(
     "/auth/fablespace/ticket",
     {},
   );
+}
+
+// Reads the signed-in user's independent FableSpace entitlement without changing forum roles.
+// Parameters: none. Return value: current access level, capabilities, and expiry. Side effect: one authenticated GET request.
+export function fetchFableSpaceAccess(): Promise<FableSpaceAccessResponse> {
+  return apiGet<FableSpaceAccessResponse>("/auth/fablespace/access");
 }

@@ -22,6 +22,7 @@ import {
   enrichFrontierNewsItem,
   fetchAdminApiKeys,
   fetchAdminBadges,
+  fetchAdminFableSpaceAccessGrants,
   fetchAdminAuditLogs,
   fetchAdminEmailLogs,
   fetchAdminSystem,
@@ -33,12 +34,17 @@ import {
   fetchPublicSiteSettings,
   grantAdminUserBadge,
   queueFrontierNewsItem,
+  revokeAdminFableSpaceAccessGrant,
   revokeAdminUserBadge,
   updateFrontierNewsSource,
+  updateAdminFableSpaceAccessGrant,
   updateAdminUser,
 } from "./api";
 import type {
   AdminEmailLogResponse,
+  AdminFableSpaceAccessGrantResponse,
+  AdminFableSpaceAccessGrantsParams,
+  AdminFableSpaceAccessGrantUpdateRequest,
   ApiKeyCreateRequest,
   ApiKeyCreateResponse,
   ApiKeyResponse,
@@ -85,6 +91,54 @@ export function useAdminUsers(params: MaybeRefOrGetter<AdminUsersParams>) {
     enabled: computed(() => hasAccessToken()),
     retry: false,
     staleTime: 15_000,
+  });
+}
+
+// Provides a reactive admin search over forum users and their FableSpace entitlement state.
+// `params` may be a ref/getter and drives both the cache key and request. Return value is the Vue Query result; side effect: fetches when authenticated.
+export function useAdminFableSpaceAccessGrants(
+  params: MaybeRefOrGetter<AdminFableSpaceAccessGrantsParams>,
+) {
+  return useQuery<AdminFableSpaceAccessGrantResponse[], Error>({
+    queryKey: computed(() => queryKeys.adminFableSpaceAccessGrants(toValue(params))),
+    queryFn: () => fetchAdminFableSpaceAccessGrants(toValue(params)),
+    enabled: computed(() => hasAccessToken()),
+    retry: false,
+    staleTime: 15_000,
+  });
+}
+
+// Creates or updates an entitlement and refreshes admin plus current-user access caches.
+// Parameters: none at setup. Return value is a mutation accepting userId and grant payload; side effect: PUT plus cache invalidation on success.
+export function useUpdateAdminFableSpaceAccessGrant() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    AdminFableSpaceAccessGrantResponse,
+    Error,
+    { userId: string; payload: AdminFableSpaceAccessGrantUpdateRequest }
+  >({
+    mutationFn: ({ userId, payload }) => updateAdminFableSpaceAccessGrant(userId, payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.fableSpaceAccess }),
+      ]);
+    },
+  });
+}
+
+// Revokes an entitlement and refreshes admin plus current-user access caches.
+// Parameters: none at setup. Return value is a mutation accepting a user ID; side effect: DELETE plus cache invalidation on success.
+export function useRevokeAdminFableSpaceAccessGrant() {
+  const queryClient = useQueryClient();
+  return useMutation<AdminFableSpaceAccessGrantResponse, Error, string>({
+    mutationFn: revokeAdminFableSpaceAccessGrant,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.fableSpaceAccess }),
+      ]);
+    },
   });
 }
 

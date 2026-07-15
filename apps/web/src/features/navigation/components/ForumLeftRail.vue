@@ -153,7 +153,7 @@ function tagAccentStyle(tagName: string): Record<string, string> {
   return { "--tag-accent": tagAccentColors[tagName] ?? "var(--primary)" };
 }
 
-// Requests a short-lived backend ticket, then transfers this administrator to FableSpace.
+// Requests a short-lived backend ticket, then transfers this authorized user to FableSpace.
 // Parameters: none. Return value: resolves after navigation starts or the error is shown; side effect: changes page location.
 async function openPrivateSpace(): Promise<void> {
   if (privateSpaceOpening.value) return;

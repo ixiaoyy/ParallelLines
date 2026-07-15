@@ -3,6 +3,9 @@ import { apiDelete, apiGet, apiPost, apiPut } from "@/shared/api/client";
 import type { BadgeGrantRequest, BadgeResponse, BadgeRevokeRequest } from "@/features/badges/model";
 import type {
   AdminEmailLogResponse,
+  AdminFableSpaceAccessGrantResponse,
+  AdminFableSpaceAccessGrantsParams,
+  AdminFableSpaceAccessGrantUpdateRequest,
   ApiKeyCreateRequest,
   ApiKeyCreateResponse,
   ApiKeyResponse,
@@ -114,6 +117,42 @@ export function fetchAdminWebhookDeliveries(limit = 20): Promise<WebhookDelivery
 
 export function fetchAdminSystem(): Promise<AdminSystemOverviewResponse> {
   return apiGet<AdminSystemOverviewResponse>("/admin/system");
+}
+
+// Searches forum accounts together with their independent FableSpace grant state.
+// `params` carries the optional identity query and row limit. Return value includes granted and ungranted users; side effect: one admin GET request.
+export function fetchAdminFableSpaceAccessGrants(
+  params: AdminFableSpaceAccessGrantsParams,
+): Promise<AdminFableSpaceAccessGrantResponse[]> {
+  const query = new URLSearchParams({ limit: String(params.limit ?? 50) });
+  if (params.query) {
+    query.set("query", params.query);
+  }
+  return apiGet<AdminFableSpaceAccessGrantResponse[]>(
+    `/admin/fablespace/access-grants?${query.toString()}`,
+  );
+}
+
+// Creates or replaces one user's FableSpace entitlement while leaving their forum account untouched.
+// `userId` is the forum user ID and `payload` is level plus optional expiry. Return value is the refreshed row; side effect: one admin PUT request.
+export function updateAdminFableSpaceAccessGrant(
+  userId: string,
+  payload: AdminFableSpaceAccessGrantUpdateRequest,
+): Promise<AdminFableSpaceAccessGrantResponse> {
+  return apiPut<AdminFableSpaceAccessGrantResponse, AdminFableSpaceAccessGrantUpdateRequest>(
+    `/admin/fablespace/access-grants/${userId}`,
+    payload,
+  );
+}
+
+// Revokes one user's FableSpace entitlement without changing their forum role or account status.
+// `userId` is the stable forum user ID. Return value is the now-ungranted row; side effect: one admin DELETE request.
+export function revokeAdminFableSpaceAccessGrant(
+  userId: string,
+): Promise<AdminFableSpaceAccessGrantResponse> {
+  return apiDelete<AdminFableSpaceAccessGrantResponse>(
+    `/admin/fablespace/access-grants/${userId}`,
+  );
 }
 
 /**

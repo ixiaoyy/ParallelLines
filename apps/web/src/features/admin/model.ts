@@ -1,4 +1,5 @@
 import type { UserBadgeResponse } from "@/features/badges/model";
+import type { FableSpaceAccessLevel } from "@/features/auth/model";
 import {
   builtinSiteText,
   currentLocale,
@@ -199,6 +200,36 @@ export interface AdminQueueOverview {
   living_forum_daily_topic_limit?: number;
   living_forum_daily_reply_limit?: number;
   counts?: Record<string, number>;
+}
+
+export interface AdminFableSpaceAccessGrantResponse {
+  user_id: string;
+  username: string;
+  email: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  forum_role: "user" | "moderator" | "admin" | string;
+  account_status: "active" | "silenced" | "suspended" | "deleted" | string;
+  access_allowed: boolean;
+  access_level: FableSpaceAccessLevel | null;
+  capabilities: string[];
+  expires_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  revoked_at: string | null;
+  granted_by_id: string | null;
+  granted_by_name: string | null;
+  authorization_version: number;
+}
+
+export interface AdminFableSpaceAccessGrantsParams {
+  query?: string;
+  limit?: number;
+}
+
+export interface AdminFableSpaceAccessGrantUpdateRequest {
+  access_level: FableSpaceAccessLevel;
+  expires_at: string | null;
 }
 
 export interface AdminSystemOverviewResponse {

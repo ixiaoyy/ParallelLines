@@ -21,7 +21,6 @@ from app.core.exceptions import (
     RateLimitError,
     ValidationError,
 )
-from app.core.permissions import USER_ROLE_ADMIN
 from app.core.security import create_token, hash_password, verify_password
 from app.db.base import utcnow
 from app.models.user import (
@@ -38,6 +37,8 @@ from app.schemas.auth import (
     EmailChangeStartResponse,
     FableSpaceSsoExchangeRequest,
     FableSpaceSsoExchangeResponse,
+    FableSpaceSsoIntrospectRequest,
+    FableSpaceSsoIntrospectResponse,
     FableSpaceSsoTicketResponse,
     FableSpaceSsoUser,
     LoginRequest,
@@ -65,6 +66,7 @@ from app.services.background_jobs import BackgroundJobService
 from app.services.badges import BadgeTrustService
 from app.services.growth import GrowthService
 from app.services.integrations import IntegrationService
+from app.services.product_access import ProductAccessService
 from app.services.spam import SpamPreventionService
 
 PASSWORD_RESET_PURPOSE = "password_reset"
@@ -81,9 +83,13 @@ class AuthService:
         self.settings = settings
 
     async def issue_fablespace_sso_ticket(self, user: User) -> FableSpaceSsoTicketResponse:
-        """Create one short-lived, single-use FableSpace login ticket for an administrator."""
-        if user.role != USER_ROLE_ADMIN:
-            raise PermissionDeniedError("admin_required", "Administrator access is required")
+        """Create a single-use FableSpace ticket for a currently authorized user."""
+        authorization = await ProductAccessService(self.session).fablespace_authorization(user)
+        if not authorization.allowed:
+            raise PermissionDeniedError(
+                "fablespace_access_required",
+                "FableSpace access is required",
+            )
         if len(self.settings.fablespace_sso_service_secret.strip()) < 32:
             raise ValidationError("fablespace_sso_unavailable", "FableSpace SSO is not configured")
 
@@ -101,7 +107,10 @@ class AuthService:
                 purpose=FABLESPACE_SSO_PURPOSE,
                 token_hash=ticket_hash,
                 email=None,
-                payload=None,
+                payload=json.dumps(
+                    {"authorization_version": authorization.authorization_version},
+                    separators=(",", ":"),
+                ),
                 sent_at=now,
                 expires_at=now + timedelta(seconds=ttl_seconds),
             )
@@ -120,10 +129,7 @@ class AuthService:
         service_secret: str | None,
     ) -> FableSpaceSsoExchangeResponse:
         """Consume a FableSpace ticket server-to-server and return a minimal trusted identity."""
-        expected_secret = self.settings.fablespace_sso_service_secret.strip()
-        supplied_secret = (service_secret or "").strip()
-        if len(expected_secret) < 32 or not hmac.compare_digest(expected_secret, supplied_secret):
-            raise AuthenticationError("invalid_sso_client", "Invalid SSO client credentials")
+        self._require_fablespace_sso_client(service_secret)
 
         now = utcnow()
         token = await self.session.scalar(
@@ -139,7 +145,12 @@ class AuthService:
             raise AuthenticationError("invalid_sso_ticket", "SSO ticket is invalid or expired")
 
         user = await self.session.get(User, token.user_id)
-        if not user or user.status != "active" or user.role != USER_ROLE_ADMIN:
+        authorization = (
+            await ProductAccessService(self.session).fablespace_authorization(user)
+            if user is not None
+            else None
+        )
+        if user is None or authorization is None or not authorization.allowed:
             token.consumed_at = now
             await self.session.commit()
             raise AuthenticationError("invalid_sso_ticket", "SSO ticket is invalid or expired")
@@ -147,14 +158,76 @@ class AuthService:
         token.consumed_at = now
         await self.session.commit()
         return FableSpaceSsoExchangeResponse(
-            user=FableSpaceSsoUser(
-                id=user.id,
-                username=user.username,
-                display_name=user.display_name,
-                avatar_url=user.avatar_url,
-                role=user.role,
-                locale=user.locale,
+            user=self._fablespace_sso_user(user),
+            capabilities=list(authorization.capabilities),
+            access_level=authorization.access_level or "access",
+            authorization_version=authorization.authorization_version,
+            access_expires_at=authorization.expires_at,
+        )
+
+    async def introspect_fablespace_access(
+        self,
+        payload: FableSpaceSsoIntrospectRequest,
+        service_secret: str | None,
+    ) -> FableSpaceSsoIntrospectResponse:
+        """Return authoritative current account and capability state to FableSpace.
+
+        Key parameters are the requested ParallelLines user ID and backend-only client
+        secret. The return value is safe trusted-session state. Side effect: reads the user
+        and product grant without mutating either.
+        """
+
+        self._require_fablespace_sso_client(service_secret)
+        user = await self.session.get(User, payload.user_id)
+        if user is None:
+            return FableSpaceSsoIntrospectResponse(
+                active=False,
+                user=None,
+                account_status=None,
+                capabilities=[],
+                access_level=None,
+                authorization_version=0,
+                access_expires_at=None,
             )
+
+        authorization = await ProductAccessService(self.session).fablespace_authorization(user)
+        return FableSpaceSsoIntrospectResponse(
+            active=authorization.allowed,
+            user=self._fablespace_sso_user(user),
+            account_status=user.status,
+            capabilities=list(authorization.capabilities),
+            access_level=authorization.access_level,
+            authorization_version=authorization.authorization_version,
+            access_expires_at=authorization.expires_at,
+        )
+
+    def _require_fablespace_sso_client(self, service_secret: str | None) -> None:
+        """Authenticate the backend-only FableSpace client with constant-time comparison.
+
+        Key parameter `service_secret` is the supplied shared secret. Return value is none.
+        Side effect: raises a typed authentication error when credentials are unavailable
+        or invalid.
+        """
+
+        expected_secret = self.settings.fablespace_sso_service_secret.strip()
+        supplied_secret = (service_secret or "").strip()
+        if len(expected_secret) < 32 or not hmac.compare_digest(expected_secret, supplied_secret):
+            raise AuthenticationError("invalid_sso_client", "Invalid SSO client credentials")
+
+    def _fablespace_sso_user(self, user: User) -> FableSpaceSsoUser:
+        """Project one forum account into the minimal trusted FableSpace identity.
+
+        Key parameter `user` is the authoritative forum model. The return value omits
+        email and security fields. This helper has no side effects.
+        """
+
+        return FableSpaceSsoUser(
+            id=user.id,
+            username=user.username,
+            display_name=user.display_name,
+            avatar_url=user.avatar_url,
+            role=user.role,
+            locale=user.locale,
         )
 
     async def register(

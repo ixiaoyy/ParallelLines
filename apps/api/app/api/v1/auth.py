@@ -11,6 +11,8 @@ from app.schemas.auth import (
     EmailChangeStartResponse,
     FableSpaceSsoExchangeRequest,
     FableSpaceSsoExchangeResponse,
+    FableSpaceSsoIntrospectRequest,
+    FableSpaceSsoIntrospectResponse,
     FableSpaceSsoTicketResponse,
     LoginRequest,
     LoginResponse,
@@ -33,10 +35,36 @@ from app.schemas.auth import (
     VerifyEmailRequest,
 )
 from app.schemas.common import ApiResponse
+from app.schemas.product_access import FableSpaceAccessStatusResponse
 from app.schemas.users import UserPublic
 from app.services.auth import AuthService
+from app.services.product_access import ProductAccessService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.get(
+    "/fablespace/access",
+    response_model=ApiResponse[FableSpaceAccessStatusResponse],
+)
+async def get_fablespace_access(
+    response: Response,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[FableSpaceAccessStatusResponse]:
+    """Return the current user's effective FableSpace access for entry visibility."""
+
+    response.headers["Cache-Control"] = "no-store"
+    authorization = await ProductAccessService(session).fablespace_authorization(current_user)
+    return ApiResponse(
+        data=FableSpaceAccessStatusResponse(
+            access_allowed=authorization.allowed,
+            capabilities=list(authorization.capabilities),
+            access_level=authorization.access_level,  # type: ignore[arg-type]
+            expires_at=authorization.expires_at,
+            authorization_version=authorization.authorization_version,
+        )
+    )
 
 
 @router.post("/fablespace/ticket", response_model=ApiResponse[FableSpaceSsoTicketResponse])
@@ -46,7 +74,7 @@ async def issue_fablespace_ticket(
     settings: SettingsDep,
     current_user: CurrentUserDep,
 ) -> ApiResponse[FableSpaceSsoTicketResponse]:
-    """Issue an administrator-only, single-use login ticket for FableSpace."""
+    """Issue a single-use FableSpace ticket after checking current product access."""
     response.headers["Cache-Control"] = "no-store"
     ticket = await AuthService(session, settings).issue_fablespace_sso_ticket(current_user)
     return ApiResponse(data=ticket)
@@ -70,6 +98,30 @@ async def exchange_fablespace_ticket(
         service_secret,
     )
     return ApiResponse(data=identity)
+
+
+@router.post(
+    "/fablespace/introspect",
+    response_model=ApiResponse[FableSpaceSsoIntrospectResponse],
+)
+async def introspect_fablespace_access(
+    payload: FableSpaceSsoIntrospectRequest,
+    response: Response,
+    session: SessionDep,
+    settings: SettingsDep,
+    service_secret: Annotated[
+        str | None,
+        Header(alias="X-FableSpace-SSO-Secret"),
+    ] = None,
+) -> ApiResponse[FableSpaceSsoIntrospectResponse]:
+    """Return authoritative account and capability state to the trusted FableSpace API."""
+
+    response.headers["Cache-Control"] = "no-store"
+    state = await AuthService(session, settings).introspect_fablespace_access(
+        payload,
+        service_secret,
+    )
+    return ApiResponse(data=state)
 
 
 @router.post(

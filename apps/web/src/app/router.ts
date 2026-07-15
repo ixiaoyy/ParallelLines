@@ -316,6 +316,20 @@ export const router = createRouter({
       },
     },
     {
+      path: "/admin/fablespace-access",
+      name: "admin-fablespace-access",
+      component: () => import("@/pages/admin/AdminFableSpaceAccessPage.vue"),
+      meta: {
+        requiredAccess: "admin",
+        seo: {
+          title: "AI 产品权限 · {siteTitle}",
+          description: "管理 FableSpace 独立产品的访问资格、权限级别和有效期。",
+          canonicalPath: "/admin/fablespace-access",
+          robots: NOINDEX_ROBOTS,
+        },
+      },
+    },
+    {
       path: "/admin/system",
       name: "admin-system",
       component: () => import("@/pages/admin/AdminSystemPage.vue"),

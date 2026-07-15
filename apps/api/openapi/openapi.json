@@ -1189,7 +1189,19 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "ApiResponse_FableSpaceAccessStatusResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_FableSpaceAdminAccessRow_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ApiResponse_FableSpaceSsoExchangeResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_FableSpaceSsoIntrospectResponse_": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -1474,6 +1486,10 @@
         "type": "object"
       },
       "ApiResponse_list_ExternalIntegrationResponse__": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_list_FableSpaceAdminAccessRow__": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -4121,6 +4137,252 @@
         "title": "ExternalWebhookResponse",
         "type": "object"
       },
+      "FableSpaceAccessGrantUpdateRequest": {
+        "properties": {
+          "access_level": {
+            "enum": [
+              "access",
+              "creator",
+              "operator",
+              "admin"
+            ],
+            "title": "Access Level",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "required": [
+          "access_level"
+        ],
+        "title": "FableSpaceAccessGrantUpdateRequest",
+        "type": "object"
+      },
+      "FableSpaceAccessStatusResponse": {
+        "properties": {
+          "access_allowed": {
+            "title": "Access Allowed",
+            "type": "boolean"
+          },
+          "access_level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "access",
+                  "creator",
+                  "operator",
+                  "admin"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Level"
+          },
+          "authorization_version": {
+            "title": "Authorization Version",
+            "type": "integer"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "required": [
+          "access_allowed",
+          "capabilities",
+          "authorization_version"
+        ],
+        "title": "FableSpaceAccessStatusResponse",
+        "type": "object"
+      },
+      "FableSpaceAdminAccessRow": {
+        "properties": {
+          "access_allowed": {
+            "title": "Access Allowed",
+            "type": "boolean"
+          },
+          "access_level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "access",
+                  "creator",
+                  "operator",
+                  "admin"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Level"
+          },
+          "account_status": {
+            "title": "Account Status",
+            "type": "string"
+          },
+          "authorization_version": {
+            "title": "Authorization Version",
+            "type": "integer"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "forum_role": {
+            "title": "Forum Role",
+            "type": "string"
+          },
+          "granted_by_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted By Id"
+          },
+          "granted_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted By Name"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "username",
+          "email",
+          "forum_role",
+          "account_status",
+          "access_allowed",
+          "capabilities",
+          "authorization_version"
+        ],
+        "title": "FableSpaceAdminAccessRow",
+        "type": "object"
+      },
       "FableSpaceSsoExchangeRequest": {
         "properties": {
           "code": {
@@ -4138,14 +4400,130 @@
       },
       "FableSpaceSsoExchangeResponse": {
         "properties": {
+          "access_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Expires At"
+          },
+          "access_level": {
+            "title": "Access Level",
+            "type": "string"
+          },
+          "authorization_version": {
+            "title": "Authorization Version",
+            "type": "integer"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
           "user": {
             "$ref": "#/components/schemas/FableSpaceSsoUser"
           }
         },
         "required": [
-          "user"
+          "user",
+          "capabilities",
+          "access_level",
+          "authorization_version"
         ],
         "title": "FableSpaceSsoExchangeResponse",
+        "type": "object"
+      },
+      "FableSpaceSsoIntrospectRequest": {
+        "properties": {
+          "user_id": {
+            "maxLength": 32,
+            "minLength": 1,
+            "pattern": "^\\d+$",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "FableSpaceSsoIntrospectRequest",
+        "type": "object"
+      },
+      "FableSpaceSsoIntrospectResponse": {
+        "properties": {
+          "access_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Expires At"
+          },
+          "access_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Level"
+          },
+          "account_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Status"
+          },
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "authorization_version": {
+            "title": "Authorization Version",
+            "type": "integer"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FableSpaceSsoUser"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "active",
+          "capabilities",
+          "authorization_version"
+        ],
+        "title": "FableSpaceSsoIntrospectResponse",
         "type": "object"
       },
       "FableSpaceSsoTicketResponse": {
@@ -12012,6 +12390,177 @@
         ]
       }
     },
+    "/api/v1/admin/fablespace/access-grants": {
+      "get": {
+        "description": "List forum users, including ungranted users, for FableSpace access management.",
+        "operationId": "list_fablespace_access_grants_api_v1_admin_fablespace_access_grants_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Query"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_list_FableSpaceAdminAccessRow__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Fablespace Access Grants",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/fablespace/access-grants/{user_id}": {
+      "delete": {
+        "description": "Revoke one user's explicit FableSpace grant.",
+        "operationId": "revoke_fablespace_access_api_v1_admin_fablespace_access_grants__user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_FableSpaceAdminAccessRow_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Revoke Fablespace Access",
+        "tags": [
+          "admin"
+        ]
+      },
+      "put": {
+        "description": "Grant, update, or reactivate one user's independent FableSpace access.",
+        "operationId": "grant_or_update_fablespace_access_api_v1_admin_fablespace_access_grants__user_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FableSpaceAccessGrantUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_FableSpaceAdminAccessRow_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Grant Or Update Fablespace Access",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/frontier-news/collect": {
       "post": {
         "description": "Run a manual collection pass for all enabled frontier sources.",
@@ -13801,6 +14350,33 @@
         ]
       }
     },
+    "/api/v1/auth/fablespace/access": {
+      "get": {
+        "description": "Return the current user's effective FableSpace access for entry visibility.",
+        "operationId": "get_fablespace_access_api_v1_auth_fablespace_access_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_FableSpaceAccessStatusResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Fablespace Access",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/fablespace/exchange": {
       "post": {
         "description": "Redeem a ticket from the trusted FableSpace backend and return minimal user data.",
@@ -13861,9 +14437,69 @@
         ]
       }
     },
+    "/api/v1/auth/fablespace/introspect": {
+      "post": {
+        "description": "Return authoritative account and capability state to the trusted FableSpace API.",
+        "operationId": "introspect_fablespace_access_api_v1_auth_fablespace_introspect_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-FableSpace-SSO-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Fablespace-Sso-Secret"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FableSpaceSsoIntrospectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_FableSpaceSsoIntrospectResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Introspect Fablespace Access",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/fablespace/ticket": {
       "post": {
-        "description": "Issue an administrator-only, single-use login ticket for FableSpace.",
+        "description": "Issue a single-use FableSpace ticket after checking current product access.",
         "operationId": "issue_fablespace_ticket_api_v1_auth_fablespace_ticket_post",
         "responses": {
           "200": {

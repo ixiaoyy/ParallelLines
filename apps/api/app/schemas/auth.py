@@ -140,6 +140,10 @@ class FableSpaceSsoExchangeRequest(BaseModel):
     code: str = Field(min_length=20, max_length=256)
 
 
+class FableSpaceSsoIntrospectRequest(BaseModel):
+    user_id: str = Field(min_length=1, max_length=32, pattern=r"^\d+$")
+
+
 class FableSpaceSsoUser(BaseModel):
     id: str
     username: str
@@ -151,3 +155,17 @@ class FableSpaceSsoUser(BaseModel):
 
 class FableSpaceSsoExchangeResponse(BaseModel):
     user: FableSpaceSsoUser
+    capabilities: list[str]
+    access_level: str
+    authorization_version: int
+    access_expires_at: datetime | None = None
+
+
+class FableSpaceSsoIntrospectResponse(BaseModel):
+    active: bool
+    user: FableSpaceSsoUser | None = None
+    account_status: str | None = None
+    capabilities: list[str]
+    access_level: str | None = None
+    authorization_version: int
+    access_expires_at: datetime | None = None

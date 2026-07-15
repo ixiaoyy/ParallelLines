@@ -3,6 +3,7 @@ import {
   AppstoreOutlined,
   BarChartOutlined,
   CloseOutlined,
+  KeyOutlined,
   ExportOutlined,
   MenuOutlined,
   SafetyCertificateOutlined,
@@ -26,7 +27,7 @@ const NotificationBell = defineAsyncComponent(() =>
 );
 
 interface AdminNavigationItem {
-  id: "dashboard" | "analytics" | "users" | "moderation" | "system";
+  id: "dashboard" | "analytics" | "users" | "fablespace" | "moderation" | "system";
   label: string;
   mobileLabel: string;
   path: string;
@@ -75,6 +76,14 @@ const navigationItems = computed<AdminNavigationItem[]>(() => [
     mobileLabel: t("admin.nav.users_short", "用户"),
     path: "/admin/users",
     icon: UserOutlined,
+    adminOnly: true,
+  },
+  {
+    id: "fablespace",
+    label: t("admin.nav.fablespace", "AI 产品权限"),
+    mobileLabel: t("admin.nav.fablespace_short", "AI 权限"),
+    path: "/admin/fablespace-access",
+    icon: KeyOutlined,
     adminOnly: true,
   },
   {

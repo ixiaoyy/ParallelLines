@@ -33,13 +33,76 @@ from app.schemas.news import (
 )
 from app.schemas.plugins import PluginResponse, PluginUpdateRequest
 from app.schemas.privacy import PrivacyActionRequest, PrivacyActionResponse
+from app.schemas.product_access import (
+    FableSpaceAccessGrantUpdateRequest,
+    FableSpaceAdminAccessRow,
+)
 from app.services.admin import AdminService, SiteSettingService
 from app.services.backups import BackupService
 from app.services.frontier_news import FrontierNewsService
 from app.services.plugins import PluginService
 from app.services.privacy import PrivacyService
+from app.services.product_access import ProductAccessService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.get(
+    "/fablespace/access-grants",
+    response_model=ApiResponse[list[FableSpaceAdminAccessRow]],
+)
+async def list_fablespace_access_grants(
+    session: SessionDep,
+    current_user: CurrentUserDep,
+    query: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> ApiResponse[list[FableSpaceAdminAccessRow]]:
+    """List forum users, including ungranted users, for FableSpace access management."""
+
+    rows = await ProductAccessService(session).list_fablespace_access_users(
+        current_user,
+        query=query,
+        limit=limit,
+    )
+    return ApiResponse(data=rows)
+
+
+@router.put(
+    "/fablespace/access-grants/{user_id}",
+    response_model=ApiResponse[FableSpaceAdminAccessRow],
+)
+async def grant_or_update_fablespace_access(
+    user_id: str,
+    payload: FableSpaceAccessGrantUpdateRequest,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[FableSpaceAdminAccessRow]:
+    """Grant, update, or reactivate one user's independent FableSpace access."""
+
+    row = await ProductAccessService(session).grant_or_update_fablespace_access(
+        user_id,
+        payload,
+        current_user,
+    )
+    return ApiResponse(data=row)
+
+
+@router.delete(
+    "/fablespace/access-grants/{user_id}",
+    response_model=ApiResponse[FableSpaceAdminAccessRow],
+)
+async def revoke_fablespace_access(
+    user_id: str,
+    session: SessionDep,
+    current_user: CurrentUserDep,
+) -> ApiResponse[FableSpaceAdminAccessRow]:
+    """Revoke one user's explicit FableSpace grant."""
+
+    row = await ProductAccessService(session).revoke_fablespace_access(
+        user_id,
+        current_user,
+    )
+    return ApiResponse(data=row)
 
 
 @router.get("/settings", response_model=ApiResponse[list[SiteSettingResponse]])
