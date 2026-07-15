@@ -1,8 +1,0 @@
-{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
-{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "backend quality gate"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "API-service-DB-file flow"}
-{"file": ".trellis/spec/backend/background-jobs.md", "reason": "verify worker handler contract"}
-{"file": ".trellis/spec/backend/admin-site-settings.md", "reason": "verify admin/audit contracts"}
-{"file": ".trellis/spec/backend/account-security.md", "reason": "verify export secret redaction"}
-{"file": ".trellis/spec/backend/backup-restore-export.md", "reason": "verify backup/export contracts"}

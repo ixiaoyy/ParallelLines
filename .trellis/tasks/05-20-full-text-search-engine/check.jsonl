@@ -1,7 +1,0 @@
-{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
-{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend quality gate"}
-{"file": ".trellis/spec/backend/search-feed-hot-ranking.md", "reason": "Verify search/feed contract"}
-{"file": ".trellis/spec/backend/board-visibility-invites.md", "reason": "Verify privacy filtering"}
-{"file": ".trellis/spec/backend/moderation-admin-safety.md", "reason": "Verify hidden content filtering"}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Verify comments/migrations"}

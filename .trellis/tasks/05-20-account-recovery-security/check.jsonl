@@ -1,6 +1,0 @@
-{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
-{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
-{"file": ".trellis\\spec\\backend\\database-guidelines.md", "reason": "schema/migration verification"}
-{"file": ".trellis\\spec\\backend\\error-handling.md", "reason": "error shape verification"}
-{"file": ".trellis\\spec\\frontend\\auth-user-session.md", "reason": "auth browser state verification"}
-{"file": ".trellis\\spec\\frontend\\type-safety.md", "reason": "TS verification"}

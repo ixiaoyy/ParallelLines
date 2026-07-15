@@ -1,8 +1,0 @@
-{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
-{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend quality gate"}
-{"file": ".trellis/spec/backend/moderation-admin-safety.md", "reason": "Verify permissions/audit/content visibility"}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Verify schema comments/migrations"}
-{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Frontend quality gate"}
-{"file": ".trellis/spec/frontend/moderation-admin-safety.md", "reason": "Verify moderation UI/query patterns"}
-{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Verify DTO/type consistency"}

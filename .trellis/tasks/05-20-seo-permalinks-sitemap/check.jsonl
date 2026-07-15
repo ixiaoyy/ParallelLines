@@ -1,7 +1,0 @@
-{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
-{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
-{"file": ".trellis\\spec\\backend\\quality-guidelines.md", "reason": "降级验证范围"}
-{"file": ".trellis\\spec\\frontend\\quality-guidelines.md", "reason": "降级验证范围"}
-{"file": ".trellis\\spec\\backend\\board-visibility-invites.md", "reason": "验证私密过滤"}
-{"file": ".trellis\\spec\\backend\\seo-permalinks-sitemap.md", "reason": "SEO backend validation contract"}
-{"file": ".trellis\\spec\\frontend\\seo-permalinks-sitemap.md", "reason": "SEO frontend validation contract"}

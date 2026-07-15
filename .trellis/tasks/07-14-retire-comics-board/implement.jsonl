@@ -1,5 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
-{"file": ".trellis/spec/backend/uploads-attachments.md", "reason": "删除板块上传实体与数据库记录"}
-{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "移除板块展示入口"}

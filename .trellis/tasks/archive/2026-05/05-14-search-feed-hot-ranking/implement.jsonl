@@ -1,8 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
-{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Backend search/feed services and worker placement"}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Topic feed query, search filters, hot score recompute"}
-{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "Frontend topic search query and DTO mapping"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Search API to UI data flow"}
-{"file": ".trellis/spec/backend/search-feed-hot-ranking.md", "reason": "Backend search/feed/hot ranking contract"}

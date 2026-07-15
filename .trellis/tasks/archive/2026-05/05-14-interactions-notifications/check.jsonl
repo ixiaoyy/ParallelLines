@@ -1,8 +1,0 @@
-{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
-{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
-{"file": ".trellis\\spec\\backend\\quality-guidelines.md", "reason": "Backend lint/test expectations"}
-{"file": ".trellis\\spec\\backend\\database-guidelines.md", "reason": "Verify migration and constraints"}
-{"file": ".trellis\\spec\\backend\\error-handling.md", "reason": "Verify response error contracts"}
-{"file": ".trellis\\spec\\backend\\interactions-notifications.md", "reason": "Verify interaction/notification contracts"}
-{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Frontend quality checks and zh-CN copy"}
-{"file": ".trellis/spec/frontend/notifications-interactions.md", "reason": "Verify notification UI and optimistic interaction behavior"}

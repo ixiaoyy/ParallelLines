@@ -1,4 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
-{"file": ".trellis\\spec\\frontend\\admin-dashboard.md", "reason": "后台导航、用户管理与系统面板改版约束"}
-{"file": ".trellis\\spec\\frontend\\analytics-data-explorer.md", "reason": "访问与真实用户增长看板契约"}

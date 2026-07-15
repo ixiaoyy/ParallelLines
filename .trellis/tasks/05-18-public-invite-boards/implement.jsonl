@@ -1,5 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
-{"file": ".trellis/spec/backend/board-visibility-invites.md", "reason": "邀请版块后端可见性与邀请生命周期合约"}
-{"file": ".trellis/spec/frontend/board-visibility-invites.md", "reason": "邀请版块前端分组和邀请中心合约"}

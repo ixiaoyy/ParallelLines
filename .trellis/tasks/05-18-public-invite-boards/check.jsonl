@@ -1,3 +1,0 @@
-{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
-{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
-{"file": "apps/api/tests/test_board_invites_visibility.py", "reason": "私密版块 ACL 与邀请流程回归测试"}

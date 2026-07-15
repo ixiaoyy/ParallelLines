@@ -1,7 +1,0 @@
-{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
-{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "backend quality gate"}
-{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "frontend quality gate if frontend changed"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "cross-layer API/service/db flow"}
-{"file": ".trellis/spec/backend/email-notifications-digests.md", "reason": "verify backend email contracts"}
-{"file": ".trellis/spec/frontend/email-preferences.md", "reason": "verify frontend email preferences contracts"}

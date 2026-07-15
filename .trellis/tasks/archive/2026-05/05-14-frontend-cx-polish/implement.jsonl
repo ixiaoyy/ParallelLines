@@ -1,9 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
-{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Route/page and feature component placement for CX redesign"}
-{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "TopicCard, list, composer and accessibility component rules"}
-{"file": ".trellis/spec/frontend/state-management.md", "reason": "Home filter/search state boundaries and URL state guidance"}
-{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Typed filter/status view-model updates"}
-{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Responsive first-screen, zh-CN copy, contrast and visual quality bar"}
-{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Reuse existing TopicCard/TopicList primitives instead of duplicating UI"}
-{"file": ".trellis/spec/product/discourse-inspired-parallellines-design.md", "reason": "Product IA, target user paths and forum UI contract"}

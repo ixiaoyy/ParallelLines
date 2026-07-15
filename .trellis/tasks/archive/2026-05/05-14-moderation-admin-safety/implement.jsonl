@@ -1,9 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
-{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Backend router/service/model layout for moderation files"}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Flag/audit ORM and migration conventions"}
-{"file": ".trellis/spec/backend/error-handling.md", "reason": "Permission and validation error contracts"}
-{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Moderation feature/page placement"}
-{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Moderation panel Vue component patterns"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer moderation DTO/data flow"}

@@ -1,8 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
-{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "Remove mock fallbacks from forum API query composables"}
-{"file": ".trellis/spec/frontend/smoke-tests.md", "reason": "Update Playwright smoke for real-data regression checks"}
-{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Keep DTO/VM types strict while removing mock data"}
-{"file": ".trellis/spec/frontend/state-management.md", "reason": "Keep server state in TanStack Query"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Real-data flow spans backend API and frontend pages"}

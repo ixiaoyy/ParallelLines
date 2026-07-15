@@ -1,9 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
-{"file": ".\\.trellis\\spec\\backend\\interactions-notifications.md", "reason": "backend interaction idempotency and notification fan-out"}
-{"file": ".\\.trellis\\spec\\backend\\board-visibility-invites.md", "reason": "private/invite board sharing must preserve ACL"}
-{"file": ".\\.trellis\\spec\\frontend\\notifications-interactions.md", "reason": "frontend optimistic interactions and auth prompts"}
-{"file": ".\\.trellis\\spec\\frontend\\post-actions.md", "reason": "topic detail/share/reply action behavior"}
-{"file": ".\\.trellis\\spec\\frontend\\forum-api-wiring.md", "reason": "DTO/VM mapping and query invalidation"}
-{"file": ".\\.trellis\\spec\\guides\\cross-layer-thinking-guide.md", "reason": "cross-layer API/service/frontend flow"}

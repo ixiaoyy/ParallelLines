@@ -1,3 +1,0 @@
-{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer notification preference data flow"}
-{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Avoid duplicating notification level constants"}

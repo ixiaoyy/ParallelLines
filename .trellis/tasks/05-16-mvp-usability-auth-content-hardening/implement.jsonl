@@ -1,9 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
-{"file": ".trellis/spec/backend/error-handling.md", "reason": "API error and permission behavior for auth/user/post edit endpoints"}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend tests and quality checks"}
-{"file": ".trellis/spec/frontend/state-management.md", "reason": "Auth state and server state rules"}
-{"file": ".trellis/spec/frontend/forum-api-wiring.md", "reason": "Post/user API wrappers and query composables"}
-{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Vue component and accessibility rules"}
-{"file": ".trellis/spec/frontend/smoke-tests.md", "reason": "Playwright smoke/interaction coverage contract"}

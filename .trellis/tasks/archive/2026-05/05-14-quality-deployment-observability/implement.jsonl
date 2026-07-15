@@ -1,8 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
-{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "API structured logging and observability conventions"}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Backend lint/test expectations for CI"}
-{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Frontend lint/type/build expectations for CI"}
-{"file": ".trellis/spec/backend/directory-structure.md", "reason": "Seed/worker/script placement"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Docker/CI cross-layer contracts"}

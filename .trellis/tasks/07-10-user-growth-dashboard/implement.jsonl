@@ -1,8 +1,0 @@
-{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
-{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
-{"file": ".trellis/spec/backend/analytics-data-explorer.md", "reason": "后端注册统计口径与测试契约"}
-{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "新增 users.is_persona 字段与 Alembic 迁移"}
-{"file": ".trellis/spec/frontend/analytics-data-explorer.md", "reason": "用户增长看板与日期范围接入"}
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "数据库到 API 再到图表的跨层口径一致性"}
-{"file": ".trellis/spec/backend/import-export-migration-tools.md", "reason": "persona 标记在 JSON 导入导出中的往返契约"}

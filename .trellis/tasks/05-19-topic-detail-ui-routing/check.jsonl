@@ -1,6 +1,0 @@
-{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
-{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
-{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "检查文件组织与组件拆分"}
-{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "检查 Vue/SCSS/UI 组件规范"}
-{"file": ".trellis/spec/frontend/post-actions.md", "reason": "检查帖子动作行为"}
-{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "检查响应式与质量"}

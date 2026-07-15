@@ -1,6 +1,0 @@
-{"file": ".agents/skills/finish-work/SKILL.md", "reason": "Finish work checklist"}
-{"file": ".agents/skills/check/SKILL.md", "reason": "Code quality check spec"}
-{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Downgraded backend quality gates"}
-{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Log redaction expectations"}
-{"file": ".trellis/spec/backend/backup-restore-export.md", "reason": "Export redaction acceptance check"}
-{"file": ".trellis/spec/backend/privacy-data-retention-anonymization.md", "reason": "Privacy contract check"}
