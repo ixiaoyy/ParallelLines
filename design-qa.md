@@ -1,8 +1,8 @@
 **Source visual truth**
 
 - `C:/Users/phpxi/AppData/Local/Temp/codex-clipboard-524c9552-f21c-4f78-8cdd-11f650ec809a.png`
-- Production source asset: `static/web/private-space-entry.png`
-- Production CDN URL: `https://img.pingxingxian.space/static/web/private-space-entry.png`
+- Production source asset: `static/web/private-space-entry-b7d15288.png`
+- Production CDN URL: `https://img.pingxingxian.space/static/web/private-space-entry-b7d15288.png`
 - Source dimensions: 1660 × 948; optimized production dimensions: 1024 × 388.
 
 **Implementation evidence**

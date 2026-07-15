@@ -39,8 +39,8 @@ STATIC_ASSETS = (
         media_type="image/png",
     ),
     StaticAsset(
-        source="static/web/private-space-entry.png",
-        key="private-space-entry.png",
+        source="static/web/private-space-entry-b7d15288.png",
+        key="private-space-entry-b7d15288.png",
         media_type="image/png",
     ),
     StaticAsset(

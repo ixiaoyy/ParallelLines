@@ -40,7 +40,7 @@ const props = defineProps<{
 }>();
 
 const privateSpaceOpening = ref(false);
-const privateSpaceEntryUrl = staticAssetUrl("/private-space-entry.png");
+const privateSpaceEntryUrl = staticAssetUrl("/private-space-entry-b7d15288.png");
 
 const publicBoards = computed(() =>
   sortBoardsWithFeedbackLast(props.boards.filter((board) => board.visibility === "public")),
