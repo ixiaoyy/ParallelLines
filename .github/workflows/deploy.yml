@@ -103,7 +103,7 @@ jobs:
             $PARALLELLINES_COMPOSE up -d --no-deps --force-recreate api worker
             PARALLELLINES_READY=false
             for ATTEMPT in $(seq 1 30); do
-              if $PARALLELLINES_COMPOSE exec -T api python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3).read()" >/dev/null 2>&1; then
+              if $PARALLELLINES_COMPOSE exec -T api python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).read()" >/dev/null 2>&1; then
                 PARALLELLINES_READY=true
                 break
               fi
@@ -143,7 +143,7 @@ jobs:
     name: Deploy full stack (compose)
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.compose == 'true'
+    if: github.event_name == 'push' && needs.changes.outputs.compose == 'true'
 
     steps:
       - name: Deploy all services to server
@@ -213,7 +213,7 @@ jobs:
     name: Deploy backend (api + worker)
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.backend == 'true' && needs.changes.outputs.compose != 'true'
+    if: github.event_name == 'push' && needs.changes.outputs.backend == 'true' && needs.changes.outputs.compose != 'true'
 
     steps:
       - name: Deploy backend services to server
@@ -297,6 +297,7 @@ jobs:
       - deploy-backend
     if: |
       always() &&
+      github.event_name == 'push' &&
       needs.changes.outputs.frontend == 'true' &&
       needs.changes.outputs.compose != 'true' &&
       (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
@@ -426,6 +427,7 @@ jobs:
       - deploy-frontend
     if: |
       always() &&
+      github.event_name == 'push' &&
       needs.changes.outputs.nginx == 'true' &&
       needs.changes.outputs.compose != 'true' &&
       (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped') &&
