@@ -41,8 +41,8 @@
 }
 
 .fablespace-entry--menu {
-  width: min(15.5rem, 100%);
-  justify-self: end;
+  width: 100%;
+  justify-self: stretch;
   border-radius: 0.9rem;
   box-shadow: 0 0.35rem 1rem rgba(216, 70, 207, 0.11);
 }
