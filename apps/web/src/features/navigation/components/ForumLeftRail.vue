@@ -27,14 +27,25 @@ import type { TagItemVM } from "@/features/tags/model";
 import { compactNumber } from "@/shared/lib/format";
 import { boardToneClass } from "@/shared/theme/boardPalette";
 
-const props = defineProps<{
-  boards: BoardSummary[];
-  tags: TagItemVM[];
-  boardsLoading: boolean;
-  boardsError: boolean;
-  tagsLoading: boolean;
-  tagsError: boolean;
-  showPrivateSpace?: boolean;
+const props = withDefaults(
+  defineProps<{
+    boards: BoardSummary[];
+    tags: TagItemVM[];
+    boardsLoading: boolean;
+    boardsError: boolean;
+    tagsLoading: boolean;
+    tagsError: boolean;
+    showPrivateSpace?: boolean;
+    variant?: "desktop" | "mobile";
+  }>(),
+  {
+    variant: "desktop",
+  },
+);
+
+// Notifies transient containers after a rail link is activated so mobile navigation can close immediately.
+const emit = defineEmits<{
+  navigate: [];
 }>();
 
 const publicBoards = computed(() =>
@@ -151,9 +162,9 @@ function tagAccentStyle(tagName: string): Record<string, string> {
 </script>
 
 <template>
-  <div class="forum-left-rail">
+  <div class="forum-left-rail" :class="`forum-left-rail--${variant}`">
     <aside class="forum-left-rail__panel" aria-label="论坛导航">
-      <RouterLink class="rail-action" :to="{ name: 'new-topic' }">新建主题</RouterLink>
+      <RouterLink class="rail-action" :to="{ name: 'new-topic' }" @click="emit('navigate')">新建主题</RouterLink>
 
       <section class="rail-section" aria-labelledby="rail-boards-title">
         <h2 id="rail-boards-title">公共版块</h2>
@@ -171,6 +182,7 @@ function tagAccentStyle(tagName: string): Record<string, string> {
             :to="{ name: 'board-detail', params: { slug: board.slug } }"
             :aria-label="boardAccessibleLabel(board)"
             :title="board.description || board.name"
+            @click="emit('navigate')"
           >
             <component :is="boardIcon(board)" class="rail-board-mark" aria-hidden="true" />
             <span class="rail-board-copy">
@@ -194,11 +206,12 @@ function tagAccentStyle(tagName: string): Record<string, string> {
               class="rail-tag"
               :style="tagAccentStyle(tag.name)"
               :to="{ name: 'search', query: { q: tag.name, tag: tag.name } }"
+              @click="emit('navigate')"
             >
               <component :is="tagIcon(tag.name)" aria-hidden="true" />
               <span>{{ tag.name }}</span>
             </RouterLink>
-            <RouterLink class="rail-tag rail-tag--all" :to="{ name: 'search' }">
+            <RouterLink class="rail-tag rail-tag--all" :to="{ name: 'search' }" @click="emit('navigate')">
               <UnorderedListOutlined aria-hidden="true" />
               <span>所有标签</span>
             </RouterLink>
@@ -207,7 +220,10 @@ function tagAccentStyle(tagName: string): Record<string, string> {
       </section>
     </aside>
 
-    <FableSpaceEntryButton v-if="showPrivateSpace" />
+    <FableSpaceEntryButton
+      v-if="showPrivateSpace"
+      :variant="variant === 'mobile' ? 'menu' : 'rail'"
+    />
   </div>
 </template>
 

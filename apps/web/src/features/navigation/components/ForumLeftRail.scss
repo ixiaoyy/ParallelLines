@@ -323,3 +323,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+.forum-left-rail--mobile {
+  position: static;
+  gap: 0.75rem;
+}
+
+.forum-left-rail--mobile .forum-left-rail__panel {
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.forum-left-rail--mobile .rail-section {
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  padding: 0.82rem 0 0;
+  background: transparent;
+}
+
+.forum-left-rail--mobile .rail-action,
+.forum-left-rail--mobile .rail-board,
+.forum-left-rail--mobile .rail-tag {
+  min-height: 2.75rem;
+}

@@ -17,6 +17,8 @@ import { usePublicSiteSettings } from "@/features/admin/queries";
 import type { UserPublic } from "@/features/auth/model";
 import { canAccessModeration, isAdmin } from "@/features/auth/permissions";
 import { useCurrentUser, useFableSpaceAccess, useLogout } from "@/features/auth/queries";
+import { useBoards } from "@/features/boards/queries";
+import { useTags } from "@/features/tags/queries";
 import { useLocale } from "@/shared/i18n/locale";
 import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
 import { useMediaQuery } from "@/shared/lib/useMediaQuery";
@@ -39,14 +41,14 @@ const AdminConsoleShell = defineAsyncComponent(() =>
   import("@/features/admin/components/AdminConsoleShell.vue"),
 );
 
-// Loads optional plugin navigation only when the visible desktop bar or opened mobile menu needs it.
+// Loads optional plugin navigation only when the visible desktop bar needs it.
 // Key parameters: none. Return value is the PluginSlot component; side effect is deferred chunk loading.
 const PluginSlot = defineAsyncComponent(() => import("@/features/plugins/components/PluginSlot.vue"));
 
-// Keeps the private-product artwork out of the main bundle until an entitled user opens mobile navigation.
-// Key parameters: none. Return value is the reusable image entry; side effect is deferred chunk loading.
-const FableSpaceEntryButton = defineAsyncComponent(() =>
-  import("@/features/navigation/components/FableSpaceEntryButton.vue"),
+// Loads the desktop-style forum rail only after compact navigation is opened.
+// Key parameters: none. Return value is the reusable forum navigation rail; side effect is deferred chunk loading.
+const ForumLeftRail = defineAsyncComponent(() =>
+  import("@/features/navigation/components/ForumLeftRail.vue"),
 );
 
 const router = useRouter();
@@ -54,10 +56,18 @@ const route = useRoute();
 const globalSearch = ref("");
 const isNavOpen = ref(false);
 const isDesktopViewport = useMediaQuery("(min-width: 621px)", true);
+const isMobileNavigationViewport = useMediaQuery("(max-width: 920px)", false);
+// Mounts and fetches the compact forum rail only while its supported viewport menu is open.
+// Parameters: none. Return value is the mobile navigation visibility flag; side effect: none.
+const shouldShowMobileNavigation = computed(
+  () => isNavOpen.value && isMobileNavigationViewport.value,
+);
 const topbarRef = ref<HTMLElement | null>(null);
 const accountMenuRef = ref<HTMLDetailsElement | null>(null);
 const currentUserQuery = useCurrentUser();
 const fableSpaceAccessQuery = useFableSpaceAccess();
+const mobileBoardsQuery = useBoards(shouldShowMobileNavigation);
+const mobileTagsQuery = useTags(30, shouldShowMobileNavigation);
 const siteSettingsQuery = usePublicSiteSettings();
 const logout = useLogout();
 const { locale } = useLocale();
@@ -75,6 +85,10 @@ const currentUser = computed(() => currentUserQuery.data.value);
 const canAccessFableSpace = computed(
   () => fableSpaceAccessQuery.data.value?.access_allowed === true,
 );
+// Normalizes deferred taxonomy results into stable arrays consumed by the reusable rail.
+// Parameters: none. Return values are current board/tag lists; side effect: none.
+const mobileNavigationBoards = computed(() => mobileBoardsQuery.data.value ?? []);
+const mobileNavigationTags = computed(() => mobileTagsQuery.data.value ?? []);
 // Auth route already renders the login/register form, so the guest CTA is hidden there to avoid duplicate entry points.
 const isAuthRoute = computed(() => route.name === "auth");
 // Marks protected administration pages so they render in the dedicated operations-console shell.
@@ -163,49 +177,6 @@ const removeRouteStartGuard = router.beforeEach((to, from) => {
 });
 const removeRouteEndGuard = router.afterEach(() => finishRouteNavigation());
 const removeRouteErrorHandler = router.onError(() => finishRouteNavigation());
-
-interface NavItem {
-  key:
-    | "home"
-    | "boards"
-    | "users"
-    | "email"
-    | "messages"
-    | "events"
-    | "admin"
-    | "moderation";
-  label: string;
-  to: RouteLocationRaw;
-}
-
-const navItems = computed<NavItem[]>(() => [
-  { key: "home", label: t("nav.home", "首页"), to: "/" },
-  { key: "boards", label: t("nav.boards", "版块"), to: "/boards" },
-  { key: "users", label: t("nav.users", "成员"), to: { name: "user-directory" } },
-  { key: "email", label: t("nav.email", "邮件"), to: { name: "account-preferences" } },
-  { key: "messages", label: t("nav.messages", "私信"), to: { name: "messages" } },
-  { key: "events", label: t("nav.events", "活动"), to: { name: "events" } },
-  { key: "admin", label: t("nav.admin", "后台"), to: { name: "admin-dashboard" } },
-  { key: "moderation", label: t("nav.moderation", "审核"), to: { name: "admin-moderation" } },
-]);
-
-const visibleNavItems = computed(() =>
-  navItems.value.filter((item) => {
-    if (item.key === "email") {
-      return Boolean(currentUser.value);
-    }
-
-    if (item.key === "messages") {
-      return Boolean(currentUser.value);
-    }
-
-    if (item.key === "admin") {
-      return isAdmin(currentUser.value);
-    }
-
-    return item.key !== "moderation" || canAccessModeration(currentUser.value);
-  }),
-);
 
 watchEffect(() => {
   applySiteBranding(siteSettingsQuery.data.value?.settings);
@@ -345,37 +316,6 @@ function t(key: string, fallback: string) {
   return siteText(siteSettingsQuery.data.value, key, fallback, locale.value);
 }
 
-function isNavItemActive(item: NavItem) {
-  if (item.key === "home") {
-    return route.name === "home";
-  }
-
-  if (item.key === "boards") {
-    return route.name === "board-directory" || route.name === "board-detail";
-  }
-
-  if (item.key === "users") {
-    return route.name === "user-directory" || route.name === "user-profile";
-  }
-
-  if (item.key === "email") {
-    return route.name === "account-preferences";
-  }
-
-  if (item.key === "messages") {
-    return route.name === "messages";
-  }
-
-  if (item.key === "events") {
-    return route.name === "events";
-  }
-
-  if (item.key === "admin") {
-    return typeof route.name === "string" && ADMIN_ROUTE_NAMES.has(route.name);
-  }
-
-  return route.name === "admin-moderation";
-}
 </script>
 
 
@@ -548,25 +488,7 @@ function isNavItemActive(item: NavItem) {
         </RouterLink>
       </div>
 
-      <div v-if="isNavOpen" id="mobile-navigation" class="mobile-nav-panel">
-        <RouterLink class="mobile-nav-publish" :to="publishLinkTarget" @click="closeNavigation">
-          <PlusOutlined aria-hidden="true" />
-          <span>{{ t("topic.publish", "发布主题") }}</span>
-        </RouterLink>
-
-        <nav class="mobile-nav-links" aria-label="移动主导航">
-          <RouterLink
-            v-for="item in visibleNavItems"
-            :key="item.key"
-            :to="item.to"
-            :class="{ 'is-active': isNavItemActive(item) }"
-            @click="closeNavigation"
-          >
-            {{ item.label }}
-          </RouterLink>
-          <PluginSlot slot-name="app.nav" compact />
-        </nav>
-
+      <div v-if="shouldShowMobileNavigation" id="mobile-navigation" class="mobile-nav-panel">
         <form
           class="mobile-search-box"
           role="search"
@@ -590,10 +512,16 @@ function isNavItemActive(item: NavItem) {
           </button>
         </form>
 
-        <FableSpaceEntryButton
-          v-if="canAccessFableSpace"
-          class="mobile-nav-fablespace"
-          variant="menu"
+        <ForumLeftRail
+          variant="mobile"
+          :boards="mobileNavigationBoards"
+          :tags="mobileNavigationTags"
+          :boards-loading="mobileBoardsQuery.isLoading.value"
+          :boards-error="mobileBoardsQuery.isError.value"
+          :tags-loading="mobileTagsQuery.isLoading.value"
+          :tags-error="mobileTagsQuery.isError.value"
+          :show-private-space="canAccessFableSpace"
+          @navigate="closeNavigation"
         />
       </div>
     </header>
