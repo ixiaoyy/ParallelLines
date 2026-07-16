@@ -551,6 +551,10 @@
   background: var(--bg-surface);
 }
 
+.mobile-nav-fablespace {
+  margin-top: 0.1rem;
+}
+
 .shell-main {
   width: min(1520px, calc(100% - 1.5rem));
   min-width: 0;

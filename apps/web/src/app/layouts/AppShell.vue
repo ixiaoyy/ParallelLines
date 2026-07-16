@@ -16,7 +16,7 @@ import { publicSettingString, siteText } from "@/features/admin/model";
 import { usePublicSiteSettings } from "@/features/admin/queries";
 import type { UserPublic } from "@/features/auth/model";
 import { canAccessModeration, isAdmin } from "@/features/auth/permissions";
-import { useCurrentUser, useLogout } from "@/features/auth/queries";
+import { useCurrentUser, useFableSpaceAccess, useLogout } from "@/features/auth/queries";
 import { useLocale } from "@/shared/i18n/locale";
 import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
 import { useMediaQuery } from "@/shared/lib/useMediaQuery";
@@ -43,6 +43,12 @@ const AdminConsoleShell = defineAsyncComponent(() =>
 // Key parameters: none. Return value is the PluginSlot component; side effect is deferred chunk loading.
 const PluginSlot = defineAsyncComponent(() => import("@/features/plugins/components/PluginSlot.vue"));
 
+// Keeps the private-product artwork out of the main bundle until an entitled user opens mobile navigation.
+// Key parameters: none. Return value is the reusable image entry; side effect is deferred chunk loading.
+const FableSpaceEntryButton = defineAsyncComponent(() =>
+  import("@/features/navigation/components/FableSpaceEntryButton.vue"),
+);
+
 const router = useRouter();
 const route = useRoute();
 const globalSearch = ref("");
@@ -51,6 +57,7 @@ const isDesktopViewport = useMediaQuery("(min-width: 621px)", true);
 const topbarRef = ref<HTMLElement | null>(null);
 const accountMenuRef = ref<HTMLDetailsElement | null>(null);
 const currentUserQuery = useCurrentUser();
+const fableSpaceAccessQuery = useFableSpaceAccess();
 const siteSettingsQuery = usePublicSiteSettings();
 const logout = useLogout();
 const { locale } = useLocale();
@@ -63,6 +70,11 @@ const PUBLIC_ROUTE_PREFETCH_DELAY_MS = 2_400;
 const ACCOUNT_ROUTE_PREFETCH_DELAY_MS = 1_800;
 const IDLE_PREFETCH_TIMEOUT_MS = 4_000;
 const currentUser = computed(() => currentUserQuery.data.value);
+// Keeps the private-space navigation entry hidden until the backend confirms access for this account.
+// Parameters: none. Return value is a secure-default visibility flag; side effect: none.
+const canAccessFableSpace = computed(
+  () => fableSpaceAccessQuery.data.value?.access_allowed === true,
+);
 // Auth route already renders the login/register form, so the guest CTA is hidden there to avoid duplicate entry points.
 const isAuthRoute = computed(() => route.name === "auth");
 // Marks protected administration pages so they render in the dedicated operations-console shell.
@@ -577,6 +589,12 @@ function isNavItemActive(item: NavItem) {
             <EnterOutlined />
           </button>
         </form>
+
+        <FableSpaceEntryButton
+          v-if="canAccessFableSpace"
+          class="mobile-nav-fablespace"
+          variant="menu"
+        />
       </div>
     </header>
 

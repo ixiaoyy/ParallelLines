@@ -17,15 +17,13 @@ import {
   TrophyOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons-vue";
-import { message } from "ant-design-vue";
 import type { Component } from "vue";
-import { computed, ref } from "vue";
+import { computed } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
 import { sortBoardsWithFeedbackLast } from "@/entities/board/order";
-import { requestFableSpaceSsoTicket } from "@/features/auth/api";
+import FableSpaceEntryButton from "@/features/navigation/components/FableSpaceEntryButton.vue";
 import type { TagItemVM } from "@/features/tags/model";
-import { staticAssetUrl } from "@/shared/assets/staticAssets";
 import { compactNumber } from "@/shared/lib/format";
 import { boardToneClass } from "@/shared/theme/boardPalette";
 
@@ -38,9 +36,6 @@ const props = defineProps<{
   tagsError: boolean;
   showPrivateSpace?: boolean;
 }>();
-
-const privateSpaceOpening = ref(false);
-const privateSpaceEntryUrl = staticAssetUrl("/private-space-entry-b7d15288.png");
 
 const publicBoards = computed(() =>
   sortBoardsWithFeedbackLast(props.boards.filter((board) => board.visibility === "public")),
@@ -153,19 +148,6 @@ function tagAccentStyle(tagName: string): Record<string, string> {
   return { "--tag-accent": tagAccentColors[tagName] ?? "var(--primary)" };
 }
 
-// Requests a short-lived backend ticket, then transfers this authorized user to FableSpace.
-// Parameters: none. Return value: resolves after navigation starts or the error is shown; side effect: changes page location.
-async function openPrivateSpace(): Promise<void> {
-  if (privateSpaceOpening.value) return;
-  privateSpaceOpening.value = true;
-  try {
-    const ticket = await requestFableSpaceSsoTicket();
-    window.location.assign(ticket.redirect_url);
-  } catch {
-    message.error("私密空间暂时无法进入，请稍后再试");
-    privateSpaceOpening.value = false;
-  }
-}
 </script>
 
 <template>
@@ -225,24 +207,7 @@ async function openPrivateSpace(): Promise<void> {
       </section>
     </aside>
 
-    <button
-      v-if="showPrivateSpace"
-      type="button"
-      class="private-space-entry"
-      :disabled="privateSpaceOpening"
-      :aria-busy="privateSpaceOpening"
-      aria-label="进入私密空间"
-      @click="openPrivateSpace"
-    >
-      <img
-        :src="privateSpaceEntryUrl"
-        alt=""
-        width="1024"
-        height="388"
-        decoding="async"
-        aria-hidden="true"
-      />
-    </button>
+    <FableSpaceEntryButton v-if="showPrivateSpace" />
   </div>
 </template>
 
