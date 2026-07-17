@@ -10,11 +10,11 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from typing import Any
 
-from sqlalchemy import desc, or_, select
+from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -24,7 +24,7 @@ from app.core.permissions import is_admin
 from app.core.security import hash_password
 from app.db.base import as_shanghai_datetime, as_utc_datetime, utcnow
 from app.models.forum import Board
-from app.models.moderation import Reviewable
+from app.models.moderation import AuditLog, Reviewable
 from app.models.news import FrontierNewsAiRun, FrontierNewsItem, FrontierNewsSource
 from app.models.user import User
 from app.schemas.news import (
@@ -42,10 +42,15 @@ DEFAULT_REVIEW_BATCH_SIZE = 3
 OPEN_REVIEW_STATUSES = {"pending", "claimed", "appealed"}
 TERMINAL_ITEM_STATUSES = {"published", "rejected", "duplicate"}
 HOT_NEWS_BOARD_NAME = "热点资讯"
-HOT_NEWS_BOARD_DESCRIPTION = "自动汇集 AI 科技与社会热点，经人工审核后发布。"
+LEGACY_HOT_NEWS_BOARD_DESCRIPTION = "自动汇集 AI 科技与社会热点，经人工审核后发布。"
+HOT_NEWS_BOARD_DESCRIPTION = "自动汇集 AI 科技与社会热点；每日择一发布，并保留原文来源与链接。"
 HOT_NEWS_TAG = "热点资讯"
 AI_TECH_TAG = "AI 科技"
 SOCIAL_HOT_TAG = "社会热点"
+DAILY_NEWS_MIN_SCORE = 35
+DAILY_NEWS_MAX_AGE = timedelta(hours=48)
+DAILY_NEWS_AUDIT_ACTION = "daily_frontier_news_published"
+DAILY_NEWS_AUDIT_TARGET_TYPE = "daily_frontier_news"
 AI_TECH_SOURCE_KINDS = frozenset(
     {"arxiv", "github_search", "hacker_news", "xai_news", "arena_leaderboard"}
 )
@@ -503,6 +508,160 @@ class FrontierNewsService:
         await self.session.commit()
         return FrontierNewsCollectResponse(**totals)
 
+    async def publish_daily_candidate(
+        self,
+        *,
+        planned_date: date | None = None,
+        dry_run: bool = False,
+    ) -> dict[str, object]:
+        """Publish at most one fresh source-backed item for one Shanghai calendar day.
+
+        The indexed audit lookup is a locking read in automatic mode. On MySQL,
+        that serializes workers on the same absent/present day key, so retries or
+        concurrent workers cannot each choose a different topic for that day.
+        """
+
+        now = utcnow()
+        publish_date = planned_date or as_shanghai_datetime(now).date()
+        audit_target_id = publish_date.isoformat()
+        audit_statement = select(AuditLog).where(
+            AuditLog.action == DAILY_NEWS_AUDIT_ACTION,
+            AuditLog.target_type == DAILY_NEWS_AUDIT_TARGET_TYPE,
+            AuditLog.target_id == audit_target_id,
+        )
+        if not dry_run:
+            audit_statement = audit_statement.with_for_update()
+        existing = await self.session.scalar(audit_statement)
+        if existing:
+            data = existing.data if isinstance(existing.data, dict) else {}
+            result: dict[str, object] = {
+                "status": "already_published",
+                "publish_date": audit_target_id,
+                "item_id": data.get("item_id"),
+                "topic_id": data.get("topic_id"),
+            }
+            if not dry_run:
+                await self.session.commit()
+            return result
+
+        candidate = await self._daily_news_candidate(now=now, lock=not dry_run)
+        if not candidate:
+            result = {
+                "status": "skipped",
+                "reason": "no_fresh_source_backed_candidate",
+                "publish_date": audit_target_id,
+            }
+            if dry_run:
+                await self.session.rollback()
+            else:
+                await self.session.commit()
+            return result
+
+        preview: dict[str, object] = {
+            "publish_date": audit_target_id,
+            "item_id": candidate.id,
+            "title": candidate.ai_title_zh or candidate.title,
+            "source_name": candidate.source.name,
+            "source_url": candidate.canonical_url,
+        }
+        if dry_run:
+            await self.session.rollback()
+            return {"status": "planned", **preview}
+
+        if not candidate.reviewable_id or not candidate.reviewable:
+            await self.session.rollback()
+            raise ConflictError(
+                "frontier_news_reviewable_missing",
+                "Daily news candidate has no reviewable draft",
+            )
+
+        try:
+            bot = await self.ensure_bot_user()
+            reviewable = await ModerationService(
+                self.session
+            ).auto_approve_frontier_news_reviewable(candidate.reviewable_id, bot)
+            if not reviewable.topic_id:
+                raise ConflictError(
+                    "frontier_news_topic_missing",
+                    "Daily news approval did not create a topic",
+                )
+            self.session.add(
+                AuditLog(
+                    actor_id=bot.id,
+                    action=DAILY_NEWS_AUDIT_ACTION,
+                    target_type=DAILY_NEWS_AUDIT_TARGET_TYPE,
+                    target_id=audit_target_id,
+                    board_id=reviewable.board_id,
+                    data={
+                        "item_id": candidate.id,
+                        "reviewable_id": reviewable.id,
+                        "topic_id": reviewable.topic_id,
+                        "source_name": candidate.source.name,
+                        "source_url": candidate.canonical_url,
+                    },
+                    created_at=utcnow(),
+                )
+            )
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+
+        return {
+            "status": "published",
+            "topic_id": reviewable.topic_id,
+            **preview,
+        }
+
+    async def _daily_news_candidate(
+        self,
+        *,
+        now: datetime,
+        lock: bool,
+    ) -> FrontierNewsItem | None:
+        """Return the newest ready item that is recent, unclaimed, and still unpublished."""
+
+        cutoff = now - DAILY_NEWS_MAX_AGE
+        statement = (
+            select(FrontierNewsItem)
+            .join(FrontierNewsItem.reviewable)
+            .join(FrontierNewsItem.source)
+            .options(
+                selectinload(FrontierNewsItem.reviewable),
+                selectinload(FrontierNewsItem.source),
+            )
+            .where(
+                FrontierNewsItem.status == "review_pending",
+                FrontierNewsItem.topic_id.is_(None),
+                FrontierNewsItem.reviewable_id.is_not(None),
+                FrontierNewsItem.ai_review_suggestion == "ready",
+                FrontierNewsItem.score >= DAILY_NEWS_MIN_SCORE,
+                Reviewable.status == "pending",
+                Reviewable.type == "queued_topic",
+                Reviewable.source == "frontier_news",
+                Reviewable.topic_id.is_(None),
+                FrontierNewsSource.enabled.is_(True),
+                FrontierNewsSource.deleted_at.is_(None),
+                FrontierNewsSource.key.notin_(RETIRED_FRONTIER_SOURCE_KEYS),
+                or_(
+                    FrontierNewsItem.published_at >= cutoff,
+                    and_(
+                        FrontierNewsItem.published_at.is_(None),
+                        FrontierNewsItem.created_at >= cutoff,
+                    ),
+                ),
+            )
+            .order_by(
+                desc(func.coalesce(FrontierNewsItem.published_at, FrontierNewsItem.created_at)),
+                desc(FrontierNewsItem.score),
+                desc(FrontierNewsItem.id),
+            )
+            .limit(1)
+        )
+        if lock:
+            statement = statement.with_for_update()
+        return await self.session.scalar(statement)
+
     async def list_items(
         self,
         current_user: User,
@@ -678,6 +837,11 @@ class FrontierNewsService:
         if board:
             if board.name in {"前沿快讯", "前沿资讯"}:
                 board.name = HOT_NEWS_BOARD_NAME
+                board.description = HOT_NEWS_BOARD_DESCRIPTION
+            elif (
+                board.name == HOT_NEWS_BOARD_NAME
+                and board.description == LEGACY_HOT_NEWS_BOARD_DESCRIPTION
+            ):
                 board.description = HOT_NEWS_BOARD_DESCRIPTION
             return board
         legacy = await self.session.scalar(

@@ -25,8 +25,8 @@ class Settings(BaseSettings):
     background_frontier_news_interval_seconds: int = 3600
     background_living_forum_interval_seconds: int = 86400
     living_forum_publish_mode: Literal["auto", "review", "sample_review", "off"] = "auto"
-    living_forum_daily_topic_limit: int = 5
-    living_forum_daily_reply_limit: int = 2
+    living_forum_daily_topic_limit: int = 1
+    living_forum_daily_reply_limit: int = 0
     frontier_news_board_slug: str = "frontier"
     frontier_news_bot_username: str = "小小资讯"
     frontier_news_bot_email: str = "xiaoxiao-zixun@pingxingxian.space"

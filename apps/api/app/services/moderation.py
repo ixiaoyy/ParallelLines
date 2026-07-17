@@ -674,6 +674,49 @@ class ModerationService:
         await self.session.commit()
         return ReviewableResponse.from_model(await self._get_reviewable(reviewable.id))
 
+    async def auto_approve_frontier_news_reviewable(
+        self,
+        reviewable_id: str,
+        actor: User,
+    ) -> Reviewable:
+        """Approve one bot-owned frontier-news draft through the normal decision pipeline.
+
+        This internal path intentionally bypasses moderator membership only for an
+        unclaimed pending news topic owned by the same persona actor. It is not
+        exposed by the moderation API.
+        """
+
+        reviewable = await self._get_reviewable(reviewable_id)
+        item_id = (reviewable.data or {}).get("frontier_news_item_id")
+        if (
+            reviewable.source != "frontier_news"
+            or reviewable.type != "queued_topic"
+            or not isinstance(item_id, str)
+            or not item_id
+        ):
+            raise ValidationError(
+                "frontier_news_auto_publish_invalid",
+                "Only frontier news topic drafts can be auto-published",
+            )
+        if reviewable.status != "pending":
+            raise ValidationError(
+                "frontier_news_auto_publish_not_pending",
+                "Frontier news draft is not pending",
+            )
+        if reviewable.created_by_id != actor.id or not actor.is_persona:
+            raise PermissionDeniedError(
+                "frontier_news_auto_publish_forbidden",
+                "Frontier news draft must be published by its persona owner",
+            )
+        return await self._apply_open_reviewable_decision_in_session(
+            reviewable,
+            ReviewableDecisionRequest(
+                action="approve",
+                note="Daily source-backed news auto-publish",
+            ),
+            actor,
+        )
+
     async def decide_reviewables_bulk(
         self,
         payload: ReviewableBulkDecisionRequest,
@@ -729,6 +772,20 @@ class ModerationService:
 
         reviewable = await self._get_reviewable(reviewable_id)
         await self._require_can_access_reviewable(current_user, reviewable)
+        return await self._apply_open_reviewable_decision_in_session(
+            reviewable,
+            payload,
+            current_user,
+        )
+
+    async def _apply_open_reviewable_decision_in_session(
+        self,
+        reviewable: Reviewable,
+        payload: ReviewableDecisionRequest,
+        current_user: User,
+    ) -> Reviewable:
+        """Apply a validated reviewable decision without permission checks or a commit."""
+
         if reviewable.status not in OPEN_REVIEWABLE_STATUSES:
             raise ValidationError("reviewable_not_open", "Reviewable is not open")
         previous_status = reviewable.status

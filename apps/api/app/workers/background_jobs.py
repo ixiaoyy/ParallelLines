@@ -23,7 +23,6 @@ from app.services.email_notifications import EmailNotificationService
 from app.services.forum import calculate_hot_score
 from app.services.frontier_news import FrontierNewsService
 from app.services.integrations import IntegrationService
-from app.services.living_forum import LivingForumService
 from app.services.search import SearchIndexService
 from app.services.uploads import UploadService
 
@@ -176,21 +175,25 @@ async def handle_publish_living_forum_day(
     session: AsyncSession,
     _payload: dict[str, object],
 ) -> dict[str, object]:
-    """Publish the daily AI-operated forum program through the unified worker."""
+    """Publish at most one fresh, source-backed news topic for the local calendar day."""
 
     settings = get_settings()
-    service = LivingForumService(session, settings)
-    publish_result = await service.publish_day(
-        limit=settings.living_forum_daily_topic_limit,
-        publish_mode=settings.living_forum_publish_mode,
-    )
-    engagement_result = await service.engage_day(
-        limit=settings.living_forum_daily_reply_limit,
+    if settings.living_forum_publish_mode == "off":
+        return {
+            "collection": {"status": "skipped", "reason": "daily_publishing_off"},
+            "publish": {"status": "skipped", "reason": "daily_publishing_off"},
+            "engagement": {"status": "disabled"},
+        }
+
+    service = FrontierNewsService(session, settings)
+    collection_result = await service.collect_due_sources()
+    publish_result = await service.publish_daily_candidate(
         dry_run=settings.living_forum_publish_mode != "auto",
     )
     return {
+        "collection": collection_result.model_dump(),
         "publish": publish_result,
-        "engagement": engagement_result,
+        "engagement": {"status": "disabled"},
     }
 
 
