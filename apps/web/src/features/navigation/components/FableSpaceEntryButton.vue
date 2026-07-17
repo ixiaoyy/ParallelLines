@@ -45,8 +45,8 @@ async function openFableSpace(): Promise<void> {
     <img
       :src="entryImageUrl"
       alt=""
-      width="1024"
-      height="388"
+      width="1008"
+      height="576"
       decoding="async"
       aria-hidden="true"
     />
