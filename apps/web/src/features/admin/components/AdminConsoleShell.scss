@@ -10,6 +10,7 @@
   --admin-canvas: var(--bg-app);
   --admin-page-max-width: 96rem;
   --admin-page-section-gap: 2.75rem;
+  --admin-mobile-navigation-height: 4rem;
   min-height: 100dvh;
   color: var(--admin-text);
   background: var(--admin-canvas);
@@ -314,7 +315,9 @@
 
 @media (max-width: 860px) {
   .admin-console-shell {
-    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(
+      var(--admin-mobile-navigation-height) + env(safe-area-inset-bottom)
+    );
   }
 
   .admin-console-shell__sidebar {
@@ -332,11 +335,11 @@
   .admin-console-shell__drawer-close {
     position: absolute;
     z-index: 1;
-    top: 0.85rem;
-    right: 0.75rem;
+    top: 0.625rem;
+    right: 0.5rem;
     display: grid;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
     place-items: center;
     border: 0;
     border-radius: 0.5rem;
@@ -367,13 +370,19 @@
   }
 
   .admin-console-shell__workspace {
-    min-height: calc(100dvh - 4.25rem - env(safe-area-inset-bottom));
+    min-height: calc(
+      100dvh - var(--admin-mobile-navigation-height) - env(safe-area-inset-bottom)
+    );
     margin-left: 0;
   }
 
   .admin-console-shell__topbar {
-    min-height: 3.75rem;
-    padding: 0 1rem;
+    min-height: calc(3.5rem + env(safe-area-inset-top));
+    padding:
+      env(safe-area-inset-top)
+      max(0.75rem, env(safe-area-inset-right))
+      0
+      max(0.75rem, env(safe-area-inset-left));
   }
 
   .admin-console-shell__topbar-start {
@@ -383,8 +392,8 @@
 
   .admin-console-shell__menu-button {
     display: grid;
-    width: 2.6rem;
-    height: 2.6rem;
+    width: 2.75rem;
+    height: 2.75rem;
     flex: 0 0 auto;
     place-items: center;
     border: 0;
@@ -396,13 +405,14 @@
   }
 
   .admin-console-shell__mobile-brand {
+    display: flex;
     min-width: 0;
     gap: 0.45rem;
   }
 
   .admin-console-shell__mobile-brand img {
-    width: 2.2rem;
-    height: 2.2rem;
+    width: 2rem;
+    height: 2rem;
     flex: 0 0 auto;
     object-fit: contain;
   }
@@ -410,7 +420,7 @@
   .admin-console-shell__mobile-brand strong {
     overflow: hidden;
     color: var(--admin-title);
-    font-size: 0.92rem;
+    font-size: 0.875rem;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -424,9 +434,18 @@
     gap: 0.25rem;
   }
 
+  .admin-console-shell__topbar-actions :deep(.notification-trigger) {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
   .admin-console-shell__content {
     width: 100%;
-    padding: 1.25rem 1rem 2.5rem;
+    padding:
+      1rem
+      max(1rem, env(safe-area-inset-right))
+      2rem
+      max(1rem, env(safe-area-inset-left));
   }
 
   .admin-console-shell__bottom-nav {
@@ -435,10 +454,15 @@
     inset: auto 0 0;
     display: grid;
     grid-template-columns: repeat(var(--admin-navigation-count, 5), minmax(0, 1fr));
-    min-height: calc(4.25rem + env(safe-area-inset-bottom));
+    min-height: calc(
+      var(--admin-mobile-navigation-height) + env(safe-area-inset-bottom)
+    );
     border-top: 1px solid var(--admin-border);
-    padding: 0.3rem max(0.3rem, env(safe-area-inset-left)) env(safe-area-inset-bottom)
-      max(0.3rem, env(safe-area-inset-right));
+    padding:
+      0.25rem
+      max(0.25rem, env(safe-area-inset-right))
+      env(safe-area-inset-bottom)
+      max(0.25rem, env(safe-area-inset-left));
     background: var(--admin-surface);
     box-shadow: 0 -0.5rem 1.5rem rgb(15 23 42 / 5%);
   }
@@ -446,24 +470,24 @@
   .admin-console-shell__bottom-item {
     display: grid;
     min-width: 0;
-    min-height: 3.6rem;
+    min-height: 3.5rem;
     place-items: center;
     align-content: center;
-    gap: 0.25rem;
-    border-radius: 0.5rem;
-    padding: 0.25rem 0.1rem;
-    color: var(--admin-muted);
+    gap: 0.15rem;
+    border-radius: 0.375rem;
+    padding: 0.2rem 0.1rem;
+    color: var(--admin-text);
     text-decoration: none;
   }
 
   .admin-console-shell__bottom-item :deep(.anticon) {
-    font-size: 1.16rem;
+    font-size: 1.1rem;
   }
 
   .admin-console-shell__bottom-item small {
     overflow: hidden;
     max-width: 100%;
-    font-size: 0.66rem;
+    font-size: 0.6875rem;
     line-height: 1.15;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -474,11 +498,28 @@
     background: var(--admin-primary-soft);
     font-weight: 760;
   }
+
+  .admin-console-shell__return {
+    min-height: 2.75rem;
+  }
 }
 
-@media (max-width: 340px) {
+@media (max-width: 360px) {
+  .admin-console-shell__topbar {
+    padding-right: max(0.5rem, env(safe-area-inset-right));
+    padding-left: max(0.5rem, env(safe-area-inset-left));
+  }
+
   .admin-console-shell__mobile-brand strong {
     display: none;
+  }
+
+  .admin-console-shell__content {
+    padding:
+      0.875rem
+      max(0.75rem, env(safe-area-inset-right))
+      1.5rem
+      max(0.75rem, env(safe-area-inset-left));
   }
 }
 

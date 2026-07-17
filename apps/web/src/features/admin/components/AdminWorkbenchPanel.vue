@@ -20,12 +20,17 @@ import UiButton from "@/shared/ui/Button.vue";
 
 const systemQuery = useAdminSystem();
 const system = computed(() => systemQuery.data.value);
+const today = new Date();
 const todayLabel = new Intl.DateTimeFormat("zh-CN", {
   year: "numeric",
   month: "long",
   day: "numeric",
   weekday: "long",
-}).format(new Date());
+}).format(today);
+const compactTodayLabel = new Intl.DateTimeFormat("zh-CN", {
+  month: "numeric",
+  day: "numeric",
+}).format(today);
 
 const quickLinks = [
   {
@@ -181,7 +186,8 @@ function auditTargetLabel(targetType: string, targetId: string): string {
       </div>
       <div class="admin-page-date">
         <ClockCircleOutlined aria-hidden="true" />
-        <span>{{ todayLabel }}</span>
+        <span class="admin-page-date__full">{{ todayLabel }}</span>
+        <span class="admin-page-date__compact">{{ compactTodayLabel }}</span>
       </div>
     </header>
 
