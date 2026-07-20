@@ -4,7 +4,7 @@ import {
   LockOutlined,
 } from "@ant-design/icons-vue";
 import { message } from "ant-design-vue";
-import { computed, defineAsyncComponent, ref } from "vue";
+import { computed, defineAsyncComponent, onBeforeUnmount, ref } from "vue";
 import { useRouter } from "vue-router";
 
 import { requestFableSpaceSsoTicket } from "@/features/auth/api";
@@ -26,6 +26,10 @@ const router = useRouter();
 const currentUserQuery = useCurrentUser();
 const currentUser = computed(() => currentUserQuery.data.value);
 const openingPrivateSpace = ref(false);
+const PRIVATE_SPACE_TICKET_TIMEOUT_MS = 10_000;
+const PRIVATE_SPACE_NAVIGATION_TIMEOUT_MS = 10_000;
+const PRIVATE_SPACE_TIMEOUT_ERROR_NAME = "PrivateSpaceTicketTimeoutError";
+let navigationFallbackTimer: number | undefined;
 const match3Url = match3LaunchUrl("play-hub");
 const isDesktopRailVisible = useMediaQuery("(min-width: 981px)", true);
 const boardsQuery = useBoards(isDesktopRailVisible);
@@ -45,6 +49,10 @@ const railTagsLoading = computed(
   () => tagsQuery.isLoading.value && cachedRailTags.length === 0,
 );
 
+onBeforeUnmount(() => {
+  clearNavigationFallback();
+});
+
 // Sends guests to authentication and signed-in users through the existing one-time SSO handoff.
 // Parameters: none. Return value resolves after routing, redirect, or error feedback; side effect changes browser location.
 async function openPrivateSpace(): Promise<void> {
@@ -58,12 +66,67 @@ async function openPrivateSpace(): Promise<void> {
 
   openingPrivateSpace.value = true;
   try {
-    const ticket = await requestFableSpaceSsoTicket();
+    const ticket = await requestPrivateSpaceTicket();
+    scheduleNavigationFallback();
     window.location.assign(ticket.redirect_url);
-  } catch {
-    message.error("私密空间暂时无法进入，请稍后再试");
+  } catch (error) {
+    clearNavigationFallback();
+    message.error(
+      isPrivateSpaceTimeout(error)
+        ? "连接私密空间超时，请重试"
+        : "私密空间暂时无法进入，请稍后再试",
+    );
     openingPrivateSpace.value = false;
   }
+}
+
+// Bounds the entire ticket request while also aborting the underlying fetch when possible.
+// Parameters: none. Return value is the one-time handoff payload; side effect may cancel a slow request.
+async function requestPrivateSpaceTicket() {
+  const controller = new AbortController();
+  let timeoutTimer: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutTimer = window.setTimeout(() => {
+      controller.abort();
+      const error = new Error("Private space ticket request timed out");
+      error.name = PRIVATE_SPACE_TIMEOUT_ERROR_NAME;
+      reject(error);
+    }, PRIVATE_SPACE_TICKET_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([
+      requestFableSpaceSsoTicket(controller.signal),
+      timeout,
+    ]);
+  } finally {
+    if (timeoutTimer !== undefined) {
+      window.clearTimeout(timeoutTimer);
+    }
+  }
+}
+
+// Restores the entry when a cross-origin navigation starts but never unloads this page.
+// Parameters: none. Return value: none; side effect schedules visible recovery feedback.
+function scheduleNavigationFallback(): void {
+  clearNavigationFallback();
+  navigationFallbackTimer = window.setTimeout(() => {
+    navigationFallbackTimer = undefined;
+    openingPrivateSpace.value = false;
+    message.warning("跳转未完成，请重试");
+  }, PRIVATE_SPACE_NAVIGATION_TIMEOUT_MS);
+}
+
+function clearNavigationFallback(): void {
+  if (navigationFallbackTimer === undefined) {
+    return;
+  }
+  window.clearTimeout(navigationFallbackTimer);
+  navigationFallbackTimer = undefined;
+}
+
+function isPrivateSpaceTimeout(error: unknown): boolean {
+  return error instanceof Error && error.name === PRIVATE_SPACE_TIMEOUT_ERROR_NAME;
 }
 </script>
 

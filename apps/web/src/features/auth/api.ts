@@ -139,10 +139,14 @@ export function logout(): Promise<Record<string, boolean>> {
 }
 
 // Requests a short-lived authorized-user handoff URL; no user profile or bearer token enters the URL.
-export function requestFableSpaceSsoTicket(): Promise<FableSpaceSsoTicketResponse> {
+// The optional signal lets launch surfaces stop waiting when the handoff cannot complete promptly.
+export function requestFableSpaceSsoTicket(
+  signal?: AbortSignal,
+): Promise<FableSpaceSsoTicketResponse> {
   return apiPost<FableSpaceSsoTicketResponse, Record<string, never>>(
     "/auth/fablespace/ticket",
     {},
+    { signal },
   );
 }
 
