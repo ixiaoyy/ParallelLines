@@ -12,8 +12,10 @@ COPY apps/web apps/web
 
 ARG VITE_API_BASE_URL=/api/v1
 ARG VITE_STATIC_ASSET_BASE_URL=https://img.pingxingxian.space/static/web
+ARG VITE_MATCH3_URL=https://webmatch3.pingxingxian.space
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_STATIC_ASSET_BASE_URL=$VITE_STATIC_ASSET_BASE_URL
+ENV VITE_MATCH3_URL=$VITE_MATCH3_URL
 
 RUN pnpm --dir apps/web build
 

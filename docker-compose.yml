@@ -94,6 +94,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+        VITE_MATCH3_URL: ${VITE_MATCH3_URL:-https://webmatch3.pingxingxian.space}
     restart: unless-stopped
     expose:
       - "80"

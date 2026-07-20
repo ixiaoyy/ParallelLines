@@ -36,9 +36,9 @@ interface AccessLevelOption {
 const accessLevelOptions: AccessLevelOption[] = [
   {
     value: "access",
-    label: "体验用户",
+    label: "基础体验",
     eyebrow: "Access",
-    description: "进入并体验已开放空间；不能新建供给侧资源。",
+    description: "所有正常登录用户已自动拥有；保留此级别仅用于兼容已有授权记录。",
   },
   {
     value: "creator",
@@ -79,10 +79,16 @@ const grantsQuery = useAdminFableSpaceAccessGrants(grantParams);
 const updateGrantMutation = useUpdateAdminFableSpaceAccessGrant();
 const revokeGrantMutation = useRevokeAdminFableSpaceAccessGrant();
 const users = computed(() => grantsQuery.data.value ?? []);
-// Counts active entries only within the current search result, avoiding a misleading global total.
-// Parameters: none. Return value is the visible active-grant count; side effect: none.
+// Counts current explicit grants within this search result; baseline access is intentionally excluded.
+// Parameters: none. Return value is the visible configured-grant count; side effect: none.
 const visibleGrantCount = computed(
-  () => users.value.filter((user) => user.access_allowed).length,
+  () =>
+    users.value.filter(
+      (user) =>
+        Boolean(user.access_level) &&
+        !user.revoked_at &&
+        (!user.expires_at || new Date(user.expires_at).getTime() > Date.now()),
+    ).length,
 );
 // Resolves the selected user against the latest query response so mutations never edit stale rows.
 // Parameters: none. Return value is the current result row or null; side effect: none.
@@ -171,12 +177,12 @@ function saveGrant(): void {
       },
     },
     {
-      onSuccess: () => message.success(`已更新 ${user.username} 的 FableSpace 权限`),
+      onSuccess: () => message.success(`已更新 ${user.username} 的 FableSpace 高级能力`),
     },
   );
 }
 
-// Confirms and revokes only the selected user's FableSpace entitlement.
+// Confirms and revokes only the selected user's explicit FableSpace capability grant.
 // Parameters: none. Return value: none. Side effect: opens a confirmation dialog and may perform an admin DELETE.
 function confirmRevokeGrant(): void {
   const user = selectedUser.value;
@@ -185,15 +191,15 @@ function confirmRevokeGrant(): void {
   }
 
   Modal.confirm({
-    title: `撤销 ${user.username} 的 FableSpace 权限？`,
-    content: "现有 FableSpace 会话将失效；论坛账号、角色和内容不会改变。",
+    title: `撤销 ${user.username} 的 FableSpace 高级能力？`,
+    content: "账号会回退到基础体验；论坛账号、角色、内容和基础入口不会改变。",
     okText: "确认撤销",
     okType: "danger",
     cancelText: "取消",
     centered: true,
     onOk: async () => {
       await revokeGrantMutation.mutateAsync(user.user_id);
-      message.success(`已撤销 ${user.username} 的 FableSpace 权限`);
+      message.success(`已撤销 ${user.username} 的 FableSpace 高级能力`);
     },
   });
 }
@@ -259,24 +265,27 @@ function formatDateTime(iso: string | null, fallback = "未记录"): string {
 // `user` contains account and entitlement state. Return value is a short Chinese label; side effect: none.
 function grantStatusLabel(user: AdminFableSpaceAccessGrantResponse): string {
   if (!user.access_level || user.revoked_at) {
-    return "未授权";
+    return user.account_status === "active" ? "基础访问" : "账号不可用";
   }
-  if (!user.access_allowed) {
-    return "已失效";
+  if (
+    user.account_status !== "active" ||
+    (user.expires_at && new Date(user.expires_at).getTime() <= Date.now())
+  ) {
+    return "高级权限失效";
   }
   if (user.expires_at && new Date(user.expires_at).getTime() - Date.now() < 7 * 86_400_000) {
-    return "即将到期";
+    return "高级权限将到期";
   }
-  return "已授权";
+  return "高级权限已配置";
 }
 
 // Maps one grant row to a semantic style suffix.
 // `user` contains account and entitlement state. Return value is a CSS status key; side effect: none.
 function grantStatusClass(user: AdminFableSpaceAccessGrantResponse): string {
   const label = grantStatusLabel(user);
-  if (label === "已授权") return "active";
-  if (label === "即将到期") return "warning";
-  if (label === "已失效") return "expired";
+  if (label === "高级权限已配置") return "active";
+  if (label === "高级权限将到期") return "warning";
+  if (label === "高级权限失效" || label === "账号不可用") return "expired";
   return "none";
 }
 
@@ -291,27 +300,27 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
   <section class="fablespace-access-panel" aria-labelledby="fablespace-access-title">
     <header class="fablespace-access-panel__header">
       <div>
-        <span class="fablespace-access-panel__context">独立产品访问控制</span>
-        <h1 id="fablespace-access-title">FableSpace 权限</h1>
-        <p>邀请指定账号进入 AI 产品，并管理权限层级与有效期。</p>
+        <span class="fablespace-access-panel__context">独立产品能力管理</span>
+        <h1 id="fablespace-access-title">FableSpace 高级能力</h1>
+        <p>所有正常登录用户均可进入；在这里管理创作、运营与产品管理能力。</p>
       </div>
       <div v-if="!grantsQuery.isLoading.value && !grantsQuery.isError.value" class="result-summary">
         <strong>{{ visibleGrantCount }}</strong>
-        <span>位已授权 / 当前 {{ users.length }} 位</span>
+        <span>位已配置 / 当前 {{ users.length }} 位</span>
       </div>
     </header>
 
     <aside class="product-boundary-note" aria-label="权限边界说明">
       <span class="product-boundary-note__icon"><LockOutlined aria-hidden="true" /></span>
       <div>
-        <strong>这是一套独立的产品资格</strong>
-        <p>授予、调整或撤销 FableSpace 权限，不会改变用户在论坛中的角色、等级、发帖权限或内容。</p>
+        <strong>基础访问已经向登录用户开放</strong>
+        <p>这里的设置只影响 FableSpace 高级能力，不改变基础入口，也不改变论坛角色、等级、发帖权限或内容。</p>
       </div>
       <span class="product-boundary-note__tag">与论坛角色解耦</span>
     </aside>
 
     <div class="access-workspace">
-      <aside class="access-directory" aria-label="用户授权列表">
+      <aside class="access-directory" aria-label="用户高级能力列表">
         <label class="access-search">
           <span class="sr-only">搜索用户名或邮箱</span>
           <SearchOutlined aria-hidden="true" />
@@ -322,7 +331,7 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
         <header class="access-directory__heading">
           <div>
             <h2>账号目录</h2>
-            <p>搜索结果同时包含未授权账号</p>
+            <p>搜索结果包含仅有基础访问的账号</p>
           </div>
           <TeamOutlined aria-hidden="true" />
         </header>
@@ -444,7 +453,7 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
               <span>02</span>
               <div>
                 <h3 id="access-expiry-title">设置有效期</h3>
-                <p>到期后产品入口与现有 FableSpace 会话自动失效。</p>
+                <p>到期后高级能力自动失效，账号仍可继续基础体验。</p>
               </div>
             </div>
             <ClockCircleOutlined aria-hidden="true" />
@@ -499,7 +508,7 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
               账号当前不可用；可撤销已有权限，但不能新增或更新授权。
             </p>
             <p v-else-if="updateGrantMutation.isSuccess.value" class="is-success">
-              <CheckCircleOutlined aria-hidden="true" />授权信息已保存。
+              <CheckCircleOutlined aria-hidden="true" />高级能力配置已保存。
             </p>
             <p v-else-if="updateGrantMutation.isError.value" class="is-error" role="alert">
               {{ updateGrantMutation.error.value?.message || "保存失败，请稍后重试。" }}
@@ -515,11 +524,11 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
             :disabled="mutationPending"
             @click="confirmRevokeGrant"
           >
-            <StopOutlined aria-hidden="true" />撤销权限
+            <StopOutlined aria-hidden="true" />撤销高级能力
           </UiButton>
           <UiButton :disabled="mutationPending || !canEditSelectedGrant" @click="saveGrant">
             <KeyOutlined aria-hidden="true" />
-            {{ updateGrantMutation.isPending.value ? "保存中…" : selectedUser.access_level ? "保存权限" : "授予权限" }}
+            {{ updateGrantMutation.isPending.value ? "保存中…" : selectedUser.access_level ? "保存能力" : "配置能力" }}
           </UiButton>
         </footer>
       </article>
@@ -527,7 +536,7 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
       <div v-else-if="!grantsQuery.isLoading.value && !grantsQuery.isError.value" class="grant-editor-empty">
         <LockOutlined aria-hidden="true" />
         <strong>选择一位用户</strong>
-        <p>在左侧搜索并选择账号，然后设置独立的 FableSpace 产品资格。</p>
+        <p>在左侧搜索并选择账号，然后配置独立的 FableSpace 高级能力。</p>
       </div>
     </div>
   </section>

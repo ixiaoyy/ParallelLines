@@ -64,11 +64,12 @@ def fablespace_authorization_from_grant(
     *,
     now: datetime | None = None,
 ) -> ProductAuthorization:
-    """Resolve effective FableSpace authorization from account and grant state.
+    """Resolve effective FableSpace authorization from account and optional elevated grant.
 
     Key parameters are the forum `user`, an optional persisted `grant`, and an optional
-    UTC clock value for deterministic tests. The return value is the current effective
-    authorization. This function does not query or mutate the database.
+    UTC clock value for deterministic tests. Active forum accounts receive baseline
+    access; a current grant may add elevated capabilities. The return value is the
+    current effective authorization. This function does not query or mutate the database.
     """
 
     evaluated_at = now or utcnow()
@@ -81,14 +82,21 @@ def fablespace_authorization_from_grant(
 
     if user.status != "active":
         return ProductAuthorization(False, None, (), version, persisted_expiry)
+    baseline = ProductAuthorization(
+        True,
+        "access",
+        fablespace_capabilities("access"),
+        version,
+        None,
+    )
     if grant is None or grant.revoked_at is not None:
-        return ProductAuthorization(False, None, (), version, persisted_expiry)
+        return baseline
     if grant.expires_at is not None and as_utc_datetime(grant.expires_at) <= evaluated_at:
-        return ProductAuthorization(False, None, (), version, persisted_expiry)
+        return baseline
 
     capabilities = fablespace_capabilities(grant.access_level)
     if FABLESPACE_ACCESS_CAPABILITY not in capabilities:
-        return ProductAuthorization(False, None, (), version, persisted_expiry)
+        return baseline
     return ProductAuthorization(
         True,
         grant.access_level,
@@ -99,7 +107,7 @@ def fablespace_authorization_from_grant(
 
 
 class ProductAccessService:
-    """Manage persistent product grants and resolve their effective capabilities."""
+    """Manage elevated product grants and resolve baseline plus granted capabilities."""
 
     def __init__(self, session: AsyncSession) -> None:
         """Store the request-scoped database session used by product access operations."""
@@ -110,7 +118,8 @@ class ProductAccessService:
         """Load and return a user's current effective FableSpace authorization.
 
         Key parameter `user` is the authoritative forum account. The return value includes
-        access, capabilities, expiry, and version. Side effect: reads one grant row.
+        baseline access, optional elevated capabilities, expiry, and version. Side effect:
+        reads one grant row.
         """
 
         grant = await self._fablespace_grant_for_user(user.id)
@@ -338,7 +347,11 @@ class ProductAccessService:
             authorization_version=authorization.authorization_version,
             granted_by_id=grant.granted_by_id if grant is not None else None,
             granted_by_name=granted_by.username if granted_by is not None else None,
-            expires_at=authorization.expires_at,
+            expires_at=(
+                as_utc_datetime(grant.expires_at)
+                if grant is not None and grant.expires_at is not None
+                else None
+            ),
             revoked_at=(
                 as_utc_datetime(grant.revoked_at)
                 if grant is not None and grant.revoked_at is not None

@@ -16,7 +16,7 @@ import { publicSettingString, siteText } from "@/features/admin/model";
 import { usePublicSiteSettings } from "@/features/admin/queries";
 import type { UserPublic } from "@/features/auth/model";
 import { canAccessModeration, isAdmin } from "@/features/auth/permissions";
-import { useCurrentUser, useFableSpaceAccess, useLogout } from "@/features/auth/queries";
+import { useCurrentUser, useLogout } from "@/features/auth/queries";
 import { useBoards } from "@/features/boards/queries";
 import { useTags } from "@/features/tags/queries";
 import { useLocale } from "@/shared/i18n/locale";
@@ -65,7 +65,6 @@ const shouldShowMobileNavigation = computed(
 const topbarRef = ref<HTMLElement | null>(null);
 const accountMenuRef = ref<HTMLDetailsElement | null>(null);
 const currentUserQuery = useCurrentUser();
-const fableSpaceAccessQuery = useFableSpaceAccess();
 const mobileBoardsQuery = useBoards(shouldShowMobileNavigation);
 const mobileTagsQuery = useTags(30, shouldShowMobileNavigation);
 const siteSettingsQuery = usePublicSiteSettings();
@@ -80,11 +79,6 @@ const PUBLIC_ROUTE_PREFETCH_DELAY_MS = 2_400;
 const ACCOUNT_ROUTE_PREFETCH_DELAY_MS = 1_800;
 const IDLE_PREFETCH_TIMEOUT_MS = 4_000;
 const currentUser = computed(() => currentUserQuery.data.value);
-// Keeps the private-space navigation entry hidden until the backend confirms access for this account.
-// Parameters: none. Return value is a secure-default visibility flag; side effect: none.
-const canAccessFableSpace = computed(
-  () => fableSpaceAccessQuery.data.value?.access_allowed === true,
-);
 // Normalizes deferred taxonomy results into stable arrays consumed by the reusable rail.
 // Parameters: none. Return values are current board/tag lists; side effect: none.
 const mobileNavigationBoards = computed(() => mobileBoardsQuery.data.value ?? []);
@@ -275,6 +269,7 @@ function schedulePublicRoutePrefetch() {
   scheduleIdleTask(() => {
     void import("@/pages/home/HomePage.vue");
     void import("@/pages/board/BoardDirectoryPage.vue");
+    void import("@/pages/play/PlayHubPage.vue");
     void import("@/pages/user/UserDirectoryPage.vue");
     void import("@/pages/events/EventsPage.vue");
     void import("@/pages/search/SearchPage.vue");
@@ -520,7 +515,6 @@ function t(key: string, fallback: string) {
           :boards-error="mobileBoardsQuery.isError.value"
           :tags-loading="mobileTagsQuery.isLoading.value"
           :tags-error="mobileTagsQuery.isError.value"
-          :show-private-space="canAccessFableSpace"
           @navigate="closeNavigation"
         />
       </div>

@@ -5,13 +5,14 @@ import type { LocationQueryRaw } from "vue-router";
 
 import type { TopicCardVM } from "@/entities/topic/model";
 import { isAdmin } from "@/features/auth/permissions";
-import { useCurrentUser, useFableSpaceAccess } from "@/features/auth/queries";
+import { useCurrentUser } from "@/features/auth/queries";
 import { useBoards } from "@/features/boards/queries";
 import { useTags } from "@/features/tags/queries";
 import type { TopicSort } from "@/features/topics/model";
 import { useTopicFeed } from "@/features/topics/queries";
 import { useAdminTopicDelete } from "@/features/topics/useAdminTopicDelete";
 import HomeHero from "@/pages/home/components/HomeHero.vue";
+import HomePlaySpotlight from "@/pages/home/components/HomePlaySpotlight.vue";
 import HomeTopicFeed from "@/pages/home/components/HomeTopicFeed.vue";
 import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
 import {
@@ -37,14 +38,8 @@ const isDesktopRailVisible = useMediaQuery("(min-width: 981px)", true);
 const filtersDataRequested = ref(false);
 const filtersOpen = ref(false);
 const currentUserQuery = useCurrentUser();
-const fableSpaceAccessQuery = useFableSpaceAccess();
 const canPublishTopic = computed(() => Boolean(currentUserQuery.data.value));
 const canDeleteTopics = computed(() => isAdmin(currentUserQuery.data.value));
-// Shows the independent product entry only after the backend confirms an active FableSpace entitlement.
-// Parameters: none. Return value is a secure-default visibility flag; side effect: none.
-const canAccessFableSpace = computed(
-  () => fableSpaceAccessQuery.data.value?.access_allowed === true,
-);
 const { deletingTopicId, requestDeleteTopic } = useAdminTopicDelete({
   note: "前台首页列表管理员删除主题。",
 });
@@ -299,7 +294,6 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
         :boards-error="boardsQuery.isError.value"
         :tags-loading="railTagsLoading"
         :tags-error="tagsQuery.isError.value"
-        :show-private-space="canAccessFableSpace"
       />
 
       <main class="main-column" aria-label="平行线首页内容">
@@ -311,6 +305,8 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
           @submit-search="submitHeroSearch"
           @toggle-filters="setFiltersOpen(!filtersOpen)"
         />
+
+        <HomePlaySpotlight class="play-slot" />
 
         <HomeTopicFeed
           id="topic-feed"

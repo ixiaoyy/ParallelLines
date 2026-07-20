@@ -52,7 +52,7 @@ async def get_fablespace_access(
     session: SessionDep,
     current_user: CurrentUserDep,
 ) -> ApiResponse[FableSpaceAccessStatusResponse]:
-    """Return the current user's effective FableSpace access for entry visibility."""
+    """Return baseline and optional elevated FableSpace capabilities for the current user."""
 
     response.headers["Cache-Control"] = "no-store"
     authorization = await ProductAccessService(session).fablespace_authorization(current_user)
@@ -74,7 +74,7 @@ async def issue_fablespace_ticket(
     settings: SettingsDep,
     current_user: CurrentUserDep,
 ) -> ApiResponse[FableSpaceSsoTicketResponse]:
-    """Issue a single-use FableSpace ticket after checking current product access."""
+    """Issue a single-use FableSpace ticket for an active signed-in account."""
     response.headers["Cache-Control"] = "no-store"
     ticket = await AuthService(session, settings).issue_fablespace_sso_ticket(current_user)
     return ApiResponse(data=ticket)

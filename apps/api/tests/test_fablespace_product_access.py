@@ -60,24 +60,28 @@ def test_fablespace_capabilities_are_hierarchical() -> None:
     assert fablespace_capabilities("unknown") == ()
 
 
-def test_forum_admin_requires_an_independent_fablespace_grant() -> None:
-    """Forum administration alone should not bypass independent product access."""
+def test_active_forum_accounts_receive_baseline_fablespace_access() -> None:
+    """Every active forum account should receive the same baseline product access."""
 
-    without_grant = fablespace_authorization_from_grant(_user(role="admin"), None)
+    ordinary_user = fablespace_authorization_from_grant(_user(), None)
+    forum_admin = fablespace_authorization_from_grant(_user(role="admin"), None)
     with_grant = fablespace_authorization_from_grant(
         _user(role="admin"),
         _grant(level="admin"),
     )
 
-    assert without_grant.allowed is False
-    assert without_grant.authorization_version == 0
+    assert ordinary_user.allowed is True
+    assert ordinary_user.access_level == "access"
+    assert ordinary_user.capabilities == ("fablespace.access",)
+    assert forum_admin == ordinary_user
+    assert forum_admin.authorization_version == 0
     assert with_grant.allowed is True
     assert with_grant.access_level == "admin"
     assert with_grant.capabilities[-1] == "fablespace.admin"
 
 
-def test_explicit_grant_respects_level_expiry_revocation_and_account_status() -> None:
-    """Effective access should require an active account and a current grant."""
+def test_explicit_grant_respects_level_and_falls_back_to_baseline() -> None:
+    """Expired or revoked grants should lose elevation while active accounts keep access."""
 
     now = datetime(2026, 7, 15, 12, tzinfo=UTC)
     active_grant = _grant(level="creator", expires_at=now + timedelta(hours=1), version=7)
@@ -102,8 +106,14 @@ def test_explicit_grant_respects_level_expiry_revocation_and_account_status() ->
     assert active.access_level == "creator"
     assert active.capabilities == ("fablespace.access", "fablespace.creator")
     assert active.authorization_version == 7
-    assert expired.allowed is False and expired.authorization_version == 8
-    assert revoked.allowed is False and revoked.authorization_version == 9
+    assert expired.allowed is True and expired.access_level == "access"
+    assert expired.capabilities == ("fablespace.access",)
+    assert expired.authorization_version == 8
+    assert expired.expires_at is None
+    assert revoked.allowed is True and revoked.access_level == "access"
+    assert revoked.capabilities == ("fablespace.access",)
+    assert revoked.authorization_version == 9
+    assert revoked.expires_at is None
     assert suspended.allowed is False and suspended.authorization_version == 7
 
 

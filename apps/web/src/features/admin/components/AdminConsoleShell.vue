@@ -80,8 +80,8 @@ const navigationItems = computed<AdminNavigationItem[]>(() => [
   },
   {
     id: "fablespace",
-    label: t("admin.nav.fablespace", "AI 产品权限"),
-    mobileLabel: t("admin.nav.fablespace_short", "AI 权限"),
+    label: t("admin.nav.fablespace", "AI 产品能力"),
+    mobileLabel: t("admin.nav.fablespace_short", "AI 能力"),
     path: "/admin/fablespace-access",
     icon: KeyOutlined,
     adminOnly: true,

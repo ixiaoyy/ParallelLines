@@ -14352,7 +14352,7 @@
     },
     "/api/v1/auth/fablespace/access": {
       "get": {
-        "description": "Return the current user's effective FableSpace access for entry visibility.",
+        "description": "Return baseline and optional elevated FableSpace capabilities for the current user.",
         "operationId": "get_fablespace_access_api_v1_auth_fablespace_access_get",
         "responses": {
           "200": {
@@ -14499,7 +14499,7 @@
     },
     "/api/v1/auth/fablespace/ticket": {
       "post": {
-        "description": "Issue a single-use FableSpace ticket after checking current product access.",
+        "description": "Issue a single-use FableSpace ticket for an active signed-in account.",
         "operationId": "issue_fablespace_ticket_api_v1_auth_fablespace_ticket_post",
         "responses": {
           "200": {

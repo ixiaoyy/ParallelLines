@@ -22,7 +22,7 @@ import { computed } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
 import { sortBoardsWithFeedbackLast } from "@/entities/board/order";
-import FableSpaceEntryButton from "@/features/navigation/components/FableSpaceEntryButton.vue";
+import PlayHubEntryButton from "@/features/navigation/components/PlayHubEntryButton.vue";
 import type { TagItemVM } from "@/features/tags/model";
 import { compactNumber } from "@/shared/lib/format";
 import { boardToneClass } from "@/shared/theme/boardPalette";
@@ -35,7 +35,6 @@ const props = withDefaults(
     boardsError: boolean;
     tagsLoading: boolean;
     tagsError: boolean;
-    showPrivateSpace?: boolean;
     variant?: "desktop" | "mobile";
   }>(),
   {
@@ -220,9 +219,9 @@ function tagAccentStyle(tagName: string): Record<string, string> {
       </section>
     </aside>
 
-    <FableSpaceEntryButton
-      v-if="showPrivateSpace"
+    <PlayHubEntryButton
       :variant="variant === 'mobile' ? 'menu' : 'rail'"
+      @click="emit('navigate')"
     />
   </div>
 </template>

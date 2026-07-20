@@ -83,7 +83,7 @@ class AuthService:
         self.settings = settings
 
     async def issue_fablespace_sso_ticket(self, user: User) -> FableSpaceSsoTicketResponse:
-        """Create a single-use FableSpace ticket for a currently authorized user."""
+        """Create a single-use FableSpace ticket for an active forum account."""
         authorization = await ProductAccessService(self.session).fablespace_authorization(user)
         if not authorization.allowed:
             raise PermissionDeniedError(

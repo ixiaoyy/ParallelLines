@@ -54,6 +54,18 @@ export const router = createRouter({
       },
     },
     {
+      path: "/play",
+      name: "play-hub",
+      component: () => import("@/pages/play/PlayHubPage.vue"),
+      meta: {
+        seo: {
+          title: "游乐场 · {siteTitle}",
+          description: "探索平行线正在生长的可玩项目：私密空间与平行消消乐。",
+          canonicalPath: "/play",
+        },
+      },
+    },
+    {
       path: "/boards",
       name: "board-directory",
       component: () => import("@/pages/board/BoardDirectoryPage.vue"),
@@ -322,8 +334,8 @@ export const router = createRouter({
       meta: {
         requiredAccess: "admin",
         seo: {
-          title: "AI 产品权限 · {siteTitle}",
-          description: "管理 FableSpace 独立产品的访问资格、权限级别和有效期。",
+          title: "AI 产品能力 · {siteTitle}",
+          description: "管理 FableSpace 独立产品的创作、运营和产品管理能力。",
           canonicalPath: "/admin/fablespace-access",
           robots: NOINDEX_ROBOTS,
         },
