@@ -175,6 +175,80 @@
   font-weight: 750;
 }
 
+.rail-board--play {
+  grid-template-columns: 1.45rem minmax(0, 1fr) auto;
+  margin-top: 0.2rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+  background:
+    linear-gradient(
+      105deg,
+      color-mix(in srgb, var(--primary) 7%, var(--bg-surface)),
+      color-mix(in srgb, var(--accent-pink) 6%, var(--bg-surface))
+    );
+  --board-accent: var(--primary);
+}
+
+.rail-board--play::after {
+  content: "";
+  position: absolute;
+  right: 0.65rem;
+  bottom: 0;
+  left: 0.65rem;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--primary),
+    var(--accent-lime),
+    var(--accent-coral),
+    var(--accent-pink),
+    transparent
+  );
+  background-size: 220% 100%;
+  opacity: 0.72;
+  animation: rail-play-trace 3.8s linear infinite;
+}
+
+.rail-board--play:hover,
+.rail-board--play:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background:
+    linear-gradient(
+      105deg,
+      color-mix(in srgb, var(--primary) 11%, var(--bg-surface)),
+      color-mix(in srgb, var(--accent-pink) 9%, var(--bg-surface))
+    );
+}
+
+.rail-board--play .rail-board-mark {
+  color: var(--primary);
+  filter: drop-shadow(0 0 0.4rem rgba(var(--primary-rgb), 0.28));
+}
+
+.rail-board-play-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.rail-board-play-dots i {
+  width: 0.34rem;
+  height: 0.34rem;
+  border-radius: 50%;
+  background: var(--accent-lime);
+  animation: rail-play-dot 1.8s ease-in-out infinite;
+}
+
+.rail-board-play-dots i:nth-child(2) {
+  background: var(--accent-coral);
+  animation-delay: 150ms;
+}
+
+.rail-board-play-dots i:nth-child(3) {
+  background: var(--accent-pink);
+  animation-delay: 300ms;
+}
+
 .rail-state {
   color: var(--muted);
   font-size: 0.76rem;
@@ -293,6 +367,31 @@
 @keyframes rail-skeleton-flow {
   0% { background-position: 120% 0; }
   100% { background-position: -120% 0; }
+}
+
+@keyframes rail-play-trace {
+  0% { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+
+@keyframes rail-play-dot {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.68;
+  }
+
+  50% {
+    transform: translateY(-0.16rem);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-board--play::after,
+  .rail-board-play-dots i {
+    animation: none;
+  }
 }
 
 @media (max-width: 980px) {

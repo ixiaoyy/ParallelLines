@@ -12,7 +12,6 @@ import type { TopicSort } from "@/features/topics/model";
 import { useTopicFeed } from "@/features/topics/queries";
 import { useAdminTopicDelete } from "@/features/topics/useAdminTopicDelete";
 import HomeHero from "@/pages/home/components/HomeHero.vue";
-import HomePlaySpotlight from "@/pages/home/components/HomePlaySpotlight.vue";
 import HomeTopicFeed from "@/pages/home/components/HomeTopicFeed.vue";
 import { discoveryTabs, type DiscoveryTab } from "@/pages/home/discovery";
 import {
@@ -305,8 +304,6 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
           @submit-search="submitHeroSearch"
           @toggle-filters="setFiltersOpen(!filtersOpen)"
         />
-
-        <HomePlaySpotlight class="play-slot" />
 
         <HomeTopicFeed
           id="topic-feed"

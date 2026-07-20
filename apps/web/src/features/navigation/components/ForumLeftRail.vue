@@ -12,6 +12,7 @@ import {
   NotificationOutlined,
   QuestionCircleOutlined,
   ReadOutlined,
+  RocketOutlined,
   TagsOutlined,
   TeamOutlined,
   TrophyOutlined,
@@ -22,7 +23,6 @@ import { computed } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
 import { sortBoardsWithFeedbackLast } from "@/entities/board/order";
-import PlayHubEntryButton from "@/features/navigation/components/PlayHubEntryButton.vue";
 import type { TagItemVM } from "@/features/tags/model";
 import { compactNumber } from "@/shared/lib/format";
 import { boardToneClass } from "@/shared/theme/boardPalette";
@@ -189,6 +189,18 @@ function tagAccentStyle(tagName: string): Record<string, string> {
             </span>
           </RouterLink>
         </template>
+        <RouterLink
+          class="rail-board rail-board--play"
+          :to="{ name: 'play-hub' }"
+          aria-label="游乐场，2 个项目可玩"
+          @click="emit('navigate')"
+        >
+          <RocketOutlined class="rail-board-mark" aria-hidden="true" />
+          <span class="rail-board-copy">
+            <strong>游乐场</strong>
+          </span>
+          <span class="rail-board-play-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        </RouterLink>
       </section>
 
       <section class="rail-section rail-section--tags" aria-labelledby="rail-tags-title">
@@ -219,10 +231,6 @@ function tagAccentStyle(tagName: string): Record<string, string> {
       </section>
     </aside>
 
-    <PlayHubEntryButton
-      :variant="variant === 'mobile' ? 'menu' : 'rail'"
-      @click="emit('navigate')"
-    />
   </div>
 </template>
 
