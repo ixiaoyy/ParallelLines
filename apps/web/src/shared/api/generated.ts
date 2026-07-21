@@ -237,6 +237,15 @@ export interface components {
     ApiResponse_bool_: {
       [key: string]: unknown;
     };
+    ApiResponse_DailyReportProfileResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_DailyReportResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_DailyReportSessionResponse_: {
+      [key: string]: unknown;
+    };
     ApiResponse_DataExplorerReportResponse_: {
       [key: string]: unknown;
     };
@@ -337,6 +346,9 @@ export interface components {
       [key: string]: unknown;
     };
     ApiResponse_list_BoardResponse__: {
+      [key: string]: unknown;
+    };
+    ApiResponse_list_DailyReportResponse__: {
       [key: string]: unknown;
     };
     ApiResponse_list_DataExplorerReportSummary__: {
@@ -767,6 +779,84 @@ export interface components {
     ChangePasswordRequest: {
       current_password: string;
       new_password: string;
+    };
+    DailyReportInput: {
+      extra_work?: Array<string>;
+      recurring_work?: Array<string>;
+      risks?: Array<string>;
+      style?: "concise" | "detailed" | "result" | "process";
+      tomorrow_plan?: Array<string>;
+      work_date: string;
+    };
+    DailyReportMessageResponse: {
+      content: string;
+      created_at: string;
+      id: string;
+      preference_suggestion?: string | null;
+      role: "user" | "assistant";
+      sequence: number;
+    };
+    DailyReportPreferenceAcceptRequest: {
+      expected_version: number;
+      requirement: string;
+    };
+    DailyReportProfileResponse: {
+      ai_enabled: boolean;
+      custom_prompt: string;
+      model_name: string;
+      preferences: {
+      [key: string]: unknown;
+    };
+      privacy_notice: string;
+      prompt_version: number;
+      provider_mode: "ai" | "local_fallback";
+      updated_at: string;
+    };
+    DailyReportProfileUpdateRequest: {
+      custom_prompt: string;
+      expected_version: number;
+    };
+    DailyReportResponse: {
+      content: string;
+      created_at: string;
+      id: string;
+      input: components["schemas"]["DailyReportInput"];
+      model_name: string;
+      prompt_version: number;
+      session_id: string;
+      updated_at: string;
+      work_date: string;
+    };
+    DailyReportSessionConfirmRequest: {
+      content: string;
+      expected_version: number;
+    };
+    DailyReportSessionFollowupRequest: {
+      current_content?: string | null;
+      expected_version: number;
+      message: string;
+    };
+    DailyReportSessionResponse: {
+      created_at: string;
+      current_draft: string;
+      id: string;
+      input: components["schemas"]["DailyReportInput"];
+      messages: Array<components["schemas"]["DailyReportMessageResponse"]>;
+      model_name: string;
+      prompt_version: number;
+      provider_mode: "ai" | "local_fallback";
+      status: "active" | "confirmed";
+      updated_at: string;
+      version: number;
+      work_date: string;
+    };
+    DailyReportSessionStartRequest: {
+      extra_work?: Array<string>;
+      recurring_work?: Array<string>;
+      risks?: Array<string>;
+      style?: "concise" | "detailed" | "result" | "process";
+      tomorrow_plan?: Array<string>;
+      work_date: string;
     };
     DataExplorerReportResponse: {
       columns?: Array<string>;
@@ -1458,6 +1548,7 @@ export interface components {
     PrivacyActionResponse: {
       anonymized: boolean;
       anonymized_logs?: number;
+      deleted_daily_report_data?: number;
       deleted_drafts?: number;
       deleted_email_codes?: number;
       deleted_notifications?: number;
@@ -2351,6 +2442,37 @@ export interface paths {
     "/api/v1/boards/{slug}/topics": {
       get: { response: components["schemas"]["ApiResponse_list_TopicResponse__"]; operationId: "list_board_topics_api_v1_boards__slug__topics_get" };
       post: { response: components["schemas"]["ApiResponse_TopicResponse_"]; operationId: "create_topic_api_v1_boards__slug__topics_post" };
+    };
+    "/api/v1/daily-reports": {
+      get: { response: components["schemas"]["ApiResponse_list_DailyReportResponse__"]; operationId: "list_daily_reports_api_v1_daily_reports_get" };
+    };
+    "/api/v1/daily-reports/{report_id}": {
+      delete: { response: components["schemas"]["ApiResponse_bool_"]; operationId: "delete_daily_report_api_v1_daily_reports__report_id__delete" };
+    };
+    "/api/v1/daily-reports/history": {
+      delete: { response: components["schemas"]["ApiResponse_bool_"]; operationId: "clear_daily_report_history_api_v1_daily_reports_history_delete" };
+    };
+    "/api/v1/daily-reports/profile": {
+      get: { response: components["schemas"]["ApiResponse_DailyReportProfileResponse_"]; operationId: "get_daily_report_profile_api_v1_daily_reports_profile_get" };
+      put: { response: components["schemas"]["ApiResponse_DailyReportProfileResponse_"]; operationId: "update_daily_report_profile_api_v1_daily_reports_profile_put" };
+    };
+    "/api/v1/daily-reports/profile/preferences": {
+      post: { response: components["schemas"]["ApiResponse_DailyReportProfileResponse_"]; operationId: "accept_daily_report_preference_api_v1_daily_reports_profile_preferences_post" };
+    };
+    "/api/v1/daily-reports/profile/reset": {
+      post: { response: components["schemas"]["ApiResponse_DailyReportProfileResponse_"]; operationId: "reset_daily_report_profile_api_v1_daily_reports_profile_reset_post" };
+    };
+    "/api/v1/daily-reports/sessions": {
+      post: { response: components["schemas"]["ApiResponse_DailyReportSessionResponse_"]; operationId: "start_daily_report_session_api_v1_daily_reports_sessions_post" };
+    };
+    "/api/v1/daily-reports/sessions/{session_id}": {
+      get: { response: components["schemas"]["ApiResponse_DailyReportSessionResponse_"]; operationId: "get_daily_report_session_api_v1_daily_reports_sessions__session_id__get" };
+    };
+    "/api/v1/daily-reports/sessions/{session_id}/confirm": {
+      post: { response: components["schemas"]["ApiResponse_DailyReportResponse_"]; operationId: "confirm_daily_report_session_api_v1_daily_reports_sessions__session_id__confirm_post" };
+    };
+    "/api/v1/daily-reports/sessions/{session_id}/messages": {
+      post: { response: components["schemas"]["ApiResponse_DailyReportSessionResponse_"]; operationId: "continue_daily_report_session_api_v1_daily_reports_sessions__session_id__messages_post" };
     };
     "/api/v1/docs/public": {
       get: { response: components["schemas"]["ApiResponse_PublicApiDocsResponse_"]; operationId: "public_api_docs_api_v1_docs_public_get" };

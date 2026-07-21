@@ -18,6 +18,7 @@ class PrivacyActionResponse(BaseModel):
     deleted_email_codes: int = 0
     deleted_drafts: int = 0
     deleted_notifications: int = 0
+    deleted_daily_report_data: int = 0
     removed_relationships: int = 0
     removed_board_memberships: int = 0
     removed_board_invitations: int = 0

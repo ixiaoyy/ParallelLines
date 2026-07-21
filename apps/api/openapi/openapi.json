@@ -1149,6 +1149,18 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "ApiResponse_DailyReportProfileResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_DailyReportResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_DailyReportSessionResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ApiResponse_DataExplorerReportResponse_": {
         "additionalProperties": true,
         "type": "object"
@@ -1466,6 +1478,10 @@
         "type": "object"
       },
       "ApiResponse_list_BoardResponse__": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_list_DailyReportResponse__": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -2934,6 +2950,472 @@
           "new_password"
         ],
         "title": "ChangePasswordRequest",
+        "type": "object"
+      },
+      "DailyReportInput": {
+        "properties": {
+          "extra_work": {
+            "items": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Extra Work",
+            "type": "array"
+          },
+          "recurring_work": {
+            "items": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Recurring Work",
+            "type": "array"
+          },
+          "risks": {
+            "items": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Risks",
+            "type": "array"
+          },
+          "style": {
+            "default": "detailed",
+            "enum": [
+              "concise",
+              "detailed",
+              "result",
+              "process"
+            ],
+            "title": "Style",
+            "type": "string"
+          },
+          "tomorrow_plan": {
+            "items": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Tomorrow Plan",
+            "type": "array"
+          },
+          "work_date": {
+            "format": "date",
+            "title": "Work Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "work_date"
+        ],
+        "title": "DailyReportInput",
+        "type": "object"
+      },
+      "DailyReportMessageResponse": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "preference_suggestion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preference Suggestion"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "sequence",
+          "role",
+          "content",
+          "created_at"
+        ],
+        "title": "DailyReportMessageResponse",
+        "type": "object"
+      },
+      "DailyReportPreferenceAcceptRequest": {
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "requirement": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Requirement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "requirement",
+          "expected_version"
+        ],
+        "title": "DailyReportPreferenceAcceptRequest",
+        "type": "object"
+      },
+      "DailyReportProfileResponse": {
+        "properties": {
+          "ai_enabled": {
+            "title": "Ai Enabled",
+            "type": "boolean"
+          },
+          "custom_prompt": {
+            "title": "Custom Prompt",
+            "type": "string"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "preferences": {
+            "additionalProperties": true,
+            "title": "Preferences",
+            "type": "object"
+          },
+          "privacy_notice": {
+            "title": "Privacy Notice",
+            "type": "string"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "integer"
+          },
+          "provider_mode": {
+            "enum": [
+              "ai",
+              "local_fallback"
+            ],
+            "title": "Provider Mode",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "custom_prompt",
+          "preferences",
+          "prompt_version",
+          "ai_enabled",
+          "provider_mode",
+          "model_name",
+          "privacy_notice",
+          "updated_at"
+        ],
+        "title": "DailyReportProfileResponse",
+        "type": "object"
+      },
+      "DailyReportProfileUpdateRequest": {
+        "properties": {
+          "custom_prompt": {
+            "maxLength": 6000,
+            "minLength": 1,
+            "title": "Custom Prompt",
+            "type": "string"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "custom_prompt",
+          "expected_version"
+        ],
+        "title": "DailyReportProfileUpdateRequest",
+        "type": "object"
+      },
+      "DailyReportResponse": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "input": {
+            "$ref": "#/components/schemas/DailyReportInput"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "work_date": {
+            "format": "date",
+            "title": "Work Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "work_date",
+          "content",
+          "input",
+          "prompt_version",
+          "model_name",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DailyReportResponse",
+        "type": "object"
+      },
+      "DailyReportSessionConfirmRequest": {
+        "properties": {
+          "content": {
+            "maxLength": 12000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "content",
+          "expected_version"
+        ],
+        "title": "DailyReportSessionConfirmRequest",
+        "type": "object"
+      },
+      "DailyReportSessionFollowupRequest": {
+        "properties": {
+          "current_content": {
+            "anyOf": [
+              {
+                "maxLength": 12000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Content"
+          },
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "message": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "expected_version"
+        ],
+        "title": "DailyReportSessionFollowupRequest",
+        "type": "object"
+      },
+      "DailyReportSessionResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_draft": {
+            "title": "Current Draft",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "input": {
+            "$ref": "#/components/schemas/DailyReportInput"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/DailyReportMessageResponse"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "integer"
+          },
+          "provider_mode": {
+            "enum": [
+              "ai",
+              "local_fallback"
+            ],
+            "title": "Provider Mode",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "confirmed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "work_date": {
+            "format": "date",
+            "title": "Work Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "work_date",
+          "status",
+          "input",
+          "current_draft",
+          "prompt_version",
+          "version",
+          "model_name",
+          "provider_mode",
+          "messages",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DailyReportSessionResponse",
+        "type": "object"
+      },
+      "DailyReportSessionStartRequest": {
+        "properties": {
+          "extra_work": {
+            "items": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Extra Work",
+            "type": "array"
+          },
+          "recurring_work": {
+            "items": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Recurring Work",
+            "type": "array"
+          },
+          "risks": {
+            "items": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Risks",
+            "type": "array"
+          },
+          "style": {
+            "default": "detailed",
+            "enum": [
+              "concise",
+              "detailed",
+              "result",
+              "process"
+            ],
+            "title": "Style",
+            "type": "string"
+          },
+          "tomorrow_plan": {
+            "items": {
+              "maxLength": 500,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Tomorrow Plan",
+            "type": "array"
+          },
+          "work_date": {
+            "format": "date",
+            "title": "Work Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "work_date"
+        ],
+        "title": "DailyReportSessionStartRequest",
         "type": "object"
       },
       "DataExplorerReportResponse": {
@@ -7252,6 +7734,11 @@
           "anonymized_logs": {
             "default": 0,
             "title": "Anonymized Logs",
+            "type": "integer"
+          },
+          "deleted_daily_report_data": {
+            "default": 0,
+            "title": "Deleted Daily Report Data",
             "type": "integer"
           },
           "deleted_drafts": {
@@ -15663,6 +16150,478 @@
         "summary": "Create Topic",
         "tags": [
           "boards"
+        ]
+      }
+    },
+    "/api/v1/daily-reports": {
+      "get": {
+        "operationId": "list_daily_reports_api_v1_daily_reports_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_list_DailyReportResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Daily Reports",
+        "tags": [
+          "daily-reports"
+        ]
+      }
+    },
+    "/api/v1/daily-reports/history": {
+      "delete": {
+        "operationId": "clear_daily_report_history_api_v1_daily_reports_history_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_bool_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Clear Daily Report History",
+        "tags": [
+          "daily-reports"
+        ]
+      }
+    },
+    "/api/v1/daily-reports/profile": {
+      "get": {
+        "operationId": "get_daily_report_profile_api_v1_daily_reports_profile_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_DailyReportProfileResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Daily Report Profile",
+        "tags": [
+          "daily-reports"
+        ]
+      },
+      "put": {
+        "operationId": "update_daily_report_profile_api_v1_daily_reports_profile_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailyReportProfileUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_DailyReportProfileResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Daily Report Profile",
+        "tags": [
+          "daily-reports"
+        ]
+      }
+    },
+    "/api/v1/daily-reports/profile/preferences": {
+      "post": {
+        "operationId": "accept_daily_report_preference_api_v1_daily_reports_profile_preferences_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailyReportPreferenceAcceptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_DailyReportProfileResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Accept Daily Report Preference",
+        "tags": [
+          "daily-reports"
+        ]
+      }
+    },
+    "/api/v1/daily-reports/profile/reset": {
+      "post": {
+        "operationId": "reset_daily_report_profile_api_v1_daily_reports_profile_reset_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_DailyReportProfileResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Reset Daily Report Profile",
+        "tags": [
+          "daily-reports"
+        ]
+      }
+    },
+    "/api/v1/daily-reports/sessions": {
+      "post": {
+        "operationId": "start_daily_report_session_api_v1_daily_reports_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailyReportSessionStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_DailyReportSessionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Start Daily Report Session",
+        "tags": [
+          "daily-reports"
+        ]
+      }
+    },
+    "/api/v1/daily-reports/sessions/{session_id}": {
+      "get": {
+        "operationId": "get_daily_report_session_api_v1_daily_reports_sessions__session_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_DailyReportSessionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Daily Report Session",
+        "tags": [
+          "daily-reports"
+        ]
+      }
+    },
+    "/api/v1/daily-reports/sessions/{session_id}/confirm": {
+      "post": {
+        "operationId": "confirm_daily_report_session_api_v1_daily_reports_sessions__session_id__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailyReportSessionConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_DailyReportResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Confirm Daily Report Session",
+        "tags": [
+          "daily-reports"
+        ]
+      }
+    },
+    "/api/v1/daily-reports/sessions/{session_id}/messages": {
+      "post": {
+        "operationId": "continue_daily_report_session_api_v1_daily_reports_sessions__session_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DailyReportSessionFollowupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_DailyReportSessionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Continue Daily Report Session",
+        "tags": [
+          "daily-reports"
+        ]
+      }
+    },
+    "/api/v1/daily-reports/{report_id}": {
+      "delete": {
+        "operationId": "delete_daily_report_api_v1_daily_reports__report_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_bool_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Daily Report",
+        "tags": [
+          "daily-reports"
         ]
       }
     },

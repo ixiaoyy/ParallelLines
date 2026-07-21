@@ -1,5 +1,11 @@
 import type { UserPublic as AuthUserPublic, LoginResponse } from "@/features/auth/model";
 import type { BoardResponse } from "@/features/boards/model";
+import type {
+  DailyReportInput,
+  DailyReportProfile,
+  DailyReportRecord,
+  DailyReportSession,
+} from "@/features/dailyReports/model";
 import type { PostResponse } from "@/features/posts/model";
 import type { CreateTopicRequest, PollResponse, TopicResponse } from "@/features/topics/model";
 import type { UserDirectoryEntry, UserProfile } from "@/features/users/model";
@@ -35,5 +41,17 @@ export type ApiContractChecks = {
   >;
   loginResponse: AssertApiCompatible<
     IsApiCompatible<LoginResponse, components["schemas"]["LoginResponse"]>
+  >;
+  dailyReportInput: AssertApiCompatible<
+    IsApiCompatible<DailyReportInput, components["schemas"]["DailyReportSessionStartRequest"]>
+  >;
+  dailyReportProfile: AssertApiCompatible<
+    IsApiCompatible<DailyReportProfile, components["schemas"]["DailyReportProfileResponse"]>
+  >;
+  dailyReportSession: AssertApiCompatible<
+    IsApiCompatible<DailyReportSession, components["schemas"]["DailyReportSessionResponse"]>
+  >;
+  dailyReportRecord: AssertApiCompatible<
+    IsApiCompatible<DailyReportRecord, components["schemas"]["DailyReportResponse"]>
   >;
 };

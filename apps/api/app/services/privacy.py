@@ -4,7 +4,7 @@ import asyncio
 import secrets
 from dataclasses import dataclass
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -13,6 +13,13 @@ from app.core.permissions import is_admin
 from app.core.security import hash_password
 from app.db.base import utcnow
 from app.models.background_job import BackgroundJob
+from app.models.daily_report import (
+    DailyReport,
+    DailyReportMessage,
+    DailyReportProfile,
+    DailyReportPromptVersion,
+    DailyReportSession,
+)
 from app.models.draft import Draft
 from app.models.email import EmailDeliveryEvent, InboundEmail, UserEmailPreference
 from app.models.forum import Board, BoardInvitation, BoardMember
@@ -45,6 +52,7 @@ class PrivacyCleanupCounts:
     deleted_email_codes: int = 0
     deleted_drafts: int = 0
     deleted_notifications: int = 0
+    deleted_daily_report_data: int = 0
     removed_relationships: int = 0
     removed_board_memberships: int = 0
     removed_board_invitations: int = 0
@@ -73,8 +81,9 @@ class PrivacyService:
             ),
             removed_private_data=(
                 "Login credentials, sessions, security tokens, recovery codes, drafts, personal "
-                "notifications, relationships, private-message participation rows, avatar and "
-                "temporary uploads are removed or disabled."
+                "notifications, personal daily-report prompts/history, relationships, "
+                "private-message participation rows, avatar and temporary uploads are removed "
+                "or disabled."
             ),
             export_redaction=(
                 "Exports redact password, token, secret, code, and sensitive hash fields."
@@ -233,6 +242,7 @@ class PrivacyService:
         deleted_notifications = await self._delete_rows(
             Notification, Notification.user_id == user.id
         )
+        deleted_daily_report_data = await self._delete_daily_report_data(user.id)
         await self.session.execute(
             update(Notification)
             .where(Notification.actor_id == user.id)
@@ -285,6 +295,7 @@ class PrivacyService:
             deleted_email_codes=deleted_email_codes,
             deleted_drafts=deleted_drafts,
             deleted_notifications=deleted_notifications,
+            deleted_daily_report_data=deleted_daily_report_data,
             removed_relationships=removed_relationships,
             removed_board_memberships=removed_board_memberships,
             removed_board_invitations=removed_board_invitations,
@@ -308,6 +319,30 @@ class PrivacyService:
         for session in sessions:
             session.revoked_at = now
         return len(sessions)
+
+    async def _delete_daily_report_data(self, user_id: str) -> int:
+        owned_models = (
+            DailyReportProfile,
+            DailyReportPromptVersion,
+            DailyReportSession,
+            DailyReportMessage,
+            DailyReport,
+        )
+        count = 0
+        for model in owned_models:
+            count += int(
+                await self.session.scalar(
+                    select(func.count(model.id)).where(model.user_id == user_id)
+                )
+                or 0
+            )
+        await self.session.execute(
+            delete(DailyReportSession).where(DailyReportSession.user_id == user_id)
+        )
+        await self.session.execute(
+            delete(DailyReportProfile).where(DailyReportProfile.user_id == user_id)
+        )
+        return count
 
     async def _disable_api_keys(self, user_id: str, actor_id: str, now) -> int:
         keys = list(

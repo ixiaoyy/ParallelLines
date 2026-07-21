@@ -8,6 +8,7 @@ from app.api.v1 import (
     api_docs,
     auth,
     boards,
+    daily_reports,
     drafts,
     email,
     events,
@@ -50,6 +51,7 @@ api_router.include_router(migrations.router)
 api_router.include_router(uploads.router)
 api_router.include_router(admin.router)
 api_router.include_router(ai.router)
+api_router.include_router(daily_reports.router)
 api_router.include_router(analytics.router)
 api_router.include_router(site.router)
 api_router.include_router(drafts.router)

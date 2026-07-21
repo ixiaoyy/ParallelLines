@@ -66,6 +66,32 @@ export const router = createRouter({
       },
     },
     {
+      path: "/tools",
+      name: "tools",
+      component: () => import("@/pages/tools/ToolsPage.vue"),
+      meta: {
+        seo: {
+          title: "社区工具 · {siteTitle}",
+          description: "使用平行线为社区成员提供的实用工具。",
+          canonicalPath: "/tools",
+        },
+      },
+    },
+    {
+      path: "/tools/daily-report",
+      name: "daily-report",
+      component: () => import("@/pages/tools/DailyReportPage.vue"),
+      meta: {
+        requiredAccess: "authenticated",
+        seo: {
+          title: "个人日报助手 · {siteTitle}",
+          description: "生成、调整并保存与账号关联的个人日报。",
+          canonicalPath: "/tools/daily-report",
+          robots: NOINDEX_ROBOTS,
+        },
+      },
+    },
+    {
       path: "/boards",
       name: "board-directory",
       component: () => import("@/pages/board/BoardDirectoryPage.vue"),

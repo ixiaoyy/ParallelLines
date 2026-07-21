@@ -75,5 +75,9 @@ export const queryKeys = {
   moderationAudit: ["moderation", "audit"] as const,
   drafts: ["drafts"] as const,
   draft: (targetType: string, targetId: string) => ["drafts", targetType, targetId] as const,
+  dailyReportsRoot: ["daily-reports"] as const,
+  dailyReportProfile: ["daily-reports", "profile"] as const,
+  dailyReportHistory: (limit: number) => ["daily-reports", "history", limit] as const,
+  dailyReportSession: (sessionId: string) => ["daily-reports", "session", sessionId] as const,
   topicNotificationLevel: (topicId: string) => ["topics", "notification-level", topicId] as const,
 };

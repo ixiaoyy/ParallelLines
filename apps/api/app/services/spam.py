@@ -193,6 +193,27 @@ class SpamPreventionService:
             ],
         )
 
+    async def enforce_daily_report(
+        self,
+        request: Request | None,
+        *,
+        current_user: User,
+    ) -> None:
+        await self._enforce_user_write_state(current_user)
+        await self._enforce_screened_ip(request_ip(request), current_user=current_user)
+        await self._enforce_rate_limits(
+            request,
+            actor=current_user,
+            policies=[
+                self._policy(
+                    "daily-report:user",
+                    "user",
+                    current_user.id,
+                    self.settings.rate_limit_daily_report_user,
+                )
+            ],
+        )
+
     async def list_screened_rules(
         self,
         current_user: User,

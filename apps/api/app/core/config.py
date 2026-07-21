@@ -33,6 +33,14 @@ class Settings(BaseSettings):
     frontier_news_ai_provider: str = "local"
     frontier_news_ai_model: str = "local-deterministic-v1"
     frontier_news_request_timeout_seconds: float = 15.0
+    daily_report_ai_provider: Literal["opencode", "openai_compatible", "local"] = "opencode"
+    daily_report_ai_model: str = "deepseek-v4-flash-free"
+    daily_report_ai_base_url: str = "https://opencode.ai/zen"
+    daily_report_ai_api_key: str = ""
+    opencode_api_key: str = ""
+    daily_report_ai_timeout_seconds: float = 30.0
+    daily_report_ai_temperature: float = 0.8
+    daily_report_ai_max_tokens: int = 1600
 
     cors_origins: list[str] = Field(
         default_factory=lambda: [
@@ -85,6 +93,7 @@ class Settings(BaseSettings):
     rate_limit_upload_ip: int = 30
     rate_limit_flag_user: int = 10
     rate_limit_flag_ip: int = 20
+    rate_limit_daily_report_user: int = 12
     new_user_link_limit: int = 5
     new_user_screening_days: int = 7
 

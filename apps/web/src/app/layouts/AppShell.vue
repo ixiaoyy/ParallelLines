@@ -6,6 +6,7 @@ import {
   MenuOutlined,
   PlusOutlined,
   SearchOutlined,
+  ToolOutlined,
   UserOutlined,
 } from "@ant-design/icons-vue";
 import { computed, defineAsyncComponent, onUnmounted, ref, watch, watchEffect } from "vue";
@@ -270,6 +271,7 @@ function schedulePublicRoutePrefetch() {
     void import("@/pages/home/HomePage.vue");
     void import("@/pages/board/BoardDirectoryPage.vue");
     void import("@/pages/play/PlayHubPage.vue");
+    void import("@/pages/tools/ToolsPage.vue");
     void import("@/pages/user/UserDirectoryPage.vue");
     void import("@/pages/events/EventsPage.vue");
     void import("@/pages/search/SearchPage.vue");
@@ -384,6 +386,16 @@ function t(key: string, fallback: string) {
       </button>
 
       <div class="topbar-actions" :class="{ 'topbar-actions--guest': !currentUser }">
+        <RouterLink
+          v-if="isDesktopViewport"
+          class="auth-link"
+          :class="{ 'is-active': route.name === 'tools' || route.name === 'daily-report' }"
+          :to="{ name: 'tools' }"
+        >
+          <ToolOutlined aria-hidden="true" />
+          工具
+        </RouterLink>
+
         <PluginSlot v-if="isDesktopViewport" class="desktop-plugin-slot" slot-name="app.nav" />
 
         <NotificationBell v-if="currentUser" class="topbar-notification" />
@@ -434,6 +446,14 @@ function t(key: string, fallback: string) {
                 @click="closeAccountMenu"
               >
                 {{ t("nav.moderation", "审核") }}
+              </RouterLink>
+              <RouterLink
+                class="account-menu__item"
+                :to="{ name: 'tools' }"
+                :class="{ 'is-active': route.name === 'tools' || route.name === 'daily-report' }"
+                @click="closeAccountMenu"
+              >
+                社区工具
               </RouterLink>
               <RouterLink
                 class="account-menu__item"

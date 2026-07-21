@@ -310,6 +310,19 @@ class BackupService:
             "bookmarks": await self._table_rows("bookmarks", user_id=user.id),
             "reactions": await self._table_rows("reactions", user_id=user.id),
             "notifications": await self._table_rows("notifications", user_id=user.id),
+            "daily_report_profile": await self._table_rows(
+                "daily_report_profiles", user_id=user.id
+            ),
+            "daily_report_prompt_versions": await self._table_rows(
+                "daily_report_prompt_versions", user_id=user.id
+            ),
+            "daily_report_sessions": await self._table_rows(
+                "daily_report_sessions", user_id=user.id
+            ),
+            "daily_report_messages": await self._table_rows(
+                "daily_report_messages", user_id=user.id
+            ),
+            "daily_reports": await self._table_rows("daily_reports", user_id=user.id),
         }
         buffer = io.BytesIO()
         with ZipFile(buffer, "w", compression=ZIP_DEFLATED) as archive:

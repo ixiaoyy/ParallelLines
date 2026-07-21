@@ -6,6 +6,13 @@ from app.models.analytics import SiteVisit
 from app.models.background_job import BackgroundJob, BackgroundJobLog
 from app.models.backup import BackupArtifact
 from app.models.badge import BadgeDefinition, UserBadge, UserTrustLevelEvent
+from app.models.daily_report import (
+    DailyReport,
+    DailyReportMessage,
+    DailyReportProfile,
+    DailyReportPromptVersion,
+    DailyReportSession,
+)
 from app.models.draft import Draft
 from app.models.email import EmailDeliveryEvent, InboundEmail, UserEmailPreference
 from app.models.event import CalendarEvent, EventRsvp
@@ -72,6 +79,11 @@ __all__ = [
     "Bookmark",
     "CalendarEvent",
     "Draft",
+    "DailyReport",
+    "DailyReportMessage",
+    "DailyReportProfile",
+    "DailyReportPromptVersion",
+    "DailyReportSession",
     "EmailVerificationCode",
     "EmailDeliveryEvent",
     "EventRsvp",
