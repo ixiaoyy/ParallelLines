@@ -266,7 +266,10 @@
     grid-template-columns: minmax(13.5rem, 17em) minmax(0, 820px);
   }
 
-  .topic-layout__rail {
+  /* The async rail's scoped stylesheet loads later, so the page override needs structural specificity. */
+  .topic-layout > .topic-layout__rail {
+    position: static;
+    top: auto;
     width: 100%;
   }
 
