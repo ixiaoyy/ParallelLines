@@ -34,6 +34,7 @@ class PersonaSpec:
     username: str
     email: str
     bio: str
+    avatar_url: str | None = None
 
 
 @dataclass(frozen=True)
@@ -82,6 +83,12 @@ PERSONAS: tuple[PersonaSpec, ...] = (
         "小漫家",
         "xiaomanjia@pingxingxian.space",
         "每天翻几页漫画，看到好玩的分镜就想分享。",
+    ),
+    PersonaSpec(
+        "小瓜同学",
+        "xiaogua@pingxingxian.space",
+        "每天逛一圈热搜，只捡有意思又能聊的。",
+        "/avatars/xiaogua.png",
     ),
     PersonaSpec("小小鸡仔", "xiaoxiao-jizai@pingxingxian.space", "小小鸡仔，偶尔啄两句。"),
 )
@@ -491,6 +498,8 @@ async def rename_legacy_personas(session: AsyncSession, *, dry_run: bool) -> int
         old_user.email = persona.email
         old_user.display_name = persona.username
         old_user.bio = persona.bio
+        if persona.avatar_url is not None:
+            old_user.avatar_url = persona.avatar_url
         old_user.role = "user"
         old_user.status = "active"
         old_user.is_persona = True
@@ -520,6 +529,8 @@ async def upsert_personas(session: AsyncSession, *, dry_run: bool) -> dict[str, 
             if not dry_run:
                 existing.display_name = persona.username
                 existing.bio = persona.bio
+                if persona.avatar_url is not None:
+                    existing.avatar_url = persona.avatar_url
                 existing.status = "active"
                 existing.role = "user"
                 existing.is_persona = True
@@ -532,6 +543,7 @@ async def upsert_personas(session: AsyncSession, *, dry_run: bool) -> dict[str, 
                 hashed_password="dry-run",
                 display_name=persona.username,
                 bio=persona.bio,
+                avatar_url=persona.avatar_url,
                 role="user",
                 status="active",
                 is_persona=True,
@@ -543,6 +555,7 @@ async def upsert_personas(session: AsyncSession, *, dry_run: bool) -> dict[str, 
             hashed_password=hash_password(secrets.token_urlsafe(32)),
             display_name=persona.username,
             bio=persona.bio,
+            avatar_url=persona.avatar_url,
             role="user",
             status="active",
             is_persona=True,
