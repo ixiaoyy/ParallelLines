@@ -881,13 +881,7 @@ function socialErrorMessage(error: unknown): string {
           </button>
         </nav>
 
-    <section v-if="profile && activeProfilePanel === 'topics'" class="profile-topics" aria-labelledby="profile-topics-title">
-      <header>
-        <div>
-          <h2 id="profile-topics-title">公开主题</h2>
-        </div>
-      </header>
-
+    <section v-if="profile && activeProfilePanel === 'topics'" class="profile-topics" aria-label="公开主题">
       <UiCard v-if="topicsQuery.isLoading.value" class="profile-state">正在加载主题…</UiCard>
       <UiCard v-else-if="topicsQuery.isError.value" class="profile-state profile-state--error" role="alert">
         暂时无法读取该用户的主题列表。请稍后重试。
