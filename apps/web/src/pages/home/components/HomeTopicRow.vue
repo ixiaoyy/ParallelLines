@@ -2,7 +2,6 @@
 import { DeleteOutlined } from "@ant-design/icons-vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
-import { resolveApiAssetUrl } from "@/shared/api/client";
 import { boardToneClass, tagToneClass } from "@/shared/theme/boardPalette";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
@@ -50,11 +49,14 @@ function requestDeleteTopic() {
     <div class="topic-main">
       <div class="author-avatar-wrapper" aria-hidden="true">
         <UiAvatar
-          :src="resolveApiAssetUrl(topic.authorAvatarUrl)"
+          :src="topic.authorAvatarUrl"
           :name="topic.authorName"
           :role="topic.authorRole"
           :level="topic.authorLevel"
           size="sm"
+          thumbnail
+          loading="lazy"
+          decoding="async"
         />
       </div>
       <div class="topic-copy">

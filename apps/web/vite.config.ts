@@ -14,6 +14,11 @@ export default defineConfig({
         // Key parameter `id` is Rollup's resolved module path; return value names the target chunk.
         // Side effect: only changes production bundle grouping, not application runtime logic.
         manualChunks(id) {
+          // Keep Vite's shared preload helper in an entry-loaded chunk so a lazy editor cannot claim it.
+          if (id === "\0vite/preload-helper.js") {
+            return "vendor-vue";
+          }
+
           const normalizedId = id.replace(/\\/g, "/");
 
           if (!normalizedId.includes("/node_modules/")) {

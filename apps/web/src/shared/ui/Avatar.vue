@@ -1,23 +1,37 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 
-import { resolveApiAssetUrl } from "@/shared/api/client";
+import { resolveApiAssetUrl, resolveApiThumbnailUrl } from "@/shared/api/client";
 import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
 
-const props = defineProps<{
-  src?: string | null;
-  name: string;
-  size?: "sm" | "md" | "lg";
-  role?: string | null;
-  level?: number | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    src?: string | null;
+    name: string;
+    size?: "sm" | "md" | "lg";
+    role?: string | null;
+    level?: number | null;
+    thumbnail?: boolean;
+    loading?: "eager" | "lazy";
+    decoding?: "async" | "auto" | "sync";
+  }>(),
+  {
+    thumbnail: false,
+    loading: "eager",
+    decoding: "auto",
+  },
+);
 
 type AvatarFrame = "none" | "level-1" | "level-2" | "level-3" | "level-4" | "level-5" | "ultimate";
 
 const imageFailed = ref(false);
 // initials 用途：头像图片缺失时显示单字兜底，避免中文双字在小头像里挤压溢出；无副作用。
 const initials = computed(() => props.name.trim().slice(0, 1).toUpperCase() || "?");
-const resolvedSrc = computed(() => resolveApiAssetUrl(props.src));
+const resolvedSrc = computed(() =>
+  props.thumbnail
+    ? (resolveApiThumbnailUrl(props.src) ?? resolveApiAssetUrl(props.src))
+    : resolveApiAssetUrl(props.src),
+);
 const displaySrc = computed(() => (imageFailed.value ? undefined : resolvedSrc.value));
 const frameStyle = computed(() => ({
   "--avatar-frame-level-1": cssUrl(staticAssetUrl("/avatar-frames/level-1.webp")),
@@ -80,7 +94,15 @@ function handleImageError() {
     :title="name"
     :style="frameStyle"
   >
-    <img v-if="displaySrc" :src="displaySrc" alt="" aria-hidden="true" @error="handleImageError" />
+    <img
+      v-if="displaySrc"
+      :src="displaySrc"
+      :loading="loading"
+      :decoding="decoding"
+      alt=""
+      aria-hidden="true"
+      @error="handleImageError"
+    />
     <span v-else class="ant-avatar-string">{{ initials }}</span>
   </span>
 </template>

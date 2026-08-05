@@ -551,18 +551,19 @@ class UploadService:
         """Return or lazily generate a small WebP thumbnail for an uploaded image.
 
         Key parameters mirror `get_upload_content`, including ACL checks. Return value
-        is thumbnail bytes plus upload metadata. Side effect: writes a cached
-        thumbnail object under the upload storage backend when missing.
+        is thumbnail bytes plus upload metadata. A cache hit reads only the thumbnail;
+        a miss reads the original and writes the generated thumbnail to storage.
         """
-        content = await self.get_upload_content(upload_id, current_user)
-        if not content.upload.is_image:
+        upload = await self.get_upload_for_delivery(upload_id, current_user)
+        if not upload.is_image:
             raise NotFoundError("upload_not_found", "Upload not found")
 
-        storage = self._storage_for_upload(content.upload)
-        thumbnail_key = self.thumbnail_key_for(content.upload)
+        storage = self._storage_for_upload(upload)
+        thumbnail_key = self.thumbnail_key_for(upload)
         try:
             thumbnail_content = await asyncio.to_thread(storage.read, thumbnail_key)
         except NotFoundError:
+            content = await self.read_upload_content(upload)
             thumbnail_content = self._generate_thumbnail(content.content)
             await asyncio.to_thread(
                 storage.write,
@@ -570,7 +571,7 @@ class UploadService:
                 thumbnail_content,
                 THUMBNAIL_MEDIA_TYPE,
             )
-        return UploadThumbnail(upload=content.upload, content=thumbnail_content)
+        return UploadThumbnail(upload=upload, content=thumbnail_content)
 
     async def cleanup_expired_temporary_uploads(self) -> int:
         now = utcnow()
