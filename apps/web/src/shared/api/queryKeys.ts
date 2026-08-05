@@ -79,5 +79,6 @@ export const queryKeys = {
   dailyReportProfile: ["daily-reports", "profile"] as const,
   dailyReportHistory: (limit: number) => ["daily-reports", "history", limit] as const,
   dailyReportSession: (sessionId: string) => ["daily-reports", "session", sessionId] as const,
+  pdfTranslationCapabilities: ["pdf-translations", "capabilities"] as const,
   topicNotificationLevel: (topicId: string) => ["topics", "notification-level", topicId] as const,
 };

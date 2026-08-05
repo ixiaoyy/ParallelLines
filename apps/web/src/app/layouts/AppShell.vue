@@ -389,7 +389,7 @@ function t(key: string, fallback: string) {
         <RouterLink
           v-if="isDesktopViewport"
           class="auth-link"
-          :class="{ 'is-active': route.name === 'tools' || route.name === 'daily-report' }"
+          :class="{ 'is-active': route.path.startsWith('/tools') }"
           :to="{ name: 'tools' }"
         >
           <ToolOutlined aria-hidden="true" />
@@ -450,7 +450,7 @@ function t(key: string, fallback: string) {
               <RouterLink
                 class="account-menu__item"
                 :to="{ name: 'tools' }"
-                :class="{ 'is-active': route.name === 'tools' || route.name === 'daily-report' }"
+                :class="{ 'is-active': route.path.startsWith('/tools') }"
                 @click="closeAccountMenu"
               >
                 社区工具

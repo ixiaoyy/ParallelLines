@@ -41,6 +41,24 @@ class Settings(BaseSettings):
     daily_report_ai_timeout_seconds: float = 30.0
     daily_report_ai_temperature: float = 0.8
     daily_report_ai_max_tokens: int = 1600
+    pdf_translation_ai_model: str = "deepseek-v4-flash-free"
+    pdf_translation_ai_base_url: str = "https://opencode.ai/zen"
+    pdf_translation_ai_api_key: str = ""
+    pdf_translation_ai_timeout_seconds: float = 90.0
+    pdf_translation_ai_temperature: float = 0.1
+    pdf_translation_ai_max_tokens: int = 8000
+    pdf_translation_max_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        ge=1024,
+        le=50 * 1024 * 1024,
+    )
+    pdf_translation_max_pages: int = Field(default=30, ge=1, le=100)
+    pdf_translation_render_dpi: int = Field(default=220, ge=150, le=300)
+    pdf_translation_render_timeout_seconds: int = Field(default=120, ge=10, le=600)
+    pdf_translation_ocr_timeout_seconds: int = Field(default=45, ge=5, le=180)
+    pdf_translation_batch_chars: int = Field(default=6000, ge=1000, le=12000)
+    pdf_translation_max_concurrency: int = Field(default=3, ge=1, le=5)
+    pdf_translation_ocr_confidence: int = Field(default=55, ge=20, le=90)
 
     cors_origins: list[str] = Field(
         default_factory=lambda: [
@@ -94,6 +112,7 @@ class Settings(BaseSettings):
     rate_limit_flag_user: int = 10
     rate_limit_flag_ip: int = 20
     rate_limit_daily_report_user: int = 12
+    rate_limit_pdf_translation_user: int = 3
     new_user_link_limit: int = 5
     new_user_screening_days: int = 7
 

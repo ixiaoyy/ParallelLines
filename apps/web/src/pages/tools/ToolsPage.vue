@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { ArrowRightOutlined, FileTextOutlined, ToolOutlined } from "@ant-design/icons-vue";
+import {
+  ArrowRightOutlined,
+  FilePdfOutlined,
+  FileTextOutlined,
+  ToolOutlined,
+} from "@ant-design/icons-vue";
 </script>
 
 <template>
@@ -16,6 +21,14 @@ import { ArrowRightOutlined, FileTextOutlined, ToolOutlined } from "@ant-design/
         <span class="tool-card__content">
           <strong>个人日报助手</strong>
           <small>多轮调整、专属 Prompt、历史表达去重</small>
+        </span>
+        <em>登录后使用 <ArrowRightOutlined aria-hidden="true" /></em>
+      </RouterLink>
+      <RouterLink class="tool-card" :to="{ name: 'pdf-translation' }">
+        <span class="tool-card__icon"><FilePdfOutlined aria-hidden="true" /></span>
+        <span class="tool-card__content">
+          <strong>PDF 英文化</strong>
+          <small>中文正文、表格与水印全量英译，输出经 OCR 复核的纯英文 PDF</small>
         </span>
         <em>登录后使用 <ArrowRightOutlined aria-hidden="true" /></em>
       </RouterLink>

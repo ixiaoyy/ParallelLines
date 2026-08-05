@@ -465,6 +465,9 @@ export interface components {
     ApiResponse_PasswordResetStartResponse_: {
       [key: string]: unknown;
     };
+    ApiResponse_PdfTranslationCapabilities_: {
+      [key: string]: unknown;
+    };
     ApiResponse_PluginResponse_: {
       [key: string]: unknown;
     };
@@ -768,6 +771,9 @@ export interface components {
       parent_board_slug?: string | null;
       post_template?: string | null;
       required_tags?: Array<string>;
+    };
+    Body_translate_pdf_to_english_api_v1_pdf_translations_post: {
+      file: string;
     };
     Body_upload_avatar_api_v1_uploads_avatar_post: {
       file: string;
@@ -1433,6 +1439,12 @@ export interface components {
     PasswordResetStartResponse: {
       expires_in_seconds: number;
       ok?: boolean;
+    };
+    PdfTranslationCapabilities: {
+      ai_enabled: boolean;
+      max_bytes: number;
+      max_pages: number;
+      privacy_notice: string;
     };
     PluginResponse: {
       config?: {
@@ -2613,6 +2625,12 @@ export interface paths {
     };
     "/api/v1/notifications/stream": {
       get: { response: unknown; operationId: "stream_notifications_api_v1_notifications_stream_get" };
+    };
+    "/api/v1/pdf-translations": {
+      post: { response: unknown; operationId: "translate_pdf_to_english_api_v1_pdf_translations_post" };
+    };
+    "/api/v1/pdf-translations/capabilities": {
+      get: { response: components["schemas"]["ApiResponse_PdfTranslationCapabilities_"]; operationId: "get_pdf_translation_capabilities_api_v1_pdf_translations_capabilities_get" };
     };
     "/api/v1/posts/{post_id}": {
       delete: { response: components["schemas"]["ApiResponse_PostResponse_"]; operationId: "delete_post_api_v1_posts__post_id__delete" };

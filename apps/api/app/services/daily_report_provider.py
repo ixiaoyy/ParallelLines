@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-import json
-import re
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 
 from app.core.config import Settings
 from app.core.exceptions import AppError
+from app.services.openai_chat import (
+    extract_chat_content,
+    extract_json_object,
+    request_openai_chat,
+)
 
 
 @dataclass(frozen=True)
@@ -42,55 +43,19 @@ class OpenAICompatibleDailyReportProvider(DailyReportProvider):
         fallback_report: str,
     ) -> DailyReportProviderResult:
         del fallback_report
-        payload = await asyncio.to_thread(self._request, messages)
-        return parse_provider_result(payload, self.settings.daily_report_ai_model)
-
-    def _request(self, messages: list[dict[str, str]]) -> dict[str, object]:
-        base_url = self.settings.daily_report_ai_base_url.rstrip("/")
-        url = base_url if base_url.endswith("/chat/completions") else f"{base_url}/chat/completions"
-        body = {
-            "model": self.settings.daily_report_ai_model,
-            "messages": messages,
-            "temperature": self.settings.daily_report_ai_temperature,
-            "max_tokens": self.settings.daily_report_ai_max_tokens,
-            "stream": False,
-        }
-        request = urllib.request.Request(
-            url,
-            data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
-            headers={
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}",
-                "User-Agent": "ParallelLines/1.0",
-            },
-            method="POST",
+        payload = await asyncio.to_thread(
+            request_openai_chat,
+            base_url=self.settings.daily_report_ai_base_url,
+            api_key=self.api_key,
+            model=self.settings.daily_report_ai_model,
+            messages=messages,
+            temperature=self.settings.daily_report_ai_temperature,
+            max_tokens=self.settings.daily_report_ai_max_tokens,
+            timeout_seconds=self.settings.daily_report_ai_timeout_seconds,
+            error_prefix="daily_report_provider",
+            service_label="日报模型服务",
         )
-        try:
-            with urllib.request.urlopen(
-                request,
-                timeout=self.settings.daily_report_ai_timeout_seconds,
-            ) as response:
-                decoded = json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            raise AppError(
-                "daily_report_provider_error",
-                f"日报模型服务返回 HTTP {exc.code}",
-                status_code=503,
-            ) from exc
-        except (OSError, TimeoutError, json.JSONDecodeError) as exc:
-            raise AppError(
-                "daily_report_provider_unavailable",
-                "日报模型服务暂时不可用",
-                status_code=503,
-            ) from exc
-        if not isinstance(decoded, dict):
-            raise AppError(
-                "daily_report_provider_invalid_response",
-                "日报模型服务返回了无法识别的内容",
-                status_code=503,
-            )
-        return decoded
+        return parse_provider_result(payload, self.settings.daily_report_ai_model)
 
 
 class LocalDailyReportProvider(DailyReportProvider):
@@ -127,21 +92,16 @@ def parse_provider_result(
     response: dict[str, object],
     fallback_model: str,
 ) -> DailyReportProviderResult:
-    choices = response.get("choices")
-    if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-        raise AppError(
-            "daily_report_provider_invalid_response",
-            "日报模型服务没有返回候选内容",
-            status_code=503,
-        )
-    message = choices[0].get("message")
-    if not isinstance(message, dict) or not isinstance(message.get("content"), str):
-        raise AppError(
-            "daily_report_provider_invalid_response",
-            "日报模型服务没有返回文本内容",
-            status_code=503,
-        )
-    payload = extract_json_object(message["content"])
+    content = extract_chat_content(
+        response,
+        error_prefix="daily_report_provider",
+        service_label="日报模型服务",
+    )
+    payload = extract_json_object(
+        content,
+        error_prefix="daily_report_provider",
+        service_label="日报模型服务",
+    )
     report = payload.get("report")
     reply = payload.get("reply")
     suggestion = payload.get("preference_suggestion")
@@ -162,33 +122,6 @@ def parse_provider_result(
         model_name=str(response.get("model") or fallback_model)[:120],
         provider_mode="ai",
     )
-
-
-def extract_json_object(content: str) -> dict[str, object]:
-    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip(), flags=re.IGNORECASE)
-    start = cleaned.find("{")
-    end = cleaned.rfind("}")
-    if start < 0 or end <= start:
-        raise AppError(
-            "daily_report_provider_invalid_response",
-            "日报模型服务没有按约定返回 JSON",
-            status_code=503,
-        )
-    try:
-        payload = json.loads(cleaned[start : end + 1])
-    except json.JSONDecodeError as exc:
-        raise AppError(
-            "daily_report_provider_invalid_response",
-            "日报模型服务返回的 JSON 无法解析",
-            status_code=503,
-        ) from exc
-    if not isinstance(payload, dict):
-        raise AppError(
-            "daily_report_provider_invalid_response",
-            "日报模型服务返回的 JSON 类型错误",
-            status_code=503,
-        )
-    return payload
 
 
 def local_preference_suggestion(message: str) -> str | None:

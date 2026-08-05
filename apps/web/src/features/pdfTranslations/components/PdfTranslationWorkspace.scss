@@ -1,0 +1,394 @@
+.pdf-translation-workspace {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 44px 0 84px;
+  color: var(--text);
+}
+
+.pdf-translation-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 0 2px 28px;
+  border-bottom: 1px solid var(--border);
+
+  > div { max-width: 760px; }
+
+  h1 {
+    margin: 10px 0 12px;
+    color: var(--title);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(2.15rem, 5vw, 4rem);
+    font-weight: 700;
+    letter-spacing: -0.045em;
+    line-height: 1.06;
+  }
+
+  p {
+    max-width: 700px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+}
+
+.pdf-translation-header__eyebrow,
+.pdf-translation-process__label,
+.pdf-translation-form__heading span,
+.pdf-translation-result > div > span {
+  color: var(--primary);
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.pdf-translation-header__stamp {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  color: var(--primary);
+  border: 2px solid currentColor;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  transform: rotate(-2deg);
+}
+
+.pdf-translation-layout {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.27fr) minmax(0, 1fr);
+  gap: 0;
+  margin-top: 30px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  box-shadow: 0 20px 48px rgb(15 23 42 / 7%);
+}
+
+.pdf-translation-process {
+  padding: 28px 24px;
+  border-right: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-app) 72%, white);
+
+  ol {
+    display: grid;
+    gap: 0;
+    margin: 22px 0 28px;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    position: relative;
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    gap: 10px;
+    min-height: 78px;
+
+    &:not(:last-child)::after {
+      position: absolute;
+      top: 28px;
+      bottom: 0;
+      left: 13px;
+      width: 1px;
+      background: var(--border);
+      content: "";
+    }
+
+    > span {
+      display: grid;
+      z-index: 1;
+      width: 28px;
+      height: 28px;
+      place-items: center;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      border-radius: 50%;
+      background: var(--bg-surface);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 0.65rem;
+      font-weight: 800;
+    }
+
+    strong,
+    small { display: block; }
+
+    strong { color: var(--title); font-size: 0.92rem; }
+    small { margin-top: 5px; color: var(--muted); line-height: 1.5; }
+  }
+
+  > p {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    padding-top: 18px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    font-size: 0.78rem;
+    line-height: 1.55;
+  }
+}
+
+.pdf-translation-console {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  padding: 30px;
+}
+
+.pdf-translation-state {
+  margin: 0;
+  padding: 12px 14px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  background: var(--bg-app);
+  font-size: 0.88rem;
+  line-height: 1.55;
+
+  &.is-error {
+    color: var(--danger);
+    border-color: var(--danger-border);
+    background: var(--danger-bg);
+  }
+}
+
+.pdf-translation-form { display: grid; gap: 18px; }
+
+.pdf-translation-form__heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+
+  > div { display: flex; align-items: baseline; gap: 12px; }
+
+  h2 {
+    margin: 0;
+    color: var(--title);
+    font-size: 1.2rem;
+    letter-spacing: -0.015em;
+  }
+
+  small { color: var(--muted); }
+}
+
+.pdf-dropzone {
+  position: relative;
+  display: grid;
+  min-height: 240px;
+  padding: 34px;
+  place-items: center;
+  align-content: center;
+  color: var(--text);
+  border: 1px dashed color-mix(in srgb, var(--primary) 52%, var(--border));
+  background:
+    linear-gradient(90deg, var(--border) 1px, transparent 1px) 16px 16px / 22px 22px,
+    linear-gradient(var(--border) 1px, transparent 1px) 16px 16px / 22px 22px,
+    color-mix(in srgb, var(--theme-soft-bg) 35%, var(--bg-surface));
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+
+  &::before,
+  &::after {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-color: var(--primary);
+    content: "";
+  }
+
+  &::before { top: 10px; left: 10px; border-top: 2px solid; border-left: 2px solid; }
+  &::after { right: 10px; bottom: 10px; border-right: 2px solid; border-bottom: 2px solid; }
+
+  &:hover,
+  &.is-active {
+    border-color: var(--primary);
+    background-color: var(--theme-soft-bg);
+  }
+
+  &.is-active { transform: translateY(-2px); }
+
+  &:focus-within {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+
+  input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  strong {
+    max-width: 100%;
+    margin-top: 14px;
+    overflow: hidden;
+    color: var(--title);
+    font-size: 1.05rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small { margin-top: 7px; color: var(--muted); line-height: 1.5; }
+}
+
+.pdf-dropzone__icon {
+  display: grid;
+  width: 58px;
+  height: 66px;
+  place-items: center;
+  color: var(--primary);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--primary);
+  background: var(--bg-surface);
+  box-shadow: 7px 7px 0 color-mix(in srgb, var(--theme-soft-bg) 80%, transparent);
+  font-size: 26px;
+}
+
+.pdf-dropzone__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 18px;
+  padding: 7px 10px;
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, var(--border));
+  background: var(--bg-surface);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.pdf-translation-contract {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+
+  span {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: var(--text);
+    font-size: 0.84rem;
+    line-height: 1.5;
+
+    svg { flex: 0 0 auto; margin-top: 3px; color: var(--accent-geek); }
+  }
+}
+
+.pdf-translation-privacy {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--muted);
+  border-left: 3px solid var(--primary);
+  background: var(--bg-app);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.pdf-translation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+
+  :deep(.ui-button) { min-height: 44px; }
+}
+
+.pdf-translation-pending,
+.pdf-translation-result {
+  border-top: 1px solid var(--border);
+}
+
+.pdf-translation-pending {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 18px;
+  align-items: center;
+  padding-top: 20px;
+
+  strong { color: var(--title); }
+  p { margin: 5px 0 0; color: var(--muted); font-size: 0.84rem; line-height: 1.55; }
+}
+
+.pdf-translation-pending__track {
+  height: 5px;
+  overflow: hidden;
+  background: var(--border);
+
+  span {
+    display: block;
+    width: 42%;
+    height: 100%;
+    background: var(--btn-primary-bg);
+    animation: pdf-translation-scan 1.4s ease-in-out infinite alternate;
+  }
+}
+
+.pdf-translation-result {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding-top: 22px;
+
+  h2 { margin: 4px 0 5px; color: var(--title); font-size: 1.16rem; }
+  p { margin: 0; color: var(--text); font-size: 0.88rem; }
+  small { display: block; margin-top: 6px; color: var(--muted); line-height: 1.5; }
+  :deep(.ui-button) { min-height: 44px; }
+}
+
+.pdf-translation-result__mark {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  color: var(--accent-geek);
+  border: 1px solid color-mix(in srgb, var(--accent-geek) 38%, var(--border));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent-geek) 10%, var(--bg-surface));
+  font-size: 20px;
+}
+
+@keyframes pdf-translation-scan {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(240%); }
+}
+
+@media (max-width: 860px) {
+  .pdf-translation-layout { grid-template-columns: 1fr; }
+  .pdf-translation-process { border-right: 0; border-bottom: 1px solid var(--border); }
+  .pdf-translation-process ol { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .pdf-translation-process li { grid-template-columns: 32px 1fr; min-height: auto; }
+  .pdf-translation-process li::after { display: none; }
+}
+
+@media (max-width: 620px) {
+  .pdf-translation-workspace { width: min(100% - 24px, 1180px); padding: 28px 0 60px; }
+  .pdf-translation-header { align-items: flex-start; flex-direction: column; gap: 18px; }
+  .pdf-translation-header h1 { font-size: clamp(2rem, 11vw, 2.9rem); }
+  .pdf-translation-header__stamp { align-self: flex-start; }
+  .pdf-translation-process,
+  .pdf-translation-console { padding: 20px; }
+  .pdf-translation-process ol { grid-template-columns: 1fr; }
+  .pdf-translation-form__heading { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .pdf-dropzone { min-height: 232px; padding: 26px 18px; }
+  .pdf-translation-contract { grid-template-columns: 1fr; }
+  .pdf-translation-actions { align-items: stretch; flex-direction: column; }
+  .pdf-translation-actions :deep(.ui-button) { width: 100%; justify-content: center; }
+  .pdf-translation-pending { grid-template-columns: 1fr; }
+  .pdf-translation-result { grid-template-columns: auto 1fr; }
+  .pdf-translation-result :deep(.ui-button) { grid-column: 1 / -1; width: 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdf-dropzone { transition: none; }
+  .pdf-translation-pending__track span { width: 100%; animation: none; }
+}

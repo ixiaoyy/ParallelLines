@@ -20,6 +20,7 @@ from app.api.v1 import (
     migrations,
     moderation,
     notifications,
+    pdf_translations,
     posts,
     search,
     site,
@@ -52,6 +53,7 @@ api_router.include_router(uploads.router)
 api_router.include_router(admin.router)
 api_router.include_router(ai.router)
 api_router.include_router(daily_reports.router)
+api_router.include_router(pdf_translations.router)
 api_router.include_router(analytics.router)
 api_router.include_router(site.router)
 api_router.include_router(drafts.router)

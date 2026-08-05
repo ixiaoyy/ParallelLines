@@ -7,6 +7,7 @@ import type {
   DailyReportSession,
 } from "@/features/dailyReports/model";
 import type { PostResponse } from "@/features/posts/model";
+import type { PdfTranslationCapabilities } from "@/features/pdfTranslations/model";
 import type { CreateTopicRequest, PollResponse, TopicResponse } from "@/features/topics/model";
 import type { UserDirectoryEntry, UserProfile } from "@/features/users/model";
 import type { components } from "@/shared/api/generated";
@@ -53,5 +54,11 @@ export type ApiContractChecks = {
   >;
   dailyReportRecord: AssertApiCompatible<
     IsApiCompatible<DailyReportRecord, components["schemas"]["DailyReportResponse"]>
+  >;
+  pdfTranslationCapabilities: AssertApiCompatible<
+    IsApiCompatible<
+      PdfTranslationCapabilities,
+      components["schemas"]["PdfTranslationCapabilities"]
+    >
   >;
 };

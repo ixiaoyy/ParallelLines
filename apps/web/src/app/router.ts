@@ -92,6 +92,20 @@ export const router = createRouter({
       },
     },
     {
+      path: "/tools/pdf-translation",
+      name: "pdf-translation",
+      component: () => import("@/pages/tools/PdfTranslationPage.vue"),
+      meta: {
+        requiredAccess: "authenticated",
+        seo: {
+          title: "PDF 英文化 · {siteTitle}",
+          description: "将中文 PDF 转换为经双重检查的纯英文 PDF。",
+          canonicalPath: "/tools/pdf-translation",
+          robots: NOINDEX_ROBOTS,
+        },
+      },
+    },
+    {
       path: "/boards",
       name: "board-directory",
       component: () => import("@/pages/board/BoardDirectoryPage.vue"),

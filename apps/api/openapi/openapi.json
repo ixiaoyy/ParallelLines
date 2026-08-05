@@ -1289,6 +1289,10 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "ApiResponse_PdfTranslationCapabilities_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ApiResponse_PluginResponse_": {
         "additionalProperties": true,
         "type": "object"
@@ -2893,6 +2897,21 @@
           }
         },
         "title": "BoardSettingsUpdateRequest",
+        "type": "object"
+      },
+      "Body_translate_pdf_to_english_api_v1_pdf_translations_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "Chinese PDF to translate",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_translate_pdf_to_english_api_v1_pdf_translations_post",
         "type": "object"
       },
       "Body_upload_avatar_api_v1_uploads_avatar_post": {
@@ -7116,6 +7135,34 @@
           "expires_in_seconds"
         ],
         "title": "PasswordResetStartResponse",
+        "type": "object"
+      },
+      "PdfTranslationCapabilities": {
+        "properties": {
+          "ai_enabled": {
+            "title": "Ai Enabled",
+            "type": "boolean"
+          },
+          "max_bytes": {
+            "title": "Max Bytes",
+            "type": "integer"
+          },
+          "max_pages": {
+            "title": "Max Pages",
+            "type": "integer"
+          },
+          "privacy_notice": {
+            "title": "Privacy Notice",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ai_enabled",
+          "max_bytes",
+          "max_pages",
+          "privacy_notice"
+        ],
+        "title": "PdfTranslationCapabilities",
         "type": "object"
       },
       "PluginResponse": {
@@ -19241,6 +19288,98 @@
         "summary": "Stream Notifications",
         "tags": [
           "notifications"
+        ]
+      }
+    },
+    "/api/v1/pdf-translations": {
+      "post": {
+        "description": "Translate one authenticated user's PDF and return a non-persistent download.\n\nKey parameters are the multipart source file plus request/session dependencies. The\nreturn value is a no-store binary PDF response. Side effects are rate-limit recording,\ntemporary processing, OCR, and configured model calls; no file row is persisted.",
+        "operationId": "translate_pdf_to_english_api_v1_pdf_translations_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_translate_pdf_to_english_api_v1_pdf_translations_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Verified English-only PDF",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-PDF-Page-Count": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-PDF-Translated-Segments": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Translate Pdf To English",
+        "tags": [
+          "pdf-translations"
+        ]
+      }
+    },
+    "/api/v1/pdf-translations/capabilities": {
+      "get": {
+        "description": "Return safe PDF limits and provider availability for an authenticated user.\n\nKey parameters are injected settings and authentication. The return value contains\nno credentials or provider content. Side effect: none beyond authentication.",
+        "operationId": "get_pdf_translation_capabilities_api_v1_pdf_translations_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_PdfTranslationCapabilities_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Pdf Translation Capabilities",
+        "tags": [
+          "pdf-translations"
         ]
       }
     },

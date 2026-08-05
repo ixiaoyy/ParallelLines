@@ -214,6 +214,32 @@ class SpamPreventionService:
             ],
         )
 
+    async def enforce_pdf_translation(
+        self,
+        request: Request | None,
+        *,
+        current_user: User,
+    ) -> None:
+        """Enforce account state, screened IPs, and the costly PDF translation limit.
+
+        Key parameters are the optional request and authenticated actor. Return value is
+        none. Side effects record the rate-limit event and may raise a safe block error.
+        """
+        await self._enforce_user_write_state(current_user)
+        await self._enforce_screened_ip(request_ip(request), current_user=current_user)
+        await self._enforce_rate_limits(
+            request,
+            actor=current_user,
+            policies=[
+                self._policy(
+                    "pdf-translation:user",
+                    "user",
+                    current_user.id,
+                    self.settings.rate_limit_pdf_translation_user,
+                )
+            ],
+        )
+
     async def list_screened_rules(
         self,
         current_user: User,

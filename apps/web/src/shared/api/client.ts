@@ -8,6 +8,11 @@ export interface ApiEnvelope<T> {
   meta?: Record<string, unknown>;
 }
 
+export interface ApiBlobResponse {
+  blob: Blob;
+  headers: Headers;
+}
+
 export class ApiError extends Error {
   constructor(
     public code: string,
@@ -230,6 +235,35 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   }
 }
 
+// Request a binary API response while retaining normal auth refresh and typed API errors.
+// Key parameters are the API path and optional request init. Return value contains the
+// response Blob and headers. Side effect: increments global request activity and may refresh auth.
+export async function apiBlob(path: string, init?: RequestInit): Promise<ApiBlobResponse> {
+  activeApiRequestCount.value += 1;
+  try {
+    const first = await performApiBlobRequest(path, init);
+    if (first.response.ok) {
+      return { blob: first.blob ?? new Blob(), headers: first.response.headers };
+    }
+
+    const firstError = toApiError(first.response, first.payload);
+    if (shouldRefreshAfterFailure(path, first.response)) {
+      const refreshedToken = await refreshAccessToken();
+      if (refreshedToken) {
+        const retry = await performApiBlobRequest(path, init);
+        if (retry.response.ok) {
+          return { blob: retry.blob ?? new Blob(), headers: retry.response.headers };
+        }
+        throw toApiError(retry.response, retry.payload);
+      }
+    }
+
+    throw firstError;
+  } finally {
+    activeApiRequestCount.value = Math.max(0, activeApiRequestCount.value - 1);
+  }
+}
+
 // Request an API envelope when callers need response metadata such as cursors.
 // Key parameters match `apiRequest`. Return value preserves `data` and `meta`.
 // Side effect: increments the global request activity counter and may refresh auth.
@@ -266,18 +300,38 @@ async function performApiRequest(
   path: string,
   init?: RequestInit,
 ): Promise<{ response: Response; payload: unknown }> {
+  const response = await performFetch(path, init);
+  return { response, payload: await readJsonPayload(response) };
+}
+
+// Perform a binary-aware request and parse JSON only for failed responses.
+// Key parameters mirror `performApiRequest`. Return value carries either a Blob or
+// an error payload beside the raw response. Side effect: performs one network request.
+async function performApiBlobRequest(
+  path: string,
+  init?: RequestInit,
+): Promise<{ response: Response; blob?: Blob; payload: unknown }> {
+  const response = await performFetch(path, init);
+  if (response.ok) {
+    return { response, blob: await response.blob(), payload: {} };
+  }
+  return { response, payload: await readJsonPayload(response) };
+}
+
+// Apply shared API headers and body content rules before issuing fetch.
+// Key parameters are the API path and optional request init. Return value is the raw
+// Fetch response. Side effect: performs one browser network request.
+async function performFetch(path: string, init?: RequestInit): Promise<Response> {
   const headers = createApiHeaders(init?.headers);
   const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
   if (init?.body && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(getApiUrl(path), {
+  return fetch(getApiUrl(path), {
     ...init,
     headers,
   });
-
-  return { response, payload: await readJsonPayload(response) };
 }
 
 async function refreshAccessToken(): Promise<string | null> {

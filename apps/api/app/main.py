@@ -43,6 +43,11 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=[
+            "Content-Disposition",
+            "X-PDF-Page-Count",
+            "X-PDF-Translated-Segments",
+        ],
     )
 
     @app.middleware("http")
