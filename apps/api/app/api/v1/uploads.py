@@ -29,6 +29,9 @@ async def upload_file(
     service = UploadService(session, settings)
     if kind == "avatar":
         upload = await service.update_avatar(file, current_user, request)
+        from app.api.seo import invalidate_sitemap_response_cache
+
+        invalidate_sitemap_response_cache()
     else:
         upload = await service.create_post_upload(
             file,
@@ -57,6 +60,9 @@ async def upload_avatar(
     file: Annotated[UploadFile, File()],
 ) -> ApiResponse[UserPublic]:
     await UploadService(session, settings).update_avatar(file, current_user, request)
+    from app.api.seo import invalidate_sitemap_response_cache
+
+    invalidate_sitemap_response_cache()
     return ApiResponse(data=UserPublic.model_validate(current_user))
 
 

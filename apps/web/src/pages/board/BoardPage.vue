@@ -112,15 +112,35 @@ const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
 );
 useSeoMeta(
-  computed(() =>
-    board.value
-      ? {
-          title: `${board.value.name} · ${siteTitle.value}`,
-          description: board.value.description,
-          canonicalPath: `/b/${board.value.slug}`,
-        }
-      : null,
-  ),
+  computed(() => {
+    const current = board.value;
+    if (!current) {
+      return boardQuery.isError.value
+        ? {
+            title: `页面不存在 · ${siteTitle.value}`,
+            description: "请求的版块不存在、已被移除或不可公开访问。",
+            canonicalPath: route.path,
+            robots: "noindex,nofollow",
+            siteName: siteTitle.value,
+          }
+        : null;
+    }
+    if (current.visibility !== "public") {
+      return {
+        title: `受限内容 · ${siteTitle.value}`,
+        description: "该版块需要相应访问权限。",
+        canonicalPath: route.path,
+        robots: "noindex,nofollow",
+        siteName: siteTitle.value,
+      };
+    }
+    return {
+      title: `${current.name} · ${siteTitle.value}`,
+      description: current.description || `浏览${current.name}版块的公开主题。`,
+      canonicalPath: `/b/${current.slug}`,
+      siteName: siteTitle.value,
+    };
+  }),
 );
 const canManageBoard = computed(
   () =>

@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class SitemapUrl(BaseModel):
     loc: str
     lastmod: datetime | None = None
-    changefreq: Literal["daily", "weekly", "monthly"] = "weekly"
-    priority: float = Field(default=0.5, ge=0, le=1)
 
 
 class SeoMetaResponse(BaseModel):

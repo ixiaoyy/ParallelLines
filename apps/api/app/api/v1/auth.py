@@ -147,6 +147,9 @@ async def verify_email(
     settings: SettingsDep,
 ) -> ApiResponse[TokenPair]:
     token_pair = await AuthService(session, settings).verify_email(payload, request)
+    from app.api.seo import invalidate_sitemap_response_cache
+
+    invalidate_sitemap_response_cache()
     return ApiResponse(data=token_pair)
 
 

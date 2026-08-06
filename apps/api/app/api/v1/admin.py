@@ -174,9 +174,11 @@ async def update_user(
     settings: SettingsDep,
     current_user: CurrentUserDep,
 ) -> ApiResponse[AdminUserResponse]:
-    return ApiResponse(
-        data=await AdminService(session, settings).update_user(user_id, payload, current_user)
-    )
+    user = await AdminService(session, settings).update_user(user_id, payload, current_user)
+    from app.api.seo import invalidate_sitemap_response_cache
+
+    invalidate_sitemap_response_cache()
+    return ApiResponse(data=user)
 
 
 @router.post("/users/{user_id}/anonymize", response_model=ApiResponse[PrivacyActionResponse])
@@ -192,6 +194,9 @@ async def anonymize_user(
         actor=current_user,
         reason=payload.reason if payload else None,
     )
+    from app.api.seo import invalidate_sitemap_response_cache
+
+    invalidate_sitemap_response_cache()
     return ApiResponse(data=result)
 
 
@@ -208,6 +213,9 @@ async def delete_user_account(
         actor=current_user,
         reason=payload.reason if payload else None,
     )
+    from app.api.seo import invalidate_sitemap_response_cache
+
+    invalidate_sitemap_response_cache()
     return ApiResponse(data=result)
 
 

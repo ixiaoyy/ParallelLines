@@ -254,6 +254,7 @@ class TopicResponse(BaseModel):
     board_slug: str
     board_name: str
     board_color: str
+    board_visibility: str
     author_id: str
     author_name: str
     author_avatar_url: str | None = None
@@ -313,6 +314,7 @@ class TopicResponse(BaseModel):
             board_slug=topic.board.slug,
             board_name=topic.board.name,
             board_color=topic.board.color,
+            board_visibility=topic.board.visibility,
             author_id=topic.user_id,
             author_name=topic.author.username,
             author_avatar_url=topic.author.avatar_url,

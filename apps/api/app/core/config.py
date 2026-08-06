@@ -1,7 +1,8 @@
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import urlsplit
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,6 +12,8 @@ class Settings(BaseSettings):
     app_name: str = "ParallelLines"
     environment: Literal["local", "test", "staging", "production"] = "local"
     api_v1_prefix: str = "/api/v1"
+    public_site_url: str | None = None
+    web_app_shell_url: str | None = None
 
     database_url: str = "mysql+asyncmy://root:root@localhost:3306/parallellines?charset=utf8mb4"
     redis_url: str = "redis://localhost:6379/0"
@@ -142,6 +145,48 @@ class Settings(BaseSettings):
     @property
     def sync_database_url(self) -> str:
         return self.database_url.replace("+asyncmy", "")
+
+    @field_validator("public_site_url")
+    @classmethod
+    def validate_public_site_url(cls, value: str | None) -> str | None:
+        """Validate and normalize the configured canonical site origin.
+
+        The optional ``value`` must be an absolute HTTP(S) origin without path,
+        query, or fragment components. The normalized return value has no
+        trailing slash; validation has no side effects.
+        """
+
+        if value is None:
+            return None
+        normalized = value.strip().rstrip("/")
+        parsed = urlsplit(normalized)
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not parsed.netloc
+            or parsed.path
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("PUBLIC_SITE_URL must be an absolute HTTP(S) origin")
+        return normalized
+
+    @field_validator("web_app_shell_url")
+    @classmethod
+    def validate_web_app_shell_url(cls, value: str | None) -> str | None:
+        """Validate the trusted internal URL used to load the compiled Web shell.
+
+        The optional ``value`` may include an HTTP(S) path such as
+        ``http://web/index.html``. The stripped URL is returned, and validation
+        performs no network request or other side effect.
+        """
+
+        if value is None:
+            return None
+        normalized = value.strip()
+        parsed = urlsplit(normalized)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.fragment:
+            raise ValueError("WEB_APP_SHELL_URL must be an absolute HTTP(S) URL")
+        return normalized
 
 
 @lru_cache

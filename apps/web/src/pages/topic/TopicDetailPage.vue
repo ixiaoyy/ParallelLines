@@ -33,11 +33,20 @@ import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import { readRouteParam } from "@/shared/router/params";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
 import { useSeoMeta } from "@/shared/seo/meta";
+import {
+  absoluteSeoUrl,
+  browserSeoOrigin,
+  buildForumTopicStructuredData,
+  markdownToPlainText,
+  SEO_PAGE_STRUCTURED_DATA_ID,
+  useStructuredData,
+} from "@/shared/seo/structuredData";
 import UiCard from "@/shared/ui/Card.vue";
 import UiEmptyState from "@/shared/ui/EmptyState.vue";
 
 const COMIC_READER_TAG = "漫画阅读";
 const TOPIC_SWIPE_TOPIC_LIMIT = 24;
+const TOPIC_STRUCTURED_POST_LIMIT = 51;
 
 interface ReplyComposerExpose {
   submitFromParent: () => void;
@@ -77,17 +86,36 @@ const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
 );
 useSeoMeta(
-  computed(() =>
-    topic.value
-      ? {
-          title: `${topic.value.title} · ${topic.value.boardName} · ${siteTitle.value}`,
-          description:
-            topic.value.excerpt || `${topic.value.boardName} 中的公开主题：${topic.value.title}`,
-          canonicalPath: `/topics/${topic.value.id}/${topic.value.slug}`,
-          ogType: "article",
-        }
-      : null,
-  ),
+  computed(() => {
+    const current = topic.value;
+    if (!current) {
+      return topicQuery.isError.value
+        ? {
+            title: `页面不存在 · ${siteTitle.value}`,
+            description: "请求的主题不存在、已被移除或不可公开访问。",
+            canonicalPath: route.path,
+            robots: "noindex,nofollow",
+            siteName: siteTitle.value,
+          }
+        : null;
+    }
+    if (!isTopicIndexableForSeo(current)) {
+      return {
+        title: `受限内容 · ${siteTitle.value}`,
+        description: "该主题需要相应访问权限。",
+        canonicalPath: route.path,
+        robots: "noindex,nofollow",
+        siteName: siteTitle.value,
+      };
+    }
+    return {
+      title: `${current.title} · ${current.boardName} · ${siteTitle.value}`,
+      description: current.excerpt || `${current.boardName} 中的公开主题：${current.title}`,
+      canonicalPath: `/topics/${current.id}/${current.slug}`,
+      ogType: "article",
+      siteName: siteTitle.value,
+    };
+  }),
 );
 const posts = computed(() => postsQuery.data.value ?? []);
 const replyStatus = ref("");
@@ -110,6 +138,52 @@ const canManageSolution = computed(
 const displayedPosts = computed(() => posts.value);
 const firstPost = computed(() => displayedPosts.value.find((post) => post.floor === 1) ?? displayedPosts.value[0] ?? null);
 const replyPosts = computed(() => displayedPosts.value.filter((post) => post.id !== firstPost.value?.id));
+const topicStructuredData = computed(() => {
+  const current = topic.value;
+  if (current && current.id !== topicId.value) {
+    return null;
+  }
+  if (!current || !firstPost.value) {
+    return topicQuery.isLoading.value || postsQuery.isLoading.value ? undefined : null;
+  }
+  if (!isTopicIndexableForSeo(current)) {
+    return null;
+  }
+
+  const origin = browserSeoOrigin();
+  const visiblePosts = displayedPosts.value
+    .filter((post) => !post.deleted)
+    .sort((left, right) => left.floor - right.floor)
+    .slice(0, TOPIC_STRUCTURED_POST_LIMIT);
+  const original = visiblePosts.find((post) => post.floor === 1) ?? null;
+  if (!origin || !original) {
+    return origin ? null : undefined;
+  }
+
+  const topicUrl = absoluteSeoUrl(origin, `/topics/${current.id}/${current.slug}`);
+  return buildForumTopicStructuredData({
+    topicUrl,
+    title: current.title,
+    boardName: current.boardName,
+    boardUrl: absoluteSeoUrl(origin, `/b/${encodeURIComponent(current.boardSlug)}`),
+    publishedAt: original.createdAt,
+    modifiedAt: current.lastPostedAt,
+    authorName: original.authorName,
+    text: markdownToPlainText(original.rawMd),
+    replyCount: current.replyCount,
+    viewCount: current.viewCount,
+    likeCount: current.likeCount,
+    replies: visiblePosts
+      .filter((post) => post.id !== original.id)
+      .map((post) => ({
+        authorName: post.authorName,
+        publishedAt: post.createdAt,
+        postNumber: post.floor,
+        text: markdownToPlainText(post.rawMd),
+      })),
+  });
+});
+useStructuredData(SEO_PAGE_STRUCTURED_DATA_ID, topicStructuredData);
 const hiddenRelationshipPostCount = computed(() => {
   const expectedPostCount = (topic.value?.replyCount ?? 0) + (topic.value ? 1 : 0);
   return Math.max(0, expectedPostCount - posts.value.length);
@@ -399,6 +473,22 @@ function htmlToPlainText(html: string) {
   const template = document.createElement("template");
   template.innerHTML = html;
   return template.content.textContent ?? "";
+}
+
+// Confirms that loaded topic data is anonymously indexable before client JSON-LD or indexable meta is emitted.
+// Key parameter: the mapped topic visibility contract. Return value: public-indexability flag; side effect: none.
+function isTopicIndexableForSeo(value: {
+  boardVisibility?: string;
+  status: string;
+  topicType?: string;
+  visibility?: string;
+}): boolean {
+  return (
+    value.boardVisibility === "public" &&
+    value.visibility === "public" &&
+    value.topicType === "regular" &&
+    value.status !== "hidden"
+  );
 }
 
 // Opens the full-page reply composer on demand so entering a topic does not download the editor bundle.

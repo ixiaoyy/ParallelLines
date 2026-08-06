@@ -49,6 +49,7 @@ export interface TopicResponse {
   board_slug: string;
   board_name: string;
   board_color: string;
+  board_visibility: string;
   author_id: string;
   author_name: string;
   author_avatar_url?: string | null;
@@ -114,6 +115,7 @@ export function toTopicCard(topic: TopicResponse): TopicCardVM {
     boardSlug: topic.board_slug,
     boardName: topic.board_name,
     boardColor: topic.board_color,
+    boardVisibility: topic.board_visibility,
     authorId: topic.author_id,
     authorName: topic.author_name,
     authorAvatarUrl: topic.author_avatar_url ?? null,
@@ -135,6 +137,8 @@ export function toTopicCard(topic: TopicResponse): TopicCardVM {
     myVote: topic.my_vote,
     hotScore: topic.hot_score,
     lastPostedAt: topic.last_posted_at,
+    topicType: topic.topic_type,
+    visibility: topic.visibility,
     pinned: topic.pinned,
     featured: topic.featured,
     officialReply: topic.featured,

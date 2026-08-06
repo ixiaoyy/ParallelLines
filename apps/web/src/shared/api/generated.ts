@@ -1934,6 +1934,7 @@ export interface components {
       board_id: string;
       board_name: string;
       board_slug: string;
+      board_visibility: string;
       bookmark_count?: number;
       bookmarked_by_me?: boolean;
       created_at: string;

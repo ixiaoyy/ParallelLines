@@ -26,6 +26,12 @@ import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
 import { readRouteParam } from "@/shared/router/params";
 import { resolveRouteSeoMeta, useSeoMeta } from "@/shared/seo/meta";
+import {
+  browserSeoOrigin,
+  buildSiteStructuredData,
+  SEO_SITE_STRUCTURED_DATA_ID,
+  useStructuredData,
+} from "@/shared/seo/structuredData";
 import UiButton from "@/shared/ui/Button.vue";
 import { applySiteBranding } from "@/shared/theme/siteBranding";
 import { setInterfaceTheme } from "@/shared/theme/interfaceTheme";
@@ -75,7 +81,12 @@ let profileRoutePrefetched = false;
 let adminRoutePrefetched = false;
 let moderationRoutePrefetched = false;
 const DEFAULT_BRAND_LOGO_URL = "/logo-lines-mark.png";
-const LEGACY_BRAND_LOGO_URLS = new Set(["/logo-lines.png", "/favicon.svg"]);
+const LEGACY_BRAND_LOGO_URLS = new Set([
+  "/logo-lines.png",
+  "/logo.png",
+  "/brand-mark.svg",
+  "/favicon.svg",
+]);
 const PUBLIC_ROUTE_PREFETCH_DELAY_MS = 2_400;
 const ACCOUNT_ROUTE_PREFETCH_DELAY_MS = 1_800;
 const IDLE_PREFETCH_TIMEOUT_MS = 4_000;
@@ -118,6 +129,19 @@ const brandLogoUrl = computed(() => {
     DEFAULT_BRAND_LOGO_URL,
   );
   return LEGACY_BRAND_LOGO_URLS.has(configuredLogo) ? DEFAULT_BRAND_LOGO_URL : configuredLogo;
+});
+const siteStructuredData = computed(() => {
+  const origin = browserSeoOrigin();
+  if (!origin || !siteSettingsQuery.data.value) {
+    return undefined;
+  }
+
+  return buildSiteStructuredData({
+    siteUrl: origin,
+    title: siteTitle.value,
+    description: `${siteTitle.value}：${siteTagline.value}。浏览公开版块与可追溯讨论。`,
+    logoUrl: brandLogoUrl.value,
+  });
 });
 const brandHomeLabel = computed(() => t("brand.home_aria", "返回首页"));
 const adminLinkTarget = computed<RouteLocationRaw>(() =>
@@ -177,6 +201,7 @@ watchEffect(() => {
   applySiteBranding(siteSettingsQuery.data.value?.settings);
 });
 useSeoMeta(routeSeoMeta);
+useStructuredData(SEO_SITE_STRUCTURED_DATA_ID, siteStructuredData);
 
 watch(
   currentUser,

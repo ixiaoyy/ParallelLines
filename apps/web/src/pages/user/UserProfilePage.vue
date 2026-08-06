@@ -55,6 +55,13 @@ import { ApiError, hasAccessToken, resolveApiAssetUrl } from "@/shared/api/clien
 import { setLocale } from "@/shared/i18n/locale";
 import { relativeTime } from "@/shared/lib/format";
 import { useSeoMeta } from "@/shared/seo/meta";
+import {
+  absoluteSeoUrl,
+  browserSeoOrigin,
+  buildProfileStructuredData,
+  SEO_PAGE_STRUCTURED_DATA_ID,
+  useStructuredData,
+} from "@/shared/seo/structuredData";
 import { setInterfaceTheme, type InterfaceTheme } from "@/shared/theme/interfaceTheme";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiBadge from "@/shared/ui/Badge.vue";
@@ -142,7 +149,15 @@ const profileDraft = reactive({
 useSeoMeta(
   computed(() => {
     if (!profile.value) {
-      return null;
+      return isProfileError.value
+        ? {
+            title: `页面不存在 · ${siteTitle.value}`,
+            description: "请求的成员资料不存在、已被移除或不可公开访问。",
+            canonicalPath: route.path,
+            robots: "noindex,nofollow",
+            siteName: siteTitle.value,
+          }
+        : null;
     }
 
     const accountCanonical =
@@ -152,20 +167,73 @@ useSeoMeta(
           ? "/account/settings"
           : "/account";
 
+    const publicProfileIndexable =
+      !isAccountRoute.value &&
+      profile.value.status === "active" &&
+      profile.value.profile_visibility === "public";
+    if (!isAccountRoute.value && !publicProfileIndexable) {
+      return {
+        title: `受限内容 · ${siteTitle.value}`,
+        description: "该成员资料需要相应访问权限。",
+        canonicalPath: route.path,
+        robots: "noindex,nofollow",
+        siteName: siteTitle.value,
+      };
+    }
+
     return {
-      title: isOwnProfile.value
+      title: isAccountRoute.value
         ? `${profileDisplayName(profile.value)} 的个人中心 · ${siteTitle.value}`
         : `${profileDisplayName(profile.value)} 的公开档案 · ${siteTitle.value}`,
-      description: isOwnProfile.value
+      description: isAccountRoute.value
         ? "查看自己的讨论、资料、成长记录，并管理账号密码和登录邮箱。"
-        : `${profileDisplayName(profile.value)} 在平行线发布了 ${profile.value.topic_count} 个公开主题、${profile.value.post_count} 条公开回复。`,
+        : profile.value.bio?.trim() ||
+          `${profileDisplayName(profile.value)} 在${siteTitle.value}发布了 ${profile.value.topic_count} 个公开主题和 ${profile.value.post_count} 篇公开帖子。`,
       canonicalPath: isAccountRoute.value
         ? accountCanonical
         : `/members/${encodeURIComponent(profile.value.id)}`,
       robots: isAccountRoute.value ? "noindex,nofollow" : undefined,
+      siteName: siteTitle.value,
     };
   }),
 );
+const profileStructuredData = computed(() => {
+  if (isAccountRoute.value) {
+    return null;
+  }
+
+  const current = profile.value;
+  if (current && current.id !== publicUserId.value) {
+    return null;
+  }
+  if (!current) {
+    return activeProfileQuery.value.isLoading.value ? undefined : null;
+  }
+  if (current.status !== "active" || current.profile_visibility !== "public") {
+    return null;
+  }
+
+  const origin = browserSeoOrigin();
+  if (!origin) {
+    return undefined;
+  }
+  const resolvedAvatar = resolveApiAssetUrl(current.avatar_url);
+  const avatarUrl =
+    resolvedAvatar && !resolvedAvatar.startsWith("data:")
+      ? absoluteSeoUrl(origin, resolvedAvatar)
+      : null;
+  return buildProfileStructuredData({
+    profileUrl: absoluteSeoUrl(origin, `/members/${encodeURIComponent(current.id)}`),
+    username: current.username,
+    displayName: profileDisplayName(current),
+    bio: current.bio?.trim() || null,
+    avatarUrl,
+    createdAt: current.created_at,
+    topicCount: current.topic_count,
+    postCount: current.post_count,
+  });
+});
+useStructuredData(SEO_PAGE_STRUCTURED_DATA_ID, profileStructuredData);
 const avatarMutation = useUploadAvatar(() => profile.value?.username ?? username.value);
 const updateProfileMutation = useUpdateMyProfile(username);
 const changePasswordMutation = useChangePassword();

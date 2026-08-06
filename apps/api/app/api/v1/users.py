@@ -58,6 +58,9 @@ async def delete_current_user(
         current_user,
         reason=payload.reason if payload else None,
     )
+    from app.api.seo import invalidate_sitemap_response_cache
+
+    invalidate_sitemap_response_cache()
     return ApiResponse(data=result)
 
 
@@ -109,6 +112,9 @@ async def update_my_profile(
     current_user: CurrentUserDep,
 ) -> ApiResponse[UserProfileResponse]:
     profile = await UserProfileService(session).update_my_profile(payload, current_user)
+    from app.api.seo import invalidate_sitemap_response_cache
+
+    invalidate_sitemap_response_cache()
     return ApiResponse(data=profile)
 
 

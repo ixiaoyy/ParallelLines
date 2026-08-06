@@ -7,6 +7,8 @@ export interface SeoMetaInput {
   canonicalPath: string;
   ogType?: "website" | "article" | string;
   robots?: string;
+  siteName?: string;
+  locale?: string;
 }
 
 export interface RouteSeoMeta {
@@ -25,16 +27,21 @@ export function useSeoMeta(source: MaybeRefOrGetter<SeoMetaInput | null | undefi
     }
 
     const canonicalUrl = absoluteUrl(meta.canonicalPath);
+    const description = truncateSeoDescription(meta.description);
     document.title = meta.title;
-    setMeta("name", "description", meta.description);
+    setMeta("name", "description", description);
     setMeta("name", "robots", meta.robots ?? "index,follow");
     setMeta("property", "og:type", meta.ogType ?? "website");
     setMeta("property", "og:title", meta.title);
-    setMeta("property", "og:description", meta.description);
+    setMeta("property", "og:description", description);
     setMeta("property", "og:url", canonicalUrl);
+    if (meta.siteName) {
+      setMeta("property", "og:site_name", meta.siteName);
+    }
+    setMeta("property", "og:locale", meta.locale ?? "zh_CN");
     setMeta("name", "twitter:card", "summary");
     setMeta("name", "twitter:title", meta.title);
-    setMeta("name", "twitter:description", meta.description);
+    setMeta("name", "twitter:description", description);
     setCanonical(canonicalUrl);
   });
 }
@@ -57,6 +64,8 @@ export function resolveRouteSeoMeta(
     canonicalPath,
     ogType: routeSeo?.ogType,
     robots: routeSeo?.robots,
+    siteName: context.siteTitle,
+    locale: "zh_CN",
   };
 }
 
@@ -120,4 +129,15 @@ function formatSeoTemplate(
  */
 function cleanRoutePath(routePath: string): string {
   return routePath.startsWith("/") && routePath ? routePath : "/";
+}
+
+/**
+ * Normalizes and bounds metadata copy to the same 180-character server contract.
+ *
+ * @param value - Dynamic route or entity description.
+ * @returns Compact description text with an ellipsis when truncated. Side effect: none.
+ */
+function truncateSeoDescription(value: string): string {
+  const compact = value.replace(/\s+/g, " ").trim();
+  return compact.length <= 180 ? compact : `${compact.slice(0, 179).trimEnd()}…`;
 }

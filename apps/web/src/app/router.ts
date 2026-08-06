@@ -48,7 +48,7 @@ export const router = createRouter({
       meta: {
         seo: {
           title: "{siteTitle}",
-          description: "{siteTagline}",
+          description: "{siteTitle}：{siteTagline}。浏览公开版块与可追溯讨论。",
           canonicalPath: "/",
         },
       },
@@ -111,8 +111,8 @@ export const router = createRouter({
       component: () => import("@/pages/board/BoardDirectoryPage.vue"),
       meta: {
         seo: {
-          title: "版块 · {siteTitle}",
-          description: "浏览平行线的讨论版块，按主题领域进入高信号问题、经验和资源讨论。",
+          title: "全部版块 · {siteTitle}",
+          description: "浏览{siteTitle}的公开版块、最新主题和可追溯讨论。",
           canonicalPath: "/boards",
         },
       },

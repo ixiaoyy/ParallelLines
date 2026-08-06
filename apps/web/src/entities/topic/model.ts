@@ -7,6 +7,7 @@ export interface TopicCardVM {
   boardSlug: string;
   boardName: string;
   boardColor: string;
+  boardVisibility?: string;
   authorId: string;
   authorName: string;
   authorAvatarUrl: string | null;
@@ -28,6 +29,8 @@ export interface TopicCardVM {
   myVote: number;
   hotScore: number;
   lastPostedAt: string;
+  topicType?: string;
+  visibility?: string;
   pinned?: boolean;
   featured?: boolean;
   solved?: boolean;

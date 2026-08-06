@@ -9992,6 +9992,10 @@
             "title": "Board Slug",
             "type": "string"
           },
+          "board_visibility": {
+            "title": "Board Visibility",
+            "type": "string"
+          },
           "bookmark_count": {
             "default": 0,
             "title": "Bookmark Count",
@@ -10160,6 +10164,7 @@
           "board_slug",
           "board_name",
           "board_color",
+          "board_visibility",
           "author_id",
           "author_name",
           "author_role",
