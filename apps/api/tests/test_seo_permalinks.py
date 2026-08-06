@@ -163,6 +163,7 @@ async def test_sitemap_filters_private_content_and_legacy_redirects(
             lambda: Settings(
                 public_site_url="https://pingxingxian.space",
                 web_app_shell_url="http://web/index.html",
+                baidu_site_verification="codeva-integration",
             ),
         )
         monkeypatch.setattr(seo_api, "load_app_shell", fake_load_app_shell)
@@ -177,6 +178,10 @@ async def test_sitemap_filters_private_content_and_legacy_redirects(
         topic_page = await client.get(topic_path)
         assert topic_page.status_code == 200
         assert 'rel="canonical" href="https://pingxingxian.space' in topic_page.text
+        assert (
+            'name="baidu-site-verification" content="codeva-integration"'
+            in topic_page.text
+        )
         assert "Public sitemap topic" in topic_page.text
         assert "This public topic should be indexed and shared." in topic_page.text
         assert 'type="application/ld+json"' in topic_page.text

@@ -221,14 +221,19 @@ async def html_page_response(document: SeoPageDocument) -> HTMLResponse:
     shell failures raise a typed 503 for Nginx fallback handling.
     """
 
-    shell_url = get_settings().web_app_shell_url
+    settings = get_settings()
+    shell_url = settings.web_app_shell_url
     if shell_url is None:
         raise AppError(
             "seo_shell_not_configured",
             "Compiled Web shell URL is not configured",
             status_code=503,
         )
-    rendered = render_seo_document(await load_app_shell(shell_url), document)
+    rendered = render_seo_document(
+        await load_app_shell(shell_url),
+        document,
+        baidu_site_verification=settings.baidu_site_verification,
+    )
     headers = {"Cache-Control": "no-cache"}
     if document.meta.robots != "index,follow":
         headers["X-Robots-Tag"] = document.meta.robots.replace(",", ", ")

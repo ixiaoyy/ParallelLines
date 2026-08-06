@@ -29,6 +29,7 @@ from app.services.seo_renderer import (
 def app_shell() -> str:
     return (
         "<!doctype html><html><head>"
+        '<meta name="applicable-device" content="pc,mobile">'
         f"{SEO_HEAD_START_MARKER}<title>default</title>{SEO_HEAD_END_MARKER}"
         "<link rel=\"stylesheet\" href=\"/assets/app.hash.css\"></head>"
         f"<body><div id=\"app\">{SEO_BODY_MARKER}</div>"
@@ -84,6 +85,28 @@ def test_renderer_preserves_vite_assets_and_escapes_dynamic_html() -> None:
     assert 'onclick="alert(1)' not in rendered
     assert "公开 &amp; 版块" in rendered
     assert rendered.count('rel="canonical"') == 1
+    assert rendered.count('name="applicable-device" content="pc,mobile"') == 1
+
+
+def test_renderer_escapes_optional_baidu_site_verification() -> None:
+    rendered = render_seo_document(
+        app_shell(),
+        page_document(),
+        baidu_site_verification='codeva-token"><script>alert(1)</script>',
+    )
+
+    assert rendered.count('name="baidu-site-verification"') == 1
+    assert (
+        'content="codeva-token&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;"'
+        in rendered
+    )
+    assert "<script>alert(1)</script>" not in rendered
+
+
+def test_renderer_omits_baidu_site_verification_without_configuration() -> None:
+    rendered = render_seo_document(app_shell(), page_document())
+
+    assert 'name="baidu-site-verification"' not in rendered
 
 
 def test_renderer_keeps_json_ld_parseable_and_script_safe() -> None:
@@ -166,6 +189,18 @@ def test_canonical_config_rejects_paths_and_non_http_schemes() -> None:
         Settings(public_site_url="https://pingxingxian.space/forum")
     with pytest.raises(ValidationError):
         Settings(web_app_shell_url="file:///tmp/index.html")
+
+
+def test_baidu_verification_config_normalizes_and_validates_meta_content() -> None:
+    assert (
+        Settings(baidu_site_verification="  codeva-example  ").baidu_site_verification
+        == "codeva-example"
+    )
+    assert Settings(baidu_site_verification="   ").baidu_site_verification is None
+    with pytest.raises(ValidationError):
+        Settings(baidu_site_verification="codeva-example\ninvalid")
+    with pytest.raises(ValidationError):
+        Settings(baidu_site_verification="x" * 257)
 
 
 @pytest.mark.asyncio

@@ -49,18 +49,28 @@ async def load_app_shell(shell_url: str) -> str:
     return shell
 
 
-def render_seo_document(shell: str, document: SeoPageDocument) -> str:
+def render_seo_document(
+    shell: str,
+    document: SeoPageDocument,
+    *,
+    baidu_site_verification: str | None = None,
+) -> str:
     """Inject ``document`` metadata and semantic fallback into compiled ``shell``.
 
     The returned HTML preserves Vite-generated scripts and hashed assets. Marker
     cardinality is revalidated, all dynamic text/attributes are escaped, JSON-LD
-    is script-safe, and the pure transformation has no side effects.
+    is script-safe, and optional Baidu verification content is emitted as an
+    escaped meta tag. The pure transformation has no side effects.
     """
 
     validate_app_shell(shell)
     start_index = shell.index(SEO_HEAD_START_MARKER)
     end_index = shell.index(SEO_HEAD_END_MARKER) + len(SEO_HEAD_END_MARKER)
-    with_head = f"{shell[:start_index]}{render_seo_head(document)}{shell[end_index:]}"
+    rendered_head = render_seo_head(
+        document,
+        baidu_site_verification=baidu_site_verification,
+    )
+    with_head = f"{shell[:start_index]}{rendered_head}{shell[end_index:]}"
     return with_head.replace(SEO_BODY_MARKER, render_semantic_fallback(document), 1)
 
 
@@ -86,12 +96,16 @@ def validate_app_shell(shell: str) -> None:
         )
 
 
-def render_seo_head(document: SeoPageDocument) -> str:
+def render_seo_head(
+    document: SeoPageDocument,
+    *,
+    baidu_site_verification: str | None = None,
+) -> str:
     """Return the controlled head block for typed SEO ``document`` metadata.
 
     The output contains one title, canonical, robots, OpenGraph/Twitter set, and
-    stable JSON-LD slots when provided. All contextual escaping is performed and
-    the function has no side effects.
+    stable JSON-LD slots when provided. Optional Baidu verification content is
+    escaped into one meta tag. The function has no side effects.
     """
 
     meta = document.meta
@@ -101,19 +115,29 @@ def render_seo_head(document: SeoPageDocument) -> str:
         f"    <title>{html.escape(meta.title)}</title>",
         f'    <meta name="description" content="{html.escape(meta.description, quote=True)}" />',
         f'    <meta name="robots" content="{html.escape(meta.robots, quote=True)}" />',
-        f'    <link rel="canonical" href="{html.escape(meta.canonical_url, quote=True)}" />',
-        f'    <meta property="og:type" content="{html.escape(meta.og_type, quote=True)}" />',
-        f'    <meta property="og:title" content="{html.escape(meta.og_title, quote=True)}" />',
-        '    <meta property="og:description" '
-        f'content="{html.escape(meta.og_description, quote=True)}" />',
-        f'    <meta property="og:url" content="{html.escape(meta.og_url, quote=True)}" />',
-        f'    <meta property="og:site_name" content="{site_title}" />',
-        '    <meta property="og:locale" content="zh_CN" />',
-        f'    <meta name="twitter:card" content="{html.escape(meta.twitter_card, quote=True)}" />',
-        f'    <meta name="twitter:title" content="{html.escape(meta.og_title, quote=True)}" />',
-        '    <meta name="twitter:description" '
-        f'content="{html.escape(meta.og_description, quote=True)}" />',
     ]
+    if baidu_site_verification:
+        lines.append(
+            '    <meta name="baidu-site-verification" '
+            f'content="{html.escape(baidu_site_verification, quote=True)}" />'
+        )
+    lines.extend(
+        [
+            f'    <link rel="canonical" href="{html.escape(meta.canonical_url, quote=True)}" />',
+            f'    <meta property="og:type" content="{html.escape(meta.og_type, quote=True)}" />',
+            f'    <meta property="og:title" content="{html.escape(meta.og_title, quote=True)}" />',
+            '    <meta property="og:description" '
+            f'content="{html.escape(meta.og_description, quote=True)}" />',
+            f'    <meta property="og:url" content="{html.escape(meta.og_url, quote=True)}" />',
+            f'    <meta property="og:site_name" content="{site_title}" />',
+            '    <meta property="og:locale" content="zh_CN" />',
+            '    <meta name="twitter:card" '
+            f'content="{html.escape(meta.twitter_card, quote=True)}" />',
+            f'    <meta name="twitter:title" content="{html.escape(meta.og_title, quote=True)}" />',
+            '    <meta name="twitter:description" '
+            f'content="{html.escape(meta.og_description, quote=True)}" />',
+        ]
+    )
     if document.site_structured_data is not None:
         lines.append(
             render_structured_data_script(

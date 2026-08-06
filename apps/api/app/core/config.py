@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     public_site_url: str | None = None
     web_app_shell_url: str | None = None
+    baidu_site_verification: str | None = None
 
     database_url: str = "mysql+asyncmy://root:root@localhost:3306/parallellines?charset=utf8mb4"
     redis_url: str = "redis://localhost:6379/0"
@@ -186,6 +187,29 @@ class Settings(BaseSettings):
         parsed = urlsplit(normalized)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.fragment:
             raise ValueError("WEB_APP_SHELL_URL must be an absolute HTTP(S) URL")
+        return normalized
+
+    @field_validator("baidu_site_verification")
+    @classmethod
+    def validate_baidu_site_verification(cls, value: str | None) -> str | None:
+        """Normalize optional Baidu verification meta content.
+
+        The configured ``value`` is the public content token issued by Baidu
+        Search Resource Platform. Blank values become ``None``; printable values
+        up to 256 characters are returned stripped for safe renderer escaping.
+        """
+
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            return None
+        if len(normalized) > 256 or any(
+            ord(character) < 32 or ord(character) == 127 for character in normalized
+        ):
+            raise ValueError(
+                "BAIDU_SITE_VERIFICATION must be printable and at most 256 characters"
+            )
         return normalized
 
 
