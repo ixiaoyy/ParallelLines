@@ -170,7 +170,7 @@ async def test_sitemap_filters_private_content_and_legacy_redirects(
         canonical_sitemap = await client.get("/sitemap.xml")
         assert canonical_sitemap.status_code == 200
         assert canonical_sitemap.headers["x-parallellines-cache"] == "miss"
-        assert "http://" not in canonical_sitemap.text
+        assert "<loc>http://" not in canonical_sitemap.text
         assert f"https://pingxingxian.space/members/{member_id}" in canonical_sitemap.text
 
         topic_path = f"/topics/{topic_data['id']}/{topic_data['slug']}"

@@ -146,6 +146,39 @@ jobs:
     if: github.event_name == 'push' && needs.changes.outputs.compose == 'true'
 
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build frontend image on runner
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          build-args: VITE_API_BASE_URL=/api/v1
+          tags: parallellines-web:latest
+          load: true
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: Export frontend image archive
+        run: docker save parallellines-web:latest | gzip > "/tmp/parallellines-web-${GITHUB_SHA}.tar.gz"
+
+      - name: Upload frontend image archive to server
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${DEPLOY_SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          PORT="${DEPLOY_PORT:-22}"
+          ssh-keyscan -p "${PORT}" "${DEPLOY_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          scp -P "${PORT}" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "/tmp/parallellines-web-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/parallellines-web-${GITHUB_SHA}.tar.gz"
+
       - name: Deploy all services to server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -156,6 +189,7 @@ jobs:
           command_timeout: 30m
           script: |
             set -e
+            WEB_IMAGE_ARCHIVE="/tmp/parallellines-web-${{ github.sha }}.tar.gz"
             DEPLOY_STARTED_AT=$(date +%s)
             echo "[deploy] mode=full stack reason=docker-compose changed"
 
@@ -174,6 +208,12 @@ jobs:
             echo "[deploy] storage directory check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
+            sudo docker load -i "${WEB_IMAGE_ARCHIVE}"
+            rm -f "${WEB_IMAGE_ARCHIVE}"
+            STEP_FINISHED_AT=$(date +%s)
+            echo "[deploy] frontend image load took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
+
+            STEP_STARTED_AT=$(date +%s)
             if sudo docker compose version >/dev/null 2>&1; then
               COMPOSE="sudo docker compose"
             else
@@ -183,7 +223,8 @@ jobs:
             echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
-            $COMPOSE up -d --build
+            $COMPOSE build api worker nginx
+            $COMPOSE up -d --no-build
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] compose full deploy took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 

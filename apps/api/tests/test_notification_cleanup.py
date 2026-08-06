@@ -15,7 +15,7 @@ from app.services.interactions import InteractionService
 def _public_board() -> SimpleNamespace:
     """Build a minimal public board object for notification access checks."""
 
-    return SimpleNamespace(visibility="public", owner_id="owner")
+    return SimpleNamespace(visibility="public", owner_id="owner", slug="public-board")
 
 
 def _topic(
