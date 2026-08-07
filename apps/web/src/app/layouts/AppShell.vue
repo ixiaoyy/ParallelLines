@@ -28,6 +28,7 @@ import { readRouteParam } from "@/shared/router/params";
 import { resolveRouteSeoMeta, useSeoMeta } from "@/shared/seo/meta";
 import {
   browserSeoOrigin,
+  buildSeoSiteName,
   buildSiteStructuredData,
   SEO_SITE_STRUCTURED_DATA_ID,
   useStructuredData,
@@ -115,10 +116,12 @@ const siteTitle = computed(() =>
 const siteTagline = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_tagline", "让答案可追溯"),
 );
+const siteSeoName = computed(() => buildSeoSiteName(siteTitle.value));
 const routeSeoMeta = computed(() =>
   resolveRouteSeoMeta(route.meta.seo, {
     routePath: route.path,
     siteTitle: siteTitle.value,
+    siteName: siteSeoName.value,
     siteTagline: siteTagline.value,
   }),
 );
@@ -139,7 +142,7 @@ const siteStructuredData = computed(() => {
   return buildSiteStructuredData({
     siteUrl: origin,
     title: siteTitle.value,
-    description: `${siteTitle.value}：${siteTagline.value}。浏览公开版块与可追溯讨论。`,
+    description: `${siteSeoName.value}：${siteTagline.value}。浏览公开版块与可追溯讨论。`,
     logoUrl: brandLogoUrl.value,
   });
 });

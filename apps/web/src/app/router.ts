@@ -47,8 +47,8 @@ export const router = createRouter({
       component: () => import("@/pages/home/HomePage.vue"),
       meta: {
         seo: {
-          title: "{siteTitle}",
-          description: "{siteTitle}：{siteTagline}。浏览公开版块与可追溯讨论。",
+          title: "{siteName}",
+          description: "{siteName}：{siteTagline}。浏览公开版块与可追溯讨论。",
           canonicalPath: "/",
         },
       },

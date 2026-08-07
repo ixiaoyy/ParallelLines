@@ -55,7 +55,7 @@ export function useSeoMeta(source: MaybeRefOrGetter<SeoMetaInput | null | undefi
  */
 export function resolveRouteSeoMeta(
   routeSeo: RouteSeoMeta | undefined,
-  context: { routePath: string; siteTitle: string; siteTagline: string },
+  context: { routePath: string; siteTitle: string; siteName?: string; siteTagline: string },
 ): SeoMetaInput {
   const canonicalPath = routeSeo?.canonicalPath ?? cleanRoutePath(context.routePath);
   return {
@@ -64,7 +64,7 @@ export function resolveRouteSeoMeta(
     canonicalPath,
     ogType: routeSeo?.ogType,
     robots: routeSeo?.robots,
-    siteName: context.siteTitle,
+    siteName: context.siteName ?? context.siteTitle,
     locale: "zh_CN",
   };
 }
@@ -108,16 +108,18 @@ function cssEscape(value: string) {
 /**
  * Applies site-level placeholders used by route SEO definitions.
  *
- * @param template - Route SEO text containing optional `{siteTitle}` or `{siteTagline}` placeholders.
- * @param context - Site title and tagline values from public settings.
+ * @param template - Route SEO text containing optional `{siteTitle}`, `{siteName}`, or `{siteTagline}` placeholders.
+ * @param context - Public site title/tagline plus the optional unique SEO site name.
  * @returns SEO text with placeholders replaced. Side effect: none.
  */
 function formatSeoTemplate(
   template: string,
-  context: { siteTitle: string; siteTagline: string },
+  context: { siteTitle: string; siteName?: string; siteTagline: string },
 ): string {
+  const siteName = context.siteName ?? context.siteTitle;
   return template
     .replaceAll("{siteTitle}", context.siteTitle)
+    .replaceAll("{siteName}", siteName)
     .replaceAll("{siteTagline}", context.siteTagline);
 }
 

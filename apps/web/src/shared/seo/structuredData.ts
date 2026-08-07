@@ -3,6 +3,9 @@ import type { MaybeRefOrGetter } from "vue";
 
 export const SEO_SITE_STRUCTURED_DATA_ID = "seo-site-structured-data";
 export const SEO_PAGE_STRUCTURED_DATA_ID = "seo-page-structured-data";
+export const SEO_BRAND_NAME = "ParallelLines";
+
+const SEO_DEFAULT_PUBLIC_TITLE = "平行线";
 
 export type JsonLdValue = string | number | boolean | null | JsonLdObject | JsonLdValue[];
 
@@ -95,6 +98,8 @@ export function buildSiteStructuredData(input: SiteStructuredDataInput): JsonLdO
   const siteUrl = absoluteSeoUrl(input.siteUrl, "/");
   const websiteId = `${siteUrl}#website`;
   const organizationId = `${siteUrl}#organization`;
+  const siteName = buildSeoSiteName(input.title);
+  const alternateNames = buildSeoSiteAlternateNames(input.title, siteUrl);
   return {
     "@context": "https://schema.org",
     "@graph": [
@@ -102,7 +107,8 @@ export function buildSiteStructuredData(input: SiteStructuredDataInput): JsonLdO
         "@type": "WebSite",
         "@id": websiteId,
         url: siteUrl,
-        name: input.title,
+        name: siteName,
+        alternateName: alternateNames,
         description: input.description,
         inLanguage: "zh-CN",
         publisher: { "@id": organizationId },
@@ -111,7 +117,8 @@ export function buildSiteStructuredData(input: SiteStructuredDataInput): JsonLdO
         "@type": "Organization",
         "@id": organizationId,
         url: siteUrl,
-        name: input.title,
+        name: siteName,
+        alternateName: alternateNames,
         logo: {
           "@type": "ImageObject",
           url: absoluteSeoUrl(input.siteUrl, input.logoUrl),
@@ -119,6 +126,42 @@ export function buildSiteStructuredData(input: SiteStructuredDataInput): JsonLdO
       },
     ],
   };
+}
+
+/**
+ * Builds the unique bilingual SEO name from the configurable public title.
+ *
+ * @param publicTitle - Administrator-visible site title.
+ * @returns The trimmed title with the stable Latin brand appended exactly once. Side effect: none.
+ */
+export function buildSeoSiteName(publicTitle: string): string {
+  const title = publicTitle.trim() || SEO_DEFAULT_PUBLIC_TITLE;
+  return title.toLowerCase().includes(SEO_BRAND_NAME.toLowerCase())
+    ? title
+    : `${title} ${SEO_BRAND_NAME}`;
+}
+
+/**
+ * Builds legitimate alternate names for the site-name structured-data contract.
+ *
+ * @param publicTitle - Administrator-visible site title.
+ * @param siteUrl - Absolute canonical site URL used to derive the lowercase hostname backup.
+ * @returns Deduplicated human-readable and hostname aliases in preference order. Side effect: none.
+ */
+export function buildSeoSiteAlternateNames(publicTitle: string, siteUrl: string): string[] {
+  const primaryName = buildSeoSiteName(publicTitle).toLowerCase();
+  const hostname = new URL(siteUrl).hostname.toLowerCase();
+  const candidates = [publicTitle.trim(), SEO_DEFAULT_PUBLIC_TITLE, SEO_BRAND_NAME, hostname];
+  const seen = new Set([primaryName]);
+  return candidates.filter((candidate) => {
+    const normalized = candidate.trim();
+    const key = normalized.toLowerCase();
+    if (!normalized || seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
 
 /**

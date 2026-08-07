@@ -15,7 +15,14 @@ from app.api.seo import base_url
 from app.core.config import Settings
 from app.core.exceptions import AppError
 from app.schemas.seo import SeoMetaResponse, SitemapUrl
-from app.services.seo import SeoPageDocument, SeoPageLink, SeoService, SeoSiteIdentity
+from app.services.seo import (
+    SeoPageDocument,
+    SeoPageLink,
+    SeoService,
+    SeoSiteIdentity,
+    site_alternate_names,
+    site_brand_name,
+)
 from app.services.seo_renderer import (
     SEO_BODY_MARKER,
     SEO_HEAD_END_MARKER,
@@ -86,6 +93,37 @@ def test_renderer_preserves_vite_assets_and_escapes_dynamic_html() -> None:
     assert "公开 &amp; 版块" in rendered
     assert rendered.count('rel="canonical"') == 1
     assert rendered.count('name="applicable-device" content="pc,mobile"') == 1
+    assert '<meta property="og:site_name" content="平行线 ParallelLines" />' in rendered
+
+
+def test_site_schema_uses_unique_bilingual_name_and_legitimate_aliases() -> None:
+    service = SeoService(cast(AsyncSession, object()))
+    identity = SeoSiteIdentity(
+        title="平行线",
+        tagline="让答案可追溯",
+        logo_url="/logo-lines-mark.png",
+    )
+
+    assert site_brand_name(identity.title) == "平行线 ParallelLines"
+    assert site_brand_name("平行线 ParallelLines") == "平行线 ParallelLines"
+    assert site_alternate_names(identity.title, "https://pingxingxian.space") == [
+        "平行线",
+        "ParallelLines",
+        "pingxingxian.space",
+    ]
+
+    schema = service._site_structured_data(  # noqa: SLF001
+        identity,
+        "https://pingxingxian.space",
+    )
+    graph = cast(list[dict[str, object]], schema["@graph"])
+    for entity in graph:
+        assert entity["name"] == "平行线 ParallelLines"
+        assert entity["alternateName"] == [
+            "平行线",
+            "ParallelLines",
+            "pingxingxian.space",
+        ]
 
 
 def test_renderer_escapes_optional_baidu_site_verification() -> None:

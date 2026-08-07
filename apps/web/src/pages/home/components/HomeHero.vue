@@ -31,7 +31,7 @@ function updateSearch(event: Event) {
   <section class="home-hero" aria-labelledby="home-hero-title">
     <div class="hero-grid">
       <div class="hero-copy">
-        <p class="hero-eyebrow">技术讨论 · 经验分享 · 项目共创</p>
+        <p class="hero-eyebrow">ParallelLines · 技术讨论 · 经验分享 · 项目共创</p>
         <h1 id="home-hero-title" class="hero-title">
           <span class="hero-title__line">让不同方向的思考，</span>
           <span class="hero-title__line"> 在<em class="hero-brand">平行线</em>上汇合。 </span>

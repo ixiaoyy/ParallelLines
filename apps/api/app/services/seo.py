@@ -25,6 +25,7 @@ MAX_BOARD_PAGE_TOPICS = 30
 MAX_TOPIC_PAGE_POSTS = 51
 MAX_PROFILE_PAGE_TOPICS = 20
 SITE_TITLE_FALLBACK = "平行线"
+SITE_BRAND_NAME = "ParallelLines"
 SITE_TAGLINE_FALLBACK = "让答案可追溯"
 SITE_DESCRIPTION_FALLBACK = "让答案可追溯的中文技术论坛。"
 SITE_LOGO_FALLBACK = "/logo-lines-mark.png"
@@ -182,7 +183,7 @@ class SeoService:
                 identity,
                 base_url,
                 "/",
-                title=identity.title,
+                title=site_brand_name(identity.title),
                 description=site_description(identity),
             )
         if normalized == "/boards":
@@ -316,7 +317,7 @@ class SeoService:
                 identity,
                 base_url,
                 "/",
-                title=identity.title,
+                title=site_brand_name(identity.title),
                 description=site_description(identity),
             ),
             heading=identity.title,
@@ -1115,6 +1116,8 @@ class SeoService:
         logo_url = absolute_asset_url(base_url, identity.logo_url) or absolute_url(
             base_url, SITE_LOGO_FALLBACK
         )
+        name = site_brand_name(identity.title)
+        alternate_names = site_alternate_names(identity.title, base_url)
         return {
             "@context": "https://schema.org",
             "@graph": [
@@ -1122,7 +1125,8 @@ class SeoService:
                     "@type": "WebSite",
                     "@id": website_id,
                     "url": absolute_url(base_url, "/"),
-                    "name": identity.title,
+                    "name": name,
+                    "alternateName": alternate_names,
                     "description": site_description(identity),
                     "inLanguage": "zh-CN",
                     "publisher": {"@id": organization_id},
@@ -1131,7 +1135,8 @@ class SeoService:
                     "@type": "Organization",
                     "@id": organization_id,
                     "url": absolute_url(base_url, "/"),
-                    "name": identity.title,
+                    "name": name,
+                    "alternateName": alternate_names,
                     "logo": {"@type": "ImageObject", "url": logo_url},
                 },
             ],
@@ -1400,7 +1405,44 @@ def setting_text(value: object, fallback: str) -> str:
 def site_description(identity: SeoSiteIdentity) -> str:
     """Return stable public-site description text from ``identity`` fields."""
 
-    return f"{identity.title}：{identity.tagline}。浏览公开版块与可追溯讨论。"
+    return f"{site_brand_name(identity.title)}：{identity.tagline}。浏览公开版块与可追溯讨论。"
+
+
+def site_brand_name(public_title: str) -> str:
+    """Return the unique bilingual SEO name for a configured public title.
+
+    ``public_title`` is the administrator-visible site title. The returned name
+    preserves it and appends the stable Latin brand exactly once; the helper has
+    no side effects.
+    """
+
+    title = public_title.strip() or SITE_TITLE_FALLBACK
+    if SITE_BRAND_NAME.casefold() in title.casefold():
+        return title
+    return f"{title} {SITE_BRAND_NAME}"
+
+
+def site_alternate_names(public_title: str, base_url: str) -> list[str]:
+    """Return deduplicated public-title, brand, and hostname aliases.
+
+    ``public_title`` and canonical ``base_url`` identify legitimate brand names.
+    The returned order prefers human-readable aliases before the lowercase host;
+    invalid or duplicate values are omitted and no side effects occur.
+    """
+
+    primary_name = site_brand_name(public_title)
+    hostname = (urlsplit(base_url).hostname or "").lower()
+    candidates = (public_title.strip(), SITE_TITLE_FALLBACK, SITE_BRAND_NAME, hostname)
+    aliases: list[str] = []
+    seen = {primary_name.casefold()}
+    for candidate in candidates:
+        normalized = candidate.strip()
+        key = normalized.casefold()
+        if not normalized or key in seen:
+            continue
+        seen.add(key)
+        aliases.append(normalized)
+    return aliases
 
 
 def latest_datetime(*values: datetime | None) -> datetime | None:

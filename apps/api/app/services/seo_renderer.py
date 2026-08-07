@@ -8,7 +8,13 @@ from urllib.request import Request, urlopen
 
 from app.core.exceptions import AppError
 from app.core.response_cache import ResponseHotCache
-from app.services.seo import SeoPageDocument, SeoPageLink, SeoPagePost, format_datetime
+from app.services.seo import (
+    SeoPageDocument,
+    SeoPageLink,
+    SeoPagePost,
+    format_datetime,
+    site_brand_name,
+)
 
 SEO_HEAD_START_MARKER = "<!-- parallellines-seo-head-start -->"
 SEO_HEAD_END_MARKER = "<!-- parallellines-seo-head-end -->"
@@ -109,7 +115,7 @@ def render_seo_head(
     """
 
     meta = document.meta
-    site_title = html.escape(document.site.title, quote=True)
+    site_title = html.escape(site_brand_name(document.site.title), quote=True)
     lines = [
         SEO_HEAD_START_MARKER,
         f"    <title>{html.escape(meta.title)}</title>",
