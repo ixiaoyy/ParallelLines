@@ -26,6 +26,7 @@ import {
 } from "@ant-design/icons-vue";
 import type { Component } from "vue";
 import { computed, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
 import type { BoardSummary } from "@/entities/board/model";
 import { sortBoardsWithFeedbackLast } from "@/entities/board/order";
@@ -34,10 +35,14 @@ import { useTags } from "@/features/tags/queries";
 import { compactNumber } from "@/shared/lib/format";
 import { boardToneClass } from "@/shared/theme/boardPalette";
 
+type DirectoryExpansionKey = "recommended" | "boards" | "tags";
+
+const route = useRoute();
+const router = useRouter();
 const searchQuery = ref("");
-const showAllRecommendedBoards = ref(false);
-const showAllBoards = ref(false);
-const showAllTags = ref(false);
+const showAllRecommendedBoards = computed(() => route.query.recommended === "all");
+const showAllBoards = computed(() => route.query.boards === "all");
+const showAllTags = computed(() => route.query.tags === "all");
 const boardsQuery = useBoards();
 const tagsQuery = useTags(60);
 
@@ -212,6 +217,18 @@ function normalizeSearch(value: string) {
   return value.trim().toLocaleLowerCase();
 }
 
+// setDirectorySectionExpanded 用途：把目录展开状态写入当前路由，确保进入内容页再返回时仍保持原状态。
+// 参数 section 指定推荐版块、全部版块或热门标签，expanded 决定展开或收起；无返回值，副作用是替换当前 URL 查询参数。
+function setDirectorySectionExpanded(section: DirectoryExpansionKey, expanded: boolean): void {
+  const nextQuery = { ...route.query };
+  if (expanded) {
+    nextQuery[section] = "all";
+  } else {
+    delete nextQuery[section];
+  }
+  void router.replace({ query: nextQuery });
+}
+
 // boardIcon 用途：为版块入口选择与产品导航一致的图标；参数为版块摘要，返回 Vue 图标组件且无副作用。
 function boardIcon(board: BoardSummary): Component {
   return boardIcons[board.slug] ?? TagsOutlined;
@@ -278,7 +295,7 @@ function boardPurpose(board: BoardSummary) {
           <button
             v-if="hasExpandableRecommendedBoards"
             type="button"
-            @click="showAllRecommendedBoards = !showAllRecommendedBoards"
+            @click="setDirectorySectionExpanded('recommended', !showAllRecommendedBoards)"
           >
             {{ showAllRecommendedBoards ? "收起" : "查看更多" }}
             <UpOutlined v-if="showAllRecommendedBoards" aria-hidden="true" />
@@ -318,7 +335,7 @@ function boardPurpose(board: BoardSummary) {
             <AppstoreOutlined aria-hidden="true" />
             全部版块
           </h2>
-          <button v-if="hasHiddenBoards" type="button" @click="showAllBoards = true">
+          <button v-if="hasHiddenBoards" type="button" @click="setDirectorySectionExpanded('boards', true)">
             查看全部
             <RightOutlined aria-hidden="true" />
           </button>
@@ -347,7 +364,7 @@ function boardPurpose(board: BoardSummary) {
             <TagsOutlined aria-hidden="true" />
             热门标签
           </h2>
-          <button v-if="hasHiddenTags" type="button" @click="showAllTags = true">
+          <button v-if="hasHiddenTags" type="button" @click="setDirectorySectionExpanded('tags', true)">
             查看全部
             <RightOutlined aria-hidden="true" />
           </button>

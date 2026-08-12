@@ -31,7 +31,15 @@ function firstRouteParam(value: string | string[] | undefined) {
 
 export const router = createRouter({
   history: createWebHistory(),
-  scrollBehavior(to) {
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition;
+    }
+
+    if (to.name === "board-directory" && from.name === "board-directory") {
+      return false;
+    }
+
     if (to.hash) {
       return waitForHashTarget(to.hash).then((found) =>
         found ? { el: to.hash, top: 0, left: 0, behavior: "smooth" } : { top: 0, left: 0 },

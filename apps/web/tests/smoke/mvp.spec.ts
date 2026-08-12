@@ -71,3 +71,78 @@ test("register login create topic and reply", async ({ page, request }) => {
   await page.getByRole("button", { name: buttonName("发布回复") }).click();
   await expect(page.getByText(replyBody)).toBeVisible();
 });
+
+test("board directory expansion and scroll survive history return", async ({ page }) => {
+  const now = new Date().toISOString();
+  const boards = Array.from({ length: 8 }, (_, index) => ({
+    id: String(index + 1),
+    slug: `history-board-${index + 1}`,
+    name: `历史版块 ${index + 1}`,
+    description: `用于返回状态测试的版块 ${index + 1}`,
+    color: "#409EFF",
+    avatar_url: null,
+    owner_id: null,
+    parent_board_id: null,
+    parent_board_slug: null,
+    parent_board_name: null,
+    visibility: "public",
+    required_tags: [],
+    allowed_tags: [],
+    post_template: null,
+    default_notification_level: "normal",
+    default_sort: "latest",
+    topic_count: 20 - index,
+    post_count: 40 - index,
+    follower_count: 0,
+    is_following: false,
+    notification_level: null,
+    can_create_topic: true,
+    created_at: now,
+    updated_at: now,
+  }));
+  const tags = Array.from({ length: 9 }, (_, index) => ({
+    id: String(index + 1),
+    name: `历史标签 ${index + 1}`,
+    slug: `history-tag-${index + 1}`,
+    topic_count: 20 - index,
+  }));
+
+  await page.route(
+    (url) => url.pathname.endsWith("/api/v1/boards"),
+    (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: boards }) }),
+  );
+  await page.route(
+    (url) => url.pathname.endsWith("/api/v1/tags") && url.searchParams.get("limit") === "60",
+    (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: tags }) }),
+  );
+
+  await page.setViewportSize({ width: 390, height: 600 });
+  await page.goto("/boards");
+
+  const boardsSection = page.locator('section[aria-labelledby="all-boards-title"]');
+  const tagsSection = page.locator('section[aria-labelledby="hot-tags-title"]');
+  await expect(boardsSection.getByRole("link")).toHaveCount(6);
+  await boardsSection.getByRole("button", { name: "查看全部" }).click();
+  await expect(boardsSection.getByRole("link")).toHaveCount(8);
+  expect(new URL(page.url()).searchParams.get("boards")).toBe("all");
+
+  await expect(tagsSection.getByRole("link")).toHaveCount(8);
+  await tagsSection.getByRole("button", { name: "查看全部" }).click();
+  await expect(tagsSection.getByRole("link")).toHaveCount(10);
+  expect(new URL(page.url()).searchParams.get("tags")).toBe("all");
+
+  const targetTag = tagsSection.getByRole("link").filter({ hasText: "# 历史标签 9" });
+  await targetTag.scrollIntoViewIfNeeded();
+  const scrollYBeforeNavigation = await page.evaluate(() => window.scrollY);
+  expect(scrollYBeforeNavigation).toBeGreaterThan(0);
+  await targetTag.click();
+  await expect(page).toHaveURL(/\/search\?/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/boards\?/);
+  await expect(boardsSection.getByRole("link")).toHaveCount(8);
+  await expect(tagsSection.getByRole("link")).toHaveCount(10);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThanOrEqual(Math.max(1, scrollYBeforeNavigation - 100));
+});
