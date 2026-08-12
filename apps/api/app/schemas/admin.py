@@ -52,7 +52,9 @@ class PublicSiteSettingsResponse(BaseModel):
 
 class AdminUserUpdateRequest(BaseModel):
     role: Literal["user", "moderator", "admin"] | None = None
-    status: Literal["active", "silenced", "suspended", "deleted"] | None = None
+    status: Literal[
+        "pending_verification", "active", "silenced", "suspended", "deleted"
+    ] | None = None
     is_persona: bool | None = None
     level: int | None = Field(default=None, ge=0, le=5)
     points_delta: int | None = Field(default=None, ge=-100_000, le=100_000)

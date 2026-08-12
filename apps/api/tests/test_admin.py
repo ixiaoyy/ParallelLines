@@ -185,6 +185,28 @@ async def test_admin_user_management_system_panel_and_mail_logs() -> None:
         assert updated_user["is_persona"] is True
         assert updated_user["level"] == 2
 
+        async with session_factory() as session:
+            pending_member = await session.get(User, member["id"])
+            assert pending_member is not None
+            pending_member.status = "pending_verification"
+            pending_member.is_persona = False
+            await session.commit()
+
+        pending_updated = await client.put(
+            f"/api/v1/admin/users/{member['id']}",
+            headers=admin_headers,
+            json={
+                "role": "moderator",
+                "status": "pending_verification",
+                "is_persona": True,
+                "level": 2,
+            },
+        )
+        assert pending_updated.status_code == 200
+        pending_user = pending_updated.json()["data"]
+        assert pending_user["status"] == "pending_verification"
+        assert pending_user["is_persona"] is True
+
         persona_users = await client.get(
             "/api/v1/admin/users?is_persona=true",
             headers=admin_headers,

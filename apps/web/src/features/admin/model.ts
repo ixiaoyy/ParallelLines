@@ -45,7 +45,7 @@ export interface AdminUserResponse {
 
 export interface AdminUserUpdateRequest {
   role?: "user" | "moderator" | "admin";
-  status?: "active" | "silenced" | "suspended" | "deleted";
+  status?: "pending_verification" | "active" | "silenced" | "suspended" | "deleted";
   is_persona?: boolean;
   level?: number;
   points_delta?: number;
@@ -299,6 +299,7 @@ export function adminStatusLabel(status: string): string {
   const labels: Record<string, string> = {
     active: "正常",
     deleted: "已删除",
+    pending_verification: "待验证",
     silenced: "禁言",
     suspended: "停用",
   };

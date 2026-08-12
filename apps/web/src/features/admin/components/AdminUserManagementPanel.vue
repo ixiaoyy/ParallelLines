@@ -22,6 +22,8 @@ import { relativeTime } from "@/shared/lib/format";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiButton from "@/shared/ui/Button.vue";
 
+type EditableUserStatus = NonNullable<AdminUserUpdateRequest["status"]>;
+
 const updateUserMutation = useUpdateAdminUser();
 const grantBadgeMutation = useGrantAdminUserBadge();
 const revokeBadgeMutation = useRevokeAdminUserBadge();
@@ -61,7 +63,7 @@ const selectedUser = computed(() => {
 
 const userDraft = reactive({
   role: "user" as "user" | "moderator" | "admin",
-  status: "active" as "active" | "silenced" | "suspended" | "deleted",
+  status: "active" as EditableUserStatus,
   isPersona: false,
   level: 0,
   pointsDelta: 0,
@@ -92,7 +94,10 @@ watch(
     selectedUserId.value = user.id;
     userDraft.role = user.role === "admin" || user.role === "moderator" ? user.role : "user";
     userDraft.status =
-      user.status === "silenced" || user.status === "suspended" || user.status === "deleted"
+      user.status === "pending_verification" ||
+      user.status === "silenced" ||
+      user.status === "suspended" ||
+      user.status === "deleted"
         ? user.status
         : "active";
     userDraft.isPersona = user.is_persona;
@@ -286,6 +291,7 @@ function accountStatusClass(status: string): string {
         <span class="filter-field__label">状态</span>
         <select v-model="userFilters.status">
           <option value="">全部状态</option>
+          <option value="pending_verification">待验证</option>
           <option value="active">正常</option>
           <option value="silenced">禁言</option>
           <option value="suspended">停用</option>
@@ -426,6 +432,7 @@ function accountStatusClass(status: string): string {
             <label>
               <span>状态</span>
               <select v-model="userDraft.status">
+                <option value="pending_verification">待验证</option>
                 <option value="active">正常</option>
                 <option value="silenced">禁言</option>
                 <option value="suspended">停用</option>

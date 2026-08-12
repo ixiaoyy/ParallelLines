@@ -97,7 +97,7 @@ export interface components {
       level?: number | null;
       points_delta?: number | null;
       role?: "user" | "moderator" | "admin" | null;
-      status?: "active" | "silenced" | "suspended" | "deleted" | null;
+      status?: "pending_verification" | "active" | "silenced" | "suspended" | "deleted" | null;
     };
     AnalyticsEntryPageResponse: {
       path: string;

@@ -546,6 +546,7 @@
             "anyOf": [
               {
                 "enum": [
+                  "pending_verification",
                   "active",
                   "silenced",
                   "suspended",
