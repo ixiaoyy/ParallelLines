@@ -42,6 +42,9 @@ export function fetchAdminUsers(params: AdminUsersParams): Promise<AdminUserResp
   if (params.status) {
     query.set("status", params.status);
   }
+  if (params.is_persona !== undefined) {
+    query.set("is_persona", String(params.is_persona));
+  }
   return apiGet<AdminUserResponse[]>(`/admin/users?${query.toString()}`);
 }
 

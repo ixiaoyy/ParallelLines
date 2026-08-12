@@ -25,12 +25,19 @@ import UiButton from "@/shared/ui/Button.vue";
 const updateUserMutation = useUpdateAdminUser();
 const grantBadgeMutation = useGrantAdminUserBadge();
 const revokeBadgeMutation = useRevokeAdminUserBadge();
-const userFilters = reactive({ query: "", role: "", status: "" });
+const userFilters = reactive({
+  query: "",
+  role: "",
+  status: "",
+  accountType: "" as "" | "member" | "persona",
+});
 const userParams = computed(() => ({
   limit: 50,
   query: userFilters.query.trim() || undefined,
   role: userFilters.role || undefined,
   status: userFilters.status || undefined,
+  is_persona:
+    userFilters.accountType === "" ? undefined : userFilters.accountType === "persona",
 }));
 const usersQuery = useAdminUsers(userParams);
 const badgesQuery = useAdminBadges();
@@ -55,6 +62,7 @@ const selectedUser = computed(() => {
 const userDraft = reactive({
   role: "user" as "user" | "moderator" | "admin",
   status: "active" as "active" | "silenced" | "suspended" | "deleted",
+  isPersona: false,
   level: 0,
   pointsDelta: 0,
   experienceDelta: 0,
@@ -87,6 +95,7 @@ watch(
       user.status === "silenced" || user.status === "suspended" || user.status === "deleted"
         ? user.status
         : "active";
+    userDraft.isPersona = user.is_persona;
     userDraft.level = user.level;
     userDraft.pointsDelta = 0;
     userDraft.experienceDelta = 0;
@@ -157,7 +166,7 @@ function showUserList(): void {
   }
 }
 
-// Sends role, status, level, and optional point/growth deltas for the selected user.
+// Sends account classification, permissions, level, and optional growth deltas for the selected user.
 // Key parameters: none. Return value: none. Side effect: invokes updateAdminUser and refreshes admin queries on success.
 function saveUser(): void {
   if (!selectedUser.value) {
@@ -166,6 +175,7 @@ function saveUser(): void {
   const payload: AdminUserUpdateRequest = {
     role: userDraft.role,
     status: userDraft.status,
+    is_persona: userDraft.isPersona,
     level: Number(userDraft.level),
   };
   const pointsDelta = Number(userDraft.pointsDelta);
@@ -243,7 +253,7 @@ function accountStatusClass(status: string): string {
       <div>
         <span class="users-panel__context">成员与权限</span>
         <h1 id="admin-users-title">用户管理</h1>
-        <p>查询账号，维护角色、状态、积分成长与徽章。</p>
+        <p>查询账号，维护运营/测试归类、角色、状态、积分成长与徽章。</p>
       </div>
       <span v-if="!usersQuery.isLoading.value && !usersQuery.isError.value" class="user-result-count">
         当前显示 <strong>{{ users.length }}</strong> 人
@@ -280,6 +290,14 @@ function accountStatusClass(status: string): string {
           <option value="silenced">禁言</option>
           <option value="suspended">停用</option>
           <option value="deleted">已删除</option>
+        </select>
+      </label>
+      <label class="filter-field">
+        <span class="filter-field__label">账号归类</span>
+        <select v-model="userFilters.accountType" aria-label="账号归类">
+          <option value="">全部账号</option>
+          <option value="member">普通账号</option>
+          <option value="persona">运营/测试账号</option>
         </select>
       </label>
     </div>
@@ -320,7 +338,7 @@ function accountStatusClass(status: string): string {
               <small>{{ user.email }}</small>
             </span>
             <span class="user-list__meta">
-              <em>{{ adminRoleLabel(user.role) }}</em>
+              <em>{{ adminRoleLabel(user.role) }} · {{ user.is_persona ? "运营/测试" : "普通" }}</em>
               <i :class="`is-${accountStatusClass(user.status)}`">{{ adminStatusLabel(user.status) }}</i>
             </span>
           </button>
@@ -351,6 +369,7 @@ function accountStatusClass(status: string): string {
               <span :class="`account-status is-${accountStatusClass(selectedUser.status)}`">
                 {{ adminStatusLabel(selectedUser.status) }}
               </span>
+              <span v-if="selectedUser.is_persona" class="account-status is-persona">运营/测试</span>
             </div>
             <p>{{ selectedUser.email }}</p>
           </div>
@@ -382,13 +401,17 @@ function accountStatusClass(status: string): string {
             <dt>最后活跃</dt>
             <dd>{{ selectedUser.last_seen_at ? relativeTime(selectedUser.last_seen_at) : "未记录" }}</dd>
           </div>
+          <div>
+            <dt>账号归类</dt>
+            <dd>{{ selectedUser.is_persona ? "运营/测试账号" : "普通账号" }}</dd>
+          </div>
         </dl>
 
         <section class="user-editor-section" aria-labelledby="account-permissions-title">
           <header class="form-section-heading">
             <div>
               <h3 id="account-permissions-title">账号权限</h3>
-              <p>角色决定管理范围，状态用于限制账号访问。</p>
+              <p>账号归类用于真人访问统计；角色和状态决定访问与管理范围。</p>
             </div>
           </header>
           <div class="editor-fields editor-fields--account">
@@ -412,6 +435,13 @@ function accountStatusClass(status: string): string {
             <label>
               <span>等级</span>
               <input v-model.number="userDraft.level" type="number" min="0" max="5" step="1" />
+            </label>
+            <label>
+              <span>账号归类</span>
+              <select v-model="userDraft.isPersona">
+                <option :value="false">普通账号</option>
+                <option :value="true">运营/测试账号</option>
+              </select>
             </label>
           </div>
         </section>

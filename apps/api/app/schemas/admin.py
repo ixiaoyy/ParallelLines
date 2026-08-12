@@ -53,6 +53,7 @@ class PublicSiteSettingsResponse(BaseModel):
 class AdminUserUpdateRequest(BaseModel):
     role: Literal["user", "moderator", "admin"] | None = None
     status: Literal["active", "silenced", "suspended", "deleted"] | None = None
+    is_persona: bool | None = None
     level: int | None = Field(default=None, ge=0, le=5)
     points_delta: int | None = Field(default=None, ge=-100_000, le=100_000)
     experience_delta: int | None = Field(default=None, ge=-100_000, le=100_000)
@@ -73,6 +74,7 @@ class AdminUserResponse(ORMModel):
     experience_to_next_level: int
     level_progress_percent: int
     status: str
+    is_persona: bool
     two_factor_enabled: bool
     created_at: datetime
     updated_at: datetime
@@ -104,6 +106,7 @@ class AdminUserResponse(ORMModel):
             experience_to_next_level=user.experience_to_next_level,
             level_progress_percent=user.level_progress_percent,
             status=user.status,
+            is_persona=user.is_persona,
             two_factor_enabled=user.two_factor_enabled,
             created_at=user.created_at,
             updated_at=user.updated_at,

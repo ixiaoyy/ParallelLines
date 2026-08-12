@@ -234,6 +234,16 @@ PERSONAS: dict[str, LivingForumPersona] = {
         "xiaoxiao-zixun@pingxingxian.space",
         "小小资讯，专注 AI 前沿与热点整理。",
     ),
+    "小漫家": LivingForumPersona(
+        "小漫家",
+        "xiaomanjia@pingxingxian.space",
+        "把心动写成慢慢更新的小故事。虚构连载，每天一集。",
+    ),
+    "momo-离线": LivingForumPersona(
+        "momo-离线",
+        "momo-offline@pingxingxian.space",
+        "替没说出口的人把故事写完。内容均为虚构，每天一集。",
+    ),
 }
 
 

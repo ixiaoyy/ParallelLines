@@ -403,6 +403,7 @@ class AdminService:
         query: str | None = None,
         role: str | None = None,
         status: str | None = None,
+        is_persona: bool | None = None,
         limit: int = 50,
     ) -> list[AdminUserResponse]:
         self._require_admin(current_user)
@@ -416,6 +417,8 @@ class AdminService:
             statement = statement.where(User.role == role)
         if status:
             statement = statement.where(User.status == status)
+        if is_persona is not None:
+            statement = statement.where(User.is_persona.is_(is_persona))
         users = list(await self.session.scalars(statement))
         return await self._users_to_responses(users)
 
@@ -448,6 +451,7 @@ class AdminService:
         before = {
             "role": user.role,
             "status": user.status,
+            "is_persona": user.is_persona,
             "level": user.level,
             "trust_level": user.trust_level,
             "points_balance": user.points_balance,
@@ -457,6 +461,8 @@ class AdminService:
             user.role = payload.role
         if payload.status is not None:
             user.status = payload.status
+        if payload.is_persona is not None:
+            user.is_persona = payload.is_persona
         if payload.level is not None:
             user.level = clamp_display_level(payload.level)
         await GrowthService(self.session).adjust_user(
@@ -476,6 +482,7 @@ class AdminService:
         after = {
             "role": user.role,
             "status": user.status,
+            "is_persona": user.is_persona,
             "level": user.level,
             "trust_level": user.trust_level,
             "points_balance": user.points_balance,

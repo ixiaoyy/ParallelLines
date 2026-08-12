@@ -40,7 +40,7 @@ export function installSiteVisitTracker(router: Router): void {
   let nextReferrer = document.referrer || "";
 
   router.afterEach((to, _from, failure) => {
-    if (failure || shouldRespectDoNotTrack()) {
+    if (failure || shouldRespectDoNotTrack() || isAutomatedBrowser()) {
       nextReferrer = window.location.href;
       return;
     }
@@ -97,4 +97,10 @@ function currentVisitPath(): string {
 function shouldRespectDoNotTrack(): boolean {
   const navigatorWithLegacyFlag = window.navigator as Navigator & { msDoNotTrack?: string };
   return navigatorWithLegacyFlag.doNotTrack === "1" || navigatorWithLegacyFlag.msDoNotTrack === "1";
+}
+
+// Excludes browser sessions that explicitly expose WebDriver automation from human-facing analytics.
+// Key parameters: none. Return value is true for standards-compliant automated browsers. Side effect: none.
+function isAutomatedBrowser(): boolean {
+  return window.navigator.webdriver === true;
 }

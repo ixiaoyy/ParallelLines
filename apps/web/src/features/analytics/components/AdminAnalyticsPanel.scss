@@ -307,6 +307,81 @@
   --metric-color: var(--accent-coral);
 }
 
+.visitor-signal {
+  display: grid;
+  grid-template-columns: minmax(18rem, 1.15fr) minmax(24rem, 1fr);
+  gap: 3rem;
+  align-items: center;
+  min-width: 0;
+  margin-bottom: 3.5rem;
+  border-block: 1px solid var(--border);
+  padding: 1.5rem 0;
+}
+
+.visitor-signal__summary {
+  min-width: 0;
+}
+
+.visitor-signal__summary > span {
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.visitor-signal__summary h2 {
+  margin: 0.35rem 0 0;
+  color: var(--title);
+  font-size: 1.15rem;
+  line-height: 1.4;
+}
+
+.visitor-signal.is-confirmed .visitor-signal__summary h2 {
+  color: color-mix(in srgb, var(--accent-geek) 68%, var(--title));
+}
+
+.visitor-signal__summary p {
+  max-width: 42rem;
+  margin: 0.45rem 0 0;
+  color: var(--analytics-muted);
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+
+.visitor-signal__breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
+  margin: 0;
+}
+
+.visitor-signal__breakdown > div {
+  min-width: 0;
+  border-left: 1px solid var(--border);
+  padding-left: 1rem;
+}
+
+.visitor-signal__breakdown dt,
+.visitor-signal__breakdown small {
+  color: var(--analytics-muted);
+  font-size: 0.7rem;
+}
+
+.visitor-signal__breakdown dd {
+  margin: 0.3rem 0;
+  color: var(--title);
+  font-size: 1.45rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.visitor-signal__breakdown small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .analytics-chart-grid,
 .analytics-table-grid {
   display: grid;
@@ -641,6 +716,11 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .visitor-signal {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
   .analytics-chart-panel,
   .analytics-table-panel {
     padding-right: 0;
@@ -715,6 +795,31 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1.5rem 1.25rem;
     padding: 0 0 2.5rem;
+  }
+
+  .visitor-signal {
+    margin-bottom: 2.5rem;
+    padding: 1.25rem 0;
+  }
+
+  .visitor-signal__breakdown {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.9rem;
+  }
+
+  .visitor-signal__breakdown > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.2rem 1rem;
+    align-items: baseline;
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .visitor-signal__breakdown dd {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    margin: 0;
   }
 
   .metric-item,

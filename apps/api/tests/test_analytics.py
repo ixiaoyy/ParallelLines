@@ -9,6 +9,7 @@ from app.api.v1.dependencies import get_session
 from app.main import create_app
 from app.models.moderation import AuditLog
 from app.models.user import User
+from app.services.site_visits import is_probable_bot_user_agent
 from tests.helpers import get_test_database_url, register_and_verify_user, reset_test_database
 
 
@@ -25,6 +26,19 @@ async def promote_admin(session_factory: async_sessionmaker[AsyncSession], user_
         assert user is not None
         user.role = "admin"
         await session.commit()
+
+
+@pytest.mark.parametrize(
+    ("user_agent", "expected"),
+    [
+        ("Mozilla/5.0 (compatible; Googlebot/2.1)", True),
+        ("curl/8.10.1", True),
+        ("Mozilla/5.0 Chrome/140.0.0.0 Safari/537.36", False),
+        (None, False),
+    ],
+)
+def test_site_visit_bot_user_agent_detection(user_agent: str | None, expected: bool) -> None:
+    assert is_probable_bot_user_agent(user_agent) is expected
 
 
 @pytest.mark.asyncio
@@ -54,6 +68,7 @@ async def test_admin_analytics_overview_reports_and_csv_export() -> None:
             await session.commit()
         user_headers = {"Authorization": f"Bearer {user['access_token']}"}
         admin_headers = {"Authorization": f"Bearer {admin['access_token']}"}
+        persona_headers = {"Authorization": f"Bearer {persona['access_token']}"}
 
         denied = await client.get("/api/v1/admin/analytics", headers=user_headers)
         assert denied.status_code == 403
@@ -128,6 +143,33 @@ async def test_admin_analytics_overview_reports_and_csv_export() -> None:
         assert search_visit.status_code == 202
         assert search_visit.json()["data"]["recorded"] is True
 
+        member_visit = await client.post(
+            "/api/v1/site/visits",
+            headers=user_headers,
+            json={"path": "/b/analytics", "title": "运营分析", "referrer": None},
+        )
+        assert member_visit.status_code == 202
+        assert member_visit.json()["data"]["recorded"] is True
+
+        persona_visit = await client.post(
+            "/api/v1/site/visits",
+            headers=persona_headers,
+            json={"path": "/", "title": "平行线", "referrer": None},
+        )
+        assert persona_visit.status_code == 202
+        assert persona_visit.json()["data"]["recorded"] is True
+
+        bot_visit = await client.post(
+            "/api/v1/site/visits",
+            headers={
+                "X-ParallelLines-Visitor": "visitor-googlebot",
+                "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)",
+            },
+            json={"path": "/", "title": "平行线", "referrer": None},
+        )
+        assert bot_visit.status_code == 202
+        assert bot_visit.json()["data"]["recorded"] is False
+
         overview = await client.get(
             "/api/v1/admin/analytics",
             headers=admin_headers,
@@ -142,6 +184,9 @@ async def test_admin_analytics_overview_reports_and_csv_export() -> None:
         assert overview_data["totals"]["flags"] >= 1
         assert overview_data["totals"]["page_views"] >= 2
         assert overview_data["totals"]["unique_visitors"] >= 2
+        assert overview_data["totals"]["authenticated_member_visitors"] == 1
+        assert overview_data["totals"]["anonymous_visitors"] == 1
+        assert overview_data["totals"]["operator_visitors"] == 2
         assert overview_data["totals"]["external_referrals"] >= 2
         assert overview_data["top_boards"][0]["slug"] == "analytics"
         assert {source["source_type"] for source in overview_data["traffic_sources"]} >= {

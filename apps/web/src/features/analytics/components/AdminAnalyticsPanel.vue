@@ -93,6 +93,9 @@ const overviewQuery = useAnalyticsOverview(range, computed(() => !isDateRangeInv
 const overview = computed(() => overviewQuery.data.value);
 const trafficSources = computed(() => overview.value?.traffic_sources ?? []);
 const entryPages = computed(() => overview.value?.entry_pages ?? []);
+const hasAuthenticatedMemberVisitors = computed(
+  () => (overview.value?.totals.authenticated_member_visitors ?? 0) > 0,
+);
 const totalContentItems = computed(() => {
   const totals = overview.value?.totals;
   return (totals?.topics ?? 0) + (totals?.posts ?? 0);
@@ -645,6 +648,39 @@ function formatChartTooltip(params: unknown): string {
             <component :is="metric.icon" v-if="metric.icon" class="metric-icon" aria-hidden="true" />
           </div>
         </article>
+      </section>
+
+      <section
+        class="visitor-signal"
+        :class="{ 'is-confirmed': hasAuthenticatedMemberVisitors }"
+        aria-labelledby="visitor-signal-title"
+      >
+        <div class="visitor-signal__summary">
+          <span>真人访问信号</span>
+          <h2 id="visitor-signal-title">
+            {{ hasAuthenticatedMemberVisitors ? "已发现登录普通成员访问" : "尚未发现登录普通成员访问" }}
+          </h2>
+          <p>
+            普通成员指已登录、非管理员且未标记为运营/测试的账号；匿名浏览器不计入确认结果，仍可能包含无法识别的自动化访问。
+          </p>
+        </div>
+        <dl class="visitor-signal__breakdown">
+          <div>
+            <dt>登录普通成员</dt>
+            <dd>{{ formatMetric(overview.totals.authenticated_member_visitors) }}</dd>
+            <small>最可信真人信号</small>
+          </div>
+          <div>
+            <dt>匿名浏览器</dt>
+            <dd>{{ formatMetric(overview.totals.anonymous_visitors) }}</dd>
+            <small>身份无法确认</small>
+          </div>
+          <div>
+            <dt>运营/管理员</dt>
+            <dd>{{ formatMetric(overview.totals.operator_visitors) }}</dd>
+            <small>不计入真人信号</small>
+          </div>
+        </dl>
       </section>
 
       <section class="analytics-chart-grid" aria-label="访问与用户增长趋势">

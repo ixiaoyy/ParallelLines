@@ -20,6 +20,18 @@ class AnalyticsMetricPoint(BaseModel):
 class AnalyticsTotalsResponse(BaseModel):
     page_views: int
     unique_visitors: int
+    authenticated_member_visitors: int = Field(
+        description=(
+            "已登录、非管理员且未标记为运营/测试账号的独立访客数；"
+            "这是后台最可信的真人访问信号。"
+        )
+    )
+    anonymous_visitors: int = Field(
+        description="未登录浏览器的独立访客数；可能包含无法识别的自动化访问。"
+    )
+    operator_visitors: int = Field(
+        description="管理员或已标记为运营/测试账号的独立访客数。"
+    )
     external_referrals: int
     dau: int
     mau: int

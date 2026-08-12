@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from io import StringIO
 from typing import Any
 
-from sqlalchemy import desc, distinct, func, select
+from sqlalchemy import and_, case, desc, distinct, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -41,6 +41,13 @@ class ReportDefinition:
     name: str
     description: str
     columns: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class VisitorSegments:
+    authenticated_member_visitors: int
+    anonymous_visitors: int
+    operator_visitors: int
 
 
 REPORTS: dict[str, ReportDefinition] = {
@@ -107,9 +114,13 @@ class AnalyticsService:
         self._require_admin(current_user)
         start, end = self._range(start_date, end_date)
         series = await self._series(start, end)
+        visitor_segments = await self._visitor_segments(start, end)
         totals = AnalyticsTotalsResponse(
             page_views=sum(point.page_views for point in series),
             unique_visitors=await self._unique_site_visitors(start, end),
+            authenticated_member_visitors=visitor_segments.authenticated_member_visitors,
+            anonymous_visitors=visitor_segments.anonymous_visitors,
+            operator_visitors=visitor_segments.operator_visitors,
             external_referrals=await self._external_referrals(start, end),
             dau=max((point.dau for point in series), default=0),
             mau=await self._active_users(start, end),
@@ -257,7 +268,9 @@ class AnalyticsService:
         rows = await self.session.execute(
             select(func.date(User.last_seen_at), func.count(distinct(User.id)))
             .where(
-                User.last_seen_at >= self._start_dt(start), User.last_seen_at <= self._end_dt(end)
+                User.last_seen_at >= self._start_dt(start),
+                User.last_seen_at <= self._end_dt(end),
+                User.is_persona.is_(False),
             )
             .group_by(func.date(User.last_seen_at))
         )
@@ -302,9 +315,60 @@ class AnalyticsService:
             select(func.count(distinct(User.id))).where(
                 User.last_seen_at >= self._start_dt(start),
                 User.last_seen_at <= self._end_dt(end),
+                User.is_persona.is_(False),
             )
         )
         return int(count or 0)
+
+    async def _visitor_segments(self, start: date, end: date) -> VisitorSegments:
+        """Split unique visitors into member, anonymous, and operator groups.
+
+        Key parameters are the inclusive analytics dates. Return value contains
+        mutually exclusive current-account classifications. Side effect: none.
+        """
+
+        authenticated_member_key = case(
+            (
+                and_(
+                    SiteVisit.user_id.is_not(None),
+                    User.is_persona.is_(False),
+                    User.role != "admin",
+                ),
+                SiteVisit.user_id,
+            )
+        )
+        anonymous_key = case(
+            (SiteVisit.user_id.is_(None), SiteVisit.visitor_key)
+        )
+        operator_key = case(
+            (
+                and_(
+                    SiteVisit.user_id.is_not(None),
+                    or_(User.is_persona.is_(True), User.role == "admin"),
+                ),
+                SiteVisit.user_id,
+            )
+        )
+        row = (
+            await self.session.execute(
+                select(
+                    func.count(distinct(authenticated_member_key)),
+                    func.count(distinct(anonymous_key)),
+                    func.count(distinct(operator_key)),
+                )
+                .select_from(SiteVisit)
+                .outerjoin(User, User.id == SiteVisit.user_id)
+                .where(
+                    SiteVisit.created_at >= self._start_dt(start),
+                    SiteVisit.created_at <= self._end_dt(end),
+                )
+            )
+        ).one()
+        return VisitorSegments(
+            authenticated_member_visitors=int(row[0] or 0),
+            anonymous_visitors=int(row[1] or 0),
+            operator_visitors=int(row[2] or 0),
+        )
 
     async def _unique_site_visitors(self, start: date, end: date) -> int:
         """Count unique site visitors across an inclusive date range.

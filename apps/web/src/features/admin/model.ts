@@ -33,6 +33,7 @@ export interface AdminUserResponse {
   experience_to_next_level: number;
   level_progress_percent: number;
   status: "active" | "silenced" | "suspended" | "deleted" | string;
+  is_persona: boolean;
   two_factor_enabled: boolean;
   created_at: string;
   updated_at: string;
@@ -45,6 +46,7 @@ export interface AdminUserResponse {
 export interface AdminUserUpdateRequest {
   role?: "user" | "moderator" | "admin";
   status?: "active" | "silenced" | "suspended" | "deleted";
+  is_persona?: boolean;
   level?: number;
   points_delta?: number;
   experience_delta?: number;
@@ -55,6 +57,7 @@ export interface AdminUsersParams {
   query?: string;
   role?: string;
   status?: string;
+  is_persona?: boolean;
   limit?: number;
 }
 

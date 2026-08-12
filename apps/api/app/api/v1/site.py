@@ -110,5 +110,6 @@ async def record_site_visit(
         current_user=current_user,
         origin=request.headers.get("origin"),
         request_host=request.url.hostname,
+        user_agent=request.headers.get("user-agent"),
     )
     return ApiResponse(data=data)

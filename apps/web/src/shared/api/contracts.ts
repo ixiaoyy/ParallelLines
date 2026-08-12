@@ -1,4 +1,5 @@
 import type { UserPublic as AuthUserPublic, LoginResponse } from "@/features/auth/model";
+import type { AdminUserResponse, AdminUserUpdateRequest } from "@/features/admin/model";
 import type { BoardResponse } from "@/features/boards/model";
 import type {
   DailyReportInput,
@@ -16,6 +17,12 @@ type IsApiCompatible<Manual, Generated> = [Manual] extends [Generated] ? true : 
 type AssertApiCompatible<Check extends true> = Check;
 
 export type ApiContractChecks = {
+  adminUserResponse: AssertApiCompatible<
+    IsApiCompatible<AdminUserResponse, components["schemas"]["AdminUserResponse"]>
+  >;
+  adminUserUpdateRequest: AssertApiCompatible<
+    IsApiCompatible<AdminUserUpdateRequest, components["schemas"]["AdminUserUpdateRequest"]>
+  >;
   boardResponse: AssertApiCompatible<
     IsApiCompatible<BoardResponse, components["schemas"]["BoardResponse"]>
   >;

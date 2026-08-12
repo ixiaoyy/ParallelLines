@@ -373,6 +373,10 @@
             "title": "Id",
             "type": "string"
           },
+          "is_persona": {
+            "title": "Is Persona",
+            "type": "boolean"
+          },
           "last_seen_at": {
             "anyOf": [
               {
@@ -448,6 +452,7 @@
           "experience_to_next_level",
           "level_progress_percent",
           "status",
+          "is_persona",
           "two_factor_enabled",
           "created_at",
           "updated_at",
@@ -483,6 +488,17 @@
               }
             ],
             "title": "Experience Delta"
+          },
+          "is_persona": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Persona"
           },
           "level": {
             "anyOf": [
@@ -816,6 +832,16 @@
       },
       "AnalyticsTotalsResponse": {
         "properties": {
+          "anonymous_visitors": {
+            "description": "未登录浏览器的独立访客数；可能包含无法识别的自动化访问。",
+            "title": "Anonymous Visitors",
+            "type": "integer"
+          },
+          "authenticated_member_visitors": {
+            "description": "已登录、非管理员且未标记为运营/测试账号的独立访客数；这是后台最可信的真人访问信号。",
+            "title": "Authenticated Member Visitors",
+            "type": "integer"
+          },
           "dau": {
             "title": "Dau",
             "type": "integer"
@@ -834,6 +860,11 @@
           },
           "mau": {
             "title": "Mau",
+            "type": "integer"
+          },
+          "operator_visitors": {
+            "description": "管理员或已标记为运营/测试账号的独立访客数。",
+            "title": "Operator Visitors",
             "type": "integer"
           },
           "page_views": {
@@ -860,6 +891,9 @@
         "required": [
           "page_views",
           "unique_visitors",
+          "authenticated_member_visitors",
+          "anonymous_visitors",
+          "operator_visitors",
           "external_referrals",
           "dau",
           "mau",
@@ -13884,6 +13918,22 @@
                 }
               ],
               "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_persona",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Persona"
             }
           },
           {

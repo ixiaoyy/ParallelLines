@@ -144,6 +144,7 @@ async def list_users(
     query: str | None = None,
     role: str | None = None,
     user_status: Annotated[str | None, Query(alias="status")] = None,
+    is_persona: bool | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> ApiResponse[list[AdminUserResponse]]:
     users = await AdminService(session, settings).list_users(
@@ -151,6 +152,7 @@ async def list_users(
         query=query,
         role=role,
         status=user_status,
+        is_persona=is_persona,
         limit=limit,
     )
     return ApiResponse(data=users)

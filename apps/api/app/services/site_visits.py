@@ -37,6 +37,17 @@ SOCIAL_HOST_MARKERS = (
     "xiaohongshu.com",
     "zhihu.com",
 )
+BOT_USER_AGENT_MARKERS = (
+    "bot",
+    "crawler",
+    "spider",
+    "slurp",
+    "headlesschrome",
+    "curl/",
+    "wget/",
+    "python-requests",
+    "go-http-client",
+)
 
 
 @dataclass(frozen=True)
@@ -64,14 +75,18 @@ class SiteVisitService:
         current_user: User | None,
         origin: str | None,
         request_host: str | None,
+        user_agent: str | None,
     ) -> SiteVisitRecordResponse:
         """Persist one site page-view event for traffic analytics.
 
         Key parameters are the frontend payload, optional anonymous visitor id,
-        optional authenticated user, and request origin/host used to classify
-        internal referrers. Return value reports whether an event was stored.
-        Side effect: inserts a `site_visits` row and commits it.
+        optional authenticated user, request origin/host, and user agent used to
+        reject known automation. Return value reports whether an event was
+        stored. Side effect: inserts a `site_visits` row and commits it.
         """
+
+        if is_probable_bot_user_agent(user_agent):
+            return SiteVisitRecordResponse(recorded=False)
 
         visitor_key = self._visitor_key(visitor_id=visitor_id, current_user=current_user)
         path = normalize_site_visit_path(
@@ -116,6 +131,17 @@ class SiteVisitService:
         if current_user is not None:
             return visitor_key_for_user(current_user.id)
         return visitor_key_for_anonymous(visitor_id)
+
+
+def is_probable_bot_user_agent(user_agent: str | None) -> bool:
+    """Return whether a request identifies as a known crawler or automation client.
+
+    Key parameter `user_agent` is the request header. Return value is true only
+    for conservative marker matches. Side effect: none.
+    """
+
+    normalized = (user_agent or "").strip().lower()
+    return bool(normalized) and any(marker in normalized for marker in BOT_USER_AGENT_MARKERS)
 
 
 def normalize_site_visit_path(

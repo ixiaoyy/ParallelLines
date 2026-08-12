@@ -166,17 +166,31 @@ async def test_admin_user_management_system_panel_and_mail_logs() -> None:
         assert users.status_code == 200
         user_rows = users.json()["data"]
         assert [row["id"] for row in user_rows] == [member["id"]]
+        assert user_rows[0]["is_persona"] is False
 
         updated = await client.put(
             f"/api/v1/admin/users/{member['id']}",
             headers=admin_headers,
-            json={"role": "moderator", "status": "silenced", "level": 2},
+            json={
+                "role": "moderator",
+                "status": "silenced",
+                "is_persona": True,
+                "level": 2,
+            },
         )
         assert updated.status_code == 200
         updated_user = updated.json()["data"]
         assert updated_user["role"] == "moderator"
         assert updated_user["status"] == "silenced"
+        assert updated_user["is_persona"] is True
         assert updated_user["level"] == 2
+
+        persona_users = await client.get(
+            "/api/v1/admin/users?is_persona=true",
+            headers=admin_headers,
+        )
+        assert persona_users.status_code == 200
+        assert member["id"] in {row["id"] for row in persona_users.json()["data"]}
 
         system = await client.get("/api/v1/admin/system", headers=admin_headers)
         assert system.status_code == 200

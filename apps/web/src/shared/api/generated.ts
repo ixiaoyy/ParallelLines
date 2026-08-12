@@ -75,6 +75,7 @@ export interface components {
       experience_to_next_level: number;
       experience_total: number;
       id: string;
+      is_persona: boolean;
       last_seen_at?: string | null;
       level: number;
       level_progress_percent: number;
@@ -92,6 +93,7 @@ export interface components {
     AdminUserUpdateRequest: {
       adjustment_reason?: string | null;
       experience_delta?: number | null;
+      is_persona?: boolean | null;
       level?: number | null;
       points_delta?: number | null;
       role?: "user" | "moderator" | "admin" | null;
@@ -149,11 +151,14 @@ export interface components {
       username: string;
     };
     AnalyticsTotalsResponse: {
+      anonymous_visitors: number;
+      authenticated_member_visitors: number;
       dau: number;
       external_referrals: number;
       flags: number;
       likes: number;
       mau: number;
+      operator_visitors: number;
       page_views: number;
       posts: number;
       registrations: number;
