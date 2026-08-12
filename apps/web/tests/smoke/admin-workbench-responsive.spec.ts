@@ -174,8 +174,16 @@ test("admin workbench keeps core information dense and reachable across viewport
   await expect(page.locator(".admin-summary-item")).toHaveCount(4);
   await expect(page.getByRole("heading", { name: "需要处理" })).toBeVisible();
 
-  await page.evaluate(() => document.body.scrollTo(0, document.body.scrollHeight));
-  await expect.poll(() => page.evaluate(() => document.body.scrollTop)).toBeGreaterThan(0);
+  const rootScrollContract = await page.evaluate(() => ({
+    rootOwnsViewportScroll: document.scrollingElement === document.documentElement,
+    rootScrollHeight: document.documentElement.scrollHeight,
+    viewportHeight: document.documentElement.clientHeight,
+  }));
+  expect(rootScrollContract.rootOwnsViewportScroll).toBe(true);
+  expect(rootScrollContract.rootScrollHeight).toBeGreaterThan(rootScrollContract.viewportHeight);
+
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   const bottomClearance = await page.evaluate(() => {
     const lastQuickLink = document.querySelector(".admin-quick-grid a:last-child");
     const bottomNav = document.querySelector(".admin-console-shell__bottom-nav");
@@ -199,7 +207,7 @@ test("admin workbench keeps core information dense and reachable across viewport
     { width: 1440, height: 900 },
   ]) {
     await page.setViewportSize(viewport);
-    await page.evaluate(() => document.body.scrollTo(0, 0));
+    await page.evaluate(() => window.scrollTo(0, 0));
 
     const layout = await page.evaluate(() => {
       const rect = (element: Element) => {
