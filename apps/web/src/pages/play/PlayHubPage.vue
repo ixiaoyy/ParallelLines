@@ -3,7 +3,8 @@ import {
   ArrowRightOutlined,
   LockOutlined,
 } from "@ant-design/icons-vue";
-import { computed, defineAsyncComponent, onBeforeUnmount, ref } from "vue";
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
 import { requestFableSpaceSsoTicket } from "@/features/auth/api";
 import { useBoards } from "@/features/boards/queries";
@@ -13,13 +14,17 @@ import {
   readCachedHomeRailBoards,
   readCachedHomeRailTags,
 } from "@/pages/home/homeRailCache";
+import { hasAccessToken } from "@/shared/api/client";
 import { useMediaQuery } from "@/shared/lib/useMediaQuery";
+import { readRouteParam } from "@/shared/router/params";
 
 const ForumLeftRail = defineAsyncComponent(() =>
   import("@/features/navigation/components/ForumLeftRail.vue"),
 );
 
 const match3Url = match3LaunchUrl("play-hub");
+const route = useRoute();
+const router = useRouter();
 const isDesktopRailVisible = useMediaQuery("(min-width: 981px)", true);
 const boardsQuery = useBoards(isDesktopRailVisible);
 const tagsQuery = useTags(30, isDesktopRailVisible);
@@ -46,6 +51,7 @@ let ticketController: AbortController | null = null;
 let ticketTimer: number | null = null;
 let navigationTimer: number | null = null;
 let pageDisposed = false;
+const MIRROR_SSO_QUERY_KEY = "mirror_sso";
 
 // Clears only timers and requests owned by the FableSpace launch control.
 function clearFableSpaceLaunch(): void {
@@ -86,6 +92,35 @@ async function launchFableSpace(): Promise<void> {
     clearFableSpaceLaunch();
   }
 }
+
+// Resumes the Keycloak forum-account handoff once, preserving it through forum login when needed.
+// Key parameters come from the current route; return value is none. Side effects: replaces the route and may launch Mirror Island.
+async function resumeMirrorSsoFromRoute(): Promise<void> {
+  const requested = readRouteParam(
+    route.query[MIRROR_SSO_QUERY_KEY] as string | string[] | undefined,
+  );
+  if (requested !== "1") return;
+
+  try {
+    if (!hasAccessToken()) {
+      await router.replace({ name: "auth", query: { redirect: route.fullPath } });
+      return;
+    }
+
+    const query = { ...route.query };
+    delete query[MIRROR_SSO_QUERY_KEY];
+    await router.replace({ name: "play-hub", query });
+    await launchFableSpace();
+  } catch {
+    if (pageDisposed) return;
+    isFableSpaceLaunching.value = false;
+    fableSpaceLaunchError.value = "论坛账号跳转未完成，请重试。";
+  }
+}
+
+onMounted(() => {
+  void resumeMirrorSsoFromRoute();
+});
 
 onBeforeUnmount(() => {
   pageDisposed = true;
