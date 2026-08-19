@@ -3,8 +3,9 @@ import {
   ArrowRightOutlined,
   LockOutlined,
 } from "@ant-design/icons-vue";
-import { computed, defineAsyncComponent } from "vue";
+import { computed, defineAsyncComponent, onBeforeUnmount, ref } from "vue";
 
+import { requestFableSpaceSsoTicket } from "@/features/auth/api";
 import { useBoards } from "@/features/boards/queries";
 import { match3LaunchUrl } from "@/features/play/products";
 import { useTags } from "@/features/tags/queries";
@@ -36,6 +37,60 @@ const railBoardsLoading = computed(
 const railTagsLoading = computed(
   () => tagsQuery.isLoading.value && cachedRailTags.length === 0,
 );
+
+const TICKET_TIMEOUT_MS = 8_000;
+const NAVIGATION_TIMEOUT_MS = 8_000;
+const isFableSpaceLaunching = ref(false);
+const fableSpaceLaunchError = ref("");
+let ticketController: AbortController | null = null;
+let ticketTimer: number | null = null;
+let navigationTimer: number | null = null;
+let pageDisposed = false;
+
+// Clears only timers and requests owned by the FableSpace launch control.
+function clearFableSpaceLaunch(): void {
+  ticketController?.abort();
+  ticketController = null;
+  if (ticketTimer !== null) window.clearTimeout(ticketTimer);
+  if (navigationTimer !== null) window.clearTimeout(navigationTimer);
+  ticketTimer = null;
+  navigationTimer = null;
+}
+
+// Requests one single-use forum ticket and navigates to its server-authorized Mirror Island callback.
+async function launchFableSpace(): Promise<void> {
+  if (isFableSpaceLaunching.value) return;
+  clearFableSpaceLaunch();
+  fableSpaceLaunchError.value = "";
+  isFableSpaceLaunching.value = true;
+  ticketController = new AbortController();
+  ticketTimer = window.setTimeout(() => ticketController?.abort(), TICKET_TIMEOUT_MS);
+
+  try {
+    const ticket = await requestFableSpaceSsoTicket(ticketController.signal);
+    if (ticketTimer !== null) window.clearTimeout(ticketTimer);
+    ticketTimer = null;
+    navigationTimer = window.setTimeout(() => {
+      if (pageDisposed) return;
+      isFableSpaceLaunching.value = false;
+      fableSpaceLaunchError.value = "跳转未完成，请重试。";
+    }, NAVIGATION_TIMEOUT_MS);
+    window.location.assign(ticket.redirect_url);
+  } catch {
+    if (pageDisposed) return;
+    const timedOut = ticketController?.signal.aborted === true;
+    isFableSpaceLaunching.value = false;
+    fableSpaceLaunchError.value = timedOut
+      ? "连接镜像岛超时，请重试。"
+      : "暂时无法进入镜像岛，请稍后重试。";
+    clearFableSpaceLaunch();
+  }
+}
+
+onBeforeUnmount(() => {
+  pageDisposed = true;
+  clearFableSpaceLaunch();
+});
 </script>
 
 <template>
@@ -57,19 +112,29 @@ const railTagsLoading = computed(
       </header>
 
       <section class="play-options" aria-label="可玩项目">
-        <a class="play-option" href="https://fable.pingxingxian.space/">
+        <button
+          class="play-option"
+          type="button"
+          :disabled="isFableSpaceLaunching"
+          :aria-busy="isFableSpaceLaunching"
+          @click="launchFableSpace"
+        >
           <span class="play-option__mark play-option__mark--private" aria-hidden="true">
             <LockOutlined />
           </span>
           <span class="play-option__copy">
             <strong>私密空间</strong>
-            <small>直接进入</small>
+            <small>{{ isFableSpaceLaunching ? "正在建立安全登录…" : "使用论坛账号进入" }}</small>
           </span>
           <span class="play-option__action">
-            进入
+            {{ isFableSpaceLaunching ? "请稍候" : "进入" }}
             <ArrowRightOutlined aria-hidden="true" />
           </span>
-        </a>
+        </button>
+
+        <p v-if="fableSpaceLaunchError" class="play-options__error" role="alert">
+          {{ fableSpaceLaunchError }}
+        </p>
 
         <a class="play-option" :href="match3Url">
           <span class="play-option__mark play-option__mark--match" aria-hidden="true">

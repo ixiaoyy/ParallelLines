@@ -75,6 +75,11 @@
   background: color-mix(in srgb, var(--primary) 4%, var(--bg-surface));
 }
 
+.play-option:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .play-option:focus-visible {
   box-shadow: inset 0 0 0 2px var(--focus-ring);
 }
@@ -162,6 +167,16 @@
 
 .play-option__action :deep(.anticon) {
   transition: transform 180ms ease;
+}
+
+.play-options__error {
+  margin: 0;
+  border-top: 1px solid var(--border);
+  padding: 0.85rem 2rem;
+  color: var(--danger, #dc2626);
+  background: color-mix(in srgb, var(--danger, #dc2626) 6%, var(--bg-surface));
+  font-size: 0.88rem;
+  font-weight: 650;
 }
 
 .play-option:hover .play-option__action :deep(.anticon),
