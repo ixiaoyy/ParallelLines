@@ -63,6 +63,22 @@ function clearFableSpaceLaunch(): void {
   navigationTimer = null;
 }
 
+// Suspends this page's launch work once the browser starts leaving the document.
+// Parameters: none. Return value: none. Side effects: blocks stale callbacks and clears owned work.
+function handlePageHide(): void {
+  pageDisposed = true;
+  clearFableSpaceLaunch();
+}
+
+// Restores the private-space entry after this document returns from the browser back-forward cache.
+// Key parameter is the browser page transition; return value is none. Side effect: resets launch UI state.
+function handlePageShow(event: PageTransitionEvent): void {
+  if (!event.persisted) return;
+  pageDisposed = false;
+  isFableSpaceLaunching.value = false;
+  fableSpaceLaunchError.value = "";
+}
+
 // Requests one single-use forum ticket and navigates to its server-authorized Mirror Island callback.
 async function launchFableSpace(): Promise<void> {
   if (isFableSpaceLaunching.value) return;
@@ -119,11 +135,15 @@ async function resumeMirrorSsoFromRoute(): Promise<void> {
 }
 
 onMounted(() => {
+  window.addEventListener("pagehide", handlePageHide);
+  window.addEventListener("pageshow", handlePageShow);
   void resumeMirrorSsoFromRoute();
 });
 
 onBeforeUnmount(() => {
   pageDisposed = true;
+  window.removeEventListener("pagehide", handlePageHide);
+  window.removeEventListener("pageshow", handlePageShow);
   clearFableSpaceLaunch();
 });
 </script>

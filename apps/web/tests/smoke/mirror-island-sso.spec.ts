@@ -34,3 +34,36 @@ test("signed-in forum-account handoff issues one ticket and returns to Mirror Is
   );
   expect(ticketRequests).toBe(1);
 });
+
+test("returning from browser cache does not show a stale navigation failure", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("parallellines.access_token", "smoke-access-token");
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) =>
+      nativeSetTimeout(handler, timeout === 8_000 ? 500 : timeout, ...args)) as typeof window.setTimeout;
+  });
+  await page.route("**/api/v1/auth/fablespace/ticket", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          redirect_url: "/play#mirror-sso-pending",
+          expires_in_seconds: 60,
+        },
+      }),
+    });
+  });
+
+  await page.goto("/play");
+  await page.getByRole("button", { name: /私密空间/ }).click();
+  await expect(page).toHaveURL(/\/play#mirror-sso-pending$/);
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: true }));
+    window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+  });
+  await page.waitForTimeout(600);
+
+  await expect(page.getByText("跳转未完成，请重试。")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /私密空间/ })).toBeEnabled();
+});
