@@ -67,18 +67,42 @@
 .app-shell--profile-screen .topbar {
   top: 0;
   width: 100%;
-  min-height: 5.5rem;
+  min-height: 6.25rem;
   margin: 0;
   border-top: 0;
   border-inline: 0;
   border-radius: 0;
-  padding: 0.75rem max(2.5rem, calc((100% - 1450px) / 2));
+  padding: 0.85rem max(2.5rem, calc((100% - 1450px) / 2));
   box-shadow: 0 1px 0 var(--border);
 }
 
 .app-shell--profile-screen .shell-main {
   width: min(1450px, calc(100% - 5rem));
-  padding-top: 1.6rem;
+  padding-top: 2.15rem;
+}
+
+.app-shell--profile-screen .brand-mark {
+  width: 3.35rem;
+  height: 3.35rem;
+  border-radius: 1rem;
+}
+
+.app-shell--profile-screen .brand strong {
+  font-size: 1.18rem;
+}
+
+.app-shell--profile-screen .brand small {
+  font-size: 0.78rem;
+}
+
+.app-shell--profile-screen .search-box {
+  min-height: 3.55rem;
+  padding-inline: 1rem 0.5rem;
+}
+
+.app-shell--profile-screen .publish-link :deep(.ui-button) {
+  min-height: 3.1rem;
+  padding-inline: 1.25rem !important;
 }
 
 .brand {

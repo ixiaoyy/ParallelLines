@@ -5,14 +5,9 @@ import {
   CompassOutlined,
   EditFilled,
   EllipsisOutlined,
-  FileTextOutlined,
   HomeOutlined,
-  MessageOutlined,
   SearchOutlined,
-  TeamOutlined,
-  TrophyOutlined,
   UserOutlined,
-  UserAddOutlined,
 } from "@ant-design/icons-vue";
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -40,7 +35,6 @@ import { useUploadAvatar } from "@/features/uploads/queries";
 import {
   activityTypeLabel,
   profileDisplayName,
-  profileVisibilityLabel,
   type UserActivityType,
   type UserProfileUpdateRequest,
 } from "@/features/users/model";
@@ -270,14 +264,14 @@ const relationshipUsersQuery = useUserRelationshipUsers(
 const relationshipUsers = computed(() => relationshipUsersQuery.data.value ?? []);
 
 // profilePanels 用途：根据访问者身份组织个人页主内容切换项；无参数，返回可渲染面板列表且无副作用。
-const profilePanels = computed<Array<{ key: ProfilePanel; label: string }>>(() => {
-  const panels: Array<{ key: ProfilePanel; label: string }> = [
-    { key: "topics", label: "主题" },
-    { key: "activity", label: "活动" },
+const profilePanels = computed<Array<{ key: ProfilePanel; label: string; count?: number }>>(() => {
+  const panels: Array<{ key: ProfilePanel; label: string; count?: number }> = [
+    { key: "topics", label: "主题", count: profile.value?.topic_count ?? 0 },
+    { key: "activity", label: "活动", count: profile.value?.post_count ?? 0 },
   ];
 
   if (canViewRelationshipLists.value) {
-    panels.push({ key: "social", label: "关注" });
+    panels.push({ key: "social", label: "关注", count: profile.value?.following_count ?? 0 });
   }
 
   if (isOwnProfile.value) {
@@ -299,10 +293,10 @@ const profileStats = computed(() => {
   const followerCount = profile.value?.follower_count ?? 0;
 
   return [
-    { label: "主题", value: topicCount, note: topicCount > 0 ? "已发起讨论" : "等待首帖", icon: FileTextOutlined },
-    { label: "回复", value: postCount, note: postCount > 0 ? "参与讨论" : "还没有回复", icon: MessageOutlined },
-    { label: "关注", value: followingCount, note: followingCount > 0 ? "正在关注" : "还未关注", icon: UserAddOutlined },
-    { label: "粉丝", value: followerCount, note: followerCount > 0 ? "关注者" : "等待关注", icon: TeamOutlined },
+    { label: "主题", value: topicCount, displayValue: String(topicCount).padStart(2, "0") },
+    { label: "回复", value: postCount, displayValue: String(postCount).padStart(2, "0") },
+    { label: "关注", value: followingCount, displayValue: String(followingCount).padStart(2, "0") },
+    { label: "粉丝", value: followerCount, displayValue: String(followerCount).padStart(2, "0") },
   ];
 });
 
@@ -766,99 +760,62 @@ function socialErrorMessage(error: unknown): string {
         用户资料暂时不可用。请稍后重试，或确认用户是否存在。
       </div>
       <template v-else-if="profile">
-        <div class="profile-hero__main">
-          <div class="profile-identity-card">
-            <div class="profile-avatar-panel">
-              <div class="profile-avatar-frame">
-                <UiAvatar
-                  :name="profile.username"
-                  :src="resolveApiAssetUrl(profile.avatar_url)"
-                  :role="null"
-                  :level="null"
-                  size="lg"
-                />
-                <span class="profile-avatar-status" aria-hidden="true"></span>
-                <input
-                  v-if="isOwnProfile"
-                  ref="avatarInput"
-                  class="avatar-upload__input"
-                  type="file"
-                  accept="image/png,image/jpeg,image/gif,image/webp"
-                  @change="handleAvatarChange"
-                />
-              </div>
-              <div v-if="isOwnProfile" class="avatar-upload">
-                <UiButton type="button" tone="ghost" @click="openAvatarPicker">
-                  {{ avatarMutation.isPending.value ? "上传中…" : "更换头像" }}
-                </UiButton>
-                <span v-if="avatarStatus" role="status">{{ avatarStatus }}</span>
-              </div>
+        <div class="profile-identity-card">
+          <div class="profile-avatar-panel">
+            <div class="profile-avatar-frame">
+              <UiAvatar
+                :name="profile.username"
+                :src="resolveApiAssetUrl(profile.avatar_url)"
+                :role="null"
+                :level="null"
+                size="lg"
+              />
+              <span class="profile-avatar-status" aria-hidden="true"></span>
+              <input
+                v-if="isOwnProfile"
+                ref="avatarInput"
+                class="avatar-upload__input"
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                @change="handleAvatarChange"
+              />
             </div>
-
-            <div class="profile-copy">
-              <div class="profile-kicker">
-                <UiBadge tone="blue">{{ isAccountRoute ? "个人中心" : "公开资料" }}</UiBadge>
-                <UiBadge tone="green">{{ roleLabel(profile.role) }}</UiBadge>
-                <UiBadge tone="blue" :title="`社区等级 ${profile.level}，由参与和贡献累计提升。`">等级 {{ profile.level }}</UiBadge>
-                <UiBadge tone="amber" :title="`信任等级 ${profile.trust_level}：${profile.trust_level_label}`">信任 {{ profile.trust_level }}</UiBadge>
-                <span class="profile-status">
-                  <span class="profile-status__dot"></span>
-                  {{ statusLabel(profile.status) }}
-                </span>
-              </div>
-              <h1>{{ displayName }}</h1>
-              <p class="profile-meta">
-                @{{ profile.username }} · 加入 {{ joinedAt }} · {{ profileVisibilityLabel(profile.profile_visibility) }}
-              </p>
-              <p v-if="profileSummary" class="profile-summary">{{ profileSummary }}</p>
-              <p v-else-if="isOwnProfile" class="profile-summary profile-summary--empty">
-                这里还没有简介。写一句话，别人打开你的公开资料时会更快知道你关注什么。
-              </p>
-              <p v-else class="profile-summary profile-summary--empty">
-                这个成员还没有填写简介。
-              </p>
-              <div v-if="profile.website_url || profile.location" class="profile-links">
-                <a v-if="profile.website_url" :href="profile.website_url" target="_blank" rel="noopener noreferrer">
-                  {{ profile.website_url }}
-                </a>
-                <span v-if="profile.location">{{ profile.location }}</span>
-              </div>
+            <div v-if="isOwnProfile" class="avatar-upload">
+              <UiButton type="button" tone="ghost" @click="openAvatarPicker">
+                {{ avatarMutation.isPending.value ? "上传中…" : "更换头像" }}
+              </UiButton>
+              <span v-if="avatarStatus" role="status">{{ avatarStatus }}</span>
             </div>
           </div>
 
-          <dl class="profile-stats" aria-label="用户内容统计">
-            <div v-for="stat in profileStats" :key="stat.label">
-              <dt>
-                {{ stat.label }}
-                <span class="profile-stat-icon">
-                  <component :is="stat.icon" aria-hidden="true" />
-                </span>
-              </dt>
-              <dd>{{ stat.value }}</dd>
-              <span class="profile-stat-note">{{ stat.note }}</span>
+          <div class="profile-copy">
+            <h1>{{ displayName }}</h1>
+            <p class="profile-meta">@{{ profile.username }}</p>
+            <p v-if="profileSummary" class="profile-summary">{{ profileSummary }}</p>
+            <p v-else-if="isOwnProfile" class="profile-summary profile-summary--empty">
+              这里还没有简介。写一句话，让其他成员更快知道你关注什么。
+            </p>
+            <p v-else class="profile-summary profile-summary--empty">这个成员还没有填写简介。</p>
+            <div class="profile-kicker" aria-label="账号身份信息">
+              <UiBadge tone="gray">{{ isAccountRoute ? "个人中心" : "公开资料" }}</UiBadge>
+              <UiBadge tone="gray">{{ roleLabel(profile.role) }}</UiBadge>
+              <UiBadge tone="gray" :title="`社区等级 ${profile.level}，由参与和贡献累计提升。`">
+                等级 {{ profile.level }}
+              </UiBadge>
+              <UiBadge tone="gray" :title="`信任等级 ${profile.trust_level}：${profile.trust_level_label}`">
+                信任 {{ profile.trust_level }}
+              </UiBadge>
+              <span class="profile-status">
+                <span class="profile-status__dot"></span>
+                {{ statusLabel(profile.status) }}
+              </span>
+              <UiBadge tone="blue">{{ profile.trust_level_label }}</UiBadge>
             </div>
-          </dl>
-        </div>
-
-        <div class="profile-hero__footer">
-          <div class="profile-insights" aria-label="账号概览">
-            <div class="profile-insight">
-              <span>成长</span>
-              <strong>等级 {{ profile.level }} · {{ profile.points_balance }} 可用积分</strong>
-              <div class="profile-level-meter" :style="levelProgressStyle" aria-hidden="true">
-                <span></span>
-              </div>
-              <small>{{ profile.experience_total }} 经验 · {{ levelProgressPercent }}%</small>
-            </div>
-            <div class="profile-insight profile-insight--trust">
-              <span>信任</span>
-              <strong>信任等级 {{ profile.trust_level }} · {{ profile.trust_level_label }}</strong>
-              <div v-if="profileBadges.length" class="profile-badges-list">
-                <span v-for="badge in profileBadges.slice(0, 3)" :key="badge.id" class="profile-badge-chip">
-                  <em>{{ badge.icon }}</em>
-                  {{ badge.name }}
-                </span>
-              </div>
+            <div v-if="profile.website_url || profile.location" class="profile-links">
+              <a v-if="profile.website_url" :href="profile.website_url" target="_blank" rel="noopener noreferrer">
+                {{ profile.website_url }}
+              </a>
+              <span v-if="profile.location">{{ profile.location }}</span>
             </div>
           </div>
 
@@ -874,7 +831,6 @@ function socialErrorMessage(error: unknown): string {
             </RouterLink>
           </div>
           <div v-else class="profile-public-actions" aria-label="用户社交操作">
-            <p class="profile-relationship-copy">关系状态：{{ socialSummary }}</p>
             <div class="profile-primary-actions profile-primary-actions--social">
               <UiButton
                 type="button"
@@ -885,54 +841,68 @@ function socialErrorMessage(error: unknown): string {
                 {{ relationship?.blocked ? "已屏蔽" : relationship?.following ? "已关注" : "关注" }}
               </UiButton>
               <UiButton type="button" tone="subtle" @click="openMessageForm">私信</UiButton>
-              <UiButton
-                type="button"
-                tone="ghost"
-                :disabled="relationshipMutation.isPending.value"
-                @click="toggleRelationship('ignore', !relationship?.ignored)"
-              >
-                {{ relationship?.ignored ? "取消忽略" : "忽略" }}
-              </UiButton>
-              <UiButton
-                type="button"
-                tone="ghost"
-                :disabled="relationshipMutation.isPending.value"
-                @click="toggleRelationship('block', !relationship?.blocked)"
-              >
-                {{ relationship?.blocked ? "取消屏蔽" : "屏蔽" }}
-              </UiButton>
+              <details v-if="currentUserQuery.data.value" class="profile-secondary-actions">
+                <summary aria-label="更多用户操作"><EllipsisOutlined aria-hidden="true" /></summary>
+                <div>
+                  <UiButton
+                    type="button"
+                    tone="ghost"
+                    :disabled="relationshipMutation.isPending.value"
+                    @click="toggleRelationship('ignore', !relationship?.ignored)"
+                  >
+                    {{ relationship?.ignored ? "取消忽略" : "忽略" }}
+                  </UiButton>
+                  <UiButton
+                    type="button"
+                    tone="ghost"
+                    :disabled="relationshipMutation.isPending.value"
+                    @click="toggleRelationship('block', !relationship?.blocked)"
+                  >
+                    {{ relationship?.blocked ? "取消屏蔽" : "屏蔽" }}
+                  </UiButton>
+                </div>
+              </details>
             </div>
+            <p v-if="currentUserQuery.data.value" class="profile-relationship-copy">{{ socialSummary }}</p>
             <p v-if="socialStatus" class="profile-social-status" role="status">{{ socialStatus }}</p>
-            <div v-if="messageFormOpen" class="profile-message-form">
-              <label>
-                <span>私信标题</span>
-                <input v-model="messageTitle" type="text" maxlength="180" />
-              </label>
-              <label>
-                <span>第一条消息</span>
-                <textarea
-                  v-model="messageBody"
-                  rows="4"
-                  placeholder="写一段只对参与者可见的上下文…"
-                ></textarea>
-              </label>
-              <div class="profile-message-actions">
-                <UiButton
-                  type="button"
-                  tone="primary"
-                  :disabled="createMessageMutation.isPending.value"
-                  @click="sendPrivateMessage"
-                >
-                  {{ createMessageMutation.isPending.value ? "发送中…" : "创建私信" }}
-                </UiButton>
-                <UiButton type="button" tone="subtle" @click="messageFormOpen = false">
-                  取消
-                </UiButton>
-              </div>
-            </div>
+          </div>
+        </div>
+
+        <div v-if="!isOwnProfile && messageFormOpen" class="profile-message-form">
+          <label>
+            <span>私信标题</span>
+            <input v-model="messageTitle" type="text" maxlength="180" />
+          </label>
+          <label>
+            <span>第一条消息</span>
+            <textarea v-model="messageBody" rows="4" placeholder="写一段只对参与者可见的上下文…"></textarea>
+          </label>
+          <div class="profile-message-actions">
+            <UiButton
+              type="button"
+              tone="primary"
+              :disabled="createMessageMutation.isPending.value"
+              @click="sendPrivateMessage"
+            >
+              {{ createMessageMutation.isPending.value ? "发送中…" : "创建私信" }}
+            </UiButton>
+            <UiButton type="button" tone="subtle" @click="messageFormOpen = false">取消</UiButton>
           </div>
         </div>
       </template>
+    </UiCard>
+
+    <UiCard v-if="profile" class="profile-stat-strip">
+      <dl class="profile-stats" aria-label="用户内容统计">
+        <div v-for="stat in profileStats" :key="stat.label">
+          <dd>{{ stat.displayValue }}</dd>
+          <dt>{{ stat.label }}</dt>
+        </div>
+      </dl>
+      <div class="profile-level-summary" :style="levelProgressStyle">
+        <strong>{{ profile.experience_total }} 经验 / {{ levelProgressPercent }}%</strong>
+        <div class="profile-level-meter" aria-hidden="true"><span></span></div>
+      </div>
     </UiCard>
 
     <div v-if="profile" class="profile-content-layout">
@@ -945,7 +915,8 @@ function socialErrorMessage(error: unknown): string {
             :class="{ active: activeProfilePanel === panel.key }"
             @click="selectProfilePanel(panel.key)"
           >
-            {{ panel.label }}
+            <span>{{ panel.label }}</span>
+            <em v-if="panel.count !== undefined">{{ String(panel.count).padStart(2, "0") }}</em>
           </button>
         </nav>
 
@@ -964,6 +935,7 @@ function socialErrorMessage(error: unknown): string {
       </UiCard>
       <TopicList
         v-else
+        appearance="profile"
         :topics="topicsQuery.data.value"
         :can-delete-topics="canDeleteTopics"
         :deleting-topic-id="deletingTopicId"
@@ -1241,46 +1213,47 @@ function socialErrorMessage(error: unknown): string {
       </main>
 
       <aside class="profile-sidebar" aria-label="个人资料侧栏">
-        <UiCard class="profile-side-card profile-side-card--badges">
+        <UiCard class="profile-side-card profile-community-card">
           <header>
-            <h2>个人勋章</h2>
-            <TrophyOutlined aria-hidden="true" />
+            <h2>社区档案</h2>
           </header>
-          <div v-if="profileBadges.length" class="profile-side-badges">
-            <span v-for="badge in profileBadges.slice(0, 6)" :key="badge.id" :title="badge.description">
-              <em>{{ badge.icon }}</em>
-              <strong>{{ badge.name }}</strong>
+          <section class="profile-community-section">
+            <span>加入</span>
+            <strong>{{ joinedAt }}</strong>
+          </section>
+          <section class="profile-community-section">
+            <h3>获得勋章</h3>
+            <div v-if="profileBadges.length" class="profile-side-badges">
+              <span v-for="badge in profileBadges.slice(0, 4)" :key="badge.id" :title="badge.description">
+                <em>{{ badge.icon }}</em>
+                <strong>{{ badge.name }}</strong>
+              </span>
+            </div>
+            <p v-else class="profile-side-empty">还没有公开勋章。</p>
+            <span v-if="profileBadges.length > 4" class="profile-side-link profile-side-link--muted">
+              已展示 4 / {{ profileBadges.length }} 个勋章
             </span>
-          </div>
-          <p v-else class="profile-side-empty">还没有公开勋章。</p>
+          </section>
+          <section class="profile-community-section">
+            <h3>常驻版块</h3>
+            <div v-if="topicsQuery.isLoading.value" class="profile-side-empty">正在读取版块…</div>
+            <div v-else-if="activeBoardSummaries.length" class="profile-board-list">
+              <RouterLink
+                v-for="board in activeBoardSummaries"
+                :key="board.slug"
+                :to="{ name: 'board-detail', params: { slug: board.slug } }"
+              >
+                <span class="profile-board-dot" :style="{ backgroundColor: board.color }" aria-hidden="true"></span>
+                <strong>{{ board.name }}</strong>
+                <em>{{ board.topicCount }} 主题 · {{ board.replyCount }} 回复</em>
+              </RouterLink>
+            </div>
+            <p v-else class="profile-side-empty">发布主题后，这里会展示真实参与过的版块。</p>
+            <RouterLink class="profile-side-link" to="/boards">查看全部版块</RouterLink>
+          </section>
           <span class="profile-side-mobile-copy">
-            查看全部 {{ profileBadges.length }} 个勋章
+            {{ profileBadges.length }} 个勋章 · {{ activeBoardSummaries.length }} 个常驻版块
           </span>
-          <span v-if="profileBadges.length > 6" class="profile-side-link profile-side-link--muted">
-            已展示 6 / {{ profileBadges.length }} 个勋章
-          </span>
-        </UiCard>
-
-        <UiCard class="profile-side-card">
-          <header>
-            <h2>参与版块</h2>
-            <FileTextOutlined aria-hidden="true" />
-          </header>
-          <div v-if="topicsQuery.isLoading.value" class="profile-side-empty">正在读取版块…</div>
-          <div v-else-if="activeBoardSummaries.length" class="profile-board-list">
-            <RouterLink
-              v-for="board in activeBoardSummaries"
-              :key="board.slug"
-              :to="{ name: 'board-detail', params: { slug: board.slug } }"
-            >
-              <span class="profile-board-dot" :style="{ backgroundColor: board.color }" aria-hidden="true"></span>
-              <strong>{{ board.name }}</strong>
-              <em>{{ board.topicCount }} 主题 · {{ board.replyCount }} 回复</em>
-            </RouterLink>
-          </div>
-          <p v-else class="profile-side-empty">发布主题后，这里会展示真实参与过的版块。</p>
-          <span class="profile-side-mobile-copy">查看全部参与的版块</span>
-          <RouterLink class="profile-side-link" to="/boards">查看全部版块</RouterLink>
         </UiCard>
       </aside>
 

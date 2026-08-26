@@ -313,3 +313,214 @@
     justify-self: start;
   }
 }
+
+.topic-row--profile {
+  grid-template-columns: auto minmax(0, 1fr) 6rem 4rem 5rem;
+  gap: 1.65rem;
+  align-items: end;
+  min-height: 16.5rem;
+  margin-bottom: 0;
+  padding: 1.55rem;
+  border-color: rgba(var(--primary-rgb), 0.09);
+  border-radius: 0.9rem;
+  box-shadow: 0 10px 28px rgba(var(--shadow-rgb), 0.07);
+}
+
+.topic-row--profile.topic-row--with-admin-actions {
+  grid-template-columns: auto minmax(0, 1fr) 6rem 4rem 5rem;
+}
+
+.topic-profile-avatar {
+  position: relative;
+  z-index: 2;
+  align-self: start;
+}
+
+.topic-row--profile :deep(.topic-profile-avatar.avatar) {
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 0;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  box-shadow: 0 8px 18px rgba(var(--primary-rgb), 0.16);
+}
+
+.topic-row--profile .topic-main {
+  align-self: stretch;
+  padding-right: 1.5rem;
+}
+
+.topic-row--profile .topic-title {
+  font-size: 1.14rem;
+  font-weight: 820;
+}
+
+.topic-row--profile .topic-excerpt {
+  max-width: 44rem;
+  margin-top: 0.65rem;
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.8;
+  -webkit-line-clamp: 3;
+}
+
+.topic-row--profile .topic-meta-line {
+  margin-top: 1rem;
+}
+
+.topic-row--profile .answer-state {
+  min-width: 0;
+  flex-wrap: nowrap;
+  gap: 0.45rem;
+  align-items: center;
+  color: var(--text);
+}
+
+.topic-row--profile .answer-state::before {
+  width: 0.52rem;
+  height: 0.52rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--btn-primary-bg);
+  content: "";
+}
+
+.topic-row--profile .answer-state svg,
+.topic-row--profile .answer-state small {
+  display: none;
+}
+
+.topic-row--profile .answer-state strong {
+  flex-basis: auto;
+  font-size: 0.78rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.topic-row--profile .topic-stat,
+.topic-row--profile .topic-activity {
+  align-self: end;
+}
+
+.topic-row--profile .topic-activity strong {
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
+.topic-row--profile .topic-activity span {
+  display: none;
+}
+
+.topic-row--profile .topic-admin-actions {
+  position: absolute;
+  top: 1.35rem;
+  right: 1.35rem;
+}
+
+.topic-overflow-menu {
+  position: relative;
+}
+
+.topic-overflow-menu summary {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  color: var(--text);
+  background: var(--bg-subtle);
+  cursor: pointer;
+  list-style: none;
+}
+
+.topic-overflow-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.topic-overflow-menu summary:hover,
+.topic-overflow-menu summary:focus-visible {
+  color: var(--primary);
+  border-color: var(--theme-soft-border-hover);
+  outline: none;
+  background: var(--theme-soft-bg);
+}
+
+.topic-overflow-menu > div {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 5;
+  width: 9.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  padding: 0.35rem;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-elevated);
+}
+
+.topic-overflow-menu .topic-delete-button {
+  width: 100%;
+  min-height: 2.35rem;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+}
+
+@media (max-width: 920px) {
+  .topic-row--profile,
+  .topic-row--profile.topic-row--with-admin-actions {
+    grid-template-columns: auto minmax(0, 1fr) 5.4rem 3.5rem 4.5rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .topic-row--profile,
+  .topic-row--profile.topic-row--with-admin-actions {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.8rem;
+    min-height: 0;
+    padding: 1rem;
+  }
+
+  .topic-row--profile .topic-main {
+    padding-right: 2.4rem;
+  }
+
+  .topic-row--profile .topic-excerpt {
+    -webkit-line-clamp: 3;
+  }
+
+  .topic-row--profile .answer-state,
+  .topic-row--profile .topic-stat,
+  .topic-row--profile .topic-activity {
+    grid-column: 2;
+    display: inline-flex;
+    align-items: center;
+    margin-right: 0.75rem;
+  }
+
+  .topic-row--profile .answer-state {
+    grid-row: 2;
+  }
+
+  .topic-row--profile .topic-stat {
+    grid-row: 3;
+  }
+
+  .topic-row--profile .topic-activity {
+    grid-row: 4;
+  }
+
+  .topic-row--profile .topic-admin-actions {
+    top: 0.9rem;
+    right: 0.9rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topic-overflow-menu summary {
+    transition: none;
+  }
+}

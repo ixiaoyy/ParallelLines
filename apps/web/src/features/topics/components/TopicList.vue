@@ -11,12 +11,14 @@ const props = withDefaults(
     emptyDescription?: string;
     canDeleteTopics?: boolean;
     deletingTopicId?: string | null;
+    appearance?: "default" | "profile";
   }>(),
   {
     emptyTitle: "还没有主题",
     emptyDescription: "可以稍后再来看看。",
     canDeleteTopics: false,
     deletingTopicId: null,
+    appearance: "default",
   },
 );
 
@@ -34,7 +36,11 @@ const orderedTopics = computed(() =>
 </script>
 
 <template>
-  <section class="topic-list-shell" aria-labelledby="topic-list-heading">
+  <section
+    class="topic-list-shell"
+    :class="`topic-list-shell--${appearance}`"
+    aria-labelledby="topic-list-heading"
+  >
     <header class="topic-list-header">
       <h2 id="topic-list-heading">主题</h2>
       <span>状态</span>
@@ -50,6 +56,7 @@ const orderedTopics = computed(() =>
         :topic="topic"
         :can-delete-topic="canDeleteTopics"
         :deleting-topic="deletingTopicId === topic.id"
+        :appearance="appearance"
         @delete-topic="emit('deleteTopic', $event)"
       />
     </div>

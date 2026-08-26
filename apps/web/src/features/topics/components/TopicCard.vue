@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircleOutlined, DeleteOutlined, LockOutlined } from "@ant-design/icons-vue";
+import { CheckCircleOutlined, DeleteOutlined, EllipsisOutlined, LockOutlined } from "@ant-design/icons-vue";
 import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
@@ -15,10 +15,12 @@ const props = withDefaults(
     topic: TopicCardVM;
     canDeleteTopic?: boolean;
     deletingTopic?: boolean;
+    appearance?: "default" | "profile";
   }>(),
   {
     canDeleteTopic: false,
     deletingTopic: false,
+    appearance: "default",
   },
 );
 
@@ -68,6 +70,7 @@ function requestDeleteTopic() {
     class="topic-row"
     :class="[
       boardToneClass(topic.boardSlug),
+      `topic-row--${appearance}`,
       { 'topic-row--pinned': topic.pinned, 'topic-row--with-admin-actions': canDeleteTopic },
     ]"
   >
@@ -77,6 +80,16 @@ function requestDeleteTopic() {
       :aria-label="`打开主题：${topic.title}`"
       tabindex="-1"
       aria-hidden="true"
+    />
+    <UiAvatar
+      v-if="appearance === 'profile'"
+      class="topic-profile-avatar"
+      :src="resolveApiAssetUrl(topic.authorAvatarUrl)"
+      :name="topic.authorName"
+      :role="topic.authorRole"
+      :level="topic.authorLevel"
+      size="sm"
+      :title="topic.authorName"
     />
     <div class="topic-main">
       <div class="topic-title-line">
@@ -110,7 +123,7 @@ function requestDeleteTopic() {
         </RouterLink>
       </div>
 
-      <div class="participant-strip" aria-label="发起人">
+      <div v-if="appearance !== 'profile'" class="participant-strip" aria-label="发起人">
         <UiAvatar
           :src="resolveApiAssetUrl(topic.authorAvatarUrl)"
           :name="topic.authorName"
@@ -142,8 +155,26 @@ function requestDeleteTopic() {
       <span>{{ topic.authorName }}</span>
     </div>
 
-    <div v-if="canDeleteTopic" class="topic-admin-actions">
+    <div v-if="canDeleteTopic" class="topic-admin-actions" @click.stop>
+      <details v-if="appearance === 'profile'" class="topic-overflow-menu">
+        <summary :aria-label="`主题操作：${topic.title}`" :title="`主题操作：${topic.title}`">
+          <EllipsisOutlined aria-hidden="true" />
+        </summary>
+        <div>
+          <button
+            class="topic-delete-button"
+            type="button"
+            :disabled="deletingTopic"
+            :aria-label="`删除主题：${topic.title}`"
+            @click.stop.prevent="requestDeleteTopic"
+          >
+            <DeleteOutlined aria-hidden="true" />
+            <span>{{ deletingTopic ? "删除中" : "删除主题" }}</span>
+          </button>
+        </div>
+      </details>
       <button
+        v-else
         class="topic-delete-button"
         type="button"
         :disabled="deletingTopic"
