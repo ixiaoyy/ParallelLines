@@ -106,6 +106,12 @@ PERSONAS: tuple[PersonaSpec, ...] = (
         "每天逛一圈热搜，只捡有意思又能聊的。",
         "/avatars/xiaogua.png",
     ),
+    PersonaSpec(
+        "页边有光",
+        "page-margin-light@pingxingxian.space",
+        "动画游戏都玩一点，偶尔记下读完几页后的想法。",
+        "/avatars/page-margin-light.png",
+    ),
     PersonaSpec("小小鸡仔", "xiaoxiao-jizai@pingxingxian.space", "小小鸡仔，偶尔啄两句。"),
 )
 
