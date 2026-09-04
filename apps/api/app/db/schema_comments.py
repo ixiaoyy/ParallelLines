@@ -4,6 +4,8 @@ from collections.abc import Mapping
 
 from sqlalchemy import MetaData
 
+from app.core.personas import PERSONA_KIND_COMMENT
+
 COMMON_COLUMN_COMMENTS: dict[str, str] = {
     "id": "主键 ID；数据库使用数值自增 BIGINT，API 层按字符串返回。",
     "created_at": "记录创建时间（UTC）。",
@@ -111,6 +113,7 @@ COLUMN_COMMENTS: dict[str, dict[str, str]] = {
         "experience_total": "用户累计成长值，用于按集中等级规则计算 level；兑换不扣减。默认 0。",
         "status": "账号状态：正常、禁言、封禁或删除。",
         "is_persona": "是否为运营维护的马甲账号；真实用户增长统计必须排除。",
+        "persona_kind": PERSONA_KIND_COMMENT,
         "last_seen_at": "用户最后活跃时间。",
         "two_factor_enabled": "是否启用 TOTP 二次验证。",
         "two_factor_secret": "TOTP Base32 密钥；为空表示未完成启用。",

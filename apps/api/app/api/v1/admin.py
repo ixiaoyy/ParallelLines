@@ -177,9 +177,14 @@ async def update_user(
     current_user: CurrentUserDep,
 ) -> ApiResponse[AdminUserResponse]:
     user = await AdminService(session, settings).update_user(user_id, payload, current_user)
-    from app.api.seo import invalidate_sitemap_response_cache
+    if payload.model_fields_set & {"is_persona", "persona_kind"}:
+        from app.api.v1.topics import invalidate_topic_write_response_caches
 
-    invalidate_sitemap_response_cache()
+        invalidate_topic_write_response_caches()
+    else:
+        from app.api.seo import invalidate_sitemap_response_cache
+
+        invalidate_sitemap_response_cache()
     return ApiResponse(data=user)
 
 

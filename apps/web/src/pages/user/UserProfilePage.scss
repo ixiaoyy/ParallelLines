@@ -205,6 +205,14 @@
   color: var(--muted);
 }
 
+.profile-hero .profile-operator-notice {
+  margin: 0.6rem 0 0;
+  color: var(--text);
+  font-size: 0.84rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
 .profile-links {
   display: flex;
   flex-wrap: wrap;

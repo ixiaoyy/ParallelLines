@@ -1,7 +1,10 @@
+import type { PersonaKind } from "@/entities/user/model";
 import type { UserBadgeResponse } from "@/features/badges/model";
 import type { UserRole, UserStatus } from "@/features/auth/model";
 
 export interface UserProfile {
+  is_persona: boolean;
+  persona_kind: PersonaKind | null;
   id: string;
   username: string;
   avatar_url: string | null;
@@ -41,6 +44,8 @@ export interface UserProfileUpdateRequest {
 }
 
 export interface UserDirectoryEntry {
+  is_persona: boolean;
+  persona_kind: PersonaKind | null;
   id: string;
   username: string;
   display_name: string | null;

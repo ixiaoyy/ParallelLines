@@ -1,3 +1,5 @@
+import type { PersonaKind } from "@/entities/user/model";
+
 export interface PostItemVM {
   id: string;
   topicId: string;
@@ -6,6 +8,8 @@ export interface PostItemVM {
   authorName: string;
   authorAvatarUrl: string | null;
   authorRole: string;
+  authorIsPersona: boolean | null;
+  authorPersonaKind: PersonaKind | null;
   authorLevel: number;
   authorTrustLevel: number;
   authorTrustLevelLabel: string;

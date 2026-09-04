@@ -4,6 +4,7 @@ import { computed, onUnmounted, ref, watch } from "vue";
 import type { BoardSummary } from "@/entities/board/model";
 import { sortBoardsWithFeedbackLast } from "@/entities/board/order";
 import type { TopicCardVM } from "@/entities/topic/model";
+import OperatorIdentityBadge from "@/features/users/components/OperatorIdentityBadge.vue";
 import type { TagItemVM } from "@/features/tags/model";
 import HomeTopicRow from "@/pages/home/components/HomeTopicRow.vue";
 import type { DiscoveryTab } from "@/pages/home/discovery";
@@ -179,6 +180,10 @@ onUnmounted(() => observer?.disconnect());
         <p>{{ todayProgramTopic.excerpt }}</p>
         <div class="daily-program__meta">
           <span>{{ todayProgramTopic.authorName }}</span>
+          <OperatorIdentityBadge
+            :is-persona="todayProgramTopic.authorIsPersona"
+            :kind="todayProgramTopic.authorPersonaKind"
+          />
           <span>{{ relativeTime(todayProgramTopic.lastPostedAt) }}</span>
           <span v-for="tag in todayProgramTags" :key="tag">#{{ tag }}</span>
         </div>

@@ -27,7 +27,18 @@ async def run_migration_import(
     session: SessionDep,
     current_user: CurrentUserDep,
 ) -> ApiResponse[MigrationImportResponse]:
-    return ApiResponse(data=await MigrationService(session).run_import(payload, current_user))
+    """Return the committed import result and refresh affected public read caches.
+
+    Payload contains validated records and current_user supplies the existing
+    admin gate. Preview imports do not enter this path or invalidate caches.
+    """
+
+    result = await MigrationService(session).run_import(payload, current_user)
+    if result.created or result.updated:
+        from app.api.v1.topics import invalidate_topic_write_response_caches
+
+        invalidate_topic_write_response_caches()
+    return ApiResponse(data=result)
 
 
 @router.get("/export", response_model=ApiResponse[MigrationExportResponse])

@@ -46,6 +46,7 @@ async def test_admin_migration_import_preview_run_export_and_errors() -> None:
                     "username": "imported_author",
                     "email": "imported_author@example.com",
                     "is_persona": True,
+                    "persona_kind": "editorial",
                 },
                 {"username": "reply_author", "email": "reply_author@example.com"},
             ],
@@ -110,6 +111,7 @@ async def test_admin_migration_import_preview_run_export_and_errors() -> None:
             user for user in data["users"] if user["username"] == "imported_author"
         )
         assert imported_author["is_persona"] is True
+        assert imported_author["persona_kind"] == "editorial"
 
         bad = await client.post(
             "/api/v1/admin/migrations/import/preview",

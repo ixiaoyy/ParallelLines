@@ -3,6 +3,7 @@ import { CheckCircleOutlined, DeleteOutlined, EllipsisOutlined, LockOutlined } f
 import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
+import OperatorIdentityBadge from "@/features/users/components/OperatorIdentityBadge.vue";
 import { resolveApiAssetUrl } from "@/shared/api/client";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
@@ -93,6 +94,11 @@ function requestDeleteTopic() {
     />
     <div class="topic-main">
       <div class="topic-title-line">
+        <OperatorIdentityBadge
+          v-if="appearance === 'profile'"
+          :is-persona="topic.authorIsPersona"
+          :kind="topic.authorPersonaKind"
+        />
         <UiBadge v-if="topic.pinned" tone="amber">置顶</UiBadge>
         <UiBadge v-if="topic.featured && !topic.solved" tone="green">精华</UiBadge>
         <UiBadge v-if="topic.unreadCount" tone="blue">{{ topic.unreadCount }} 新</UiBadge>
@@ -132,9 +138,11 @@ function requestDeleteTopic() {
           size="sm"
           :title="topic.authorName"
         />
-        <span>
-          {{ topic.authorName }} 发起 · {{ relativeTime(topic.lastPostedAt) }}有新动静
-        </span>
+        <div class="participant-copy">
+          <span class="participant-name">{{ topic.authorName }}</span>
+          <OperatorIdentityBadge :is-persona="topic.authorIsPersona" :kind="topic.authorPersonaKind" />
+          <span>发起 · {{ relativeTime(topic.lastPostedAt) }}有新动静</span>
+        </div>
       </div>
     </div>
 

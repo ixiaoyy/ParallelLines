@@ -3,6 +3,7 @@ import { sortBoardsWithFeedbackLast } from "@/entities/board/order";
 import type { TopicCardVM } from "@/entities/topic/model";
 import type { TagItemVM } from "@/features/tags/model";
 import type { TopicSort } from "@/features/topics/model";
+import { isPersonaKind } from "@/features/users/operatorIdentity";
 import { getAccessToken, getRefreshToken } from "@/shared/api/client";
 import { readPersistentCache, writePersistentCache } from "@/shared/lib/persistentCache";
 
@@ -10,7 +11,7 @@ const CACHE_TTL_MS = 10 * 60 * 1000;
 const TOPIC_FEED_CACHE_TTL_MS = 2 * 60 * 1000;
 const PUBLIC_BOARDS_CACHE_KEY = "parallellines.homeRail.publicBoards.v1";
 const TAGS_CACHE_KEY_PREFIX = "parallellines.homeRail.tags.v2";
-const TOPIC_FEED_CACHE_KEY_PREFIX = "parallellines.homeFeed.topics.v1";
+const TOPIC_FEED_CACHE_KEY_PREFIX = "parallellines.homeFeed.topics.v2";
 
 export function readCachedHomeRailBoards(): BoardSummary[] {
   return readPersistentCache(PUBLIC_BOARDS_CACHE_KEY, isBoardSummaryArray, CACHE_TTL_MS) ?? [];
@@ -61,7 +62,7 @@ export function cacheHomeRailTags(tags: TagItemVM[]): TagItemVM[] {
 // Key parameters are `sort` and `topics`; return value is the cached slice.
 export function cacheHomeFeedTopics(sort: TopicSort, topics: TopicCardVM[]): TopicCardVM[] {
   const feedTopics = topics.slice(0, 30);
-  if (!feedTopics.length) {
+  if (!feedTopics.length || !feedTopics.every(isTopicCard)) {
     return feedTopics;
   }
 
@@ -162,6 +163,9 @@ function isTopicCard(value: unknown): value is TopicCardVM {
     typeof value.boardSlug === "string" &&
     typeof value.boardName === "string" &&
     typeof value.authorName === "string" &&
+    typeof value.authorIsPersona === "boolean" &&
+    (value.authorPersonaKind === null || isPersonaKind(value.authorPersonaKind)) &&
+    (value.authorIsPersona || value.authorPersonaKind === null) &&
     Array.isArray(value.tags) &&
     typeof value.excerpt === "string" &&
     typeof value.replyCount === "number" &&

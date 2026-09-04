@@ -305,9 +305,15 @@
   background: var(--danger-bg);
 }
 
-.account-status.is-persona {
-  color: color-mix(in srgb, var(--accent-violet) 72%, var(--title));
-  background: color-mix(in srgb, var(--accent-violet) 12%, transparent);
+.persona-kind-help {
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.persona-kind-field select {
+  max-width: 24rem;
 }
 
 .user-detail-back {

@@ -79,6 +79,7 @@ export interface components {
       last_seen_at?: string | null;
       level: number;
       level_progress_percent: number;
+      persona_kind: "editorial" | "automation" | "fictional" | null;
       points_balance: number;
       post_count: number;
       role: string;
@@ -95,6 +96,7 @@ export interface components {
       experience_delta?: number | null;
       is_persona?: boolean | null;
       level?: number | null;
+      persona_kind?: "editorial" | "automation" | "fictional" | null;
       points_delta?: number | null;
       role?: "user" | "moderator" | "admin" | null;
       status?: "pending_verification" | "active" | "silenced" | "suspended" | "deleted" | null;
@@ -1363,6 +1365,7 @@ export interface components {
       display_name?: string | null;
       email: string;
       is_persona?: boolean;
+      persona_kind?: "editorial" | "automation" | "fictional" | null;
       username: string;
     };
     ModerationActionResponse: {
@@ -1515,8 +1518,10 @@ export interface components {
     PostResponse: {
       accepted_answer?: boolean;
       author_avatar_url?: string | null;
+      author_is_persona: boolean;
       author_level: number;
       author_name: string;
+      author_persona_kind: "editorial" | "automation" | "fictional" | null;
       author_role: string;
       author_trust_level: number;
       author_trust_level_label: string;
@@ -1930,8 +1935,10 @@ export interface components {
       answer_mode?: boolean;
       author_avatar_url?: string | null;
       author_id: string;
+      author_is_persona: boolean;
       author_level: number;
       author_name: string;
+      author_persona_kind: "editorial" | "automation" | "fictional" | null;
       author_role: string;
       author_trust_level: number;
       author_trust_level_label: string;
@@ -2047,8 +2054,10 @@ export interface components {
       created_at: string;
       display_name?: string | null;
       id: string;
+      is_persona: boolean;
       last_seen_at?: string | null;
       level: number;
+      persona_kind: "editorial" | "automation" | "fictional" | null;
       points_balance: number;
       post_count: number;
       role: string;
@@ -2069,9 +2078,11 @@ export interface components {
       follower_count: number;
       following_count: number;
       id: string;
+      is_persona: boolean;
       level: number;
       level_progress_percent: number;
       location?: string | null;
+      persona_kind: "editorial" | "automation" | "fictional" | null;
       points_balance: number;
       post_count: number;
       profile_visibility: string;
@@ -2132,7 +2143,9 @@ export interface components {
       display_name?: string | null;
       followed_at: string;
       id: string;
+      is_persona: boolean;
       level: number;
+      persona_kind: "editorial" | "automation" | "fictional" | null;
       post_count: number;
       role: string;
       topic_count: number;

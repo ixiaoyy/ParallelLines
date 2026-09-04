@@ -1,7 +1,11 @@
+import type { PersonaKind } from "@/entities/user/model";
+
 export interface MigrationUserRecord {
   username: string;
   email: string;
   display_name?: string | null;
+  is_persona?: boolean;
+  persona_kind?: PersonaKind | null;
 }
 
 export interface MigrationBoardRecord {

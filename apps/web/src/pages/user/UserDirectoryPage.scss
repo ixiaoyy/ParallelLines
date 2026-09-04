@@ -45,7 +45,7 @@
 
 .directory-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
   gap: 0.8rem;
 }
 
@@ -88,7 +88,21 @@
   white-space: nowrap;
 }
 
-.directory-card__main span,
+.directory-card__identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.4rem;
+  min-width: 0;
+}
+
+.directory-card__identity strong {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.directory-card__main > span,
 .directory-card__main p,
 .directory-card__meta small {
   color: var(--muted);

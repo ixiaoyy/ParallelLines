@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 
 import { profileDisplayName, type UserDirectorySort } from "@/features/users/model";
+import OperatorIdentityBadge from "@/features/users/components/OperatorIdentityBadge.vue";
 import { useUserDirectory } from "@/features/users/queries";
 import { resolveApiAssetUrl } from "@/shared/api/client";
 import { relativeTime } from "@/shared/lib/format";
@@ -56,7 +57,10 @@ const sortOptions: { label: string; value: UserDirectorySort; description: strin
           :level="user.level"
         />
         <div class="directory-card__main">
-          <strong>{{ profileDisplayName(user) }}</strong>
+          <div class="directory-card__identity">
+            <strong>{{ profileDisplayName(user) }}</strong>
+            <OperatorIdentityBadge :is-persona="user.is_persona" :kind="user.persona_kind" />
+          </div>
           <span>@{{ user.username }} · {{ user.role }}</span>
           <p>主题 {{ user.topic_count }} · 回复 {{ user.post_count }} · {{ user.points_balance }} 可用积分</p>
         </div>

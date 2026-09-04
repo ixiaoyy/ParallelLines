@@ -19,6 +19,24 @@
   overflow-wrap: anywhere;
 }
 
+.topic-author {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.topic-author a {
+  max-width: 100%;
+  color: inherit;
+  overflow-wrap: anywhere;
+  text-underline-offset: 0.18em;
+}
+
 .topic-taxonomy {
   display: flex;
   flex-wrap: wrap;

@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.core.personas import PersonaKind
 from app.models.forum import Topic
 from app.models.social import PrivateMessageParticipant
 from app.schemas.badges import UserBadgeResponse
@@ -37,6 +38,8 @@ class UserPublic(ORMModel):
 
 
 class UserProfileResponse(ORMModel):
+    is_persona: bool
+    persona_kind: PersonaKind | None
     id: str
     username: str
     avatar_url: str | None = None
@@ -76,6 +79,8 @@ class UserProfileUpdateRequest(BaseModel):
 
 
 class UserDirectoryResponse(BaseModel):
+    is_persona: bool
+    persona_kind: PersonaKind | None
     id: str
     username: str
     display_name: str | None = None
@@ -92,6 +97,8 @@ class UserDirectoryResponse(BaseModel):
 
 
 class UserRelationshipUserResponse(BaseModel):
+    is_persona: bool
+    persona_kind: PersonaKind | None
     id: str
     username: str
     display_name: str | None = None

@@ -1,4 +1,6 @@
 import type { PollVM, TopicCardVM, TopicStatus } from "@/entities/topic/model";
+import type { PersonaKind } from "@/entities/user/model";
+import { normalizePersonaFlag, normalizePersonaKind } from "@/features/users/operatorIdentity";
 import { localizedText } from "@/shared/i18n/locale";
 
 export type TopicSort = "latest" | "hot" | "top" | "votes";
@@ -54,6 +56,8 @@ export interface TopicResponse {
   author_name: string;
   author_avatar_url?: string | null;
   author_role: string;
+  author_is_persona: boolean;
+  author_persona_kind: PersonaKind | null;
   author_level: number;
   author_trust_level: number;
   author_trust_level_label: string;
@@ -120,6 +124,8 @@ export function toTopicCard(topic: TopicResponse): TopicCardVM {
     authorName: topic.author_name,
     authorAvatarUrl: topic.author_avatar_url ?? null,
     authorRole: topic.author_role,
+    authorIsPersona: normalizePersonaFlag(topic.author_is_persona),
+    authorPersonaKind: normalizePersonaKind(topic.author_is_persona, topic.author_persona_kind),
     authorLevel: topic.author_level,
     authorTrustLevel: topic.author_trust_level,
     authorTrustLevelLabel: topic.author_trust_level_label,

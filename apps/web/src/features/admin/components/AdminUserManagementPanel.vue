@@ -8,6 +8,9 @@ import {
 } from "@ant-design/icons-vue";
 import { computed, nextTick, reactive, ref, watch } from "vue";
 
+import type { PersonaKind } from "@/entities/user/model";
+import OperatorIdentityBadge from "@/features/users/components/OperatorIdentityBadge.vue";
+import { normalizePersonaKind, operatorIdentity, OPERATOR_IDENTITIES } from "@/features/users/operatorIdentity";
 import type { UserBadgeResponse } from "@/features/badges/model";
 import { adminRoleLabel, adminStatusLabel } from "@/features/admin/model";
 import type { AdminUserResponse, AdminUserUpdateRequest } from "@/features/admin/model";
@@ -65,6 +68,7 @@ const userDraft = reactive({
   role: "user" as "user" | "moderator" | "admin",
   status: "active" as EditableUserStatus,
   isPersona: false,
+  personaKind: null as PersonaKind | null,
   level: 0,
   pointsDelta: 0,
   experienceDelta: 0,
@@ -101,6 +105,7 @@ watch(
         ? user.status
         : "active";
     userDraft.isPersona = user.is_persona;
+    userDraft.personaKind = normalizePersonaKind(user.is_persona, user.persona_kind);
     userDraft.level = user.level;
     userDraft.pointsDelta = 0;
     userDraft.experienceDelta = 0;
@@ -111,6 +116,13 @@ watch(
   },
   { immediate: true },
 );
+
+// Clear the draft subtype when the operator flag is disabled; no network or account mutation.
+watch(() => userDraft.isPersona, (isPersona) => {
+  if (!isPersona) {
+    userDraft.personaKind = null;
+  }
+});
 
 watch(
   badgeCatalog,
@@ -181,6 +193,7 @@ function saveUser(): void {
     role: userDraft.role,
     status: userDraft.status,
     is_persona: userDraft.isPersona,
+    persona_kind: userDraft.isPersona ? userDraft.personaKind : null,
     level: Number(userDraft.level),
   };
   const pointsDelta = Number(userDraft.pointsDelta);
@@ -344,7 +357,7 @@ function accountStatusClass(status: string): string {
               <small>{{ user.email }}</small>
             </span>
             <span class="user-list__meta">
-              <em>{{ adminRoleLabel(user.role) }} · {{ user.is_persona ? "运营/测试" : "普通" }}</em>
+              <em>{{ adminRoleLabel(user.role) }} · {{ operatorIdentity(user.is_persona, user.persona_kind)?.label ?? "普通" }}</em>
               <i :class="`is-${accountStatusClass(user.status)}`">{{ adminStatusLabel(user.status) }}</i>
             </span>
           </button>
@@ -375,7 +388,7 @@ function accountStatusClass(status: string): string {
               <span :class="`account-status is-${accountStatusClass(selectedUser.status)}`">
                 {{ adminStatusLabel(selectedUser.status) }}
               </span>
-              <span v-if="selectedUser.is_persona" class="account-status is-persona">运营/测试</span>
+              <OperatorIdentityBadge :is-persona="selectedUser.is_persona" :kind="selectedUser.persona_kind" />
             </div>
             <p>{{ selectedUser.email }}</p>
           </div>
@@ -449,6 +462,18 @@ function accountStatusClass(status: string): string {
                 <option :value="false">普通账号</option>
                 <option :value="true">运营/测试账号</option>
               </select>
+            </label>
+            <label class="editor-field--wide persona-kind-field">
+              <span>公开身份</span>
+              <select v-model="userDraft.personaKind" :disabled="!userDraft.isPersona">
+                <option :value="null">未细分（运营角色）</option>
+                <option v-for="identity in OPERATOR_IDENTITIES" :key="identity.kind" :value="identity.kind">
+                  {{ identity.label }}
+                </option>
+              </select>
+              <small class="persona-kind-help">
+                {{ operatorIdentity(userDraft.isPersona, userDraft.personaKind)?.description ?? "仅运营/测试账号可选择公开身份。" }}
+              </small>
             </label>
           </div>
         </section>

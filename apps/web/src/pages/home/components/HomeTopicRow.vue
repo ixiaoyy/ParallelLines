@@ -2,6 +2,7 @@
 import { DeleteOutlined } from "@ant-design/icons-vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
+import OperatorIdentityBadge from "@/features/users/components/OperatorIdentityBadge.vue";
 import { boardToneClass, tagToneClass } from "@/shared/theme/boardPalette";
 import { compactNumber, relativeTime } from "@/shared/lib/format";
 import { topicDetailRoute } from "@/shared/router/topicRoutes";
@@ -66,6 +67,10 @@ function requestDeleteTopic() {
           <span v-if="topic.tags.includes('今日节目')" class="topic-status topic-status--program">今日节目</span>
           <span v-if="topic.featured" class="topic-status topic-status--signal">精选</span>
           <span v-if="topic.solved" class="topic-status topic-status--solved">已解决</span>
+        </div>
+        <div class="topic-author" aria-label="发起人">
+          <span>{{ topic.authorName }}</span>
+          <OperatorIdentityBadge :is-persona="topic.authorIsPersona" :kind="topic.authorPersonaKind" />
         </div>
         <p>{{ topic.excerpt }}</p>
         <div class="topic-tags">

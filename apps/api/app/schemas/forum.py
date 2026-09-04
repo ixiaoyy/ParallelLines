@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.core.personas import PersonaKind, normalize_persona_kind
 from app.db.base import utcnow
 from app.models.forum import (
     Board,
@@ -246,6 +247,8 @@ class TopicMergeRequest(BaseModel):
 
 
 class TopicResponse(BaseModel):
+    author_is_persona: bool
+    author_persona_kind: PersonaKind | None
     id: str
     slug: str
     title: str
@@ -319,6 +322,10 @@ class TopicResponse(BaseModel):
             author_name=topic.author.username,
             author_avatar_url=topic.author.avatar_url,
             author_role=topic.author.role,
+            author_is_persona=topic.author.is_persona,
+            author_persona_kind=normalize_persona_kind(
+                topic.author.is_persona, topic.author.persona_kind
+            ),
             author_level=topic.author.level,
             author_trust_level=topic.author.trust_level,
             author_trust_level_label=topic.author.trust_level_label,
@@ -357,6 +364,8 @@ class TopicResponse(BaseModel):
 
 
 class PostResponse(BaseModel):
+    author_is_persona: bool
+    author_persona_kind: PersonaKind | None
     id: str
     topic_id: str
     user_id: str
@@ -397,6 +406,10 @@ class PostResponse(BaseModel):
             author_name=post.author.username,
             author_avatar_url=post.author.avatar_url,
             author_role=post.author.role,
+            author_is_persona=post.author.is_persona,
+            author_persona_kind=normalize_persona_kind(
+                post.author.is_persona, post.author.persona_kind
+            ),
             author_level=post.author.level,
             author_trust_level=post.author.trust_level,
             author_trust_level_label=post.author.trust_level_label,

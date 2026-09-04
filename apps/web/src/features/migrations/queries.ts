@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed } from "vue";
 
 import { hasAccessToken } from "@/shared/api/client";
@@ -14,8 +14,19 @@ export function usePreviewMigrationImport() {
 }
 
 export function useRunMigrationImport() {
+  const queryClient = useQueryClient();
   return useMutation<MigrationImportResponse, Error, MigrationImportRequest>({
     mutationFn: runMigrationImport,
+    onSuccess: async (result) => {
+      if (result.created || result.updated) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.usersRoot }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.topicsRoot }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.userRelationshipUsersRoot }),
+        ]);
+      }
+    },
   });
 }
 

@@ -1,3 +1,4 @@
+import type { PersonaKind } from "@/entities/user/model";
 import type { TopicResponse } from "@/features/topics/model";
 
 export type UserRelationshipKind = "follow" | "ignore" | "block";
@@ -13,6 +14,8 @@ export interface UserRelationshipState {
 }
 
 export interface UserRelationshipUser {
+  is_persona: boolean;
+  persona_kind: PersonaKind | null;
   id: string;
   username: string;
   display_name: string | null;

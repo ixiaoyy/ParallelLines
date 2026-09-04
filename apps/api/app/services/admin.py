@@ -13,6 +13,7 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import NotFoundError, PermissionDeniedError, ValidationError
 from app.core.growth import clamp_display_level
 from app.core.permissions import is_admin
+from app.core.personas import resolve_persona_update
 from app.db.base import utcnow
 from app.models.admin import SiteSetting
 from app.models.background_job import BackgroundJob
@@ -448,10 +449,18 @@ class AdminService:
                     "Cannot remove your own admin role",
                 )
 
+        next_is_persona, next_persona_kind = resolve_persona_update(
+            user.is_persona,
+            user.persona_kind,
+            requested_is_persona=payload.is_persona,
+            requested_kind=payload.persona_kind,
+            kind_provided="persona_kind" in payload.model_fields_set,
+        )
         before = {
             "role": user.role,
             "status": user.status,
             "is_persona": user.is_persona,
+            "persona_kind": user.persona_kind,
             "level": user.level,
             "trust_level": user.trust_level,
             "points_balance": user.points_balance,
@@ -461,8 +470,8 @@ class AdminService:
             user.role = payload.role
         if payload.status is not None:
             user.status = payload.status
-        if payload.is_persona is not None:
-            user.is_persona = payload.is_persona
+        user.is_persona = next_is_persona
+        user.persona_kind = next_persona_kind
         if payload.level is not None:
             user.level = clamp_display_level(payload.level)
         await GrowthService(self.session).adjust_user(
@@ -483,6 +492,7 @@ class AdminService:
             "role": user.role,
             "status": user.status,
             "is_persona": user.is_persona,
+            "persona_kind": user.persona_kind,
             "level": user.level,
             "trust_level": user.trust_level,
             "points_balance": user.points_balance,

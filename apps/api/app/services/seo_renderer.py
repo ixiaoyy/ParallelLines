@@ -7,6 +7,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from app.core.exceptions import AppError
+from app.core.personas import persona_identity
 from app.core.response_cache import ResponseHotCache
 from app.services.seo import (
     SeoPageDocument,
@@ -198,6 +199,10 @@ def render_semantic_fallback(document: SeoPageDocument) -> str:
         f"  <h1>{html.escape(document.heading)}</h1>",
         f"  <p>{html.escape(document.intro)}</p>",
     ]
+    if document.identity_notice:
+        sections.append(
+            f'  <p class="seo-fallback__identity">{html.escape(document.identity_notice)}</p>'
+        )
     if document.links:
         sections.extend(render_link_section(document.links))
     if document.posts:
@@ -242,6 +247,9 @@ def render_post_section(posts: tuple[SeoPagePost, ...]) -> list[str]:
             author = (
                 f'<a href="{html.escape(post.author_path, quote=True)}">{author}</a>'
             )
+        operator = persona_identity(post.author_is_persona, post.author_persona_kind)
+        if operator is not None:
+            author += f' <span class="seo-fallback__identity">{html.escape(operator.label)}</span>'
         lines.extend(
             [
                 f'    <article id="post-{post.post_number}">',

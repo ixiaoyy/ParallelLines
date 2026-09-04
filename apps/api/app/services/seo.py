@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
 from app.core.exceptions import NotFoundError
+from app.core.personas import PersonaKind, normalize_persona_kind, persona_identity
 from app.db.base import as_utc_datetime
 from app.models.admin import SiteSetting
 from app.models.forum import Board, Post, PostRevision, Topic
@@ -65,6 +66,8 @@ class SeoPageLink:
 class SeoPagePost:
     author_name: str
     author_path: str | None
+    author_is_persona: bool
+    author_persona_kind: PersonaKind | None
     published_at: datetime
     modified_at: datetime
     plain_text: str
@@ -82,6 +85,7 @@ class SeoPageDocument:
     intro: str
     links: tuple[SeoPageLink, ...] = ()
     posts: tuple[SeoPagePost, ...] = ()
+    identity_notice: str | None = None
     site_structured_data: JsonObject | None = None
     page_structured_data: JsonObject | None = None
 
@@ -493,6 +497,7 @@ class SeoService:
         topic_count = await self._public_topic_count_for_user(user.id)
         post_count = await self._public_post_count_for_user(user.id)
         topics = await self._public_topics(MAX_PROFILE_PAGE_TOPICS, author_id=user.id)
+        operator = persona_identity(user.is_persona, user.persona_kind)
         display_name = user.display_name or user.username
         description = user.bio or (
             f"{display_name} 在{identity.title}发布了 {topic_count} 个公开主题"
@@ -511,6 +516,7 @@ class SeoService:
             ),
             heading=display_name,
             intro=description,
+            identity_notice=f"{operator.label}：{operator.description}" if operator else None,
             links=tuple(self._topic_link(topic) for topic in topics),
             site_structured_data=self._site_structured_data(identity, base_url),
             page_structured_data=self._profile_structured_data(
@@ -1038,6 +1044,10 @@ class SeoService:
         return SeoPagePost(
             author_name=post.author.username,
             author_path=author_path,
+            author_is_persona=post.author.is_persona,
+            author_persona_kind=normalize_persona_kind(
+                post.author.is_persona, post.author.persona_kind
+            ),
             published_at=post.created_at,
             modified_at=modified_at,
             plain_text=markdown_to_text(post.raw_md),
@@ -1147,15 +1157,18 @@ class SeoService:
         topic: Topic,
         posts: tuple[SeoPagePost, ...],
         base_url: str,
-    ) -> JsonObject:
-        """Build DiscussionForumPosting JSON-LD matching visible fallback posts.
+    ) -> JsonObject | None:
+        """Build forum JSON-LD for a public, non-operator-authored topic only.
 
         ``topic`` supplies public counters, ``posts`` is the bounded rendered post
         set, and ``base_url`` builds canonical URLs. The returned mapping includes
-        no hidden/deleted content and has no side effects.
+        no hidden/deleted content or operator-authored comments. Returns None
+        for managed/unknown primary authors; never changes indexability or counts.
         """
 
         first_post = next(post for post in posts if post.post_number == 1)
+        if topic.author.is_persona is not False or first_post.author_is_persona is not False:
+            return None
         canonical_url = absolute_url(base_url, topic_canonical_path(topic))
         author: JsonObject = {
             "@type": "Person",
@@ -1166,7 +1179,7 @@ class SeoService:
 
         comments: list[JsonObject] = []
         for post in posts:
-            if post.post_number == 1:
+            if post.post_number == 1 or post.author_is_persona is not False:
                 continue
             comment_author: JsonObject = {"@type": "Person", "name": post.author_name}
             if post.author_path is not None:
@@ -1238,14 +1251,17 @@ class SeoService:
         topic_count: int,
         post_count: int,
         base_url: str,
-    ) -> JsonObject:
-        """Build ProfilePage/Person JSON-LD from one explicitly public profile.
+    ) -> JsonObject | None:
+        """Build Person profile JSON-LD only for an explicitly non-operator user.
 
         ``user`` supplies public fields, contribution counts summarize anonymous
         content, and ``base_url`` builds absolute URLs. The returned mapping has
         no side effects and must never be called for a non-public profile.
+        Managed/unknown identities return None instead of inventing an entity.
         """
 
+        if user.is_persona is not False:
+            return None
         canonical_url = absolute_url(base_url, f"/members/{encode_path_segment(user.id)}")
         person: JsonObject = {
             "@type": "Person",

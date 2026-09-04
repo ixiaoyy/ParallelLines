@@ -32,6 +32,8 @@ import {
 import TopicList from "@/features/topics/components/TopicList.vue";
 import { useAdminTopicDelete } from "@/features/topics/useAdminTopicDelete";
 import { useUploadAvatar } from "@/features/uploads/queries";
+import OperatorIdentityBadge from "@/features/users/components/OperatorIdentityBadge.vue";
+import { normalizePersonaFlag, operatorIdentity } from "@/features/users/operatorIdentity";
 import {
   activityTypeLabel,
   profileDisplayName,
@@ -191,6 +193,9 @@ useSeoMeta(
     };
   }),
 );
+const profileOperatorIdentity = computed(() =>
+  operatorIdentity(profile.value?.is_persona, profile.value?.persona_kind),
+);
 const profileStructuredData = computed(() => {
   if (isAccountRoute.value) {
     return null;
@@ -217,6 +222,7 @@ const profileStructuredData = computed(() => {
       ? absoluteSeoUrl(origin, resolvedAvatar)
       : null;
   return buildProfileStructuredData({
+    isPersona: normalizePersonaFlag(current.is_persona),
     profileUrl: absoluteSeoUrl(origin, `/members/${encodeURIComponent(current.id)}`),
     username: current.username,
     displayName: profileDisplayName(current),
@@ -799,6 +805,7 @@ function socialErrorMessage(error: unknown): string {
             <div class="profile-kicker" aria-label="账号身份信息">
               <UiBadge tone="gray">{{ isAccountRoute ? "个人中心" : "公开资料" }}</UiBadge>
               <UiBadge tone="gray">{{ roleLabel(profile.role) }}</UiBadge>
+              <OperatorIdentityBadge :is-persona="profile.is_persona" :kind="profile.persona_kind" />
               <UiBadge tone="gray" :title="`社区等级 ${profile.level}，由参与和贡献累计提升。`">
                 等级 {{ profile.level }}
               </UiBadge>
@@ -811,6 +818,9 @@ function socialErrorMessage(error: unknown): string {
               </span>
               <UiBadge tone="blue">{{ profile.trust_level_label }}</UiBadge>
             </div>
+            <p v-if="profileOperatorIdentity" class="profile-operator-notice">
+              {{ profileOperatorIdentity.description }}
+            </p>
             <div v-if="profile.website_url || profile.location" class="profile-links">
               <a v-if="profile.website_url" :href="profile.website_url" target="_blank" rel="noopener noreferrer">
                 {{ profile.website_url }}
@@ -1042,6 +1052,7 @@ function socialErrorMessage(error: unknown): string {
           />
           <div>
             <strong>{{ relatedUser.display_name?.trim() || relatedUser.username }}</strong>
+            <OperatorIdentityBadge :is-persona="relatedUser.is_persona" :kind="relatedUser.persona_kind" />
             <p>
               @{{ relatedUser.username }} · 等级 {{ relatedUser.level }} ·
               {{ relatedUser.topic_count }} 主题 / {{ relatedUser.post_count }} 回复

@@ -27,6 +27,7 @@ import { Modal } from "ant-design-vue";
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import type { PostItemVM } from "@/entities/post/model";
+import OperatorIdentityBadge from "@/features/users/components/OperatorIdentityBadge.vue";
 import { setPostLike } from "@/features/interactions/api";
 import { useOptimisticToggle } from "@/features/interactions/useOptimisticToggle";
 import {
@@ -958,6 +959,7 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
           <div class="post-author-copy">
             <div class="post-author-name">
               <strong>{{ post.authorName }}</strong>
+              <OperatorIdentityBadge :is-persona="post.authorIsPersona" :kind="post.authorPersonaKind" />
               <span v-if="post.floor === 1" class="author-badge author-badge--owner">楼主</span>
               <span v-if="authorRoleBadge" class="author-badge author-badge--role">{{ authorRoleBadge }}</span>
             </div>

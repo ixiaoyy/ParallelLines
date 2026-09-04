@@ -162,6 +162,8 @@ const topicStructuredData = computed(() => {
 
   const topicUrl = absoluteSeoUrl(origin, `/topics/${current.id}/${current.slug}`);
   return buildForumTopicStructuredData({
+    topicAuthorIsPersona: current.authorIsPersona,
+    authorIsPersona: original.authorIsPersona,
     topicUrl,
     title: current.title,
     boardName: current.boardName,
@@ -176,6 +178,7 @@ const topicStructuredData = computed(() => {
     replies: visiblePosts
       .filter((post) => post.id !== original.id)
       .map((post) => ({
+        authorIsPersona: post.authorIsPersona,
         authorName: post.authorName,
         publishedAt: post.createdAt,
         postNumber: post.floor,

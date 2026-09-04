@@ -112,6 +112,23 @@
   background: color-mix(in srgb, var(--success) 10%, var(--bg-surface));
 }
 
+.topic-author {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.45rem;
+  min-width: 0;
+  margin-top: 0.36rem;
+  color: var(--text);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.topic-author > span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 .topic-copy p {
   margin: 0.36rem 0 0;
   overflow: hidden;

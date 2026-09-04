@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.core.personas import PersonaKind, normalize_persona_kind
 from app.models.admin import SiteSetting
 from app.models.background_job import BackgroundJob, BackgroundJobLog
 from app.models.user import User
@@ -56,6 +57,7 @@ class AdminUserUpdateRequest(BaseModel):
         "pending_verification", "active", "silenced", "suspended", "deleted"
     ] | None = None
     is_persona: bool | None = None
+    persona_kind: PersonaKind | None = None
     level: int | None = Field(default=None, ge=0, le=5)
     points_delta: int | None = Field(default=None, ge=-100_000, le=100_000)
     experience_delta: int | None = Field(default=None, ge=-100_000, le=100_000)
@@ -77,6 +79,7 @@ class AdminUserResponse(ORMModel):
     level_progress_percent: int
     status: str
     is_persona: bool
+    persona_kind: PersonaKind | None
     two_factor_enabled: bool
     created_at: datetime
     updated_at: datetime
@@ -109,6 +112,7 @@ class AdminUserResponse(ORMModel):
             level_progress_percent=user.level_progress_percent,
             status=user.status,
             is_persona=user.is_persona,
+            persona_kind=normalize_persona_kind(user.is_persona, user.persona_kind),
             two_factor_enabled=user.two_factor_enabled,
             created_at=user.created_at,
             updated_at=user.updated_at,

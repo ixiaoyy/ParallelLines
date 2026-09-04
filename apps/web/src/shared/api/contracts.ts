@@ -9,6 +9,8 @@ import type {
 } from "@/features/dailyReports/model";
 import type { PostResponse } from "@/features/posts/model";
 import type { PdfTranslationCapabilities } from "@/features/pdfTranslations/model";
+import type { MigrationUserRecord } from "@/features/migrations/model";
+import type { UserRelationshipUser } from "@/features/social/model";
 import type { CreateTopicRequest, PollResponse, TopicResponse } from "@/features/topics/model";
 import type { UserDirectoryEntry, UserProfile } from "@/features/users/model";
 import type { components } from "@/shared/api/generated";
@@ -46,6 +48,12 @@ export type ApiContractChecks = {
   >;
   userDirectory: AssertApiCompatible<
     IsApiCompatible<UserDirectoryEntry, components["schemas"]["UserDirectoryResponse"]>
+  >;
+  userRelationshipUser: AssertApiCompatible<
+    IsApiCompatible<UserRelationshipUser, components["schemas"]["UserRelationshipUserResponse"]>
+  >;
+  migrationUserRecord: AssertApiCompatible<
+    IsApiCompatible<MigrationUserRecord, components["schemas"]["MigrationUserRecord"]>
   >;
   loginResponse: AssertApiCompatible<
     IsApiCompatible<LoginResponse, components["schemas"]["LoginResponse"]>

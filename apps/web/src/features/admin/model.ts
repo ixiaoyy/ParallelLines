@@ -1,3 +1,4 @@
+import type { PersonaKind } from "@/entities/user/model";
 import type { UserBadgeResponse } from "@/features/badges/model";
 import type { FableSpaceAccessLevel } from "@/features/auth/model";
 import {
@@ -34,6 +35,7 @@ export interface AdminUserResponse {
   level_progress_percent: number;
   status: "active" | "silenced" | "suspended" | "deleted" | string;
   is_persona: boolean;
+  persona_kind: PersonaKind | null;
   two_factor_enabled: boolean;
   created_at: string;
   updated_at: string;
@@ -47,6 +49,7 @@ export interface AdminUserUpdateRequest {
   role?: "user" | "moderator" | "admin";
   status?: "pending_verification" | "active" | "silenced" | "suspended" | "deleted";
   is_persona?: boolean;
+  persona_kind?: PersonaKind | null;
   level?: number;
   points_delta?: number;
   experience_delta?: number;

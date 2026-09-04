@@ -1,4 +1,6 @@
 import type { PostItemVM } from "@/entities/post/model";
+import type { PersonaKind } from "@/entities/user/model";
+import { normalizePersonaFlag, normalizePersonaKind } from "@/features/users/operatorIdentity";
 
 export interface PostResponse {
   id: string;
@@ -7,6 +9,8 @@ export interface PostResponse {
   author_name: string;
   author_avatar_url?: string | null;
   author_role: string;
+  author_is_persona: boolean;
+  author_persona_kind: PersonaKind | null;
   author_level: number;
   author_trust_level: number;
   author_trust_level_label: string;
@@ -80,6 +84,8 @@ export function toPostItem(post: PostResponse): PostItemVM {
     authorName: post.author_name,
     authorAvatarUrl: post.author_avatar_url ?? null,
     authorRole: post.author_role,
+    authorIsPersona: normalizePersonaFlag(post.author_is_persona),
+    authorPersonaKind: normalizePersonaKind(post.author_is_persona, post.author_persona_kind),
     authorLevel: post.author_level,
     authorTrustLevel: post.author_trust_level,
     authorTrustLevelLabel: post.author_trust_level_label,

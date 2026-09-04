@@ -133,11 +133,18 @@
   font-size: 0.72rem;
 }
 
-.participant-strip > span {
+.participant-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.4rem;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--text);
+}
+
+.participant-name {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .participant-strip :deep(.avatar) {

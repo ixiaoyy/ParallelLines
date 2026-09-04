@@ -21,6 +21,7 @@ export interface SiteStructuredDataInput {
 }
 
 export interface ForumPostStructuredDataInput {
+  authorIsPersona: boolean | null;
   authorName: string;
   publishedAt: string;
   modifiedAt?: string;
@@ -29,6 +30,8 @@ export interface ForumPostStructuredDataInput {
 }
 
 export interface ForumTopicStructuredDataInput {
+  topicAuthorIsPersona: boolean | null;
+  authorIsPersona: boolean | null;
   topicUrl: string;
   title: string;
   boardName: string;
@@ -44,6 +47,7 @@ export interface ForumTopicStructuredDataInput {
 }
 
 export interface ProfileStructuredDataInput {
+  isPersona: boolean | null;
   profileUrl: string;
   username: string;
   displayName: string;
@@ -168,24 +172,29 @@ export function buildSeoSiteAlternateNames(publicTitle: string, siteUrl: string)
  * Builds DiscussionForumPosting schema from a confirmed public topic and its visible posts.
  *
  * @param input - Canonical topic/board URLs, public counters, first-post text, and a bounded reply list.
- * @returns JSON-LD matching the content currently rendered by the topic page. Side effect: none.
+ * @returns JSON-LD for non-operator authors, or null for managed/unknown primary authors. No side effects.
  */
 export function buildForumTopicStructuredData(
   input: ForumTopicStructuredDataInput,
-): JsonLdObject {
-  const comments: JsonLdObject[] = input.replies.map((reply) => {
-    const comment: JsonLdObject = {
-      "@type": "Comment",
-      url: `${input.topicUrl}#post-${reply.postNumber}`,
-      text: reply.text,
-      datePublished: reply.publishedAt,
-      author: { "@type": "Person", name: reply.authorName },
-    };
-    if (reply.modifiedAt) {
-      comment.dateModified = reply.modifiedAt;
-    }
-    return comment;
-  });
+): JsonLdObject | null {
+  if (input.topicAuthorIsPersona !== false || input.authorIsPersona !== false) {
+    return null;
+  }
+  const comments: JsonLdObject[] = input.replies
+    .filter((reply) => reply.authorIsPersona === false)
+    .map((reply) => {
+      const comment: JsonLdObject = {
+        "@type": "Comment",
+        url: `${input.topicUrl}#post-${reply.postNumber}`,
+        text: reply.text,
+        datePublished: reply.publishedAt,
+        author: { "@type": "Person", name: reply.authorName },
+      };
+      if (reply.modifiedAt) {
+        comment.dateModified = reply.modifiedAt;
+      }
+      return comment;
+    });
   const schema: JsonLdObject = {
     "@context": "https://schema.org",
     "@type": "DiscussionForumPosting",
@@ -222,9 +231,12 @@ export function buildForumTopicStructuredData(
  * Builds ProfilePage and Person schema for one profile confirmed as public.
  *
  * @param input - Canonical profile URL plus public identity fields and contribution counts.
- * @returns Public profile JSON-LD without members-only/private fields. Side effect: none.
+ * @returns Public profile JSON-LD or null for operator/unknown identities. No side effects.
  */
-export function buildProfileStructuredData(input: ProfileStructuredDataInput): JsonLdObject {
+export function buildProfileStructuredData(input: ProfileStructuredDataInput): JsonLdObject | null {
+  if (input.isPersona !== false) {
+    return null;
+  }
   const person: JsonLdObject = {
     "@type": "Person",
     "@id": `${input.profileUrl}#person`,

@@ -5,6 +5,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Te
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.permissions import USER_ROLE_USER
+from app.core.personas import PERSONA_KIND_COMMENT
 from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin, id_column_type
 
 UserRole = Literal["user", "moderator", "admin"]
@@ -48,6 +49,9 @@ class User(IntegerPrimaryKeyMixin, TimestampMixin, Base):
         default=False,
         nullable=False,
         comment="是否为运营维护的马甲账号；真实用户增长统计必须排除。",
+    )
+    persona_kind: Mapped[str | None] = mapped_column(
+        String(24), nullable=True, comment=PERSONA_KIND_COMMENT
     )
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     two_factor_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

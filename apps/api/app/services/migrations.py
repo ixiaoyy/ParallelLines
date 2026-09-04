@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import PermissionDeniedError
 from app.core.permissions import is_admin
+from app.core.personas import normalize_persona_kind
 from app.core.security import hash_password
 from app.db.base import utcnow
 from app.models.forum import Board, BoardMember, Post, Tag, Topic
@@ -157,11 +158,29 @@ class MigrationService:
             )
             if existing:
                 imported[existing.username] = existing
+                existing_kind = normalize_persona_kind(existing.is_persona, existing.persona_kind)
+                if (
+                    record.persona_kind is not None
+                    and existing_kind is not None
+                    and record.persona_kind != existing_kind
+                ):
+                    self._row(rows, "user", username, "error", "公开身份冲突，请在后台明确修改。")
+                    continue
+                changed = False
                 if record.is_persona and not existing.is_persona:
                     existing.is_persona = True
-                    self._row(rows, "user", username, "updated", "已标记为马甲账号")
-                    continue
-                self._row(rows, "user", username, "skipped", "用户已存在")
+                    existing.persona_kind = None
+                    changed = True
+                if record.persona_kind is not None and existing_kind is None:
+                    existing.persona_kind = record.persona_kind
+                    changed = True
+                self._row(
+                    rows,
+                    "user",
+                    username,
+                    "updated" if changed else "skipped",
+                    "已更新运营身份" if changed else "用户已存在",
+                )
                 continue
             user = User(
                 username=username,
@@ -172,6 +191,7 @@ class MigrationService:
                 status="active",
                 locale="zh-CN",
                 is_persona=record.is_persona,
+                persona_kind=record.persona_kind,
             )
             self.session.add(user)
             await self.session.flush()
@@ -429,6 +449,7 @@ class MigrationService:
             "status": user.status,
             "locale": user.locale,
             "is_persona": user.is_persona,
+            "persona_kind": normalize_persona_kind(user.is_persona, user.persona_kind),
             "created_at": user.created_at,
         }
 

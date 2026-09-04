@@ -3,7 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic_core import PydanticCustomError
+
+from app.core.personas import PersonaKind
 
 
 class MigrationUserRecord(BaseModel):
@@ -11,6 +14,21 @@ class MigrationUserRecord(BaseModel):
     email: EmailStr
     display_name: str | None = Field(default=None, max_length=80)
     is_persona: bool = False
+    persona_kind: PersonaKind | None = None
+
+    @model_validator(mode="after")
+    def validate_persona_kind(self) -> MigrationUserRecord:
+        """Require explicit operator ownership for an imported non-null subtype.
+
+        Validates this record and returns it, or raises a JSON-safe validation error.
+        Missing/null kinds remain compatible with historical import documents.
+        """
+
+        if self.persona_kind is not None and not self.is_persona:
+            raise PydanticCustomError(
+                "persona_kind_requires_persona", "A persona kind requires is_persona=true"
+            )
+        return self
 
 
 class MigrationBoardRecord(BaseModel):

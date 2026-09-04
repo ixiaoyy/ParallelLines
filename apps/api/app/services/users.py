@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import NotFoundError, PermissionDeniedError, ValidationError
 from app.core.permissions import is_admin
+from app.core.personas import normalize_persona_kind
 from app.models.forum import Board, Post, Topic
 from app.models.interaction import Bookmark, Reaction
 from app.models.social import UserRelationship
@@ -167,6 +168,8 @@ class UserProfileService:
         rows = (await self.session.execute(statement)).all()
         return [
             UserDirectoryResponse(
+                is_persona=user.is_persona,
+                persona_kind=normalize_persona_kind(user.is_persona, user.persona_kind),
                 id=user.id,
                 username=user.username,
                 display_name=user.display_name,
@@ -267,6 +270,10 @@ class UserProfileService:
         rows = (await self.session.execute(statement)).all()
         return [
             UserRelationshipUserResponse(
+                is_persona=related_user.is_persona,
+                persona_kind=normalize_persona_kind(
+                    related_user.is_persona, related_user.persona_kind
+                ),
                 id=related_user.id,
                 username=related_user.username,
                 display_name=related_user.display_name,
@@ -302,6 +309,8 @@ class UserProfileService:
         except Exception:
             badges = []
         return UserProfileResponse(
+            is_persona=user.is_persona,
+            persona_kind=normalize_persona_kind(user.is_persona, user.persona_kind),
             id=user.id,
             username=user.username,
             avatar_url=user.avatar_url,

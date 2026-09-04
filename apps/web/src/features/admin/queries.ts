@@ -156,8 +156,16 @@ export function useUpdateAdminUser() {
   const queryClient = useQueryClient();
   return useMutation<AdminUserResponse, Error, { userId: string; payload: AdminUserUpdateRequest }>({
     mutationFn: ({ userId, payload }) => updateAdminUser(userId, payload),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot });
+    onSuccess: async (_user, { payload }) => {
+      const refreshes = [queryClient.invalidateQueries({ queryKey: queryKeys.adminRoot })];
+      if ("is_persona" in payload || "persona_kind" in payload) {
+        refreshes.push(
+          queryClient.invalidateQueries({ queryKey: queryKeys.usersRoot }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.topicsRoot }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.userRelationshipUsersRoot }),
+        );
+      }
+      await Promise.all(refreshes);
     },
   });
 }

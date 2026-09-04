@@ -1,3 +1,5 @@
+import type { PersonaKind } from "@/entities/user/model";
+
 export type TopicStatus = "open" | "closed" | "archived" | "hidden";
 
 export interface TopicCardVM {
@@ -12,6 +14,8 @@ export interface TopicCardVM {
   authorName: string;
   authorAvatarUrl: string | null;
   authorRole: string;
+  authorIsPersona: boolean | null;
+  authorPersonaKind: PersonaKind | null;
   authorLevel: number;
   authorTrustLevel: number;
   authorTrustLevelLabel: string;

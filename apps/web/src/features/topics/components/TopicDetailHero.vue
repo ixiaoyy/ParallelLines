@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TopicCardVM } from "@/entities/topic/model";
+import OperatorIdentityBadge from "@/features/users/components/OperatorIdentityBadge.vue";
 import { boardToneClass, tagToneClass } from "@/shared/theme/boardPalette";
 import UiBadge from "@/shared/ui/Badge.vue";
 
@@ -11,6 +12,13 @@ defineProps<{
 <template>
   <section class="topic-detail-hero" :style="{ '--topic-color': topic.boardColor }" aria-labelledby="topic-title">
     <h1 id="topic-title">{{ topic.title }}</h1>
+
+    <div class="topic-author" aria-label="主题作者">
+      <RouterLink :to="{ name: 'user-profile', params: { id: topic.authorId } }">
+        {{ topic.authorName }}
+      </RouterLink>
+      <OperatorIdentityBadge :is-persona="topic.authorIsPersona" :kind="topic.authorPersonaKind" />
+    </div>
 
     <div class="topic-taxonomy" aria-label="主题板块与标签">
       <RouterLink

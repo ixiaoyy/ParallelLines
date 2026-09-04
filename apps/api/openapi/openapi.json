@@ -397,6 +397,22 @@
             "title": "Level Progress Percent",
             "type": "integer"
           },
+          "persona_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "editorial",
+                  "automation",
+                  "fictional"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Kind"
+          },
           "points_balance": {
             "title": "Points Balance",
             "type": "integer"
@@ -453,6 +469,7 @@
           "level_progress_percent",
           "status",
           "is_persona",
+          "persona_kind",
           "two_factor_enabled",
           "created_at",
           "updated_at",
@@ -512,6 +529,22 @@
               }
             ],
             "title": "Level"
+          },
+          "persona_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "editorial",
+                  "automation",
+                  "fictional"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Kind"
           },
           "points_delta": {
             "anyOf": [
@@ -6662,6 +6695,22 @@
             "title": "Is Persona",
             "type": "boolean"
           },
+          "persona_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "editorial",
+                  "automation",
+                  "fictional"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Kind"
+          },
           "username": {
             "maxLength": 32,
             "minLength": 3,
@@ -7520,6 +7569,10 @@
             ],
             "title": "Author Avatar Url"
           },
+          "author_is_persona": {
+            "title": "Author Is Persona",
+            "type": "boolean"
+          },
           "author_level": {
             "title": "Author Level",
             "type": "integer"
@@ -7527,6 +7580,22 @@
           "author_name": {
             "title": "Author Name",
             "type": "string"
+          },
+          "author_persona_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "editorial",
+                  "automation",
+                  "fictional"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Persona Kind"
           },
           "author_role": {
             "title": "Author Role",
@@ -7631,6 +7700,8 @@
           }
         },
         "required": [
+          "author_is_persona",
+          "author_persona_kind",
           "id",
           "topic_id",
           "user_id",
@@ -9991,6 +10062,10 @@
             "title": "Author Id",
             "type": "string"
           },
+          "author_is_persona": {
+            "title": "Author Is Persona",
+            "type": "boolean"
+          },
           "author_level": {
             "title": "Author Level",
             "type": "integer"
@@ -9998,6 +10073,22 @@
           "author_name": {
             "title": "Author Name",
             "type": "string"
+          },
+          "author_persona_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "editorial",
+                  "automation",
+                  "fictional"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Persona Kind"
           },
           "author_role": {
             "title": "Author Role",
@@ -10192,6 +10283,8 @@
           }
         },
         "required": [
+          "author_is_persona",
+          "author_persona_kind",
           "id",
           "slug",
           "title",
@@ -10683,6 +10776,10 @@
             "title": "Id",
             "type": "string"
           },
+          "is_persona": {
+            "title": "Is Persona",
+            "type": "boolean"
+          },
           "last_seen_at": {
             "anyOf": [
               {
@@ -10698,6 +10795,22 @@
           "level": {
             "title": "Level",
             "type": "integer"
+          },
+          "persona_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "editorial",
+                  "automation",
+                  "fictional"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Kind"
           },
           "points_balance": {
             "title": "Points Balance",
@@ -10729,6 +10842,8 @@
           }
         },
         "required": [
+          "is_persona",
+          "persona_kind",
           "id",
           "username",
           "role",
@@ -10815,6 +10930,10 @@
             "title": "Id",
             "type": "string"
           },
+          "is_persona": {
+            "title": "Is Persona",
+            "type": "boolean"
+          },
           "level": {
             "title": "Level",
             "type": "integer"
@@ -10833,6 +10952,22 @@
               }
             ],
             "title": "Location"
+          },
+          "persona_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "editorial",
+                  "automation",
+                  "fictional"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Kind"
           },
           "points_balance": {
             "title": "Points Balance",
@@ -10887,6 +11022,8 @@
           }
         },
         "required": [
+          "is_persona",
+          "persona_kind",
           "id",
           "username",
           "role",
@@ -11247,9 +11384,29 @@
             "title": "Id",
             "type": "string"
           },
+          "is_persona": {
+            "title": "Is Persona",
+            "type": "boolean"
+          },
           "level": {
             "title": "Level",
             "type": "integer"
+          },
+          "persona_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "editorial",
+                  "automation",
+                  "fictional"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Kind"
           },
           "post_count": {
             "title": "Post Count",
@@ -11277,6 +11434,8 @@
           }
         },
         "required": [
+          "is_persona",
+          "persona_kind",
           "id",
           "username",
           "role",
@@ -13633,6 +13792,7 @@
     },
     "/api/v1/admin/migrations/import/run": {
       "post": {
+        "description": "Return the committed import result and refresh affected public read caches.\n\nPayload contains validated records and current_user supplies the existing\nadmin gate. Preview imports do not enter this path or invalidate caches.",
         "operationId": "run_migration_import_api_v1_admin_migrations_import_run_post",
         "requestBody": {
           "content": {
