@@ -31,6 +31,7 @@ DEFAULT_SEED_KEY = "seed-real-lounge-v1"
 DEFAULT_SEED_USERNAME = "今天也想早睡"
 DEFAULT_SEED_EMAIL = "sleepy_today@parallellines.local"
 DEFAULT_DISPLAY_NAME = "今天也想早睡"
+DEFAULT_SEED_PERSONA_KIND = "fictional"
 DEFAULT_TITLE = "今天把手机通知关了，舒服多了"
 DEFAULT_BODY = (
     "这几天有点烦，总觉得一会儿就想摸手机。昨晚干脆把几个 App 的通知关了，"
@@ -201,6 +202,8 @@ async def upsert_seed_author(
         existing.status = "active"
         existing.role = "user"
         existing.is_persona = True
+        if existing.persona_kind is None:
+            existing.persona_kind = DEFAULT_SEED_PERSONA_KIND
         return existing, False
 
     user = User(
@@ -212,6 +215,7 @@ async def upsert_seed_author(
         role="user",
         status="active",
         is_persona=True,
+        persona_kind=DEFAULT_SEED_PERSONA_KIND,
     )
     session.add(user)
     await session.flush()

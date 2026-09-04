@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import ast
+import runpy
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,6 +12,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError as SchemaValidationError
+from sqlalchemy.dialects import mysql
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
@@ -19,9 +22,11 @@ from app.core.exceptions import PermissionDeniedError, ValidationError
 from app.core.personas import (
     PERSONA_IDENTITIES,
     PERSONA_KIND_COMMENT,
+    SEEDED_PERSONA_CLASSIFICATIONS,
     normalize_persona_kind,
     persona_identity,
     resolve_persona_update,
+    seeded_persona_kind,
 )
 from app.db.schema_comments import COLUMN_COMMENTS
 from app.main import create_app
@@ -33,6 +38,7 @@ from app.schemas.migrations import MigrationRowResult, MigrationUserRecord
 from app.schemas.users import UserProfileUpdateRequest
 from app.services.admin import AdminService
 from app.services.badges import BadgeTrustService
+from app.services.frontier_news import FrontierNewsService
 from app.services.growth import GrowthService
 from app.services.living_forum import LivingForumService
 from app.services.migrations import MigrationService
@@ -456,18 +462,122 @@ async def test_import_old_document_and_new_user_roundtrip(monkeypatch: pytest.Mo
     assert restored.persona_kind == "automation"
 
 
+def test_seeded_persona_catalogue_has_one_automation_account() -> None:
+    """The approved seed map must be complete, unique, and keep one news bot."""
+
+    from scripts.seed_persona_discussions import PERSONAS as DISCUSSION_PERSONAS
+
+    counts = Counter(item.kind for item in SEEDED_PERSONA_CLASSIFICATIONS)
+    assert counts == {"automation": 1, "editorial": 3, "fictional": 22}
+    assert [
+        item.username for item in SEEDED_PERSONA_CLASSIFICATIONS if item.kind == "automation"
+    ] == ["小小资讯"]
+    assert seeded_persona_kind("小瓜同学", "xiaogua@pingxingxian.space") == "editorial"
+    assert seeded_persona_kind("小小资讯", "xiaogua@pingxingxian.space") is None
+    identities = {(item.username, item.email) for item in SEEDED_PERSONA_CLASSIFICATIONS}
+    assert len(identities) == len(SEEDED_PERSONA_CLASSIFICATIONS) == 26
+    standard_identities = {(persona.username, persona.email) for persona in DISCUSSION_PERSONAS}
+    assert identities - standard_identities == {
+        ("小小资讯", "xiaoxiao-zixun@pingxingxian.space"),
+        ("今天也想早睡", "sleepy_today@parallellines.local"),
+    }
+
+
+@pytest.mark.asyncio
+async def test_persona_seed_initializes_every_non_bot_account_kind() -> None:
+    """The general seed classifies 24 accounts without creating a second bot."""
+
+    from scripts.seed_persona_discussions import upsert_personas
+
+    users = await upsert_personas(cast(AsyncSession, memory_session()), dry_run=True)
+    counts = Counter(user.persona_kind for user in users.values())
+    assert counts == {"editorial": 3, "fictional": 21}
+    assert "小小资讯" not in users
+    assert all(user.persona_kind != "automation" for user in users.values())
+
+
+def test_living_forum_import_payload_carries_explicit_kinds() -> None:
+    """Admin migration payloads must not recreate known personas unclassified."""
+
+    from scripts.publish_living_forum_api import persona_user_records
+
+    records = {
+        str(record["username"]): record
+        for record in persona_user_records(["小小资讯", "老槐", "小漫家"])
+    }
+    assert records["小小资讯"]["persona_kind"] == "automation"
+    assert records["老槐"]["persona_kind"] == "fictional"
+    assert records["小漫家"]["persona_kind"] == "fictional"
+
+
 @pytest.mark.asyncio
 async def test_runtime_persona_refresh_preserves_subtype() -> None:
     """The existing runtime refresh must not reset an administrator's classification."""
 
-    user = memory_user(kind="fictional")
+    user = memory_user(kind="editorial")
     user.username = "老槐"
     user.email = "old-huai-tree@pingxingxian.space"
     session = memory_session(user)
     service = LivingForumService(cast(AsyncSession, session), Settings(_env_file=None))
     assert await service._ensure_persona("老槐") is user
-    assert user.persona_kind == "fictional"
+    assert user.persona_kind == "editorial"
     assert user.is_persona is True
+
+
+@pytest.mark.asyncio
+async def test_runtime_persona_refresh_fills_approved_subtype() -> None:
+    """A known unclassified living-forum account receives its configured kind."""
+
+    user = memory_user(kind=None)
+    user.username = "老槐"
+    user.email = "old-huai-tree@pingxingxian.space"
+    service = LivingForumService(
+        cast(AsyncSession, memory_session(user)), Settings(_env_file=None)
+    )
+    assert await service._ensure_persona("老槐") is user
+    assert user.persona_kind == "fictional"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("current_kind", "expected_kind"),
+    [(None, "automation"), ("editorial", "editorial")],
+)
+async def test_frontier_news_bot_is_the_only_automatic_runtime_account(
+    current_kind: str | None,
+    expected_kind: str,
+) -> None:
+    """The news bot fills automation once and preserves an administrator choice."""
+
+    user = memory_user(kind=current_kind)
+    user.username = "小小资讯"
+    user.email = "xiaoxiao-zixun@pingxingxian.space"
+    service = FrontierNewsService(
+        cast(AsyncSession, memory_session(user)), Settings(_env_file=None)
+    )
+    assert await service.ensure_bot_user() is user
+    assert user.persona_kind == expected_kind
+
+
+@pytest.mark.asyncio
+async def test_review_seed_fills_fictional_without_overwriting_a_choice() -> None:
+    """The legacy review author fills null and leaves an explicit kind unchanged."""
+
+    from scripts.seed_review_topic import upsert_seed_author
+
+    for current_kind, expected_kind in [(None, "fictional"), ("editorial", "editorial")]:
+        user = memory_user(kind=current_kind)
+        user.username = "今天也想早睡"
+        user.email = "sleepy_today@parallellines.local"
+        result, created = await upsert_seed_author(
+            cast(AsyncSession, memory_session(user)),
+            username=user.username,
+            email=user.email,
+            display_name=user.username,
+        )
+        assert result is user
+        assert created is False
+        assert user.persona_kind == expected_kind
 
 
 @pytest.mark.parametrize("kind", ["editorial", "automation", "fictional", None])
@@ -592,3 +702,39 @@ def test_migration_is_only_a_nullable_column_without_running_it() -> None:
     assert mapped_column.type.length == 24
     assert mapped_column.server_default is None
     assert mapped_column.comment == COLUMN_COMMENTS["users"]["persona_kind"] == PERSONA_KIND_COMMENT
+
+
+def test_seeded_persona_backfill_migration_is_exact_and_non_overwriting() -> None:
+    """The corrective migration must match the approved map and only fill null kinds."""
+
+    path = Path(__file__).parents[1] / "alembic/versions/0073_classify_seeded_personas.py"
+    namespace = runpy.run_path(str(path))
+    assert namespace["revision"] == "0073_classify_seeded_personas"
+    assert namespace["down_revision"] == "0072_add_user_persona_kind"
+    migration_catalogue = {
+        (item.username, item.email): item.kind
+        for item in namespace["PERSONA_CLASSIFICATIONS"]
+    }
+    core_catalogue = {
+        (item.username, item.email): item.kind for item in SEEDED_PERSONA_CLASSIFICATIONS
+    }
+    assert migration_catalogue == core_catalogue
+
+    expected_counts = {"automation": 1, "editorial": 3, "fictional": 22}
+    statements = namespace["classification_updates"]()
+    assert len(statements) == 3
+    for statement in statements:
+        compiled = statement.compile(dialect=mysql.dialect())
+        sql = str(compiled)
+        kind = compiled.params["persona_kind"]
+        assert kind in expected_counts
+        assert "is_persona IS true" in sql
+        assert "persona_kind IS NULL" in sql
+        assert sum(key.startswith("username_") for key in compiled.params) == expected_counts[kind]
+        assert sum(key.startswith("email_") for key in compiled.params) == expected_counts[kind]
+
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    downgrade = next(
+        node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "downgrade"
+    )
+    assert not any(isinstance(node, ast.Call) for node in ast.walk(downgrade))

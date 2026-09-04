@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppError, ValidationError
+from app.core.personas import seeded_persona_kind
 from app.core.security import hash_password
 from app.db.base import utcnow
 from app.models.forum import Board, Post, Topic
@@ -583,6 +584,13 @@ class LivingForumService:
                 "Living forum persona is not configured",
                 {"username": username},
             )
+        persona_kind = seeded_persona_kind(persona.username, persona.email)
+        if persona_kind is None:
+            raise ValidationError(
+                "living_forum_persona_kind_missing",
+                "Living forum persona has no approved public classification",
+                {"username": username},
+            )
         existing = await self.session.scalar(
             select(User).where(or_(User.username == persona.username, User.email == persona.email))
         )
@@ -598,6 +606,8 @@ class LivingForumService:
             existing.status = "active"
             existing.role = "user"
             existing.is_persona = True
+            if existing.persona_kind is None:
+                existing.persona_kind = persona_kind
             await self.session.flush()
             return existing
 
@@ -610,6 +620,7 @@ class LivingForumService:
             role="user",
             status="active",
             is_persona=True,
+            persona_kind=persona_kind,
         )
         self.session.add(user)
         await self.session.flush()

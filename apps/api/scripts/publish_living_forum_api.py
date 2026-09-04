@@ -22,6 +22,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
+from app.core.personas import seeded_persona_kind  # noqa: E402
 from app.services.living_forum import (  # noqa: E402
     PERSONAS,
     LivingForumTopicPlan,
@@ -533,12 +534,16 @@ def persona_user_records(usernames: Iterable[str]) -> list[dict[str, object]]:
     for username, persona in PERSONAS.items():
         if username not in seen:
             continue
+        persona_kind = seeded_persona_kind(persona.username, persona.email)
+        if persona_kind is None:
+            raise RuntimeError(f"Missing approved persona classification: {persona.username}")
         records.append(
             {
                 "username": persona.username,
                 "email": persona.email,
                 "display_name": persona.username,
                 "is_persona": True,
+                "persona_kind": persona_kind,
             }
         )
     return records

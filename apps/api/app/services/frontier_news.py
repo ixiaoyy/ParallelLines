@@ -767,6 +767,7 @@ class FrontierNewsService:
 
         username = self.settings.frontier_news_bot_username
         email = self.settings.frontier_news_bot_email
+        persona_kind = "automation"
         by_username = await self.session.scalar(select(User).where(User.username == username))
         by_email = await self.session.scalar(select(User).where(User.email == email))
         by_legacy_email = None
@@ -798,6 +799,7 @@ class FrontierNewsService:
                 experience_total=0,
                 status="active",
                 is_persona=True,
+                persona_kind=persona_kind,
                 two_factor_enabled=False,
                 profile_visibility="public",
                 show_activity=True,
@@ -825,6 +827,8 @@ class FrontierNewsService:
         bot.role = "user"
         bot.status = "active"
         bot.is_persona = True
+        if bot.persona_kind is None:
+            bot.persona_kind = persona_kind
         bot.level = 0
         bot.trust_level = 0
         return bot

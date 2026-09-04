@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.logging import configure_logging
+from app.core.personas import PersonaKind, seeded_persona_kind
 from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
 from app.models.forum import Board
@@ -114,6 +115,19 @@ PERSONAS: tuple[PersonaSpec, ...] = (
     ),
     PersonaSpec("小小鸡仔", "xiaoxiao-jizai@pingxingxian.space", "小小鸡仔，偶尔啄两句。"),
 )
+
+
+def required_persona_kind(persona: PersonaSpec) -> PersonaKind:
+    """Return one seed's approved kind or fail before any account write.
+
+    The parameter is the configured persona. The return value is its exact
+    username/email classification; this helper has no persistence side effects.
+    """
+
+    kind = seeded_persona_kind(persona.username, persona.email)
+    if kind is None:
+        raise RuntimeError(f"Missing approved persona classification: {persona.username}")
+    return kind
 
 LEGACY_PERSONA_RENAMES: tuple[tuple[str, str], ...] = (
     ("今天也想早睡", "不吃香菜的猫"),
@@ -507,6 +521,7 @@ async def rename_legacy_personas(session: AsyncSession, *, dry_run: bool) -> int
         if old_user is None:
             continue
         persona = persona_by_name[new_name]
+        persona_kind = required_persona_kind(persona)
         existing_name_user = by_username.get(persona.username)
         existing_email_user = by_email.get(persona.email)
         if existing_name_user is not None and existing_name_user.id != old_user.id:
@@ -525,6 +540,8 @@ async def rename_legacy_personas(session: AsyncSession, *, dry_run: bool) -> int
         old_user.role = "user"
         old_user.status = "active"
         old_user.is_persona = True
+        if old_user.persona_kind is None:
+            old_user.persona_kind = persona_kind
     if rename_count and not dry_run:
         await session.flush()
     return rename_count
@@ -539,6 +556,7 @@ async def upsert_personas(session: AsyncSession, *, dry_run: bool) -> dict[str, 
     """
     users: dict[str, User] = {}
     for persona in PERSONAS:
+        persona_kind = required_persona_kind(persona)
         existing = await session.scalar(
             select(User).where(or_(User.username == persona.username, User.email == persona.email))
         )
@@ -556,6 +574,8 @@ async def upsert_personas(session: AsyncSession, *, dry_run: bool) -> dict[str, 
                 existing.status = "active"
                 existing.role = "user"
                 existing.is_persona = True
+                if existing.persona_kind is None:
+                    existing.persona_kind = persona_kind
             users[persona.username] = existing
             continue
         if dry_run:
@@ -569,6 +589,7 @@ async def upsert_personas(session: AsyncSession, *, dry_run: bool) -> dict[str, 
                 role="user",
                 status="active",
                 is_persona=True,
+                persona_kind=persona_kind,
             )
             continue
         user = User(
@@ -581,6 +602,7 @@ async def upsert_personas(session: AsyncSession, *, dry_run: bool) -> dict[str, 
             role="user",
             status="active",
             is_persona=True,
+            persona_kind=persona_kind,
         )
         session.add(user)
         await session.flush()

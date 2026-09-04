@@ -21,6 +21,15 @@ class PersonaIdentity:
     description: str
 
 
+@dataclass(frozen=True)
+class SeededPersonaClassification:
+    """Bind one project-owned seed identity to its approved public subtype."""
+
+    username: str
+    email: str
+    kind: PersonaKind
+
+
 PERSONA_IDENTITIES: dict[PersonaKind, PersonaIdentity] = {
     "editorial": PersonaIdentity(
         "editorial", "官方栏目", "该账号由平行线运营维护，用于栏目内容发布。"
@@ -33,6 +42,64 @@ PERSONA_IDENTITIES: dict[PersonaKind, PersonaIdentity] = {
     ),
 }
 GENERIC_PERSONA_IDENTITY = PersonaIdentity(None, "运营角色", "该账号由平行线运营维护。")
+
+SEEDED_PERSONA_CLASSIFICATIONS: tuple[SeededPersonaClassification, ...] = (
+    SeededPersonaClassification(
+        "不吃香菜的猫", "no-coriander-cat@pingxingxian.space", "fictional"
+    ),
+    SeededPersonaClassification(
+        "一杯冰美式续命", "iced-americano@pingxingxian.space", "fictional"
+    ),
+    SeededPersonaClassification("外卖备注写错了", "waimai-note@pingxingxian.space", "fictional"),
+    SeededPersonaClassification(
+        "冰箱里还有半瓶可乐", "half-cola@pingxingxian.space", "fictional"
+    ),
+    SeededPersonaClassification("刚下班别催", "offwork-no-push@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("雾里看山", "fog-mountain@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("远山便利店", "yuanshan-shop@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("老槐", "old-huai-tree@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("oldhuai", "oldhuai@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("huai_07", "huai-07@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("Aki_慢慢来", "aki-slow@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("momo-离线", "momo-offline@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("kk不在线", "kk-offline@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("Nate_路过", "nate-passby@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("小K_再看看", "xiaok-look@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("rain_404", "rain404@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("zzZ_醒了", "zzz-awake@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("beta路人", "beta-passer@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("loop_一下", "loop-once@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("穿猫的靴子", "cat-boots@pingxingxian.space", "fictional"),
+    SeededPersonaClassification("小漫家", "xiaomanjia@pingxingxian.space", "fictional"),
+    SeededPersonaClassification(
+        "小小资讯", "xiaoxiao-zixun@pingxingxian.space", "automation"
+    ),
+    SeededPersonaClassification(
+        "小小鸡仔", "xiaoxiao-jizai@pingxingxian.space", "editorial"
+    ),
+    SeededPersonaClassification("小瓜同学", "xiaogua@pingxingxian.space", "editorial"),
+    SeededPersonaClassification(
+        "页边有光", "page-margin-light@pingxingxian.space", "editorial"
+    ),
+    SeededPersonaClassification(
+        "今天也想早睡", "sleepy_today@parallellines.local", "fictional"
+    ),
+)
+
+_SEEDED_PERSONA_CLASSIFICATION_BY_IDENTITY = {
+    (classification.username, classification.email): classification.kind
+    for classification in SEEDED_PERSONA_CLASSIFICATIONS
+}
+
+
+def seeded_persona_kind(username: str, email: str) -> PersonaKind | None:
+    """Return the approved subtype for one exact seeded username/email pair.
+
+    Parameters are the canonical public username and email. The return value is
+    the configured kind or None; matching is exact and this helper has no side effects.
+    """
+
+    return _SEEDED_PERSONA_CLASSIFICATION_BY_IDENTITY.get((username, email))
 
 
 def normalize_persona_kind(is_persona: bool, kind: object) -> PersonaKind | None:
