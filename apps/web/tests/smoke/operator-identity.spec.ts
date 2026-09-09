@@ -337,10 +337,10 @@ function expectIsolated(state: FixtureState): void {
 
 test("identity catalogue and SEO builders respect explicit ownership", () => {
   expect(Object.values(OPERATOR_IDENTITIES).map((identity) => identity.label)).toEqual([
-    "官方栏目", "自动账号", "创作角色",
+    "官方栏目", "资讯机器人", "创作角色",
   ]);
   expect(OPERATOR_IDENTITIES.editorial.description).toBe("该账号由平行线运营维护，用于栏目内容发布。");
-  expect(OPERATOR_IDENTITIES.automation.description).toBe("该账号由平行线运营维护，用于自动化发布或辅助互动。");
+  expect(OPERATOR_IDENTITIES.automation.description).toBe("由平行线运营，自动收集和发布资讯。");
   expect(OPERATOR_IDENTITIES.fictional.description).toBe("该账号是平行线运营的创作角色，不代表独立社区成员。");
   expect(operatorIdentity(true, "future-kind")?.label).toBe("运营角色");
   expect(operatorIdentity(false, "editorial")).toBeNull();

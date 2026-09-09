@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.exceptions import PermissionDeniedError
+from app.db.base import utcnow
 from app.models.moderation import AuditLog
 from app.models.user import User
 from app.services.frontier_news import (
@@ -138,6 +139,22 @@ async def test_daily_publish_stops_after_the_day_has_an_audit_record(
     }
     candidate_lookup.assert_not_awaited()
     assert session.commit_count == 1
+
+
+@pytest.mark.asyncio
+async def test_daily_candidate_orders_editorial_score_before_freshness() -> None:
+    """A high-value model launch must outrank a newer low-value candidate."""
+
+    scalar = AsyncMock(return_value=None)
+    session = cast(AsyncSession, SimpleNamespace(scalar=scalar))
+    service = FrontierNewsService(session, Settings(_env_file=None))
+
+    assert await service._daily_news_candidate(now=utcnow(), lock=False) is None
+
+    statement = scalar.await_args.args[0]
+    order_by = [str(clause).lower() for clause in statement._order_by_clauses]
+    assert "frontier_news_items.score desc" in order_by[0]
+    assert "coalesce" in order_by[1]
 
 
 @pytest.mark.asyncio

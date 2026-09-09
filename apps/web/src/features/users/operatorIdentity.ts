@@ -14,8 +14,8 @@ export const OPERATOR_IDENTITIES = {
   },
   automation: {
     kind: "automation",
-    label: "自动账号",
-    description: "该账号由平行线运营维护，用于自动化发布或辅助互动。",
+    label: "资讯机器人",
+    description: "由平行线运营，自动收集和发布资讯。",
   },
   fictional: {
     kind: "fictional",

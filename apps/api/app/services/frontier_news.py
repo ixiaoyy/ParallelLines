@@ -49,6 +49,7 @@ AI_TECH_TAG = "AI 科技"
 SOCIAL_HOT_TAG = "社会热点"
 DAILY_NEWS_MIN_SCORE = 35
 DAILY_NEWS_MAX_AGE = timedelta(hours=48)
+MAJOR_MODEL_RELEASE_SCORE = 100
 DAILY_NEWS_AUDIT_ACTION = "daily_frontier_news_published"
 DAILY_NEWS_AUDIT_TARGET_TYPE = "daily_frontier_news"
 AI_TECH_SOURCE_KINDS = frozenset(
@@ -136,6 +137,56 @@ AI_KEYWORDS = (
     "评测",
     "基准",
 )
+MAJOR_MODEL_FAMILY_KEYWORDS = (
+    "gemini",
+    "gpt",
+    "claude",
+    "grok",
+    "llama",
+    "gemma",
+    "mistral",
+    "mixtral",
+    "deepseek",
+    "qwen",
+    "kimi",
+    "glm",
+    "command r",
+    "phi",
+)
+MAJOR_MODEL_RELEASE_KEYWORDS = (
+    "introducing",
+    "introduces",
+    "announcing",
+    "announce",
+    "launching",
+    "launched",
+    "release",
+    "released",
+    "now available",
+    "general availability",
+    "preview",
+    "正式发布",
+    "发布",
+    "推出",
+    "上线",
+    "开放使用",
+)
+OFFICIAL_AI_LAB_HOSTS = (
+    "ai.google.dev",
+    "ai.meta.com",
+    "anthropic.com",
+    "blog.google",
+    "cohere.com",
+    "deepmind.google",
+    "deepseek.com",
+    "huggingface.co",
+    "mistral.ai",
+    "moonshot.cn",
+    "openai.com",
+    "qwenlm.ai",
+    "x.ai",
+    "zhipuai.cn",
+)
 CHINESE_AI_NEWS_KEYWORDS = (
     "AI",
     "人工智能",
@@ -217,6 +268,19 @@ class FetchedNewsEntry:
 
 DEFAULT_FRONTIER_SOURCES: tuple[DefaultFrontierSource, ...] = (
     DefaultFrontierSource(
+        key="openai_news",
+        name="OpenAI 官方资讯",
+        kind="rss",
+        url="https://openai.com/news/rss.xml",
+        config={
+            "max_items": 20,
+            "review_batch_size": 5,
+            "keywords": list(AI_KEYWORDS),
+        },
+        trust_level=100,
+        fetch_interval_minutes=60,
+    ),
+    DefaultFrontierSource(
         key="arxiv_ai_llm",
         name="arXiv AI / LLM 论文",
         kind="arxiv",
@@ -272,6 +336,19 @@ DEFAULT_FRONTIER_SOURCES: tuple[DefaultFrontierSource, ...] = (
         },
         trust_level=80,
         fetch_interval_minutes=240,
+    ),
+    DefaultFrontierSource(
+        key="google_ai_blog",
+        name="Google AI / Gemini 官方博客",
+        kind="rss",
+        url="https://blog.google/rss/",
+        config={
+            "max_items": 20,
+            "review_batch_size": 5,
+            "keywords": list(AI_KEYWORDS),
+        },
+        trust_level=100,
+        fetch_interval_minutes=60,
     ),
     DefaultFrontierSource(
         key="xai_news",
@@ -619,7 +696,7 @@ class FrontierNewsService:
         now: datetime,
         lock: bool,
     ) -> FrontierNewsItem | None:
-        """Return the newest ready item that is recent, unclaimed, and still unpublished."""
+        """Return the highest-scoring recent ready item, breaking ties by recency and ID."""
 
         cutoff = now - DAILY_NEWS_MAX_AGE
         statement = (
@@ -652,8 +729,8 @@ class FrontierNewsService:
                 ),
             )
             .order_by(
-                desc(func.coalesce(FrontierNewsItem.published_at, FrontierNewsItem.created_at)),
                 desc(FrontierNewsItem.score),
+                desc(func.coalesce(FrontierNewsItem.published_at, FrontierNewsItem.created_at)),
                 desc(FrontierNewsItem.id),
             )
             .limit(1)
@@ -925,6 +1002,7 @@ class FrontierNewsService:
             )
         source.last_checked_at = utcnow()
         source.last_error = None
+        entries.sort(key=lambda entry: self._score_entry(source, entry), reverse=True)
         for entry in entries:
             if queued_count >= review_batch_size:
                 break
@@ -1345,6 +1423,11 @@ class FrontierNewsService:
             )
         )
         if existing:
+            if (
+                self._is_major_official_model_release(source, entry)
+                and existing.score < MAJOR_MODEL_RELEASE_SCORE
+            ):
+                existing.score = MAJOR_MODEL_RELEASE_SCORE
             return existing, False
         raw_payload = dict(entry.raw_payload)
         if entry.image_url:
@@ -1619,6 +1702,8 @@ class FrontierNewsService:
     def _score_entry(self, source: FrontierNewsSource, entry: FetchedNewsEntry) -> int:
         """Score relevance from source trust, keyword hits, and metadata completeness."""
 
+        if self._is_major_official_model_release(source, entry):
+            return MAJOR_MODEL_RELEASE_SCORE
         text = f"{entry.title} {entry.summary or ''} {entry.url}".lower()
         keyword_hits = sum(1 for keyword in self._keywords(source) if keyword.lower() in text)
         score = int(source.trust_level * 0.55) + min(30, keyword_hits * 8)
@@ -1629,6 +1714,27 @@ class FrontierNewsService:
         if "github.com" in entry.url:
             score += 5
         return max(0, min(100, score))
+
+    def _is_major_official_model_release(
+        self,
+        source: FrontierNewsSource,
+        entry: FetchedNewsEntry,
+    ) -> bool:
+        """Return whether an official-lab entry announces a major named model release.
+
+        Key parameters are the configured source and normalized upstream entry.
+        The return value is an editorial-priority signal; this method has no side effects.
+        """
+
+        if not _url_uses_host(source.url, OFFICIAL_AI_LAB_HOSTS) or not _url_uses_host(
+            entry.url,
+            OFFICIAL_AI_LAB_HOSTS,
+        ):
+            return False
+        title = entry.title.lower()
+        return any(keyword in title for keyword in MAJOR_MODEL_FAMILY_KEYWORDS) and any(
+            keyword in title for keyword in MAJOR_MODEL_RELEASE_KEYWORDS
+        )
 
     def _source_due(self, source: FrontierNewsSource) -> bool:
         """Return whether a source should run in the current scheduled bucket."""
@@ -2269,6 +2375,16 @@ def _html_image_url(value: str | None) -> str | None:
         return None
     match = re.search(r"<img\b[^>]*\bsrc=['\"]([^'\"]+)['\"]", value, flags=re.IGNORECASE)
     return _safe_image_url(match.group(1)) if match else None
+
+
+def _url_uses_host(url: str, allowed_hosts: tuple[str, ...]) -> bool:
+    """Return whether a URL uses an allowed host or one of its subdomains."""
+
+    hostname = (urllib.parse.urlsplit(url).hostname or "").lower().rstrip(".")
+    return any(
+        hostname == allowed_host or hostname.endswith(f".{allowed_host}")
+        for allowed_host in allowed_hosts
+    )
 
 
 def _safe_image_url(value: object) -> str | None:

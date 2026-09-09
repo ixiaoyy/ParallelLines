@@ -1,6 +1,7 @@
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import cast
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +16,7 @@ from app.services.frontier_news import (
     DEFAULT_FRONTIER_SOURCES,
     DEFAULT_REVIEW_BATCH_SIZE,
     RETIRED_FRONTIER_SOURCE_KEYS,
+    FetchedNewsEntry,
     FrontierNewsService,
 )
 
@@ -171,6 +173,150 @@ def test_frontier_news_default_sources_exclude_retired_caiwen_keys() -> None:
     default_keys = {source.key for source in DEFAULT_FRONTIER_SOURCES}
 
     assert default_keys.isdisjoint(RETIRED_FRONTIER_SOURCE_KEYS)
+
+
+def test_frontier_news_defaults_include_google_ai_official_feed() -> None:
+    """Verify Gemini announcements are collected directly from Google's official feed."""
+
+    source = next(
+        source for source in DEFAULT_FRONTIER_SOURCES if source.key == "google_ai_blog"
+    )
+
+    assert source.kind == "rss"
+    assert source.url == "https://blog.google/rss/"
+    assert source.trust_level == 100
+    assert "gemini" in {str(keyword).lower() for keyword in source.config["keywords"]}
+
+
+def test_official_major_model_release_receives_top_editorial_score() -> None:
+    """Verify named model launches outrank ordinary fresh items only on official hosts."""
+
+    service = FrontierNewsService(cast(AsyncSession, object()), Settings(_env_file=None))
+    official_source = FrontierNewsSource(
+        key="google_ai_blog",
+        name="Google AI / Gemini 官方博客",
+        kind="rss",
+        url="https://blog.google/rss/",
+        config={"keywords": ["gemini"]},
+        enabled=True,
+        trust_level=100,
+        fetch_interval_minutes=60,
+    )
+    release = FetchedNewsEntry(
+        external_id="gemini-3-7-flash",
+        title="Introducing Gemini 3.7 Flash",
+        url="https://blog.google/innovation-and-ai/gemini-3-7-flash/",
+        summary="Google introduces a new model for coding and agents.",
+        author_names=["Google"],
+        published_at=utcnow(),
+        raw_payload={},
+    )
+    ordinary = FetchedNewsEntry(
+        external_id="gemini-evals",
+        title="How we evaluate Gemini for long-context tasks",
+        url="https://blog.google/innovation-and-ai/gemini-evals/",
+        summary="A look at model evaluation methodology.",
+        author_names=["Google"],
+        published_at=utcnow(),
+        raw_payload={},
+    )
+    spoofed_source = FrontierNewsSource(
+        key="spoofed_google_blog",
+        name="Spoofed Google Blog",
+        kind="rss",
+        url="https://blog.google.example.com/rss/",
+        config={"keywords": ["gemini"]},
+        enabled=True,
+        trust_level=100,
+        fetch_interval_minutes=60,
+    )
+    spoofed_release = FetchedNewsEntry(
+        external_id="spoofed-gemini-release",
+        title="Introducing Gemini 3.7 Flash",
+        url="https://blog.google.example.com/gemini-3-7-flash/",
+        summary="A spoofed release entry.",
+        author_names=["Unknown"],
+        published_at=utcnow(),
+        raw_payload={},
+    )
+
+    assert service._score_entry(official_source, release) == 100
+    assert service._score_entry(official_source, ordinary) < 100
+    assert service._score_entry(spoofed_source, release) < 100
+    assert service._score_entry(official_source, spoofed_release) < 100
+
+
+@pytest.mark.asyncio
+async def test_existing_official_model_release_is_promoted_to_top_score() -> None:
+    """Verify a previously collected duplicate receives the new editorial priority."""
+
+    existing = SimpleNamespace(score=72)
+    session = SimpleNamespace(scalar=AsyncMock(return_value=existing))
+    service = FrontierNewsService(cast(AsyncSession, session), Settings(_env_file=None))
+    source = FrontierNewsSource(
+        key="google_ai_blog",
+        name="Google AI / Gemini 官方博客",
+        kind="rss",
+        url="https://blog.google/rss/",
+        config={"keywords": ["gemini"]},
+        enabled=True,
+        trust_level=100,
+        fetch_interval_minutes=60,
+    )
+    release = FetchedNewsEntry(
+        external_id="gemini-3-7-flash",
+        title="Introducing Gemini 3.7 Flash",
+        url="https://blog.google/innovation-and-ai/gemini-3-7-flash/",
+        summary="Google introduces a new model for coding and agents.",
+        author_names=["Google"],
+        published_at=utcnow(),
+        raw_payload={},
+    )
+
+    item, created = await service._upsert_entry(source, release)
+
+    assert item is existing
+    assert created is False
+    assert existing.score == 100
+
+
+@pytest.mark.asyncio
+async def test_openai_images_release_enters_queue_before_tool_roundup() -> None:
+    """Keep an official image-model launch ahead of tool news with one queue slot."""
+
+    spec = next(source for source in DEFAULT_FRONTIER_SOURCES if source.key == "openai_news")
+    assert spec.url == "https://openai.com/news/rss.xml"
+    source = FrontierNewsSource(
+        key=spec.key, name=spec.name, kind=spec.kind, url=spec.url,
+        config={**spec.config, "review_batch_size": 1}, trust_level=spec.trust_level,
+    )
+    service = FrontierNewsService(cast(AsyncSession, object()), Settings(_env_file=None))
+    release = FetchedNewsEntry(
+        external_id="images-2-5", title="Introducing ChatGPT Images 2.5",
+        url="https://openai.com/index/introducing-chatgpt-images-2-5/",
+        summary="Sharper details, faster generation, and more precise editing.",
+        author_names=["OpenAI"], published_at=utcnow(), raw_payload={},
+    )
+    ordinary = FetchedNewsEntry(
+        external_id="tools", title="AI coding tools roundup",
+        url="https://openai.com/index/tools/", summary="A collection of coding tools.",
+        author_names=["OpenAI"], published_at=utcnow(), raw_payload={},
+    )
+    assert service._score_entry(source, release) == 100
+    assert service._score_entry(source, ordinary) < 100
+    service._fetch_source_entries = AsyncMock(return_value=[ordinary, release])
+    item = SimpleNamespace(reviewable_id=None)
+    service._upsert_entry = AsyncMock(return_value=(item, True))
+
+    async def queue_item(candidate: SimpleNamespace) -> None:
+        """Record a successful queue insertion without database or network access."""
+        candidate.reviewable_id = "review-1"
+
+    service._enrich_and_queue_item = AsyncMock(side_effect=queue_item)
+    result = await service._collect_source(source, force=True)
+    service._upsert_entry.assert_awaited_once_with(source, release)
+    assert result.queued_count == 1
+    assert result.error_count == 0
 
 
 def test_frontier_source_due_accepts_naive_last_checked_time() -> None:

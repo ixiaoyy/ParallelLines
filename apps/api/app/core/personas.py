@@ -35,7 +35,7 @@ PERSONA_IDENTITIES: dict[PersonaKind, PersonaIdentity] = {
         "editorial", "官方栏目", "该账号由平行线运营维护，用于栏目内容发布。"
     ),
     "automation": PersonaIdentity(
-        "automation", "自动账号", "该账号由平行线运营维护，用于自动化发布或辅助互动。"
+        "automation", "资讯机器人", "由平行线运营，自动收集和发布资讯。"
     ),
     "fictional": PersonaIdentity(
         "fictional", "创作角色", "该账号是平行线运营的创作角色，不代表独立社区成员。"

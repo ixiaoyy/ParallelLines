@@ -165,7 +165,7 @@ def memory_post(topic: Topic, author: User, *, floor: int) -> Post:
     ("managed", "kind", "label"),
     [
         (True, "editorial", "官方栏目"),
-        (True, "automation", "自动账号"),
+        (True, "automation", "资讯机器人"),
         (True, "fictional", "创作角色"),
         (True, None, "运营角色"),
         (True, "future-kind", "运营角色"),
