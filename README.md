@@ -99,17 +99,23 @@ while Docker Compose builds the production frontend against the same-origin `/ap
 ### 注册邮件验证码
 
 本地和 CI 默认使用 `EMAIL_DELIVERY_MODE=memory`，注册接口会返回仅用于开发测试的
-`dev_verification_code`，前端会自动填入验证码输入框。真实环境请改为 SMTP：
+`dev_verification_code`，前端会自动填入验证码输入框。预发布和生产环境统一使用
+Resend SMTP：
 
 ```powershell
 EMAIL_DELIVERY_MODE=smtp
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USERNAME=your-smtp-user
-SMTP_PASSWORD=your-smtp-password
-SMTP_FROM_EMAIL=noreply@example.com
-SMTP_USE_TLS=true
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=465
+SMTP_USERNAME=resend
+SMTP_PASSWORD=your-resend-api-key
+SMTP_FROM_EMAIL=noreply@pingxingxian.space
+SMTP_USE_TLS=false
+SMTP_USE_SSL=true
 ```
+
+启用前须在 Resend 验证 `pingxingxian.space` 并创建 API Key。API Key 只写入服务器上的
+`apps/api/.env`，不得提交到仓库。现有注册、密码重置、邮箱换绑、通知和摘要邮件继续共用
+同一发送链路，无需引入额外 SDK。
 
 生产环境不得使用 `memory` 模式；验证码有效期和重发/尝试限制可通过
 `EMAIL_VERIFICATION_CODE_TTL_MINUTES`、`EMAIL_VERIFICATION_RESEND_SECONDS`、
