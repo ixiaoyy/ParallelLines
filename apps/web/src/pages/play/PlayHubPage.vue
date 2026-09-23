@@ -167,25 +167,19 @@ onBeforeUnmount(() => {
       </header>
 
       <section class="play-options" aria-label="可玩项目">
-        <button
-          class="play-option"
-          type="button"
-          :disabled="isFableSpaceLaunching"
-          :aria-busy="isFableSpaceLaunching"
-          @click="launchFableSpace"
-        >
+        <a class="play-option" href="https://fable.pingxingxian.space/">
           <span class="play-option__mark play-option__mark--private" aria-hidden="true">
             <LockOutlined />
           </span>
           <span class="play-option__copy">
             <strong>私密空间</strong>
-            <small>{{ isFableSpaceLaunching ? "正在建立安全登录…" : "使用论坛账号进入" }}</small>
+            <small>直接进入</small>
           </span>
           <span class="play-option__action">
-            {{ isFableSpaceLaunching ? "请稍候" : "进入" }}
+            进入
             <ArrowRightOutlined aria-hidden="true" />
           </span>
-        </button>
+        </a>
 
         <p v-if="fableSpaceLaunchError" class="play-options__error" role="alert">
           {{ fableSpaceLaunchError }}

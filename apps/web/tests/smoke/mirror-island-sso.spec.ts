@@ -54,8 +54,7 @@ test("returning from browser cache does not show a stale navigation failure", as
     });
   });
 
-  await page.goto("/play");
-  await page.getByRole("button", { name: /私密空间/ }).click();
+  await page.goto("/play?mirror_sso=1");
   await expect(page).toHaveURL(/\/play#mirror-sso-pending$/);
 
   await page.evaluate(() => {
@@ -65,5 +64,22 @@ test("returning from browser cache does not show a stale navigation failure", as
   await page.waitForTimeout(600);
 
   await expect(page.getByText("跳转未完成，请重试。")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /私密空间/ })).toBeEnabled();
+  await expect(page.getByRole("link", { name: /私密空间/ })).toBeVisible();
+});
+
+test("forum private-space card navigates directly without requesting a ticket", async ({ page }) => {
+  let ticketRequests = 0;
+  await page.route("**/api/v1/auth/fablespace/ticket", async (route) => {
+    ticketRequests += 1;
+    await route.abort();
+  });
+  await page.route("https://fable.pingxingxian.space/**", async (route) => {
+    await route.fulfill({ contentType: "text/html", body: "<title>Private space</title>" });
+  });
+
+  await page.goto("/play");
+  await page.getByRole("link", { name: /私密空间/ }).click();
+
+  await expect(page).toHaveURL("https://fable.pingxingxian.space/");
+  expect(ticketRequests).toBe(0);
 });
