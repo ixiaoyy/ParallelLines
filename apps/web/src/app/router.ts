@@ -68,8 +68,20 @@ export const router = createRouter({
       meta: {
         seo: {
           title: "游乐场 · {siteTitle}",
-          description: "探索平行线正在生长的可玩项目：私密空间与平行消消乐。",
+          description: "探索平行线游乐场：私密空间、平行消消乐与将军战小兵。",
           canonicalPath: "/play",
+        },
+      },
+    },
+    {
+      path: "/play/generals-soldiers",
+      name: "play-generals-soldiers",
+      component: () => import("@/pages/play/GeneralsSoldiersPage.vue"),
+      meta: {
+        seo: {
+          title: "将军战小兵 · {siteTitle}",
+          description: "在平行线游乐场选择将军或小兵，与电脑展开五乘五棋盘对弈。",
+          canonicalPath: "/play/generals-soldiers",
         },
       },
     },

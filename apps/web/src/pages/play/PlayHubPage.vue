@@ -162,43 +162,45 @@ onBeforeUnmount(() => {
 
     <section class="play-hub-page" aria-labelledby="play-hub-title">
       <header class="play-hub-header">
-        <h1 id="play-hub-title">游乐场</h1>
-        <span>2 个项目</span>
+        <div>
+          <span class="play-hub-header__eyebrow">平行线 · 游乐场</span>
+          <h1 id="play-hub-title">游乐场</h1>
+          <p>今天玩点什么？选一款喜欢的游戏，随时开始。</p>
+        </div>
+        <span class="play-hub-header__count">3 个可玩项目</span>
       </header>
 
-      <section class="play-options" aria-label="可玩项目">
-        <a class="play-option" href="https://fable.pingxingxian.space/">
-          <span class="play-option__mark play-option__mark--private" aria-hidden="true">
-            <LockOutlined />
+      <div class="play-gallery" aria-label="可玩项目">
+        <RouterLink class="play-feature-card" :to="{ name: 'play-generals-soldiers' }">
+          <span class="play-feature-card__label">新加入 · Q 版策略对弈</span>
+          <strong>将军战小兵</strong>
+          <p>选将军突围，或带领小兵围困对手。喵喵酱已经摆好棋盘。</p>
+          <span class="play-feature-card__action">开始对弈 <ArrowRightOutlined aria-hidden="true" /></span>
+          <span class="play-feature-card__pieces" aria-hidden="true">
+            <i><img src="/games/generals-soldiers/general-chibi.png" alt="" width="320" height="320" /></i>
+            <i><img src="/games/generals-soldiers/soldier-chibi.png" alt="" width="320" height="320" /></i>
           </span>
-          <span class="play-option__copy">
-            <strong>私密空间</strong>
-            <small>直接进入</small>
-          </span>
-          <span class="play-option__action">
-            进入
-            <ArrowRightOutlined aria-hidden="true" />
-          </span>
+          <img class="play-feature-card__character" src="/games/generals-soldiers/miaomiao-chibi.png" alt="" width="760" height="827" />
+        </RouterLink>
+
+        <a class="play-game-card play-game-card--match" :href="match3Url">
+          <span class="play-game-card__top">轻松休闲 <ArrowRightOutlined aria-hidden="true" /></span>
+          <span class="play-game-card__art" aria-hidden="true"><img src="/match3-game-mark.png" alt="" width="96" height="96" /></span>
+          <strong>平行消消乐</strong>
+          <p>打开即玩，来一局轻松的消除。</p>
+          <span class="play-game-card__action">开始游戏</span>
         </a>
 
-        <p v-if="fableSpaceLaunchError" class="play-options__error" role="alert">
-          {{ fableSpaceLaunchError }}
-        </p>
-
-        <a class="play-option" :href="match3Url">
-          <span class="play-option__mark play-option__mark--match" aria-hidden="true">
-            <img src="/match3-game-mark.png" alt="" width="64" height="64" />
-          </span>
-          <span class="play-option__copy">
-            <strong>平行消消乐</strong>
-            <small>打开即玩</small>
-          </span>
-          <span class="play-option__action">
-            开始
-            <ArrowRightOutlined aria-hidden="true" />
-          </span>
+        <a class="play-game-card play-game-card--private" href="https://fable.pingxingxian.space/">
+          <span class="play-game-card__top">独立空间 <ArrowRightOutlined aria-hidden="true" /></span>
+          <span class="play-game-card__art play-game-card__art--private" aria-hidden="true"><LockOutlined /></span>
+          <strong>私密空间</strong>
+          <p>前往独立空间，继续探索。</p>
+          <span class="play-game-card__action">直接进入</span>
         </a>
-      </section>
+      </div>
+
+      <p v-if="fableSpaceLaunchError" class="play-hub-error" role="alert">{{ fableSpaceLaunchError }}</p>
     </section>
   </div>
 </template>

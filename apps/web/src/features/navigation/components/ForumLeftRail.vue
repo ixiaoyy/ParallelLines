@@ -192,7 +192,7 @@ function tagAccentStyle(tagName: string): Record<string, string> {
         <RouterLink
           class="rail-board rail-board--play"
           :to="{ name: 'play-hub' }"
-          aria-label="游乐场，2 个项目可玩"
+          aria-label="游乐场，3 个项目可玩"
           @click="emit('navigate')"
         >
           <RocketOutlined class="rail-board-mark" aria-hidden="true" />
