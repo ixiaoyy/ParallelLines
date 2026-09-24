@@ -107,6 +107,7 @@ test("对局占满视口，棋盘和操作在手机横竖屏及桌面都可见",
     await page.getByRole("button", { name: /开始对弈/ }).click();
 
     await expect(page.locator(".topbar")).toHaveCount(0);
+    await expect(page.getByRole("navigation")).toHaveCount(0);
     const layout = await page.evaluate(() => {
       const board = document.querySelector(".gs-board")!.getBoundingClientRect();
       const actions = document.querySelector(".gs-match-actions")!.getBoundingClientRect();

@@ -8,7 +8,6 @@ import { useRoute, useRouter } from "vue-router";
 
 import { requestFableSpaceSsoTicket } from "@/features/auth/api";
 import { useBoards } from "@/features/boards/queries";
-import { match3LaunchUrl } from "@/features/play/products";
 import { useTags } from "@/features/tags/queries";
 import {
   readCachedHomeRailBoards,
@@ -22,7 +21,6 @@ const ForumLeftRail = defineAsyncComponent(() =>
   import("@/features/navigation/components/ForumLeftRail.vue"),
 );
 
-const match3Url = match3LaunchUrl("play-hub");
 const route = useRoute();
 const router = useRouter();
 const isDesktopRailVisible = useMediaQuery("(min-width: 981px)", true);
@@ -183,13 +181,13 @@ onBeforeUnmount(() => {
           <img class="play-feature-card__character" src="/games/generals-soldiers/miaomiao-chibi.png" alt="" width="760" height="827" />
         </RouterLink>
 
-        <a class="play-game-card play-game-card--match" :href="match3Url">
+        <RouterLink class="play-game-card play-game-card--match" :to="{ name: 'play-match3' }">
           <span class="play-game-card__top">轻松休闲 <ArrowRightOutlined aria-hidden="true" /></span>
           <span class="play-game-card__art" aria-hidden="true"><img src="/match3-game-mark.png" alt="" width="96" height="96" /></span>
           <strong>平行消消乐</strong>
           <p>打开即玩，来一局轻松的消除。</p>
           <span class="play-game-card__action">开始游戏</span>
-        </a>
+        </RouterLink>
 
         <a class="play-game-card play-game-card--private" href="https://fable.pingxingxian.space/">
           <span class="play-game-card__top">独立空间 <ArrowRightOutlined aria-hidden="true" /></span>

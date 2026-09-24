@@ -271,12 +271,6 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="gs-page" :data-theme="theme" :data-phase="phase">
-    <header class="gs-topline">
-      <RouterLink :to="{ name: 'play-hub' }" class="gs-back">‹ 返回游乐场</RouterLink>
-      <span class="gs-topline__label">平行线 · 游乐场</span>
-      <button class="gs-topline__rules" type="button" @click="openRules">游戏规则</button>
-    </header>
-
     <div v-if="phase === 'setup'" class="gs-setup">
       <section class="gs-hero" aria-labelledby="gs-title">
         <div class="gs-hero__copy">
@@ -337,6 +331,7 @@ onBeforeUnmount(() => {
 
         <div class="gs-settings__foot">
           <UiButton tone="primary" class="gs-start" @click="startGame">开始对弈 <span aria-hidden="true">→</span></UiButton>
+          <button class="gs-settings__rules" type="button" @click="openRules">游戏规则</button>
           <p>将军先行；选小兵方时由电脑先走。</p>
         </div>
       </section>

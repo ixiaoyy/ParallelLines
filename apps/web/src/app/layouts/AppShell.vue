@@ -98,8 +98,10 @@ const mobileNavigationBoards = computed(() => mobileBoardsQuery.data.value ?? []
 const mobileNavigationTags = computed(() => mobileTagsQuery.data.value ?? []);
 // Auth route already renders the login/register form, so the guest CTA is hidden there to avoid duplicate entry points.
 const isAuthRoute = computed(() => route.name === "auth");
-// 对局页使用自己的返回入口，避免论坛导航占据棋盘空间或在滚动时遮住落子区域。
-const isPlayGameRoute = computed(() => route.name === "play-generals-soldiers");
+// 游戏页独占视口，论坛导航仅在游乐场等普通页面显示。
+const isPlayGameRoute = computed(() =>
+  route.name === "play-generals-soldiers" || route.name === "play-match3",
+);
 // Marks protected administration pages so they render in the dedicated operations-console shell.
 // No parameters; return value follows the current route and has no side effects.
 const isAdminConsoleRoute = computed(() => route.path === "/admin" || route.path.startsWith("/admin/"));

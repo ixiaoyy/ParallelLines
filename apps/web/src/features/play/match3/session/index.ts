@@ -1,0 +1,16 @@
+export {
+  AMBIENT_SNAPSHOT_VERSION,
+  AMBIENT_STORAGE_KEY,
+  createFreshSnapshot,
+  loadAmbientSnapshot,
+  loadAmbientSnapshotResult,
+  parseAmbientSnapshot,
+  resolveBrowserStorage,
+  saveAmbientSnapshot,
+  type AmbientPreferences,
+  type AmbientPetProgress,
+  type AmbientPlantProgress,
+  type AmbientSnapshotLoadResult,
+  type AmbientSnapshotV4,
+  type StorageLike,
+} from "./ambient-storage";

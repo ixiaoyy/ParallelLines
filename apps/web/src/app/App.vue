@@ -51,7 +51,7 @@ const theme = {
     <AppShell>
       <RouterView />
     </AppShell>
-    <!-- 对局页以棋盘和操作为主，不让站点级请求提示盖住落子区域。 -->
-    <GlobalLoadingIndicator v-if="route.name !== 'play-generals-soldiers'" />
+    <!-- 游戏页不让站点级请求提示盖住游玩区域。 -->
+    <GlobalLoadingIndicator v-if="route.name !== 'play-generals-soldiers' && route.name !== 'play-match3'" />
   </ConfigProvider>
 </template>

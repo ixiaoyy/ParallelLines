@@ -110,42 +110,6 @@
   outline-offset: 3px;
 }
 
-.gs-topline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  max-width: 1440px;
-  width: 100%;
-  margin: 0 auto 0.8rem;
-  color: var(--gs-muted);
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.gs-back {
-  color: var(--gs-ink);
-  text-decoration: none;
-}
-
-.gs-back:hover,
-.gs-topline__rules:hover {
-  color: var(--gs-highlight);
-}
-
-.gs-topline__label {
-  letter-spacing: 0.08em;
-}
-
-.gs-topline__rules {
-  min-height: 2.75rem;
-  border: 0;
-  padding: 0.3rem 0.5rem;
-  color: var(--gs-ink);
-  background: transparent;
-  cursor: pointer;
-}
-
 .gs-setup,
 .gs-match {
   max-width: 1440px;
@@ -502,6 +466,20 @@
   border-radius: 0.85rem !important;
   font-size: 1.05rem;
   font-weight: 800;
+}
+
+.gs-settings__rules {
+  min-height: 44px;
+  border: 1px solid var(--gs-border);
+  border-radius: 0.7rem;
+  padding: 0.45rem 1.1rem;
+  color: var(--gs-ink);
+  background: var(--gs-surface);
+  cursor: pointer;
+}
+
+.gs-settings__rules:hover {
+  border-color: var(--gs-highlight);
 }
 
 .gs-match__header {
@@ -1060,15 +1038,6 @@
     --gs-page-gutter: 0.75rem;
   }
 
-  .gs-topline {
-    margin-bottom: 0.9rem;
-    font-size: 0.82rem;
-  }
-
-  .gs-topline__label {
-    display: none;
-  }
-
   .gs-hero {
     display: block;
     min-height: 25rem;
@@ -1324,17 +1293,6 @@
 @media (orientation: landscape) and (max-height: 540px) and (min-width: 560px) {
   .gs-page[data-phase="playing"] {
     --gs-page-gutter: 0.4rem;
-  }
-
-  .gs-topline {
-    min-height: 1.5rem;
-    margin-bottom: 0.1rem;
-    font-size: 0.76rem;
-  }
-
-  .gs-topline__rules {
-    min-height: 1.5rem;
-    padding: 0.1rem 0.25rem;
   }
 
   .gs-match__header {

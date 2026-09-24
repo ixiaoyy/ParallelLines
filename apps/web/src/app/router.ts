@@ -86,6 +86,18 @@ export const router = createRouter({
       },
     },
     {
+      path: "/play/match3",
+      name: "play-match3",
+      component: () => import("@/pages/play/Match3Page.vue"),
+      meta: {
+        seo: {
+          title: "平行消消乐 · {siteTitle}",
+          description: "在平行线游乐场寻找三条同种小鱼，陪小猫完成一关关的挑战。",
+          canonicalPath: "/play/match3",
+        },
+      },
+    },
+    {
       path: "/tools",
       name: "tools",
       component: () => import("@/pages/tools/ToolsPage.vue"),
