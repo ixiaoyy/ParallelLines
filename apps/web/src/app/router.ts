@@ -68,8 +68,20 @@ export const router = createRouter({
       meta: {
         seo: {
           title: "游乐场 · {siteTitle}",
-          description: "探索平行线游乐场：瓜体实验室、私密空间、平行消消乐与将军战小兵。",
+          description: "探索平行线游乐场：准点下班、瓜体实验室、私密空间、平行消消乐与将军战小兵。",
           canonicalPath: "/play",
+        },
+      },
+    },
+    {
+      path: "/play/clockout",
+      name: "play-clockout",
+      component: () => import("@/pages/play/ClockoutGamePage.vue"),
+      meta: {
+        seo: {
+          title: "准点下班 · {siteTitle}",
+          description: "在平行线游乐场闯过十八间办公室，带好背包，赶在下班前走进电梯。",
+          canonicalPath: "/play/clockout",
         },
       },
     },

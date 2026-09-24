@@ -165,7 +165,7 @@ onBeforeUnmount(() => {
           <h1 id="play-hub-title">游乐场</h1>
           <p>今天玩点什么？选一款喜欢的游戏，随时开始。</p>
         </div>
-        <span class="play-hub-header__count">4 个可玩项目</span>
+        <span class="play-hub-header__count">5 个可玩项目</span>
       </header>
 
       <div class="play-gallery" aria-label="可玩项目">
@@ -187,6 +187,14 @@ onBeforeUnmount(() => {
           <strong>瓜体实验室</strong>
           <p>让水果像果冻一样流动、碰撞、融合，合成大西瓜。</p>
           <span class="play-game-card__action">开始实验</span>
+        </RouterLink>
+
+        <RouterLink class="play-game-card play-game-card--clockout" :to="{ name: 'play-clockout' }">
+          <span class="play-game-card__top">新加入 · 18 关潜行 <ArrowRightOutlined aria-hidden="true" /></span>
+          <span class="play-game-card__art" aria-hidden="true"><img src="/games/clockout/scene.png" alt="" width="820" height="460" /></span>
+          <strong>准点下班</strong>
+          <p>躲开巡视，带上背包，赶在 18:00 前走进电梯。</p>
+          <span class="play-game-card__action">开始闯关</span>
         </RouterLink>
 
         <RouterLink class="play-game-card play-game-card--match" :to="{ name: 'play-match3' }">
