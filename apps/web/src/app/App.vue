@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ConfigProvider } from "ant-design-vue";
 import zhCN from "ant-design-vue/es/locale/zh_CN";
+import { useRoute } from "vue-router";
 
 import AppShell from "@/app/layouts/AppShell.vue";
 import GlobalLoadingIndicator from "@/shared/ui/GlobalLoadingIndicator.vue";
+
+const route = useRoute();
 
 /** 须与 tokens.scss / button-surfaces.scss 一致，见 AGENTS.md */
 const theme = {
@@ -48,6 +51,7 @@ const theme = {
     <AppShell>
       <RouterView />
     </AppShell>
-    <GlobalLoadingIndicator />
+    <!-- 对局页以棋盘和操作为主，不让站点级请求提示盖住落子区域。 -->
+    <GlobalLoadingIndicator v-if="route.name !== 'play-generals-soldiers'" />
   </ConfigProvider>
 </template>

@@ -529,6 +529,19 @@
   padding: 0;
 }
 
+/* 游戏路由由自己的页头和棋盘布局接管整个视口。 */
+.app-shell--play-game {
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+
+.app-shell--play-game .shell-main {
+  width: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+}
+
 @media (max-width: 1100px) {
   .topbar {
     grid-template-columns: minmax(0, 1fr) auto;

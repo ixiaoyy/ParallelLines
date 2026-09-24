@@ -98,6 +98,8 @@ const mobileNavigationBoards = computed(() => mobileBoardsQuery.data.value ?? []
 const mobileNavigationTags = computed(() => mobileTagsQuery.data.value ?? []);
 // Auth route already renders the login/register form, so the guest CTA is hidden there to avoid duplicate entry points.
 const isAuthRoute = computed(() => route.name === "auth");
+// 对局页使用自己的返回入口，避免论坛导航占据棋盘空间或在滚动时遮住落子区域。
+const isPlayGameRoute = computed(() => route.name === "play-generals-soldiers");
 // Marks protected administration pages so they render in the dedicated operations-console shell.
 // No parameters; return value follows the current route and has no side effects.
 const isAdminConsoleRoute = computed(() => route.path === "/admin" || route.path.startsWith("/admin/"));
@@ -362,10 +364,11 @@ function t(key: string, fallback: string) {
       'is-route-navigating': isRouteNavigating,
       'app-shell--mobile-fullscreen': isMobileFullscreenRoute,
       'app-shell--auth-immersive': isAuthRoute,
+      'app-shell--play-game': isPlayGameRoute,
       'app-shell--profile-screen': isProfileScreenRoute,
     }"
   >
-    <header v-if="!isAuthRoute" ref="topbarRef" class="topbar" @keydown.esc="closeNavigation">
+    <header v-if="!isAuthRoute && !isPlayGameRoute" ref="topbarRef" class="topbar" @keydown.esc="closeNavigation">
       <RouterLink class="brand" to="/" :aria-label="brandHomeLabel" :title="brandHomeLabel" @click="handleBrandClick">
         <span class="brand-mark">
           <img class="brand-logo" :src="brandLogoUrl" alt="" aria-hidden="true" />

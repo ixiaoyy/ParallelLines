@@ -98,3 +98,76 @@ test("玩家执小兵时电脑先走且棋局返回玩家回合", async ({ page 
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   if (screenshotDir) await page.screenshot({ path: path.join(screenshotDir, "game-board-default-390.png"), fullPage: true });
 });
+
+test("对局占满视口，棋盘和操作在手机横竖屏及桌面都可见", async ({ page }) => {
+  for (const [width, height] of [[320, 568], [390, 844], [568, 320], [667, 375], [1440, 900]]) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/play/generals-soldiers");
+    await page.getByRole("button", { name: /将军方/ }).click();
+    await page.getByRole("button", { name: /开始对弈/ }).click();
+
+    await expect(page.locator(".topbar")).toHaveCount(0);
+    const layout = await page.evaluate(() => {
+      const board = document.querySelector(".gs-board")!.getBoundingClientRect();
+      const actions = document.querySelector(".gs-match-actions")!.getBoundingClientRect();
+      return {
+        scrollY,
+        board: { top: board.top, bottom: board.bottom, width: board.width, height: board.height },
+        actions: { right: actions.right, bottom: actions.bottom },
+        scrollWidth: document.documentElement.scrollWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+      };
+    });
+
+    expect(layout.scrollY, `${width}×${height} 初始滚动位置`).toBe(0);
+    expect(Math.abs(layout.board.width - layout.board.height), `${width}×${height} 棋盘形状`).toBeLessThanOrEqual(1);
+    expect(layout.board.top, `${width}×${height} 棋盘顶部`).toBeGreaterThanOrEqual(0);
+    expect(layout.board.bottom, `${width}×${height} 棋盘底部`).toBeLessThanOrEqual(height + 1);
+    expect(layout.actions.right, `${width}×${height} 操作区右边`).toBeLessThanOrEqual(width + 1);
+    expect(layout.actions.bottom, `${width}×${height} 操作区底部`).toBeLessThanOrEqual(height + 1);
+    expect(layout.scrollWidth, `${width}×${height} 横向溢出`).toBeLessThanOrEqual(width);
+    expect(layout.scrollHeight, `${width}×${height} 纵向溢出`).toBeLessThanOrEqual(height + 1);
+  }
+
+  await page.setViewportSize({ width: 320, height: 568 });
+  const resized = await page.evaluate(() => ({
+    boardBottom: document.querySelector(".gs-board")!.getBoundingClientRect().bottom,
+    actionsBottom: document.querySelector(".gs-match-actions")!.getBoundingClientRect().bottom,
+  }));
+  expect(resized.boardBottom).toBeLessThanOrEqual(569);
+  expect(resized.actionsBottom).toBeLessThanOrEqual(569);
+
+  await page.goto("/play");
+  await expect(page.locator(".topbar")).toBeVisible();
+});
+
+test("走棋、电脑回应与悔棋都不改变棋盘和棋格尺寸", async ({ page }) => {
+  for (const [width, height] of [[320, 568], [390, 844], [568, 320], [1440, 900]]) {
+    await page.setViewportSize({ width, height });
+    await page.goto("/play/generals-soldiers");
+    await page.getByRole("button", { name: /将军方/ }).click();
+    await page.getByRole("button", { name: /开始对弈/ }).click();
+
+    const measure = () => page.locator(".gs-board").evaluate((board) => {
+      const boardRect = board.getBoundingClientRect();
+      const cells = Array.from(board.querySelectorAll(".gs-cell"), (cell) => {
+        const rect = cell.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      });
+      return { board: { width: boardRect.width, height: boardRect.height }, cells };
+    });
+
+    const initial = await measure();
+    const cellHeights = initial.cells.map((cell) => cell.height);
+    expect(Math.max(...cellHeights) - Math.min(...cellHeights), `${width}×${height} 五行等高`).toBeLessThan(1);
+
+    await page.getByRole("button", { name: "第5行第2列，将军" }).click();
+    await page.getByRole("button", { name: "第3行第2列，小兵，可跳吃" }).click();
+    expect(await measure(), `${width}×${height} 玩家落子`).toEqual(initial);
+    await expect(page.locator(".gs-turn")).toHaveText("轮到你走", { timeout: 3_000 });
+    expect(await measure(), `${width}×${height} 电脑回应`).toEqual(initial);
+
+    await page.getByRole("button", { name: "悔棋" }).click();
+    expect(await measure(), `${width}×${height} 悔棋`).toEqual(initial);
+  }
+});

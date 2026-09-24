@@ -79,16 +79,24 @@
 }
 
 .gs-page {
+  --gs-page-gutter: clamp(0.7rem, 1.6vw, 1.35rem);
   position: relative;
-  min-height: min(72rem, calc(100vh - 9rem));
+  min-height: 100dvh;
   overflow: hidden;
-  border: 2px solid var(--gs-border);
-  border-radius: 1.5rem;
-  padding: clamp(1rem, 2.5vw, 2rem);
+  padding:
+    max(var(--gs-page-gutter), env(safe-area-inset-top))
+    max(var(--gs-page-gutter), env(safe-area-inset-right))
+    max(var(--gs-page-gutter), env(safe-area-inset-bottom))
+    max(var(--gs-page-gutter), env(safe-area-inset-left));
   color: var(--gs-ink);
   background: var(--gs-page-bg);
   isolation: isolate;
   box-sizing: border-box;
+}
+
+.gs-page[data-phase="playing"] {
+  display: flex;
+  flex-direction: column;
 }
 
 .gs-page button,
@@ -107,8 +115,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  max-width: 1200px;
-  margin: 0 auto 1.6rem;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto 0.8rem;
   color: var(--gs-muted);
   font-size: 0.9rem;
   font-weight: 700;
@@ -139,8 +148,15 @@
 
 .gs-setup,
 .gs-match {
-  max-width: 1200px;
+  max-width: 1440px;
+  width: 100%;
   margin: 0 auto;
+}
+
+.gs-page[data-phase="playing"] .gs-match {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
 }
 
 .gs-hero {
@@ -490,10 +506,16 @@
 
 .gs-match__header {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.gs-match__header > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
 }
 
 .gs-match__kicker {
@@ -503,9 +525,9 @@
 }
 
 .gs-match__header h1 {
-  margin: 0.2rem 0 0;
+  margin: 0;
   color: var(--gs-ink);
-  font-size: clamp(1.7rem, 3vw, 2.35rem);
+  font-size: clamp(1.35rem, 2.2vw, 1.8rem);
   font-weight: 900;
   letter-spacing: -0.025em;
 }
@@ -523,10 +545,19 @@
 
 .gs-match__body {
   display: grid;
-  grid-template-columns: minmax(11rem, 14rem) minmax(0, 34rem) minmax(11rem, 14rem);
+  flex: 1;
+  grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr) minmax(10rem, 14rem);
   justify-content: center;
-  align-items: start;
+  align-content: center;
+  align-items: center;
   gap: clamp(0.8rem, 2vw, 1.6rem);
+  min-height: 0;
+}
+
+.gs-arena {
+  width: min(100%, max(15rem, calc(100dvh - 18.5rem)), 54rem);
+  min-width: 0;
+  margin: 0 auto;
 }
 
 .gs-match__aside {
@@ -608,7 +639,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.4rem;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.6rem;
   border: 2px solid var(--gs-border);
   border-radius: 1rem;
   padding: 0.7rem 1rem;
@@ -648,11 +679,14 @@
   padding: 0.25rem;
   background: var(--gs-frame);
   box-shadow: 0.42rem 0.55rem 0 var(--gs-panel-shadow), inset 0 0 0 2px color-mix(in srgb, var(--gs-general) 45%, transparent);
+  box-sizing: border-box;
 }
 
 .gs-board {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  // 棋子落点变化不能改变任意一行的高度，五行始终与五列等分棋盘。
+  grid-template-rows: repeat(5, minmax(0, 1fr));
   gap: clamp(2px, 0.6vw, 4px);
   aspect-ratio: 1;
   width: 100%;
@@ -951,7 +985,7 @@
   justify-content: center;
   flex-wrap: wrap;
   gap: 0.55rem;
-  margin-top: 1.2rem;
+  margin-top: 0.75rem;
 }
 
 .gs-match-actions button {
@@ -1023,8 +1057,7 @@
 
 @media (max-width: 680px) {
   .gs-page {
-    border-radius: 1rem;
-    padding: 1rem;
+    --gs-page-gutter: 0.75rem;
   }
 
   .gs-topline {
@@ -1096,7 +1129,7 @@
 
   .gs-match__body {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0.9rem;
+    gap: 0.5rem;
   }
 
   .gs-match__aside--character {
@@ -1131,7 +1164,7 @@
   }
 
   .gs-arena {
-    width: min(100%, 34rem);
+    width: min(100%, max(15rem, calc(100dvh - 18.5rem)));
     margin: 0 auto;
   }
 
@@ -1162,7 +1195,7 @@
 
 @media (max-width: 390px) {
   .gs-page {
-    padding: 0.7rem;
+    --gs-page-gutter: 0.65rem;
   }
 
   .gs-hero {
@@ -1222,7 +1255,7 @@
   }
 
   .gs-match__header h1 {
-    font-size: 1.42rem;
+    font-size: 1.28rem;
   }
 
   .gs-turn {
@@ -1265,6 +1298,148 @@
   .gs-match-actions button {
     min-width: calc(25% - 0.45rem);
     padding-inline: 0.2rem;
+  }
+}
+
+@media (max-width: 350px) {
+  .gs-match__header > div,
+  .gs-match__kicker {
+    display: block;
+  }
+
+  .gs-match__header h1 {
+    font-size: 1.2rem;
+    white-space: nowrap;
+  }
+}
+
+/* 矮屏竖向对局优先保留可点的棋格和底部操作；阵营仍在标题中可见。 */
+@media (orientation: portrait) and (max-height: 680px) and (max-width: 560px) {
+  .gs-match__aside--character {
+    display: none;
+  }
+}
+
+/* 矮屏横向对局将棋盘和操作并排，棋格按可用高度保持正方形。 */
+@media (orientation: landscape) and (max-height: 540px) and (min-width: 560px) {
+  .gs-page[data-phase="playing"] {
+    --gs-page-gutter: 0.4rem;
+  }
+
+  .gs-topline {
+    min-height: 1.5rem;
+    margin-bottom: 0.1rem;
+    font-size: 0.76rem;
+  }
+
+  .gs-topline__rules {
+    min-height: 1.5rem;
+    padding: 0.1rem 0.25rem;
+  }
+
+  .gs-match__header {
+    margin-bottom: 0.1rem;
+  }
+
+  .gs-match__header h1 {
+    font-size: 1.18rem;
+  }
+
+  .gs-match__kicker,
+  .gs-turn {
+    font-size: 0.72rem;
+  }
+
+  .gs-turn {
+    padding: 0.25rem 0.45rem;
+  }
+
+  .gs-match__body {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    gap: 0;
+  }
+
+  .gs-match__aside {
+    display: none;
+  }
+
+  .gs-arena {
+    display: grid;
+    grid-template-columns: minmax(0, clamp(16rem, calc(100dvh - 4rem), 22rem)) minmax(8rem, 9.5rem);
+    grid-template-rows: auto 1fr auto;
+    align-items: start;
+    justify-content: center;
+    gap: 0.35rem 0.7rem;
+    width: 100%;
+    max-width: none;
+  }
+
+  .gs-board-frame {
+    grid-column: 1;
+    grid-row: 1 / 4;
+    width: 100%;
+    border-width: 0.35rem;
+    padding: 0.15rem;
+  }
+
+  .gs-score {
+    grid-column: 2;
+    grid-row: 1;
+    display: grid;
+    gap: 0.2rem;
+    margin: 0;
+    padding: 0.3rem 0.45rem;
+  }
+
+  .gs-score > span:not(.gs-score__versus) {
+    gap: 0.3rem;
+  }
+
+  .gs-score__piece {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .gs-score strong {
+    font-size: 1rem;
+  }
+
+  .gs-score small {
+    display: inline;
+  }
+
+  .gs-score__versus {
+    display: none;
+  }
+
+  .gs-match-actions {
+    grid-column: 2;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 0.3rem;
+    margin: 0;
+  }
+
+  .gs-match-actions button {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.2rem;
+    font-size: 0.76rem;
+  }
+
+  .gs-match__hint {
+    grid-column: 2;
+    grid-row: 3;
+    justify-content: flex-start;
+    margin: 0;
+    font-size: 0.68rem;
+  }
+
+  .gs-match__hint span:last-child {
+    display: none;
   }
 }
 

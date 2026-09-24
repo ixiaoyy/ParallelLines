@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref } from "vue";
 
 import UiButton from "@/shared/ui/Button.vue";
 
@@ -196,12 +196,15 @@ function startGame(): void {
   recentPositions.value = [positionKey(state.value)];
   phase.value = "playing";
   scheduleAiMove();
+  // 设置页较长；进入对局后回到顶部，避免保留旧滚动位置让棋盘被截在屏幕外。
+  void nextTick(() => window.scrollTo(0, 0));
 }
 
 function returnToSetup(): void {
   stopAi();
   selected.value = null;
   phase.value = "setup";
+  void nextTick(() => window.scrollTo(0, 0));
 }
 
 function undoMove(): void {
@@ -267,7 +270,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="gs-page" :data-theme="theme">
+  <div class="gs-page" :data-theme="theme" :data-phase="phase">
     <header class="gs-topline">
       <RouterLink :to="{ name: 'play-hub' }" class="gs-back">‹ 返回游乐场</RouterLink>
       <span class="gs-topline__label">平行线 · 游乐场</span>
@@ -341,7 +344,7 @@ onBeforeUnmount(() => {
 
     <div v-else class="gs-match">
       <header class="gs-match__header">
-        <div><span class="gs-match__kicker">第 {{ round }} 回合</span><h1>将军战小兵</h1></div>
+        <div><span class="gs-match__kicker">第 {{ round }} 回合 · 你执{{ playerSide === 'general' ? '将军' : '小兵' }}</span><h1>将军战小兵</h1></div>
         <span class="gs-turn" role="status">{{ state.winner ? '对局结束' : aiThinking ? state.ply === 0 ? '将军先行 · 电脑准备中' : '电脑思考中' : '轮到你走' }}</span>
       </header>
 
