@@ -52,6 +52,6 @@ const theme = {
       <RouterView />
     </AppShell>
     <!-- 游戏页不让站点级请求提示盖住游玩区域。 -->
-    <GlobalLoadingIndicator v-if="route.name !== 'play-generals-soldiers' && route.name !== 'play-match3'" />
+    <GlobalLoadingIndicator v-if="route.name !== 'play-generals-soldiers' && route.name !== 'play-match3' && route.name !== 'play-melon'" />
   </ConfigProvider>
 </template>

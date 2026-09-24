@@ -165,7 +165,7 @@ onBeforeUnmount(() => {
           <h1 id="play-hub-title">游乐场</h1>
           <p>今天玩点什么？选一款喜欢的游戏，随时开始。</p>
         </div>
-        <span class="play-hub-header__count">3 个可玩项目</span>
+        <span class="play-hub-header__count">4 个可玩项目</span>
       </header>
 
       <div class="play-gallery" aria-label="可玩项目">
@@ -179,6 +179,14 @@ onBeforeUnmount(() => {
             <i><img src="/games/generals-soldiers/soldier-chibi.png" alt="" width="320" height="320" /></i>
           </span>
           <img class="play-feature-card__character" src="/games/generals-soldiers/miaomiao-chibi.png" alt="" width="760" height="827" />
+        </RouterLink>
+
+        <RouterLink class="play-game-card play-game-card--melon" :to="{ name: 'play-melon' }">
+          <span class="play-game-card__top">新加入 · 半流体合成 <ArrowRightOutlined aria-hidden="true" /></span>
+          <span class="play-game-card__art" aria-hidden="true"><img src="/games/melon/mark.svg" alt="" width="48" height="48" /></span>
+          <strong>瓜体实验室</strong>
+          <p>让水果像果冻一样流动、碰撞、融合，合成大西瓜。</p>
+          <span class="play-game-card__action">开始实验</span>
         </RouterLink>
 
         <RouterLink class="play-game-card play-game-card--match" :to="{ name: 'play-match3' }">

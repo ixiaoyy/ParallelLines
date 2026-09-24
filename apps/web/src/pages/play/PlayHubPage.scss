@@ -230,6 +230,29 @@
   background: #f1f2ff;
 }
 
+.play-game-card--melon {
+  grid-column: 1 / -1;
+  min-height: 14rem;
+  padding-right: 11rem;
+  background: #f1f2ff;
+}
+
+.play-game-card--melon .play-game-card__art {
+  position: absolute;
+  top: 50%;
+  right: 2rem;
+  width: 7.5rem;
+  height: 7.5rem;
+  margin: 0;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.play-game-card--melon .play-game-card__art img {
+  padding: 1.1rem;
+  object-fit: contain;
+}
+
 .play-game-card--private {
   background: #edf8f5;
 }
@@ -406,6 +429,21 @@
     min-height: 13.6rem;
     border-radius: 1rem;
     padding: 1rem;
+  }
+
+  .play-game-card--melon {
+    min-height: 12rem;
+    padding-right: 7rem;
+  }
+
+  .play-game-card--melon .play-game-card__art {
+    right: 1rem;
+    width: 5.3rem;
+    height: 5.3rem;
+  }
+
+  .play-game-card--melon .play-game-card__art img {
+    padding: 0.7rem;
   }
 
   .play-game-card__art {

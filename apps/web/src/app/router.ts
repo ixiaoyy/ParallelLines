@@ -68,8 +68,20 @@ export const router = createRouter({
       meta: {
         seo: {
           title: "游乐场 · {siteTitle}",
-          description: "探索平行线游乐场：私密空间、平行消消乐与将军战小兵。",
+          description: "探索平行线游乐场：瓜体实验室、私密空间、平行消消乐与将军战小兵。",
           canonicalPath: "/play",
+        },
+      },
+    },
+    {
+      path: "/play/melon",
+      name: "play-melon",
+      component: () => import("@/pages/play/MelonGamePage.vue"),
+      meta: {
+        seo: {
+          title: "瓜体实验室 · {siteTitle}",
+          description: "在平行线游乐场投放水果、切换流动性，合成大西瓜。",
+          canonicalPath: "/play/melon",
         },
       },
     },

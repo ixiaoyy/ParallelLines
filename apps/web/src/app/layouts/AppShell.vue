@@ -100,7 +100,7 @@ const mobileNavigationTags = computed(() => mobileTagsQuery.data.value ?? []);
 const isAuthRoute = computed(() => route.name === "auth");
 // 游戏页独占视口，论坛导航仅在游乐场等普通页面显示。
 const isPlayGameRoute = computed(() =>
-  route.name === "play-generals-soldiers" || route.name === "play-match3",
+  route.name === "play-generals-soldiers" || route.name === "play-match3" || route.name === "play-melon",
 );
 // Marks protected administration pages so they render in the dedicated operations-console shell.
 // No parameters; return value follows the current route and has no side effects.
