@@ -39,6 +39,8 @@ export const queryKeys = {
   emailPreferences: ["email", "preferences"] as const,
   siteSettingsPublic: ["site", "settings", "public"] as const,
   siteExtensions: ["site", "extensions"] as const,
+  catalog: ["catalog"] as const,
+  adminCatalog: ["admin", "catalog"] as const,
   adminRoot: ["admin"] as const,
   adminPlugins: ["admin", "plugins"] as const,
   adminAnalytics: (startDate: string, endDate: string) =>

@@ -22,13 +22,13 @@ class Settings(BaseSettings):
     background_job_poll_seconds: int = 5
     background_job_batch_size: int = 25
     background_job_retry_delay_seconds: int = 60
-    background_hot_rank_interval_seconds: int = 300
+    background_hot_rank_interval_seconds: int = 0
     background_upload_cleanup_interval_seconds: int = 3600
     background_session_cleanup_interval_seconds: int = 3600
-    background_digest_interval_seconds: int = 3600
-    background_frontier_news_interval_seconds: int = 3600
-    background_living_forum_interval_seconds: int = 86400
-    living_forum_publish_mode: Literal["auto", "review", "sample_review", "off"] = "auto"
+    background_digest_interval_seconds: int = 0
+    background_frontier_news_interval_seconds: int = 0
+    background_living_forum_interval_seconds: int = 0
+    living_forum_publish_mode: Literal["auto", "review", "sample_review", "off"] = "off"
     living_forum_daily_topic_limit: int = 1
     living_forum_daily_reply_limit: int = 0
     frontier_news_board_slug: str = "frontier"
@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     frontier_news_ai_provider: str = "local"
     frontier_news_ai_model: str = "local-deterministic-v1"
     frontier_news_request_timeout_seconds: float = 15.0
+    catalog_rating_ip_secret: str = ""
     daily_report_ai_provider: Literal["opencode", "openai_compatible", "local"] = "opencode"
     daily_report_ai_model: str = "deepseek-v4-flash-free"
     daily_report_ai_base_url: str = "https://opencode.ai/zen"

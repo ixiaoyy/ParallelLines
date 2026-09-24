@@ -194,7 +194,6 @@ def render_semantic_fallback(document: SeoPageDocument) -> str:
         f'data-seo-page-kind="{html.escape(document.kind, quote=True)}">',
         '  <nav aria-label="站点导航">',
         f'    <a href="/">{html.escape(document.site.title)}</a>',
-        '    <a href="/boards">全部版块</a>',
         "  </nav>",
         f"  <h1>{html.escape(document.heading)}</h1>",
         f"  <p>{html.escape(document.intro)}</p>",
@@ -220,8 +219,13 @@ def render_link_section(links: tuple[SeoPageLink, ...]) -> list[str]:
 
     lines = ["  <section>", "    <h2>相关公开内容</h2>", "    <ul>"]
     for link in links:
+        external_attrs = (
+            ' target="_blank" rel="noopener noreferrer"'
+            if link.path.startswith("https://")
+            else ""
+        )
         lines.append(
-            f'      <li><a href="{html.escape(link.path, quote=True)}">'
+            f'      <li><a href="{html.escape(link.path, quote=True)}"{external_attrs}>'
             f"{html.escape(link.label)}</a>"
         )
         if link.description:

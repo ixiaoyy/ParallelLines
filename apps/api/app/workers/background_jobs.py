@@ -197,19 +197,33 @@ async def handle_publish_living_forum_day(
     }
 
 
+async def handle_retired_forum_job(
+    _session: AsyncSession,
+    _payload: dict[str, object],
+) -> dict[str, object]:
+    """安全消费改版前已排队的论坛任务。
+
+    两个参数仅用于兼容统一 worker 接口；返回跳过状态，不读取或写入业务数据。
+    """
+
+    return {"status": "skipped", "reason": "forum_retired"}
+
+
 JOB_HANDLERS: dict[str, BackgroundJobHandler] = {
-    "recompute_hot_scores": handle_recompute_hot_scores,
+    # 历史队列可能仍含论坛任务；统一跳过，通用维护与认证邮件照常执行。
+    "recompute_hot_scores": handle_retired_forum_job,
     "cleanup_expired_uploads": handle_cleanup_expired_uploads,
     "cleanup_expired_sessions": handle_cleanup_expired_sessions,
     "create_notification": handle_create_notification,
     "send_notification_email": handle_send_notification_email,
-    "send_digest_emails": handle_send_digest_emails,
+    "send_digest_emails": handle_retired_forum_job,
     "send_email": handle_send_email,
     "create_site_backup": handle_create_site_backup,
     "rebuild_search_index": handle_rebuild_search_index,
     "deliver_webhook": handle_deliver_webhook,
-    "collect_frontier_news": handle_collect_frontier_news,
-    "publish_living_forum_day": handle_publish_living_forum_day,
+    "collect_frontier_news": handle_retired_forum_job,
+    "publish_living_forum_day": handle_retired_forum_job,
+    "publish_daily_reading": handle_retired_forum_job,
 }
 
 WORKER_QUEUES = ("mail", "notifications", "maintenance", "webhooks", "default")
@@ -230,23 +244,11 @@ async def run_once(
         service = BackgroundJobService(session)
         if enqueue_scheduled:
             await service.enqueue_due_scheduled_jobs(
-                background_hot_rank_interval_seconds=(
-                    runtime_settings.background_hot_rank_interval_seconds
-                ),
                 background_upload_cleanup_interval_seconds=(
                     runtime_settings.background_upload_cleanup_interval_seconds
                 ),
                 background_session_cleanup_interval_seconds=(
                     runtime_settings.background_session_cleanup_interval_seconds
-                ),
-                background_digest_interval_seconds=(
-                    runtime_settings.background_digest_interval_seconds
-                ),
-                background_frontier_news_interval_seconds=(
-                    runtime_settings.background_frontier_news_interval_seconds
-                ),
-                background_living_forum_interval_seconds=(
-                    runtime_settings.background_living_forum_interval_seconds
                 ),
             )
         for _ in range(runtime_settings.background_job_batch_size):

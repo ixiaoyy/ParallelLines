@@ -243,7 +243,11 @@ class SiteSettingService:
         return value is True
 
     async def upload_limit_bytes(self, *, kind: str, fallback: int) -> int:
-        key = "upload_max_avatar_bytes" if kind == "avatar" else "upload_max_bytes"
+        key = (
+            "upload_max_avatar_bytes"
+            if kind in {"avatar", "catalog_icon"}
+            else "upload_max_bytes"
+        )
         value = await self._setting_value(key)
         if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
             return fallback

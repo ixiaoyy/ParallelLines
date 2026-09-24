@@ -33,6 +33,39 @@ export interface components {
       task_name: string;
       updated_at: string;
     };
+    AdminCatalogCategoryResponse: {
+      created_at: string;
+      icon_upload_id: string | null;
+      icon_url: string | null;
+      id: string;
+      is_visible: boolean;
+      name: string;
+      projects: Array<components["schemas"]["AdminCatalogProjectResponse"]>;
+      slug: string;
+      sort_order: number;
+      updated_at: string;
+    };
+    AdminCatalogProjectResponse: {
+      average_score: number | null;
+      category_id: string;
+      created_at: string;
+      description: string | null;
+      icon_upload_id: string | null;
+      icon_url: string | null;
+      id: string;
+      is_visible: boolean;
+      kind: "external" | "internal";
+      my_score: number | null;
+      name: string;
+      rating_count: number;
+      slug: string;
+      sort_order: number;
+      updated_at: string;
+      url: string;
+    };
+    AdminCatalogResponse: {
+      categories: Array<components["schemas"]["AdminCatalogCategoryResponse"]>;
+    };
     AdminEmailLogResponse: {
       kind: string;
       sent_at: string;
@@ -199,6 +232,15 @@ export interface components {
       token_prefix: string;
       updated_at: string;
     };
+    ApiResponse_AdminCatalogCategoryResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_AdminCatalogProjectResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_AdminCatalogResponse_: {
+      [key: string]: unknown;
+    };
     ApiResponse_AdminSystemOverviewResponse_: {
       [key: string]: unknown;
     };
@@ -242,6 +284,12 @@ export interface components {
       [key: string]: unknown;
     };
     ApiResponse_bool_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_CatalogRatingStateResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_CatalogResponse_: {
       [key: string]: unknown;
     };
     ApiResponse_DailyReportProfileResponse_: {
@@ -787,7 +835,75 @@ export interface components {
     };
     Body_upload_file_api_v1_uploads_post: {
       file: string;
-      kind?: "post_attachment" | "avatar";
+      kind?: "post_attachment" | "avatar" | "catalog_icon";
+    };
+    CatalogCategoryCreateRequest: {
+      icon_upload_id?: string | null;
+      is_visible?: boolean;
+      name: string;
+      slug: string;
+      sort_order?: number;
+    };
+    CatalogCategoryResponse: {
+      icon_url: string | null;
+      id: string;
+      name: string;
+      projects: Array<components["schemas"]["CatalogProjectResponse"]>;
+      slug: string;
+    };
+    CatalogCategoryUpdateRequest: {
+      icon_upload_id?: string | null;
+      is_visible?: boolean | null;
+      name?: string | null;
+      slug?: string | null;
+      sort_order?: number | null;
+    };
+    CatalogProjectCreateRequest: {
+      category_id: string;
+      description?: string | null;
+      icon_upload_id?: string | null;
+      is_visible?: boolean;
+      kind: "external" | "internal";
+      name: string;
+      slug: string;
+      sort_order?: number;
+      url: string;
+    };
+    CatalogProjectResponse: {
+      average_score: number | null;
+      created_at: string;
+      description: string | null;
+      icon_url: string | null;
+      id: string;
+      kind: "external" | "internal";
+      my_score: number | null;
+      name: string;
+      rating_count: number;
+      slug: string;
+      url: string;
+    };
+    CatalogProjectUpdateRequest: {
+      category_id?: string | null;
+      description?: string | null;
+      icon_upload_id?: string | null;
+      is_visible?: boolean | null;
+      kind?: "external" | "internal" | null;
+      name?: string | null;
+      slug?: string | null;
+      sort_order?: number | null;
+      url?: string | null;
+    };
+    CatalogRatingCreateRequest: {
+      score: number;
+    };
+    CatalogRatingStateResponse: {
+      average_score: number | null;
+      my_score: number | null;
+      project_id: string;
+      rating_count: number;
+    };
+    CatalogResponse: {
+      categories: Array<components["schemas"]["CatalogCategoryResponse"]>;
     };
     ChangePasswordRequest: {
       current_password: string;
@@ -2271,6 +2387,21 @@ export interface paths {
     "/api/v1/admin/badges": {
       get: { response: components["schemas"]["ApiResponse_list_BadgeResponse__"]; operationId: "list_badges_api_v1_admin_badges_get" };
     };
+    "/api/v1/admin/catalog": {
+      get: { response: components["schemas"]["ApiResponse_AdminCatalogResponse_"]; operationId: "get_admin_catalog_api_v1_admin_catalog_get" };
+    };
+    "/api/v1/admin/catalog/categories": {
+      post: { response: components["schemas"]["ApiResponse_AdminCatalogCategoryResponse_"]; operationId: "create_catalog_category_api_v1_admin_catalog_categories_post" };
+    };
+    "/api/v1/admin/catalog/categories/{category_id}": {
+      put: { response: components["schemas"]["ApiResponse_AdminCatalogCategoryResponse_"]; operationId: "update_catalog_category_api_v1_admin_catalog_categories__category_id__put" };
+    };
+    "/api/v1/admin/catalog/projects": {
+      post: { response: components["schemas"]["ApiResponse_AdminCatalogProjectResponse_"]; operationId: "create_catalog_project_api_v1_admin_catalog_projects_post" };
+    };
+    "/api/v1/admin/catalog/projects/{project_id}": {
+      put: { response: components["schemas"]["ApiResponse_AdminCatalogProjectResponse_"]; operationId: "update_catalog_project_api_v1_admin_catalog_projects__project_id__put" };
+    };
     "/api/v1/admin/email-logs": {
       get: { response: components["schemas"]["ApiResponse_list_AdminEmailLogResponse__"]; operationId: "list_email_logs_api_v1_admin_email_logs_get" };
     };
@@ -2473,6 +2604,12 @@ export interface paths {
     "/api/v1/boards/{slug}/topics": {
       get: { response: components["schemas"]["ApiResponse_list_TopicResponse__"]; operationId: "list_board_topics_api_v1_boards__slug__topics_get" };
       post: { response: components["schemas"]["ApiResponse_TopicResponse_"]; operationId: "create_topic_api_v1_boards__slug__topics_post" };
+    };
+    "/api/v1/catalog": {
+      get: { response: components["schemas"]["ApiResponse_CatalogResponse_"]; operationId: "get_catalog_api_v1_catalog_get" };
+    };
+    "/api/v1/catalog/projects/{project_id}/ratings": {
+      post: { response: components["schemas"]["ApiResponse_CatalogRatingStateResponse_"]; operationId: "rate_catalog_project_api_v1_catalog_projects__project_id__ratings_post" };
     };
     "/api/v1/daily-reports": {
       get: { response: components["schemas"]["ApiResponse_list_DailyReportResponse__"]; operationId: "list_daily_reports_api_v1_daily_reports_get" };

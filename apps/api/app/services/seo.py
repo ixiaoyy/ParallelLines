@@ -12,6 +12,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload, selectinload
 
+from app.core.config import get_settings
 from app.core.exceptions import NotFoundError
 from app.core.personas import PersonaKind, normalize_persona_kind, persona_identity
 from app.db.base import as_utc_datetime
@@ -19,6 +20,7 @@ from app.models.admin import SiteSetting
 from app.models.forum import Board, Post, PostRevision, Topic
 from app.models.user import User
 from app.schemas.seo import SeoMetaResponse, SitemapUrl
+from app.services.catalog import CatalogService
 
 MAX_SITEMAP_ITEMS_PER_TYPE = 1000
 MAX_HOME_LINKS_PER_TYPE = 20
@@ -28,7 +30,7 @@ MAX_PROFILE_PAGE_TOPICS = 20
 SITE_TITLE_FALLBACK = "平行线"
 SITE_BRAND_NAME = "ParallelLines"
 SITE_TAGLINE_FALLBACK = "让答案可追溯"
-SITE_DESCRIPTION_FALLBACK = "让答案可追溯的中文技术论坛。"
+SITE_DESCRIPTION_FALLBACK = "发现游戏与互动项目的分类目录。"
 SITE_LOGO_FALLBACK = "/logo-lines-mark.png"
 LEGACY_SITE_LOGO_URLS = {
     "/logo-lines.png",
@@ -104,54 +106,12 @@ class SeoService:
         self.session = session
 
     async def sitemap_urls(self, base_url: str) -> list[SitemapUrl]:
-        """Return bounded canonical sitemap entries for anonymous public content.
+        """仅列出新目录首页与保留的站内游戏，旧论坛页面不再供索引。"""
 
-        ``base_url`` is the already resolved canonical origin. The returned list
-        excludes private, hidden, deleted, merged, and non-public-profile data;
-        this read-only method has no database side effects.
-        """
-
-        public_boards = await self._public_boards(MAX_SITEMAP_ITEMS_PER_TYPE)
-        public_topics = await self._public_topics(MAX_SITEMAP_ITEMS_PER_TYPE)
-        public_users = await self._public_users(MAX_SITEMAP_ITEMS_PER_TYPE)
-        board_activity = await self._public_board_activity()
-        topic_content_activity = await self._public_topic_content_activity()
-        user_activity = await self._public_user_activity()
-        latest_public_activity = latest_datetime(
-            *(board.updated_at for board in public_boards),
-            *board_activity.values(),
-            *topic_content_activity.values(),
-        )
-
-        urls = [
-            SitemapUrl(loc=absolute_url(base_url, "/"), lastmod=latest_public_activity),
-            SitemapUrl(loc=absolute_url(base_url, "/boards"), lastmod=latest_public_activity),
+        return [
+            SitemapUrl(loc=absolute_url(base_url, "/")),
+            SitemapUrl(loc=absolute_url(base_url, "/play/generals-soldiers")),
         ]
-        urls.extend(
-            SitemapUrl(
-                loc=absolute_url(base_url, f"/b/{encode_path_segment(board.slug)}"),
-                lastmod=latest_datetime(board.updated_at, board_activity.get(board.id)),
-            )
-            for board in public_boards
-        )
-        urls.extend(
-            SitemapUrl(
-                loc=absolute_url(base_url, topic_canonical_path(topic)),
-                lastmod=latest_datetime(
-                    topic.last_posted_at,
-                    topic_content_activity.get(topic.id),
-                ),
-            )
-            for topic in public_topics
-        )
-        urls.extend(
-            SitemapUrl(
-                loc=absolute_url(base_url, f"/members/{encode_path_segment(user.id)}"),
-                lastmod=user_activity.get(user.id),
-            )
-            for user in public_users
-        )
-        return urls
 
     async def robots_txt(self, base_url: str) -> str:
         """Return the public robots policy referencing the canonical sitemap URL.
@@ -301,17 +261,15 @@ class SeoService:
         return LegacyTopicRedirect(status_code=301, location=absolute_url(base_url, canonical_path))
 
     async def home_page(self, base_url: str) -> SeoPageDocument:
-        """Build the anonymous semantic home-page document and public links.
-
-        ``base_url`` is the canonical origin. The returned document contains
-        bounded board/topic links plus stable site schema and performs no writes.
-        """
+        """生成新目录首屏语义 HTML，项目链接与公开 API 使用同一数据源。"""
 
         identity = await self._site_identity()
-        boards = await self._public_boards(MAX_HOME_LINKS_PER_TYPE)
-        topics = await self._public_topics(MAX_HOME_LINKS_PER_TYPE)
-        links = tuple(self._board_link(board) for board in boards) + tuple(
-            self._topic_link(topic) for topic in topics
+        catalog = await CatalogService(self.session, get_settings()).public_catalog()
+        # 只渲染可见分类中的项目，避免无 JS 首屏重新露出旧论坛内容。
+        links = tuple(
+            SeoPageLink(path=project.url, label=project.name, description=project.description)
+            for category in catalog.categories
+            for project in category.projects
         )
         return SeoPageDocument(
             kind="home",
@@ -1419,9 +1377,9 @@ def setting_text(value: object, fallback: str) -> str:
 
 
 def site_description(identity: SeoSiteIdentity) -> str:
-    """Return stable public-site description text from ``identity`` fields."""
+    """返回聚合目录描述，避免旧论坛副标题进入新首页与结构化数据。"""
 
-    return f"{site_brand_name(identity.title)}：{identity.tagline}。浏览公开版块与可追溯讨论。"
+    return f"{site_brand_name(identity.title)}：按分类发现游戏与互动项目，搜索并查看访客评分。"
 
 
 def site_brand_name(public_title: str) -> str:

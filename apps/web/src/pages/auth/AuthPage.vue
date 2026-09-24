@@ -59,6 +59,8 @@ const OAUTH_PROVIDER_OPTIONS: Record<string, OAuthProviderOption> = {
 };
 const route = useRoute();
 const router = useRouter();
+// 登录页仅供 /admin 认证使用，旧注册入口不再从公开目录开放。
+const adminLoginOnly = computed(() => route.query.redirect === "/admin");
 const loginMutation = useLogin();
 const oauthProvidersQuery = useOAuthProviders();
 const verifyTwoFactorMutation = useVerifyTwoFactorLogin();
@@ -68,7 +70,9 @@ const resendVerificationMutation = useResendVerification();
 const requestPasswordResetMutation = useRequestPasswordReset();
 const confirmPasswordResetMutation = useConfirmPasswordReset();
 
-const activeTab = ref<AuthTab>(readAuthTab(route.query.mode));
+const activeTab = ref<AuthTab>(
+  adminLoginOnly.value && route.query.mode === "register" ? "login" : readAuthTab(route.query.mode),
+);
 const account = ref("");
 const loginPassword = ref("");
 const rememberMe = ref(true);
@@ -121,7 +125,7 @@ const redirectTarget = computed(() => {
 watch(
   () => route.query.mode,
   (mode) => {
-    activeTab.value = readAuthTab(mode);
+    activeTab.value = adminLoginOnly.value && mode === "register" ? "login" : readAuthTab(mode);
     formError.value = "";
     formNotice.value = "";
   },
@@ -318,6 +322,9 @@ function resetPendingVerification() {
 }
 
 function switchTab(tab: AuthTab) {
+  if (adminLoginOnly.value && tab === "register") {
+    return;
+  }
   activeTab.value = tab;
   formError.value = "";
   formNotice.value = "";
@@ -452,13 +459,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 </script>
 
 <template>
-  <div class="auth-page" :class="`auth-page--${activeTab}`" :style="authPageStyle">
+  <div class="auth-page" :class="[`auth-page--${activeTab}`, { 'auth-page--admin-login': adminLoginOnly }]" :style="authPageStyle">
     <nav class="auth-topbar" aria-label="认证页导航">
       <RouterLink class="auth-topbar__brand" to="/" aria-label="返回首页">
         <img :src="authMarkUrl" alt="" class="auth-logo-mark" />
         <span>ParallelLines</span>
       </RouterLink>
-      <div class="auth-topbar__actions">
+      <div v-if="!adminLoginOnly" class="auth-topbar__actions">
         <button type="button" class="auth-language" aria-label="切换语言">
           <GlobalOutlined aria-hidden="true" />
           <span>简体中文</span>
@@ -468,7 +475,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       </div>
     </nav>
 
-    <section class="auth-stage" aria-label="ParallelLines 登录注册">
+    <section class="auth-stage" :aria-label="adminLoginOnly ? '平行线后台登录' : 'ParallelLines 登录注册'">
       <aside class="auth-brand-panel">
         <div class="auth-brand-panel__lockup">
           <img :src="authMarkUrl" alt="" class="auth-brand-panel__mark" />
@@ -500,10 +507,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
           <div class="auth-card__brand">
             <img :src="authMarkUrl" alt="" class="auth-card__mark" />
             <strong>ParallelLines</strong>
-            <span>连接思想，启发未来</span>
+            <span>{{ adminLoginOnly ? "目录管理与访问统计" : "连接思想，启发未来" }}</span>
           </div>
 
-          <div v-if="activeTab !== 'forgot'" class="auth-tabs" role="tablist" aria-label="认证方式">
+          <div v-if="adminLoginOnly && activeTab !== 'forgot'" class="auth-recovery-heading">
+            <strong>后台登录</strong>
+          </div>
+          <div v-else-if="activeTab !== 'forgot'" class="auth-tabs" role="tablist" aria-label="认证方式">
             <button
               type="button"
               role="tab"
@@ -614,7 +624,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
             <UiButton class="auth-submit" type="submit" tone="primary" :disabled="isSubmitting">
               {{ isSubmitting ? "登录中…" : "登录" }}
             </UiButton>
-            <div v-if="availableOAuthProviders.length" class="auth-social-block">
+            <div v-if="!adminLoginOnly && availableOAuthProviders.length" class="auth-social-block">
               <div class="auth-divider"><span>其他登录方式</span></div>
               <div class="auth-social-list" aria-label="其他登录方式">
                 <button
@@ -631,7 +641,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
                 </button>
               </div>
             </div>
-            <p class="auth-switch-copy">还没有账号？ <button type="button" @click="switchTab('register')">立即注册</button></p>
+            <p v-if="!adminLoginOnly" class="auth-switch-copy">还没有账号？ <button type="button" @click="switchTab('register')">立即注册</button></p>
           </form>
 
           <form v-else-if="activeTab === 'forgot'" class="auth-form auth-form--forgot" aria-label="找回密码表单">
@@ -818,7 +828,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       </main>
     </section>
 
-    <footer class="auth-footer" aria-label="认证页页脚">
+    <footer v-if="!adminLoginOnly" class="auth-footer" aria-label="认证页页脚">
       <span>© 2024 ParallelLines. All rights reserved.</span>
       <RouterLink to="/">用户协议</RouterLink>
       <RouterLink to="/">隐私政策</RouterLink>

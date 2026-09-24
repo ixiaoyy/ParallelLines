@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from app.models.upload import Upload
 
-UploadKind = Literal["post_attachment", "avatar"]
+UploadKind = Literal["post_attachment", "avatar", "catalog_icon"]
 
 
 class UploadResponse(BaseModel):

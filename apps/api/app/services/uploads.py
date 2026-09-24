@@ -22,7 +22,9 @@ from starlette.requests import Request
 
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppError, NotFoundError, PermissionDeniedError, ValidationError
+from app.core.permissions import is_admin
 from app.db.base import new_random_suffix, utcnow
+from app.models.catalog import CatalogCategory, CatalogProject
 from app.models.forum import Board, Post, Topic
 from app.models.upload import Upload
 from app.models.user import User
@@ -440,6 +442,22 @@ class UploadService:
         await self.session.commit()
         return upload
 
+    async def create_catalog_icon(
+        self,
+        file: UploadFile,
+        current_user: User,
+        request: Request | None = None,
+    ) -> Upload:
+        """仅允许管理员暂存目录图标，待分类或项目保存后再公开。"""
+
+        if not is_admin(current_user):
+            raise PermissionDeniedError()
+        upload = await self._create_upload(
+            file, current_user, kind="catalog_icon", request=request
+        )
+        await self.session.commit()
+        return upload
+
     async def attach_uploads_to_post(
         self,
         raw_md: str,
@@ -528,7 +546,9 @@ class UploadService:
         if not upload or upload.deleted_at is not None or upload.status == "deleted":
             raise NotFoundError("upload_not_found", "Upload not found")
 
-        if upload.kind != "avatar":
+        if upload.kind == "catalog_icon":
+            await self._require_catalog_icon_access(upload, current_user)
+        elif upload.kind != "avatar":
             await self._require_attachment_access(upload, current_user)
 
         return upload
@@ -653,7 +673,7 @@ class UploadService:
         )
         max_bytes = (
             self.settings.upload_max_avatar_bytes
-            if kind == "avatar"
+            if kind in {"avatar", "catalog_icon"}
             else self.settings.upload_max_bytes
         )
         max_bytes = await SiteSettingService(self.session, self.settings).upload_limit_bytes(
@@ -667,8 +687,13 @@ class UploadService:
             filename=filename,
             declared_media_type=file.content_type,
         )
-        if kind == "avatar" and media_type not in IMAGE_MEDIA_TYPES:
-            raise ValidationError("avatar_must_be_image", "Avatar upload must be an image")
+        if media_type not in IMAGE_MEDIA_TYPES:
+            if kind == "avatar":
+                raise ValidationError("avatar_must_be_image", "Avatar upload must be an image")
+            if kind == "catalog_icon":
+                raise ValidationError(
+                    "catalog_icon_must_be_image", "请上传 PNG、JPG、GIF 或 WebP 图片。"
+                )
         sha256 = hashlib.sha256(content).hexdigest()
         extension = extension_for_media_type(media_type, filename)
         upload = Upload(
@@ -684,7 +709,7 @@ class UploadService:
             is_image=media_type in IMAGE_MEDIA_TYPES,
             expires_at=(
                 utcnow() + timedelta(hours=self.settings.upload_temporary_ttl_hours)
-                if kind == "post_attachment"
+                if kind in {"post_attachment", "catalog_icon"}
                 else None
             ),
         )
@@ -725,6 +750,41 @@ class UploadService:
         if not topic or topic.deleted_at is not None:
             raise NotFoundError("upload_not_found", "Upload not found")
         if not await self._can_access_board(topic.board, current_user):
+            raise NotFoundError("upload_not_found", "Upload not found")
+
+    async def _require_catalog_icon_access(
+        self,
+        upload: Upload,
+        current_user: User | None,
+    ) -> None:
+        """仅公开已挂载到可见目录的图标；未挂载图标仅上传管理员可读取。"""
+
+        if (
+            current_user is not None
+            and is_admin(current_user)
+            and current_user.id == upload.user_id
+        ):
+            return
+        if upload.status != "catalog_icon":
+            raise NotFoundError("upload_not_found", "Upload not found")
+        visible_category = await self.session.scalar(
+            select(CatalogCategory.id).where(
+                CatalogCategory.icon_upload_id == upload.id,
+                CatalogCategory.is_visible.is_(True),
+            )
+        )
+        if visible_category is not None:
+            return
+        visible_project = await self.session.scalar(
+            select(CatalogProject.id)
+            .join(CatalogCategory, CatalogCategory.id == CatalogProject.category_id)
+            .where(
+                CatalogProject.icon_upload_id == upload.id,
+                CatalogProject.is_visible.is_(True),
+                CatalogCategory.is_visible.is_(True),
+            )
+        )
+        if visible_project is None:
             raise NotFoundError("upload_not_found", "Upload not found")
 
     def _storage_for_upload(self, upload: Upload) -> LocalUploadStorage | S3UploadStorage:

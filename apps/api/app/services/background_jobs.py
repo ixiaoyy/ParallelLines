@@ -243,23 +243,16 @@ class BackgroundJobService:
     async def enqueue_due_scheduled_jobs(
         self,
         *,
-        background_hot_rank_interval_seconds: int,
         background_upload_cleanup_interval_seconds: int,
         background_session_cleanup_interval_seconds: int,
-        background_digest_interval_seconds: int,
-        background_frontier_news_interval_seconds: int = 0,
-        background_living_forum_interval_seconds: int = 0,
         now: datetime | None = None,
     ) -> list[BackgroundJob]:
         run_time = _queue_timestamp(now or utcnow())
         jobs: list[BackgroundJob] = []
+        # 论坛自动任务已停止调度，只保留站点仍需的上传与会话清理。
         schedules = (
-            ("recompute_hot_scores", background_hot_rank_interval_seconds),
             ("cleanup_expired_uploads", background_upload_cleanup_interval_seconds),
             ("cleanup_expired_sessions", background_session_cleanup_interval_seconds),
-            ("send_digest_emails", background_digest_interval_seconds),
-            ("collect_frontier_news", background_frontier_news_interval_seconds),
-            ("publish_living_forum_day", background_living_forum_interval_seconds),
         )
         for task_name, interval_seconds in schedules:
             if interval_seconds <= 0:

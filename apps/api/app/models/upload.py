@@ -8,8 +8,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin
 
-UploadKind = Literal["post_attachment", "avatar"]
-UploadStatus = Literal["temporary", "attached", "avatar", "deleted"]
+UploadKind = Literal["post_attachment", "avatar", "catalog_icon"]
+UploadStatus = Literal["temporary", "attached", "avatar", "catalog_icon", "deleted"]
 
 
 class Upload(IntegerPrimaryKeyMixin, TimestampMixin, Base):

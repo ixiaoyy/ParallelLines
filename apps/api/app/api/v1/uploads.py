@@ -32,6 +32,9 @@ async def upload_file(
         from app.api.seo import invalidate_sitemap_response_cache
 
         invalidate_sitemap_response_cache()
+    elif kind == "catalog_icon":
+        # 图标先暂存，管理员绑定到分类或项目后才向访客开放读取。
+        upload = await service.create_catalog_icon(file, current_user, request)
     else:
         upload = await service.create_post_upload(
             file,
@@ -41,7 +44,7 @@ async def upload_file(
         await session.commit()
     public_url = (
         service.public_upload_url(upload)
-        if settings.upload_public_cdn_urls and upload.is_image
+        if settings.upload_public_cdn_urls and upload.is_image and kind != "catalog_icon"
         else None
     )
     return ApiResponse(data=UploadResponse.from_model(upload, url=public_url))

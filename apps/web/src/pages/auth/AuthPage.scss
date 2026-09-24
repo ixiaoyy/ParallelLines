@@ -1006,3 +1006,26 @@
     font-size: 1.08rem;
   }
 }
+
+/* 后台登录保留现有认证逻辑，隐藏不再适用的论坛宣导区域。 */
+.auth-page--admin-login .auth-topbar,
+.auth-page--admin-login .auth-brand-panel {
+  display: none;
+}
+
+.auth-page--admin-login .auth-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100svh;
+  padding: 2rem 1rem;
+}
+
+.auth-page--admin-login .auth-panel {
+  width: min(100%, 32.5rem);
+}
+
+.auth-page--admin-login .auth-card {
+  min-height: auto;
+}

@@ -1,6 +1,12 @@
 import type { UserPublic as AuthUserPublic, LoginResponse } from "@/features/auth/model";
 import type { AdminUserResponse, AdminUserUpdateRequest } from "@/features/admin/model";
 import type { BoardResponse } from "@/features/boards/model";
+import type { AdminCatalogCategory, AdminCatalogProject } from "@/features/catalog/adminModel";
+import type {
+  CatalogCategoryResponse,
+  CatalogProjectResponse,
+  CatalogRatingResponse,
+} from "@/features/catalog/model";
 import type {
   DailyReportInput,
   DailyReportProfile,
@@ -19,6 +25,21 @@ type IsApiCompatible<Manual, Generated> = [Manual] extends [Generated] ? true : 
 type AssertApiCompatible<Check extends true> = Check;
 
 export type ApiContractChecks = {
+  catalogCategory: AssertApiCompatible<
+    IsApiCompatible<CatalogCategoryResponse, components["schemas"]["CatalogCategoryResponse"]>
+  >;
+  catalogProject: AssertApiCompatible<
+    IsApiCompatible<CatalogProjectResponse, components["schemas"]["CatalogProjectResponse"]>
+  >;
+  catalogRating: AssertApiCompatible<
+    IsApiCompatible<CatalogRatingResponse, components["schemas"]["CatalogRatingStateResponse"]>
+  >;
+  adminCatalogCategory: AssertApiCompatible<
+    IsApiCompatible<AdminCatalogCategory, components["schemas"]["AdminCatalogCategoryResponse"]>
+  >;
+  adminCatalogProject: AssertApiCompatible<
+    IsApiCompatible<AdminCatalogProject, components["schemas"]["AdminCatalogProjectResponse"]>
+  >;
   adminUserResponse: AssertApiCompatible<
     IsApiCompatible<AdminUserResponse, components["schemas"]["AdminUserResponse"]>
   >;

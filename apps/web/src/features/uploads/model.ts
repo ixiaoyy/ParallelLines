@@ -1,4 +1,4 @@
-export type UploadKind = "post_attachment" | "avatar";
+export type UploadKind = "post_attachment" | "avatar" | "catalog_icon";
 
 export interface UploadResponse {
   id: string;
@@ -7,7 +7,7 @@ export interface UploadResponse {
   media_type: string;
   byte_size: number;
   kind: UploadKind | string;
-  status: "temporary" | "attached" | "avatar" | "deleted" | string;
+  status: "temporary" | "attached" | "avatar" | "catalog_icon" | "deleted" | string;
   is_image: boolean;
   created_at: string;
 }

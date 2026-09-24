@@ -1,12 +1,23 @@
 <script setup lang="ts">
 import { ConfigProvider } from "ant-design-vue";
 import zhCN from "ant-design-vue/es/locale/zh_CN";
+import { computed } from "vue";
 import { useRoute } from "vue-router";
 
-import AppShell from "@/app/layouts/AppShell.vue";
-import GlobalLoadingIndicator from "@/shared/ui/GlobalLoadingIndicator.vue";
+import { resolveRouteSeoMeta, useSeoMeta } from "@/shared/seo/meta";
 
 const route = useRoute();
+// 新站公开页面使用固定目录文案，保留管理员路由的 noindex 元信息。
+useSeoMeta(
+  computed(() =>
+    resolveRouteSeoMeta(route.meta.seo, {
+      routePath: route.path,
+      siteTitle: "平行线",
+      siteName: "平行线 ParallelLines",
+      siteTagline: "发现有趣的游戏与互动项目",
+    }),
+  ),
+);
 
 /** 须与 tokens.scss / button-surfaces.scss 一致，见 AGENTS.md */
 const theme = {
@@ -48,10 +59,6 @@ const theme = {
 
 <template>
   <ConfigProvider :locale="zhCN" :theme="theme">
-    <AppShell>
-      <RouterView />
-    </AppShell>
-    <!-- 游戏页不让站点级请求提示盖住游玩区域。 -->
-    <GlobalLoadingIndicator v-if="route.name !== 'play-generals-soldiers' && route.name !== 'play-match3' && route.name !== 'play-melon' && route.name !== 'play-clockout'" />
+    <RouterView />
   </ConfigProvider>
 </template>

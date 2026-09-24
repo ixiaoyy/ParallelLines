@@ -8,6 +8,7 @@ from app.api.v1 import (
     api_docs,
     auth,
     boards,
+    catalog,
     daily_reports,
     drafts,
     email,
@@ -37,6 +38,8 @@ api_router.include_router(auth.router)
 api_router.include_router(email.router)
 api_router.include_router(events.router)
 api_router.include_router(boards.router)
+api_router.include_router(catalog.router)
+api_router.include_router(catalog.admin_router)
 api_router.include_router(topics.router)
 api_router.include_router(users.router)
 api_router.include_router(posts.router)

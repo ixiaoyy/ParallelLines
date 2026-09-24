@@ -171,6 +171,228 @@
         "title": "AdminBackgroundJobResponse",
         "type": "object"
       },
+      "AdminCatalogCategoryResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "icon_upload_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Upload Id"
+          },
+          "icon_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Url"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_visible": {
+            "title": "Is Visible",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/AdminCatalogProjectResponse"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "icon_upload_id",
+          "icon_url",
+          "sort_order",
+          "is_visible",
+          "created_at",
+          "updated_at",
+          "projects"
+        ],
+        "title": "AdminCatalogCategoryResponse",
+        "type": "object"
+      },
+      "AdminCatalogProjectResponse": {
+        "properties": {
+          "average_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Score"
+          },
+          "category_id": {
+            "title": "Category Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "icon_upload_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Upload Id"
+          },
+          "icon_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Url"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_visible": {
+            "title": "Is Visible",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "external",
+              "internal"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "my_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Score"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rating_count": {
+            "title": "Rating Count",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "url",
+          "kind",
+          "description",
+          "icon_url",
+          "created_at",
+          "average_score",
+          "rating_count",
+          "my_score",
+          "category_id",
+          "icon_upload_id",
+          "sort_order",
+          "is_visible",
+          "updated_at"
+        ],
+        "title": "AdminCatalogProjectResponse",
+        "type": "object"
+      },
+      "AdminCatalogResponse": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/AdminCatalogCategoryResponse"
+            },
+            "title": "Categories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories"
+        ],
+        "title": "AdminCatalogResponse",
+        "type": "object"
+      },
       "AdminEmailLogResponse": {
         "properties": {
           "kind": {
@@ -1161,6 +1383,18 @@
         "title": "ApiKeyResponse",
         "type": "object"
       },
+      "ApiResponse_AdminCatalogCategoryResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_AdminCatalogProjectResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_AdminCatalogResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ApiResponse_AdminSystemOverviewResponse_": {
         "additionalProperties": true,
         "type": "object"
@@ -1214,6 +1448,14 @@
         "type": "object"
       },
       "ApiResponse_BoardSettingsResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_CatalogRatingStateResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_CatalogResponse_": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -3007,7 +3249,8 @@
             "default": "post_attachment",
             "enum": [
               "post_attachment",
-              "avatar"
+              "avatar",
+              "catalog_icon"
             ],
             "title": "Kind",
             "type": "string"
@@ -3017,6 +3260,522 @@
           "file"
         ],
         "title": "Body_upload_file_api_v1_uploads_post",
+        "type": "object"
+      },
+      "CatalogCategoryCreateRequest": {
+        "properties": {
+          "icon_upload_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Upload Id"
+          },
+          "is_visible": {
+            "default": true,
+            "title": "Is Visible",
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ],
+        "title": "CatalogCategoryCreateRequest",
+        "type": "object"
+      },
+      "CatalogCategoryResponse": {
+        "properties": {
+          "icon_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Url"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogProjectResponse"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "icon_url",
+          "projects"
+        ],
+        "title": "CatalogCategoryResponse",
+        "type": "object"
+      },
+      "CatalogCategoryUpdateRequest": {
+        "properties": {
+          "icon_upload_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Upload Id"
+          },
+          "is_visible": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Visible"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          }
+        },
+        "title": "CatalogCategoryUpdateRequest",
+        "type": "object"
+      },
+      "CatalogProjectCreateRequest": {
+        "properties": {
+          "category_id": {
+            "title": "Category Id",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "icon_upload_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Upload Id"
+          },
+          "is_visible": {
+            "default": true,
+            "title": "Is Visible",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "external",
+              "internal"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "url": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category_id",
+          "slug",
+          "name",
+          "url",
+          "kind"
+        ],
+        "title": "CatalogProjectCreateRequest",
+        "type": "object"
+      },
+      "CatalogProjectResponse": {
+        "properties": {
+          "average_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Score"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "icon_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Url"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "external",
+              "internal"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "my_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Score"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rating_count": {
+            "title": "Rating Count",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "url",
+          "kind",
+          "description",
+          "icon_url",
+          "created_at",
+          "average_score",
+          "rating_count",
+          "my_score"
+        ],
+        "title": "CatalogProjectResponse",
+        "type": "object"
+      },
+      "CatalogProjectUpdateRequest": {
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "icon_upload_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Upload Id"
+          },
+          "is_visible": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Visible"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "external",
+                  "internal"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "CatalogProjectUpdateRequest",
+        "type": "object"
+      },
+      "CatalogRatingCreateRequest": {
+        "properties": {
+          "score": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Score",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "score"
+        ],
+        "title": "CatalogRatingCreateRequest",
+        "type": "object"
+      },
+      "CatalogRatingStateResponse": {
+        "properties": {
+          "average_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Score"
+          },
+          "my_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "My Score"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "rating_count": {
+            "title": "Rating Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "average_score",
+          "rating_count",
+          "my_score"
+        ],
+        "title": "CatalogRatingStateResponse",
+        "type": "object"
+      },
+      "CatalogResponse": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogCategoryResponse"
+            },
+            "title": "Categories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories"
+        ],
+        "title": "CatalogResponse",
         "type": "object"
       },
       "ChangePasswordRequest": {
@@ -12853,6 +13612,243 @@
         ]
       }
     },
+    "/api/v1/admin/catalog": {
+      "get": {
+        "description": "仅管理员可查看含隐藏内容的完整目录。",
+        "operationId": "get_admin_catalog_api_v1_admin_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_AdminCatalogResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Admin Catalog",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/categories": {
+      "post": {
+        "description": "新增目录分类。",
+        "operationId": "create_catalog_category_api_v1_admin_catalog_categories_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogCategoryCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_AdminCatalogCategoryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Catalog Category",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/categories/{category_id}": {
+      "put": {
+        "description": "编辑或隐藏目录分类。",
+        "operationId": "update_catalog_category_api_v1_admin_catalog_categories__category_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "category_id",
+            "required": true,
+            "schema": {
+              "title": "Category Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogCategoryUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_AdminCatalogCategoryResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Catalog Category",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/projects": {
+      "post": {
+        "description": "新增目录项目。",
+        "operationId": "create_catalog_project_api_v1_admin_catalog_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogProjectCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_AdminCatalogProjectResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Catalog Project",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/projects/{project_id}": {
+      "put": {
+        "description": "编辑或隐藏目录项目。",
+        "operationId": "update_catalog_project_api_v1_admin_catalog_projects__project_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogProjectUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_AdminCatalogProjectResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Catalog Project",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/email-logs": {
       "get": {
         "operationId": "list_email_logs_api_v1_admin_email_logs_get",
@@ -16413,6 +17409,81 @@
         "summary": "Create Topic",
         "tags": [
           "boards"
+        ]
+      }
+    },
+    "/api/v1/catalog": {
+      "get": {
+        "description": "公开可见目录及当前访客的历史评分；响应不得由共享缓存保存。",
+        "operationId": "get_catalog_api_v1_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_CatalogResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Catalog",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/projects/{project_id}/ratings": {
+      "post": {
+        "description": "保存访客对可见项目的首次评分，重复提交只返回原分数。",
+        "operationId": "rate_catalog_project_api_v1_catalog_projects__project_id__ratings_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogRatingCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_CatalogRatingStateResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rate Catalog Project",
+        "tags": [
+          "catalog"
         ]
       }
     },
