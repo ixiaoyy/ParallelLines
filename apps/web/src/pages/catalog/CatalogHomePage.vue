@@ -2,7 +2,7 @@
 import {
   AimOutlined, AppstoreOutlined, ArrowRightOutlined, BulbOutlined,
   ClockCircleFilled, CoffeeOutlined, FireFilled, HeartFilled,
-  HeartOutlined, SearchOutlined, SmileOutlined, StarFilled, ThunderboltOutlined,
+  HeartOutlined, HourglassOutlined, SearchOutlined, SmileOutlined, StarFilled, ThunderboltOutlined,
 } from "@ant-design/icons-vue";
 import { computed, ref } from "vue";
 
@@ -12,6 +12,7 @@ import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
 
 type SortMode = "latest" | "hot";
 type CatalogEntry = CatalogProject & { categorySlug: string };
+const COMING_SOON_FILTER = "coming-soon";
 const catalogAssetPath = "/catalog/2026-09-24-v1";
 const heroBackground = cssUrl(staticAssetUrl(`${catalogAssetPath}/hero-sky.webp`));
 const mascotUrl = staticAssetUrl(`${catalogAssetPath}/chibi-cat-explorer.webp`);
@@ -32,22 +33,31 @@ const ratingErrorProjectId = ref<string | null>(null);
 const hoveredProjectId = ref<string | null>(null);
 const hoveredScore = ref(0);
 
-// 空分类保留在后台供管理员维护，公开页仅展示有项目的分类。
-const categories = computed(() => (catalogQuery.data.value ?? []).filter((category) => category.projects.length > 0));
+// 预告项目单独筛选，普通分类只展示已开放项目；后台归属保持原样。
+const allCategories = computed(() => catalogQuery.data.value ?? []);
+const categories = computed(() => allCategories.value.filter((category) =>
+  category.projects.some((project) => !isComingSoon(project)),
+));
 const allProjects = computed<CatalogEntry[]>(() =>
-  categories.value.flatMap((category) =>
+  allCategories.value.flatMap((category) =>
     category.projects.map((project) => ({
       ...project,
       categorySlug: category.slug,
     })),
   ),
 );
+const hasComingSoon = computed(() => allProjects.value.some(isComingSoon));
 const normalizedSearch = computed(() => search.value.trim().toLocaleLowerCase());
 
 // 分类、搜索与排序只改变展示，项目归属仍以后台数据为准。
 const visibleProjects = computed(() => {
   const matching = allProjects.value.filter((project) => {
-    if (selectedCategory.value !== "all" && project.categorySlug !== selectedCategory.value) return false;
+    if (selectedCategory.value === COMING_SOON_FILTER) {
+      if (!isComingSoon(project)) return false;
+    } else {
+      if (isComingSoon(project)) return false;
+      if (selectedCategory.value !== "all" && project.categorySlug !== selectedCategory.value) return false;
+    }
     if (!normalizedSearch.value) return true;
     return [displayName(project), project.name, displayDescription(project), project.url]
       .some((value) => value.toLocaleLowerCase().includes(normalizedSearch.value));
@@ -78,7 +88,7 @@ function displayName(project: CatalogProject): string {
 }
 
 function displayDescription(project: CatalogProject): string {
-  if (isComingSoon(project)) return "星露谷风格的田园生活，敬请期待。";
+  if (isComingSoon(project)) return "星露谷风格的田园生活，正在开发中。";
   if (project.description) return project.description;
   const introductions: Record<string, string> = {
     "clock-out": "解开难题，准点下班！",
@@ -204,8 +214,11 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
                 <AppstoreOutlined v-else aria-hidden="true" />
                 {{ category.name }}
               </button>
+              <button v-if="hasComingSoon" type="button" class="catalog-filter catalog-filter--coming-soon" :class="{ 'is-active': selectedCategory === COMING_SOON_FILTER }" :aria-pressed="selectedCategory === COMING_SOON_FILTER" @click="selectedCategory = COMING_SOON_FILTER">
+                <HourglassOutlined aria-hidden="true" /> 敬请期待
+              </button>
             </div>
-            <div class="catalog-sort" role="group" aria-label="项目排序">
+            <div v-if="selectedCategory !== COMING_SOON_FILTER" class="catalog-sort" role="group" aria-label="项目排序">
               <button type="button" :class="{ 'is-active': sortMode === 'latest' }" :aria-pressed="sortMode === 'latest'" @click="sortMode = 'latest'"><ClockCircleFilled aria-hidden="true" /> 最新</button>
               <button type="button" :class="{ 'is-active': sortMode === 'hot' }" :aria-pressed="sortMode === 'hot'" @click="sortMode = 'hot'"><FireFilled aria-hidden="true" /> 热门</button>
             </div>
@@ -219,16 +232,25 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
           <div v-else class="catalog-grid">
             <article v-for="project in visibleProjects" :key="project.id" class="catalog-card" :class="{ 'catalog-card--coming-soon': isComingSoon(project) }">
               <div class="catalog-card__media">
-                <img :src="coverUrl(project)" :alt="`${displayName(project)}封面`" loading="lazy" />
+                <a v-if="isComingSoon(project)" class="catalog-card__preview-media" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="`查看${displayName(project)}的开发进度`">
+                  <img :src="coverUrl(project)" :alt="`${displayName(project)}封面`" loading="lazy" />
+                </a>
+                <img v-else :src="coverUrl(project)" :alt="`${displayName(project)}封面`" loading="lazy" />
                 <div class="catalog-card__badges">
                   <span v-if="isNew(project)" class="catalog-card__badge catalog-card__badge--new" role="img" aria-label="新项目" title="新项目"><ClockCircleFilled aria-hidden="true" /></span>
                   <span v-if="isHot(project) && !isComingSoon(project)" class="catalog-card__badge catalog-card__badge--hot" role="img" aria-label="热门项目" title="热门项目"><FireFilled aria-hidden="true" /></span>
                 </div>
               </div>
               <div class="catalog-card__body">
-                <h2>{{ displayName(project) }}</h2>
+                <h2>
+                  <a v-if="isComingSoon(project)" class="catalog-card__preview-title" :href="project.url" target="_blank" rel="noopener noreferrer">{{ displayName(project) }}</a>
+                  <template v-else>{{ displayName(project) }}</template>
+                </h2>
                 <p class="catalog-card__description">{{ displayDescription(project) }}</p>
-                <div v-if="isComingSoon(project)" class="catalog-card__footer catalog-card__footer--coming-soon"><span>敬请期待</span><span>很快见面</span></div>
+                <div v-if="isComingSoon(project)" class="catalog-card__footer catalog-card__footer--coming-soon">
+                  <span>持续开发中</span>
+                  <a class="catalog-card__open" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="`查看${displayName(project)}的开发进度`"><ArrowRightOutlined aria-hidden="true" /></a>
+                </div>
                 <div v-else class="catalog-card__footer">
                   <div class="catalog-card__rating" :class="{ 'is-pending': pendingProjectId === project.id }">
                     <div class="catalog-card__hearts" role="group" :aria-label="`${displayName(project)}的评分`" @mouseleave="clearPreview">

@@ -219,6 +219,7 @@
 .catalog-filter:nth-child(4) .anticon { color: #b16f32; background: #fff1e2; }
 .catalog-filter:nth-child(5) .anticon { color: #13847f; background: #def8f4; }
 .catalog-filter:nth-child(6) .anticon { color: #5b60b0; background: #eef0ff; }
+.catalog-filter--coming-soon .anticon { color: #705cbb; background: #f0ecff; }
 
 .catalog-filter img { width: 25px; height: 25px; object-fit: contain; }
 
@@ -275,7 +276,13 @@
   background: #d9efff;
 }
 
-.catalog-card__media > img {
+.catalog-card__preview-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.catalog-card__media img {
   display: block;
   width: 100%;
   height: 100%;
@@ -283,7 +290,7 @@
   transition: transform 300ms ease;
 }
 
-.catalog-card:hover .catalog-card__media > img { transform: scale(1.035); }
+.catalog-card:hover .catalog-card__media img { transform: scale(1.035); }
 
 .catalog-card__badges {
   position: absolute;
@@ -324,6 +331,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.catalog-card__preview-title {
+  color: inherit;
+  text-decoration: none;
+}
+
+.catalog-card__preview-title:hover { color: #267cdb; }
 
 .catalog-card__description {
   display: -webkit-box;
@@ -398,13 +412,6 @@
   font-weight: 800;
 }
 
-.catalog-card__footer--coming-soon span:first-child {
-  border-radius: 10px;
-  padding: 7px 12px;
-  color: #4f60ae;
-  background: #edf0ff;
-}
-
 .catalog-card__rating-error { margin: 5px 0 0; color: #b2344c; font-size: 12px; }
 .catalog-list__rating-note { margin: 18px 0 0; color: #8ca1bb; font-size: 12px; }
 
@@ -460,6 +467,8 @@
 .catalog-search button:focus-visible,
 .catalog-card__hearts button:focus-visible,
 .catalog-card__open:focus-visible,
+.catalog-card__preview-media:focus-visible,
+.catalog-card__preview-title:focus-visible,
 .catalog-state button:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
@@ -504,13 +513,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .catalog-card,
-  .catalog-card__media > img,
+  .catalog-card__media img,
   .catalog-filter,
   .catalog-sort button,
   .catalog-card__open { transition: none; }
   .catalog-card:hover,
   .catalog-filter:hover,
   .catalog-sort button:hover,
-  .catalog-card:hover .catalog-card__media > img { transform: none; }
+  .catalog-card:hover .catalog-card__media img { transform: none; }
   .catalog-state__spinner { animation: none; }
 }

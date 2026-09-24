@@ -19,9 +19,42 @@
     <link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <script>
+      // Vue 接管前显示品牌占位；若入口脚本失败，恢复服务端的可读目录。
+      document.documentElement.classList.add("app-booting");
+      window.setTimeout(() => {
+        if (document.querySelector("#app > .seo-fallback")) {
+          document.documentElement.classList.remove("app-booting");
+        }
+      }, 8000);
+    </script>
+    <style>
+      /* 首屏正文由服务端注入，样式需随 HTML 同步到达。 */
+      body { margin: 0; }
+      .site-boot { display: none; }
+      .app-booting .site-boot { display: flex; min-height: 100vh; align-items: center; justify-content: center; gap: 14px; background: #f8fcff; color: #1e3158; font: 800 22px system-ui, -apple-system, "Segoe UI", sans-serif; }
+      .app-booting .site-boot img { width: 48px; height: 48px; object-fit: contain; }
+      .app-booting .seo-fallback { display: none; }
+      .seo-fallback { min-height: 100vh; padding-bottom: 64px; background: #f8fcff; color: #1e3158; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+      .seo-fallback nav { padding: 25px max(26px, calc((100% - 1200px) / 2)); background: #eaf7ff; }
+      .seo-fallback nav a { display: inline-flex; align-items: center; gap: 12px; color: #1e3158; font-size: 22px; font-weight: 800; text-decoration: none; }
+      .seo-fallback nav a::before { width: 48px; height: 48px; background: url('/logo-lines-mark.png') center / contain no-repeat; content: ''; }
+      .seo-fallback > h1, .seo-fallback > p { margin: 0; padding-inline: max(26px, calc((100% - 1200px) / 2)); background: #eaf7ff; }
+      .seo-fallback > h1 { padding-top: 32px; font-size: clamp(36px, 5vw, 60px); line-height: 1.25; }
+      .seo-fallback > p { padding-top: 8px; padding-bottom: 46px; color: #61799e; font-size: 18px; }
+      .seo-fallback > section { width: min(1200px, calc(100% - 52px)); margin: 36px auto 0; }
+      .seo-fallback h2 { margin: 0 0 18px; font-size: 24px; }
+      .seo-fallback ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 18px; margin: 0; padding: 0; list-style: none; }
+      .seo-fallback li, .seo-fallback article { border: 1px solid #dcecff; border-radius: 20px; padding: 22px; background: #fff; box-shadow: 0 8px 24px rgba(75, 149, 213, .09); }
+      .seo-fallback li a { color: #1e3158; font-size: 19px; font-weight: 750; text-decoration: none; }
+      .seo-fallback li a:hover { color: #267cdb; }
+      .seo-fallback li p { margin: 8px 0 0; color: #61799e; }
+      .seo-fallback a:focus-visible { outline: 3px solid #409eff; outline-offset: 4px; }
+      @media (max-width: 600px) { .seo-fallback nav { padding-block: 16px; } .seo-fallback > p { padding-bottom: 30px; font-size: 16px; } .seo-fallback > section { margin-top: 26px; } }
+    </style>
   </head>
   <body>
-    <div id="app"><!-- parallellines-seo-body --></div>
+    <div id="app"><div class="site-boot" role="status"><img src="/logo-lines-mark.png" alt="" width="48" height="48" /><span>平行线</span></div><!-- parallellines-seo-body --></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
