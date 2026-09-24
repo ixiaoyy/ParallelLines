@@ -22,6 +22,24 @@ class StaticAsset:
     media_type: str
 
 
+CATALOG_ASSET_KEYS = (
+    "catalog/2026-09-24-v1/chibi-cat-explorer.webp",
+    "catalog/2026-09-24-v1/hero-sky.webp",
+    "catalog/2026-09-24-v1/covers/cf-transport.webp",
+    "catalog/2026-09-24-v1/covers/clock-out.webp",
+    "catalog/2026-09-24-v1/covers/csgo-desert.webp",
+    "catalog/2026-09-24-v1/covers/discover.webp",
+    "catalog/2026-09-24-v1/covers/fablespace.webp",
+    "catalog/2026-09-24-v1/covers/fruit-ninja.webp",
+    "catalog/2026-09-24-v1/covers/generals-soldiers.webp",
+    "catalog/2026-09-24-v1/covers/infinite-garden.webp",
+    "catalog/2026-09-24-v1/covers/merge-watermelon.webp",
+    "catalog/2026-09-24-v1/covers/pelican-bike.webp",
+    "catalog/2026-09-24-v1/covers/qin-imperial-factory.webp",
+    "catalog/2026-09-24-v1/covers/qq-racing.webp",
+    "catalog/2026-09-24-v1/covers/super-mario.webp",
+)
+
 STATIC_ASSETS = (
     StaticAsset(
         source="static/web/auth-visual/parallel-auth-pc-bg.png",
@@ -73,6 +91,9 @@ STATIC_ASSETS = (
         key="avatar-frames/ultimate-animated.webp",
         media_type="image/webp",
     ),
+) + tuple(
+    StaticAsset(source=f"static/web/{key}", key=key, media_type="image/webp")
+    for key in CATALOG_ASSET_KEYS
 )
 
 
@@ -91,7 +112,7 @@ def object_key(asset: StaticAsset, prefix: str) -> str:
 
 
 # Uploads all declared frontend static assets without creating upload database rows.
-def upload_static_assets(*, prefix: str, dry_run: bool, verify: bool) -> None:
+def upload_static_assets(*, prefix: str, dry_run: bool, verify: bool, catalog_only: bool = False) -> None:
     """Upload configured frontend static assets to S3/R2 and print their public CDN URLs."""
 
     settings = Settings()
@@ -100,7 +121,13 @@ def upload_static_assets(*, prefix: str, dry_run: bool, verify: bool) -> None:
     if not settings.upload_cdn_base_url:
         raise RuntimeError("UPLOAD_CDN_BASE_URL is required to print public static asset URLs")
 
-    for asset in STATIC_ASSETS:
+    # 本次发布只写入新版目录图片，避免重传已有的认证页和头像资源。
+    assets = (
+        (asset for asset in STATIC_ASSETS if asset.key in CATALOG_ASSET_KEYS)
+        if catalog_only
+        else STATIC_ASSETS
+    )
+    for asset in assets:
         source_path = root / asset.source
         if not source_path.is_file():
             raise FileNotFoundError(source_path)
@@ -138,6 +165,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Read each object back after upload and compare bytes.",
     )
+    parser.add_argument(
+        "--catalog-only",
+        action="store_true",
+        help="Upload only the versioned catalog images.",
+    )
     return parser.parse_args()
 
 
@@ -146,7 +178,12 @@ def main() -> None:
     """Run the static asset upload command using runtime environment settings."""
 
     args = parse_args()
-    upload_static_assets(prefix=args.prefix, dry_run=args.dry_run, verify=args.verify)
+    upload_static_assets(
+        prefix=args.prefix,
+        dry_run=args.dry_run,
+        verify=args.verify,
+        catalog_only=args.catalog_only,
+    )
 
 
 if __name__ == "__main__":
