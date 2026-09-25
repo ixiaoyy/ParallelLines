@@ -302,6 +302,8 @@ class CatalogService:
             url=project.destination_url,
             kind=project.destination_kind,
             description=project.description,
+            author_name=project.author_name,
+            author_url=project.author_url,
             icon_url=self._icon_url(project.icon_upload_id),
             created_at=project.created_at,
             average_score=average,

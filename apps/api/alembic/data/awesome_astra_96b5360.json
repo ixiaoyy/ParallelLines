@@ -1,0 +1,1455 @@
+{
+  "source_commit": "96b5360c69edf6f7ef59ac96072c6cdf9e93e5b1",
+  "source_url": "https://raw.githubusercontent.com/MartinDelophy/awesome-gpt-6-astra/96b5360c69edf6f7ef59ac96072c6cdf9e93e5b1/README.zh-CN.md",
+  "entries": [
+    {
+      "source_line": 48,
+      "source_category": "动作与街机",
+      "name": "Mosswing",
+      "url": "https://mosswing-quiet-flight.jack-514.chatgpt.site/",
+      "description": "3D 单键飞行，控制小翼穿越障碍间隙得分。",
+      "author_name": "Ayi1337",
+      "author_url": "https://github.com/Ayi1337"
+    },
+    {
+      "source_line": 55,
+      "source_category": "动作与街机",
+      "name": "Astra Floor",
+      "url": "https://astrafloor.berochlu.workers.dev/",
+      "description": "3D 第一人称僵尸生存射击：控制后坐力、管理冲刺体力，使用武士刀抵御逐渐增强的敌潮并挑战最终首领。",
+      "author_name": "BEROCHLU",
+      "author_url": "https://github.com/BEROCHLU"
+    },
+    {
+      "source_line": 62,
+      "source_category": "动作与街机",
+      "name": "Stadium Elite — El Clásico",
+      "url": "https://stadium-elite.mindblown.ai/",
+      "description": "在 3D 球场进行巴塞罗那对皇家马德里的 11 人制比赛，传球、射门并切换球员。",
+      "author_name": "Mindblown / @mind",
+      "author_url": "https://mindblown.ai/@mind"
+    },
+    {
+      "source_line": 68,
+      "source_category": "动作与街机",
+      "name": "Magic Carpet Wizard — A Thousand Skies",
+      "url": "https://threapchills.github.io/MagicCarpetWizard/",
+      "description": "驾驶魔毯探索球形世界，穿环、施法，并挑战敌人与 Boss。",
+      "author_name": "threapchills",
+      "author_url": "https://github.com/threapchills"
+    },
+    {
+      "source_line": 75,
+      "source_category": "动作与街机",
+      "name": "雷霆战机 · 天穹远征 / THUNDERFALL",
+      "url": "https://thunderfall.vercel.app/",
+      "description": "三种战机挑战五大空域与多阶段首领，躲避漂移弹和预警激光、拾取四色武器，完整战役至少十分钟有效战斗。",
+      "author_name": "jackroc",
+      "author_url": "https://github.com/jackroc"
+    },
+    {
+      "source_line": 82,
+      "source_category": "动作与街机",
+      "name": "IRON BASTION / 钢铁防线",
+      "url": "https://iron-bastion.zecoba.workers.dev/",
+      "description": "在六片战区驾驶 3D 坦克，抵御敌军波次并守护信标；可破坏砖墙，并使用战术冲刺与电磁脉冲。",
+      "author_name": "chat01.ai",
+      "author_url": "https://linux.do/u/bandaot"
+    },
+    {
+      "source_line": 88,
+      "source_category": "动作与街机",
+      "name": "Stick Fighter",
+      "url": "https://stick-fighter-production.up.railway.app/",
+      "description": "仍在开发中的火柴人格斗游戏，包含拳脚连招、上勾拳、飞镖和格挡；提供电脑陪练及在线、好友模式入口。",
+      "author_name": "Dwayne",
+      "author_url": "https://x.com/CtrlAltDwayne"
+    },
+    {
+      "source_line": 94,
+      "source_category": "动作与街机",
+      "name": "Gogh Strike · Paint Clash",
+      "url": "https://gogh-strike.surge.sh/",
+      "description": "梵高画作风格的第一人称颜料对战，包含六位艺术家、专属武器及率先获得 20 分的赛制。",
+      "author_name": "Peter Gostev",
+      "author_url": "https://x.com/petergostev"
+    },
+    {
+      "source_line": 100,
+      "source_category": "动作与街机",
+      "name": "ASTEROIDS · Deepfield",
+      "url": "https://asteroids-deepfield-cockpit.dan200200.chatgpt.site/",
+      "description": "驾驶小行星射击座舱，使用四向摄像头、雷达、双炮与惯性飞行。",
+      "author_name": "Eyes Wide Open",
+      "author_url": "https://x.com/DantesClown"
+    },
+    {
+      "source_line": 106,
+      "source_category": "动作与街机",
+      "name": "BLACKWATER · Silent Harbor",
+      "url": "https://blackwater-roan.vercel.app/",
+      "description": "潜入雨夜货运港口的战术 FPS，包含精细步枪、战斗 HUD 和九名敌人。",
+      "author_name": "hiraeth",
+      "author_url": "https://x.com/WoahWurdz"
+    },
+    {
+      "source_line": 113,
+      "source_category": "动作与街机",
+      "name": "Cinderfall · Fire, Shadow & Steel",
+      "url": "https://rogue-omega.vercel.app/",
+      "description": "四位英雄的奇幻对决竞技场，包含六项职业技能和单人 AI 对战，也提供在线房间。",
+      "author_name": "JUMPERZ",
+      "author_url": "https://x.com/jumperz"
+    },
+    {
+      "source_line": 119,
+      "source_category": "动作与街机",
+      "name": "Oz Breakdance",
+      "url": "https://satriodewantono.com/breakdance/",
+      "description": "拖动布娃娃舞者的手脚和头部命中对应目标，获得分数并延长霹雳舞回合时间。",
+      "author_name": "Satrio",
+      "author_url": "https://x.com/satrio_d"
+    },
+    {
+      "source_line": 125,
+      "source_category": "动作与街机",
+      "name": "Astral War",
+      "url": "https://astralwar.io/",
+      "description": "二战题材浏览器 FPS，可选择士兵或僵尸外观、调整武器配置，并提供机器人训练与大厅模式。",
+      "author_name": "Rishi",
+      "author_url": "https://x.com/0xRishi"
+    },
+    {
+      "source_line": 131,
+      "source_category": "动作与街机",
+      "name": "FLOP CLUB",
+      "url": "https://bubucn.com/ai-model-evals/flop-club/game/index.html",
+      "description": "从三种高度的跳台起跳，完成翻转和转体，对准漂浮圆环入水，挑战更高评分。",
+      "author_name": "BubuAi",
+      "author_url": "https://x.com/BubuStd"
+    },
+    {
+      "source_line": 138,
+      "source_category": "动作与街机",
+      "name": "Vector Dive — Beyond the Signal",
+      "url": "https://vector-dive.openai.chatgpt.site/",
+      "description": "驾驶飞行器穿越逐圈加速的霓虹线框赛道，利用加速与相位移动坚持更久。",
+      "author_name": "Thomas Ricouard",
+      "author_url": "https://x.com/Dimillian"
+    },
+    {
+      "source_line": 144,
+      "source_category": "动作与街机",
+      "name": "Harbor Skirmish",
+      "url": "https://gpt6astra-game.vercel.app/",
+      "description": "在海边小镇抵御一波波兔子入侵，切换三种武器，利用屋顶路线、冲刺与钩索周旋。",
+      "author_name": "OpenDesign",
+      "author_url": "https://x.com/OpenDesignHQ"
+    },
+    {
+      "source_line": 150,
+      "source_category": "动作与街机",
+      "name": "UNDERGROUND — 地下拳场",
+      "url": "https://iamsonic.net/2026/mini-games/underground-boxing.html",
+      "description": "在地下 3D 拳台进行三回合限时对决，平衡出拳、格挡、闪避与体力消耗。",
+      "author_name": "Sonic的奇思妙想",
+      "author_url": "https://x.com/sonic0828"
+    },
+    {
+      "source_line": 157,
+      "source_category": "动作与街机",
+      "name": "街头小子 · Urban Champion 3D",
+      "url": "https://iamsonic.net/2026/mini-games/urban-champion.html",
+      "description": "在日落街区交替使用高低拳与格挡，将对手逼入井口，同时留意从楼上掉落的花盆。",
+      "author_name": "Sonic的奇思妙想",
+      "author_url": "https://x.com/sonic0828"
+    },
+    {
+      "source_line": 164,
+      "source_category": "动作与街机",
+      "name": "零点街区 · 弹壳特攻队 3D",
+      "url": "https://iamsonic.net/2026/mini-games/shells-3d/play.html",
+      "description": "在城市围攻中坚持三分钟，以自动射击配合走位躲避敌群，拾取经验并选择升级能力。",
+      "author_name": "Sonic的奇思妙想",
+      "author_url": "https://x.com/sonic0828"
+    },
+    {
+      "source_line": 171,
+      "source_category": "动作与街机",
+      "name": "ASCII DISTRICT",
+      "url": "https://ascii-district.vercel.app/",
+      "description": "在由 ASCII 字符构成的第一人称竞技场迎战病毒敌人，利用冲刺、跳跃和滑行应对连续波次。",
+      "author_name": "Acker Code",
+      "author_url": "https://x.com/acker_code"
+    },
+    {
+      "source_line": 177,
+      "source_category": "动作与街机",
+      "name": "Aura Farming: Unbothered",
+      "url": "https://www.aigameshare.com/games/aura-farming-game",
+      "description": "让跳舞的水豚在龙舟船头保持平衡，逆着波浪调整重心，在 40 秒内完成六个动作。",
+      "author_name": "nilni / @nil",
+      "author_url": "https://www.aigameshare.com/profile/nil"
+    },
+    {
+      "source_line": 183,
+      "source_category": "动作与街机",
+      "name": "CHRONO RAID · SUZUNE & AOI",
+      "url": "https://suzune-aoi-fighters.szou2003.chatgpt.site/",
+      "description": "选择 SUZUNE 的近身连击或 AOI 的远程攻击，躲避机械首领，并触发带动画演出的必杀技。",
+      "author_name": "SZOU / @szounft",
+      "author_url": "https://x.com/szounft"
+    },
+    {
+      "source_line": 189,
+      "source_category": "动作与街机",
+      "name": "MR. NIPS · Twin Trouble",
+      "url": "https://mr-nips-twin-laser-arcade.troybkk.chatgpt.site/",
+      "description": "操控像素角色躲避无人机，自动发射双束激光，收集能量并蓄力释放清屏 Nova。",
+      "author_name": "TROY / @creepztopia",
+      "author_url": "https://x.com/creepztopia"
+    },
+    {
+      "source_line": 195,
+      "source_category": "动作与街机",
+      "name": "Billionaire Pit",
+      "url": "https://billionaire-pit.vercel.app/",
+      "description": "选择讽刺风格的亿万富豪角色，在三轮锦标赛中对战电脑，使用拳击、踢击、格挡与闪避。",
+      "author_name": "Ornob Islam Siyam",
+      "author_url": "https://x.com/siyam_uddin_t"
+    },
+    {
+      "source_line": 201,
+      "source_category": "动作与街机",
+      "name": "水果忍者 · 再来一刀 / Fruit Ninja Dojo",
+      "url": "https://fruit-ninja-dojo-20260905.yongqixue666.chatgpt.site/",
+      "description": "滑动切开飞起的水果、累积连击；这款非官方水果忍者改编提供经典、60 秒街机和 90 秒禅模式。",
+      "author_name": "Laplace9 / yongqixue99-hue",
+      "author_url": "https://linux.do/u/Laplace9"
+    },
+    {
+      "source_line": 208,
+      "source_category": "动作与街机",
+      "name": "血裔决斗Ⅱ / Nightborn Clash",
+      "url": "https://nightborn-clash.dixonefg5.chatgpt.site/",
+      "description": "选择四名吸血鬼斗士之一，组合普通攻击、聚气技能和超必杀，可进入练习场或进行 99 秒人机决斗。",
+      "author_name": "Cloaker Vampiror",
+      "author_url": "https://x.com/CloakofEcstasy"
+    },
+    {
+      "source_line": 214,
+      "source_category": "动作与街机",
+      "name": "DUST II · 沙漠行动 / Desert Operations",
+      "url": "https://dust-ii-map.yelin8130.chatgpt.site/",
+      "description": "在沙漠地图上与机器人交战，选择个人竞技、团队、爆破或生化模式，切换装备并使用可选的无敌与飞行辅助。",
+      "author_name": "lin_ye / lin ye",
+      "author_url": "https://linux.do/u/lin_ye"
+    },
+    {
+      "source_line": 221,
+      "source_category": "动作与街机",
+      "name": "Thornwake",
+      "url": "https://thornwake-moth-descent.ltodd.chatgpt.site/",
+      "description": "昆虫主题的动作 Roguelite：挥动针刃作战，在盘根错节的房间中跳跃、冲刺，通过反复探索收集丝线与余烬种子。",
+      "author_name": "Lehiem / LiamTodd98",
+      "author_url": "https://github.com/LiamTodd98"
+    },
+    {
+      "source_line": 227,
+      "source_category": "动作与街机",
+      "name": "DEAD END — Oakridge",
+      "url": "https://dead-end.replit.app/",
+      "description": "在 Oakridge 社区抵御感染者波次；3D 模式加入三个待修复中继站、照明弹和撤离目标。",
+      "author_name": "Minsang Daniel Kim",
+      "author_url": "https://x.com/msdkim0424"
+    },
+    {
+      "source_line": 233,
+      "source_category": "动作与街机",
+      "name": "Anime Rift — The Crossover Arena",
+      "url": "https://anime-rift-cade.theyounganimation.chatgpt.site/",
+      "description": "使用 13 名动漫与原创角色，在三座竞技场中施展飞行、特殊技和击飞出界，提供单人人机练习。",
+      "author_name": "Cade Louis Mack",
+      "author_url": "https://x.com/Cade_Animation"
+    },
+    {
+      "source_line": 239,
+      "source_category": "动作与街机",
+      "name": "VeilFall — God’s Heart",
+      "url": "https://veilfall.replit.app/play",
+      "description": "探索茂密的 3D 山谷，以 Crimson Dreadlord 开始三波战斗试炼；这是仍在开发的 MOBA 风格原型。",
+      "author_name": "Shehnoor Ansari (Noni)",
+      "author_url": "https://x.com/Noni_Shehnoor"
+    },
+    {
+      "source_line": 245,
+      "source_category": "动作与街机",
+      "name": "Butterball Run — Dinner Has Other Plans",
+      "url": "https://butterball-run.jeraldine-t.chatgpt.site/",
+      "description": "操控黄油球绕餐盘移动，在 60 秒内救出八只贻贝，躲避移动的芦笋并保住黄油能量。",
+      "author_name": "Seolyeon / SecretSeoul",
+      "author_url": "https://x.com/SecretSeoul"
+    },
+    {
+      "source_line": 251,
+      "source_category": "动作与街机",
+      "name": "Tideglass Hunt",
+      "url": "https://tideglass-hunt.timothee-leborgne.ohmyunicorn.com/",
+      "description": "选择钢铁、风暴或冰霜能力，在海岸战斗场景中探索，搭配技能对付怪物；限时狩猎可由单人开局。",
+      "author_name": "Timothée Le Borgne",
+      "author_url": "https://x.com/Tim_LB"
+    },
+    {
+      "source_line": 257,
+      "source_category": "动作与街机",
+      "name": "Canteen Crashers",
+      "url": "https://wavedash.com/games/canteen-crashers",
+      "description": "在食堂箱子中寻找三份食谱并带回厨房，利用装备与托盘滑行躲避主厨；演示版提供三名电脑队友。",
+      "author_name": "Chong-U / chongdashu",
+      "author_url": "https://x.com/chongdashu"
+    },
+    {
+      "source_line": 263,
+      "source_category": "动作与街机",
+      "name": "こもれびの木の実あつめ / Komorebi Nut Gathering",
+      "url": "https://komorebi-kinomi-0916.inu03550.chatgpt.site/",
+      "description": "左右移动小森林精灵接住木果与闪光、避开落叶，在 60 秒内挑战 300 分采集目标。",
+      "author_name": "Kazumi",
+      "author_url": "https://x.com/Kazumib0"
+    },
+    {
+      "source_line": 269,
+      "source_category": "动作与街机",
+      "name": "PATCH",
+      "url": "https://agentgames.dev/play/patch",
+      "description": "操纵麻薯小人离开安全领地，画出闭环圈地，同时躲避十四名电脑对手对暴露路径的截击。",
+      "author_name": "Drakoniux",
+      "author_url": "https://agentgames.dev/u/Drakoniux"
+    },
+    {
+      "source_line": 275,
+      "source_category": "动作与街机",
+      "name": "DEADBLOCK: Outbreak",
+      "url": "https://agentgames.dev/play/deadblock-outbreak",
+      "description": "在六张地图中抵御逐步增强的丧尸波次，搜寻补给并解锁武器、路障与战地强化。",
+      "author_name": "Drakoniux",
+      "author_url": "https://agentgames.dev/u/Drakoniux"
+    },
+    {
+      "source_line": 281,
+      "source_category": "动作与街机",
+      "name": "Dropzone Royale",
+      "url": "https://agentgames.dev/play/dropzone-royale",
+      "description": "空降岛屿与 39 名电脑对手竞争，搜查建筑寻找装备，在俯视角生存竞技中躲避逐步收缩的风暴。",
+      "author_name": "Drakoniux",
+      "author_url": "https://agentgames.dev/u/Drakoniux"
+    },
+    {
+      "source_line": 287,
+      "source_category": "动作与街机",
+      "name": "Mog Mode",
+      "url": "https://yesterdayarcade.com/games/mog-mode/",
+      "description": "选择科技公司 CEO 的夸张角色，在五次握手中抓准时机，成功四次赢得合照主角位置；属于非官方恶搞作品。",
+      "author_name": "Dylan Elder / Yesterday Arcade",
+      "author_url": "https://x.com/YesterdayArcade"
+    },
+    {
+      "source_line": 293,
+      "source_category": "动作与街机",
+      "name": "The Crownless",
+      "url": "https://www.spawn.co/@izkimar/the-crownless/play",
+      "description": "以格斗连招攻上砂岩城塞，收集灵魂获得新能力，逐步挑战国王；死亡会失去本轮战斗进度。",
+      "author_name": "Izkimar",
+      "author_url": "https://x.com/Izkimar"
+    },
+    {
+      "source_line": 299,
+      "source_category": "动作与街机",
+      "name": "Until the Crown Falls",
+      "url": "https://www.spawn.co/@branthebroke/until-the-crown-falls/play",
+      "description": "在无尽围攻中守护国王，搜集钢材、指挥卫兵；国王受到的伤害不会自动恢复。",
+      "author_name": "Bran",
+      "author_url": "https://x.com/Bran_The_Broke"
+    },
+    {
+      "source_line": 305,
+      "source_category": "动作与街机",
+      "name": "VOIDBOUND — The Choir of Ash",
+      "url": "https://alesha-pro.github.io/bench-portal/games/voidbound-choir-of-ash/",
+      "description": "在教堂竞技场中以轻重剑击、闪避和范围魔法迎战恶魔。",
+      "author_name": "Alexey Fateev",
+      "author_url": "https://x.com/superalesha"
+    },
+    {
+      "source_line": 311,
+      "source_category": "动作与街机",
+      "name": "u/NIVERSE — Orbital Duel",
+      "url": "https://universe-duel.vercel.app/",
+      "description": "选择机甲，在掩体间利用冲刺、追踪导弹、激光剑和等离子爆发进行对决。",
+      "author_name": "ハヤシモン",
+      "author_url": "https://x.com/hayashimon1"
+    },
+    {
+      "source_line": 317,
+      "source_category": "动作与街机",
+      "name": "RUNNER — Stage 1",
+      "url": "https://runner-stage1.vercel.app/",
+      "description": "在受魂斗罗启发的横版原型中穿越丛林桥梁，射击敌人并向堡垒前进。",
+      "author_name": "Anish Acharya",
+      "author_url": "https://x.com/illscience"
+    },
+    {
+      "source_line": 323,
+      "source_category": "动作与街机",
+      "name": "DRONE.IO — Proving Grounds",
+      "url": "https://drone-io.vercel.app/",
+      "description": "驾驶无人机在本地竞技场躲避电脑对手，利用雷达寻找机会并逐步升级。",
+      "author_name": "Angello",
+      "author_url": "https://x.com/OMASMohamad"
+    },
+    {
+      "source_line": 329,
+      "source_category": "动作与街机",
+      "name": "Neural Sight",
+      "url": "https://monstercameron.github.io/Neural-Sight/",
+      "description": "在高斯泼溅实景构成的第一人称游戏原型中探索，体验武器影像、感染者与可投掷弹力球。",
+      "author_name": "Earl Cameron",
+      "author_url": "https://x.com/monstercameron"
+    },
+    {
+      "source_line": 335,
+      "source_category": "动作与街机",
+      "name": "Knightmare — Medusa’s Temple",
+      "url": "https://knightmare-medusa-3d.robin-hwang.chatgpt.site/",
+      "description": "在 Knightmare 的非官方 3D 首领战改编中射击、闪避，并释放净化迎战美杜莎。",
+      "author_name": "MinHo Hwang",
+      "author_url": "https://x.com/MinHoHwang1"
+    },
+    {
+      "source_line": 341,
+      "source_category": "动作与街机",
+      "name": "准点下班，别被发现 / Clock Out Unseen",
+      "url": "https://www.bilibili.com/toy/clockout-unseen/index.html",
+      "description": "在三关限时办公室潜行中，借助家具掩体、咖啡机和六秒文件夹伪装避开巡逻，赶到电梯下班。",
+      "author_name": "Ryan-fm",
+      "author_url": "https://github.com/Ryan-fm"
+    },
+    {
+      "source_line": 353,
+      "source_category": "解谜与益智",
+      "name": "Vesper: The Last Light",
+      "url": "https://vesper.mansgullberg.chatgpt.site/",
+      "description": "第三人称解谜冒险：探索淹没的花园与天体机械，把光作为生命、弹药和货币来管理，修复三道封印。",
+      "author_name": "kvickan",
+      "author_url": "https://buymeacoffee.com/kvickan"
+    },
+    {
+      "source_line": 360,
+      "source_category": "解谜与益智",
+      "name": "Mystery Town",
+      "url": "https://playableworld.itch.io/mystery-town",
+      "description": "观察微缩 3D 世界，检查并操作物体，通过正确的因果顺序破解环境谜题。",
+      "author_name": "PlayableWorld",
+      "author_url": "https://playableworld.itch.io/"
+    },
+    {
+      "source_line": 367,
+      "source_category": "解谜与益智",
+      "name": "瓜体实验室",
+      "url": "https://melon-game.jack-514.chatgpt.site/",
+      "description": "把半流体水果的形变与碰撞融入西瓜合成玩法。",
+      "author_name": "Ayi1337",
+      "author_url": "https://github.com/Ayi1337"
+    },
+    {
+      "source_line": 374,
+      "source_category": "解谜与益智",
+      "name": "Q弹消消乐",
+      "url": "https://qbxxl.0nz.de/",
+      "description": "点击消除至少三颗相连的同色泡泡，大组生成爆弹和彩虹，提供解压、闯关和限时模式。",
+      "author_name": "zding",
+      "author_url": null
+    },
+    {
+      "source_line": 380,
+      "source_category": "解谜与益智",
+      "name": "榫境 / Sunjing Puzzles",
+      "url": "https://sunjing-puzzles.vercel.app",
+      "description": "在 3D 木作展台拆解六构件互锁木锁，挑战两种华容道布局，支持提示与移动撤销。",
+      "author_name": "MartinDelophy",
+      "author_url": "https://github.com/MartinDelophy"
+    },
+    {
+      "source_line": 387,
+      "source_category": "解谜与益智",
+      "name": "CityMaker / 城市营造",
+      "url": "https://citymaker.0to1app.com",
+      "description": "在 4×4 街区上玩 2048：合并相同建筑，沿十一级建筑阶梯从传统民居成长为城市天际线，收录十二座城市，视角可按 45° 逐级旋转。",
+      "author_name": "Derek Wang",
+      "author_url": "https://github.com/derek-wangpch"
+    },
+    {
+      "source_line": 394,
+      "source_category": "解谜与益智",
+      "name": "Bonkshot",
+      "url": "https://bonkshot.com/",
+      "description": "拖动弹弓发射小角色，击中木制支撑，让结构倒塌并清除目标。",
+      "author_name": "edmund5",
+      "author_url": "https://x.com/edmund5"
+    },
+    {
+      "source_line": 400,
+      "source_category": "解谜与益智",
+      "name": "Greenhouse Escape Room: The Last Seed",
+      "url": "https://www.aigameshare.com/games/greenhouse-escape-room",
+      "description": "探索被风暴封闭的温室，通过修复铜水管、摆放植物与反射光线等谜题，救出最后一颗种子。",
+      "author_name": "nilni / @nil",
+      "author_url": "https://www.aigameshare.com/profile/nil"
+    },
+    {
+      "source_line": 406,
+      "source_category": "解谜与益智",
+      "name": "无限庭院 · Infinite Garden — Atlas of Echoes",
+      "url": "https://infinite-garden.yelin8130.chatgpt.site/",
+      "description": "探索 48 座可改变重力的庭院，把彩色果实送到对应底座、唤醒回路，在没有边界的建筑空间中解谜。",
+      "author_name": "lin_ye / lin ye",
+      "author_url": "https://linux.do/u/lin_ye"
+    },
+    {
+      "source_line": 412,
+      "source_category": "解谜与益智",
+      "name": "Pixel Orchard — Memory Harvest",
+      "url": "https://miaai-lab.github.io/GPT-6-Astra-100-HTML-Files/013-pixel-orchard.html",
+      "description": "翻开十二张种子卡片寻找六组配对，通过计步和重新洗牌练习记忆力。",
+      "author_name": "MiaAI-Lab",
+      "author_url": "https://github.com/MiaAI-Lab"
+    },
+    {
+      "source_line": 419,
+      "source_category": "解谜与益智",
+      "name": "Lantern Cove — The Borrowed Light",
+      "url": "https://lantern-cove.akartit.chatgpt.site/",
+      "description": "带领 Mara 探索手绘港口，与守卫对话，结合线索和物品寻找灯塔遗失的透镜。",
+      "author_name": "AK / akartit",
+      "author_url": "https://x.com/akartit"
+    },
+    {
+      "source_line": 429,
+      "source_category": "策略与模拟",
+      "name": "Tidehook",
+      "url": "https://tidehook-mallow.vercel.app/",
+      "description": "驾驶小拖船 Mallow 完成三段海岸航程，拖回会影响加速与转向的不同重量打捞物，交给港口起重机，并最终找回灯塔透镜。",
+      "author_name": "Emile du Toit / Mafuta Games",
+      "author_url": "https://mafuta.itch.io/"
+    },
+    {
+      "source_line": 436,
+      "source_category": "策略与模拟",
+      "name": "Dwellcraft · 住进想象",
+      "url": "https://dwellcraft.vercel.app/",
+      "description": "从家具库拖入物件，自由装修三个住宅，调整材质与光照，再以第一人称走进自己的设计；支持本机存档和自有 GLB 模型导入。",
+      "author_name": "Ryan-fm",
+      "author_url": "https://github.com/Ryan-fm"
+    },
+    {
+      "source_line": 443,
+      "source_category": "策略与模拟",
+      "name": "Little Kingdom Chess / 작은 왕국 체스",
+      "url": "https://little-kingdom-chess.echo3042.chatgpt.site/",
+      "description": "在可旋转的 3D 棋盘上与电脑下国际象棋，包含微缩角色、棋谱与悔棋。",
+      "author_name": "에코_eco",
+      "author_url": "https://x.com/echo3042"
+    },
+    {
+      "source_line": 449,
+      "source_category": "策略与模拟",
+      "name": "JUNK RUN",
+      "url": "https://junk-run.pages.dev/",
+      "description": "用废料零件组装无动力小车，再依靠重力冲下山坡；从第一人称工坊开始。",
+      "author_name": "TheLabGuy",
+      "author_url": "https://x.com/hermesailab"
+    },
+    {
+      "source_line": 455,
+      "source_category": "策略与模拟",
+      "name": "Spy or Lie",
+      "url": "https://spyorlie.com/",
+      "description": "与电脑对战的六边形策略桌游：放置隐藏身份的特工，通过虚张声势和包围敌方群组触发连锁占领。",
+      "author_name": "Nate Lorenzen",
+      "author_url": "https://x.com/NateLorenzen"
+    },
+    {
+      "source_line": 461,
+      "source_category": "策略与模拟",
+      "name": "三分天下 · 百将风云 / Three Kingdoms: Hundred Heroes",
+      "url": "https://sanguo-jiangshan.vercel.app",
+      "description": "选择魏、蜀、吴，在 15 城地图上经营金粮、指挥拥有独立 AI 生成头像的 108 名武将，以回合制征战对抗 AI 势力，争夺天下统一。",
+      "author_name": "MartinDelophy",
+      "author_url": "https://github.com/MartinDelophy"
+    },
+    {
+      "source_line": 468,
+      "source_category": "策略与模拟",
+      "name": "最后的灯塔 / Last Beacon",
+      "url": "https://last-beacon.loupengju.cc",
+      "description": "在微缩海岛上连接电网、布置并升级炮塔，以有限电力抵挡十波机械生物和最终 Boss，守住灯塔。",
+      "author_name": "stackloomdev",
+      "author_url": "https://github.com/stackloomdev"
+    },
+    {
+      "source_line": 475,
+      "source_category": "策略与模拟",
+      "name": "缺氧 · 小小星球",
+      "url": "https://hypoxia-6tu.pages.dev/",
+      "description": "地下殖民地生存模拟：指挥三名复制人挖掘和建造，管理氧气、食物及电力，让基地持续运转。",
+      "author_name": "dudu",
+      "author_url": null
+    },
+    {
+      "source_line": 481,
+      "source_category": "策略与模拟",
+      "name": "魔塔 · 永夜之阶",
+      "url": "https://ai.ywnet.xyz/work/mt.html",
+      "description": "十五层像素高塔冒险，围绕攻防计算、有限资源和三色钥匙规划路线、逐层探索。",
+      "author_name": "yw",
+      "author_url": null
+    },
+    {
+      "source_line": 487,
+      "source_category": "策略与模拟",
+      "name": "永恒荒野",
+      "url": "https://starve.pages.dev/",
+      "description": "投稿中的《饥荒》复刻网页生存与策略游戏；截图展示了森林探索、物资收集、背包，以及生命、饱食与理智状态。",
+      "author_name": "dudu",
+      "author_url": null
+    },
+    {
+      "source_line": 494,
+      "source_category": "策略与模拟",
+      "name": "潜水员戴夫（复刻）",
+      "url": "https://dave-2cm.pages.dev/",
+      "description": "《潜水员戴夫》的浏览器复刻，将水下鱼叉捕鱼、寿司店经营与海岛种植结合在一起。",
+      "author_name": "dudu",
+      "author_url": null
+    },
+    {
+      "source_line": 501,
+      "source_category": "策略与模拟",
+      "name": "No Moat",
+      "url": "https://no-moat.petergyang.chatgpt.site/",
+      "description": "创业题材的肉鸽卡牌游戏：招募团队，打出卡牌应对抄袭者、程序错误和云服务账单。",
+      "author_name": "Peter Yang",
+      "author_url": "https://x.com/petergyang"
+    },
+    {
+      "source_line": 507,
+      "source_category": "策略与模拟",
+      "name": "The Free Game",
+      "url": "https://vale-dos-vinhedos.lucas579686.chatgpt.site/",
+      "description": "修路、培养工人、搭建生产链，在细致的 3D 中世纪村庄里经营建设。",
+      "author_name": "Lucas Marques, from Shiva",
+      "author_url": "https://x.com/LucasMarquesSv"
+    },
+    {
+      "source_line": 514,
+      "source_category": "策略与模拟",
+      "name": "AGI of Empires — The Compute Wars",
+      "url": "https://agiofempires.com/",
+      "description": "收集资金与 GPU，建造数据中心和军队，抢先完成 ASI 研究或摧毁其他 AI 实验室的总部。",
+      "author_name": "timour kosters",
+      "author_url": "https://x.com/timourxyz"
+    },
+    {
+      "source_line": 520,
+      "source_category": "策略与模拟",
+      "name": "Atlas Go",
+      "url": "https://atlas-go.borisxp.chatgpt.site/",
+      "description": "在城市街道网络和特殊图形棋盘上对弈围棋，支持本地轮流操作并提供好友对局入口。",
+      "author_name": "Boris Power",
+      "author_url": "https://x.com/BorisMPower"
+    },
+    {
+      "source_line": 526,
+      "source_category": "策略与模拟",
+      "name": "Ironwood — The Art of Industry",
+      "url": "https://ironwood.sparkles.dev/",
+      "description": "采集原料，为机器供能并连接传送带，将林间空地发展成持续运转的工厂。",
+      "author_name": "Dan",
+      "author_url": "https://x.com/aidaniil"
+    },
+    {
+      "source_line": 532,
+      "source_category": "策略与模拟",
+      "name": "DUST FRONT",
+      "url": "https://dust-front.mustafaakin.dev/",
+      "description": "单人即时战略：建设基地、占领据点，指挥地面与空中部队作战。",
+      "author_name": "Mustafa Akın",
+      "author_url": "https://x.com/mustafaakin"
+    },
+    {
+      "source_line": 538,
+      "source_category": "策略与模拟",
+      "name": "前线指令 / Frontline Command",
+      "url": "https://fluffy-biscotti-dad318.netlify.app/",
+      "description": "在现代战争题材的即时战略游戏中建设基地、争夺资源区，指挥坦克、步兵、飞机与无人机对抗电脑，并通过间谍和情报系统获取优势。",
+      "author_name": "嘟啊嘟",
+      "author_url": "https://x.com/HDLhN783wtLkpPR"
+    },
+    {
+      "source_line": 545,
+      "source_category": "策略与模拟",
+      "name": "Coin Pusher Roguelite: Mintfall",
+      "url": "https://www.aigameshare.com/games/coin-pusher-roguelite-mintfall",
+      "description": "在 3D 推币机中瞄准投币，组合特殊硬币与遗物，用有限投币次数完成六轮分数目标。",
+      "author_name": "nilni / @nil",
+      "author_url": "https://www.aigameshare.com/profile/nil"
+    },
+    {
+      "source_line": 551,
+      "source_category": "策略与模拟",
+      "name": "Westward — The Oregon Trail",
+      "url": "https://biswaz.me/westward/",
+      "description": "带领马车队沿俄勒冈小道西行，分配食物、安排狩猎与修理，并处理旅途中的选择。",
+      "author_name": "Biswas",
+      "author_url": "https://x.com/bis_waz"
+    },
+    {
+      "source_line": 557,
+      "source_category": "策略与模拟",
+      "name": "Outerstead · First Light",
+      "url": "https://outerstead.com/",
+      "description": "为四名幸存者建造边境殖民地，安排食物与工作优先级，并探索 Hollow-7 的秘密。",
+      "author_name": "Lance Edward",
+      "author_url": "https://lance.name/"
+    },
+    {
+      "source_line": 563,
+      "source_category": "策略与模拟",
+      "name": "Chess Cubed",
+      "url": "https://playchesscubed.com/play/?world=lunar",
+      "description": "在相连的六个立方体表面下国际象棋，旋转棋盘观察威胁，也可用平面视图规划对电脑的走法。",
+      "author_name": "Matthew Lebo / digitalml",
+      "author_url": "https://www.reddit.com/user/digitalml/"
+    },
+    {
+      "source_line": 569,
+      "source_category": "策略与模拟",
+      "name": "Outermate: First Count",
+      "url": "https://outermate.com/",
+      "description": "熟悉监狱的日常作息，建立关系并收集权限与物资，准备多条越狱路线。",
+      "author_name": "Lance Edward",
+      "author_url": "https://lance.name/"
+    },
+    {
+      "source_line": 575,
+      "source_category": "策略与模拟",
+      "name": "Česká dobrodružství / Czech Adventures",
+      "url": "https://czech-game.vercel.app/",
+      "description": "乘坐火车、汽车、船只或飞机探索微缩捷克世界，切换载具并完成小任务。",
+      "author_name": "petr royce",
+      "author_url": "https://x.com/petrroyce"
+    },
+    {
+      "source_line": 581,
+      "source_category": "策略与模拟",
+      "name": "Land, If You Can",
+      "url": "https://landifyoucan.naylalabs.xyz/",
+      "description": "接管客机或轻型飞机，跟随塔台指引完成进近与降落挑战，包含五个场景、可互动客舱和飞行回放。",
+      "author_name": "Taniai_",
+      "author_url": "https://www.reddit.com/user/Taniai_/"
+    },
+    {
+      "source_line": 587,
+      "source_category": "策略与模拟",
+      "name": "Last Train to the Sea",
+      "url": "https://app.usecrayon.ai/play/bda1b910-b840-48cb-bb4c-28d0cde29107",
+      "description": "驾驶长着翅膀的电车穿行五座云上小镇，维持车身平衡、接送乘客，并收集车资、车票和车站印章。",
+      "author_name": "Aniket J",
+      "author_url": "https://x.com/aniketjart"
+    },
+    {
+      "source_line": 593,
+      "source_category": "策略与模拟",
+      "name": "Realm of Seratari",
+      "url": "https://dragonwild.seranotte.chatgpt.site/",
+      "description": "在程序生成的世界中养育巨龙、狩猎与收集金币，决定如何与会成长、防御和结盟的城镇相处。",
+      "author_name": "Nightstar31415",
+      "author_url": "https://www.reddit.com/user/Nightstar31415/"
+    },
+    {
+      "source_line": 599,
+      "source_category": "策略与模拟",
+      "name": "Monopoly City — A Board Worth Exploring",
+      "url": "https://monopoly-city.eekosystems.chatgpt.site/",
+      "description": "在微缩 3D 城市棋盘上与三名电脑对手掷骰对局，处理机会卡、交易地产，并切换棋盘与街道视角。",
+      "author_name": "Thomas Unise",
+      "author_url": "https://x.com/thomasunise"
+    },
+    {
+      "source_line": 605,
+      "source_category": "策略与模拟",
+      "name": "MUST. MAKE. PAPERCLIPS.",
+      "url": "https://wavedash.com/games/must-make-paperclips",
+      "description": "布置、升级炮塔守卫废土上的回形针工厂，穿插第一人称战斗，并通过永久研究挑战六个任务。",
+      "author_name": "Danny Limanseta",
+      "author_url": "https://x.com/DannyLimanseta"
+    },
+    {
+      "source_line": 612,
+      "source_category": "策略与模拟",
+      "name": "Sundrift — Take the Slow Way Home",
+      "url": "https://wesche.com/lab/astra/boat-explorer/",
+      "description": "驾驶小艇探索夕照中的群岛海域，结合局部海图寻找海岸，在没有限时目标的航行沙盒中漫游。",
+      "author_name": "Wësche",
+      "author_url": "https://x.com/WescheNex1q"
+    },
+    {
+      "source_line": 618,
+      "source_category": "策略与模拟",
+      "name": "VeilFall: The Hollow War",
+      "url": "https://agentgames.dev/play/veilfall",
+      "description": "扮演 Ilyra 参加三路 5v5 电脑对战，施放光系技能、购买遗物，推进防御塔并摧毁敌方核心。",
+      "author_name": "aronewshop",
+      "author_url": "https://agentgames.dev/u/aronewshop"
+    },
+    {
+      "source_line": 624,
+      "source_category": "策略与模拟",
+      "name": "Minimum Rage",
+      "url": "https://minimum-rage.fastandlucid.chatgpt.site/",
+      "description": "帮助 Kevin 保住餐厅工作：接单、取餐并服务八位顾客，避免过多客人失去耐心离开。",
+      "author_name": "fastandlucid",
+      "author_url": "https://x.com/FastandLucid"
+    },
+    {
+      "source_line": 630,
+      "source_category": "策略与模拟",
+      "name": "Cabsolutely",
+      "url": "https://cabsolutely.vercel.app/",
+      "description": "驾驶出租车穿行旧金山金融区，接送乘客赚取每日目标车费，并留意车辆状况。",
+      "author_name": "ilker",
+      "author_url": "https://x.com/ailker"
+    },
+    {
+      "source_line": 636,
+      "source_category": "策略与模拟",
+      "name": "Mini Moto — Pine Ridge Park",
+      "url": "https://mini-moto-park.chipchaunceytheonlyone.chatgpt.site/",
+      "description": "管理车手并塑造微缩越野摩托公园，通过全景或头盔视角观察八圈比赛。",
+      "author_name": "Christopher J. DiMarco",
+      "author_url": "https://x.com/chrisjdimarco"
+    },
+    {
+      "source_line": 642,
+      "source_category": "策略与模拟",
+      "name": "DASH / DINNER",
+      "url": "https://play.agentgames.dev/g/g_Gkna3a8DsdOR3NCL/index.html",
+      "description": "接受限时外卖订单，以第一人称穿行城市，管理配送员体力并逐步升级交通工具。",
+      "author_name": "Drakoniux",
+      "author_url": "https://agentgames.dev/u/Drakoniux"
+    },
+    {
+      "source_line": 648,
+      "source_category": "策略与模拟",
+      "name": "Aegis Flora",
+      "url": "https://murderszn.github.io/aegis-flora/game.html",
+      "description": "放置太阳朋克防御塔以改变敌人路径，在连续进攻中保护核心。",
+      "author_name": "Joshua Ray / murderszn",
+      "author_url": "https://x.com/jahflyx"
+    },
+    {
+      "source_line": 654,
+      "source_category": "策略与模拟",
+      "name": "Stillwater · Aquarium",
+      "url": "https://fish.kennyatx.com/",
+      "description": "照料淡水水族箱、投喂小鱼，通过水草与更大栖息地逐步扩展鱼缸。",
+      "author_name": "Kenny Johnson",
+      "author_url": "https://x.com/KennyJohnsonATX"
+    },
+    {
+      "source_line": 664,
+      "source_category": "RPG 与冒险",
+      "name": "The Sunshard",
+      "url": "https://mindblown.ai/games/the-sunshard",
+      "description": "体素风动作 RPG：使用火花弹与日光爆发对抗 Hollowborn，闪现躲避危险，唤醒太阳之门。",
+      "author_name": "Mindblown / @mind",
+      "author_url": "https://mindblown.ai/@mind"
+    },
+    {
+      "source_line": 670,
+      "source_category": "RPG 与冒险",
+      "name": "Lumbridge / Elderwood Realms",
+      "url": "https://elderwood-realms.rohannvarma.chatgpt.site/",
+      "description": "复古多人冒险，包含共享世界、技能、采集和战斗，可使用游客身份进入。",
+      "author_name": "Rohan Varma",
+      "author_url": "https://x.com/TheRohanVarma"
+    },
+    {
+      "source_line": 676,
+      "source_category": "RPG 与冒险",
+      "name": "Silent Meridian / 静默子午线",
+      "url": "https://silent-meridian.stackloom.org/",
+      "description": "一款包含四章、十三道谜题的氛围叙事解谜游戏：在“现在”与“回声”间对照线索、收集证据，解开停在 00:17 的观测站之谜。",
+      "author_name": "stackloomdev",
+      "author_url": "https://github.com/stackloomdev"
+    },
+    {
+      "source_line": 683,
+      "source_category": "RPG 与冒险",
+      "name": "热血归来 · 八荒幻世 / Mir176 Dragon Warrior",
+      "url": "https://mir176-dragon-warrior.geekcatxx.chatgpt.site/",
+      "description": "传奇风格动作 RPG，包含战士、法师、道士三职业、装备、副本战斗与自动战斗。",
+      "author_name": "知识猫AI实验室",
+      "author_url": "https://x.com/GeekCatX"
+    },
+    {
+      "source_line": 689,
+      "source_category": "RPG 与冒险",
+      "name": "Zork · The Great Underground Empire",
+      "url": "https://zork-underground-empire.netlify.app/",
+      "description": "Zork 的非官方 3D 改编，以第一人称探索地下世界，结合谜题、战斗与冒险日志。",
+      "author_name": "Ethan Mollick",
+      "author_url": "https://x.com/emollick"
+    },
+    {
+      "source_line": 695,
+      "source_category": "RPG 与冒险",
+      "name": "The Simpsons: Hit & Run — Browser Recreation",
+      "url": "https://vheissu.github.io/hit-and-run-web/",
+      "description": "在非官方浏览器重制版中步行或驾车探索春田镇，体验任务、街道交通与警察追逐。",
+      "author_name": "Dwayne",
+      "author_url": "https://x.com/CtrlAltDwayne"
+    },
+    {
+      "source_line": 702,
+      "source_category": "RPG 与冒险",
+      "name": "Where the Wind Wanders",
+      "url": "https://app.usecrayon.ai/play/a9a3c165-74b3-4ff6-9588-ad97f829ddb5",
+      "description": "在阳光下的 2.5D 山谷中沿小径漫游，寻找三封风之信，体验轻松的探索冒险。",
+      "author_name": "Tushar",
+      "author_url": "https://x.com/TusharXo"
+    },
+    {
+      "source_line": 709,
+      "source_category": "RPG 与冒险",
+      "name": "ALIBI — The Last Light",
+      "url": "https://alibi-blackthorn-manor.vercel.app/",
+      "description": "在点击式谋杀谜案中调查 Blackthorn 庄园，检查场景并追踪线索，寻找凶手。",
+      "author_name": "Christos Antonopoulos",
+      "author_url": "https://x.com/Christos_antono"
+    },
+    {
+      "source_line": 715,
+      "source_category": "RPG 与冒险",
+      "name": "Skyward: The Gathering",
+      "url": "https://edge-city-skyward-quests.vercel.app/",
+      "description": "探索浮空群岛，在社区之间跳跃和滑翔，并完成居民交付的任务。",
+      "author_name": "timour kosters",
+      "author_url": "https://x.com/timourxyz"
+    },
+    {
+      "source_line": 721,
+      "source_category": "RPG 与冒险",
+      "name": "Anna & Leo · The Starstone Adventure",
+      "url": "https://anna-leo-starstone.vercel.app/",
+      "description": "在 Anna 的音乐魔法与 Leo 的超能力之间切换，唤醒旋律花朵并探索奇迹花园。",
+      "author_name": "Dharma Utomo",
+      "author_url": "https://x.com/dharmautomo"
+    },
+    {
+      "source_line": 727,
+      "source_category": "RPG 与冒险",
+      "name": "The Legend of Deller",
+      "url": "https://rain-court-js.umodeler-inc-4323.chatgpt.site/",
+      "description": "探索雨雾庇护所，再向地牢进发，运用剑技连段、元素技能和闪避展开冒险。",
+      "author_name": "UModeler X PicoBerry",
+      "author_url": "https://x.com/UModeler"
+    },
+    {
+      "source_line": 734,
+      "source_category": "RPG 与冒险",
+      "name": "Dungeon of Astra",
+      "url": "https://wavedash.com/games/dungeon-of-astra",
+      "description": "招募冒险小队，深入百层地下城，结合剑击、火球与队友职业能力，挑战带永久死亡机制的冒险。",
+      "author_name": "tonysuri / @tonysurix",
+      "author_url": "https://x.com/tonysurix"
+    },
+    {
+      "source_line": 740,
+      "source_category": "RPG 与冒险",
+      "name": "Sunlandia — The Forgotten Shore",
+      "url": "https://sunlandia.smallweblab.com/",
+      "description": "以第一人称探索沉船后的孤岛，调查线索、解开环境谜题，并寻找通往灯塔的道路。",
+      "author_name": "Ramon Linares / Small Web Lab",
+      "author_url": "https://github.com/RamonLinares"
+    },
+    {
+      "source_line": 746,
+      "source_category": "RPG 与冒险",
+      "name": "NÁCAR",
+      "url": "https://nacar-microcosmo.preda2005.chatgpt.site/",
+      "description": "在浸水的蜗牛壳中扮演微生物，吞食营养、探索微观水域，并逐渐进化出新的身体部件。",
+      "author_name": "Marcio Lima / @Preda2005",
+      "author_url": "https://x.com/Preda2005"
+    },
+    {
+      "source_line": 752,
+      "source_category": "RPG 与冒险",
+      "name": "BELOW — The Hollow",
+      "url": "https://below-the-hollow.thebuggeddev.chatgpt.site/",
+      "description": "以第一人称探索每次重新生成的水下洞穴，沿潜水引导绳寻找返回水面的路径。",
+      "author_name": "The Bugged Dev",
+      "author_url": "https://x.com/thebuggeddev"
+    },
+    {
+      "source_line": 758,
+      "source_category": "RPG 与冒险",
+      "name": "The Road to Kufa",
+      "url": "https://road-to-kufa.vercel.app/",
+      "description": "步行或骑马探索阿拉伯沙漠世界，游览绿洲城镇并发现地标；当前为开发中的冒险原型。",
+      "author_name": "Zenpher",
+      "author_url": "https://www.reddit.com/user/Zenpher/"
+    },
+    {
+      "source_line": 765,
+      "source_category": "RPG 与冒险",
+      "name": "Grand Theft Auto VI — PS1 Demake",
+      "url": "https://origozero.ai/play/ad25322f-fdfe-49c0-9ee9-82608c8f9ff7",
+      "description": "在 PlayStation 风格画面中探索小型 Vice City，体验驾驶、双主角、任务和警察追逐；为非官方粉丝改编。",
+      "author_name": "Deata / wannabestraight",
+      "author_url": "https://origozero.ai/users/Deata"
+    },
+    {
+      "source_line": 772,
+      "source_category": "RPG 与冒险",
+      "name": "Don't Look Away — Saint Orison",
+      "url": "https://weeping-angels.vercel.app/",
+      "description": "在黑暗教堂中恢复供电并寻找逃生钥匙；石像天使会在看不见它们时逼近，每次眨眼都伴随风险。",
+      "author_name": "Blendi",
+      "author_url": "https://x.com/BlendiByl"
+    },
+    {
+      "source_line": 778,
+      "source_category": "RPG 与冒险",
+      "name": "Europe, the Game",
+      "url": "https://play.justmovetoeurope.com/",
+      "description": "探索欧洲城市街区，在工作、体力、社交与虚拟日常预算之间进行取舍。",
+      "author_name": "Lara Avci",
+      "author_url": "https://x.com/laraavci_"
+    },
+    {
+      "source_line": 788,
+      "source_category": "平台跳跃与竞速",
+      "name": "Barrelbound: The Lost Cargo",
+      "url": "https://barrelbound.vercel.app/",
+      "description": "选择 Rocco 或 Pip，在三个丛林平台关卡中二段跳、投掷木桶、搭乘矿车，找回遗失的货物并挑战最终首领。",
+      "author_name": "Emile du Toit / Mafuta Games",
+      "author_url": "https://mafuta.itch.io/"
+    },
+    {
+      "source_line": 795,
+      "source_category": "平台跳跃与竞速",
+      "name": "STORM RACE",
+      "url": "https://storm-race.vercel.app/",
+      "description": "迷你四驱车竞速，包含零件拆解车库、加速和晴天、雨天、暴风雨赛道变化。",
+      "author_name": "BubuAi",
+      "author_url": "https://x.com/BubuStd"
+    },
+    {
+      "source_line": 801,
+      "source_category": "平台跳跃与竞速",
+      "name": "FANG STARLIGHT RUN",
+      "url": "https://fang-starlight-run.yosshy666.chatgpt.site/",
+      "description": "操控小狼穿越三个星夜横版关卡，利用二段跳与冲刺收集金币和星之碎片。",
+      "author_name": "FANGプラス最強伝説🐺",
+      "author_url": "https://x.com/FANGsaikyou"
+    },
+    {
+      "source_line": 807,
+      "source_category": "平台跳跃与竞速",
+      "name": "Blue Bajaj Rally",
+      "url": "https://bajaj.guzo.tech/",
+      "description": "驾驶三轮 Bajaj 在埃塞俄比亚风格的高地赛道上，与五名电脑车手竞速或挑战计时。",
+      "author_name": "Guzo Technologies",
+      "author_url": "https://x.com/guzotech"
+    },
+    {
+      "source_line": 813,
+      "source_category": "平台跳跃与竞速",
+      "name": "APEX CLUB — Bay Kart Grand Prix",
+      "url": "https://apex-club-racing.vercel.app",
+      "description": "在海湾赛道参加三圈卡丁车竞速，选择六款赛车，利用漂移蓄力与出弯小喷争夺个人名次或 4v4 队伍积分。",
+      "author_name": "Ryan",
+      "author_url": null
+    },
+    {
+      "source_line": 820,
+      "source_category": "平台跳跃与竞速",
+      "name": "PELICAN PEDAL / 鹈鹕踏浪",
+      "url": "https://pelican-pedal.zecoba.workers.dev/",
+      "description": "让鹈鹕骑着自行车穿行于不断变化的 3D 海岸，在三条车道间换道、跳跃与低头躲避障碍，连续收集小鱼获得连击，使用护盾、磁铁和六秒无敌冲刺。",
+      "author_name": "chat01.ai",
+      "author_url": "https://chat01.ai"
+    },
+    {
+      "source_line": 827,
+      "source_category": "平台跳跃与竞速",
+      "name": "狂飙赛车 · OVERDRIVE",
+      "url": "https://gpt-kbsc.0nz.de/",
+      "description": "与五名 AI 对手进行 3D 赛车竞速，可选择车辆和赛道，提供计时、漂移及氮气加速。",
+      "author_name": "zding",
+      "author_url": null
+    },
+    {
+      "source_line": 833,
+      "source_category": "平台跳跃与竞速",
+      "name": "零界深潜 / ABYSS PROTOCOL",
+      "url": "https://abyss-descent.zecoba.workers.dev/",
+      "description": "只靠左右移动，在 3D 深井中踩着移动、脆裂与相位平台不断下潜，躲避激光和锯刃，收集晶体与生存芯片。",
+      "author_name": "chat01.ai",
+      "author_url": "https://linux.do/u/bandaot"
+    },
+    {
+      "source_line": 840,
+      "source_category": "平台跳跃与竞速",
+      "name": "疾风赛道 / Kart Racing（跑跑卡丁车）",
+      "url": "https://qwen3-8-test.vercel.app/",
+      "description": "通过漂移积攒氮气，在三圈竞速中使用道具争夺名次；当前游戏名为“疾风赛道”，提供 2–4 人联机入口。",
+      "author_name": "SteveZhang / jay6697117",
+      "author_url": "https://github.com/jay6697117"
+    },
+    {
+      "source_line": 846,
+      "source_category": "平台跳跃与竞速",
+      "name": "TIDAL RUSH — Paradise GP",
+      "url": "https://tidal-rush-paradise-gp.skirano.chatgpt.site/",
+      "description": "在热带卡丁车赛道上漂移、使用道具，经过三圈比赛与七名对手争夺名次。",
+      "author_name": "Pietro Schirano",
+      "author_url": "https://x.com/skirano"
+    },
+    {
+      "source_line": 853,
+      "source_category": "平台跳跃与竞速",
+      "name": "LUNA — Crimson Requiem / 紅月のレクイエム",
+      "url": "https://luna-crimson-requiem.ponsuke.chatgpt.site/",
+      "description": "在哥特像素关卡中跳跃前进，通过挥剑、踩踏或召唤攻击迎战敌人的短篇横版冒险。",
+      "author_name": "音羽ぽんすけ",
+      "author_url": "https://x.com/ponsuke_otowa"
+    },
+    {
+      "source_line": 859,
+      "source_category": "平台跳跃与竞速",
+      "name": "Strange Orbit",
+      "url": "https://app.usecrayon.ai/play/47df78e2-1410-45d1-833c-196e1161c0b8",
+      "description": "骑着自行车沿行星环与宇航员对手竞速，收集星尘、跟随尾流并加速完成轨道杯。",
+      "author_name": "Crayon",
+      "author_url": "https://x.com/usecrayon"
+    },
+    {
+      "source_line": 865,
+      "source_category": "平台跳跃与竞速",
+      "name": "One More Vine — Into the Wild",
+      "url": "https://onemorevine.bennash.dev/",
+      "description": "在四个丛林关卡中奔跑、跳跃和荡藤，收集宝藏、躲避鳄鱼并刷新通关时间。",
+      "author_name": "Ben Nash",
+      "author_url": "https://x.com/bennash"
+    },
+    {
+      "source_line": 871,
+      "source_category": "平台跳跃与竞速",
+      "name": "混合马里奥Ⅱ · 忍者龙剑传 × 坦克大战 / Mario Mix II",
+      "url": "https://aha-xiaoq.github.io/games/mario-mix-2/play.html",
+      "description": "让《忍者龙剑传》的隼龙与《坦克大战》的坦克进入马里奥地下关卡 1-2：用隼龙横版跳跃、攀墙与战斗，用坦克俯视作战，也可选择“忍龙 → 坦克”双角色接力救回公主。",
+      "author_name": "在下_小Q（Aha-xiaoQ）",
+      "author_url": "https://github.com/Aha-xiaoQ"
+    },
+    {
+      "source_line": 880,
+      "source_category": "平台跳跃与竞速",
+      "name": "Bengaluru ORR Rush",
+      "url": "https://orr-rush-bengaluru.ravitheja.chatgpt.site/",
+      "description": "穿行班加罗尔的拥堵道路，避开坑洼和外卖摩托，利用加速与侧向挥击争取超车空间。",
+      "author_name": "Ravi Theja",
+      "author_url": "https://x.com/ravithejads"
+    },
+    {
+      "source_line": 886,
+      "source_category": "平台跳跃与竞速",
+      "name": "SKICROSS · 极地速降",
+      "url": "https://iamsonic.net/2026/mini-games/skicross.html",
+      "description": "与三名对手沿雪山竞速，穿越旗门与障碍，并在雪崩追上之前冲向终点。",
+      "author_name": "Sonic的奇思妙想",
+      "author_url": "https://x.com/sonic0828"
+    },
+    {
+      "source_line": 893,
+      "source_category": "平台跳跃与竞速",
+      "name": "Itsy Bitsy Spider · One More Climb",
+      "url": "https://game-bench.piccini.app/games/gpt-6-astra/",
+      "description": "爬上长满苔藓的墙壁，捕食飞虫恢复抓力，并在雨水到来前藏进洞穴。",
+      "author_name": "Luiz Piccini",
+      "author_url": "https://piccini.app/"
+    },
+    {
+      "source_line": 899,
+      "source_category": "平台跳跃与竞速",
+      "name": "Desi Mayhem",
+      "url": "https://desimayhem.com/",
+      "description": "骑摩托穿行印度城市道路，在公交车与三轮车之间竞速，并使用踢击、拳击和加速。",
+      "author_name": "Kishore",
+      "author_url": "https://x.com/GetKishore"
+    },
+    {
+      "source_line": 905,
+      "source_category": "平台跳跃与竞速",
+      "name": "Cosmic Tides",
+      "url": "https://app.usecrayon.ai/play/362ae1e7-29bd-4fbc-9103-00649265d942",
+      "description": "驾驶载具穿越银河海面，追逐发光路线门，可选择两圈竞速或无尽漂流。",
+      "author_name": "Aniket J",
+      "author_url": "https://x.com/aniketjart"
+    },
+    {
+      "source_line": 911,
+      "source_category": "平台跳跃与竞速",
+      "name": "Neon Wake — Dubai Coast",
+      "url": "https://neonwake.ethraship.com/",
+      "description": "驾驶快艇沿迪拜海岸穿过八个赛段，在三圈赛道中使用加速与跳台捷径。",
+      "author_name": "Captain M1K / Ethra",
+      "author_url": "https://x.com/captain_m1k"
+    },
+    {
+      "source_line": 917,
+      "source_category": "平台跳跃与竞速",
+      "name": "Wings of Freedom — Levi Skyrun",
+      "url": "https://attack-on-titan-jet.vercel.app/",
+      "description": "引导利威尔自动穿梭屋顶，闪避障碍，把握翻越与攻击巨人的时机来积累连贯动作。",
+      "author_name": "Dhrubhagat Singh",
+      "author_url": "https://x.com/dhrubhagatsingh"
+    },
+    {
+      "source_line": 924,
+      "source_category": "平台跳跃与竞速",
+      "name": "Hot Wheeler",
+      "url": "https://hot-wheeler.vercel.app/",
+      "description": "驾驶玩具赛车穿过特技公园或卧室赛道的环形轨道、坡道与加速区，可切换自动跑圈、手动驾驶和放置车辆。",
+      "author_name": "Varun Arora",
+      "author_url": "https://x.com/varavibes"
+    },
+    {
+      "source_line": 930,
+      "source_category": "平台跳跃与竞速",
+      "name": "旧城区 · 放学路 / Dual Realms",
+      "url": "https://sgyno09-source.github.io/dual-realms/",
+      "description": "在两位女主间切换，二段跳穿过街道与屋顶，使用三连击和闪避闯过当前开放的两个横版冒险章节。",
+      "author_name": "serein",
+      "author_url": "https://x.com/you1873118"
+    },
+    {
+      "source_line": 937,
+      "source_category": "平台跳跃与竞速",
+      "name": "Race Jimothy",
+      "url": "https://tayttm.github.io/race-jimothy/",
+      "description": "画出挑战者，让它与浣熊 Jimothy 在 30 米赛道上竞速，再修改涂鸦发起下一场对决。",
+      "author_name": "Yuting_M / tayttm",
+      "author_url": "https://x.com/YutingM84881"
+    },
+    {
+      "source_line": 944,
+      "source_category": "平台跳跃与竞速",
+      "name": "Glider — One Throw. Endless Sky.",
+      "url": "https://glider.game/",
+      "description": "发射纸飞机，在不断延展的 3D 地貌中转向、加速与穿环，或自由探索不同生态区域。",
+      "author_name": "mrtwizzles",
+      "author_url": "https://www.reddit.com/user/mrtwizzles/"
+    },
+    {
+      "source_line": 950,
+      "source_category": "平台跳跃与竞速",
+      "name": "Duck Off",
+      "url": "https://duckoff.fun/",
+      "description": "点击划水推动小鸭前进，躲开木桩与漩涡、积攒加速，支持单人练习与房间竞速。",
+      "author_name": "swarnim.eth",
+      "author_url": "https://x.com/swarnimodi"
+    },
+    {
+      "source_line": 956,
+      "source_category": "平台跳跃与竞速",
+      "name": "Wildwake Rally",
+      "url": "https://wildwake-rally.vercel.app/",
+      "description": "驾驶橙色拉力赛车穿越低多边形山地赛道，提供两圈单人练习与公开排行榜。",
+      "author_name": "DefyEntropyV",
+      "author_url": "https://x.com/DefyEntropyV"
+    },
+    {
+      "source_line": 962,
+      "source_category": "平台跳跃与竞速",
+      "name": "Icy Tower — Frostbound",
+      "url": "https://icy-tower-frostbound.netlify.app/",
+      "description": "在冰塔中连跳、墙跳并积累动量，逃离不断升高的冰霜，提供经典模式与每日挑战。",
+      "author_name": "Tahsin Safa Elmalı",
+      "author_url": "https://x.com/SafaElmali"
+    },
+    {
+      "source_line": 968,
+      "source_category": "平台跳跃与竞速",
+      "name": "VOIDRUNNER — Orbital Combat League",
+      "url": "https://alesha-pro.github.io/bench-portal/games/voidrunner-astra/",
+      "description": "驾驶反重力飞船在霓虹赛道上与七名对手竞速，结合加速、气刹与武器争夺名次。",
+      "author_name": "Alexey Fateev",
+      "author_url": "https://x.com/superalesha"
+    },
+    {
+      "source_line": 974,
+      "source_category": "平台跳跃与竞速",
+      "name": "PaperRoute",
+      "url": "https://www.paperroute.lol/play/",
+      "description": "骑车穿行郊区街道，向两侧订户投递报纸，并躲开车辆、行人和坑洞。",
+      "author_name": "Emm Tee / BuiltBySketch",
+      "author_url": "https://x.com/builtbysketch"
+    },
+    {
+      "source_line": 980,
+      "source_category": "平台跳跃与竞速",
+      "name": "Zombie Escape Driver",
+      "url": "https://zombiedriver.z.madsoftware.co/",
+      "description": "在无尽夜间驾驶中穿越丧尸与交通，收集废料并加速冲向下一个街区。",
+      "author_name": "Marc",
+      "author_url": "https://x.com/MarcDagatan"
+    },
+    {
+      "source_line": 986,
+      "source_category": "平台跳跃与竞速",
+      "name": "DUSKLINE — Canyon Circuit",
+      "url": "https://duskline-canyon-run.abdulhadi-ai.chatgpt.site/",
+      "description": "在落日峡谷环线上驾驶，结合圈速计时、赛道进度小地图与可切换的追车视角。",
+      "author_name": "Abu Hadi",
+      "author_url": "https://x.com/1banke"
+    },
+    {
+      "source_line": 992,
+      "source_category": "平台跳跃与竞速",
+      "name": "RED FLAG GAME",
+      "url": "https://seimusic.info/file/red_flag_game.html",
+      "description": "驾车往返机场与家，留意限速、红绿灯和剩余驾照分数。",
+      "author_name": "SEI",
+      "author_url": "https://x.com/seimusic"
+    },
+    {
+      "source_line": 998,
+      "source_category": "平台跳跃与竞速",
+      "name": "Flappy Bird · Click to Fly",
+      "url": "https://flappy-click-arcade-sept26.wesley-blomquist96.chatgpt.site/",
+      "description": "通过适时点击或轻触让小鸟保持飞行，穿过水管间隙，体验简洁的街机改编。",
+      "author_name": "Wesley Blomquist",
+      "author_url": "https://x.com/Chief1496"
+    },
+    {
+      "source_line": 1008,
+      "source_category": "实验玩法与多人游戏",
+      "name": "ASTRA Arcade",
+      "url": "https://astra-arcade.antonioleivag.chatgpt.site/",
+      "description": "集山地拉力、滑雪、反重力竞速等六款浏览器游戏于一体的街机厅；按一个合集收录。",
+      "author_name": "Antonio Leiva",
+      "author_url": "https://x.com/antonioleivag"
+    },
+    {
+      "source_line": 1014,
+      "source_category": "实验玩法与多人游戏",
+      "name": "Chao Party",
+      "url": "https://chao.party/",
+      "description": "非官方 Chao Garden 多人同人游戏：选择索尼克角色，探索花园并与 Chao 互动。",
+      "author_name": "Hank",
+      "author_url": "https://x.com/h4nkdog"
+    },
+    {
+      "source_line": 1020,
+      "source_category": "实验玩法与多人游戏",
+      "name": "ORBITAL GARDEN · 轨道花园",
+      "url": "https://orbital-garden-one.vercel.app",
+      "description": "交互式粒子艺术沙盒：让 48,000 颗光点在花、引力环与星系之间变形，扰动雕塑并将瞬间导出为海报。",
+      "author_name": "jackroc",
+      "author_url": "https://github.com/jackroc"
+    },
+    {
+      "source_line": 1027,
+      "source_category": "实验玩法与多人游戏",
+      "name": "Toy2Game / 在线玩具箱",
+      "url": "https://games.asmo.top/",
+      "description": "把桌面玩具改编成四款 3D 网页游戏：轮流敲冰避免企鹅落水、带小兔穿过机关、放置太空人保持平台平衡，以及挪动车辆解开出库谜题。",
+      "author_name": "asmoyou",
+      "author_url": "https://github.com/asmoyou"
+    },
+    {
+      "source_line": 1034,
+      "source_category": "实验玩法与多人游戏",
+      "name": "Jelly Baby",
+      "url": "https://jelly.scottsun.io/",
+      "description": "阳光木桌上的软体果冻游乐场，可以跳跃、拉伸，体验秋千和蹦床。",
+      "author_name": "Scott",
+      "author_url": "https://x.com/scottstts"
+    },
+    {
+      "source_line": 1041,
+      "source_category": "实验玩法与多人游戏",
+      "name": "泡泡坦克大作战联机版 / Toon Tank Arena",
+      "url": "https://toon-tank-arena.jay6697117.deno.net/",
+      "description": "用弹跳炮弹与强化道具守护彩虹核心，提供单人、双人同屏合作与在线对战模式的卡通坦克竞技场。",
+      "author_name": "SteveZhang / jay6697117",
+      "author_url": "https://github.com/jay6697117"
+    },
+    {
+      "source_line": 1047,
+      "source_category": "实验玩法与多人游戏",
+      "name": "Above the Rooftops",
+      "url": "https://app.usecrayon.ai/play/d09bb865-2259-42e2-86cc-fb609a9d6f28",
+      "description": "涂绘风筝并在城市屋顶上放飞，控制风筝线张力，体验自由飞行或限时收集天空光点的挑战。",
+      "author_name": "Tushar / @TusharXo",
+      "author_url": "https://x.com/TusharXo"
+    },
+    {
+      "source_line": 1053,
+      "source_category": "实验玩法与多人游戏",
+      "name": "Starship Foundry — Isometric Flight Lab",
+      "url": "https://allaiinc.org/Starship-Foundry-Isometric-Flight-Lab.html",
+      "description": "用模块拼装飞船，检查连接、动力与推力，再带着作品进入穿环、跳跃或等距视角射击模式。",
+      "author_name": "Aaron Wacker",
+      "author_url": "https://x.com/Aaron_Wacker"
+    },
+    {
+      "source_line": 1059,
+      "source_category": "实验玩法与多人游戏",
+      "name": "POCKET_01 — Personal Game System",
+      "url": "https://devoshub.com/",
+      "description": "打开虚拟单色掌机，在 12 款小游戏中选择贪吃蛇、方块、打砖块、扫雷或八关推箱子等玩法。",
+      "author_name": "Haris Memic",
+      "author_url": "https://x.com/LeHari_eth"
+    },
+    {
+      "source_line": 1065,
+      "source_category": "实验玩法与多人游戏",
+      "name": "Super Mario Bros. + Duck Hunt — Browser Port",
+      "url": "https://mario-duck-hunt-mobile.astral-bead-6514.chatgpt.site/",
+      "description": "在同一卡带界面切换非官方马里奥平台跳跃与 Duck Hunt 移植游戏，提供屏幕移动、跳跃和点击射击操作。",
+      "author_name": "Trust Me Bro / TrustMeOrElse",
+      "author_url": "https://x.com/TrustMeOrElse"
+    },
+    {
+      "source_line": 1071,
+      "source_category": "实验玩法与多人游戏",
+      "name": "Bubble Wrap Simulator",
+      "url": "https://bubble-wrap-simulator.vercel.app/",
+      "description": "探索由泡泡纸构成的房间，自由戳破各处表面，体验没有任务限制的解压游戏。",
+      "author_name": "FinkTheArtist",
+      "author_url": "https://x.com/crtvTeknologist"
+    },
+    {
+      "source_line": 1077,
+      "source_category": "实验玩法与多人游戏",
+      "name": "Loulou’s Apartment",
+      "url": "https://loulous-apartment.vercel.app/",
+      "description": "探索温馨的公寓游戏，与日常物品互动，并抚摸小狗 Maggie。",
+      "author_name": "Louise de Sadeleer",
+      "author_url": "https://x.com/LouiseDSadeleer"
+    }
+  ]
+}

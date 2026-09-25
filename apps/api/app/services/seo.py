@@ -147,7 +147,7 @@ class SeoService:
                 identity,
                 base_url,
                 "/",
-                title=site_brand_name(identity.title),
+                title=f"AI游戏收录 · {site_brand_name(identity.title)}",
                 description=site_description(identity),
             )
         if normalized == "/boards":
@@ -279,7 +279,7 @@ class SeoService:
                 identity,
                 base_url,
                 "/",
-                title=site_brand_name(identity.title),
+                title=f"AI游戏收录 · {site_brand_name(identity.title)}",
                 description=site_description(identity),
             ),
             heading=identity.title,
@@ -1379,7 +1379,7 @@ def setting_text(value: object, fallback: str) -> str:
 def site_description(identity: SeoSiteIdentity) -> str:
     """返回聚合目录描述，避免旧论坛副标题进入新首页与结构化数据。"""
 
-    return f"{site_brand_name(identity.title)}：按分类发现游戏与互动项目，搜索并查看访客评分。"
+    return f"{site_brand_name(identity.title)}：AI游戏收录。按分类浏览、按项目名称搜索，查看作者与游客评分，前往原站体验。"
 
 
 def site_brand_name(public_title: str) -> str:

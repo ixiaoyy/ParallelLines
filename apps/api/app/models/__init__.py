@@ -6,7 +6,7 @@ from app.models.analytics import SiteVisit
 from app.models.background_job import BackgroundJob, BackgroundJobLog
 from app.models.backup import BackupArtifact
 from app.models.badge import BadgeDefinition, UserBadge, UserTrustLevelEvent
-from app.models.catalog import CatalogCategory, CatalogProject, CatalogRating
+from app.models.catalog import CatalogCategory, CatalogProject, CatalogRating, CatalogSubmission
 from app.models.daily_report import (
     DailyReport,
     DailyReportMessage,
@@ -82,6 +82,7 @@ __all__ = [
     "CatalogCategory",
     "CatalogProject",
     "CatalogRating",
+    "CatalogSubmission",
     "Draft",
     "DailyReport",
     "DailyReportMessage",

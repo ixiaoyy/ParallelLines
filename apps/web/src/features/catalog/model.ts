@@ -8,6 +8,7 @@ export interface CatalogProjectResponse {
   kind: "external" | "internal";
   description: string | null;
   author_name?: string | null;
+  author_url?: string | null;
   icon_url: string | null;
   created_at: string;
   average_score: number | null;
@@ -46,6 +47,7 @@ export interface CatalogProject {
   kind: "external" | "internal";
   description: string | null;
   authorName: string | null;
+  authorUrl?: string;
   iconUrl?: string;
   createdAt: string;
   averageScore: number | null;
@@ -77,6 +79,20 @@ function catalogIconUrl(url: string | null): string | undefined {
   }
 }
 
+// 作者链接只允许 HTTPS，避免后台数据异常时把不安全地址放入公开卡片。
+function catalogAuthorUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" || !parsed.hostname || parsed.username || parsed.password) {
+      return undefined;
+    }
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 // 将一个 API 分类及其项目映射为页面结构；外链显示域名，站内项目不显示域名。
 // 参数是 API 分类，返回可直接用于筛选和展示的分类，不产生写入。
 export function toCatalogCategory(category: CatalogCategoryResponse): CatalogCategory {
@@ -102,6 +118,7 @@ export function toCatalogCategory(category: CatalogCategoryResponse): CatalogCat
         kind: project.kind,
         description: project.description,
         authorName: project.author_name ?? null,
+        authorUrl: catalogAuthorUrl(project.author_url),
         iconUrl: catalogIconUrl(project.icon_url),
         createdAt: project.created_at,
         averageScore: project.average_score,

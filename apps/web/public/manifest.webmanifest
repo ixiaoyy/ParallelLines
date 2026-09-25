@@ -1,7 +1,7 @@
 {
-  "name": "平行线 ParallelLines",
+  "name": "平行线 ParallelLines · AI游戏收录",
   "short_name": "平行线",
-  "description": "让答案可追溯的中文技术论坛。",
+  "description": "按分类浏览 AI 游戏、搜索项目名称，查看作者与游客评分，前往原站体验。",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",

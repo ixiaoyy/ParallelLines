@@ -4,7 +4,7 @@ import {
   ClockCircleFilled, CoffeeOutlined, FireFilled, HeartFilled,
   HeartOutlined, HourglassOutlined, SearchOutlined, SmileOutlined, StarFilled, ThunderboltOutlined,
 } from "@ant-design/icons-vue";
-import { computed, ref } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 
 import type { CatalogProject } from "@/features/catalog/model";
 import { useCatalog, useRateCatalogProject } from "@/features/catalog/queries";
@@ -12,6 +12,7 @@ import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
 
 type SortMode = "latest" | "hot";
 type CatalogEntry = CatalogProject & { categorySlug: string };
+const PAGE_SIZE = 24;
 const COMING_SOON_FILTER = "coming-soon";
 const catalogAssetPath = "/catalog/2026-09-24-v1";
 const newCatalogAssetPath = "/catalog/2026-09-25-v1";
@@ -40,10 +41,13 @@ const searchInput = ref("");
 const search = ref("");
 const selectedCategory = ref("all");
 const sortMode = ref<SortMode>("latest");
+const visibleLimit = ref(PAGE_SIZE);
 const pendingProjectId = ref<string | null>(null);
 const ratingErrorProjectId = ref<string | null>(null);
 const hoveredProjectId = ref<string | null>(null);
 const hoveredScore = ref(0);
+const authorDialog = ref<HTMLDialogElement | null>(null);
+const selectedAuthor = ref<string | null>(null);
 
 // 预告项目单独筛选，普通分类只展示已开放项目；后台归属保持原样。
 const allCategories = computed(() => catalogQuery.data.value ?? []);
@@ -59,6 +63,9 @@ const allProjects = computed<CatalogEntry[]>(() =>
   ),
 );
 const hasComingSoon = computed(() => allProjects.value.some(isComingSoon));
+const selectedAuthorProjects = computed(() =>
+  allProjects.value.filter((project) => project.authorName === selectedAuthor.value),
+);
 const normalizedSearch = computed(() => search.value.trim().toLocaleLowerCase());
 
 // 分类与排序只改变展示，查询词仅匹配卡片展示名称；项目归属仍以后台数据为准。
@@ -89,9 +96,24 @@ const visibleProjects = computed(() => {
   });
 });
 
+// 大目录只先渲染首批卡片；筛选变化后重新从首批展示，搜索仍覆盖全部项目。
+const displayedProjects = computed(() => visibleProjects.value.slice(0, visibleLimit.value));
+watch([normalizedSearch, selectedCategory, sortMode], () => {
+  visibleLimit.value = PAGE_SIZE;
+});
+
+function loadMoreProjects(): void {
+  visibleLimit.value += PAGE_SIZE;
+}
+
 // 朝花夕拾尚未开放；沿用原项目标识，兼容仍未执行分类迁移的环境。
 function isComingSoon(project: CatalogProject): boolean {
   return project.slug === "fablespace";
+}
+
+// 站内游戏与朝花夕拾统一展示原创署名，不用网址或后台空值推断具体作者。
+function isOriginalProject(project: CatalogProject): boolean {
+  return project.kind === "internal" || project.slug === "fablespace";
 }
 
 function displayName(project: CatalogProject): string {
@@ -156,6 +178,16 @@ function submitSearch(): void {
   search.value = searchInput.value;
 }
 
+// 没有外部作者主页时，展示本站已收录的该作者作品作为简要介绍。
+function openAuthorIntro(name: string): void {
+  selectedAuthor.value = name;
+  void nextTick(() => authorDialog.value?.showModal());
+}
+
+function closeAuthorIntro(): void {
+  authorDialog.value?.close();
+}
+
 // 游客只提交首次评分；预告项目不开放评分。
 async function rateProject(project: CatalogProject, score: number): Promise<void> {
   if (isComingSoon(project) || project.myScore !== null || pendingProjectId.value !== null) return;
@@ -213,9 +245,6 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
           <div class="catalog-controls">
             <div class="catalog-categories" role="group" aria-label="项目分类">
               <button type="button" class="catalog-filter" :class="{ 'is-active': selectedCategory === 'all' }" :aria-pressed="selectedCategory === 'all'" @click="selectedCategory = 'all'">全部</button>
-              <button v-if="hasComingSoon" type="button" class="catalog-filter catalog-filter--coming-soon" :class="{ 'is-active': selectedCategory === COMING_SOON_FILTER }" :aria-pressed="selectedCategory === COMING_SOON_FILTER" @click="selectedCategory = COMING_SOON_FILTER">
-                <HourglassOutlined aria-hidden="true" /> 敬请期待
-              </button>
               <button v-for="category in categories" :key="category.id" type="button" class="catalog-filter" :class="[`catalog-filter--${category.slug}`, { 'is-active': selectedCategory === category.slug }]" :aria-pressed="selectedCategory === category.slug" @click="selectedCategory = category.slug">
                 <img v-if="category.iconUrl" :src="category.iconUrl" alt="" width="22" height="22" />
                 <AimOutlined v-else-if="category.slug === 'shooting'" aria-hidden="true" />
@@ -225,6 +254,9 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
                 <CoffeeOutlined v-else-if="category.slug === 'casual'" aria-hidden="true" />
                 <AppstoreOutlined v-else aria-hidden="true" />
                 {{ category.name }}
+              </button>
+              <button v-if="hasComingSoon" type="button" class="catalog-filter catalog-filter--coming-soon" :class="{ 'is-active': selectedCategory === COMING_SOON_FILTER }" :aria-pressed="selectedCategory === COMING_SOON_FILTER" @click="selectedCategory = COMING_SOON_FILTER">
+                <HourglassOutlined aria-hidden="true" /> 敬请期待
               </button>
             </div>
             <div v-if="selectedCategory !== COMING_SOON_FILTER" class="catalog-sort" role="group" aria-label="项目排序">
@@ -239,7 +271,7 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
             <button v-if="search || selectedCategory !== 'all'" type="button" @click="search = ''; searchInput = ''; selectedCategory = 'all'">清除筛选</button>
           </div>
           <div v-else class="catalog-grid">
-            <article v-for="(project, index) in visibleProjects" :key="project.id" class="catalog-card" :class="{ 'catalog-card--coming-soon': isComingSoon(project) }">
+            <article v-for="(project, index) in displayedProjects" :key="project.id" class="catalog-card" :class="{ 'catalog-card--coming-soon': isComingSoon(project) }">
               <div class="catalog-card__media">
                 <!-- 站内项目保持路由跳转，外链当前页直达原站；首屏三张封面优先加载。 -->
                 <RouterLink v-if="project.kind === 'internal'" class="catalog-card__media-link" :to="project.url" :aria-label="`打开${displayName(project)}`">
@@ -259,7 +291,12 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
                   <a v-else class="catalog-card__title-link" :href="project.url">{{ displayName(project) }}</a>
                 </h2>
                 <p class="catalog-card__description">{{ displayDescription(project) }}</p>
-                <p v-if="project.authorName" class="catalog-card__author">作者：{{ project.authorName }}</p>
+                <p class="catalog-card__author">
+                  作者：<span v-if="isOriginalProject(project)">原创</span>
+                  <a v-else-if="project.authorName && project.authorUrl" :href="project.authorUrl" :aria-label="`查看${project.authorName}的作者链接`">{{ project.authorName }}</a>
+                  <button v-else-if="project.authorName" type="button" :aria-label="`查看${project.authorName}的作品`" @click="openAuthorIntro(project.authorName)">{{ project.authorName }}</button>
+                  <span v-else>待补充</span>
+                </p>
                 <div v-if="isComingSoon(project)" class="catalog-card__footer catalog-card__footer--coming-soon">
                   <span>持续开发中</span>
                   <a class="catalog-card__open" :href="project.url" :aria-label="`查看${displayName(project)}的开发进度`"><ArrowRightOutlined aria-hidden="true" /></a>
@@ -281,12 +318,27 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
               </div>
             </article>
           </div>
+          <div v-if="displayedProjects.length < visibleProjects.length" class="catalog-load-more">
+            <button type="button" @click="loadMoreProjects">加载更多</button>
+            <span>还有 {{ visibleProjects.length - displayedProjects.length }} 个项目</span>
+          </div>
           <!-- 预告项目没有评分入口，评分说明只跟随已开放项目列表。 -->
           <p v-if="selectedCategory !== COMING_SOON_FILTER && visibleProjects.length > 0" class="catalog-list__rating-note">每个项目每位访客只能评一次，提交后不可修改。</p>
         </template>
       </section>
       <footer class="catalog-footer">平行线 · 发现有趣的项目</footer>
     </div>
+    <dialog ref="authorDialog" class="catalog-author-dialog" aria-labelledby="catalog-author-dialog-title" @close="selectedAuthor = null">
+      <h2 id="catalog-author-dialog-title">{{ selectedAuthor }}</h2>
+      <p>本站已收录的作品</p>
+      <ul>
+        <li v-for="project in selectedAuthorProjects" :key="project.id">
+          <RouterLink v-if="project.kind === 'internal'" :to="project.url" @click="closeAuthorIntro">{{ displayName(project) }}</RouterLink>
+          <a v-else :href="project.url">{{ displayName(project) }}</a>
+        </li>
+      </ul>
+      <button type="button" @click="closeAuthorIntro">关闭</button>
+    </dialog>
   </main>
 </template>
 

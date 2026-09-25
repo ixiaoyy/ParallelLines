@@ -1,6 +1,8 @@
-# 平行线
+# 平行线 · AI游戏收录
 
-面向中文技术社区的 Discourse-inspired 论坛项目，采用 Vue 3 + FastAPI 实现。代码仓库和包名暂沿用 `ParallelLines/parallellines`。
+平行线是 AI 游戏收录网站。访客可以按分类浏览、按项目名称搜索，查看已有作者署名和游客评分，再前往游戏原站体验。网站使用 Vue 3 + FastAPI 实现，代码仓库和包名继续沿用 `ParallelLines/parallellines`。
+
+下文保留了注册、发帖和通知等历史论坛模块的开发与运维资料；这些功能不代表当前公开站仍提供论坛入口。
 
 ## Stack Target
 

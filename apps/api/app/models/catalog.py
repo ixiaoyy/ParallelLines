@@ -60,6 +60,8 @@ class CatalogProject(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     destination_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     destination_kind: Mapped[str] = mapped_column(String(16), nullable=False, default="external")
     description: Mapped[str | None] = mapped_column(String(300))
+    author_name: Mapped[str | None] = mapped_column(String(120))
+    author_url: Mapped[str | None] = mapped_column(String(2048))
     icon_upload_id: Mapped[str | None] = mapped_column(
         id_column_type(), ForeignKey("uploads.id", ondelete="SET NULL")
     )
@@ -85,3 +87,33 @@ class CatalogRating(IntegerPrimaryKeyMixin, Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )
+
+
+# 游客投稿在审核前独立保存；只有审核通过后才创建公开目录项目。
+class CatalogSubmission(IntegerPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "catalog_submissions"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected')",
+            name="ck_catalog_submissions_status",
+        ),
+        UniqueConstraint("pending_url_digest", name="uq_catalog_submissions_pending_url_digest"),
+        Index("ix_catalog_submissions_status_created_id", "status", "created_at", "id"),
+        Index("ix_catalog_submissions_ip_created", "submitter_ip_digest", "created_at"),
+    )
+
+    category_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    project_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    destination_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    author_name: Mapped[str | None] = mapped_column(String(120))
+    contact: Mapped[str | None] = mapped_column(String(200))
+    submitter_ip_digest: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    pending_url_digest: Mapped[str | None] = mapped_column(CHAR(64))
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+    project_id: Mapped[str | None] = mapped_column(
+        id_column_type(), ForeignKey("catalog_projects.id", ondelete="SET NULL")
+    )
+    reviewed_by_id: Mapped[str | None] = mapped_column(
+        id_column_type(), ForeignKey("users.id", ondelete="SET NULL")
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -27,8 +27,8 @@ export const router = createRouter({
       component: () => import("@/pages/catalog/CatalogHomePage.vue"),
       meta: {
         seo: {
-          title: "{siteName}",
-          description: "在平行线按分类发现游戏与互动项目，搜索并查看访客评分。",
+          title: "AI游戏收录 · {siteName}",
+          description: "在平行线按分类浏览 AI 游戏、搜索项目名称，查看作者与游客评分，前往原站体验。",
           canonicalPath: "/",
         },
       },
