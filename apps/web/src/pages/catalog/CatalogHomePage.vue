@@ -14,8 +14,20 @@ type SortMode = "latest" | "hot";
 type CatalogEntry = CatalogProject & { categorySlug: string };
 const COMING_SOON_FILTER = "coming-soon";
 const catalogAssetPath = "/catalog/2026-09-24-v1";
+const newCatalogAssetPath = "/catalog/2026-09-25-v1";
 const heroBackground = cssUrl(staticAssetUrl(`${catalogAssetPath}/hero-sky.webp`));
 const mascotUrl = staticAssetUrl(`${catalogAssetPath}/chibi-cat-explorer.webp`);
+const originalCoverSlugs = new Set([
+  "clock-out", "merge-watermelon", "qin-imperial-factory", "super-mario",
+  "csgo-desert", "infinite-garden", "fruit-ninja", "qq-racing",
+  "cf-transport", "pelican-bike", "fablespace", "generals-soldiers",
+]);
+const newCoverSlugs = new Set([
+  "yu-gi-oh-destiny-duel", "secondhand-3c-store", "voxel-tides", "sneaky-thief",
+  "liuxin-watermelon", "xing-lei-shou-wei", "yongyao-crystal-tower",
+  "zhi-guai-lu", "sanguo-zhengshi", "yeyu-tanglou", "non-euclidean-lab",
+  "geodesic-explorer", "hyperbolic-room", "encounter-command-console",
+]);
 const seedOrder = new Map([
   "clock-out", "merge-watermelon", "qin-imperial-factory", "super-mario",
   "csgo-desert", "infinite-garden", "fruit-ninja", "qq-racing",
@@ -49,7 +61,7 @@ const allProjects = computed<CatalogEntry[]>(() =>
 const hasComingSoon = computed(() => allProjects.value.some(isComingSoon));
 const normalizedSearch = computed(() => search.value.trim().toLocaleLowerCase());
 
-// 分类、搜索与排序只改变展示，项目归属仍以后台数据为准。
+// 分类与排序只改变展示，查询词仅匹配卡片展示名称；项目归属仍以后台数据为准。
 const visibleProjects = computed(() => {
   const matching = allProjects.value.filter((project) => {
     if (selectedCategory.value === COMING_SOON_FILTER) {
@@ -59,8 +71,7 @@ const visibleProjects = computed(() => {
       if (selectedCategory.value !== "all" && project.categorySlug !== selectedCategory.value) return false;
     }
     if (!normalizedSearch.value) return true;
-    return [displayName(project), project.name, displayDescription(project), project.url]
-      .some((value) => value.toLocaleLowerCase().includes(normalizedSearch.value));
+    return displayName(project).toLocaleLowerCase().includes(normalizedSearch.value);
   });
   return matching.sort((left, right) => {
     if (sortMode.value === "hot") {
@@ -109,12 +120,10 @@ function displayDescription(project: CatalogProject): string {
 // 首批项目使用专属封面，后台上传图片优先显示，新项目使用通用封面。
 function coverUrl(project: CatalogProject): string {
   if (project.iconUrl) return project.iconUrl;
-  const covers = new Set([
-    "clock-out", "merge-watermelon", "qin-imperial-factory", "super-mario",
-    "csgo-desert", "infinite-garden", "fruit-ninja", "qq-racing",
-    "cf-transport", "pelican-bike", "fablespace", "generals-soldiers",
-  ]);
-  return staticAssetUrl(`${catalogAssetPath}/covers/${covers.has(project.slug) ? project.slug : "discover"}.webp`);
+  if (newCoverSlugs.has(project.slug)) {
+    return staticAssetUrl(`${newCatalogAssetPath}/covers/${project.slug}.webp`);
+  }
+  return staticAssetUrl(`${catalogAssetPath}/covers/${originalCoverSlugs.has(project.slug) ? project.slug : "discover"}.webp`);
 }
 
 // 新项目和热门项目沿用已确定的 7 天、10 人与 4.5 分规则。
@@ -179,8 +188,8 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
           <p class="catalog-hero__intro">探索好玩的游戏，发现更多有趣的世界 <StarFilled aria-hidden="true" /></p>
           <form class="catalog-search" role="search" @submit.prevent="submitSearch">
             <SearchOutlined class="catalog-search__icon" aria-hidden="true" />
-            <label class="catalog-search__label" for="catalog-query">搜索项目名称、介绍或网址</label>
-            <input id="catalog-query" v-model="searchInput" type="search" placeholder="搜索项目名称、介绍或网址..." autocomplete="off" @search="submitSearch" />
+            <label class="catalog-search__label" for="catalog-query">搜索项目名称</label>
+            <input id="catalog-query" v-model="searchInput" type="search" placeholder="搜索项目名称..." autocomplete="off" @search="submitSearch" />
             <button type="submit">搜索</button>
           </form>
         </div>
@@ -204,7 +213,10 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
           <div class="catalog-controls">
             <div class="catalog-categories" role="group" aria-label="项目分类">
               <button type="button" class="catalog-filter" :class="{ 'is-active': selectedCategory === 'all' }" :aria-pressed="selectedCategory === 'all'" @click="selectedCategory = 'all'">全部</button>
-              <button v-for="category in categories" :key="category.id" type="button" class="catalog-filter" :class="{ 'is-active': selectedCategory === category.slug }" :aria-pressed="selectedCategory === category.slug" @click="selectedCategory = category.slug">
+              <button v-if="hasComingSoon" type="button" class="catalog-filter catalog-filter--coming-soon" :class="{ 'is-active': selectedCategory === COMING_SOON_FILTER }" :aria-pressed="selectedCategory === COMING_SOON_FILTER" @click="selectedCategory = COMING_SOON_FILTER">
+                <HourglassOutlined aria-hidden="true" /> 敬请期待
+              </button>
+              <button v-for="category in categories" :key="category.id" type="button" class="catalog-filter" :class="[`catalog-filter--${category.slug}`, { 'is-active': selectedCategory === category.slug }]" :aria-pressed="selectedCategory === category.slug" @click="selectedCategory = category.slug">
                 <img v-if="category.iconUrl" :src="category.iconUrl" alt="" width="22" height="22" />
                 <AimOutlined v-else-if="category.slug === 'shooting'" aria-hidden="true" />
                 <ThunderboltOutlined v-else-if="category.slug === 'racing'" aria-hidden="true" />
@@ -213,9 +225,6 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
                 <CoffeeOutlined v-else-if="category.slug === 'casual'" aria-hidden="true" />
                 <AppstoreOutlined v-else aria-hidden="true" />
                 {{ category.name }}
-              </button>
-              <button v-if="hasComingSoon" type="button" class="catalog-filter catalog-filter--coming-soon" :class="{ 'is-active': selectedCategory === COMING_SOON_FILTER }" :aria-pressed="selectedCategory === COMING_SOON_FILTER" @click="selectedCategory = COMING_SOON_FILTER">
-                <HourglassOutlined aria-hidden="true" /> 敬请期待
               </button>
             </div>
             <div v-if="selectedCategory !== COMING_SOON_FILTER" class="catalog-sort" role="group" aria-label="项目排序">
@@ -230,12 +239,15 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
             <button v-if="search || selectedCategory !== 'all'" type="button" @click="search = ''; searchInput = ''; selectedCategory = 'all'">清除筛选</button>
           </div>
           <div v-else class="catalog-grid">
-            <article v-for="project in visibleProjects" :key="project.id" class="catalog-card" :class="{ 'catalog-card--coming-soon': isComingSoon(project) }">
+            <article v-for="(project, index) in visibleProjects" :key="project.id" class="catalog-card" :class="{ 'catalog-card--coming-soon': isComingSoon(project) }">
               <div class="catalog-card__media">
-                <a v-if="isComingSoon(project)" class="catalog-card__preview-media" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="`查看${displayName(project)}的开发进度`">
-                  <img :src="coverUrl(project)" :alt="`${displayName(project)}封面`" loading="lazy" />
+                <!-- 站内项目保持路由跳转，外链当前页直达原站；首屏三张封面优先加载。 -->
+                <RouterLink v-if="project.kind === 'internal'" class="catalog-card__media-link" :to="project.url" :aria-label="`打开${displayName(project)}`">
+                  <img :src="coverUrl(project)" alt="" :loading="index < 3 ? 'eager' : 'lazy'" decoding="async" />
+                </RouterLink>
+                <a v-else class="catalog-card__media-link" :href="project.url" :aria-label="isComingSoon(project) ? `查看${displayName(project)}的开发进度` : `打开${displayName(project)}`">
+                  <img :src="coverUrl(project)" alt="" :loading="index < 3 ? 'eager' : 'lazy'" decoding="async" />
                 </a>
-                <img v-else :src="coverUrl(project)" :alt="`${displayName(project)}封面`" loading="lazy" />
                 <div class="catalog-card__badges">
                   <span v-if="isNew(project)" class="catalog-card__badge catalog-card__badge--new" role="img" aria-label="新项目" title="新项目"><ClockCircleFilled aria-hidden="true" /></span>
                   <span v-if="isHot(project) && !isComingSoon(project)" class="catalog-card__badge catalog-card__badge--hot" role="img" aria-label="热门项目" title="热门项目"><FireFilled aria-hidden="true" /></span>
@@ -243,13 +255,14 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
               </div>
               <div class="catalog-card__body">
                 <h2>
-                  <a v-if="isComingSoon(project)" class="catalog-card__preview-title" :href="project.url" target="_blank" rel="noopener noreferrer">{{ displayName(project) }}</a>
-                  <template v-else>{{ displayName(project) }}</template>
+                  <RouterLink v-if="project.kind === 'internal'" class="catalog-card__title-link" :to="project.url">{{ displayName(project) }}</RouterLink>
+                  <a v-else class="catalog-card__title-link" :href="project.url">{{ displayName(project) }}</a>
                 </h2>
                 <p class="catalog-card__description">{{ displayDescription(project) }}</p>
+                <p v-if="project.authorName" class="catalog-card__author">作者：{{ project.authorName }}</p>
                 <div v-if="isComingSoon(project)" class="catalog-card__footer catalog-card__footer--coming-soon">
                   <span>持续开发中</span>
-                  <a class="catalog-card__open" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="`查看${displayName(project)}的开发进度`"><ArrowRightOutlined aria-hidden="true" /></a>
+                  <a class="catalog-card__open" :href="project.url" :aria-label="`查看${displayName(project)}的开发进度`"><ArrowRightOutlined aria-hidden="true" /></a>
                 </div>
                 <div v-else class="catalog-card__footer">
                   <div class="catalog-card__rating" :class="{ 'is-pending': pendingProjectId === project.id }">
@@ -262,13 +275,14 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
                     <span class="catalog-card__rating-count">{{ project.ratingCount }} 人评分</span>
                   </div>
                   <RouterLink v-if="project.kind === 'internal'" class="catalog-card__open" :to="project.url" :aria-label="`打开${displayName(project)}`"><ArrowRightOutlined aria-hidden="true" /></RouterLink>
-                  <a v-else class="catalog-card__open" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="`打开${displayName(project)}，在新窗口`"><ArrowRightOutlined aria-hidden="true" /></a>
+                  <a v-else class="catalog-card__open" :href="project.url" :aria-label="`打开${displayName(project)}`"><ArrowRightOutlined aria-hidden="true" /></a>
                 </div>
                 <p v-if="ratingErrorProjectId === project.id" class="catalog-card__rating-error" role="alert">评分暂时不可用，请稍后重试。</p>
               </div>
             </article>
           </div>
-          <p class="catalog-list__rating-note">每个项目每位访客只能评一次，提交后不可修改。</p>
+          <!-- 预告项目没有评分入口，评分说明只跟随已开放项目列表。 -->
+          <p v-if="selectedCategory !== COMING_SOON_FILTER && visibleProjects.length > 0" class="catalog-list__rating-note">每个项目每位访客只能评一次，提交后不可修改。</p>
         </template>
       </section>
       <footer class="catalog-footer">平行线 · 发现有趣的项目</footer>

@@ -7,6 +7,7 @@ export interface CatalogProjectResponse {
   url: string;
   kind: "external" | "internal";
   description: string | null;
+  author_name?: string | null;
   icon_url: string | null;
   created_at: string;
   average_score: number | null;
@@ -44,6 +45,7 @@ export interface CatalogProject {
   url: string;
   kind: "external" | "internal";
   description: string | null;
+  authorName: string | null;
   iconUrl?: string;
   createdAt: string;
   averageScore: number | null;
@@ -99,6 +101,7 @@ export function toCatalogCategory(category: CatalogCategoryResponse): CatalogCat
         url: project.url,
         kind: project.kind,
         description: project.description,
+        authorName: project.author_name ?? null,
         iconUrl: catalogIconUrl(project.icon_url),
         createdAt: project.created_at,
         averageScore: project.average_score,

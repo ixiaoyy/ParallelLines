@@ -38,6 +38,20 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-09-24-v1/covers/qin-imperial-factory.webp",
     "catalog/2026-09-24-v1/covers/qq-racing.webp",
     "catalog/2026-09-24-v1/covers/super-mario.webp",
+    "catalog/2026-09-25-v1/covers/encounter-command-console.webp",
+    "catalog/2026-09-25-v1/covers/geodesic-explorer.webp",
+    "catalog/2026-09-25-v1/covers/hyperbolic-room.webp",
+    "catalog/2026-09-25-v1/covers/liuxin-watermelon.webp",
+    "catalog/2026-09-25-v1/covers/non-euclidean-lab.webp",
+    "catalog/2026-09-25-v1/covers/sanguo-zhengshi.webp",
+    "catalog/2026-09-25-v1/covers/secondhand-3c-store.webp",
+    "catalog/2026-09-25-v1/covers/sneaky-thief.webp",
+    "catalog/2026-09-25-v1/covers/voxel-tides.webp",
+    "catalog/2026-09-25-v1/covers/xing-lei-shou-wei.webp",
+    "catalog/2026-09-25-v1/covers/yeyu-tanglou.webp",
+    "catalog/2026-09-25-v1/covers/yongyao-crystal-tower.webp",
+    "catalog/2026-09-25-v1/covers/yu-gi-oh-destiny-duel.webp",
+    "catalog/2026-09-25-v1/covers/zhi-guai-lu.webp",
 )
 
 STATIC_ASSETS = (
@@ -112,7 +126,10 @@ def object_key(asset: StaticAsset, prefix: str) -> str:
 
 
 # Uploads all declared frontend static assets without creating upload database rows.
-def upload_static_assets(*, prefix: str, dry_run: bool, verify: bool, catalog_only: bool = False) -> None:
+def upload_static_assets(
+    *, prefix: str, dry_run: bool, verify: bool,
+    catalog_only: bool = False, catalog_version: str | None = None,
+) -> None:
     """Upload configured frontend static assets to S3/R2 and print their public CDN URLs."""
 
     settings = Settings()
@@ -127,6 +144,12 @@ def upload_static_assets(*, prefix: str, dry_run: bool, verify: bool, catalog_on
         if catalog_only
         else STATIC_ASSETS
     )
+    # 指定版本时只发布该版本新图，不重传其他目录版本或站点资源。
+    if catalog_version:
+        version_prefix = f"catalog/{catalog_version.strip('/')}/"
+        assets = tuple(asset for asset in assets if asset.key.startswith(version_prefix))
+        if not assets:
+            raise ValueError(f"no catalog assets for version {catalog_version}")
     for asset in assets:
         source_path = root / asset.source
         if not source_path.is_file():
@@ -170,6 +193,10 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Upload only the versioned catalog images.",
     )
+    parser.add_argument(
+        "--catalog-version",
+        help="Upload only catalog images in this version directory.",
+    )
     return parser.parse_args()
 
 
@@ -183,6 +210,7 @@ def main() -> None:
         dry_run=args.dry_run,
         verify=args.verify,
         catalog_only=args.catalog_only,
+        catalog_version=args.catalog_version,
     )
 
 
