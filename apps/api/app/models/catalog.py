@@ -109,6 +109,9 @@ class CatalogSubmission(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     contact: Mapped[str | None] = mapped_column(String(200))
     submitter_ip_digest: Mapped[str] = mapped_column(CHAR(64), nullable=False)
     pending_url_digest: Mapped[str | None] = mapped_column(CHAR(64))
+    cover_upload_id: Mapped[str | None] = mapped_column(
+        id_column_type(), ForeignKey("uploads.id", ondelete="SET NULL")
+    )
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
     project_id: Mapped[str | None] = mapped_column(
         id_column_type(), ForeignKey("catalog_projects.id", ondelete="SET NULL")

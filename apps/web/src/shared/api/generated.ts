@@ -46,6 +46,8 @@ export interface components {
       updated_at: string;
     };
     AdminCatalogProjectResponse: {
+      author_name: string | null;
+      author_url: string | null;
       average_score: number | null;
       category_id: string;
       created_at: string;
@@ -58,6 +60,7 @@ export interface components {
       my_score: number | null;
       name: string;
       rating_count: number;
+      rating_score_sum: number;
       slug: string;
       sort_order: number;
       updated_at: string;
@@ -65,6 +68,21 @@ export interface components {
     };
     AdminCatalogResponse: {
       categories: Array<components["schemas"]["AdminCatalogCategoryResponse"]>;
+    };
+    AdminCatalogSubmissionResponse: {
+      author_name: string | null;
+      category_name: string;
+      contact: string | null;
+      cover_url: string | null;
+      created_at: string;
+      id: string;
+      project_id: string | null;
+      project_name: string;
+      reviewed_at: string | null;
+      reviewed_by_id: string | null;
+      status: "pending" | "approved" | "rejected";
+      updated_at: string;
+      url: string;
     };
     AdminEmailLogResponse: {
       kind: string;
@@ -241,6 +259,9 @@ export interface components {
     ApiResponse_AdminCatalogResponse_: {
       [key: string]: unknown;
     };
+    ApiResponse_AdminCatalogSubmissionResponse_: {
+      [key: string]: unknown;
+    };
     ApiResponse_AdminSystemOverviewResponse_: {
       [key: string]: unknown;
     };
@@ -290,6 +311,9 @@ export interface components {
       [key: string]: unknown;
     };
     ApiResponse_CatalogResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_CatalogSubmissionCreateResponse_: {
       [key: string]: unknown;
     };
     ApiResponse_DailyReportProfileResponse_: {
@@ -380,6 +404,9 @@ export interface components {
       [key: string]: unknown;
     };
     ApiResponse_list_AdminBackgroundJobResponse__: {
+      [key: string]: unknown;
+    };
+    ApiResponse_list_AdminCatalogSubmissionResponse__: {
       [key: string]: unknown;
     };
     ApiResponse_list_AdminEmailLogResponse__: {
@@ -827,6 +854,14 @@ export interface components {
       post_template?: string | null;
       required_tags?: Array<string>;
     };
+    Body_submit_catalog_project_api_v1_catalog_submissions_post: {
+      author_name?: string | null;
+      category_name: string;
+      contact?: string | null;
+      cover?: string | null;
+      project_name: string;
+      url: string;
+    };
     Body_translate_pdf_to_english_api_v1_pdf_translations_post: {
       file: string;
     };
@@ -859,6 +894,8 @@ export interface components {
       sort_order?: number | null;
     };
     CatalogProjectCreateRequest: {
+      author_name?: string | null;
+      author_url?: string | null;
       category_id: string;
       description?: string | null;
       icon_upload_id?: string | null;
@@ -870,6 +907,8 @@ export interface components {
       url: string;
     };
     CatalogProjectResponse: {
+      author_name: string | null;
+      author_url: string | null;
       average_score: number | null;
       created_at: string;
       description: string | null;
@@ -879,10 +918,13 @@ export interface components {
       my_score: number | null;
       name: string;
       rating_count: number;
+      rating_score_sum: number;
       slug: string;
       url: string;
     };
     CatalogProjectUpdateRequest: {
+      author_name?: string | null;
+      author_url?: string | null;
       category_id?: string | null;
       description?: string | null;
       icon_upload_id?: string | null;
@@ -901,9 +943,17 @@ export interface components {
       my_score: number | null;
       project_id: string;
       rating_count: number;
+      rating_score_sum: number;
     };
     CatalogResponse: {
       categories: Array<components["schemas"]["CatalogCategoryResponse"]>;
+    };
+    CatalogSubmissionCreateResponse: {
+      id: string;
+      status: "pending" | "approved" | "rejected";
+    };
+    CatalogSubmissionReviewRequest: {
+      decision: "approve" | "reject";
     };
     ChangePasswordRequest: {
       current_password: string;
@@ -2402,6 +2452,15 @@ export interface paths {
     "/api/v1/admin/catalog/projects/{project_id}": {
       put: { response: components["schemas"]["ApiResponse_AdminCatalogProjectResponse_"]; operationId: "update_catalog_project_api_v1_admin_catalog_projects__project_id__put" };
     };
+    "/api/v1/admin/catalog/submissions": {
+      get: { response: components["schemas"]["ApiResponse_list_AdminCatalogSubmissionResponse__"]; operationId: "get_pending_catalog_submissions_api_v1_admin_catalog_submissions_get" };
+    };
+    "/api/v1/admin/catalog/submissions/{submission_id}/cover": {
+      get: { response: unknown; operationId: "get_catalog_submission_cover_api_v1_admin_catalog_submissions__submission_id__cover_get" };
+    };
+    "/api/v1/admin/catalog/submissions/{submission_id}/review": {
+      post: { response: components["schemas"]["ApiResponse_AdminCatalogSubmissionResponse_"]; operationId: "review_catalog_submission_api_v1_admin_catalog_submissions__submission_id__review_post" };
+    };
     "/api/v1/admin/email-logs": {
       get: { response: components["schemas"]["ApiResponse_list_AdminEmailLogResponse__"]; operationId: "list_email_logs_api_v1_admin_email_logs_get" };
     };
@@ -2610,6 +2669,9 @@ export interface paths {
     };
     "/api/v1/catalog/projects/{project_id}/ratings": {
       post: { response: components["schemas"]["ApiResponse_CatalogRatingStateResponse_"]; operationId: "rate_catalog_project_api_v1_catalog_projects__project_id__ratings_post" };
+    };
+    "/api/v1/catalog/submissions": {
+      post: { response: components["schemas"]["ApiResponse_CatalogSubmissionCreateResponse_"]; operationId: "submit_catalog_project_api_v1_catalog_submissions_post" };
     };
     "/api/v1/daily-reports": {
       get: { response: components["schemas"]["ApiResponse_list_DailyReportResponse__"]; operationId: "list_daily_reports_api_v1_daily_reports_get" };

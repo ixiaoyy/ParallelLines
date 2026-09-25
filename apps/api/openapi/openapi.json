@@ -250,6 +250,28 @@
       },
       "AdminCatalogProjectResponse": {
         "properties": {
+          "author_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "author_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Url"
+          },
           "average_score": {
             "anyOf": [
               {
@@ -338,6 +360,10 @@
             "title": "Rating Count",
             "type": "integer"
           },
+          "rating_score_sum": {
+            "title": "Rating Score Sum",
+            "type": "integer"
+          },
           "slug": {
             "title": "Slug",
             "type": "string"
@@ -363,10 +389,13 @@
           "url",
           "kind",
           "description",
+          "author_name",
+          "author_url",
           "icon_url",
           "created_at",
           "average_score",
           "rating_count",
+          "rating_score_sum",
           "my_score",
           "category_id",
           "icon_upload_id",
@@ -391,6 +420,129 @@
           "categories"
         ],
         "title": "AdminCatalogResponse",
+        "type": "object"
+      },
+      "AdminCatalogSubmissionResponse": {
+        "properties": {
+          "author_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "category_name": {
+            "title": "Category Name",
+            "type": "string"
+          },
+          "contact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact"
+          },
+          "cover_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Url"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "project_name": {
+            "title": "Project Name",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewed_by_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By Id"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "category_name",
+          "project_name",
+          "url",
+          "author_name",
+          "contact",
+          "cover_url",
+          "status",
+          "project_id",
+          "reviewed_by_id",
+          "reviewed_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AdminCatalogSubmissionResponse",
         "type": "object"
       },
       "AdminEmailLogResponse": {
@@ -1395,6 +1547,10 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "ApiResponse_AdminCatalogSubmissionResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ApiResponse_AdminSystemOverviewResponse_": {
         "additionalProperties": true,
         "type": "object"
@@ -1456,6 +1612,10 @@
         "type": "object"
       },
       "ApiResponse_CatalogResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_CatalogSubmissionCreateResponse_": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -1764,6 +1924,10 @@
         "type": "object"
       },
       "ApiResponse_list_AdminBackgroundJobResponse__": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_list_AdminCatalogSubmissionResponse__": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -3209,6 +3373,71 @@
         "title": "BoardSettingsUpdateRequest",
         "type": "object"
       },
+      "Body_submit_catalog_project_api_v1_catalog_submissions_post": {
+        "properties": {
+          "author_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "category_name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Category Name",
+            "type": "string"
+          },
+          "contact": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact"
+          },
+          "cover": {
+            "anyOf": [
+              {
+                "contentMediaType": "application/octet-stream",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover"
+          },
+          "project_name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Project Name",
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 2048,
+            "minLength": 9,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category_name",
+          "project_name",
+          "url"
+        ],
+        "title": "Body_submit_catalog_project_api_v1_catalog_submissions_post",
+        "type": "object"
+      },
       "Body_translate_pdf_to_english_api_v1_pdf_translations_post": {
         "properties": {
           "file": {
@@ -3417,6 +3646,30 @@
       },
       "CatalogProjectCreateRequest": {
         "properties": {
+          "author_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "author_url": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Url"
+          },
           "category_id": {
             "title": "Category Id",
             "type": "string"
@@ -3494,6 +3747,28 @@
       },
       "CatalogProjectResponse": {
         "properties": {
+          "author_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "author_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Url"
+          },
           "average_score": {
             "anyOf": [
               {
@@ -3563,6 +3838,10 @@
             "title": "Rating Count",
             "type": "integer"
           },
+          "rating_score_sum": {
+            "title": "Rating Score Sum",
+            "type": "integer"
+          },
           "slug": {
             "title": "Slug",
             "type": "string"
@@ -3579,10 +3858,13 @@
           "url",
           "kind",
           "description",
+          "author_name",
+          "author_url",
           "icon_url",
           "created_at",
           "average_score",
           "rating_count",
+          "rating_score_sum",
           "my_score"
         ],
         "title": "CatalogProjectResponse",
@@ -3590,6 +3872,30 @@
       },
       "CatalogProjectUpdateRequest": {
         "properties": {
+          "author_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "author_url": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Url"
+          },
           "category_id": {
             "anyOf": [
               {
@@ -3751,12 +4057,17 @@
           "rating_count": {
             "title": "Rating Count",
             "type": "integer"
+          },
+          "rating_score_sum": {
+            "title": "Rating Score Sum",
+            "type": "integer"
           }
         },
         "required": [
           "project_id",
           "average_score",
           "rating_count",
+          "rating_score_sum",
           "my_score"
         ],
         "title": "CatalogRatingStateResponse",
@@ -3776,6 +4087,46 @@
           "categories"
         ],
         "title": "CatalogResponse",
+        "type": "object"
+      },
+      "CatalogSubmissionCreateResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "CatalogSubmissionCreateResponse",
+        "type": "object"
+      },
+      "CatalogSubmissionReviewRequest": {
+        "properties": {
+          "decision": {
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "title": "Decision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "CatalogSubmissionReviewRequest",
         "type": "object"
       },
       "ChangePasswordRequest": {
@@ -13849,6 +14200,137 @@
         ]
       }
     },
+    "/api/v1/admin/catalog/submissions": {
+      "get": {
+        "description": "仅管理员读取待审投稿及封面预览地址。",
+        "operationId": "get_pending_catalog_submissions_api_v1_admin_catalog_submissions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_list_AdminCatalogSubmissionResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Pending Catalog Submissions",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/submissions/{submission_id}/cover": {
+      "get": {
+        "description": "管理员从 API 读取待审封面字节，不暴露未批准的 CDN 地址。",
+        "operationId": "get_catalog_submission_cover_api_v1_admin_catalog_submissions__submission_id__cover_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "title": "Submission Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Catalog Submission Cover",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/catalog/submissions/{submission_id}/review": {
+      "post": {
+        "description": "管理员审核；通过时创建可见目录项目并公开已压缩封面。",
+        "operationId": "review_catalog_submission_api_v1_admin_catalog_submissions__submission_id__review_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "title": "Submission Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogSubmissionReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_AdminCatalogSubmissionResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Review Catalog Submission",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/email-logs": {
       "get": {
         "operationId": "list_email_logs_api_v1_admin_email_logs_get",
@@ -17482,6 +17964,48 @@
           }
         },
         "summary": "Rate Catalog Project",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/submissions": {
+      "post": {
+        "description": "游客提交待审目录项目；可选封面与投稿记录在同一事务绑定。",
+        "operationId": "submit_catalog_project_api_v1_catalog_submissions_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_submit_catalog_project_api_v1_catalog_submissions_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_CatalogSubmissionCreateResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Catalog Project",
         "tags": [
           "catalog"
         ]

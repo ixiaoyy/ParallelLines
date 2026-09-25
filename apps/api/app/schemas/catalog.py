@@ -161,6 +161,10 @@ class CatalogSubmissionCreateResponse(BaseModel):
     status: CatalogSubmissionStatus
 
 
+class CatalogSubmissionReviewRequest(BaseModel):
+    decision: Literal["approve", "reject"]
+
+
 # 联系方式只出现在管理员审核响应，不进入公开项目响应。
 class AdminCatalogSubmissionResponse(BaseModel):
     id: str
@@ -169,6 +173,7 @@ class AdminCatalogSubmissionResponse(BaseModel):
     url: str
     author_name: str | None
     contact: str | None
+    cover_url: str | None
     status: CatalogSubmissionStatus
     project_id: str | None
     reviewed_by_id: str | None
@@ -181,6 +186,7 @@ class CatalogRatingStateResponse(BaseModel):
     project_id: str
     average_score: float | None
     rating_count: int
+    rating_score_sum: int
     my_score: int | None
 
 
@@ -197,6 +203,7 @@ class CatalogProjectResponse(BaseModel):
     created_at: datetime
     average_score: float | None
     rating_count: int
+    rating_score_sum: int
     my_score: int | None
 
 

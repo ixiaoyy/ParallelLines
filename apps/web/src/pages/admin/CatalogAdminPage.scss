@@ -116,6 +116,23 @@
 .catalog-admin__check input { width: 1rem; height: 1rem; accent-color: var(--primary, #409eff); }
 .catalog-admin__error { margin: .2rem 0; color: var(--danger, #dc2626); font-size: .85rem; }
 .catalog-admin__form-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.catalog-admin__submissions { display: grid; gap: 1rem; }
+.catalog-admin__submission { min-width: 0; padding: 1.2rem; border: 1px solid var(--catalog-border); border-radius: .75rem; background: var(--bg-surface, #fff); }
+.catalog-admin__submission-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.catalog-admin__submission-head h3 { margin: 0; font-size: 1.05rem; }
+.catalog-admin__submission-head p { margin: .25rem 0 0; color: var(--catalog-muted); font-size: .85rem; }
+.catalog-admin__submission-head > span { flex: 0 0 auto; color: var(--catalog-muted); font-size: .8rem; }
+.catalog-admin__submission-details { display: grid; gap: .7rem; margin: 1rem 0; }
+.catalog-admin__submission-details > div { display: grid; grid-template-columns: 5rem minmax(0, 1fr); gap: .8rem; }
+.catalog-admin__submission-details dt { color: var(--catalog-muted); font-size: .85rem; }
+.catalog-admin__submission-details dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-size: .9rem; }
+.catalog-admin__submission-details a { color: var(--primary, #409eff); }
+.catalog-admin__submission-cover { display: grid; justify-items: start; gap: .5rem; margin: 0 0 1rem; }
+.catalog-admin__submission-cover button { min-height: 2.5rem; border: 1px solid var(--catalog-border); border-radius: .5rem; padding: .4rem .7rem; background: var(--bg-surface, #fff); color: var(--primary, #409eff); font: inherit; font-size: .85rem; font-weight: 650; cursor: pointer; }
+.catalog-admin__submission-cover button:disabled { opacity: .55; cursor: wait; }
+.catalog-admin__submission-cover img { width: min(100%, 360px); max-height: 220px; border-radius: .5rem; object-fit: contain; background: var(--bg-subtle, #f1f5f9); }
+.catalog-admin__submission-cover p { margin: 0; color: var(--danger, #dc2626); font-size: .85rem; }
+.catalog-admin__submission-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
 .catalog-admin button:focus-visible,
 .catalog-admin a:focus-visible,
 .catalog-admin input:focus-visible,
@@ -130,11 +147,12 @@
 @media (max-width: 680px) {
   .catalog-admin__header,
   .catalog-admin__section-head { align-items: flex-start; flex-direction: column; }
-  .catalog-admin__tabs { margin-top: 1.5rem; }
+  .catalog-admin__tabs { flex-wrap: wrap; gap: .8rem 1.2rem; margin-top: 1.5rem; }
   .catalog-admin__section { padding-top: 1.4rem; }
   .catalog-admin__metrics,
   .catalog-admin__tables { grid-template-columns: 1fr; }
   .catalog-admin__row { flex-wrap: wrap; }
   .catalog-admin__row-actions { width: 100%; justify-content: flex-end; }
   .catalog-admin__filters { align-items: stretch; }
+  .catalog-admin__submission-details > div { grid-template-columns: 1fr; gap: .15rem; }
 }

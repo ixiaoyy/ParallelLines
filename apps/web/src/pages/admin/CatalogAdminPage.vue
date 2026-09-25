@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useQuery, useQueryClient } from "@tanstack/vue-query";
-import { computed, reactive, ref } from "vue";
+import { computed, onUnmounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 
 import {
@@ -16,6 +16,8 @@ import type {
   CategoryDraftPayload,
   ProjectDraftPayload,
 } from "@/features/catalog/adminModel";
+import { fetchAdminCatalogSubmissions, fetchAdminSubmissionCover, reviewCatalogSubmission } from "@/features/catalog/submissionsApi";
+import type { AdminCatalogSubmission } from "@/features/catalog/submissionsModel";
 import { formatMetric, sourceNameLabel, sourceTypeLabel } from "@/features/analytics/model";
 import { useLogout } from "@/features/auth/queries";
 import { useAnalyticsOverview } from "@/features/analytics/queries";
@@ -24,7 +26,7 @@ import { queryKeys } from "@/shared/api/queryKeys";
 import { resolveApiAssetUrl } from "@/shared/api/client";
 import UiButton from "@/shared/ui/Button.vue";
 
-type AdminTab = "traffic" | "catalog";
+type AdminTab = "traffic" | "review" | "catalog";
 type EditorKind = "category" | "project";
 
 const activeTab = ref<AdminTab>("traffic");
@@ -45,6 +47,39 @@ const catalogQuery = useQuery({
   enabled: computed(() => activeTab.value === "catalog"),
   retry: false,
 });
+const submissionsQuery = useQuery({
+  queryKey: queryKeys.adminCatalogSubmissions,
+  queryFn: fetchAdminCatalogSubmissions,
+  enabled: computed(() => activeTab.value === "review"),
+  retry: false,
+});
+const pendingSubmissions = computed(() =>
+  submissionsQuery.data.value?.filter((submission) => submission.status === "pending") ?? [],
+);
+const reviewPendingId = ref("");
+const reviewError = ref("");
+const coverPreviewUrls = ref<Record<string, string>>({});
+const coverPreviewLoadingId = ref("");
+const coverPreviewErrorId = ref("");
+
+onUnmounted(() => {
+  Object.values(coverPreviewUrls.value).forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
+});
+
+// 待审封面需要管理员凭据，按需读取并释放 Blob URL，避免公开直连受保护资源。
+async function previewSubmissionCover(submission: AdminCatalogSubmission): Promise<void> {
+  if (!submission.cover_url || coverPreviewLoadingId.value || coverPreviewUrls.value[submission.id]) return;
+  coverPreviewErrorId.value = "";
+  coverPreviewLoadingId.value = submission.id;
+  try {
+    const cover = await fetchAdminSubmissionCover(submission.id);
+    coverPreviewUrls.value = { ...coverPreviewUrls.value, [submission.id]: URL.createObjectURL(cover) };
+  } catch {
+    coverPreviewErrorId.value = submission.id;
+  } finally {
+    coverPreviewLoadingId.value = "";
+  }
+}
 
 const categories = computed(() => catalogQuery.data.value?.categories ?? []);
 const projects = computed(() => categories.value.flatMap((category) => category.projects));
@@ -70,6 +105,7 @@ const projectDraft = reactive<ProjectDraftPayload>({
   url: "",
   kind: "external",
   description: null,
+  author_name: null,
   icon_upload_id: null,
   sort_order: 0,
   is_visible: true,
@@ -152,6 +188,7 @@ function newProject(): void {
   Object.assign(projectDraft, {
     category_id: filterCategoryId.value || categories.value[0]?.id || "",
     slug: "", name: "", url: "", kind: "external", description: null,
+    author_name: null,
     icon_upload_id: null, sort_order: 0, is_visible: true,
   });
   editorKind.value = "project";
@@ -168,6 +205,7 @@ function editProject(project: AdminCatalogProject): void {
     url: project.url,
     kind: project.kind,
     description: project.description,
+    author_name: project.author_name,
     icon_upload_id: project.icon_upload_id,
     sort_order: project.sort_order,
     is_visible: project.is_visible,
@@ -215,6 +253,7 @@ async function saveEditor(): Promise<void> {
         slug: projectDraft.slug.trim(),
         url: projectDraft.url.trim(),
         description: projectDraft.description?.trim() || null,
+        author_name: projectDraft.author_name?.trim() || null,
       }
     : null;
   saveError.value = "";
@@ -281,6 +320,7 @@ async function setProjectVisible(project: AdminCatalogProject, isVisible: boolea
     await updateCatalogProject(project.id, {
       category_id: project.category_id, slug: project.slug, name: project.name,
       url: project.url, kind: project.kind, description: project.description,
+      author_name: project.author_name,
       icon_upload_id: project.icon_upload_id,
       sort_order: project.sort_order, is_visible: isVisible,
     });
@@ -294,6 +334,32 @@ async function setProjectVisible(project: AdminCatalogProject, isVisible: boolea
     visibilityPendingKey.value = "";
   }
 }
+
+// 管理员审核待审投稿；后端写入完成后刷新投稿与目录，避免重复上线。
+async function reviewSubmission(submission: AdminCatalogSubmission, decision: "approve" | "reject"): Promise<void> {
+  if (reviewPendingId.value || submission.status !== "pending") return;
+  reviewError.value = "";
+  reviewPendingId.value = submission.id;
+  try {
+    await reviewCatalogSubmission(submission.id, decision);
+    const previewUrl = coverPreviewUrls.value[submission.id];
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      const nextPreviews = { ...coverPreviewUrls.value };
+      delete nextPreviews[submission.id];
+      coverPreviewUrls.value = nextPreviews;
+    }
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminCatalogSubmissions }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminCatalog }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.catalog }),
+    ]);
+  } catch {
+    reviewError.value = "保存失败，请稍后重试。";
+  } finally {
+    reviewPendingId.value = "";
+  }
+}
 </script>
 
 <template>
@@ -302,7 +368,7 @@ async function setProjectVisible(project: AdminCatalogProject, isVisible: boolea
       <div>
         <p class="catalog-admin__eyebrow">平行线后台</p>
         <h1>站点管理</h1>
-        <p>查看访问情况，维护公开目录的分类和项目。</p>
+        <p>查看访问情况，审核投稿，维护公开目录的分类和项目。</p>
       </div>
       <div class="catalog-admin__header-actions">
         <RouterLink class="catalog-admin__visit" to="/">查看网站<span aria-hidden="true">↗</span></RouterLink>
@@ -312,6 +378,7 @@ async function setProjectVisible(project: AdminCatalogProject, isVisible: boolea
 
     <nav class="catalog-admin__tabs" aria-label="后台功能">
       <button type="button" :class="{ 'is-active': activeTab === 'traffic' }" :aria-pressed="activeTab === 'traffic'" @click="activeTab = 'traffic'">流量统计</button>
+      <button type="button" :class="{ 'is-active': activeTab === 'review' }" :aria-pressed="activeTab === 'review'" @click="activeTab = 'review'">投稿审核</button>
       <button type="button" :class="{ 'is-active': activeTab === 'catalog' }" :aria-pressed="activeTab === 'catalog'" @click="activeTab = 'catalog'">目录管理</button>
     </nav>
 
@@ -364,6 +431,44 @@ async function setProjectVisible(project: AdminCatalogProject, isVisible: boolea
       </template>
     </section>
 
+    <section v-else-if="activeTab === 'review'" class="catalog-admin__section" aria-labelledby="review-heading">
+      <div class="catalog-admin__section-head">
+        <div><h2 id="review-heading">投稿审核</h2><p>查看游客提交的项目，审核通过后加入公开目录。</p></div>
+        <UiButton tone="subtle" :disabled="submissionsQuery.isFetching.value || Boolean(reviewPendingId)" @click="submissionsQuery.refetch()">刷新</UiButton>
+      </div>
+      <p v-if="reviewError" class="catalog-admin__error" role="alert">{{ reviewError }}</p>
+      <div v-if="submissionsQuery.isPending.value" class="catalog-admin__state" role="status">正在读取投稿…</div>
+      <div v-else-if="submissionsQuery.isError.value" class="catalog-admin__state">
+        <UiButton tone="subtle" @click="submissionsQuery.refetch()">重新加载</UiButton>
+      </div>
+      <p v-else-if="!pendingSubmissions.length" class="catalog-admin__state">暂无待审投稿。</p>
+      <div v-else class="catalog-admin__submissions">
+        <article v-for="submission in pendingSubmissions" :key="submission.id" class="catalog-admin__submission">
+          <div class="catalog-admin__submission-head">
+            <div><h3>{{ submission.project_name }}</h3><p>分类：{{ submission.category_name }}</p></div>
+            <span>待审核</span>
+          </div>
+          <dl class="catalog-admin__submission-details">
+            <div><dt>项目地址</dt><dd><a :href="submission.url" target="_blank" rel="noopener noreferrer">{{ submission.url }}</a></dd></div>
+            <div v-if="submission.author_name"><dt>作者</dt><dd>{{ submission.author_name }}</dd></div>
+            <div v-if="submission.contact"><dt>联系方式</dt><dd>{{ submission.contact }}</dd></div>
+            <div><dt>提交时间</dt><dd>{{ new Date(submission.created_at).toLocaleString('zh-CN') }}</dd></div>
+          </dl>
+          <div v-if="submission.cover_url" class="catalog-admin__submission-cover">
+            <button v-if="!coverPreviewUrls[submission.id]" type="button" :disabled="Boolean(coverPreviewLoadingId)" @click="previewSubmissionCover(submission)">
+              {{ coverPreviewLoadingId === submission.id ? '正在读取封面…' : '查看投稿封面' }}
+            </button>
+            <img v-else :src="coverPreviewUrls[submission.id]" :alt="`${submission.project_name} 的投稿封面`" />
+            <p v-if="coverPreviewErrorId === submission.id" role="alert">封面加载失败，请稍后重试。</p>
+          </div>
+          <div class="catalog-admin__submission-actions">
+            <UiButton :disabled="Boolean(reviewPendingId)" :aria-label="`通过 ${submission.project_name} 的投稿`" @click="reviewSubmission(submission, 'approve')">{{ reviewPendingId === submission.id ? '处理中…' : '通过' }}</UiButton>
+            <UiButton tone="danger" :disabled="Boolean(reviewPendingId)" :aria-label="`拒绝 ${submission.project_name} 的投稿`" @click="reviewSubmission(submission, 'reject')">拒绝</UiButton>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section v-else class="catalog-admin__section" aria-labelledby="catalog-heading">
       <div class="catalog-admin__section-head">
         <div><h2 id="catalog-heading">目录管理</h2><p>分类与项目可编辑或隐藏；评分和历史记录会保留。</p></div>
@@ -372,7 +477,7 @@ async function setProjectVisible(project: AdminCatalogProject, isVisible: boolea
           <UiButton :disabled="!categories.length || isSaving" @click="newProject">新增项目</UiButton>
         </div>
       </div>
-      <p class="catalog-admin__rule">最新：公开 7 天内。最热门：至少 10 人评分且平均分达到 4.5。</p>
+      <p class="catalog-admin__rule">最新：创建 7 天内。最热门：至少 10 人评分且平均分达到 4.5。</p>
       <div v-if="catalogQuery.isPending.value" class="catalog-admin__state" role="status">正在读取目录…</div>
       <div v-else-if="catalogQuery.isError.value" class="catalog-admin__state">
         <UiButton tone="subtle" @click="catalogQuery.refetch()">重新加载</UiButton>
@@ -403,7 +508,7 @@ async function setProjectVisible(project: AdminCatalogProject, isVisible: boolea
               <div v-for="project in filteredProjects" :key="project.id" class="catalog-admin__row">
                 <img v-if="project.icon_url" :src="resolveApiAssetUrl(project.icon_url)" alt="" />
                 <span v-else class="catalog-admin__icon-fallback" aria-hidden="true">↗</span>
-                <div class="catalog-admin__row-main"><strong>{{ project.name }}</strong><small>{{ categories.find((item) => item.id === project.category_id)?.name }} · {{ project.rating_count }} 人评分<span v-if="project.average_score !== null"> · {{ project.average_score.toFixed(1) }} 分</span></small></div>
+                <div class="catalog-admin__row-main"><strong>{{ project.name }}</strong><small>{{ categories.find((item) => item.id === project.category_id)?.name }}<span v-if="project.author_name"> · 作者：{{ project.author_name }}</span> · {{ project.rating_count }} 人评分<span v-if="project.average_score !== null"> · {{ project.average_score.toFixed(1) }} 分</span></small></div>
                 <span v-if="!project.is_visible" class="catalog-admin__hidden">已隐藏</span>
                 <div class="catalog-admin__row-actions">
                   <button type="button" :disabled="isSaving" @click="editProject(project)">编辑</button>
@@ -422,6 +527,7 @@ async function setProjectVisible(project: AdminCatalogProject, isVisible: boolea
               <template v-if="editorKind === 'project'">
                 <label>所属分类<select v-model="projectDraft.category_id" required><option value="" disabled>选择分类</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></label>
                 <label>项目地址<input v-model="projectDraft.url" :type="projectDraft.kind === 'external' ? 'url' : 'text'" :pattern="projectDraft.kind === 'external' ? 'https://.+' : undefined" required :readonly="projectDraft.kind === 'internal'" /></label>
+                <label>作者（可选）<input v-model="projectDraft.author_name" type="text" maxlength="120" /></label>
                 <label>简介（可选）<textarea v-model="projectDraft.description" maxlength="300" rows="3"></textarea></label>
               </template>
               <label>排序<input v-if="editorKind === 'category'" v-model.number="categoryDraft.sort_order" type="number" min="0" step="1" required /><input v-else v-model.number="projectDraft.sort_order" type="number" min="0" step="1" required /></label>

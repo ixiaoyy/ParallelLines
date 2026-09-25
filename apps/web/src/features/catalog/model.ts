@@ -7,12 +7,13 @@ export interface CatalogProjectResponse {
   url: string;
   kind: "external" | "internal";
   description: string | null;
-  author_name?: string | null;
-  author_url?: string | null;
+  author_name: string | null;
+  author_url: string | null;
   icon_url: string | null;
   created_at: string;
   average_score: number | null;
   rating_count: number;
+  rating_score_sum: number;
   my_score: number | null;
 }
 
@@ -36,6 +37,7 @@ export interface CatalogRatingResponse {
   project_id: string;
   average_score: number | null;
   rating_count: number;
+  rating_score_sum: number;
   my_score: number;
 }
 
@@ -52,6 +54,7 @@ export interface CatalogProject {
   createdAt: string;
   averageScore: number | null;
   ratingCount: number;
+  ratingScoreSum: number;
   myScore: number | null;
   host: string;
 }
@@ -123,6 +126,7 @@ export function toCatalogCategory(category: CatalogCategoryResponse): CatalogCat
         createdAt: project.created_at,
         averageScore: project.average_score,
         ratingCount: project.rating_count,
+        ratingScoreSum: project.rating_score_sum ?? 0,
         myScore: project.my_score,
         host,
       };

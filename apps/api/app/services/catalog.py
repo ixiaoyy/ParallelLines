@@ -126,11 +126,12 @@ class CatalogService:
                         raise
             await self.session.commit()
             summaries = await self._rating_summaries([resolved_project_id])
-            average, count = summaries.get(resolved_project_id, (None, 0))
+            average, count, score_sum = summaries.get(resolved_project_id, (None, 0, 0))
             return CatalogRatingStateResponse(
                 project_id=resolved_project_id,
                 average_score=average,
                 rating_count=count,
+                rating_score_sum=score_sum,
                 my_score=rating.score,
             )
         except NotFoundError:
@@ -263,17 +264,26 @@ class CatalogService:
 
     async def _rating_summaries(
         self, project_ids: list[str]
-    ) -> dict[str, tuple[float | None, int]]:
+    ) -> dict[str, tuple[float | None, int, int]]:
         if not project_ids:
             return {}
         rows = (
             await self.session.execute(
-                select(CatalogRating.project_id, func.avg(CatalogRating.score), func.count())
+                # 作者排行累计每张评分的原始分值，与平均分和评分人数同次聚合。
+                select(
+                    CatalogRating.project_id,
+                    func.avg(CatalogRating.score),
+                    func.count(),
+                    func.sum(CatalogRating.score),
+                )
                 .where(CatalogRating.project_id.in_(project_ids))
                 .group_by(CatalogRating.project_id)
             )
         ).all()
-        return {project_id: (float(average), int(count)) for project_id, average, count in rows}
+        return {
+            project_id: (float(average), int(count), int(score_sum))
+            for project_id, average, count, score_sum in rows
+        }
 
     async def _my_scores(self, project_ids: list[str], digest: str | None) -> dict[str, int]:
         if not project_ids or digest is None:
@@ -291,10 +301,10 @@ class CatalogService:
     def _project_response(
         self,
         project: CatalogProject,
-        summaries: dict[str, tuple[float | None, int]],
+        summaries: dict[str, tuple[float | None, int, int]],
         my_scores: dict[str, int],
     ) -> CatalogProjectResponse:
-        average, count = summaries.get(project.id, (None, 0))
+        average, count, score_sum = summaries.get(project.id, (None, 0, 0))
         return CatalogProjectResponse(
             id=project.id,
             slug=project.slug,
@@ -308,11 +318,12 @@ class CatalogService:
             created_at=project.created_at,
             average_score=average,
             rating_count=count,
+            rating_score_sum=score_sum,
             my_score=my_scores.get(project.id),
         )
 
     def _admin_project_response(
-        self, project: CatalogProject, summaries: dict[str, tuple[float | None, int]]
+        self, project: CatalogProject, summaries: dict[str, tuple[float | None, int, int]]
     ) -> AdminCatalogProjectResponse:
         public = self._project_response(project, summaries, {})
         return AdminCatalogProjectResponse(
@@ -325,7 +336,7 @@ class CatalogService:
         )
 
     def _admin_category_response(
-        self, category: CatalogCategory, summaries: dict[str, tuple[float | None, int]]
+        self, category: CatalogCategory, summaries: dict[str, tuple[float | None, int, int]]
     ) -> AdminCatalogCategoryResponse:
         return AdminCatalogCategoryResponse(
             id=category.id,

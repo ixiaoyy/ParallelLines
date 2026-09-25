@@ -1,288 +1,71 @@
-# 平行线 · AI游戏收录
+# 平行线 · AI 游戏收录
 
-平行线是 AI 游戏收录网站。访客可以按分类浏览、按项目名称搜索，查看已有作者署名和游客评分，再前往游戏原站体验。网站使用 Vue 3 + FastAPI 实现，代码仓库和包名继续沿用 `ParallelLines/parallellines`。
+平行线收录可直接游玩的 AI 游戏与独立项目。访客可以按分类浏览、按项目名称搜索、查看作者和评分，再打开游戏原站。站内作品也保留直达入口。
 
-下文保留了注册、发帖和通知等历史论坛模块的开发与运维资料；这些功能不代表当前公开站仍提供论坛入口。
+## 网站功能
 
-## Stack Target
+- 游戏目录：分类、名称搜索、最新与热门排序；游戏卡片展示封面、作者及评分。
+- 游客评分：每个 IP 对同一项目只能提交一次 1–5 心评分。
+- 游戏投稿：游客填写分类、项目名和 HTTPS 链接，可选填作者、联系方式及封面；管理员审核通过后才公开。
+- 目录后台：`/admin` 登录后可查看流量统计、审核投稿、维护分类与项目。
 
-- Frontend: Vue 3, Vite, TypeScript, Ant Design Vue, Vue Router, Pinia, TanStack Query
-- Backend: FastAPI, SQLAlchemy 2.x async, Alembic, MySQL, Redis
-- Worker: Python async background job runner for notifications, email digests, hot ranking, and cleanup tasks
-- Palette: `#F8FAFC`, `#409EFF`, `#10B981`, `#334155`, `#475569`, `#1E1E1E`
+公开站不要求登录。目录、评分和投稿由 API 提供；项目资料存于 MySQL，图片可使用本地存储或 S3 兼容对象存储。
 
-## Quick Start with Docker
+## 项目结构
+
+| 路径 | 用途 |
+| --- | --- |
+| `apps/web` | Vue 3、Vite、TypeScript 前端 |
+| `apps/api` | FastAPI、SQLAlchemy、Alembic 后端 |
+| `apps/api/alembic` | 数据表与初始目录迁移 |
+| `static/web/catalog` | 目录封面等静态图片源文件 |
+| `deploy/nginx` | 公网站点与 API 的 Nginx 配置 |
+
+## 本地启动
+
+仓库使用 pnpm 11 和 Python 项目的 uv。先复制 `apps/api/.env.example` 为 `apps/api/.env`，设置本地 `DATABASE_URL`、`JWT_SECRET_KEY` 等配置。
+
+使用 Docker Compose：
 
 ```powershell
-# From repo root
 docker compose up -d --build
 ```
 
-Services:
+Compose 会启动 MySQL、Redis、API、静态 Web、Nginx 和后台清理 worker，并在 API 启动时执行 Alembic 迁移。网站地址为 `http://localhost`，API 健康检查为 `http://localhost/healthz`。Compose 使用的数据库地址应指向服务名 `db`。
 
-- Web: <http://localhost> via the Compose Nginx entrypoint
-- API: <http://127.0.0.1:8000> for local debugging, and `/api/` via Nginx
-- API health: <http://localhost/healthz>
-- API metrics: <http://localhost/metrics>
-- MySQL: `127.0.0.1:3306` for local administration only, persisted under `/opt/parallellines/var/mysql`
-- Redis: `127.0.0.1:6379` for local debugging only
-
-`docker compose up` reads `apps/api/.env`, starts the bundled MySQL and Redis services, runs
-Alembic migrations against the configured `DATABASE_URL`, builds the frontend with
-`VITE_API_BASE_URL=/api/v1`, then starts the API, the static web Nginx container, the public Nginx
-entrypoint, and the unified background job worker. For Compose deployments, set
-`DATABASE_URL` to the internal MySQL service name, for example
-`mysql+asyncmy://appuser:<password>@db:3306/parallellines?charset=utf8mb4`; keep that password in
-sync with `MYSQL_PASSWORD` in `apps/api/.env`.
-
-Production Compose exposes ports 80 and 443 through the Nginx entrypoint. Nginx serves the HTTP-01
-challenge from `/opt/parallellines/var/certbot`, persists certificates under
-`/opt/parallellines/var/letsencrypt`, and redirects normal HTTP traffic to HTTPS. The deploy
-workflow bootstraps a Let's Encrypt certificate for `pingxingxian.space` and
-`www.pingxingxian.space` only when the persisted certificate is missing; routine renewals are handled
-by the Compose `certbot` service. Until the first certificate succeeds, Nginx starts with a temporary
-self-signed fallback certificate so the deployment does not fail before the first certificate is
-issued.
-
-The production deploy workflow is path-aware: frontend-only pushes rebuild the web container,
-backend pushes rebuild API and worker containers, Nginx changes rebuild only the entrypoint, and
-Compose changes fall back to a full `docker compose up -d --build`. Deploy workflow or Docker ignore
-changes do not deploy the runtime by themselves; the next runtime-affecting deploy will pick them up.
-Each runtime deploy prints per-stage timings (`checkout`, storage directory check, Compose deploy,
-certificate check, image prune, and total) so slow runs can be diagnosed from GitHub Actions logs
-instead of guessed.
-
-## Local Development without Docker
-
-### Backend
+分别运行前后端：
 
 ```powershell
 cd apps/api
 uv sync
-Copy-Item .env.example .env  # then edit DATABASE_URL / JWT_SECRET_KEY
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
-For Docker, `apps/api/.env` is the single API configuration file. The bundled MySQL service reads
-`MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER`, and `MYSQL_PASSWORD` from the same file; the
-API and worker should connect through `DATABASE_URL` using host `db`. If you intentionally use a
-remote managed database instead, set that remote host in `DATABASE_URL` and remove or ignore the
-Compose `db` service for that deployment.
-
-Useful commands:
-
-```powershell
-uv run ruff check app tests
-uv run pytest -q
-uv run python -m app.workers.background_jobs
-# Only synchronize the pinned/featured starter posts into the current database; default author is 多动脑子z.
-uv run python -m app.sync_quality_posts
-```
-
-### Frontend
-
 ```powershell
 pnpm install
-pnpm --dir apps/web dev
+pnpm dev:web
 ```
 
-Useful commands:
+前端通过 `VITE_API_BASE_URL` 连接 API；本地默认是 `http://127.0.0.1:8000/api/v1`，Compose 构建使用同源的 `/api/v1`。
+
+## 内容与图片
+
+管理员在 `/admin` 维护目录。隐藏项目不会出现在公开目录；游客投稿在审核通过前也不会公开。初始游戏及分类由 Alembic 数据迁移导入，之后可在后台调整。
+
+部分游戏的收录线索来自 [awesome-gpt-6-astra](https://github.com/MartinDelophy/awesome-gpt-6-astra)。感谢维护者 martindelophy；各游戏的作者仍按项目本身署名。
+
+内置目录封面位于 `static/web/catalog`，正式页面从 `img.pingxingxian.space` 的版本化目录读取。新图片应压缩后上传到新版本路径，避免覆盖旧图；管理员和游客提交的封面由上传服务管理，待审封面只在后台预览。
+
+本地上传默认保存在 `apps/api/var/uploads`；Compose 将上传文件映射到宿主机的 `/opt/parallellines/var/uploads`。如使用 S3 兼容存储，在 `apps/api/.env` 配置 `UPLOAD_STORAGE_BACKEND=s3` 及对应连接参数，不要把密钥提交到仓库。
+
+## 检查与部署
 
 ```powershell
-pnpm --dir apps/web lint
-pnpm --dir apps/web typecheck
-pnpm --dir apps/web build
+pnpm typecheck:web
+pnpm lint:web
+pnpm build:web
+pnpm lint:api
 ```
 
-The frontend reads `VITE_API_BASE_URL`; local dev falls back to `http://127.0.0.1:8000/api/v1`,
-while Docker Compose builds the production frontend against the same-origin `/api/v1` path.
-
-### 注册邮件验证码
-
-本地和 CI 默认使用 `EMAIL_DELIVERY_MODE=memory`，注册接口会返回仅用于开发测试的
-`dev_verification_code`，前端会自动填入验证码输入框。预发布和生产环境统一使用
-Resend SMTP：
-
-```powershell
-EMAIL_DELIVERY_MODE=smtp
-SMTP_HOST=smtp.resend.com
-SMTP_PORT=465
-SMTP_USERNAME=resend
-SMTP_PASSWORD=your-resend-api-key
-SMTP_FROM_EMAIL=noreply@pingxingxian.space
-SMTP_USE_TLS=false
-SMTP_USE_SSL=true
-```
-
-启用前须在 Resend 验证 `pingxingxian.space` 并创建 API Key。API Key 只写入服务器上的
-`apps/api/.env`，不得提交到仓库。现有注册、密码重置、邮箱换绑、通知和摘要邮件继续共用
-同一发送链路，无需引入额外 SDK。
-
-生产环境不得使用 `memory` 模式；验证码有效期和重发/尝试限制可通过
-`EMAIL_VERIFICATION_CODE_TTL_MINUTES`、`EMAIL_VERIFICATION_RESEND_SECONDS`、
-`EMAIL_VERIFICATION_MAX_ATTEMPTS` 调整。
-
-### 上传、头像与附件
-
-本地默认使用 `UPLOAD_STORAGE_BACKEND=local`，文件保存到 `UPLOAD_STORAGE_PATH=var/uploads`。
-Docker Compose 部署会覆盖容器内路径为 `/var/lib/parallellines/uploads`，并把宿主机目录
-`/opt/parallellines/var/uploads` 绑定到该路径，避免镜像重建或命名卷变化导致上传文件不可见。
-发帖上传会返回 `/uploads/{id}/content` 引用，创建/编辑帖子后自动绑定到对应楼层。头像通过
-`POST /api/v1/uploads/avatar` 更新，并会同步到 `/auth/me` 和公开用户资料。
-
-也可以把新上传切到 S3 兼容存储（例如 Cloudflare R2）。默认前端 URL 和权限检查保持不变，
-API 会按每条上传记录的 `storage_backend` 从本地或对象存储读取文件：
-
-```env
-UPLOAD_STORAGE_BACKEND=s3
-UPLOAD_S3_BUCKET=your-r2-bucket
-UPLOAD_S3_REGION=auto
-UPLOAD_S3_ENDPOINT_URL=https://<account-id>.r2.cloudflarestorage.com
-UPLOAD_S3_ACCESS_KEY_ID=your-r2-access-key-id
-UPLOAD_S3_SECRET_ACCESS_KEY=your-r2-secret-access-key
-UPLOAD_S3_REQUEST_TIMEOUT_SECONDS=10
-```
-
-如果 R2 已绑定公开访问域名，可以设置：
-
-```env
-UPLOAD_CDN_BASE_URL=https://img.pingxingxian.space
-```
-
-这样 API 在完成上传 ACL 校验后，会把图片和缩略图请求 302 到
-`https://img.pingxingxian.space/{storage_key}`。如果希望新上传接口直接返回 CDN URL，额外开启：
-
-```env
-UPLOAD_PUBLIC_CDN_URLS=true
-```
-
-这个开关适合公开图片站点；开启后 Markdown 会保存 `img.pingxingxian.space` 地址，图片 URL
-本身就是可直接访问的公开链接。
-
-已有本地文件迁移到 R2 时，保持对象 key 与数据库 `storage_key` 一致，例如
-`2026/06/3.png` 和 `_thumbnails/2026/06/3.png.webp`，并把对应上传记录的
-`storage_backend` 改为 `s3`；这样旧记录不需要改 URL。
-
-可以用内置迁移脚本分批迁移历史图片。默认只预览 `uploads.storage_backend='local'`
-且 `is_image=true` 的记录，不写 R2、不改数据库：
-
-```bash
-cd apps/api
-uv run python -m app.migrate_uploads_to_s3 --dry-run
-```
-
-确认数量和缺失文件后再执行真实迁移：
-
-```bash
-uv run python -m app.migrate_uploads_to_s3 --apply
-```
-
-脚本会按原 `storage_key` 上传原图，已存在的本地缩略图会迁到
-`_thumbnails/{storage_key}.webp`；没有缩略图的图片会在首次请求缩略图时由 API
-重新生成到 R2。迁移成功后才把对应上传记录更新为 `storage_backend='s3'`，本地文件
-不会被删除。可用 `--limit 100` 先小批量验证，`--start-after-id <id>` 断点续跑，
-或用 `--all-files` 把非图片附件也一起迁移。
-
-新上传文件按 UTC 年/月切目录，例如 `2026/05/{upload_id}.jpeg`；旧记录中的历史
-`storage_key` 仍按数据库原值读取。
-
-关键限制：
-
-- `UPLOAD_MAX_BYTES`：帖子图片/附件单文件大小。
-- `UPLOAD_MAX_AVATAR_BYTES`：头像单文件大小。
-- `UPLOAD_MAX_FILES_PER_POST`：单个帖子最多引用的上传数量。
-- `UPLOAD_TEMPORARY_TTL_HOURS`：未绑定临时上传的过期时间。
-- `BACKGROUND_UPLOAD_CLEANUP_INTERVAL_SECONDS`：统一后台任务 worker 的临时上传清理调度间隔。
-
-### 备份、恢复校验与数据导出
-
-管理员可通过 `/api/v1/admin/backups` 创建站点备份任务，统一后台 worker 会生成包含数据库 JSON 快照和可选上传文件的 ZIP 归档。备份元数据会记录状态、创建人、文件大小和 SHA-256 校验和。
-
-- `BACKUP_STORAGE_PATH`：备份 ZIP 的本地存储目录；Docker Compose 中 API 和 worker 共享 `/opt/parallellines/var/backups` 挂载目录。
-- `/api/v1/admin/backups/{id}/download`：仅管理员可下载成功备份，并返回 `X-Backup-SHA256`。
-- `/api/v1/admin/backups/{id}/restore`：当前阶段只做非破坏性校验，必须提交 `RESTORE {id}` 确认，生产环境禁用。
-- `/api/v1/users/me/export`：登录用户导出自己的资料、主题、帖子和互动记录。
-- `/api/v1/admin/exports/site`：管理员导出脱敏后的全站 JSON ZIP。
-
-导出与备份中的 password/token/secret/code 字段会被脱敏，不导出明文密码或一次性令牌。
-
-### 通知邮件、摘要与入站回复
-
-即时通知邮件、每日/每周摘要、退信/投诉回调和入站回复记录都由统一后台任务与 `/api/v1/email/*` API 承载：
-
-- 用户在 `/email-preferences` 管理邮件总开关、单类通知开关和摘要频率。
-- `BACKGROUND_DIGEST_INTERVAL_SECONDS` 控制摘要任务调度间隔。
-- 配置 `EMAIL_WEBHOOK_SECRET` 后，邮件服务商回调必须传入 `X-Email-Webhook-Secret`。
-- 本地可运行 `uv run python -m app.workers.background_jobs` 处理 `mail`、`notifications` 和 `maintenance` 队列。
-
-生产本地存储由 `docker-compose.yml` 固定挂载：
-
-```text
-/opt/parallellines/var/mysql    -> /var/lib/mysql
-/opt/parallellines/var/uploads  -> /var/lib/parallellines/uploads
-/opt/parallellines/var/backups  -> /var/lib/parallellines/backups
-```
-
-部署脚本会先创建目录并赋予读写权限；不要删除 `/opt/parallellines/var/mysql`，也不要执行
-`docker compose down -v` 或 `docker system prune --volumes` 清理历史数据，除非已确认没有待迁移的旧数据库、备份或上传文件。
-
-## Smoke Tests
-
-Playwright smoke tests cover register → login → create board/topic → reply against a running API and web app.
-
-```powershell
-# Terminal 1: start API + web, or use docker compose up
-$env:PLAYWRIGHT_BASE_URL="http://127.0.0.1"
-$env:PLAYWRIGHT_API_BASE_URL="http://127.0.0.1/api/v1"
-pnpm --dir apps/web exec playwright install chromium
-pnpm --dir apps/web test:smoke
-```
-
-## CI
-
-`.github/workflows/ci.yml` runs:
-
-1. Backend `uv sync --frozen`, `ruff check`, and `pytest`.
-2. Frontend `pnpm install --frozen-lockfile`, lint, typecheck, and build.
-3. Playwright MVP smoke tests with a MySQL-backed API and Vite dev server.
-
-## Operations Checklist
-
-Before deployment:
-
-- Set `JWT_SECRET_KEY` to a strong secret; never use the local default.
-- Set `DATABASE_URL`, `REDIS_URL`, `CORS_ORIGINS`, `ENVIRONMENT`, SMTP email settings, `EMAIL_WEBHOOK_SECRET`, background job intervals, upload storage settings, and `BACKUP_STORAGE_PATH` for the target environment.
-- Keep host-level Nginx/Apache stopped on ports 80 and 443 when using the Compose Nginx entrypoint.
-- Ensure the cloud security group allows inbound TCP 80 and 443 before the first Let's Encrypt request.
-- Run `alembic upgrade head` before starting new application code.
-- Check `/healthz`, `/metrics`, API request logs, and worker logs after rollout.
-- Run smoke tests against the target environment or staging before promotion.
-
-Rollback:
-
-1. Stop workers first to prevent background writes during rollback.
-2. Roll back application containers to the previous image.
-3. If a migration is incompatible, run the matching Alembic downgrade only after backing up data.
-4. Re-run smoke tests and verify `/metrics` request counters move after traffic resumes.
-
-Troubleshooting:
-
-- API returns 401 after login: verify `JWT_SECRET_KEY` is stable across API replicas.
-- Frontend cannot call API: verify `VITE_API_BASE_URL` was set at build time and `CORS_ORIGINS` includes the web origin.
-- Docker API cannot connect to DB: run `docker compose config`, verify `apps/api/.env` has the intended `DATABASE_URL`, then inspect `docker compose logs api worker`.
-- Smoke test cannot find new board: confirm the API URL points to the same backend used by the web app.
-
-## Design Artifacts
-
-- Product/architecture design: `.trellis/spec/product/discourse-inspired-parallellines-design.md`
-- Trellis task plan: `.trellis/spec/product/trellis-task-plan.md`
-- Trellis task tree: `.trellis/tasks/05-14-parallellines-mvp`
-
-## Trellis
-
-```powershell
-python .trellis\scripts\get_context.py
-python .trellis\scripts\task.py list
-python .trellis\scripts\task.py start 05-14-parallellines-mvp
-```
+`pnpm test:api` 需要事先配置可用的测试数据库，不能直接使用默认本地地址运行。部署前检查迁移、目录图片与 API 配置；部署后检查 `/healthz`、首页目录、投稿审核及图片访问。不要删除持久化的 MySQL、上传文件和备份目录。

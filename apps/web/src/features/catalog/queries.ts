@@ -30,6 +30,7 @@ export function useRateCatalogProject() {
                   ...project,
                   averageScore: result.average_score,
                   ratingCount: result.rating_count,
+                  ratingScoreSum: result.rating_score_sum ?? project.ratingScoreSum,
                   myScore: result.my_score,
                 }
               : project,

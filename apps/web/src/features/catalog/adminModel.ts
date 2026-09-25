@@ -6,6 +6,8 @@ export interface AdminCatalogProject {
   url: string;
   kind: "external" | "internal";
   description: string | null;
+  author_name: string | null;
+  author_url: string | null;
   icon_upload_id: string | null;
   icon_url: string | null;
   sort_order: number;
@@ -14,6 +16,7 @@ export interface AdminCatalogProject {
   updated_at: string;
   average_score: number | null;
   rating_count: number;
+  rating_score_sum: number;
   my_score: number | null;
 }
 
@@ -49,6 +52,7 @@ export interface ProjectDraftPayload {
   url: string;
   kind: "external" | "internal";
   description: string | null;
+  author_name: string | null;
   icon_upload_id: string | null;
   sort_order: number;
   is_visible: boolean;

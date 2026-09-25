@@ -45,6 +45,8 @@ IMAGE_MEDIA_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
 THUMBNAIL_DIRECTORY = "_thumbnails"
 THUMBNAIL_MAX_SIZE = (360, 520)
 THUMBNAIL_MEDIA_TYPE = "image/webp"
+CATALOG_SUBMISSION_COVER_MAX_BYTES = 2 * 1024 * 1024
+CATALOG_SUBMISSION_COVER_MAX_SIZE = (1200, 800)
 ALLOWED_BINARY_SIGNATURES: dict[str, tuple[str, tuple[bytes, ...]]] = {
     ".png": ("image/png", (b"\x89PNG\r\n\x1a\n",)),
     ".jpg": ("image/jpeg", (b"\xff\xd8\xff",)),
@@ -458,6 +460,11 @@ class UploadService:
         await self.session.commit()
         return upload
 
+    async def create_submission_cover(self, file: UploadFile) -> Upload:
+        """暂存游客投稿封面；调用方须在同一事务内绑定待审投稿并提交。"""
+
+        return await self._create_upload(file, None, kind="catalog_submission_cover")
+
     async def attach_uploads_to_post(
         self,
         raw_md: str,
@@ -546,6 +553,9 @@ class UploadService:
         if not upload or upload.deleted_at is not None or upload.status == "deleted":
             raise NotFoundError("upload_not_found", "Upload not found")
 
+        if upload.kind == "catalog_submission_cover":
+            # 游客封面只走管理员审核预览，不能经通用上传接口或 CDN 重定向读取。
+            raise NotFoundError("upload_not_found", "Upload not found")
         if upload.kind == "catalog_icon":
             await self._require_catalog_icon_access(upload, current_user)
         elif upload.kind != "avatar":
@@ -662,24 +672,35 @@ class UploadService:
     async def _create_upload(
         self,
         file: UploadFile,
-        current_user: User,
+        current_user: User | None,
         *,
         kind: str,
         request: Request | None = None,
     ) -> Upload:
-        await SpamPreventionService(self.session, self.settings).enforce_upload(
-            request,
-            current_user=current_user,
-        )
+        if kind == "catalog_submission_cover":
+            if current_user is not None:
+                raise PermissionDeniedError()
+        else:
+            if current_user is None:
+                raise PermissionDeniedError()
+            await SpamPreventionService(self.session, self.settings).enforce_upload(
+                request,
+                current_user=current_user,
+            )
         max_bytes = (
-            self.settings.upload_max_avatar_bytes
-            if kind in {"avatar", "catalog_icon"}
-            else self.settings.upload_max_bytes
+            CATALOG_SUBMISSION_COVER_MAX_BYTES
+            if kind == "catalog_submission_cover"
+            else (
+                self.settings.upload_max_avatar_bytes
+                if kind in {"avatar", "catalog_icon"}
+                else self.settings.upload_max_bytes
+            )
         )
-        max_bytes = await SiteSettingService(self.session, self.settings).upload_limit_bytes(
-            kind=kind,
-            fallback=max_bytes,
-        )
+        if kind != "catalog_submission_cover":
+            max_bytes = await SiteSettingService(self.session, self.settings).upload_limit_bytes(
+                kind=kind,
+                fallback=max_bytes,
+            )
         content = await self._read_limited(file, max_bytes)
         filename = sanitize_filename(file.filename or "upload")
         media_type = sniff_media_type(
@@ -690,14 +711,19 @@ class UploadService:
         if media_type not in IMAGE_MEDIA_TYPES:
             if kind == "avatar":
                 raise ValidationError("avatar_must_be_image", "Avatar upload must be an image")
-            if kind == "catalog_icon":
+            if kind in {"catalog_icon", "catalog_submission_cover"}:
                 raise ValidationError(
                     "catalog_icon_must_be_image", "请上传 PNG、JPG、GIF 或 WebP 图片。"
                 )
+        if kind == "catalog_submission_cover":
+            # 待审封面转换成小尺寸 WebP；公开目录只会在审核通过后引用压缩后的文件。
+            content = await asyncio.to_thread(self._optimized_catalog_cover, content)
+            filename = f"{Path(filename).stem[:240]}.webp"
+            media_type = "image/webp"
         sha256 = hashlib.sha256(content).hexdigest()
         extension = extension_for_media_type(media_type, filename)
         upload = Upload(
-            user_id=current_user.id,
+            user_id=current_user.id if current_user is not None else None,
             original_filename=filename,
             storage_backend=self.settings.upload_storage_backend,
             storage_key=storage_key_for(f"pending-{new_random_suffix(8)}", extension),
@@ -715,11 +741,35 @@ class UploadService:
         )
         self.session.add(upload)
         await self.session.flush()
-        upload.storage_key = storage_key_for(upload.id, extension)
+        upload.storage_key = (
+            f"catalog-submissions/{utcnow():%Y/%m}/{new_random_suffix(16)}{extension}"
+            if kind == "catalog_submission_cover"
+            else storage_key_for(upload.id, extension)
+        )
         storage = self._storage_for_backend(upload.storage_backend)
         await asyncio.to_thread(storage.write, upload.storage_key, content, media_type)
+        if kind == "catalog_submission_cover":
+            # 待审期间不按普通临时文件清理；审核拒绝时再交给现有过期清理任务。
+            upload.status = "catalog_submission_cover"
+            upload.expires_at = None
         await self.session.flush()
         return upload
+
+    def _optimized_catalog_cover(self, content: bytes) -> bytes:
+        """将投稿图片压缩为宽高有界的静态 WebP 封面，返回编码后字节。"""
+
+        try:
+            with Image.open(BytesIO(content)) as source_image:
+                image = ImageOps.exif_transpose(source_image)
+                image.thumbnail(CATALOG_SUBMISSION_COVER_MAX_SIZE, Image.Resampling.LANCZOS)
+                image = self._to_thumbnail_rgb(image)
+                output = BytesIO()
+                image.save(output, "WEBP", quality=78, method=4)
+                return output.getvalue()
+        except (OSError, UnidentifiedImageError, Image.DecompressionBombError) as exc:
+            raise ValidationError(
+                "catalog_icon_must_be_image", "请上传 PNG、JPG、GIF 或 WebP 图片。"
+            ) from exc
 
     async def _read_limited(self, file: UploadFile, max_bytes: int) -> bytes:
         content = await file.read(max_bytes + 1)

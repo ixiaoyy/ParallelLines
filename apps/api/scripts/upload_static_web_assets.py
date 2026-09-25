@@ -11,6 +11,9 @@ from app.core.config import Settings
 from app.services.uploads import S3UploadStorage, public_storage_url
 
 STATIC_WEB_PREFIX = "static/web"
+ASTRA_COVER_DIR = (
+    Path(__file__).resolve().parents[3] / "static/web/catalog/2026-09-26-v1/covers"
+)
 
 
 @dataclass(frozen=True)
@@ -21,6 +24,12 @@ class StaticAsset:
     key: str
     media_type: str
 
+
+# 本地快照生成的独立卡面集中放在新版目录，只在指定版本时上传。
+CATALOG_ASTRA_COVER_KEYS = tuple(
+    f"catalog/2026-09-26-v1/covers/{path.name}"
+    for path in sorted(ASTRA_COVER_DIR.glob("astra-*.svg"))
+)
 
 CATALOG_ASSET_KEYS = (
     "catalog/2026-09-24-v1/chibi-cat-explorer.webp",
@@ -52,7 +61,7 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-09-25-v1/covers/yongyao-crystal-tower.webp",
     "catalog/2026-09-25-v1/covers/yu-gi-oh-destiny-duel.webp",
     "catalog/2026-09-25-v1/covers/zhi-guai-lu.webp",
-)
+) + CATALOG_ASTRA_COVER_KEYS
 
 STATIC_ASSETS = (
     StaticAsset(
@@ -106,7 +115,11 @@ STATIC_ASSETS = (
         media_type="image/webp",
     ),
 ) + tuple(
-    StaticAsset(source=f"static/web/{key}", key=key, media_type="image/webp")
+    StaticAsset(
+        source=f"static/web/{key}",
+        key=key,
+        media_type="image/svg+xml" if key.endswith(".svg") else "image/webp",
+    )
     for key in CATALOG_ASSET_KEYS
 )
 
@@ -146,6 +159,8 @@ def upload_static_assets(
     )
     # 指定版本时只发布该版本新图，不重传其他目录版本或站点资源。
     if catalog_version:
+        if catalog_version == "2026-09-26-v1" and len(CATALOG_ASTRA_COVER_KEYS) != 157:
+            raise RuntimeError("expected 157 generated Astra cover files")
         version_prefix = f"catalog/{catalog_version.strip('/')}/"
         assets = tuple(asset for asset in assets if asset.key.startswith(version_prefix))
         if not assets:
