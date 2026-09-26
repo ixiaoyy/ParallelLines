@@ -69,8 +69,8 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-09-25-v1/covers/yongyao-crystal-tower.webp",
     "catalog/2026-09-25-v1/covers/yu-gi-oh-destiny-duel.webp",
     "catalog/2026-09-25-v1/covers/zhi-guai-lu.webp",
-    "catalog/2026-09-27-v1/covers/shi-yu-yuanfang.webp",
-    "catalog/2026-09-27-v1/covers/hongloumeng-haitang-shishe.webp",
+    "catalog/2026-09-27-v2/covers/shi-yu-yuanfang.webp",
+    "catalog/2026-09-27-v2/covers/hongloumeng-haitang-shishe.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 STATIC_ASSETS = (
