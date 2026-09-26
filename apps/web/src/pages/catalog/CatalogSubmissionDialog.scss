@@ -1,9 +1,9 @@
 .catalog-submission-dialog {
-  width: min(calc(100% - 32px), 560px);
+  width: min(calc(100% - 32px), 640px);
   max-height: min(90vh, 790px);
   overflow-y: auto;
-  border: 1px solid #d8eaff;
-  border-radius: 24px;
+  border: 0;
+  border-radius: 16px;
   padding: 0;
   color: #20365d;
   background: #fff;
@@ -14,30 +14,28 @@
 
 .catalog-submission-dialog__header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 24px 26px 14px;
+  padding: 22px 26px;
+  background: #f0f8ff;
 }
 
-.catalog-submission-dialog__eyebrow {
-  margin: 0 0 3px;
-  color: #5f8bc4;
-  font-size: .82rem;
-  font-weight: 700;
-}
-
-.catalog-submission-dialog__header h2 { margin: 0; font-size: 1.45rem; }
+.catalog-submission-dialog__header h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.45rem; }
+.catalog-submission-dialog__header h2 .anticon { color: var(--btn-primary-bg); }
 
 .catalog-submission-dialog__close {
-  width: 40px;
-  height: 40px;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
   border: 0;
   border-radius: 50%;
   color: #55739d;
-  background: #edf6ff;
+  background: #fff;
   font: inherit;
-  font-size: 1.6rem;
+  font-size: 1.1rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -45,11 +43,10 @@
 .catalog-submission-dialog__close:hover { background: #dceeff; }
 .catalog-submission-dialog__close:disabled { opacity: .5; cursor: wait; }
 
-.catalog-submission-dialog__form { display: grid; gap: 16px; padding: 0 26px 26px; }
-.catalog-submission-dialog__intro { margin: 0; color: #6a80a2; font-size: .9rem; }
+.catalog-submission-dialog__form { display: grid; gap: 19px; padding: 24px 26px 26px; }
 .catalog-submission-dialog__form label { display: grid; gap: 6px; color: #395675; font-size: .88rem; font-weight: 700; }
 .catalog-submission-dialog__form label strong { color: #d64163; }
-.catalog-submission-dialog__form label small { color: #8195ac; font-size: .77rem; font-weight: 500; }
+.catalog-submission-dialog__form label small { color: #536b8c; font-size: .77rem; font-weight: 500; }
 .catalog-submission-dialog__form input:not([type="file"]) {
   width: 100%;
   min-width: 0;
@@ -63,12 +60,16 @@
   font-weight: 500;
 }
 
-.catalog-submission-dialog__form input::placeholder { color: #9aacc4; }
-.catalog-submission-dialog__optional { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.catalog-submission-dialog__form input::placeholder { color: #536b8c; }
+.catalog-submission-dialog__names,
+.catalog-submission-dialog__optional { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
 .catalog-submission-dialog__cover { display: grid; gap: 8px; }
-.catalog-submission-dialog__cover input { min-width: 0; max-width: 100%; color: #55739d; font-size: .82rem; }
+.catalog-submission-dialog__cover-picker { display: flex; min-width: 0; align-items: center; gap: 12px; }
+.catalog-submission-dialog__choose-cover { min-height: 44px; flex: 0 0 auto; border: 1px solid #ccdef3; border-radius: 10px; padding: 8px 14px; color: #176abd; background: #eff7ff; font: inherit; font-size: .86rem; font-weight: 700; cursor: pointer; }
+.catalog-submission-dialog__choose-cover:hover { background: #dceeff; }
+.catalog-submission-dialog__filename { min-width: 0; overflow: hidden; color: #536b8c; font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
 .catalog-submission-dialog__cover img { width: min(100%, 260px); max-height: 145px; border-radius: 12px; object-fit: cover; }
-.catalog-submission-dialog__clear-cover { justify-self: start; min-height: 36px; border: 0; padding: 0; color: #409eff; background: transparent; font: inherit; font-size: .83rem; cursor: pointer; }
+.catalog-submission-dialog__clear-cover { justify-self: start; min-height: 44px; border: 0; padding: 0; color: #176abd; background: transparent; font: inherit; font-size: .83rem; cursor: pointer; }
 .catalog-submission-dialog__error { margin: 0; color: #bf2e4d; font-size: .84rem; }
 .catalog-submission-dialog__actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding-top: 3px; }
 .catalog-submission-dialog__actions > button:first-child,
@@ -86,14 +87,16 @@
 
 .catalog-submission-dialog__actions :deep(.ui-button) { min-height: 44px; border-radius: 10px !important; padding-inline: 18px; }
 .catalog-submission-dialog__success { display: grid; justify-items: center; gap: 12px; padding: 32px 24px 38px; text-align: center; }
-.catalog-submission-dialog__success span { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; color: #fff; background: #409eff; font-size: 2rem; }
+.catalog-submission-dialog__success > .anticon { color: var(--btn-primary-bg); font-size: 64px; }
 .catalog-submission-dialog__success p { margin: 0 0 8px; font-size: 1.1rem; font-weight: 800; }
-.catalog-submission-dialog__success button { min-width: 120px; border: 0; color: #fff; background: #409eff; }
+.catalog-submission-dialog__success button { min-width: 120px; border: 0; color: var(--btn-primary-fg); background: var(--btn-primary-bg); }
+.catalog-submission-dialog__success button:hover { background: var(--btn-primary-bg-hover); }
 .catalog-submission-dialog :is(button, input):focus-visible { outline: 3px solid var(--focus-ring, #409eff); outline-offset: 2px; }
 
 @media (max-width: 560px) {
   .catalog-submission-dialog { width: calc(100% - 20px); max-height: calc(100dvh - 24px); border-radius: 18px; }
-  .catalog-submission-dialog__header { padding: 20px 20px 12px; }
-  .catalog-submission-dialog__form { padding: 0 20px 22px; }
+  .catalog-submission-dialog__header { padding: 18px; }
+  .catalog-submission-dialog__form { padding: 20px 18px 22px; }
+  .catalog-submission-dialog__names,
   .catalog-submission-dialog__optional { grid-template-columns: 1fr; }
 }

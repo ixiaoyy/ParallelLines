@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CheckCircleFilled, CloseOutlined, UploadOutlined } from "@ant-design/icons-vue";
 import { nextTick, onUnmounted, ref, watch } from "vue";
 
 import { submitCatalogProject } from "@/features/catalog/submissionsApi";
@@ -132,29 +133,27 @@ async function submit(): Promise<void> {
 <template>
   <dialog ref="dialog" class="catalog-submission-dialog" aria-labelledby="catalog-submission-title" @close="onClosed" @cancel="onCancel">
     <div class="catalog-submission-dialog__header">
-      <div>
-        <p class="catalog-submission-dialog__eyebrow">分享有趣的游戏</p>
-        <h2 id="catalog-submission-title">投稿项目</h2>
-      </div>
-      <button type="button" class="catalog-submission-dialog__close" aria-label="关闭投稿窗口" :disabled="isSubmitting" @click="closeDialog">×</button>
+      <h2 id="catalog-submission-title"><UploadOutlined aria-hidden="true" /> 投稿游戏</h2>
+      <button type="button" class="catalog-submission-dialog__close" aria-label="关闭投稿窗口" :disabled="isSubmitting" @click="closeDialog"><CloseOutlined aria-hidden="true" /></button>
     </div>
 
     <div v-if="isSubmitted" class="catalog-submission-dialog__success" role="status">
-      <span aria-hidden="true">✓</span>
-      <p>请耐心等待管理员审核</p>
+      <CheckCircleFilled aria-hidden="true" />
+      <p>待审核</p>
       <button type="button" @click="closeDialog">完成</button>
     </div>
 
     <form v-else class="catalog-submission-dialog__form" @submit.prevent="submit">
-      <p class="catalog-submission-dialog__intro">填写游戏信息，审核通过后会显示在首页。</p>
+      <div class="catalog-submission-dialog__names">
       <label>
         <span>分类名称 <strong>*</strong></span>
         <input v-model="categoryName" name="category_name" type="text" maxlength="120" required autocomplete="off" autofocus placeholder="例如：休闲" />
       </label>
       <label>
-        <span>项目名称 <strong>*</strong></span>
+        <span>游戏名称 <strong>*</strong></span>
         <input v-model="projectName" name="project_name" type="text" maxlength="120" required autocomplete="off" placeholder="输入游戏名称" />
       </label>
+      </div>
       <label>
         <span>游戏链接 <strong>*</strong></span>
         <input v-model="url" name="url" type="url" maxlength="2048" required inputmode="url" placeholder="https://" />
@@ -170,8 +169,13 @@ async function submit(): Promise<void> {
         </label>
       </div>
       <div class="catalog-submission-dialog__cover">
-        <label for="catalog-submission-cover">封面图 <small>选填，最大 2 MB</small></label>
-        <input id="catalog-submission-cover" ref="coverInput" name="cover" type="file" accept="image/png,image/jpeg,image/gif,image/webp" @change="selectCover" />
+        <label id="catalog-submission-cover-label" for="catalog-submission-cover">封面图 <small>选填，最大 2 MB</small></label>
+        <!-- 中文按钮触发现有文件选择与校验，避免原生控件受浏览器语言影响。 -->
+        <input id="catalog-submission-cover" ref="coverInput" name="cover" type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden @change="selectCover" />
+        <div class="catalog-submission-dialog__cover-picker">
+          <button type="button" class="catalog-submission-dialog__choose-cover" aria-describedby="catalog-submission-cover-label" @click="coverInput?.click()">{{ cover ? '更换封面' : '选择封面' }}</button>
+          <span v-if="cover" class="catalog-submission-dialog__filename" :title="cover.name">{{ cover.name }}</span>
+        </div>
         <img v-if="coverPreview" :src="coverPreview" alt="已选封面预览" />
         <button v-if="coverPreview || coverError" type="button" class="catalog-submission-dialog__clear-cover" @click="clearCover">移除封面</button>
         <p v-if="coverError" role="alert" class="catalog-submission-dialog__error">{{ coverError }}</p>

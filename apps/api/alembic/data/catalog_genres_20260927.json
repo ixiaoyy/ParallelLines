@@ -1,0 +1,1247 @@
+{
+  "snapshot_date": "2026-09-27",
+  "categories": [
+    {
+      "slug": "action",
+      "name": "动作"
+    },
+    {
+      "slug": "shooting",
+      "name": "射击"
+    },
+    {
+      "slug": "racing",
+      "name": "竞速"
+    },
+    {
+      "slug": "stages",
+      "name": "闯关"
+    },
+    {
+      "slug": "puzzle",
+      "name": "解谜"
+    },
+    {
+      "slug": "rts",
+      "name": "策略"
+    },
+    {
+      "slug": "tower-defense",
+      "name": "塔防"
+    },
+    {
+      "slug": "cards",
+      "name": "卡牌"
+    },
+    {
+      "slug": "rpg",
+      "name": "角色扮演"
+    },
+    {
+      "slug": "simulation",
+      "name": "模拟经营"
+    },
+    {
+      "slug": "casual",
+      "name": "休闲"
+    },
+    {
+      "slug": "romance",
+      "name": "恋爱"
+    },
+    {
+      "slug": "horror",
+      "name": "恐怖"
+    },
+    {
+      "slug": "exploration",
+      "name": "探索"
+    },
+    {
+      "slug": "farming",
+      "name": "种田"
+    }
+  ],
+  "previous_categories": [
+    {
+      "slug": "games",
+      "name": "游戏"
+    },
+    {
+      "slug": "shooting",
+      "name": "射击"
+    },
+    {
+      "slug": "racing",
+      "name": "竞速"
+    },
+    {
+      "slug": "funny",
+      "name": "搞怪"
+    },
+    {
+      "slug": "puzzle",
+      "name": "智力"
+    },
+    {
+      "slug": "casual",
+      "name": "休闲"
+    },
+    {
+      "slug": "cards",
+      "name": "卡牌"
+    },
+    {
+      "slug": "romance",
+      "name": "恋爱"
+    },
+    {
+      "slug": "stages",
+      "name": "闯关"
+    },
+    {
+      "slug": "tower-defense",
+      "name": "塔防"
+    },
+    {
+      "slug": "horror",
+      "name": "恐怖"
+    },
+    {
+      "slug": "exploration",
+      "name": "探索"
+    },
+    {
+      "slug": "rts",
+      "name": "即时战略"
+    },
+    {
+      "slug": "astra-action-arcade",
+      "name": "动作与街机"
+    },
+    {
+      "slug": "astra-puzzle-brain",
+      "name": "解谜与益智"
+    },
+    {
+      "slug": "astra-strategy-simulation",
+      "name": "策略与模拟"
+    },
+    {
+      "slug": "astra-rpg-adventure",
+      "name": "RPG 与冒险"
+    },
+    {
+      "slug": "astra-platform-racing",
+      "name": "平台跳跃与竞速"
+    },
+    {
+      "slug": "astra-experimental-multiplayer",
+      "name": "实验玩法与多人游戏"
+    },
+    {
+      "slug": "farming",
+      "name": "种田"
+    }
+  ],
+  "projects": [
+    {
+      "slug": "csgo-desert",
+      "name": "CSGO ·沙漠行动",
+      "previous_category": "shooting",
+      "category": "shooting"
+    },
+    {
+      "slug": "cf-transport",
+      "name": "穿越火线之运输船",
+      "previous_category": "shooting",
+      "category": "shooting"
+    },
+    {
+      "slug": "qq-racing",
+      "name": "QQ飞车",
+      "previous_category": "racing",
+      "category": "racing"
+    },
+    {
+      "slug": "pelican-bike",
+      "name": "鹈鹕骑自行车",
+      "previous_category": "racing",
+      "category": "racing"
+    },
+    {
+      "slug": "qin-imperial-factory",
+      "name": "秦始皇打螺丝",
+      "previous_category": "funny",
+      "category": "simulation"
+    },
+    {
+      "slug": "clock-out",
+      "name": "准点下班",
+      "previous_category": "puzzle",
+      "category": "puzzle"
+    },
+    {
+      "slug": "merge-watermelon",
+      "name": "合成大西瓜",
+      "previous_category": "puzzle",
+      "category": "casual"
+    },
+    {
+      "slug": "generals-soldiers",
+      "name": "将军战小兵",
+      "previous_category": "puzzle",
+      "category": "rts"
+    },
+    {
+      "slug": "voxel-tides",
+      "name": "体素潮汐",
+      "previous_category": "casual",
+      "category": "casual"
+    },
+    {
+      "slug": "liuxin-watermelon",
+      "name": "流心西瓜",
+      "previous_category": "casual",
+      "category": "casual"
+    },
+    {
+      "slug": "super-mario",
+      "name": "超级马里奥",
+      "previous_category": "casual",
+      "category": "stages"
+    },
+    {
+      "slug": "infinite-garden",
+      "name": "无限庭院",
+      "previous_category": "casual",
+      "category": "puzzle"
+    },
+    {
+      "slug": "fruit-ninja",
+      "name": "水果忍者",
+      "previous_category": "casual",
+      "category": "casual"
+    },
+    {
+      "slug": "yu-gi-oh-destiny-duel",
+      "name": "游戏王",
+      "previous_category": "cards",
+      "category": "cards"
+    },
+    {
+      "slug": "zhi-guai-lu",
+      "name": "志怪录",
+      "previous_category": "cards",
+      "category": "cards"
+    },
+    {
+      "slug": "sanguo-zhengshi",
+      "name": "三国争势",
+      "previous_category": "cards",
+      "category": "cards"
+    },
+    {
+      "slug": "secondhand-3c-store",
+      "name": "二手3C店",
+      "previous_category": "romance",
+      "category": "romance"
+    },
+    {
+      "slug": "sneaky-thief",
+      "name": "Sneaky Thief",
+      "previous_category": "stages",
+      "category": "stages"
+    },
+    {
+      "slug": "xing-lei-shou-wei",
+      "name": "星垒守卫",
+      "previous_category": "tower-defense",
+      "category": "tower-defense"
+    },
+    {
+      "slug": "yongyao-crystal-tower",
+      "name": "永耀晶塔",
+      "previous_category": "tower-defense",
+      "category": "tower-defense"
+    },
+    {
+      "slug": "yeyu-tanglou",
+      "name": "夜雨唐楼",
+      "previous_category": "horror",
+      "category": "horror"
+    },
+    {
+      "slug": "non-euclidean-lab",
+      "name": "非欧空间实验室",
+      "previous_category": "exploration",
+      "category": "exploration"
+    },
+    {
+      "slug": "geodesic-explorer",
+      "name": "测地线",
+      "previous_category": "exploration",
+      "category": "exploration"
+    },
+    {
+      "slug": "hyperbolic-room",
+      "name": "双曲房间",
+      "previous_category": "exploration",
+      "category": "exploration"
+    },
+    {
+      "slug": "encounter-command-console",
+      "name": "遭遇战指挥台",
+      "previous_category": "rts",
+      "category": "rts"
+    },
+    {
+      "slug": "astra-9681da78b6870a313d7b",
+      "name": "Mosswing",
+      "previous_category": "astra-action-arcade",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-033070040847094f8086",
+      "name": "Astra Floor",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-ee2530db3a32bac36e92",
+      "name": "Stadium Elite — El Clásico",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-a530e034c1041a8a6bb6",
+      "name": "Magic Carpet Wizard — A Thousand Skies",
+      "previous_category": "astra-action-arcade",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-4e56244d7b46908ff88a",
+      "name": "雷霆战机 · 天穹远征 / THUNDERFALL",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-427abefc3be5bb52b0f4",
+      "name": "IRON BASTION / 钢铁防线",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-c54ccbf7b89c49bc169f",
+      "name": "Stick Fighter",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-5e2dfc04f35bdbdc5182",
+      "name": "Gogh Strike · Paint Clash",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-9525ab52b6ffdd451247",
+      "name": "ASTEROIDS · Deepfield",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-171ef06c04fe47b6aba4",
+      "name": "BLACKWATER · Silent Harbor",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-dc6c61d34f6085cec364",
+      "name": "Cinderfall · Fire, Shadow & Steel",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-e27160e1a2ea0440b983",
+      "name": "Oz Breakdance",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-514f1f85af2c13a8a0db",
+      "name": "Astral War",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-b56616ef96dcdfd3915c",
+      "name": "FLOP CLUB",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-1f6a98b5e4ffccd9e0e0",
+      "name": "Vector Dive — Beyond the Signal",
+      "previous_category": "astra-action-arcade",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-0df6eab4b08d9cec0900",
+      "name": "Harbor Skirmish",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-110eb6b0d2cacba8d82a",
+      "name": "UNDERGROUND — 地下拳场",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-5ed24019b4bc6c2f4bba",
+      "name": "街头小子 · Urban Champion 3D",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-b804c57bcee1770a6984",
+      "name": "零点街区 · 弹壳特攻队 3D",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-4b26cfbaf3acf31f2e91",
+      "name": "ASCII DISTRICT",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-8e8e67c90f76ee3d4e3d",
+      "name": "Aura Farming: Unbothered",
+      "previous_category": "astra-action-arcade",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-cf21798c175fa3c01ea5",
+      "name": "CHRONO RAID · SUZUNE & AOI",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-ad990346ecd44af5763a",
+      "name": "MR. NIPS · Twin Trouble",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-e13954694a0138f0245e",
+      "name": "Billionaire Pit",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-7a8bc7cf73a496a2a730",
+      "name": "血裔决斗Ⅱ / Nightborn Clash",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-e1736be90df14b693943",
+      "name": "Thornwake",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-336bdb8fe529f674d208",
+      "name": "DEAD END — Oakridge",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-b75c762d7b3587880bde",
+      "name": "Anime Rift — The Crossover Arena",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-5d63b84efb1e7eddf60a",
+      "name": "VeilFall — God’s Heart",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-1262d1b2a44aba7aeb65",
+      "name": "Butterball Run — Dinner Has Other Plans",
+      "previous_category": "astra-action-arcade",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-830858db804e19269f8b",
+      "name": "Tideglass Hunt",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-ca4e89010438edf3221e",
+      "name": "Canteen Crashers",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-1647d744e3f32e884f07",
+      "name": "こもれびの木の実あつめ / Komorebi Nut Gathering",
+      "previous_category": "astra-action-arcade",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-9243a9d003c2a862c3f1",
+      "name": "PATCH",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-6dfeaf0e929ecc36236c",
+      "name": "DEADBLOCK: Outbreak",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-e0757a3020dbd424e5f7",
+      "name": "Dropzone Royale",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-b1aa19771af411e30123",
+      "name": "Mog Mode",
+      "previous_category": "astra-action-arcade",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-020bc8d35fff46649d48",
+      "name": "The Crownless",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-1456aaa71e27fd2dd5e4",
+      "name": "Until the Crown Falls",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-2550b40d229c543ba438",
+      "name": "VOIDBOUND — The Choir of Ash",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-cba3393948adc795e4bf",
+      "name": "u/NIVERSE — Orbital Duel",
+      "previous_category": "astra-action-arcade",
+      "category": "action"
+    },
+    {
+      "slug": "astra-3f1d96e276c8d953ada4",
+      "name": "RUNNER — Stage 1",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-9a73cbc429bb4b6302fd",
+      "name": "DRONE.IO — Proving Grounds",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-3e01116f87092370c360",
+      "name": "Neural Sight",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-510528ad665e86f7105b",
+      "name": "Knightmare — Medusa’s Temple",
+      "previous_category": "astra-action-arcade",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-663eb3201a700c806ecf",
+      "name": "准点下班，别被发现 / Clock Out Unseen",
+      "previous_category": "astra-action-arcade",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-7edd4effafa83b4fd55a",
+      "name": "Vesper: The Last Light",
+      "previous_category": "astra-puzzle-brain",
+      "category": "puzzle"
+    },
+    {
+      "slug": "astra-940973d6b1805a52c1f0",
+      "name": "Mystery Town",
+      "previous_category": "astra-puzzle-brain",
+      "category": "puzzle"
+    },
+    {
+      "slug": "astra-b423557db87dd3dfe26c",
+      "name": "Q弹消消乐",
+      "previous_category": "astra-puzzle-brain",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-7e0d2e37b2e9a32fdd31",
+      "name": "榫境 / Sunjing Puzzles",
+      "previous_category": "astra-puzzle-brain",
+      "category": "puzzle"
+    },
+    {
+      "slug": "astra-e26e7da684d9a4ee7920",
+      "name": "CityMaker / 城市营造",
+      "previous_category": "astra-puzzle-brain",
+      "category": "puzzle"
+    },
+    {
+      "slug": "astra-2816434faa3e026e79a3",
+      "name": "Bonkshot",
+      "previous_category": "astra-puzzle-brain",
+      "category": "puzzle"
+    },
+    {
+      "slug": "astra-27f541f14365c72d05f5",
+      "name": "Greenhouse Escape Room: The Last Seed",
+      "previous_category": "astra-puzzle-brain",
+      "category": "puzzle"
+    },
+    {
+      "slug": "astra-6db391ac7ca0252ae0e0",
+      "name": "Pixel Orchard — Memory Harvest",
+      "previous_category": "astra-puzzle-brain",
+      "category": "puzzle"
+    },
+    {
+      "slug": "astra-9823a3093b650ec22bca",
+      "name": "Lantern Cove — The Borrowed Light",
+      "previous_category": "astra-puzzle-brain",
+      "category": "puzzle"
+    },
+    {
+      "slug": "astra-302db576aa575673a6b8",
+      "name": "Tidehook",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-b380953a44102d0db87f",
+      "name": "Dwellcraft · 住进想象",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-13e191190e8a1455565e",
+      "name": "Little Kingdom Chess / 작은 왕국 체스",
+      "previous_category": "astra-strategy-simulation",
+      "category": "rts"
+    },
+    {
+      "slug": "astra-1457d625c8a918dc1e2a",
+      "name": "JUNK RUN",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-d84a25a4df3178232958",
+      "name": "Spy or Lie",
+      "previous_category": "astra-strategy-simulation",
+      "category": "rts"
+    },
+    {
+      "slug": "astra-41517b64128da07f9617",
+      "name": "三分天下 · 百将风云 / Three Kingdoms: Hundred Heroes",
+      "previous_category": "astra-strategy-simulation",
+      "category": "rts"
+    },
+    {
+      "slug": "astra-8a030cbab06c13f6c191",
+      "name": "最后的灯塔 / Last Beacon",
+      "previous_category": "astra-strategy-simulation",
+      "category": "tower-defense"
+    },
+    {
+      "slug": "astra-98ab881e21164befcedf",
+      "name": "缺氧 · 小小星球",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-9343e6e1d5a4134df6dd",
+      "name": "魔塔 · 永夜之阶",
+      "previous_category": "astra-strategy-simulation",
+      "category": "rpg"
+    },
+    {
+      "slug": "astra-fc74f8d97d62a6f67c35",
+      "name": "永恒荒野",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-e97dc74ac42fa72b2013",
+      "name": "潜水员戴夫（复刻）",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-e2e57a088c363d9523dc",
+      "name": "No Moat",
+      "previous_category": "astra-strategy-simulation",
+      "category": "cards"
+    },
+    {
+      "slug": "astra-1f124b8987bc57034cb4",
+      "name": "The Free Game",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-3613b6738feb9721018b",
+      "name": "AGI of Empires — The Compute Wars",
+      "previous_category": "astra-strategy-simulation",
+      "category": "rts"
+    },
+    {
+      "slug": "astra-ac4711656abf9e51fd5d",
+      "name": "Atlas Go",
+      "previous_category": "astra-strategy-simulation",
+      "category": "rts"
+    },
+    {
+      "slug": "astra-91e926e559e666303499",
+      "name": "Ironwood — The Art of Industry",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-d29e74ac15e222629347",
+      "name": "DUST FRONT",
+      "previous_category": "astra-strategy-simulation",
+      "category": "rts"
+    },
+    {
+      "slug": "astra-21fdaee391d39bb0fe8e",
+      "name": "前线指令 / Frontline Command",
+      "previous_category": "astra-strategy-simulation",
+      "category": "rts"
+    },
+    {
+      "slug": "astra-ba96746fb674fe6e5d75",
+      "name": "Coin Pusher Roguelite: Mintfall",
+      "previous_category": "astra-strategy-simulation",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-e3695f0dd288ac441539",
+      "name": "Westward — The Oregon Trail",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-62518178767a834b0c47",
+      "name": "Outerstead · First Light",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-a146ecd81e3c0fd17f7c",
+      "name": "Chess Cubed",
+      "previous_category": "astra-strategy-simulation",
+      "category": "rts"
+    },
+    {
+      "slug": "astra-1ad2d1b439fada4dad43",
+      "name": "Outermate: First Count",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-4ba67655fe5503789186",
+      "name": "Česká dobrodružství / Czech Adventures",
+      "previous_category": "astra-strategy-simulation",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-b697350134145531b660",
+      "name": "Land, If You Can",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-d539e7dea52f4dbdbe98",
+      "name": "Last Train to the Sea",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-5499fb7a30e7096d20a2",
+      "name": "Realm of Seratari",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-ad8fb9993f77c939ac37",
+      "name": "Monopoly City — A Board Worth Exploring",
+      "previous_category": "astra-strategy-simulation",
+      "category": "rts"
+    },
+    {
+      "slug": "astra-0a5696802efe2cf4eb0b",
+      "name": "MUST. MAKE. PAPERCLIPS.",
+      "previous_category": "astra-strategy-simulation",
+      "category": "tower-defense"
+    },
+    {
+      "slug": "astra-32c586b2d4fdbceea43b",
+      "name": "Sundrift — Take the Slow Way Home",
+      "previous_category": "astra-strategy-simulation",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-f5b73abc93d34c914618",
+      "name": "VeilFall: The Hollow War",
+      "previous_category": "astra-strategy-simulation",
+      "category": "action"
+    },
+    {
+      "slug": "astra-822e1e16714fc7467967",
+      "name": "Minimum Rage",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-28ab51385456596132c2",
+      "name": "Cabsolutely",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-3e12e1f7db12c5958a70",
+      "name": "Mini Moto — Pine Ridge Park",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-3ddd716f2c1c5dc5bbf9",
+      "name": "DASH / DINNER",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-2e78b1f9bfe2d5a51ddb",
+      "name": "Aegis Flora",
+      "previous_category": "astra-strategy-simulation",
+      "category": "tower-defense"
+    },
+    {
+      "slug": "astra-a3c15daa5c7684de01cd",
+      "name": "Stillwater · Aquarium",
+      "previous_category": "astra-strategy-simulation",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-23b1fcf02285084d4a7a",
+      "name": "The Sunshard",
+      "previous_category": "astra-rpg-adventure",
+      "category": "rpg"
+    },
+    {
+      "slug": "astra-097dd5d8242f560dea43",
+      "name": "Lumbridge / Elderwood Realms",
+      "previous_category": "astra-rpg-adventure",
+      "category": "rpg"
+    },
+    {
+      "slug": "astra-9901d0cd25f74f721cf1",
+      "name": "Silent Meridian / 静默子午线",
+      "previous_category": "astra-rpg-adventure",
+      "category": "puzzle"
+    },
+    {
+      "slug": "astra-9f6053150e5437975ac9",
+      "name": "热血归来 · 八荒幻世 / Mir176 Dragon Warrior",
+      "previous_category": "astra-rpg-adventure",
+      "category": "rpg"
+    },
+    {
+      "slug": "astra-c7b9aeab0d6f3976e12c",
+      "name": "Zork · The Great Underground Empire",
+      "previous_category": "astra-rpg-adventure",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-57a0366da3327902a1d2",
+      "name": "The Simpsons: Hit & Run — Browser Recreation",
+      "previous_category": "astra-rpg-adventure",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-cc9ad512ca686135fe76",
+      "name": "Where the Wind Wanders",
+      "previous_category": "astra-rpg-adventure",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-1e630c47189c3cb4ad86",
+      "name": "ALIBI — The Last Light",
+      "previous_category": "astra-rpg-adventure",
+      "category": "puzzle"
+    },
+    {
+      "slug": "astra-2462f7e67812cd9ee2e6",
+      "name": "Skyward: The Gathering",
+      "previous_category": "astra-rpg-adventure",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-11e2fc3f012ef76af1b3",
+      "name": "Anna & Leo · The Starstone Adventure",
+      "previous_category": "astra-rpg-adventure",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-6c6975eca8cff6aac94b",
+      "name": "The Legend of Deller",
+      "previous_category": "astra-rpg-adventure",
+      "category": "rpg"
+    },
+    {
+      "slug": "astra-0751dc4e0b9b7bc13c1f",
+      "name": "Dungeon of Astra",
+      "previous_category": "astra-rpg-adventure",
+      "category": "rpg"
+    },
+    {
+      "slug": "astra-1f43aa750906959d1b06",
+      "name": "Sunlandia — The Forgotten Shore",
+      "previous_category": "astra-rpg-adventure",
+      "category": "puzzle"
+    },
+    {
+      "slug": "astra-675f30f4da9dcb9b6abb",
+      "name": "NÁCAR",
+      "previous_category": "astra-rpg-adventure",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-b5a8161cbae513e928bf",
+      "name": "BELOW — The Hollow",
+      "previous_category": "astra-rpg-adventure",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-ce6f6e868e0d7108ec78",
+      "name": "The Road to Kufa",
+      "previous_category": "astra-rpg-adventure",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-df451d3127e5ce9143ab",
+      "name": "Grand Theft Auto VI — PS1 Demake",
+      "previous_category": "astra-rpg-adventure",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-f029a391ce93b0a0b3e2",
+      "name": "Don't Look Away — Saint Orison",
+      "previous_category": "astra-rpg-adventure",
+      "category": "horror"
+    },
+    {
+      "slug": "astra-f3e517b6e512b56ed07a",
+      "name": "Europe, the Game",
+      "previous_category": "astra-rpg-adventure",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-6c4baeb741c84dea15a5",
+      "name": "Barrelbound: The Lost Cargo",
+      "previous_category": "astra-platform-racing",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-f4db700a1d7970c900b3",
+      "name": "STORM RACE",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-018c7f79463bb6a93fe7",
+      "name": "FANG STARLIGHT RUN",
+      "previous_category": "astra-platform-racing",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-08fc75f5fd8f3ba4bd73",
+      "name": "Blue Bajaj Rally",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-e48428f88519b6c8b7a3",
+      "name": "APEX CLUB — Bay Kart Grand Prix",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-2ad71fb927a8d308c2d9",
+      "name": "PELICAN PEDAL / 鹈鹕踏浪",
+      "previous_category": "astra-platform-racing",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-d98f28295a8e9b7abb3e",
+      "name": "狂飙赛车 · OVERDRIVE",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-bd4a5c51c39e59d80055",
+      "name": "零界深潜 / ABYSS PROTOCOL",
+      "previous_category": "astra-platform-racing",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-c3ad2159872d2b53299e",
+      "name": "疾风赛道 / Kart Racing（跑跑卡丁车）",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-169a094a99f2babbad62",
+      "name": "TIDAL RUSH — Paradise GP",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-ff7eb021356988a2ee2e",
+      "name": "LUNA — Crimson Requiem / 紅月のレクイエム",
+      "previous_category": "astra-platform-racing",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-2f8b06306e8317e776f7",
+      "name": "Strange Orbit",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-2ed775b07a1f3dec93af",
+      "name": "One More Vine — Into the Wild",
+      "previous_category": "astra-platform-racing",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-9dbd59a9718b252daedf",
+      "name": "混合马里奥Ⅱ · 忍者龙剑传 × 坦克大战 / Mario Mix II",
+      "previous_category": "astra-platform-racing",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-737515ccf06e471b66db",
+      "name": "Bengaluru ORR Rush",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-2afd72d658a118edf721",
+      "name": "SKICROSS · 极地速降",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-0fc050c56af452204941",
+      "name": "Itsy Bitsy Spider · One More Climb",
+      "previous_category": "astra-platform-racing",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-4c2940525db8caea8e83",
+      "name": "Desi Mayhem",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-75786d9934b010b4af5f",
+      "name": "Cosmic Tides",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-d1a1713d7d1c68ad526c",
+      "name": "Neon Wake — Dubai Coast",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-851063cb241124496353",
+      "name": "Wings of Freedom — Levi Skyrun",
+      "previous_category": "astra-platform-racing",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-f8ca3c8fc5591faad3fb",
+      "name": "Hot Wheeler",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-6b6d8bab39e3e7aa0e40",
+      "name": "旧城区 · 放学路 / Dual Realms",
+      "previous_category": "astra-platform-racing",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-5a1fc7753e77b9c80f1e",
+      "name": "Race Jimothy",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-e5528b49d98bff3b4a47",
+      "name": "Glider — One Throw. Endless Sky.",
+      "previous_category": "astra-platform-racing",
+      "category": "exploration"
+    },
+    {
+      "slug": "astra-1a08e60416474715e4c9",
+      "name": "Duck Off",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-9162b8eb054a23001222",
+      "name": "Wildwake Rally",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-e3e0c3779acf611a0d8a",
+      "name": "Icy Tower — Frostbound",
+      "previous_category": "astra-platform-racing",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-9a9c8b8c9d6ed29e3d5d",
+      "name": "VOIDRUNNER — Orbital Combat League",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-2d533a07e0ef09ed8b9c",
+      "name": "PaperRoute",
+      "previous_category": "astra-platform-racing",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-0e23961af475dd79edb9",
+      "name": "Zombie Escape Driver",
+      "previous_category": "astra-platform-racing",
+      "category": "stages"
+    },
+    {
+      "slug": "astra-a0dbfc0153d5468171c8",
+      "name": "DUSKLINE — Canyon Circuit",
+      "previous_category": "astra-platform-racing",
+      "category": "racing"
+    },
+    {
+      "slug": "astra-9e76a4627ebd2c414574",
+      "name": "RED FLAG GAME",
+      "previous_category": "astra-platform-racing",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-3bc0ec5d5d3997e98bfe",
+      "name": "Flappy Bird · Click to Fly",
+      "previous_category": "astra-platform-racing",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-29d562b3c4875f2e1f3e",
+      "name": "ASTRA Arcade",
+      "previous_category": "astra-experimental-multiplayer",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-02e8a97587019eaa433a",
+      "name": "Chao Party",
+      "previous_category": "astra-experimental-multiplayer",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-ddd7c102793a0868582d",
+      "name": "ORBITAL GARDEN · 轨道花园",
+      "previous_category": "astra-experimental-multiplayer",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-c077e9c5e3e217e584b6",
+      "name": "Toy2Game / 在线玩具箱",
+      "previous_category": "astra-experimental-multiplayer",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-618cbf01a70a0a9bbd98",
+      "name": "Jelly Baby",
+      "previous_category": "astra-experimental-multiplayer",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-e7a008ef7eb73d0c1e54",
+      "name": "泡泡坦克大作战联机版 / Toon Tank Arena",
+      "previous_category": "astra-experimental-multiplayer",
+      "category": "shooting"
+    },
+    {
+      "slug": "astra-d1673479a545e9932b92",
+      "name": "Above the Rooftops",
+      "previous_category": "astra-experimental-multiplayer",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-6a00ceb67a98334c3d14",
+      "name": "Starship Foundry — Isometric Flight Lab",
+      "previous_category": "astra-experimental-multiplayer",
+      "category": "simulation"
+    },
+    {
+      "slug": "astra-91365a2c81a00fb7fbe4",
+      "name": "POCKET_01 — Personal Game System",
+      "previous_category": "astra-experimental-multiplayer",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-2a8764b03af3aca71817",
+      "name": "Super Mario Bros. + Duck Hunt — Browser Port",
+      "previous_category": "astra-experimental-multiplayer",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-13508b94fa3c711d6b18",
+      "name": "Bubble Wrap Simulator",
+      "previous_category": "astra-experimental-multiplayer",
+      "category": "casual"
+    },
+    {
+      "slug": "astra-40bf72afcb8c1f4782ab",
+      "name": "Loulou’s Apartment",
+      "previous_category": "astra-experimental-multiplayer",
+      "category": "exploration"
+    },
+    {
+      "slug": "fablespace",
+      "name": "朝花夕拾",
+      "previous_category": "farming",
+      "category": "farming"
+    }
+  ]
+}
