@@ -293,5 +293,6 @@ def test_migration_has_one_head():
     config = Config()
     config.set_main_option("script_location", str(ROOT / "alembic"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["0081_catalog_games_and_views"]
-    assert script.get_revision("head").down_revision == "0080_unify_catalog_genres"
+    assert script.get_heads() == ["0082_add_fengling_town"]
+    assert len(script.get_heads()[0]) <= 32
+    assert script.get_revision("head").down_revision == "0081_catalog_games_and_views"

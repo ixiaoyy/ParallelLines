@@ -159,6 +159,7 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "astra-ff7eb021356988a2ee2e": "/catalog/2026-09-26-v2/covers/astra-ff7eb021356988a2ee2e.webp",
   "shi-yu-yuanfang": "/catalog/2026-09-27-v2/covers/shi-yu-yuanfang.webp",
   "hongloumeng-haitang-shishe": "/catalog/2026-09-27-v2/covers/hongloumeng-haitang-shishe.webp",
+  "fengling-town": "/catalog/2026-09-27-v3/covers/fengling-town.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {
