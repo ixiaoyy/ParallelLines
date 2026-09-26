@@ -27,8 +27,8 @@ export const router = createRouter({
       component: () => import("@/pages/catalog/CatalogHomePage.vue"),
       meta: {
         seo: {
-          title: "AI游戏收录 · {siteName}",
-          description: "在平行线按分类浏览 AI 游戏、搜索项目名称，查看作者与游客评分，前往原站体验。",
+          title: "AI 游戏 · GPT / Claude Code / Kimi · 点开即玩 | {siteName}",
+          description: "{siteName} 收录 AI 网页游戏，探索 GPT、Claude Code、Kimi 等工具带来的游戏创意。涵盖策略、卡牌、解谜、角色扮演与休闲玩法，按分类和热度发现游戏，点开即玩。",
           canonicalPath: "/",
         },
       },

@@ -405,12 +405,29 @@ class CatalogService:
     def _ip_digest(self, request: Request, *, required: bool) -> str | None:
         """只使用 Nginx 覆盖的 X-Real-IP 或直连地址，不保存原始 IP。"""
 
-        if len(self.settings.catalog_rating_ip_secret) < 32:
+        # 已有专用密钥保留原始字节，包括首尾空白，避免改变历史评分的访客身份。
+        configured_secret = self.settings.catalog_rating_ip_secret
+        if configured_secret and len(configured_secret) < 32:
             if required:
                 raise AppError(
                     "catalog_rating_unavailable", RATING_UNAVAILABLE_MESSAGE, status_code=503
                 )
             return None
+        # 没有单独配置时从现有生产 JWT 密钥派生用途隔离的评分密钥，避免新站上线后评分恒为 503。
+        if configured_secret:
+            digest_key = configured_secret.encode("utf-8")
+        else:
+            root_secret = self.settings.jwt_secret_key
+            if len(root_secret) < 32 or root_secret.startswith("change-me-"):
+                if required:
+                    raise AppError(
+                        "catalog_rating_unavailable", RATING_UNAVAILABLE_MESSAGE, status_code=503
+                    )
+                return None
+            # 十六进制子密钥可原样固定到专用配置，便于轮换 JWT 时保留评分身份。
+            digest_key = hmac.new(
+                root_secret.encode("utf-8"), b"catalog-rating-ip-key-v1", hashlib.sha256
+            ).hexdigest().encode("ascii")
         raw_ip = request.headers.get("x-real-ip") or (request.client.host if request.client else "")
         try:
             address = ipaddress.ip_address(raw_ip)
@@ -423,7 +440,7 @@ class CatalogService:
         if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped:
             address = address.ipv4_mapped
         return hmac.new(
-            self.settings.catalog_rating_ip_secret.encode("utf-8"),
+            digest_key,
             address.compressed.encode("ascii"),
             hashlib.sha256,
         ).hexdigest()

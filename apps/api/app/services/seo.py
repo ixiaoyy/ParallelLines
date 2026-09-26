@@ -147,7 +147,10 @@ class SeoService:
                 identity,
                 base_url,
                 "/",
-                title=f"AI游戏收录 · {site_brand_name(identity.title)}",
+                title=(
+                    "AI 游戏 · GPT / Claude Code / Kimi · 点开即玩 | "
+                    f"{site_brand_name(identity.title)}"
+                ),
                 description=site_description(identity),
             )
         if normalized == "/boards":
@@ -279,11 +282,14 @@ class SeoService:
                 identity,
                 base_url,
                 "/",
-                title=f"AI游戏收录 · {site_brand_name(identity.title)}",
+                title=(
+                    "AI 游戏 · GPT / Claude Code / Kimi · 点开即玩 | "
+                    f"{site_brand_name(identity.title)}"
+                ),
                 description=site_description(identity),
             ),
             heading=identity.title,
-            intro=site_description(identity),
+            intro="",
             links=links,
             site_structured_data=self._site_structured_data(identity, base_url),
         )
@@ -1379,7 +1385,11 @@ def setting_text(value: object, fallback: str) -> str:
 def site_description(identity: SeoSiteIdentity) -> str:
     """返回聚合目录描述，避免旧论坛副标题进入新首页与结构化数据。"""
 
-    return f"{site_brand_name(identity.title)}：AI游戏收录。按分类浏览、按项目名称搜索，查看作者与游客评分，前往原站体验。"
+    return (
+        f"{site_brand_name(identity.title)} 收录 AI 网页游戏，"
+        "探索 GPT、Claude Code、Kimi 等工具带来的游戏创意。"
+        "涵盖策略、卡牌、解谜、角色扮演与休闲玩法，按分类和热度发现游戏，点开即玩。"
+    )
 
 
 def site_brand_name(public_title: str) -> str:

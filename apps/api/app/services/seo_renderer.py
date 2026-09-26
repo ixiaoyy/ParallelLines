@@ -196,8 +196,10 @@ def render_semantic_fallback(document: SeoPageDocument) -> str:
         f'    <a href="/">{html.escape(document.site.title)}</a>',
         "  </nav>",
         f"  <h1>{html.escape(document.heading)}</h1>",
-        f"  <p>{html.escape(document.intro)}</p>",
     ]
+    # 首页没有额外简介时省略段落；其他页面的非空简介继续按原方式转义。
+    if document.intro:
+        sections.append(f"  <p>{html.escape(document.intro)}</p>")
     if document.identity_notice:
         sections.append(
             f'  <p class="seo-fallback__identity">{html.escape(document.identity_notice)}</p>'
