@@ -18,11 +18,12 @@ import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
 import CatalogSubmissionDialog from "./CatalogSubmissionDialog.vue";
 import CatalogLeaderboard from "./CatalogLeaderboard.vue";
 
-type SortMode = "latest" | "hot" | "views";
+type SortMode = "latest" | "hot";
 type CatalogView = "games" | "authors" | "contributors";
 type CatalogEntry = CatalogProject & { categorySlug: string; heat: number };
 const PAGE_SIZE = 24;
 const AUTHOR_PAGE_SIZE = 20;
+const HEART_HEAT_WEIGHT = 5;
 const SOURCE_CONTRIBUTOR_URL = "https://github.com/MartinDelophy/awesome-gpt-6-astra";
 const catalogAssetPath = "/catalog/2026-09-24-v1";
 const newCatalogAssetPath = "/catalog/2026-09-25-v1";
@@ -93,9 +94,9 @@ const allProjects = computed<CatalogEntry[]>(() =>
     category.projects.map((project) => ({
       ...project,
       categorySlug: category.slug,
-      // 旧缓存缺失浏览量按零处理；热度统一取累计浏览量与累计评分心数之和。
+      // 旧缓存缺失浏览量按零处理；每次浏览计 1 热度，每颗评分心心计 5 热度。
       viewCount: project.viewCount ?? 0,
-      heat: (project.viewCount ?? 0) + (project.ratingScoreSum ?? 0),
+      heat: (project.viewCount ?? 0) + (project.ratingScoreSum ?? 0) * HEART_HEAT_WEIGHT,
     })),
   ),
 );
@@ -167,13 +168,10 @@ const visibleProjects = computed(() => {
     return displayName(project).toLocaleLowerCase().includes(normalizedSearch.value);
   });
   return matching.sort((left, right) => {
-    // 热门与浏览分别按热度和浏览量排序；相同值仍使用原有最新及稳定顺序。
+    // 热门按浏览与心心的综合热度排序；相同值仍使用原有最新及稳定顺序。
     if (sortMode.value === "hot") {
       const heat = right.heat - left.heat;
       if (heat) return heat;
-    } else if (sortMode.value === "views") {
-      const views = right.viewCount - left.viewCount;
-      if (views) return views;
     }
     const created = Date.parse(right.createdAt) - Date.parse(left.createdAt);
     if (created) return created;
@@ -367,7 +365,6 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
             <div class="catalog-sort" role="group" aria-label="游戏排序">
               <button type="button" :class="{ 'is-active': sortMode === 'latest' }" :aria-pressed="sortMode === 'latest'" @click="sortMode = 'latest'"><ClockCircleFilled aria-hidden="true" /> 最新</button>
               <button type="button" :class="{ 'is-active': sortMode === 'hot' }" :aria-pressed="sortMode === 'hot'" @click="sortMode = 'hot'"><FireFilled aria-hidden="true" /> 热门</button>
-              <button type="button" :class="{ 'is-active': sortMode === 'views' }" :aria-pressed="sortMode === 'views'" @click="sortMode = 'views'"><EyeOutlined aria-hidden="true" /> 浏览</button>
             </div>
           </div>
           <div class="catalog-results" role="status">{{ visibleProjects.length }} 个游戏</div>
