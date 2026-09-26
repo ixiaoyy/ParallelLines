@@ -30,12 +30,16 @@ var/
 
 # Local browser, screenshot, and design-QA artifacts
 /.tmp_*
+/.codex-tmp/
+/tmp/
 /CURRENT_*.png
 /[0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*.png
 /design-qa*.md
+/apps/web/design-qa*.md
 
 # Local AI/Trellis tooling must never enter the repository
 /.agents/
+/.claude/
 /.codex/
 /.trellis/
 

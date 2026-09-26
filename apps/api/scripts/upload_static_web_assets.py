@@ -14,6 +14,9 @@ STATIC_WEB_PREFIX = "static/web"
 ASTRA_COVER_DIR = (
     Path(__file__).resolve().parents[3] / "static/web/catalog/2026-09-26-v1/covers"
 )
+ASTRA_ILLUSTRATION_DIR = (
+    Path(__file__).resolve().parents[3] / "static/web/catalog/2026-09-26-v2/covers"
+)
 
 
 @dataclass(frozen=True)
@@ -29,6 +32,11 @@ class StaticAsset:
 CATALOG_ASTRA_COVER_KEYS = tuple(
     f"catalog/2026-09-26-v1/covers/{path.name}"
     for path in sorted(ASTRA_COVER_DIR.glob("astra-*.svg"))
+)
+# 逐张制作的游戏插画只发布已完成的 WebP，旧 SVG 仍保留为未完成项目的兜底。
+CATALOG_ASTRA_ILLUSTRATION_KEYS = tuple(
+    f"catalog/2026-09-26-v2/covers/{path.name}"
+    for path in sorted(ASTRA_ILLUSTRATION_DIR.glob("astra-*.webp"))
 )
 
 CATALOG_ASSET_KEYS = (
@@ -61,7 +69,7 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-09-25-v1/covers/yongyao-crystal-tower.webp",
     "catalog/2026-09-25-v1/covers/yu-gi-oh-destiny-duel.webp",
     "catalog/2026-09-25-v1/covers/zhi-guai-lu.webp",
-) + CATALOG_ASTRA_COVER_KEYS
+) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 STATIC_ASSETS = (
     StaticAsset(
