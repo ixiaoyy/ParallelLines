@@ -567,6 +567,20 @@
   cursor: pointer;
 }
 
+.catalog-card__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 14px;
+  margin: 5px 0 2px;
+  color: #5d7394;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.catalog-card__stats > span { display: inline-flex; min-width: 0; align-items: center; gap: 5px; overflow-wrap: anywhere; }
+.catalog-card__views .anticon { color: #527ca8; }
+.catalog-card__heat .anticon { color: #d2753a; }
+
 .catalog-card__footer {
   display: flex;
   min-height: 44px;

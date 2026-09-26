@@ -380,6 +380,11 @@
           "url": {
             "title": "Url",
             "type": "string"
+          },
+          "view_count": {
+            "default": 0,
+            "title": "View Count",
+            "type": "integer"
           }
         },
         "required": [
@@ -1616,6 +1621,10 @@
         "type": "object"
       },
       "ApiResponse_CatalogSubmissionCreateResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_CatalogViewStateResponse_": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -3849,6 +3858,11 @@
           "url": {
             "title": "Url",
             "type": "string"
+          },
+          "view_count": {
+            "default": 0,
+            "title": "View Count",
+            "type": "integer"
           }
         },
         "required": [
@@ -4127,6 +4141,24 @@
           "decision"
         ],
         "title": "CatalogSubmissionReviewRequest",
+        "type": "object"
+      },
+      "CatalogViewStateResponse": {
+        "properties": {
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "view_count": {
+            "title": "View Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "view_count"
+        ],
+        "title": "CatalogViewStateResponse",
         "type": "object"
       },
       "ChangePasswordRequest": {
@@ -17964,6 +17996,49 @@
           }
         },
         "summary": "Rate Catalog Project",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/projects/{project_id}/views": {
+      "post": {
+        "description": "为公开项目的一次打开累计计数，返回提交后的总次数。",
+        "operationId": "record_catalog_project_view_api_v1_catalog_projects__project_id__views_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_CatalogViewStateResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Catalog Project View",
         "tags": [
           "catalog"
         ]

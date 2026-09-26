@@ -17,6 +17,7 @@ export interface AdminCatalogProject {
   average_score: number | null;
   rating_count: number;
   rating_score_sum: number;
+  view_count: number;
   my_score: number | null;
 }
 

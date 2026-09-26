@@ -6,7 +6,7 @@ import ipaddress
 import logging
 from urllib.parse import urlsplit
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -35,6 +35,7 @@ from app.schemas.catalog import (
     CatalogProjectUpdateRequest,
     CatalogRatingStateResponse,
     CatalogResponse,
+    CatalogViewStateResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,44 @@ class CatalogService:
                 for category in categories
             ]
         )
+
+    async def record_view(self, project_id: str) -> CatalogViewStateResponse:
+        """为指定公开项目累计一次打开并返回总数；不可见项目不写入且返回 404。"""
+
+        resolved_project_id = self._numeric_id(project_id)
+        try:
+            # 项目与父分类均可见时才原子递增，避免旧 ORM 对象或并发请求覆盖计数。
+            result = await self.session.execute(
+                update(CatalogProject)
+                .where(
+                    CatalogProject.id == resolved_project_id,
+                    CatalogProject.is_visible.is_(True),
+                    CatalogProject.category_id.in_(
+                        select(CatalogCategory.id).where(CatalogCategory.is_visible.is_(True))
+                    ),
+                )
+                .values(
+                    view_count=CatalogProject.view_count + 1,
+                    # 浏览统计不改变管理员的内容编辑时间。
+                    updated_at=CatalogProject.updated_at,
+                )
+                .execution_options(synchronize_session=False)
+            )
+            if result.rowcount != 1:
+                # 隐藏或不存在的项目保持统一 404，并结束本次无效写事务。
+                await self.session.rollback()
+                raise NotFoundError()
+            view_count = await self.session.scalar(
+                select(CatalogProject.view_count).where(CatalogProject.id == resolved_project_id)
+            )
+            await self.session.commit()
+            return CatalogViewStateResponse(project_id=resolved_project_id, view_count=view_count)
+        except SQLAlchemyError as exc:
+            await self.session.rollback()
+            logger.exception("catalog_view_failed", extra={"project_id": project_id})
+            raise AppError(
+                "catalog_view_unavailable", SAVE_FAILED_MESSAGE, status_code=503
+            ) from exc
 
     async def rate_project(
         self, project_id: str, score: int, request: Request
@@ -316,6 +355,7 @@ class CatalogService:
             author_url=project.author_url,
             icon_url=self._icon_url(project.icon_upload_id),
             created_at=project.created_at,
+            view_count=project.view_count,
             average_score=average,
             rating_count=count,
             rating_score_sum=score_sum,

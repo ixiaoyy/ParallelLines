@@ -190,6 +190,11 @@ class CatalogRatingStateResponse(BaseModel):
     my_score: int | None
 
 
+class CatalogViewStateResponse(BaseModel):
+    project_id: str
+    view_count: int
+
+
 class CatalogProjectResponse(BaseModel):
     id: str
     slug: str
@@ -205,6 +210,7 @@ class CatalogProjectResponse(BaseModel):
     rating_count: int
     rating_score_sum: int
     my_score: int | None
+    view_count: int = 0
 
 
 class CatalogCategoryResponse(BaseModel):

@@ -20,6 +20,7 @@ from app.schemas.catalog import (
     CatalogSubmissionCreateRequest,
     CatalogSubmissionCreateResponse,
     CatalogSubmissionReviewRequest,
+    CatalogViewStateResponse,
 )
 from app.schemas.common import ApiResponse
 from app.services.catalog import CatalogService
@@ -37,6 +38,23 @@ async def get_catalog(
 
     response.headers["Cache-Control"] = "private, no-store"
     return ApiResponse(data=await CatalogService(session, settings).public_catalog(request))
+
+
+@router.post(
+    "/projects/{project_id}/views",
+    response_model=ApiResponse[CatalogViewStateResponse],
+)
+async def record_catalog_project_view(
+    project_id: str,
+    response: Response,
+    session: SessionDep,
+    settings: SettingsDep,
+) -> ApiResponse[CatalogViewStateResponse]:
+    """为公开项目的一次打开累计计数，返回提交后的总次数。"""
+
+    response.headers["Cache-Control"] = "private, no-store"
+    state = await CatalogService(session, settings).record_view(project_id)
+    return ApiResponse(data=state)
 
 
 @router.post(

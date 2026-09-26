@@ -3,7 +3,7 @@ import {
   AimOutlined, AlertOutlined, AppstoreOutlined, ArrowRightOutlined,
   BulbOutlined, CarOutlined, ClockCircleFilled, CloseOutlined, CoffeeOutlined,
   CompassOutlined, CreditCardOutlined, CrownOutlined, DeploymentUnitOutlined,
-  FireFilled, FlagOutlined, HeartFilled, HeartOutlined, SafetyCertificateOutlined,
+  EyeOutlined, FireFilled, FlagOutlined, HeartFilled, HeartOutlined, SafetyCertificateOutlined,
   SearchOutlined, ShopOutlined, ThunderboltOutlined, TrophyOutlined, UploadOutlined,
 } from "@ant-design/icons-vue";
 import { computed, nextTick, ref, watch } from "vue";
@@ -12,15 +12,15 @@ import type { Component } from "vue";
 import type { CatalogProject } from "@/features/catalog/model";
 import { catalogAuthorKey, rankCatalogAuthors } from "@/features/catalog/authorRanking";
 import { getCatalogCoverPath } from "@/features/catalog/coverManifest";
-import { useCatalog, useRateCatalogProject } from "@/features/catalog/queries";
+import { useCatalog, useRateCatalogProject, useRecordCatalogProjectView } from "@/features/catalog/queries";
 import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
 
 import CatalogSubmissionDialog from "./CatalogSubmissionDialog.vue";
 import CatalogLeaderboard from "./CatalogLeaderboard.vue";
 
-type SortMode = "latest" | "hot";
+type SortMode = "latest" | "hot" | "views";
 type CatalogView = "games" | "authors" | "contributors";
-type CatalogEntry = CatalogProject & { categorySlug: string };
+type CatalogEntry = CatalogProject & { categorySlug: string; heat: number };
 const PAGE_SIZE = 24;
 const AUTHOR_PAGE_SIZE = 20;
 const SOURCE_CONTRIBUTOR_URL = "https://github.com/MartinDelophy/awesome-gpt-6-astra";
@@ -64,6 +64,7 @@ const seedOrder = new Map([
 
 const catalogQuery = useCatalog();
 const ratingMutation = useRateCatalogProject();
+const viewMutation = useRecordCatalogProjectView();
 const searchInput = ref("");
 const search = ref("");
 const submissionOpen = ref(false);
@@ -92,6 +93,9 @@ const allProjects = computed<CatalogEntry[]>(() =>
     category.projects.map((project) => ({
       ...project,
       categorySlug: category.slug,
+      // 旧缓存缺失浏览量按零处理；热度统一取累计浏览量与累计评分心数之和。
+      viewCount: project.viewCount ?? 0,
+      heat: (project.viewCount ?? 0) + (project.ratingScoreSum ?? 0),
     })),
   ),
 );
@@ -163,13 +167,13 @@ const visibleProjects = computed(() => {
     return displayName(project).toLocaleLowerCase().includes(normalizedSearch.value);
   });
   return matching.sort((left, right) => {
+    // 热门与浏览分别按热度和浏览量排序；相同值仍使用原有最新及稳定顺序。
     if (sortMode.value === "hot") {
-      const qualified = Number(isHot(right)) - Number(isHot(left));
-      if (qualified) return qualified;
-      const ratings = right.ratingCount - left.ratingCount;
-      if (ratings) return ratings;
-      const average = (right.averageScore ?? 0) - (left.averageScore ?? 0);
-      if (average) return average;
+      const heat = right.heat - left.heat;
+      if (heat) return heat;
+    } else if (sortMode.value === "views") {
+      const views = right.viewCount - left.viewCount;
+      if (views) return views;
     }
     const created = Date.parse(right.createdAt) - Date.parse(left.createdAt);
     if (created) return created;
@@ -278,6 +282,13 @@ function closeAuthorIntro(): void {
   authorDialog.value?.close();
 }
 
+// 游戏链接由浏览器直接打开新标签；仅左键/键盘点击和中键各记录一次，右键菜单不计数。
+// 参数为目标游戏与链接事件；不拦截默认行为、不移动目录或关闭作者弹窗。
+function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
+  if (event.type === "click" ? event.button !== 0 : event.type !== "auxclick" || event.button !== 1) return;
+  viewMutation.mutate({ projectId: project.id });
+}
+
 // 游客只提交首次评分；开发预览暂不开放评分。
 async function rateProject(project: CatalogProject, score: number): Promise<void> {
   if (isPreviewProject(project) || project.myScore !== null || pendingProjectId.value !== null) return;
@@ -356,6 +367,7 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
             <div class="catalog-sort" role="group" aria-label="游戏排序">
               <button type="button" :class="{ 'is-active': sortMode === 'latest' }" :aria-pressed="sortMode === 'latest'" @click="sortMode = 'latest'"><ClockCircleFilled aria-hidden="true" /> 最新</button>
               <button type="button" :class="{ 'is-active': sortMode === 'hot' }" :aria-pressed="sortMode === 'hot'" @click="sortMode = 'hot'"><FireFilled aria-hidden="true" /> 热门</button>
+              <button type="button" :class="{ 'is-active': sortMode === 'views' }" :aria-pressed="sortMode === 'views'" @click="sortMode = 'views'"><EyeOutlined aria-hidden="true" /> 浏览</button>
             </div>
           </div>
           <div class="catalog-results" role="status">{{ visibleProjects.length }} 个游戏</div>
@@ -367,12 +379,8 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
           <div v-else class="catalog-grid">
             <article v-for="(project, index) in displayedProjects" :key="project.id" class="catalog-card" :class="{ 'catalog-card--preview': isPreviewProject(project) }">
               <div class="catalog-card__media">
-                <!-- 站内项目保持路由跳转，外链当前页直达原站；首屏三张封面优先加载。 -->
-                <RouterLink v-if="project.kind === 'internal'" class="catalog-card__media-link" :to="project.url" :aria-label="`打开${displayName(project)}`">
-                  <img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" :loading="index < 3 ? 'eager' : 'lazy'" decoding="async" />
-                  <span v-else class="catalog-card__cover-fallback" :class="`catalog-card__cover-fallback--${fallbackCoverTone(project.slug)}`" aria-hidden="true"><span>{{ categoryName(project.categorySlug) }}</span><strong>{{ displayName(project) }}</strong><i>✦</i></span>
-                </RouterLink>
-                <a v-else class="catalog-card__media-link" :href="project.url" :aria-label="isPreviewProject(project) ? `查看${displayName(project)}的开发进度` : `打开${displayName(project)}`">
+                <!-- 站内、外链及开发预览都由原生链接在新标签打开；首屏三张封面优先加载。 -->
+                <a class="catalog-card__media-link" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="isPreviewProject(project) ? `查看${displayName(project)}的开发进度` : `打开${displayName(project)}`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">
                   <img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" :loading="index < 3 ? 'eager' : 'lazy'" decoding="async" />
                   <span v-else class="catalog-card__cover-fallback" :class="`catalog-card__cover-fallback--${fallbackCoverTone(project.slug)}`" aria-hidden="true"><span>{{ categoryName(project.categorySlug) }}</span><strong>{{ displayName(project) }}</strong><i>✦</i></span>
                 </a>
@@ -383,18 +391,21 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
               </div>
               <div class="catalog-card__body">
                 <h2>
-                  <RouterLink v-if="project.kind === 'internal'" class="catalog-card__title-link" :to="project.url">{{ displayName(project) }}</RouterLink>
-                  <a v-else class="catalog-card__title-link" :href="project.url">{{ displayName(project) }}</a>
+                  <a class="catalog-card__title-link" :href="project.url" target="_blank" rel="noopener noreferrer" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">{{ displayName(project) }}</a>
                 </h2>
                 <p class="catalog-card__author">
                   作者：<span v-if="isOriginalProject(project)">原创</span>
-                  <a v-else-if="project.authorName && project.authorUrl" :href="project.authorUrl" :aria-label="`查看${project.authorName}的作者链接`">{{ project.authorName }}</a>
+                  <a v-else-if="project.authorName && project.authorUrl" :href="project.authorUrl" target="_blank" rel="noopener noreferrer" :aria-label="`查看${project.authorName}的作者链接`">{{ project.authorName }}</a>
                   <button v-else-if="project.authorName" type="button" :aria-label="`查看${project.authorName}的作品`" @click="openAuthorIntro(project.authorName)">{{ project.authorName }}</button>
                   <span v-else>待补充</span>
                 </p>
+                <div class="catalog-card__stats">
+                  <span class="catalog-card__views" :aria-label="`${project.viewCount} 次浏览`" :title="`${project.viewCount} 次浏览`"><EyeOutlined aria-hidden="true" />{{ project.viewCount }}</span>
+                  <span class="catalog-card__heat" :aria-label="`热度 ${project.heat}`" :title="`热度 ${project.heat}`"><FireFilled aria-hidden="true" />{{ project.heat }}</span>
+                </div>
                 <div v-if="isPreviewProject(project)" class="catalog-card__footer catalog-card__footer--preview">
                   <span>持续开发中</span>
-                  <a class="catalog-card__open" :href="project.url" :aria-label="`查看${displayName(project)}的开发进度`"><ArrowRightOutlined aria-hidden="true" /></a>
+                  <a class="catalog-card__open" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="`查看${displayName(project)}的开发进度`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)"><ArrowRightOutlined aria-hidden="true" /></a>
                 </div>
                 <div v-else class="catalog-card__footer">
                   <div class="catalog-card__rating" :class="{ 'is-pending': pendingProjectId === project.id }">
@@ -406,8 +417,7 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
                     </div>
                     <span class="catalog-card__rating-count">{{ project.ratingCount }} 人评分</span>
                   </div>
-                  <RouterLink v-if="project.kind === 'internal'" class="catalog-card__open" :to="project.url" :aria-label="`打开${displayName(project)}`"><ArrowRightOutlined aria-hidden="true" /></RouterLink>
-                  <a v-else class="catalog-card__open" :href="project.url" :aria-label="`打开${displayName(project)}`"><ArrowRightOutlined aria-hidden="true" /></a>
+                  <a class="catalog-card__open" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="`打开${displayName(project)}`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)"><ArrowRightOutlined aria-hidden="true" /></a>
                 </div>
                 <p v-if="ratingErrorProjectId === project.id" class="catalog-card__rating-error" role="alert">评分暂时不可用，请稍后重试。</p>
               </div>
@@ -457,8 +467,7 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
       </div>
       <ul class="catalog-author-dialog__games">
         <li v-for="project in selectedAuthorProjects" :key="project.id">
-          <RouterLink v-if="project.kind === 'internal'" :to="project.url" @click="closeAuthorIntro"><img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" loading="lazy" /><span>{{ displayName(project) }}</span><ArrowRightOutlined aria-hidden="true" /></RouterLink>
-          <a v-else :href="project.url"><img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" loading="lazy" /><span>{{ displayName(project) }}</span><ArrowRightOutlined aria-hidden="true" /></a>
+          <a :href="project.url" target="_blank" rel="noopener noreferrer" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)"><img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" loading="lazy" /><span>{{ displayName(project) }}</span><ArrowRightOutlined aria-hidden="true" /></a>
         </li>
       </ul>
     </dialog>

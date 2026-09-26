@@ -4,6 +4,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     CHAR,
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -67,6 +68,11 @@ class CatalogProject(IntegerPrimaryKeyMixin, TimestampMixin, Base):
     )
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    # 每次公开打开累计一次；旧项目和新建项目均从零开始。
+    view_count: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, default=0, server_default="0"
+    )
 
     category: Mapped[CatalogCategory] = relationship("CatalogCategory", back_populates="projects")
 

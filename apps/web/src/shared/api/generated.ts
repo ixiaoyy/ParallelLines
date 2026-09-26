@@ -65,6 +65,7 @@ export interface components {
       sort_order: number;
       updated_at: string;
       url: string;
+      view_count?: number;
     };
     AdminCatalogResponse: {
       categories: Array<components["schemas"]["AdminCatalogCategoryResponse"]>;
@@ -314,6 +315,9 @@ export interface components {
       [key: string]: unknown;
     };
     ApiResponse_CatalogSubmissionCreateResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_CatalogViewStateResponse_: {
       [key: string]: unknown;
     };
     ApiResponse_DailyReportProfileResponse_: {
@@ -921,6 +925,7 @@ export interface components {
       rating_score_sum: number;
       slug: string;
       url: string;
+      view_count?: number;
     };
     CatalogProjectUpdateRequest: {
       author_name?: string | null;
@@ -954,6 +959,10 @@ export interface components {
     };
     CatalogSubmissionReviewRequest: {
       decision: "approve" | "reject";
+    };
+    CatalogViewStateResponse: {
+      project_id: string;
+      view_count: number;
     };
     ChangePasswordRequest: {
       current_password: string;
@@ -2669,6 +2678,9 @@ export interface paths {
     };
     "/api/v1/catalog/projects/{project_id}/ratings": {
       post: { response: components["schemas"]["ApiResponse_CatalogRatingStateResponse_"]; operationId: "rate_catalog_project_api_v1_catalog_projects__project_id__ratings_post" };
+    };
+    "/api/v1/catalog/projects/{project_id}/views": {
+      post: { response: components["schemas"]["ApiResponse_CatalogViewStateResponse_"]; operationId: "record_catalog_project_view_api_v1_catalog_projects__project_id__views_post" };
     };
     "/api/v1/catalog/submissions": {
       post: { response: components["schemas"]["ApiResponse_CatalogSubmissionCreateResponse_"]; operationId: "submit_catalog_project_api_v1_catalog_submissions_post" };

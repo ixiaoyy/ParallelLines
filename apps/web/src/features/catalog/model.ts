@@ -14,6 +14,7 @@ export interface CatalogProjectResponse {
   average_score: number | null;
   rating_count: number;
   rating_score_sum: number;
+  view_count: number;
   my_score: number | null;
 }
 
@@ -41,6 +42,11 @@ export interface CatalogRatingResponse {
   my_score: number;
 }
 
+export interface CatalogViewResponse {
+  project_id: string;
+  view_count: number;
+}
+
 export interface CatalogProject {
   id: string;
   slug: string;
@@ -55,6 +61,7 @@ export interface CatalogProject {
   averageScore: number | null;
   ratingCount: number;
   ratingScoreSum: number;
+  viewCount: number;
   myScore: number | null;
   host: string;
 }
@@ -127,6 +134,8 @@ export function toCatalogCategory(category: CatalogCategoryResponse): CatalogCat
         averageScore: project.average_score,
         ratingCount: project.rating_count,
         ratingScoreSum: project.rating_score_sum ?? 0,
+        // 旧版目录响应尚无浏览量时从零展示，不推算历史访问。
+        viewCount: project.view_count ?? 0,
         myScore: project.my_score,
         host,
       };

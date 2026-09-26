@@ -429,6 +429,8 @@ function shouldRefreshAfterFailure(path: string, response: Response): boolean {
 
 function isRefreshExcludedPath(path: string): boolean {
   return (
+    // 公开游戏浏览计数每次打开只提交一次，不能在 401 后刷新令牌并自动重发。
+    /^\/catalog\/projects\/[^/]+\/views$/.test(path) ||
     path === "/auth/refresh" ||
     path === "/auth/login" ||
     path === "/auth/register" ||
