@@ -5,9 +5,18 @@ import {
   createInitialState,
   legalMoves,
   playMove,
+  positionKey,
   type Cell,
   type GameState,
 } from "../../src/features/play/generals-soldiers/rules";
+
+/** 用固定棋盘构造回归局面，G 为将军、S 为小兵、点号为空格。 */
+function position(rows: readonly string[], turn: GameState["turn"], ply: number): GameState {
+  const board = rows.join("").split("").map((mark): Cell =>
+    mark === "G" ? "general" : mark === "S" ? "soldier" : "empty",
+  );
+  return { board, turn, soldiers: board.filter((cell) => cell === "soldier").length, ply, winner: null, lastMove: null };
+}
 
 test("开局站位、将军先行与隔空吃兵符合棋盘规则", () => {
   const start = createInitialState();
@@ -93,12 +102,6 @@ test("四档电脑遇到当前一步可赢的局面会直接取胜", () => {
 });
 
 test("四档电脑在固定战术局面会因前瞻能力改变决策", () => {
-  const position = (rows: string[], turn: GameState["turn"], ply: number): GameState => {
-    const board = rows.join("").split("").map((mark): Cell =>
-      mark === "G" ? "general" : mark === "S" ? "soldier" : "empty",
-    );
-    return { board, turn, soldiers: board.filter((cell) => cell === "soldier").length, ply, winner: null, lastMove: null };
-  };
   const situations = [
     { rows: ["SSSSS", "SSSSS", "SG.SS", ".....", ".GSG."], turn: "general", ply: 4, weaker: "easy", stronger: "normal" },
     { rows: ["SSSSS", "SSSSS", "...GS", "SG...", ".GS.."], turn: "soldier", ply: 7, weaker: "normal", stronger: "hard" },
@@ -111,5 +114,104 @@ test("四档电脑在固定战术局面会因前瞻能力改变决策", () => {
     const deeper = chooseAiMove(state, situation.stronger, [], () => 0.99);
     expect(shallow.move, `${situation.weaker}/${situation.stronger}`).not.toEqual(deeper.move);
     expect(deeper.depth).toBeGreaterThanOrEqual(shallow.depth);
+  }
+});
+
+test("困难与最高难度将军在围堵前先救出角落将军", () => {
+  const state = position(["GS..S", ".S.SS", ".SSGS", "...S.", "..G.."], "general", 26);
+
+  // 自弈中的旧走法先吃兵，会给小兵封死左上角将军的机会；此时仍可主动撤出。
+  const greedy = playMove(state, 22, 12);
+  expect(greedy).not.toBeNull();
+  const blocked = playMove(greedy!, 6, 5);
+  expect(blocked).not.toBeNull();
+  expect(legalMoves(blocked!, "general").filter((move) => move.from === 0)).toEqual([]);
+  expect(legalMoves(state)).toContainEqual({ from: 0, to: 5, capture: false });
+
+  for (const difficulty of ["hard", "hell"] as const) {
+    const result = chooseAiMove(state, difficulty, [], () => 0.99);
+    expect(result.move, difficulty).toEqual({ from: 0, to: 5, capture: false });
+    const escaped = playMove(state, result.move!.from, result.move!.to)!;
+    expect(escaped.soldiers).toBe(state.soldiers);
+
+    // 检查全部下一手兵方应对，确认撤退后的将军不会立刻被封死。
+    for (const reply of legalMoves(escaped)) {
+      const afterReply = playMove(escaped, reply.from, reply.to)!;
+      expect(legalMoves(afterReply, "general").some((move) => move.from === 5), difficulty).toBe(true);
+    }
+  }
+});
+
+test("高难度将军仍会选择落入角落但立即获胜的吃兵", () => {
+  const state = position(["SS...", ".S...", "G....", ".....", "..GGS"], "general", 60);
+
+  // 落点紧邻封锁兵，吃完却只剩三兵；胜负应先于退路风险决定走法。
+  for (const difficulty of ["hard", "hell"] as const) {
+    const result = chooseAiMove(state, difficulty, [], () => 0.99);
+    expect(result.move, difficulty).toEqual({ from: 10, to: 0, capture: true });
+    const won = playMove(state, result.move!.from, result.move!.to)!;
+    expect(won.soldiers).toBe(3);
+    expect(won.winner).toBe("general");
+    expect(legalMoves(won)).toEqual([]);
+  }
+});
+
+test("电脑小兵各难度和低难度将军保留原有固定战术选择", () => {
+  const general = position(["SSSSS", "SSSSS", "SG.SS", ".....", ".GSG."], "general", 4);
+  const soldier = position(["SSSSS", "SSSSS", "S..SS", ".G...", ".GSG."], "soldier", 5);
+
+  // 期望值来自增强前的固定局面，防止将军防守评分外溢到未授权修改的难度和阵营。
+  const unchanged = [
+    { state: general, difficulty: "easy", move: { from: 23, to: 13, capture: true } },
+    { state: general, difficulty: "normal", move: { from: 11, to: 13, capture: true } },
+    { state: soldier, difficulty: "easy", move: { from: 6, to: 11, capture: false } },
+    { state: soldier, difficulty: "normal", move: { from: 13, to: 12, capture: false } },
+    { state: soldier, difficulty: "hard", move: { from: 13, to: 12, capture: false } },
+    { state: soldier, difficulty: "hell", move: { from: 10, to: 11, capture: false } },
+  ] as const;
+
+  for (const situation of unchanged) {
+    const result = chooseAiMove(situation.state, situation.difficulty, [], () => 0.99);
+    expect(result.move, `${situation.state.turn}/${situation.difficulty}`).toEqual(situation.move);
+  }
+});
+
+test("最高难度避开八半步后才会被全部封锁的走法", () => {
+  const state = position([".S..S", ".S..S", "SGS.S", "S.S..", ".GGS."], "general", 42);
+
+  // 失败棋谱第42手：11→16在八半步内会被强制封死，21→16仍有退路。
+  expect(legalMoves(state)).toContainEqual({ from: 11, to: 16, capture: false });
+  const result = chooseAiMove(state, "hell", [], () => 0.99);
+  expect(result.move).toEqual({ from: 21, to: 16, capture: false });
+  expect(legalMoves(state)).toContainEqual(result.move);
+  expect(result.nodes).toBeLessThanOrEqual(160_001);
+});
+
+test("所有候选已被证明必败时仍返回合法走法并由规则判胜负", () => {
+  const state = position(["..S.S", ".S..S", "SS..S", ".GS..", "SGGS."], "general", 48);
+  expect(legalMoves(state)).toEqual([{ from: 16, to: 15, capture: false }]);
+
+  // 该局只剩一条必败退路；筛掉已证败候选后不能把仍在进行的对局当成无棋可走。
+  for (const difficulty of ["hard", "hell"] as const) {
+    const result = chooseAiMove(state, difficulty, [], () => 0.99);
+    expect(result.move, difficulty).toEqual({ from: 16, to: 15, capture: false });
+    const continued = playMove(state, result.move!.from, result.move!.to)!;
+    expect(continued.winner).toBeNull();
+    const blocked = playMove(continued, 11, 16);
+    expect(blocked?.winner).toBe("soldier");
+  }
+});
+
+test("历史局面键不会覆盖立即获胜和已经结束的真实终局", () => {
+  const state = position(["SS...", ".S...", "G....", ".....", "..GGS"], "general", 60);
+  const won = playMove(state, 10, 0)!;
+  const recent = [positionKey(won)];
+
+  // 历史键不带胜负标记；即使传入的历史包含胜局棋盘，真实终局仍必须优先。
+  for (const difficulty of ["hard", "hell"] as const) {
+    const result = chooseAiMove(state, difficulty, recent, () => 0.99);
+    expect(result.move, difficulty).toEqual({ from: 10, to: 0, capture: true });
+    expect(playMove(state, result.move!.from, result.move!.to)?.winner).toBe("general");
+    expect(chooseAiMove(won, difficulty, recent, () => 0.99)).toEqual({ move: null, depth: 0, nodes: 0 });
   }
 });
