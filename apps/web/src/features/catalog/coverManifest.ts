@@ -160,6 +160,7 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "shi-yu-yuanfang": "/catalog/2026-09-27-v2/covers/shi-yu-yuanfang.webp",
   "hongloumeng-haitang-shishe": "/catalog/2026-09-27-v2/covers/hongloumeng-haitang-shishe.webp",
   "fengling-town": "/catalog/2026-09-27-v3/covers/fengling-town.webp",
+  "double-feature": "/catalog/2026-09-28-v1/covers/double-feature.webp",
   backrooms: "/catalog/2026-09-29-v1/covers/backrooms.webp",
 };
 
