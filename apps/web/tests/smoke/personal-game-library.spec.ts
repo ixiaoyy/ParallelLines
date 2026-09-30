@@ -196,7 +196,7 @@ test("个人范围组合分类、搜索和作者条件，并重置分页但不�
   await page.locator(".catalog-library-filters").getByRole("button", { name: "想玩清单", exact: true }).click();
   await expect(page.locator(".catalog-card")).toHaveCount(24);
   await expect(page.locator(".catalog-results")).toHaveText("25 个游戏");
-  await page.getByRole("group", { name: "游戏分类", exact: true }).getByRole("button", { name: "休闲", exact: true }).click();
+  await page.getByRole("combobox", { name: "游戏分类", exact: true }).selectOption("casual");
   await expect(page.locator(".catalog-card h2")).toHaveText(["合成大西瓜"]);
   await page.getByRole("searchbox", { name: "搜索游戏名称", exact: true }).fill("蛇蛇");
   await page.getByRole("button", { name: "搜索", exact: true }).click();

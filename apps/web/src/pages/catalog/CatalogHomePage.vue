@@ -1,13 +1,6 @@
 <script setup lang="ts">
-import {
-  AimOutlined, AlertOutlined, AppstoreOutlined, ArrowRightOutlined,
-  BulbOutlined, CarOutlined, ClockCircleFilled, CloseOutlined, CoffeeOutlined,
-  CompassOutlined, CreditCardOutlined, CrownOutlined, DeploymentUnitOutlined,
-  EyeOutlined, FireFilled, FlagOutlined, HeartFilled, HeartOutlined, SafetyCertificateOutlined,
-  SearchOutlined, ShopOutlined, StarFilled, StarOutlined, ThunderboltOutlined, TrophyOutlined, UploadOutlined,
-} from "@ant-design/icons-vue";
+import { CloseOutlined, EyeOutlined, FireFilled, HeartFilled } from "@ant-design/icons-vue";
 import { computed, nextTick, ref, watch } from "vue";
-import type { Component } from "vue";
 
 import type { CatalogProject } from "@/features/catalog/model";
 import { catalogAuthorKey, rankCatalogAuthors } from "@/features/catalog/authorRanking";
@@ -15,7 +8,7 @@ import { getCatalogCoverPath } from "@/features/catalog/coverManifest";
 import { useCatalog, useRateCatalogProject, useRecordCatalogProjectView } from "@/features/catalog/queries";
 import { readPersonalLibrary, recordRecentProject, savePersonalLibrary, toggleWantedProject } from "@/features/catalog/personalLibrary";
 import type { PersonalLibrary } from "@/features/catalog/personalLibrary";
-import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
+import { staticAssetUrl } from "@/shared/assets/staticAssets";
 
 import CatalogSubmissionDialog from "./CatalogSubmissionDialog.vue";
 import CatalogLeaderboard from "./CatalogLeaderboard.vue";
@@ -30,25 +23,6 @@ const HEART_HEAT_WEIGHT = 5;
 const SOURCE_CONTRIBUTOR_URL = "https://github.com/MartinDelophy/awesome-gpt-6-astra";
 const catalogAssetPath = "/catalog/2026-09-24-v1";
 const newCatalogAssetPath = "/catalog/2026-09-25-v1";
-const heroBackground = cssUrl(staticAssetUrl(`${catalogAssetPath}/hero-sky.webp`));
-const mascotUrl = staticAssetUrl(`${catalogAssetPath}/chibi-cat-explorer.webp`);
-// 已确认的游戏分类各用独立图标；后台上传的分类图仍优先展示。
-const categoryIcons: Record<string, Component> = {
-  action: ThunderboltOutlined,
-  shooting: AimOutlined,
-  racing: CarOutlined,
-  stages: FlagOutlined,
-  puzzle: BulbOutlined,
-  rts: DeploymentUnitOutlined,
-  "tower-defense": SafetyCertificateOutlined,
-  cards: CreditCardOutlined,
-  rpg: CrownOutlined,
-  simulation: ShopOutlined,
-  casual: CoffeeOutlined,
-  romance: HeartOutlined,
-  horror: AlertOutlined,
-  exploration: CompassOutlined,
-};
 const originalCoverSlugs = new Set([
   "clock-out", "merge-watermelon", "qin-imperial-factory", "super-mario",
   "csgo-desert", "infinite-garden", "fruit-ninja", "qq-racing",
@@ -347,183 +321,101 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
 
 <template>
   <main class="catalog-page" aria-labelledby="catalog-title">
-    <section class="catalog-hero" :class="{ 'catalog-hero--ranking': catalogView !== 'games' }" :style="{ '--catalog-hero-image': heroBackground }" aria-labelledby="catalog-title">
-      <div class="catalog-page__wrap catalog-hero__inner">
-        <header class="catalog-header">
-          <RouterLink class="catalog-brand" to="/" aria-label="平行线首页">
-            <img src="/logo-lines-mark.png" alt="" width="44" height="44" />
-            <span>平行线</span>
-          </RouterLink>
-        </header>
-        <div class="catalog-hero__copy">
-          <h1 id="catalog-title"><template v-if="catalogView === 'games'">今天想玩点什么<span>？</span></template><template v-else>{{ catalogView === 'authors' ? '作者榜' : '贡献榜' }}</template></h1>
-          <div v-if="catalogView === 'games'" class="catalog-hero__actions">
-            <form class="catalog-search" role="search" @submit.prevent="submitSearch">
-              <SearchOutlined class="catalog-search__icon" aria-hidden="true" />
-              <label class="catalog-search__label" for="catalog-query">搜索游戏名称</label>
-              <input id="catalog-query" v-model="searchInput" type="search" placeholder="搜索游戏名称..." autocomplete="off" @search="submitSearch" />
-              <button type="submit">搜索</button>
-            </form>
-            <button type="button" class="catalog-hero__submit" @click="submissionOpen = true"><UploadOutlined aria-hidden="true" /> 投稿游戏</button>
-          </div>
-        </div>
-        <img class="catalog-hero__mascot" :src="mascotUrl" alt="" width="430" height="430" />
+    <header class="catalog-header">
+      <div class="catalog-page__wrap catalog-header__inner">
+        <RouterLink class="catalog-brand" to="/" aria-label="平行线首页">
+          <img src="/logo-lines-mark.png" alt="" width="92" height="82" />
+          <span>平行线</span>
+        </RouterLink>
+        <nav class="catalog-view-tabs" aria-label="浏览内容">
+          <button type="button" :class="{ 'is-active': catalogView === 'games' }" :aria-pressed="catalogView === 'games'" @click="catalogView = 'games'">游戏目录</button>
+          <button type="button" :class="{ 'is-active': catalogView === 'authors' }" :aria-pressed="catalogView === 'authors'" @click="catalogView = 'authors'">作者榜</button>
+          <button type="button" :class="{ 'is-active': catalogView === 'contributors' }" :aria-pressed="catalogView === 'contributors'" @click="catalogView = 'contributors'">贡献榜</button>
+        </nav>
+        <button type="button" class="catalog-header__submit" @click="submissionOpen = true">投稿游戏</button>
+      </div>
+    </header>
+    <section class="catalog-hero" aria-labelledby="catalog-title">
+      <div class="catalog-hero__inner">
+        <h1 id="catalog-title"><template v-if="catalogView === 'games'">今天想玩<span>点什么</span>？</template><template v-else>{{ catalogView === 'authors' ? '作者榜' : '贡献榜' }}</template></h1>
+        <form v-if="catalogView === 'games'" class="catalog-search" role="search" @submit.prevent="submitSearch">
+          <span class="catalog-icon catalog-icon--search" aria-hidden="true"></span>
+          <label class="catalog-search__label" for="catalog-query">搜索游戏名称</label>
+          <input id="catalog-query" v-model="searchInput" type="search" placeholder="搜索游戏名称..." autocomplete="off" @search="submitSearch" />
+          <button type="submit">搜索</button>
+        </form>
       </div>
     </section>
-
     <div class="catalog-page__wrap">
       <section class="catalog-list" aria-label="游戏与作者">
-        <template v-if="catalogQuery.isLoading.value">
-          <div class="catalog-state catalog-state--loading" role="status" aria-label="正在加载游戏目录">
-            <span class="catalog-state__spinner" aria-hidden="true"></span>
-            <span>正在加载游戏目录…</span>
-          </div>
-        </template>
-        <div v-else-if="catalogQuery.isError.value" class="catalog-state" role="alert">
-          <span>项目目录暂时不可用，请稍后重试。</span>
-          <button type="button" @click="catalogQuery.refetch()">重新加载</button>
-        </div>
+        <div v-if="catalogQuery.isLoading.value" class="catalog-state catalog-state--loading" role="status" aria-label="正在加载游戏目录"><span class="catalog-state__spinner" aria-hidden="true"></span><span>正在加载游戏目录…</span></div>
+        <div v-else-if="catalogQuery.isError.value" class="catalog-state" role="alert"><span>项目目录暂时不可用，请稍后重试。</span><button type="button" @click="catalogQuery.refetch()">重新加载</button></div>
         <template v-else>
-          <div class="catalog-view-tabs" role="group" aria-label="浏览内容">
-            <button type="button" :class="{ 'is-active': catalogView === 'games' }" :aria-pressed="catalogView === 'games'" @click="catalogView = 'games'"><AppstoreOutlined aria-hidden="true" /> 游戏目录</button>
-            <button type="button" :class="{ 'is-active': catalogView === 'authors' }" :aria-pressed="catalogView === 'authors'" @click="catalogView = 'authors'"><CrownOutlined aria-hidden="true" /> 作者榜</button>
-            <button type="button" :class="{ 'is-active': catalogView === 'contributors' }" :aria-pressed="catalogView === 'contributors'" @click="catalogView = 'contributors'"><TrophyOutlined aria-hidden="true" /> 贡献榜</button>
-          </div>
           <template v-if="catalogView === 'games'">
-          <!-- 个人范围独立于游戏分类与公共榜单，复用下方现有卡片。 -->
-          <div class="catalog-library">
-            <div class="catalog-library-filters" role="group" aria-label="全部游戏、想玩清单、最近打开">
-              <button type="button" :class="{ 'is-active': libraryScope === 'all' }" :aria-pressed="libraryScope === 'all'" @click="libraryScope = 'all'">全部游戏</button>
-              <button type="button" :class="{ 'is-active': libraryScope === 'wanted' }" :aria-pressed="libraryScope === 'wanted'" @click="libraryScope = 'wanted'"><StarOutlined aria-hidden="true" /> 想玩清单</button>
-              <button type="button" :class="{ 'is-active': libraryScope === 'recent' }" :aria-pressed="libraryScope === 'recent'" @click="libraryScope = 'recent'"><ClockCircleFilled aria-hidden="true" /> 最近打开</button>
+            <!-- 清单、分类和排序各自保留原状态；数量置于工具栏，避免挤占卡片行。 -->
+            <div class="catalog-controls">
+              <div class="catalog-library-filters" role="group" aria-label="全部游戏、想玩清单、最近打开">
+                <button type="button" :class="{ 'is-active': libraryScope === 'all' }" :aria-pressed="libraryScope === 'all'" @click="libraryScope = 'all'">全部游戏</button>
+                <button type="button" :class="{ 'is-active': libraryScope === 'wanted' }" :aria-pressed="libraryScope === 'wanted'" @click="libraryScope = 'wanted'">想玩清单</button>
+                <button type="button" :class="{ 'is-active': libraryScope === 'recent' }" :aria-pressed="libraryScope === 'recent'" @click="libraryScope = 'recent'">最近打开</button>
+              </div>
+              <span class="catalog-results" role="status">{{ visibleProjects.length }} 个游戏</span>
+              <div class="catalog-categories"><label for="catalog-category">分类：</label><select id="catalog-category" v-model="selectedCategory" aria-label="游戏分类"><option value="all">全部</option><option v-for="category in categories" :key="category.id" :value="category.slug">{{ category.name }}</option></select></div>
+              <div v-if="libraryScope !== 'recent'" class="catalog-sort" role="group" aria-label="游戏排序">
+                <button type="button" :class="{ 'is-active': sortMode === 'latest' }" :aria-pressed="sortMode === 'latest'" @click="sortMode = 'latest'">最新</button>
+                <button type="button" :class="{ 'is-active': sortMode === 'hot' }" :aria-pressed="sortMode === 'hot'" @click="sortMode = 'hot'">热门</button>
+              </div>
             </div>
-            <p class="catalog-library__hint">记录保存在当前浏览器，清理浏览器数据后会丢失。</p>
             <p v-if="!libraryCanPersist" class="catalog-library__notice" role="alert">本地存储不可用，当前清单只在本次页面访问期间保留。</p>
             <p v-if="wantedLimitReached" class="catalog-library__notice" role="alert">想玩清单最多保存 500 款游戏，请先移出部分游戏。</p>
-          </div>
-          <div v-if="selectedAuthorKey" class="catalog-author-selection">
-            <span>正在查看 <strong>{{ selectedAuthorName || '该作者' }}</strong> 的作品</span>
-            <button type="button" @click="clearAuthorGames">清除作者筛选</button>
-          </div>
-          <div class="catalog-controls">
-            <div class="catalog-categories" role="group" aria-label="游戏分类">
-              <button type="button" class="catalog-filter" :class="{ 'is-active': selectedCategory === 'all' }" :aria-pressed="selectedCategory === 'all'" @click="selectedCategory = 'all'">全部</button>
-              <button v-for="category in categories" :key="category.id" type="button" class="catalog-filter" :class="[`catalog-filter--${category.slug}`, { 'is-active': selectedCategory === category.slug }]" :aria-pressed="selectedCategory === category.slug" @click="selectedCategory = category.slug">
-                <img v-if="category.iconUrl" :src="category.iconUrl" alt="" width="22" height="22" />
-                <span v-else-if="category.slug === 'farming'" class="catalog-filter__seedling" aria-hidden="true">🌱</span>
-                <component :is="categoryIcons[category.slug] ?? AppstoreOutlined" v-else aria-hidden="true" />
-                {{ category.name }}
-              </button>
-            </div>
-            <div v-if="libraryScope !== 'recent'" class="catalog-sort" role="group" aria-label="游戏排序">
-              <button type="button" :class="{ 'is-active': sortMode === 'latest' }" :aria-pressed="sortMode === 'latest'" @click="sortMode = 'latest'"><ClockCircleFilled aria-hidden="true" /> 最新</button>
-              <button type="button" :class="{ 'is-active': sortMode === 'hot' }" :aria-pressed="sortMode === 'hot'" @click="sortMode = 'hot'"><FireFilled aria-hidden="true" /> 热门</button>
-            </div>
-          </div>
-          <div class="catalog-results" role="status">{{ visibleProjects.length }} 个游戏</div>
-
-          <div v-if="visibleProjects.length === 0" class="catalog-state" role="status">
-            <span>{{ emptyLibraryText }}</span>
-            <button v-if="search || selectedCategory !== 'all' || selectedAuthorKey" type="button" @click="search = ''; searchInput = ''; selectedCategory = 'all'; selectedAuthorKey = null">清除筛选</button>
-          </div>
-          <div v-else class="catalog-grid">
-            <article v-for="(project, index) in displayedProjects" :key="project.id" class="catalog-card" :class="{ 'catalog-card--preview': isPreviewProject(project) }">
-              <div class="catalog-card__media">
-                <!-- 站内、外链及开发预览都由原生链接在新标签打开；首屏三张封面优先加载。 -->
-                <a class="catalog-card__media-link" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="isPreviewProject(project) ? `查看${displayName(project)}的开发进度` : `打开${displayName(project)}`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">
-                  <img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" :loading="index < 3 ? 'eager' : 'lazy'" decoding="async" />
-                  <span v-else class="catalog-card__cover-fallback" :class="`catalog-card__cover-fallback--${fallbackCoverTone(project.slug)}`" aria-hidden="true"><span>{{ categoryName(project.categorySlug) }}</span><strong>{{ displayName(project) }}</strong><i>✦</i></span>
-                </a>
-                <button type="button" class="catalog-card__wanted" :class="{ 'is-active': wantedIds.has(project.id) }" :aria-pressed="wantedIds.has(project.id)" :aria-label="wantedIds.has(project.id) ? '移出想玩' : '加入想玩'" :title="wantedIds.has(project.id) ? '移出想玩' : '加入想玩'" @click="toggleWanted(project)">
-                  <StarFilled v-if="wantedIds.has(project.id)" aria-hidden="true" />
-                  <StarOutlined v-else aria-hidden="true" />
-                </button>
-                <div class="catalog-card__badges">
-                  <span v-if="isNew(project)" class="catalog-card__badge catalog-card__badge--new" role="img" aria-label="新游戏" title="新游戏"><ClockCircleFilled aria-hidden="true" /></span>
-                  <span v-if="isHot(project) && !isPreviewProject(project)" class="catalog-card__badge catalog-card__badge--hot" role="img" aria-label="热门游戏" title="热门游戏"><FireFilled aria-hidden="true" /></span>
+            <div v-if="selectedAuthorKey" class="catalog-author-selection"><span>正在查看 <strong>{{ selectedAuthorName || '该作者' }}</strong> 的作品</span><button type="button" @click="clearAuthorGames">清除作者筛选</button></div>
+            <div v-if="visibleProjects.length === 0" class="catalog-state" role="status"><span>{{ emptyLibraryText }}</span><button v-if="search || selectedCategory !== 'all' || selectedAuthorKey" type="button" @click="search = ''; searchInput = ''; selectedCategory = 'all'; selectedAuthorKey = null">清除筛选</button></div>
+            <div v-else class="catalog-grid">
+              <article v-for="(project, index) in displayedProjects" :key="project.id" class="catalog-card" :class="{ 'catalog-card--preview': isPreviewProject(project) }">
+                <div class="catalog-card__media">
+                  <a class="catalog-card__media-link" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="isPreviewProject(project) ? `查看${displayName(project)}的开发进度` : `打开${displayName(project)}`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">
+                    <img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" :loading="index < 3 ? 'eager' : 'lazy'" decoding="async" />
+                    <span v-else class="catalog-card__cover-fallback" :class="`catalog-card__cover-fallback--${fallbackCoverTone(project.slug)}`" aria-hidden="true"><span>{{ categoryName(project.categorySlug) }}</span><strong>{{ displayName(project) }}</strong></span>
+                  </a>
+                  <div class="catalog-card__badges"><span v-if="isNew(project)" class="catalog-card__badge" role="img" aria-label="新游戏" title="新游戏"><span class="catalog-icon catalog-icon--clock" aria-hidden="true"></span></span><span v-if="isHot(project) && !isPreviewProject(project)" class="catalog-card__badge catalog-card__badge--hot" role="img" aria-label="热门游戏" title="热门游戏"><FireFilled aria-hidden="true" /></span></div>
                 </div>
-              </div>
-              <div class="catalog-card__body">
-                <h2>
-                  <a class="catalog-card__title-link" :href="project.url" target="_blank" rel="noopener noreferrer" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">{{ displayName(project) }}</a>
-                </h2>
-                <p class="catalog-card__author">
-                  作者：<span v-if="isOriginalProject(project)">原创</span>
-                  <a v-else-if="project.authorName && project.authorUrl" :href="project.authorUrl" target="_blank" rel="noopener noreferrer" :aria-label="`查看${project.authorName}的作者链接`">{{ project.authorName }}</a>
-                  <button v-else-if="project.authorName" type="button" :aria-label="`查看${project.authorName}的作品`" @click="openAuthorIntro(project.authorName)">{{ project.authorName }}</button>
-                  <span v-else>待补充</span>
-                </p>
-                <div class="catalog-card__stats">
-                  <span class="catalog-card__views" :aria-label="`${project.viewCount} 次浏览`" :title="`${project.viewCount} 次浏览`"><EyeOutlined aria-hidden="true" />{{ project.viewCount }}</span>
-                  <span class="catalog-card__heat" :aria-label="`热度 ${project.heat}`" :title="`热度 ${project.heat}`"><FireFilled aria-hidden="true" />{{ project.heat }}</span>
-                </div>
-                <div v-if="isPreviewProject(project)" class="catalog-card__footer catalog-card__footer--preview">
-                  <span>持续开发中</span>
-                  <a class="catalog-card__open" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="`查看${displayName(project)}的开发进度`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)"><ArrowRightOutlined aria-hidden="true" /></a>
-                </div>
-                <div v-else class="catalog-card__footer">
-                  <div class="catalog-card__rating" :class="{ 'is-pending': pendingProjectId === project.id }">
+                <div class="catalog-card__body">
+                  <h2><a class="catalog-card__title-link" :href="project.url" target="_blank" rel="noopener noreferrer" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">{{ displayName(project) }}</a></h2>
+                  <p class="catalog-card__author">作者：<span v-if="isOriginalProject(project)">原创</span><a v-else-if="project.authorName && project.authorUrl" :href="project.authorUrl" target="_blank" rel="noopener noreferrer" :aria-label="`查看${project.authorName}的作者链接`">{{ project.authorName }}</a><button v-else-if="project.authorName" type="button" :aria-label="`查看${project.authorName}的作品`" @click="openAuthorIntro(project.authorName)">{{ project.authorName }}</button><span v-else>待补充</span></p>
+                  <div v-if="!isPreviewProject(project)" class="catalog-card__rating" :class="{ 'is-pending': pendingProjectId === project.id }">
                     <div class="catalog-card__hearts" role="group" :aria-label="`${displayName(project)}的评分`" @mouseleave="clearPreview">
-                      <button v-for="score in 5" :key="score" type="button" :disabled="project.myScore !== null || pendingProjectId !== null" :aria-label="project.myScore === null ? `给${displayName(project)}评${score}分` : `${displayName(project)}已评${project.myScore}分，不能修改`" :title="project.myScore === null ? `评${score}分` : `已评${project.myScore}分`" @mouseenter="previewScore(project, score)" @focus="previewScore(project, score)" @blur="clearPreview" @click="rateProject(project, score)">
-                        <HeartFilled v-if="isFilled(project, score)" aria-hidden="true" />
-                        <HeartOutlined v-else aria-hidden="true" />
-                      </button>
+                      <button v-for="score in 5" :key="score" type="button" :disabled="project.myScore !== null || pendingProjectId !== null" :aria-label="project.myScore === null ? `给${displayName(project)}评${score}分` : `${displayName(project)}已评${project.myScore}分，不能修改`" :title="project.myScore === null ? `评${score}分` : `已评${project.myScore}分`" @mouseenter="previewScore(project, score)" @focus="previewScore(project, score)" @blur="clearPreview" @click="rateProject(project, score)"><HeartFilled v-if="isFilled(project, score)" aria-hidden="true" /><span v-else class="catalog-icon catalog-icon--heart" aria-hidden="true"></span></button>
                     </div>
-                    <span class="catalog-card__rating-count">{{ project.ratingCount }} 人评分</span>
                   </div>
-                  <a class="catalog-card__open" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="`打开${displayName(project)}`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)"><ArrowRightOutlined aria-hidden="true" /></a>
+                  <p v-else class="catalog-card__preview-note">持续开发中</p>
+                  <!-- 公共计数继续展示，合并在次级信息行，既不伪造数据也不占用评分与操作区。 -->
+                  <div class="catalog-card__stats">
+                    <span class="catalog-card__views" :aria-label="`${project.viewCount} 次浏览`" :title="`${project.viewCount} 次浏览`"><EyeOutlined aria-hidden="true" />{{ project.viewCount }}</span>
+                    <span class="catalog-card__heat" :aria-label="`热度 ${project.heat}`" :title="`热度 ${project.heat}`"><FireFilled aria-hidden="true" />{{ project.heat }}</span>
+                    <span v-if="!isPreviewProject(project)" class="catalog-card__rating-count">{{ project.ratingCount }} 人评分</span>
+                  </div>
+                  <div class="catalog-card__footer">
+                    <button type="button" class="catalog-card__wanted" :class="{ 'is-active': wantedIds.has(project.id) }" :aria-pressed="wantedIds.has(project.id)" :aria-label="wantedIds.has(project.id) ? '移出想玩' : '加入想玩'" :title="wantedIds.has(project.id) ? '移出想玩' : '加入想玩'" @click="toggleWanted(project)"><span class="catalog-icon catalog-icon--star" aria-hidden="true"></span></button>
+                    <a class="catalog-card__open" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="isPreviewProject(project) ? `查看${displayName(project)}的开发进度` : `打开${displayName(project)}`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">{{ isPreviewProject(project) ? '开发进度' : '打开游戏' }}</a>
+                  </div>
+                  <p v-if="ratingErrorProjectId === project.id" class="catalog-card__rating-error" role="alert">评分暂时不可用，请稍后重试。</p>
                 </div>
-                <p v-if="ratingErrorProjectId === project.id" class="catalog-card__rating-error" role="alert">评分暂时不可用，请稍后重试。</p>
-              </div>
-            </article>
-          </div>
-          <div v-if="displayedProjects.length < visibleProjects.length" class="catalog-load-more">
-            <button type="button" @click="loadMoreProjects">加载更多</button>
-            <span>还有 {{ visibleProjects.length - displayedProjects.length }} 个游戏</span>
-          </div>
+              </article>
+            </div>
+            <div v-if="displayedProjects.length < visibleProjects.length" class="catalog-load-more"><button type="button" @click="loadMoreProjects">加载更多</button><span>还有 {{ visibleProjects.length - displayedProjects.length }} 个游戏</span></div>
           </template>
-          <CatalogLeaderboard
-            v-else-if="catalogView === 'authors'"
-            title="作者榜"
-            :entries="authorLeaderboardEntries"
-            :scene-background="heroBackground"
-            :mascot-url="mascotUrl"
-            :has-more="displayedAuthors.length < matchingAuthors.length"
-            more-label="加载更多作者"
-            @show-games="showAuthorGames"
-            @load-more="authorVisibleLimit += AUTHOR_PAGE_SIZE"
-          >
-            <template #tools>
-              <span class="catalog-author-count" role="status">{{ matchingAuthors.length }} 位作者</span>
-              <label class="catalog-author-search" for="catalog-author-query"><SearchOutlined aria-hidden="true" /><span>搜索作者</span><input id="catalog-author-query" v-model="authorSearch" type="search" placeholder="搜索作者名称..." autocomplete="off" /></label>
-            </template>
+          <CatalogLeaderboard v-else-if="catalogView === 'authors'" title="作者榜" :entries="authorLeaderboardEntries" :has-more="displayedAuthors.length < matchingAuthors.length" more-label="加载更多作者" @show-games="showAuthorGames" @load-more="authorVisibleLimit += AUTHOR_PAGE_SIZE">
+            <template #tools><span class="catalog-author-count" role="status">{{ matchingAuthors.length }} 位作者</span><label class="catalog-author-search" for="catalog-author-query"><span class="catalog-icon catalog-icon--search" aria-hidden="true"></span><span class="catalog-search__label">搜索作者</span><input id="catalog-author-query" v-model="authorSearch" type="search" placeholder="搜索作者名称..." autocomplete="off" /></label></template>
           </CatalogLeaderboard>
-          <CatalogLeaderboard
-            v-else
-            title="贡献榜"
-            :entries="contributorLeaderboardEntries"
-            :scene-background="heroBackground"
-            :mascot-url="mascotUrl"
-            :has-more="displayedContributors.length < rankedContributors.length"
-            more-label="加载更多贡献者"
-            @show-games="showAuthorGames"
-            @load-more="contributorVisibleLimit += AUTHOR_PAGE_SIZE"
-          />
+          <CatalogLeaderboard v-else title="贡献榜" :entries="contributorLeaderboardEntries" :has-more="displayedContributors.length < rankedContributors.length" more-label="加载更多贡献者" @show-games="showAuthorGames" @load-more="contributorVisibleLimit += AUTHOR_PAGE_SIZE" />
         </template>
       </section>
-      <footer class="catalog-footer">平行线</footer>
+      <footer class="catalog-footer"><span class="catalog-footer__accent" aria-hidden="true"></span><p v-if="catalogView === 'games'" class="catalog-library__hint">记录保存在当前浏览器，清理浏览器数据后会丢失。</p><span v-else>平行线</span><span class="catalog-footer__accent" aria-hidden="true"></span></footer>
     </div>
     <CatalogSubmissionDialog v-model:open="submissionOpen" />
     <dialog ref="authorDialog" class="catalog-author-dialog" aria-labelledby="catalog-author-dialog-title" @close="selectedAuthor = null">
-      <div class="catalog-author-dialog__header">
-        <div><h2 id="catalog-author-dialog-title">{{ selectedAuthor }}</h2><span>{{ selectedAuthorProjects.length }} 个游戏</span></div>
-        <button type="button" class="catalog-author-dialog__close" aria-label="关闭作者窗口" @click="closeAuthorIntro"><CloseOutlined aria-hidden="true" /></button>
-      </div>
-      <ul class="catalog-author-dialog__games">
-        <li v-for="project in selectedAuthorProjects" :key="project.id">
-          <a :href="project.url" target="_blank" rel="noopener noreferrer" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)"><img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" loading="lazy" /><span>{{ displayName(project) }}</span><ArrowRightOutlined aria-hidden="true" /></a>
-        </li>
-      </ul>
+      <div class="catalog-author-dialog__header"><div><h2 id="catalog-author-dialog-title">{{ selectedAuthor }}</h2><span>{{ selectedAuthorProjects.length }} 个游戏</span></div><button type="button" class="catalog-author-dialog__close" aria-label="关闭作者窗口" @click="closeAuthorIntro"><CloseOutlined aria-hidden="true" /></button></div>
+      <ul class="catalog-author-dialog__games"><li v-for="project in selectedAuthorProjects" :key="project.id"><a :href="project.url" target="_blank" rel="noopener noreferrer" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)"><img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" loading="lazy" /><span>{{ displayName(project) }}</span><span class="catalog-icon catalog-icon--arrow" aria-hidden="true"></span></a></li></ul>
     </dialog>
   </main>
 </template>

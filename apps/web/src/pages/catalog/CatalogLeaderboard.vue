@@ -16,8 +16,6 @@ const props = defineProps<{
     isHeartMetric?: boolean;
     sourceUrl?: string;
   }>;
-  sceneBackground: string;
-  mascotUrl: string;
   hasMore: boolean;
   moreLabel: string;
 }>();
@@ -36,11 +34,10 @@ const rows = computed(() => props.entries.filter((entry) => entry.rank > 3));
   <section class="catalog-leaderboard" :aria-label="title">
     <div v-if="$slots.tools" class="catalog-leaderboard__tools"><slot name="tools" /></div>
     <p v-if="!entries.length" class="catalog-leaderboard__empty" role="status">没有找到匹配的作者。</p>
-    <ol v-if="podium.length" class="catalog-podium" :style="{ '--podium-scene': sceneBackground }" :aria-label="`${title}前三名`">
+    <ol v-if="podium.length" class="catalog-podium" :aria-label="`${title}前三名`">
       <li v-for="entry in podium" :key="entry.key" class="catalog-podium__place" :class="`catalog-podium__place--${entry.rank}`" :data-rank="entry.rank" :value="entry.rank">
-        <div class="catalog-podium__art" :class="{ 'catalog-podium__art--source': entry.sourceUrl }">
+        <div class="catalog-podium__art">
           <img v-if="entry.cover" :src="entry.cover" alt="" decoding="async" />
-          <img v-else-if="entry.sourceUrl" :src="mascotUrl" alt="" decoding="async" />
           <TrophyFilled v-else class="catalog-podium__art-fallback" aria-hidden="true" />
           <span class="catalog-podium__medal" :aria-label="`第${entry.rank}名`"><TrophyFilled aria-hidden="true" /><b>{{ entry.rank }}</b></span>
         </div>
