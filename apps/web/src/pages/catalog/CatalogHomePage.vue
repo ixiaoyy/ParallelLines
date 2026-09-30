@@ -4,7 +4,7 @@ import {
   BulbOutlined, CarOutlined, ClockCircleFilled, CloseOutlined, CoffeeOutlined,
   CompassOutlined, CreditCardOutlined, CrownOutlined, DeploymentUnitOutlined,
   EyeOutlined, FireFilled, FlagOutlined, HeartFilled, HeartOutlined, SafetyCertificateOutlined,
-  SearchOutlined, ShopOutlined, ThunderboltOutlined, TrophyOutlined, UploadOutlined,
+  SearchOutlined, ShopOutlined, StarFilled, StarOutlined, ThunderboltOutlined, TrophyOutlined, UploadOutlined,
 } from "@ant-design/icons-vue";
 import { computed, nextTick, ref, watch } from "vue";
 import type { Component } from "vue";
@@ -13,6 +13,8 @@ import type { CatalogProject } from "@/features/catalog/model";
 import { catalogAuthorKey, rankCatalogAuthors } from "@/features/catalog/authorRanking";
 import { getCatalogCoverPath } from "@/features/catalog/coverManifest";
 import { useCatalog, useRateCatalogProject, useRecordCatalogProjectView } from "@/features/catalog/queries";
+import { readPersonalLibrary, recordRecentProject, savePersonalLibrary, toggleWantedProject } from "@/features/catalog/personalLibrary";
+import type { PersonalLibrary } from "@/features/catalog/personalLibrary";
 import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
 
 import CatalogSubmissionDialog from "./CatalogSubmissionDialog.vue";
@@ -20,6 +22,7 @@ import CatalogLeaderboard from "./CatalogLeaderboard.vue";
 
 type SortMode = "latest" | "hot";
 type CatalogView = "games" | "authors" | "contributors";
+type LibraryScope = "all" | "wanted" | "recent";
 type CatalogEntry = CatalogProject & { categorySlug: string; heat: number };
 const PAGE_SIZE = 24;
 const AUTHOR_PAGE_SIZE = 20;
@@ -83,6 +86,14 @@ const hoveredProjectId = ref<string | null>(null);
 const hoveredScore = ref(0);
 const authorDialog = ref<HTMLDialogElement | null>(null);
 const selectedAuthor = ref<string | null>(null);
+// 个人清单仅属于当前浏览器；存储异常后本页继续使用内存状态，不覆盖原记录。
+const initialLibrary = readPersonalLibrary();
+const personalLibrary = ref(initialLibrary.library);
+const libraryCanPersist = ref(initialLibrary.canPersist);
+const libraryScope = ref<LibraryScope>("all");
+const wantedLimitReached = ref(false);
+const wantedIds = computed(() => new Set(personalLibrary.value.wantedIds));
+const recentOrder = computed(() => new Map(personalLibrary.value.recent.map((entry, index) => [entry.projectId, index])));
 
 // 种田分类固定在末尾；其余分类仍沿用后台排序。
 const allCategories = computed(() => catalogQuery.data.value ?? []);
@@ -158,16 +169,30 @@ const selectedAuthorProjects = computed(() =>
   allProjects.value.filter((project) => project.authorName === selectedAuthor.value),
 );
 const normalizedSearch = computed(() => search.value.trim().toLocaleLowerCase());
+// 个人记录只匹配当前公开目录；暂缺或下架项目不展示，也不因此删除本地记录。
+const libraryProjects = computed(() => allProjects.value.filter((project) =>
+  libraryScope.value === "wanted" ? wantedIds.value.has(project.id)
+    : libraryScope.value === "recent" ? recentOrder.value.has(project.id) : true,
+));
+// 只有无其他筛选的空个人范围使用清单提示，组合筛选无结果仍沿用原提示。
+const emptyLibraryText = computed(() => {
+  if (normalizedSearch.value || selectedCategory.value !== "all" || selectedAuthorKey.value) return "没有找到匹配的游戏";
+  if (libraryScope.value === "wanted" && personalLibrary.value.wantedIds.length === 0) return "还没有加入想玩的游戏";
+  if (libraryScope.value === "recent" && personalLibrary.value.recent.length === 0) return "还没有打开过游戏";
+  return "没有找到匹配的游戏";
+});
 
 // 分类与排序只改变展示，查询词仅匹配卡片展示名称；开发预览也归入正常分类。
 const visibleProjects = computed(() => {
-  const matching = allProjects.value.filter((project) => {
+  const matching = libraryProjects.value.filter((project) => {
     if (selectedAuthorKey.value && catalogAuthorKey(project) !== selectedAuthorKey.value) return false;
     if (selectedCategory.value !== "all" && project.categorySlug !== selectedCategory.value) return false;
     if (!normalizedSearch.value) return true;
     return displayName(project).toLocaleLowerCase().includes(normalizedSearch.value);
   });
   return matching.sort((left, right) => {
+    // 使用已按时间整理的记录顺序；同一毫秒打开也保留新记录在前，不参与公共排序。
+    if (libraryScope.value === "recent") return (recentOrder.value.get(left.id) ?? 0) - (recentOrder.value.get(right.id) ?? 0);
     // 热门按浏览与心心的综合热度排序；相同值仍使用原有最新及稳定顺序。
     if (sortMode.value === "hot") {
       const heat = right.heat - left.heat;
@@ -182,7 +207,7 @@ const visibleProjects = computed(() => {
 
 // 大目录只先渲染首批卡片；筛选变化后重新从首批展示，搜索仍覆盖全部项目。
 const displayedProjects = computed(() => visibleProjects.value.slice(0, visibleLimit.value));
-watch([normalizedSearch, selectedCategory, sortMode, selectedAuthorKey], () => {
+watch([normalizedSearch, selectedCategory, sortMode, selectedAuthorKey, libraryScope], () => {
   visibleLimit.value = PAGE_SIZE;
 });
 watch(normalizedAuthorSearch, () => { authorVisibleLimit.value = AUTHOR_PAGE_SIZE; });
@@ -197,6 +222,8 @@ function showAuthorGames(key: string): void {
   search.value = "";
   searchInput.value = "";
   catalogView.value = "games";
+  // 从公共作者榜进入作品时恢复完整目录，避免此前个人范围隐藏作者作品。
+  libraryScope.value = "all";
 }
 
 function clearAuthorGames(): void {
@@ -280,10 +307,25 @@ function closeAuthorIntro(): void {
   authorDialog.value?.close();
 }
 
+/** 更新个人清单的页面状态并尝试保存；失败后保留内存操作，同时显示持久化限制。 */
+function updatePersonalLibrary(library: PersonalLibrary): void {
+  personalLibrary.value = library;
+  if (libraryCanPersist.value) libraryCanPersist.value = savePersonalLibrary(library);
+}
+
+/** 切换指定游戏的想玩状态；达到容量时不改现有清单，不触发评分或打开请求。 */
+function toggleWanted(project: CatalogProject): void {
+  const updated = toggleWantedProject(personalLibrary.value, project.id);
+  wantedLimitReached.value = updated === null;
+  if (updated) updatePersonalLibrary(updated);
+}
+
 // 游戏链接由浏览器直接打开新标签；仅左键/键盘点击和中键各记录一次，右键菜单不计数。
 // 参数为目标游戏与链接事件；不拦截默认行为、不移动目录或关闭作者弹窗。
 function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
   if (event.type === "click" ? event.button !== 0 : event.type !== "auxclick" || event.button !== 1) return;
+  // 只记有效点击，不推断实际游玩；本地保存与原累计量请求互不依赖。
+  updatePersonalLibrary(recordRecentProject(personalLibrary.value, project.id));
   viewMutation.mutate({ projectId: project.id });
 }
 
@@ -348,6 +390,17 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
             <button type="button" :class="{ 'is-active': catalogView === 'contributors' }" :aria-pressed="catalogView === 'contributors'" @click="catalogView = 'contributors'"><TrophyOutlined aria-hidden="true" /> 贡献榜</button>
           </div>
           <template v-if="catalogView === 'games'">
+          <!-- 个人范围独立于游戏分类与公共榜单，复用下方现有卡片。 -->
+          <div class="catalog-library">
+            <div class="catalog-library-filters" role="group" aria-label="全部游戏、想玩清单、最近打开">
+              <button type="button" :class="{ 'is-active': libraryScope === 'all' }" :aria-pressed="libraryScope === 'all'" @click="libraryScope = 'all'">全部游戏</button>
+              <button type="button" :class="{ 'is-active': libraryScope === 'wanted' }" :aria-pressed="libraryScope === 'wanted'" @click="libraryScope = 'wanted'"><StarOutlined aria-hidden="true" /> 想玩清单</button>
+              <button type="button" :class="{ 'is-active': libraryScope === 'recent' }" :aria-pressed="libraryScope === 'recent'" @click="libraryScope = 'recent'"><ClockCircleFilled aria-hidden="true" /> 最近打开</button>
+            </div>
+            <p class="catalog-library__hint">记录保存在当前浏览器，清理浏览器数据后会丢失。</p>
+            <p v-if="!libraryCanPersist" class="catalog-library__notice" role="alert">本地存储不可用，当前清单只在本次页面访问期间保留。</p>
+            <p v-if="wantedLimitReached" class="catalog-library__notice" role="alert">想玩清单最多保存 500 款游戏，请先移出部分游戏。</p>
+          </div>
           <div v-if="selectedAuthorKey" class="catalog-author-selection">
             <span>正在查看 <strong>{{ selectedAuthorName || '该作者' }}</strong> 的作品</span>
             <button type="button" @click="clearAuthorGames">清除作者筛选</button>
@@ -362,7 +415,7 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
                 {{ category.name }}
               </button>
             </div>
-            <div class="catalog-sort" role="group" aria-label="游戏排序">
+            <div v-if="libraryScope !== 'recent'" class="catalog-sort" role="group" aria-label="游戏排序">
               <button type="button" :class="{ 'is-active': sortMode === 'latest' }" :aria-pressed="sortMode === 'latest'" @click="sortMode = 'latest'"><ClockCircleFilled aria-hidden="true" /> 最新</button>
               <button type="button" :class="{ 'is-active': sortMode === 'hot' }" :aria-pressed="sortMode === 'hot'" @click="sortMode = 'hot'"><FireFilled aria-hidden="true" /> 热门</button>
             </div>
@@ -370,7 +423,7 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
           <div class="catalog-results" role="status">{{ visibleProjects.length }} 个游戏</div>
 
           <div v-if="visibleProjects.length === 0" class="catalog-state" role="status">
-            <span>没有找到匹配的游戏</span>
+            <span>{{ emptyLibraryText }}</span>
             <button v-if="search || selectedCategory !== 'all' || selectedAuthorKey" type="button" @click="search = ''; searchInput = ''; selectedCategory = 'all'; selectedAuthorKey = null">清除筛选</button>
           </div>
           <div v-else class="catalog-grid">
@@ -381,6 +434,10 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
                   <img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" :loading="index < 3 ? 'eager' : 'lazy'" decoding="async" />
                   <span v-else class="catalog-card__cover-fallback" :class="`catalog-card__cover-fallback--${fallbackCoverTone(project.slug)}`" aria-hidden="true"><span>{{ categoryName(project.categorySlug) }}</span><strong>{{ displayName(project) }}</strong><i>✦</i></span>
                 </a>
+                <button type="button" class="catalog-card__wanted" :class="{ 'is-active': wantedIds.has(project.id) }" :aria-pressed="wantedIds.has(project.id)" :aria-label="wantedIds.has(project.id) ? '移出想玩' : '加入想玩'" :title="wantedIds.has(project.id) ? '移出想玩' : '加入想玩'" @click="toggleWanted(project)">
+                  <StarFilled v-if="wantedIds.has(project.id)" aria-hidden="true" />
+                  <StarOutlined v-else aria-hidden="true" />
+                </button>
                 <div class="catalog-card__badges">
                   <span v-if="isNew(project)" class="catalog-card__badge catalog-card__badge--new" role="img" aria-label="新游戏" title="新游戏"><ClockCircleFilled aria-hidden="true" /></span>
                   <span v-if="isHot(project) && !isPreviewProject(project)" class="catalog-card__badge catalog-card__badge--hot" role="img" aria-label="热门游戏" title="热门游戏"><FireFilled aria-hidden="true" /></span>

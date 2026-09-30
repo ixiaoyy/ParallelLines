@@ -379,6 +379,91 @@
 .catalog-filter.is-active .anticon,
 .catalog-sort button.is-active .anticon { color: #fff; background: transparent; }
 
+.catalog-library {
+  margin: 18px 0 14px;
+}
+
+.catalog-library-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.catalog-library-filters button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 8px 14px;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.catalog-library-filters button:hover {
+  color: var(--theme-soft-fg);
+  background: var(--theme-soft-bg-hover);
+}
+
+.catalog-library-filters button.is-active {
+  border-color: var(--btn-primary-border);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
+}
+
+.catalog-library-filters button.is-active:hover {
+  background: var(--btn-primary-bg-hover);
+}
+
+.catalog-library__hint,
+.catalog-library__notice {
+  margin: 8px 0 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.catalog-library__notice {
+  font-weight: 700;
+}
+
+.catalog-card__wanted {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--bg-surface);
+  font-size: 21px;
+  cursor: pointer;
+}
+
+.catalog-card__wanted:hover {
+  color: var(--btn-primary-bg);
+  border-color: var(--btn-primary-border);
+}
+
+.catalog-card__wanted.is-active {
+  color: var(--btn-primary-fg);
+  border-color: var(--btn-primary-border);
+  background: var(--btn-primary-bg);
+}
+
+.catalog-card__wanted.is-active:hover {
+  background: var(--btn-primary-bg-hover);
+}
+
 .catalog-results {
   min-height: 23px;
   margin: 10px 0 7px;
@@ -748,6 +833,8 @@
 .catalog-filter:focus-visible,
 .catalog-sort button:focus-visible,
 .catalog-search button:focus-visible,
+.catalog-library-filters button:focus-visible,
+.catalog-card__wanted:focus-visible,
 .catalog-card__hearts button:focus-visible,
 .catalog-card__open:focus-visible,
 .catalog-card__media-link:focus-visible,
@@ -801,6 +888,7 @@
   .catalog-hero--ranking .catalog-hero__mascot { bottom: -22px; right: 0; width: 44%; max-height: 190px; opacity: 1; }
   .catalog-list { padding-top: 16px; }
   .catalog-controls { gap: 8px; }
+  .catalog-library-filters button { flex: 1 1 auto; padding-inline: 8px; font-size: 12px; }
   // 手机分类固定两行，在容器内滚动；DOM 顺序和键盘焦点顺序保持一致。
   .catalog-categories {
     display: grid;
