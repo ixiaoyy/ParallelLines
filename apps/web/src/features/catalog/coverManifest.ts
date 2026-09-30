@@ -162,6 +162,8 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "fengling-town": "/catalog/2026-09-27-v3/covers/fengling-town.webp",
   "double-feature": "/catalog/2026-09-28-v1/covers/double-feature.webp",
   backrooms: "/catalog/2026-09-29-v1/covers/backrooms.webp",
+  "snake-escape": "/catalog/2026-09-30-v1/covers/snake-escape.webp",
+  "flappy-dunk": "/catalog/2026-09-30-v1/covers/flappy-dunk.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {

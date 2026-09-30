@@ -45,6 +45,31 @@ export const router = createRouter({
         },
       },
     },
+    // 新小游戏独立按需加载，目录入口仍复用首页和既有统计。
+    {
+      path: "/play/snake-escape",
+      name: "play-snake-escape",
+      component: () => import("@/pages/play/SnakeEscapePage.vue"),
+      meta: {
+        seo: {
+          title: "蛇蛇出洞 · {siteTitle}",
+          description: "按顺序放走彩色小蛇，避开阻挡，在倒计时结束前清空棋盘。",
+          canonicalPath: "/play/snake-escape",
+        },
+      },
+    },
+    {
+      path: "/play/flappy-dunk",
+      name: "play-flappy-dunk",
+      component: () => import("@/pages/play/FlappyDunkPage.vue"),
+      meta: {
+        seo: {
+          title: "飞翼灌篮 · {siteTitle}",
+          description: "点按让带翅膀的篮球跳跃，从上方穿过篮圈，挑战连续进球和最高分。",
+          canonicalPath: "/play/flappy-dunk",
+        },
+      },
+    },
     {
       path: "/auth",
       name: "auth",
