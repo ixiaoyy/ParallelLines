@@ -93,7 +93,7 @@
     background: #fffaf1f5;
     h2 { margin: 9px 0 10px; color: var(--dunk-ink); font-size: 22px; line-height: 1.4; font-weight: 800; }
     p { margin: 0 0 20px; color: var(--dunk-muted); font-size: 12px; }
-    :deep(.ui-button) { min-width: 134px; height: 44px; border-radius: 8px !important; }
+    :deep(.ui-button) { justify-content: center; min-width: 134px; height: 44px; border-radius: 8px !important; }
   }
   &__dialog-label { color: #b57c3b; font-size: 11px; letter-spacing: 0.08em; }
   &__court-caption { margin: 12px 0 0; color: var(--dunk-muted); text-align: center; font-size: 11px; }

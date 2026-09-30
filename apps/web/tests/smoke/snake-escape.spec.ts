@@ -5,6 +5,12 @@ import {
 } from "../../src/features/play/snake-escape/rules";
 import { parseProgress, unlockNext } from "../../src/features/play/snake-escape/storage";
 
+/** 按蛇头真实行列定位，测试不依赖关卡存储编号或显示颜色。 */
+function headName(snake: Snake): RegExp {
+  const head = snake.path.at(-1)!;
+  return new RegExp(`蛇头在第${head.y + 1}行第${head.x + 1}列，`);
+}
+
 /** 用单一头部阻挡构造局面，避免只用生成器自己的参考解测试生成器。 */
 function blockedPosition(): GameState {
   const snakes: Snake[] = [
@@ -122,8 +128,7 @@ test("界面：手机可开局、撞退、提示、暂停、重开且棋盘触�
   const first = createGame(1);
   const blocked = first.snakes.find((snake) => !canEscape(snake, first.snakes, first.level.gridSize));
   expect(blocked).toBeDefined();
-  const index = first.snakes.findIndex((snake) => snake.id === blocked?.id);
-  const hit = page.getByRole("button", { name: new RegExp(`^第 ${index + 1} 条`) });
+  const hit = page.locator(".se-board").getByRole("button", { name: headName(blocked!) });
   const size = await hit.boundingBox();
   expect(size?.width).toBeGreaterThanOrEqual(44);
   expect(size?.height).toBeGreaterThanOrEqual(44);
@@ -132,6 +137,7 @@ test("界面：手机可开局、撞退、提示、暂停、重开且棋盘触�
   await expect(page.getByRole("button", { name: /^提示/ })).toBeEnabled();
   await page.getByRole("button", { name: /^提示/ }).click();
   await expect(page.locator(".se-head-button--hint")).toHaveCount(1);
+  await expect(page.locator(".se-arena__notice")).toHaveText("已圈出一条前方畅通的小蛇。");
   await page.getByRole("button", { name: "暂停", exact: true }).click();
   await expect(page.getByRole("heading", { name: "花园暂停营业" })).toBeVisible();
   await page.getByRole("button", { name: "继续游戏" }).click();
@@ -148,8 +154,8 @@ test("界面：按安全顺序通关可进入下一关，刷新后保留已解�
   await page.getByRole("button", { name: "开始游戏" }).click();
   const level = createLevel(1);
   for (const id of solveLevel(level) ?? []) {
-    const index = level.snakes.findIndex((snake) => snake.id === id);
-    await page.getByRole("button", { name: new RegExp(`^第 ${index + 1} 条`) }).click();
+    const snake = level.snakes.find((candidate) => candidate.id === id)!;
+    await page.locator(".se-board").getByRole("button", { name: headName(snake) }).click();
     // 离场显示期间输入被锁，下一条等待恢复，避免用测试绕过真实动画节奏。
     if (id !== (solveLevel(level) ?? []).at(-1)) await expect(page.getByRole("button", { name: /^提示/ })).toBeEnabled();
   }
@@ -179,10 +185,49 @@ test("界面：320 像素密集关卡按真实头部格子命中，不误选重�
     return { x: position.x, y: position.y };
   }, head);
   await page.mouse.click(point.x, point.y);
-  await expect(page.locator(".se-arena__notice")).toHaveText("第 1 条小蛇出洞啦！");
+  await expect(page.locator(".se-arena__notice")).toHaveText("小蛇出洞啦！");
   await expect(page.getByLabel("剩余 3 条生命")).toBeVisible();
   await expect(page.locator(".se-head-button")).toHaveCount(level.snakes.length - 1);
-  await expect(page.getByRole("button", { name: /^第 1 条/ })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /^第 17 条/ })).toHaveCount(1);
+  await expect(page.locator(".se-board").getByRole("button", { name: headName(snake) })).toHaveCount(0);
+  await expect(page.locator(".se-board").getByRole("button", { name: headName(level.snakes[16]) })).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test("界面：蛇头不显示解题编号，键盘按位置选择且离场后配色不变", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.addInitScript(() => {
+    localStorage.setItem("parallellines.snake-escape.progress.v1", JSON.stringify({ version: 1, highestUnlocked: 5 }));
+  });
+  await page.goto("/play/snake-escape");
+  await page.getByRole("button", { name: "开始游戏" }).click();
+  const level = createLevel(5);
+  const spatial = [...level.snakes].sort((a, b) => {
+    const left = a.path.at(-1)!;
+    const right = b.path.at(-1)!;
+    return left.y - right.y || left.x - right.x;
+  });
+  expect(spatial.map((snake) => snake.id)).not.toEqual(level.solution);
+  const heads = page.locator(".se-head-button");
+  await expect(heads).toHaveCount(level.snakes.length);
+  await expect(heads).toHaveText(level.snakes.map(() => ""));
+  await expect(heads.locator("span")).toHaveCount(0);
+  const labels = await heads.evaluateAll((elements) => elements.map((element) => element.getAttribute("aria-label")));
+  for (const [index, snake] of spatial.entries()) expect(labels[index]).toMatch(headName(snake));
+  await heads.first().focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(heads.nth(1)).toBeFocused();
+  await page.getByText("按位置选择小蛇", { exact: true }).click();
+  const picker = page.locator(".se-snake-picker button");
+  expect(await picker.evaluateAll((elements) => elements.map((element) => element.getAttribute("aria-label")))).toEqual(labels);
+  const colorsBefore = await picker.locator("i").evaluateAll((elements) => elements.map((element) => (element as HTMLElement).style.background));
+  const exit = level.snakes.find((snake) => canEscape(snake, level.snakes, level.gridSize))!;
+  await page.locator(".se-snake-picker").getByRole("button", { name: headName(exit) }).click();
+  await expect(heads).toHaveCount(level.snakes.length - 1);
+  const remaining = spatial.filter((snake) => snake.id !== exit.id);
+  const labelsAfter = await heads.evaluateAll((elements) => elements.map((element) => element.getAttribute("aria-label")));
+  expect(labelsAfter).toEqual(labels.filter((_, index) => spatial[index].id !== exit.id));
+  expect(await picker.locator("i").evaluateAll((elements) => elements.map((element) => (element as HTMLElement).style.background)))
+    .toEqual(remaining.map((snake) => colorsBefore[spatial.indexOf(snake)]));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });

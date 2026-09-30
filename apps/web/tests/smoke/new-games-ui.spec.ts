@@ -42,6 +42,7 @@ test("飞球页面实际空格穿圈计分、暂停、重开和最高分保存",
 });
 
 test("飞球页面在手机宽度可触屏起跳且没有横向溢出", async ({ page }) => {
+  await page.clock.install();
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/play/flappy-dunk");
@@ -54,6 +55,19 @@ test("飞球页面在手机宽度可触屏起跳且没有横向溢出", async ({
     await page.touchscreen.tap(rect.x + rect.width * 0.25, rect.y + rect.height * 0.25);
     await expect(court).toHaveAttribute("data-phase", "running");
     await page.getByRole("button", { name: "暂停", exact: true }).click();
+    await page.locator(".flappy-dunk__dialog").getByRole("button", { name: "继续游戏", exact: true }).click();
+    await page.clock.runFor(10_000);
+    await expect(court).toHaveAttribute("data-phase", "over");
+    const restart = page.getByTestId("dunk-restart");
+    // 比较实际文字与按钮的中心，避免只检查 CSS 声明而漏掉样式覆盖。
+    const offset = await restart.evaluate((button) => {
+      const range = document.createRange();
+      range.selectNodeContents(button.querySelector("span")!);
+      const text = range.getBoundingClientRect();
+      const rect = button.getBoundingClientRect();
+      return Math.abs(text.x + text.width / 2 - rect.x - rect.width / 2);
+    });
+    expect(offset).toBeLessThanOrEqual(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     if (screenshots) await page.screenshot({ path: path.join(screenshots, `dunk-${width}.png`), fullPage: true });
   }

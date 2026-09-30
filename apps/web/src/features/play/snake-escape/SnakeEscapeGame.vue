@@ -33,7 +33,14 @@ let lastFrame = 0;
 let clockPendingMs = 0;
 let motionQuery: MediaQueryList | null = null;
 
-const activeSnakes = computed(() => state.value.snakes.filter((snake) => snake.active));
+// 按初始蛇头位置排列显示与键盘选择，避免关卡存储顺序泄露解题顺序；离场后颜色保持不变。
+const spatialOrder = computed(() => new Map([...state.value.level.snakes].sort((left, right) => {
+  const a = left.path[left.path.length - 1];
+  const b = right.path[right.path.length - 1];
+  return a.y - b.y || a.x - b.x;
+}).map((snake, index) => [snake.id, index])));
+const activeSnakes = computed(() => state.value.snakes.filter((snake) => snake.active)
+  .sort((left, right) => spatialOrder.value.get(left.id)! - spatialOrder.value.get(right.id)!));
 const visibleSnakes = computed(() => motion.value?.kind === "escape"
   ? [...activeSnakes.value, motion.value.snake] : activeSnakes.value);
 const gridSize = computed(() => state.value.level.gridSize);
@@ -49,14 +56,14 @@ const showCurtain = computed(() => state.value.status !== "playing" && !(state.v
 const tier = computed(() => state.value.level.number <= 5 ? "初入花园" : state.value.level.number <= 15 ? "弯弯小径"
   : state.value.level.number <= 30 ? "缤纷迷宫" : "花园高手");
 
-/** 用稳定编号分配颜色，同色小蛇用可见编号区分，避免只靠颜色操作。 */
-function snakeIndex(snake: Snake): number {
-  return state.value.snakes.findIndex((candidate) => candidate.id === snake.id);
+/** 按初始蛇头位置分配配色索引，离场动画仍使用原配色。 */
+function colorIndex(snake: Snake): number {
+  return spatialOrder.value.get(snake.id)! % colors.length;
 }
 
-/** 获取编号对应配色，动画期间保留原关卡的颜色身份。 */
+/** 获取位置对应配色，动画期间保留原关卡的颜色身份。 */
 function colorFor(snake: Snake): SnakeColor {
-  return colors[snakeIndex(snake) % colors.length];
+  return colors[colorIndex(snake)];
 }
 
 /** 沿身体原路径前进，再沿头方向延伸，弯曲身体不会横扫旁边的小蛇。 */
@@ -103,9 +110,15 @@ function headButtonStyle(snake: Snake): Record<string, string> {
   return { left: `${(head.x + 1.6) / extent * 100}%`, top: `${(head.y + 1.6) / extent * 100}%` };
 }
 
-/** 给键盘和辅助技术提供编号及方向，不提前公开是否可离场。 */
+/** 用从一开始的行列描述蛇头位置，区分同色小蛇而不公开解题编号。 */
+function headPosition(snake: Snake): string {
+  const head = snake.path[snake.path.length - 1];
+  return `第${head.y + 1}行第${head.x + 1}列`;
+}
+
+/** 给键盘和辅助技术提供颜色、蛇头位置及方向，不提前公开是否可离场。 */
 function snakeLabel(snake: Snake): string {
-  return `第 ${snakeIndex(snake) + 1} 条${colorFor(snake).name}小蛇，朝${directionNames[snakeDirection(snake)]}`;
+  return `${colorFor(snake).name}小蛇，蛇头在${headPosition(snake)}，朝${directionNames[snakeDirection(snake)]}`;
 }
 
 /** 清除动画帧和时间基准，暂停及离开页面均不留下后台计时器。 */
@@ -178,7 +191,7 @@ function chooseSnake(snake: Snake): void {
   if (result.outcome === "ignored") return;
   state.value = result.state;
   if (result.outcome === "blocked") notice.value = `前方有小蛇挡路，剩余 ${state.value.lives} 条生命。`;
-  else notice.value = `第 ${snakeIndex(snake) + 1} 条小蛇出洞啦！`;
+  else notice.value = "小蛇出洞啦！";
   // 动画只影响显示，生命、胜负与通关解锁均由纯规则结果决定。
   motion.value = reduceMotion.value || state.value.status === "lost" ? null
     : { snake, kind: result.outcome === "escaped" ? "escape" : "bump", progress: 0, duration: result.outcome === "escaped" ? 650 : 320 };
@@ -215,7 +228,7 @@ function showHint(): void {
   if (blocked.value) return;
   state.value = takeHint(state.value);
   const snake = activeSnakes.value.find((candidate) => candidate.id === state.value.hintId);
-  if (snake) notice.value = `试试第 ${snakeIndex(snake) + 1} 条小蛇，前方畅通。`;
+  if (snake) notice.value = "已圈出一条前方畅通的小蛇。";
 }
 
 /** 键盘按方向键在蛇头按钮间循环，回车或空格由原生按钮执行。 */
@@ -299,9 +312,9 @@ onBeforeUnmount(() => {
                 <g v-for="snake in visibleSnakes" :key="snake.id" class="se-snake" :class="{ 'se-snake--hint': state.hintId === snake.id }" :transform="bumpTransform(snake)" filter="url(#se-snake-shadow)">
                   <polyline v-if="state.hintId === snake.id" :points="polyline(snake)" fill="none" stroke="#fff7bd" stroke-width="1.02" stroke-linecap="round" stroke-linejoin="round" />
                   <polyline :points="polyline(snake)" fill="none" :stroke="colorFor(snake).dark" stroke-width="0.73" stroke-linecap="round" stroke-linejoin="round" />
-                  <circle v-for="(cell, index) in pathFor(snake)" :key="index" :cx="cell.x + 0.5" :cy="cell.y + 0.5" :r="index === 0 ? 0.29 : 0.4" :fill="`url(#se-color-${snakeIndex(snake) % colors.length})`" :stroke="colorFor(snake).dark" stroke-width="0.035" />
+                  <circle v-for="(cell, index) in pathFor(snake)" :key="index" :cx="cell.x + 0.5" :cy="cell.y + 0.5" :r="index === 0 ? 0.29 : 0.4" :fill="`url(#se-color-${colorIndex(snake)})`" :stroke="colorFor(snake).dark" stroke-width="0.035" />
                   <g :transform="headTransform(snake)">
-                    <ellipse cx="0.04" cy="0" rx="0.47" ry="0.43" :fill="`url(#se-color-${snakeIndex(snake) % colors.length})`" :stroke="colorFor(snake).dark" stroke-width="0.035" />
+                    <ellipse cx="0.04" cy="0" rx="0.47" ry="0.43" :fill="`url(#se-color-${colorIndex(snake)})`" :stroke="colorFor(snake).dark" stroke-width="0.035" />
                     <ellipse cx="0.14" cy="-0.18" rx="0.17" ry="0.14" fill="#fff" /><ellipse cx="0.14" cy="0.18" rx="0.17" ry="0.14" fill="#fff" />
                     <circle cx="0.19" cy="-0.17" r="0.074" fill="#28334c" /><circle cx="0.19" cy="0.17" r="0.074" fill="#28334c" />
                     <circle cx="0.215" cy="-0.195" r="0.023" fill="#fff" /><circle cx="0.215" cy="0.145" r="0.023" fill="#fff" />
@@ -309,7 +322,7 @@ onBeforeUnmount(() => {
                   </g>
                 </g>
               </svg>
-              <button v-for="snake in activeSnakes" :key="snake.id" type="button" class="se-head-button" :class="{ 'se-head-button--hint': state.hintId === snake.id }" :style="headButtonStyle(snake)" :disabled="blocked" :aria-label="snakeLabel(snake)" @click="handleHeadClick(snake, $event)" @keydown="handleSnakeKey"><span>{{ snakeIndex(snake) + 1 }}</span></button>
+              <button v-for="snake in activeSnakes" :key="snake.id" type="button" class="se-head-button" :class="{ 'se-head-button--hint': state.hintId === snake.id }" :style="headButtonStyle(snake)" :disabled="blocked" :aria-label="snakeLabel(snake)" @click="handleHeadClick(snake, $event)" @keydown="handleSnakeKey"></button>
             </div>
           </div>
           <div class="se-garden__edge" aria-hidden="true"><span class="se-watermelon"></span><span>回家的路，就在前方</span><span class="se-watermelon"></span></div>
@@ -332,7 +345,7 @@ onBeforeUnmount(() => {
           <button type="button" @click="loadLevel(state.level.number, true)"><span aria-hidden="true">↻</span>重开</button>
           <label class="se-tools__zoom"><span>缩放</span><input v-model.number="zoom" type="range" min="100" max="180" step="10" aria-label="棋盘缩放" /><output>{{ zoom }}%</output></label>
         </div>
-        <details class="se-snake-picker"><summary>按编号选择小蛇</summary><div><button v-for="snake in activeSnakes" :key="snake.id" type="button" :disabled="blocked" :class="{ 'is-hinted': state.hintId === snake.id }" :aria-label="snakeLabel(snake)" @click="chooseSnake(snake)"><i :style="{ background: colorFor(snake).base }" aria-hidden="true"></i>{{ snakeIndex(snake) + 1 }} <span aria-hidden="true">{{ arrows[snakeDirection(snake)] }}</span></button></div></details>
+        <details class="se-snake-picker"><summary>按位置选择小蛇</summary><div><button v-for="snake in activeSnakes" :key="snake.id" type="button" :disabled="blocked" :class="{ 'is-hinted': state.hintId === snake.id }" :aria-label="snakeLabel(snake)" @click="chooseSnake(snake)"><i :style="{ background: colorFor(snake).base }" aria-hidden="true"></i>{{ headPosition(snake) }} <span aria-hidden="true">{{ arrows[snakeDirection(snake)] }}</span></button></div></details>
       </section>
 
       <aside class="se-guide">
