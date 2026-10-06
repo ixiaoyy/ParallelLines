@@ -1,320 +1,222 @@
-@font-face {
-  font-family: "Catalog Arcade Heading";
-  src: url("/catalog/pixel-arcade/fonts/arcade-heading.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Catalog Arcade Display";
-  src: url("/catalog/pixel-arcade/fonts/arcade-display.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-}
-
-.catalog-page {
-  --catalog-ink: #071936;
-  --catalog-paper: #fff8e8;
-  --catalog-muted: #536176;
-  --catalog-font: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
-  --catalog-heading-font: "Catalog Arcade Heading", var(--catalog-font);
-  --catalog-display-font: "Catalog Arcade Display", var(--catalog-font);
-  min-height: 100vh;
-  border: 6px solid var(--catalog-ink);
-  color: var(--catalog-ink);
-  background: var(--catalog-paper);
-  font-family: var(--catalog-font);
-}
-
-.catalog-page__wrap { width: min(1800px, calc(100% - 36px)); margin-inline: auto; }
-.catalog-header { height: 88px; border-bottom: 4px solid var(--catalog-ink); }
-.catalog-header__inner { display: grid; height: 100%; grid-template-columns: 220px minmax(0, 1fr) 220px; align-items: center; gap: 24px; }
-.catalog-brand { display: inline-flex; min-height: 44px; align-items: center; gap: 14px; color: inherit; font-family: var(--catalog-heading-font); font-synthesis: none; font-size: 36px; font-weight: 700; text-decoration: none; white-space: nowrap; }
-.catalog-brand img { display: block; width: 92px; height: 82px; object-fit: cover; mix-blend-mode: multiply; }
-.catalog-view-tabs { position: relative; display: flex; width: max-content; justify-self: center; align-items: center; justify-content: center; gap: 36px; }
-// 导航箭头来自同一像素图标库，仅作街机面板装饰，不增加可点击入口。
-.catalog-view-tabs::before,
-.catalog-view-tabs::after { position: absolute; top: 50%; width: 32px; height: 32px; color: #f4514f; background: currentColor; content: ""; transform: translateY(-50%); filter: drop-shadow(2px 1px 0 var(--catalog-ink)); pointer-events: none; }
-.catalog-view-tabs::before { left: -38px; mask: url("/catalog/pixel-arcade/icons/chevron-left.svg") center / contain no-repeat; }
-.catalog-view-tabs::after { right: -38px; mask: url("/catalog/pixel-arcade/icons/chevron-right.svg") center / contain no-repeat; }
-.catalog-view-tabs button,
-.catalog-header__submit,
-.catalog-library-filters button,
-.catalog-sort button,
-.catalog-search button,
-.catalog-card__open {
-  position: relative;
-  display: inline-flex;
-  min-height: 56px;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--catalog-ink);
-  border-radius: 0;
-  padding: 6px 16px;
-  color: var(--catalog-ink);
-  background: var(--catalog-paper);
-  font-family: inherit;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.3;
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.catalog-view-tabs button { min-width: 150px; border-color: transparent; padding-inline: 24px; }
-.catalog-view-tabs button.is-active,
-.catalog-header__submit,
-.catalog-library-filters button.is-active,
-.catalog-sort button.is-active,
-.catalog-search button,
-.catalog-card__open { border-color: transparent; color: var(--btn-primary-fg); background: var(--btn-primary-bg); background-clip: padding-box; }
-
-// 按钮描边使用正式透明九宫格素材，中心由主按钮变量着色，不拉伸素材中的空白。
-.catalog-view-tabs button.is-active::after,
-.catalog-header__submit::after,
-.catalog-library-filters button.is-active::after,
-.catalog-sort button.is-active::after,
-.catalog-search button::after,
-.catalog-card__open::after {
-  position: absolute;
-  inset: -6px;
-  border: 16px solid transparent;
-  border-image: url("/catalog/pixel-arcade/button-frame.png") 160 / 16px / 0 stretch;
-  content: "";
-  pointer-events: none;
-}
-
-.catalog-view-tabs button:hover:not(.is-active),
-.catalog-library-filters button:hover:not(.is-active),
-.catalog-sort button:hover:not(.is-active) { background: #f2e6cd; }
-.catalog-view-tabs button.is-active:hover,
-.catalog-header__submit:hover,
-.catalog-library-filters button.is-active:hover,
-.catalog-sort button.is-active:hover,
-.catalog-search button:hover,
-.catalog-card__open:hover { color: var(--btn-primary-fg); background-color: var(--btn-primary-bg-hover); }
-.catalog-header__submit { width: 202px; font-size: 30px; }
-
-.catalog-hero { height: 212px; border-bottom: 4px solid var(--catalog-ink); background: var(--catalog-paper) url("/catalog/pixel-arcade/hero-v3.webp") center bottom / cover no-repeat; }
-.catalog-hero__inner { display: flex; height: 100%; flex-direction: column; align-items: center; gap: 16px; padding: 22px 16px 18px; }
-.catalog-hero h1 { margin: 0; color: var(--catalog-ink); font-family: var(--catalog-heading-font); font-synthesis: none; font-size: 72px; font-weight: 700; letter-spacing: 0.01em; line-height: 1.18; text-align: center; }
-.catalog-hero h1 span { color: #f4514f; }
-.catalog-search { display: flex; width: min(770px, 100%); min-height: 68px; align-items: center; gap: 20px; border: 3px solid var(--catalog-ink); background: var(--catalog-paper); }
-.catalog-search > .catalog-icon { width: 34px; height: 34px; margin-left: 20px; }
-.catalog-search input { min-width: 0; width: 100%; flex: 1; border: 0; outline: 0; color: var(--catalog-ink); background: transparent; font: inherit; font-size: 23px; }
-.catalog-search input::placeholder { color: #657080; opacity: 1; }
-.catalog-search button { width: 154px; min-height: 62px; flex: 0 0 154px; align-self: stretch; border-width: 0; font-size: 30px; }
-.catalog-search button::after { inset: -6px; }
+@font-face { font-family: "Catalog Arcade Heading"; src: url("/catalog/pixel-arcade/fonts/arcade-heading.woff2") format("woff2"); font-style: normal; font-weight: 700; font-display: swap; }
+// 按已确认夜景稿设置页面局部配色，不覆盖全站品牌和主按钮变量。
+.catalog-page { --catalog-ink: #00123b; --catalog-paper: #fffdf3; --catalog-muted: #57728b; --catalog-bg: #03183d; --catalog-cyan: #20ddff; --catalog-blue: #087fff; --catalog-red: #ff335e; --catalog-yellow: #ffda35; --catalog-edge-width: 24px; --catalog-font: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif; --catalog-heading-font: "Catalog Arcade Heading", var(--catalog-font); position: relative; isolation: isolate; min-height: 100vh; color: #f7fcff; background: var(--catalog-bg); font-family: var(--catalog-font); }
+// 书架与植物只露出目录两侧的空白边缘，不盖住卡片、控件或页面文字。
+.catalog-page::before { position: absolute; inset: 364px 0 0; z-index: -1; background: url("/catalog/night-arcade-v1/side-scene.webp") center top / 100% 1024px repeat-y; mask-image: linear-gradient(to right, #000 var(--catalog-edge-width), transparent var(--catalog-edge-width), transparent calc(100% - var(--catalog-edge-width)), #000 calc(100% - var(--catalog-edge-width))); content: ""; pointer-events: none; }
+.catalog-page__wrap { width: min(1800px, calc(100% - 48px)); margin-inline: auto; }
+.catalog-header { height: 62px; border-bottom: 1px solid #187aca; background: #031333; }
+.catalog-header__inner { display: flex; width: min(1364px, calc(100% - 64px)); height: 100%; align-items: center; gap: 24px; padding-right: 22px; }
+.catalog-brand { display: flex; flex: 0 0 auto; align-items: center; gap: 17px; color: #fff; text-decoration: none; white-space: nowrap; }
+.catalog-brand img { display: block; width: 64px; height: 52px; object-fit: contain; filter: invert(1) hue-rotate(180deg) saturate(6) brightness(3.2); mix-blend-mode: screen; }
+.catalog-brand > span { font-family: var(--catalog-heading-font); font-synthesis: none; font-size: 32px; font-weight: 700; }
+.catalog-header__tagline { flex: 0 1 182px; font-size: 12px; white-space: nowrap; }
+.catalog-view-tabs { display: flex; flex: 1; align-items: center; justify-content: flex-start; gap: 22px; }
+.catalog-view-tabs button, .catalog-header__search, .catalog-header__submit, .catalog-library-filters button, .catalog-layout-toggle button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 10px; border: 1px solid transparent; border-radius: 0; padding: 6px 14px; color: #f7fcff; background: transparent; font: 700 18px / 1.25 var(--catalog-font); white-space: nowrap; cursor: pointer; }
+.catalog-view-tabs button { min-width: 148px; }
+.catalog-view-tabs button.is-active { min-width: 176px; }
+.catalog-view-tabs button + button { border-left-color: #1471b2; }
+.catalog-view-tabs button.is-active, .catalog-header__submit, .catalog-library-filters button.is-active, .catalog-layout-toggle button.is-active { border-color: #78eaff; color: #fff; background: var(--catalog-blue); box-shadow: inset 0 0 0 1px #005dba, 0 0 0 2px #044d92; }
+// 确认稿的控件只削去四角，文字与点击区域仍由原按钮承载。
+.catalog-view-tabs button.is-active, .catalog-header__submit, .catalog-library-filters button, .catalog-layout-toggle button, .catalog-categories select, .catalog-sort select { clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px); }
+.catalog-view-tabs .anticon, .catalog-view-tabs .catalog-icon, .catalog-header__submit .anticon { width: 28px; height: 28px; font-size: 26px; }
+.catalog-header__search { min-width: 44px; margin-left: auto; padding: 4px; font-size: 27px; }
+.catalog-header__submit { min-width: 156px; }
+.catalog-header__mascot { flex: 0 0 44px; }
+.catalog-header__mascot img { display: block; width: 44px; height: 44px; object-fit: contain; }
+.catalog-view-tabs button:not(.is-active):hover, .catalog-header__search:hover { color: var(--catalog-cyan); }
+.catalog-view-tabs button.is-active:hover { color: #fff; background: #2493ff; }
+.catalog-header__submit:hover, .catalog-library-filters button.is-active:hover, .catalog-layout-toggle button.is-active:hover { background: #2493ff; }
+// 正式场景独立于可编辑标题与搜索；人物和设备位于素材底部安全区。
+.catalog-hero { height: 302px; border-bottom: 2px solid #795233; background: #021436 url("/catalog/night-arcade-v1/hero-scene.webp") center bottom / cover no-repeat; }
+.catalog-hero__inner { display: flex; height: 100%; flex-direction: column; align-items: center; padding: 30px 16px 0; }
+.catalog-hero h1 { margin: 0; color: #fff; font-family: var(--catalog-heading-font); font-synthesis: none; font-size: 56px; font-weight: 700; line-height: 74px; text-align: center; white-space: nowrap; }
+.catalog-hero h1 span { color: var(--catalog-red); }
+.catalog-hero__subtitle { position: relative; isolation: isolate; margin: 4px 0 12px; padding: 5px 22px; color: #e8f7ff; background: #0d87b4; font-size: 14px; font-weight: 700; line-height: 20px; letter-spacing: 2px; clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%); }
+.catalog-hero__subtitle::before { position: absolute; inset: 1px; z-index: -1; background: #04204c; content: ""; clip-path: inherit; }
+.catalog-search { display: flex; width: min(480px, 100%); height: 54px; align-items: center; gap: 12px; border: 2px solid #ecf8ff; background: var(--catalog-paper); box-shadow: 0 0 0 2px #103d66; }
+.catalog-search > .anticon { margin-left: 14px; color: var(--catalog-ink); font-size: 26px; }
+.catalog-search input { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--catalog-ink); background: transparent; font: 16px / 1.4 var(--catalog-font); }
+.catalog-search input::placeholder { color: #667c90; opacity: 1; }
+.catalog-search button { width: 110px; min-height: 50px; align-self: stretch; border: 1px solid #ffb3c4; padding: 4px 12px; color: #fff; background: var(--catalog-red); font: 700 24px / 1.2 var(--catalog-font); cursor: pointer; }
+.catalog-search button:hover { background: #ff5678; }
+.catalog-search:focus-within { outline: 2px solid var(--catalog-cyan); outline-offset: 4px; }
 .catalog-search__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.catalog-search:focus-within { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
+.catalog-hero__motto { display: flex; align-items: center; gap: 12px; margin: 22px 0 0; font-size: 12px; line-height: 16px; }
+.catalog-hero__motto > span:not(.anticon):nth-of-type(n+2) { color: var(--catalog-yellow); }
+.catalog-hero__motto b, .catalog-hero__motto .anticon { color: var(--catalog-red); }
+.catalog-hero__motto .anticon { font-size: 18px; }
+// 榜单采用各自的确认场景；中央文字与图标仍是真实页面元素。
+.catalog-page--authors .catalog-hero { height: clamp(360px, 38.25vw, 480px); background-image: url("/catalog/night-arcade-v1/authors-hero-scene.webp"); }
+.catalog-page--contributors .catalog-hero { height: clamp(402px, 42.75vw, 520px); background-image: url("/catalog/night-arcade-v1/contributors-hero-scene.webp"); }
+.catalog-hero--leaderboard .catalog-hero__inner { padding-top: 36px; }
+.catalog-hero__emblem { display: block; width: 64px; height: 48px; margin-bottom: 8px; object-fit: contain; }
+.catalog-hero--leaderboard h1 { font-size: 76px; line-height: 94px; }
+.catalog-hero__leaderboard-subtitle { max-width: 100%; margin: 6px 0 0; color: #f1f8ff; font-size: 18px; font-weight: 700; line-height: 26px; text-align: center; }
+.catalog-hero--leaderboard .catalog-hero__motto { margin-top: 22px; }
+.catalog-page--authors > .catalog-page__wrap, .catalog-page--contributors > .catalog-page__wrap { max-width: 1320px; }
+.catalog-page--authors .catalog-author-count { font-size: 24px; font-weight: 700; }
+.catalog-page--authors .catalog-author-search { width: min(380px, 55%); min-height: 54px; border: 2px solid #64d8ff; padding-inline: 14px; }
+.catalog-page--authors .catalog-author-search input { font-size: 16px; }
+// 窄桌面下把设备横带上移到页脚文字上方，避免它被页脚底色完全挡住。
+.catalog-page--authors .catalog-footer::before, .catalog-page--contributors .catalog-footer::before { background-position: center calc(100% - 64px); }
 .catalog-icon { display: inline-block; width: 24px; height: 24px; flex: 0 0 auto; background: currentColor; mask: var(--catalog-icon) center / contain no-repeat; }
+.catalog-icon--gamepad { --catalog-icon: url("/catalog/pixel-arcade/icons/gamepad.svg"); }
 .catalog-icon--search { --catalog-icon: url("/catalog/pixel-arcade/icons/search.svg"); }
 .catalog-icon--heart { --catalog-icon: url("/catalog/pixel-arcade/icons/heart.svg"); }
 .catalog-icon--star { --catalog-icon: url("/catalog/pixel-arcade/icons/star.svg"); }
 .catalog-icon--clock { --catalog-icon: url("/catalog/pixel-arcade/icons/clock.svg"); }
 .catalog-icon--arrow { --catalog-icon: url("/catalog/pixel-arcade/icons/arrow-right.svg"); }
-
-.catalog-controls { display: flex; min-height: 80px; align-items: center; gap: 28px; border-bottom: 4px solid var(--catalog-ink); margin-bottom: 24px; padding: 12px 20px 0; }
-.catalog-library-filters { display: flex; flex: 0 0 auto; align-self: stretch; align-items: stretch; gap: 8px; }
-.catalog-library-filters button { width: 178px; min-height: 56px; padding-inline: 10px; font-size: 26px; }
-.catalog-results { margin-left: auto; color: var(--catalog-muted); font-size: 12px; white-space: nowrap; }
-.catalog-categories { display: flex; min-width: 0; flex: 0 0 auto; align-items: center; gap: 14px; }
-.catalog-categories label { flex: 0 0 auto; font-size: 26px; font-weight: 700; white-space: nowrap; }
-.catalog-categories select { width: 194px; height: 52px; appearance: none; border: 2px solid var(--catalog-ink); border-radius: 0; padding: 4px 44px 4px 24px; color: var(--catalog-ink); background: var(--catalog-paper) url("/catalog/pixel-arcade/icons/chevron-down.svg") right 12px center / 28px no-repeat; font: 700 26px / 1.3 var(--catalog-font); cursor: pointer; }
-.catalog-sort { display: flex; flex: 0 0 auto; }
-.catalog-sort button { min-width: 120px; font-size: 26px; }
-.catalog-sort button + button { border-left: 0; }
-.catalog-library__notice { margin: -8px 0 20px; border-left: 4px solid #f4514f; padding: 8px 12px; color: var(--catalog-ink); background: #ffefd2; font-size: 15px; line-height: 1.6; }
-.catalog-author-selection { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: -4px 0 18px; color: var(--catalog-muted); font-size: 16px; }
-.catalog-author-selection button { min-height: 44px; border: 0; padding: 6px 10px; color: var(--catalog-ink); background: transparent; font: inherit; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
-.catalog-author-count { color: var(--catalog-muted); font-size: 17px; }
-.catalog-author-search { display: flex; width: min(360px, 100%); min-height: 52px; align-items: center; gap: 12px; border: 2px solid var(--catalog-ink); padding: 8px 12px; color: var(--catalog-ink); background: var(--catalog-paper); }
-.catalog-author-search input { min-width: 0; width: 100%; border: 0; outline: 0; color: inherit; background: transparent; font: inherit; font-size: 17px; }
-.catalog-author-search:focus-within { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
-
-// 卡片按屏幕宽度增加列数；窄屏保留单列与完整操作区，不挤小评分点击范围。
-.catalog-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
-// 边框与红色角钉来自正式卡匣素材；绘制向外扩 14px 抵消透明留白，不改变内容尺寸。
-.catalog-card { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 8px; border: 14px solid transparent; border-image: url("/catalog/pixel-arcade/frame-card.png") 220 / 44px / 14px stretch; padding: 2px 6px; background: var(--catalog-paper); }
-// 封面移到信息上方并沿用正式图片比例，避免固定高度在多列卡片中裁掉游戏画面。
-.catalog-card__media { position: relative; min-width: 0; aspect-ratio: 2.12; border: 2px solid var(--catalog-ink); background: #f2e5c9; }
+.catalog-controls { display: flex; min-height: 68px; align-items: center; gap: 20px; padding: 8px 24px; }
+.catalog-library-filters { display: flex; flex: 0 0 auto; gap: 12px; }
+.catalog-library-filters button { min-width: 156px; border-color: #bbcfe3; padding-inline: 18px; color: var(--catalog-ink); background: var(--catalog-paper); }
+.catalog-library-filters button:first-child { min-width: 180px; }
+.catalog-library-filters .anticon, .catalog-library-filters .catalog-icon { width: 26px; height: 26px; font-size: 24px; }
+.catalog-library-filters button:nth-child(2) .anticon { color: var(--catalog-red); }
+.catalog-library-filters button.is-active .anticon { color: #fff; }
+.catalog-library-filters button:hover:not(.is-active) { background: #dcefff; }
+// 状态节点仍保留目录数量；视觉上使用确认稿的细分隔线，不新增计数面板。
+.catalog-results { min-width: 16px; flex: 1; border-top: 1px solid #118ec6; color: transparent; font-size: 0; }
+.catalog-categories, .catalog-sort { display: flex; flex: 0 0 auto; align-items: center; gap: 12px; }
+.catalog-categories label, .catalog-sort label { color: #fff; font-size: 18px; font-weight: 700; white-space: nowrap; }
+.catalog-categories select, .catalog-sort select { width: 152px; min-height: 44px; appearance: none; border: 1px solid #ccddec; border-radius: 0; padding: 7px 36px 7px 14px; color: var(--catalog-ink); background: var(--catalog-paper) url("/catalog/pixel-arcade/icons/chevron-down.svg") right 10px center / 20px no-repeat; font: 700 16px / 1.4 var(--catalog-font); cursor: pointer; }
+.catalog-layout-toggle { display: flex; flex: 0 0 auto; gap: 12px; }
+.catalog-layout-toggle button { width: 52px; padding: 4px; border-color: #1488ca; background: #04234b; font-size: 26px; }
+.catalog-library__notice { margin: 0 0 12px; border: 1px solid #f994a9; padding: 10px 14px; color: #fff4f6; background: #622643; font-size: 14px; line-height: 1.6; }
+.catalog-author-selection { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 12px; color: #d7e9ff; font-size: 15px; }
+.catalog-author-selection button { min-height: 44px; border: 0; padding: 6px 10px; color: #fff; background: transparent; font: inherit; text-decoration: underline; cursor: pointer; }
+// 掌机轮廓与细节均来自正式图片；两个同坐标纹理层保留透明开窗，只用页面色填壳体。
+.catalog-list { position: relative; z-index: 1; }
+.catalog-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 12px 16px; }
+.catalog-card { --device-color: #1594ff; position: relative; isolation: isolate; min-width: 0; padding: 13px 8.5% 8px 12.5%; color: var(--catalog-ink); }
+.catalog-card::before, .catalog-card::after { position: absolute; inset: 0; z-index: -1; content: ""; pointer-events: none; }
+.catalog-card::before { background: var(--device-color); mask: url("/catalog/night-arcade-v1/device-shell.webp") center / 103.3% 113.3% no-repeat; }
+.catalog-card::after { background: url("/catalog/night-arcade-v1/device-shell.webp") center / 103.3% 113.3% no-repeat; filter: brightness(1.25); mix-blend-mode: multiply; }
+.catalog-card--red { --device-color: #ff335e; } .catalog-card--blue { --device-color: #1594ff; } .catalog-card--yellow { --device-color: #ffd438; } .catalog-card--green { --device-color: #00d597; } .catalog-card--purple { --device-color: #a43cff; } .catalog-card--teal { --device-color: #00dec3; } .catalog-card--pink { --device-color: #ff4387; } .catalog-card--sky { --device-color: #1bafff; }
+.catalog-card__media { position: relative; min-width: 0; aspect-ratio: 2.95; background: #06182c; }
 .catalog-card__media-link { display: block; width: 100%; height: 100%; }
 .catalog-card__media img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
-.catalog-card__cover-fallback { display: flex; width: 100%; height: 100%; flex-direction: column; justify-content: center; gap: 8px; padding: 10px; color: var(--catalog-ink); background: #e1ebf1; }
-.catalog-card__cover-fallback span { font-size: 13px; }
-.catalog-card__cover-fallback strong { font-size: 20px; line-height: 1.4; overflow-wrap: anywhere; }
-.catalog-card__cover-fallback--1 { background: #eee4ef; }
-.catalog-card__cover-fallback--2 { background: #e4edda; }
-.catalog-card__cover-fallback--3 { background: #f3dfd5; }
-.catalog-card__cover-fallback--4 { background: #f3e8c6; }
-.catalog-card__cover-fallback--5 { background: #deedef; }
-.catalog-card__badges { position: absolute; top: 6px; right: 6px; display: flex; gap: 5px; }
-.catalog-card__badge { display: grid; width: 26px; height: 26px; place-items: center; border: 1px solid var(--catalog-ink); color: var(--catalog-ink); background: var(--catalog-paper); font-size: 16px; }
-.catalog-card__badge .catalog-icon { width: 18px; height: 18px; }
-.catalog-card__badge--hot { color: #df613b; }
-.catalog-card__body { display: flex; min-width: 0; flex-direction: column; align-items: stretch; padding: 0 0 6px; }
-.catalog-card h2 { min-height: 2.6em; margin: 0; color: var(--catalog-ink); font-family: var(--catalog-display-font); font-synthesis: none; font-size: 24px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
-.catalog-card__title-link { display: block; min-height: 44px; color: inherit; text-decoration: none; overflow-wrap: anywhere; }
-.catalog-card__title-link:hover { text-decoration: underline; text-underline-offset: 5px; }
-.catalog-card__author { display: flex; min-height: 44px; align-items: center; flex-wrap: wrap; margin: 0; color: var(--catalog-ink); font-size: 16px; line-height: 1.35; overflow-wrap: anywhere; }
-.catalog-card__author a,
-.catalog-card__author button { display: inline-flex; min-width: 44px; max-width: 100%; min-height: 44px; align-items: center; border: 0; padding: 0; color: inherit; background: transparent; font: inherit; text-align: left; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; cursor: pointer; }
-.catalog-card__rating { min-width: 0; }
-.catalog-card__hearts { display: flex; align-items: center; }
-.catalog-card__hearts button { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 0; border-radius: 0; padding: 0; color: #f2497d; background: transparent; cursor: pointer; }
-.catalog-card__hearts .catalog-icon { width: 28px; height: 28px; }
-.catalog-card__hearts .anticon { font-size: 26px; }
-.catalog-card__hearts button:not(:disabled):hover { background: #ffe5e8; }
-.catalog-card__hearts button:disabled { cursor: default; }
-.catalog-card__rating.is-pending { opacity: .55; }
-.catalog-card__preview-note { display: flex; min-height: 44px; align-items: center; margin: 0; color: var(--catalog-muted); font-size: 16px; }
-.catalog-card__stats { display: flex; min-height: 18px; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin-bottom: 10px; color: var(--catalog-muted); font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; }
-.catalog-card__stats > span { display: inline-flex; min-width: 0; align-items: center; gap: 4px; overflow-wrap: anywhere; }
-.catalog-card__heat .anticon { color: #c56b43; }
-.catalog-card__rating-count { margin-left: auto; }
-.catalog-card__footer { display: flex; align-items: stretch; gap: 10px; margin-top: auto; }
-.catalog-card__wanted { display: grid; width: 44px; min-height: 44px; flex: 0 0 44px; place-items: center; border: 2px solid var(--catalog-ink); border-radius: 0; padding: 0; color: var(--catalog-ink); background: var(--catalog-paper); cursor: pointer; }
-.catalog-card__wanted .catalog-icon { width: 28px; height: 28px; }
-.catalog-card__wanted:hover { background: #f2e6cd; }
-.catalog-card__wanted.is-active { color: var(--btn-primary-fg); background: var(--btn-primary-bg); }
-.catalog-card__wanted.is-active:hover { background: var(--btn-primary-bg-hover); }
-.catalog-card__open { min-width: 0; min-height: 44px; flex: 1; padding-inline: 4px; font-size: 20px; }
-.catalog-card__rating-error { margin: 8px 0 0; color: #a1233c; font-size: 13px; line-height: 1.5; }
-.catalog-load-more { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 26px; color: var(--catalog-muted); font-size: 14px; }
-.catalog-load-more button,
-.catalog-state button { min-height: 44px; border: 2px solid var(--catalog-ink); border-radius: 0; padding: 8px 20px; color: var(--catalog-ink); background: var(--catalog-paper); font: 700 18px / 1.3 var(--catalog-font); cursor: pointer; }
-.catalog-load-more button:hover,
-.catalog-state button:hover { background: #f2e6cd; }
-.catalog-state { display: flex; min-height: 180px; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 20px; border: 2px dashed var(--catalog-ink); padding: 24px; color: var(--catalog-muted); font-size: 17px; text-align: center; }
-.catalog-state__spinner { width: 24px; height: 24px; border: 3px solid #d9cdb2; border-top-color: var(--catalog-ink); animation: catalog-spin 800ms steps(4) infinite; }
-.catalog-footer { display: flex; min-height: 80px; align-items: center; justify-content: center; gap: 28px; padding: 24px 0; color: var(--catalog-muted); font-size: 18px; text-align: center; }
-.catalog-footer__accent { width: 20px; height: 20px; flex: 0 0 20px; background: #f4514f; mask: url("/catalog/pixel-arcade/icons/plus.svg") center / contain no-repeat; }
-.catalog-footer::before,
-.catalog-footer::after { content: ""; height: 1px; min-width: 18px; flex: 1; border-top: 3px dotted var(--catalog-ink); }
-.catalog-library__hint { margin: 0; line-height: 1.5; }
-
-.catalog-author-dialog { width: min(600px, calc(100% - 24px)); max-height: min(80dvh, 640px); overflow-y: auto; border: 14px solid transparent; border-image: url("/catalog/pixel-arcade/frame-card.png") 220 / 18px / 0 stretch; border-radius: 0; padding: 0; color: var(--catalog-ink); background: var(--catalog-paper); }
-.catalog-author-dialog::backdrop { background: #07193699; }
-.catalog-author-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 2px solid var(--catalog-ink); padding: 18px; }
-.catalog-author-dialog__header > div { min-width: 0; }
-.catalog-author-dialog__header h2 { margin: 0 0 6px; font-size: 28px; overflow-wrap: anywhere; }
-.catalog-author-dialog__header span { color: var(--catalog-muted); font-size: 15px; }
-.catalog-author-dialog__close { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 2px solid var(--catalog-ink); border-radius: 0; color: var(--catalog-ink); background: var(--catalog-paper); font-size: 18px; cursor: pointer; }
-.catalog-author-dialog__close:hover { background: #f2e6cd; }
-.catalog-author-dialog__games { margin: 0; padding: 8px 18px 16px; list-style: none; }
-.catalog-author-dialog__games li + li { border-top: 1px solid #b8ae97; }
-.catalog-author-dialog__games a { display: flex; min-height: 72px; align-items: center; gap: 12px; padding: 12px 0; color: var(--catalog-ink); font-weight: 700; text-decoration: none; }
-.catalog-author-dialog__games a:hover { text-decoration: underline; text-underline-offset: 3px; }
-.catalog-author-dialog__games img { width: 100px; flex: 0 0 100px; aspect-ratio: 2.12; border: 1px solid var(--catalog-ink); object-fit: cover; }
-.catalog-author-dialog__games a > span { min-width: 0; overflow-wrap: anywhere; }
-.catalog-author-dialog__games .catalog-icon { margin-left: auto; }
-.catalog-page :is(button, a, select):focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
-.catalog-card__media-link:focus-visible { outline-offset: -6px; }
+.catalog-card__cover-fallback { display: flex; height: 100%; flex-direction: column; justify-content: center; gap: 4px; padding: 8px; color: var(--catalog-ink); background: #d8eaf0; }
+.catalog-card__cover-fallback span { font-size: 12px; } .catalog-card__cover-fallback strong { font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
+.catalog-card__badges { position: absolute; top: 4px; left: 4px; display: flex; gap: 4px; }
+.catalog-card__badge { display: grid; min-width: 24px; min-height: 24px; place-items: center; color: #fff; background: #057eb9; font-size: 12px; font-weight: 700; }
+.catalog-card__badge--hot { padding-inline: 7px; background: var(--catalog-red); } .catalog-card__badge .catalog-icon { width: 18px; height: 18px; }
+.catalog-card__body { min-width: 0; }
+.catalog-card__info { position: relative; min-height: 51px; padding: 4px 8px 3px; background: var(--catalog-paper); }
+.catalog-card h2 { margin: 0; color: var(--catalog-ink); font-size: 18px; font-weight: 800; line-height: 22px; overflow-wrap: anywhere; }
+.catalog-card__title-link { display: block; color: inherit; text-decoration: none; } .catalog-card__title-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+.catalog-card__author { display: flex; min-width: 0; align-items: baseline; flex-wrap: wrap; max-width: calc(100% - 46px); margin: 0; font-size: 13px; line-height: 19px; overflow-wrap: anywhere; }
+.catalog-card__author a, .catalog-card__author button { min-width: 0; max-width: 100%; border: 0; padding: 0; color: #0a4a85; background: transparent; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; overflow-wrap: anywhere; }
+.catalog-card__stats { position: absolute; right: 5px; bottom: 4px; display: flex; max-width: 52px; align-items: center; flex-wrap: wrap; gap: 2px 4px; color: #587089; font-size: 10px; line-height: 1.2; }
+.catalog-card__stats > span { display: inline-flex; min-width: 0; align-items: center; gap: 2px; overflow-wrap: anywhere; } .catalog-card__heat .anticon { color: #bd723f; }
+.catalog-card__footer { display: flex; min-width: 0; min-height: 44px; align-items: center; gap: 6px; margin-right: -6%; }
+.catalog-card__rating-trigger { display: flex; min-width: 74px; min-height: 44px; flex: 1; align-items: center; gap: 5px; border: 0; padding: 0; color: #fff; background: transparent; font: 12px / 1.2 var(--catalog-font); text-align: left; cursor: pointer; }
+.catalog-card__rating-trigger .anticon { width: 26px; height: 26px; flex: 0 0 26px; color: #fff; font-size: 24px; }
+.catalog-card__rating-trigger .anticon :deep(svg) { stroke: #ff326d; stroke-width: 90px; paint-order: stroke; }
+.catalog-card__rating-trigger.is-filled .anticon { color: #ff326d; }
+.catalog-card--yellow .catalog-card__rating-trigger { color: var(--catalog-ink); } .catalog-card__rating-trigger:hover { color: #ffe5ee; } .catalog-card__rating-count { white-space: nowrap; }
+.catalog-card__preview-note { min-width: 0; flex: 1; margin: 0; color: #fff; font-size: 11px; line-height: 1.3; }
+.catalog-card__wanted { display: grid; width: 44px; min-height: 44px; flex: 0 0 44px; place-items: center; border: 0; padding: 0; color: #fff; background: transparent; cursor: pointer; }
+.catalog-card__wanted .anticon { color: inherit; font-size: 26px; }
+.catalog-card__wanted .anticon :deep(svg) { stroke: #001e4c; stroke-width: 90px; paint-order: stroke; }
+.catalog-card__wanted.is-active { color: var(--catalog-yellow); } .catalog-card__wanted:hover { color: #fff09a; }
+.catalog-card__open { position: relative; display: inline-flex; width: 136px; min-width: 88px; min-height: 44px; flex: 0 1 136px; align-items: center; justify-content: center; gap: 6px; padding: 4px 8px; color: #08204b; background: var(--catalog-yellow); font-size: 17px; font-weight: 800; line-height: 1.25; text-decoration: none; white-space: nowrap; }
+// 裁去按钮纹理的透明边距，正文和点击盒保持独立，不以截图模拟控件。
+.catalog-card__open::after { position: absolute; inset: 0; background: url("/catalog/night-arcade-v1/yellow-button-frame.webp") center / 100% 135.75% no-repeat; content: ""; pointer-events: none; }
+.catalog-card__open:hover { background: #ffe666; } .catalog-card__open .anticon { font-size: 16px; }
+.catalog-card__rating-panel { position: absolute; right: 8px; bottom: 58px; z-index: 5; max-width: calc(100% - 16px); border: 2px solid #19baff; padding: 8px; color: #fb3271; background: #fffdf5; box-shadow: 3px 3px 0 #001335; }
+.catalog-card__hearts { display: flex; align-items: center; } .catalog-card__hearts button { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 0; padding: 0; color: #fa3270; background: transparent; cursor: pointer; }
+.catalog-card__hearts .catalog-icon { width: 28px; height: 28px; } .catalog-card__hearts .anticon { font-size: 28px; }
+.catalog-card__hearts button:disabled { cursor: default; } .catalog-card__hearts button:not(:disabled):hover { background: #ffe3ec; } .catalog-card__rating-panel.is-pending { opacity: .6; }
+.catalog-card__rating-error { margin: 5px 0 0; padding: 5px 7px; color: #7b1533; background: #fff4f4; font-size: 12px; line-height: 1.5; }
+.catalog-load-more { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 20px; color: #cbe9ff; font-size: 14px; }
+.catalog-load-more button, .catalog-state button { min-height: 44px; border: 1px solid #52d7ff; padding: 8px 18px; color: #fff; background: #075ba8; font: 700 16px / 1.3 var(--catalog-font); cursor: pointer; }
+.catalog-state { display: flex; min-height: 180px; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 16px; border: 1px solid #1b73b6; padding: 24px; color: #dfeeff; font-size: 16px; text-align: center; }
+.catalog-state__spinner { width: 24px; height: 24px; border: 3px solid #174376; border-top-color: #27ceff; animation: catalog-spin 800ms steps(4) infinite; }
+// 列表仅重排同一批项目和原操作，窄屏保持单列，不新增数据来源或本地存储。
+.catalog-grid--list { grid-template-columns: minmax(0, 1fr) !important; }
+.catalog-grid--list .catalog-card { display: grid; grid-template-columns: 260px minmax(0, 1fr); align-items: center; gap: 16px; border: 2px solid var(--device-color); padding: 12px; background: #07284b; }
+.catalog-grid--list .catalog-card::before, .catalog-grid--list .catalog-card::after { display: none; } .catalog-grid--list .catalog-card__media { aspect-ratio: 2.12; }
+.catalog-grid--list .catalog-card__info { min-height: 64px; } .catalog-grid--list .catalog-card__footer { justify-content: flex-end; gap: 16px; margin: 0; }
+.catalog-grid--list .catalog-card__rating-trigger { flex: 0 0 auto; }
+.catalog-footer { position: relative; isolation: isolate; min-height: 106px; margin-top: 41px; padding-top: 32px; }
+.catalog-footer::before { position: absolute; inset: -36px 0 0; z-index: -1; background: url("/catalog/night-arcade-v1/footer-scene.webp") center bottom / 100% auto no-repeat; content: ""; pointer-events: none; }
+.catalog-footer__inner { position: relative; z-index: 1; display: grid; grid-template-columns: 440px 480px minmax(0, 1fr); min-height: 64px; align-items: center; gap: 32px; border-top: 1px solid #1772ad; border-bottom: 1px solid #1772ad; padding-inline: 82px; background: #031b40; }
+.catalog-footer__brand { display: flex; align-items: center; gap: 28px; } .catalog-footer__brand strong { color: #fff; font-family: var(--catalog-heading-font); font-synthesis: none; font-size: 30px; }
+.catalog-footer__brand > span { color: #40d7ff; font-size: 14px; }
+.catalog-footer__motto { display: flex; align-items: center; gap: 24px; margin: 0; color: #3adeff; font-size: 14px; white-space: nowrap; } .catalog-footer__motto .anticon { color: var(--catalog-red); font-size: 20px; }
+.catalog-footer__play { display: flex; align-items: center; gap: 3px; margin-right: 180px; color: var(--catalog-red); font-size: 18px; white-space: nowrap; } .catalog-footer__play > span:not(.anticon) { margin-left: 8px; color: var(--catalog-cyan); font-size: 14px; }
+.catalog-library__hint { margin: 0; padding: 2px 12px 0; color: #82afcd; font-size: 10px; line-height: 14px; text-align: center; }
+.catalog-author-count { color: #cde9ff; font-size: 15px; } .catalog-author-search { display: flex; width: min(360px, 100%); min-height: 44px; align-items: center; gap: 10px; border: 1px solid #1884ba; padding: 8px 12px; color: #102750; background: #fffdf5; }
+// 榜单沿用浅色面板和深色辅助文字；空结果位于夜景底上，单独保留可读的浅色提示。
+.catalog-page :deep(.catalog-leaderboard__empty) { color: #dcefff; }
+.catalog-author-search input { min-width: 0; width: 100%; border: 0; outline: 0; color: inherit; background: transparent; font: inherit; font-size: 14px; }
+.catalog-author-dialog { width: min(600px, calc(100% - 24px)); max-height: min(80dvh, 640px); overflow-y: auto; border: 2px solid #18baf8; padding: 0; color: #0b244a; background: #fffdf5; }
+.catalog-author-dialog::backdrop { background: #001332b3; } .catalog-author-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #bed9ea; padding: 16px; }
+.catalog-author-dialog__header > div { min-width: 0; } .catalog-author-dialog__header h2 { margin: 0 0 6px; font-size: 24px; overflow-wrap: anywhere; } .catalog-author-dialog__header span { color: #58718d; font-size: 14px; }
+.catalog-author-dialog__close { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 0; padding: 0; color: inherit; background: transparent; font-size: 18px; cursor: pointer; }
+.catalog-author-dialog__games { margin: 0; padding: 0 16px; list-style: none; } .catalog-author-dialog__games li + li { border-top: 1px solid #d6e4ec; }
+.catalog-author-dialog__games a { display: flex; min-height: 72px; align-items: center; gap: 12px; padding: 10px 0; color: #14386a; font-weight: 700; text-decoration: none; }
+.catalog-author-dialog__games img { width: 100px; flex: 0 0 100px; aspect-ratio: 2.12; object-fit: cover; } .catalog-author-dialog__games a > span { min-width: 0; overflow-wrap: anywhere; } .catalog-author-dialog__games .catalog-icon { margin-left: auto; }
+.catalog-page :is(button, a, select):focus-visible { outline: 2px solid #42deff; outline-offset: 3px; } .catalog-card__media-link:focus-visible { outline-offset: -4px; }
 @keyframes catalog-spin { to { transform: rotate(360deg); } }
-
-// 每列保留五颗评分按钮所需宽度；大屏扩到六列后限制整体宽度，避免卡片继续放大。
-@media (min-width: 600px) {
-  .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 600px) { .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .catalog-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1280px) { .catalog-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1600px) { .catalog-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (min-width: 1920px) { .catalog-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.catalog-footer::after { position: absolute; right: 30px; bottom: 8px; z-index: 2; width: 160px; height: 160px; background: url("/catalog/night-arcade-v1/footer-cat.webp") center / contain no-repeat; content: ""; pointer-events: none; }
+@media (min-width: 1600px) { .catalog-card__open { font-size: 15px; gap: 4px; padding-inline: 4px; } .catalog-card__open .anticon { font-size: 14px; } }
+@media (max-width: 1430px) {
+ .catalog-header__tagline { display: none; } .catalog-header__inner { gap: 12px; padding-right: 0; } .catalog-view-tabs button, .catalog-view-tabs button.is-active { min-width: 136px; }
+ .catalog-controls { gap: 14px; padding-inline: 8px; } .catalog-library-filters button { min-width: 134px; padding-inline: 12px; font-size: 16px; } .catalog-library-filters button:first-child { min-width: 150px; }
+ .catalog-categories, .catalog-sort { gap: 8px; } .catalog-categories select, .catalog-sort select { width: 128px; } .catalog-layout-toggle { gap: 8px; } .catalog-layout-toggle button { width: 44px; }
+ .catalog-card__footer { gap: 2px; } .catalog-card__open { width: 104px; flex-basis: 104px; font-size: 15px; } .catalog-card__rating-trigger { min-width: 65px; gap: 3px; font-size: 11px; }
+ .catalog-footer__inner { grid-template-columns: max-content minmax(0, 1fr) max-content; padding-inline: 24px; gap: 20px; } .catalog-footer__brand { gap: 16px; } .catalog-footer__motto { gap: 16px; } .catalog-footer__play { margin-right: 110px; }
 }
-
-@media (min-width: 960px) {
-  .catalog-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
-@media (min-width: 1280px) {
-  .catalog-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-@media (min-width: 1600px) {
-  .catalog-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-}
-
-@media (min-width: 1920px) {
-  .catalog-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-}
-
-@media (max-width: 1300px) {
-  .catalog-header__inner { grid-template-columns: 230px minmax(0, 1fr) 170px; gap: 16px; }
-  .catalog-view-tabs { gap: 14px; }
-  .catalog-view-tabs button { min-width: 130px; padding-inline: 16px; font-size: 25px; }
-  .catalog-header__submit { width: 170px; font-size: 26px; }
-  .catalog-controls { gap: 18px; padding-inline: 10px; }
-  .catalog-library-filters button { width: 144px; font-size: 23px; }
-  .catalog-categories label { font-size: 22px; }
-  .catalog-categories select { width: 150px; font-size: 23px; }
-  .catalog-sort button { min-width: 92px; font-size: 23px; }
-}
-
 @media (max-width: 1100px) {
-  .catalog-page__wrap { width: calc(100% - 28px); }
-  .catalog-header__inner { grid-template-columns: 195px minmax(0, 1fr) 140px; gap: 10px; }
-  .catalog-brand { gap: 8px; font-size: 28px; }
-  .catalog-brand img { width: 76px; height: 70px; }
-  .catalog-view-tabs { gap: 4px; }
-  .catalog-view-tabs button { min-width: 102px; font-size: 21px; }
-  .catalog-header__submit { width: 140px; font-size: 22px; }
-  .catalog-controls { gap: 12px; padding-inline: 0; }
-  .catalog-library-filters button { width: 122px; font-size: 20px; }
-  .catalog-categories { gap: 4px; }
-  .catalog-categories select { width: 124px; font-size: 20px; padding-left: 12px; }
-  .catalog-categories label { font-size: 19px; }
-  .catalog-sort button { min-width: 72px; font-size: 20px; padding-inline: 12px; }
-  .catalog-results { font-size: 11px; }
+ .catalog-header__inner { width: calc(100% - 32px); } .catalog-brand { gap: 8px; } .catalog-brand img { width: 52px; height: 44px; } .catalog-brand > span { font-size: 26px; }
+ .catalog-view-tabs button { min-width: 110px; padding-inline: 10px; font-size: 16px; } .catalog-header__submit { min-width: 134px; font-size: 16px; }
+ .catalog-controls { flex-wrap: wrap; gap: 10px; padding-block: 12px; } .catalog-results { flex: 1; } .catalog-categories label, .catalog-sort label { font-size: 15px; }
+ .catalog-categories select, .catalog-sort select { width: 116px; font-size: 15px; } .catalog-footer__brand > span { display: none; }
+ // 中等宽度给页脚猫预留独立空间，装饰短句不与猫或品牌重叠。
+ .catalog-footer__inner { grid-template-columns: max-content minmax(0, 1fr); padding-right: 188px; }
+ .catalog-footer__motto { justify-self: center; gap: 12px; font-size: 12px; } .catalog-footer__play { display: none; }
 }
-
-@media (max-width: 880px) {
-  .catalog-header { height: auto; }
-  .catalog-header__inner { display: flex; flex-wrap: wrap; gap: 10px; padding-block: 8px 12px; }
-  .catalog-header__submit { margin-left: auto; }
-  .catalog-view-tabs { order: 3; width: 100%; }
-  .catalog-view-tabs::before,
-  .catalog-view-tabs::after { display: none; }
-  .catalog-view-tabs button { min-width: 0; flex: 1; }
-  .catalog-hero h1 { font-size: 52px; }
-  .catalog-hero__inner { justify-content: center; gap: 20px; padding-block: 16px; }
-  .catalog-search { width: min(680px, 92%); }
-  .catalog-controls { flex-wrap: wrap; gap: 10px 14px; padding-top: 16px; padding-bottom: 12px; }
-  .catalog-library-filters { width: 100%; }
-  .catalog-library-filters button { min-height: 50px; flex: 1; }
-  .catalog-categories { margin-left: auto; }
-  .catalog-results { margin-left: 0; }
+@media (max-width: 800px) {
+ .catalog-page { --catalog-edge-width: 12px; }
+ .catalog-page__wrap { width: calc(100% - 24px); } .catalog-header { height: auto; } .catalog-header__inner { flex-wrap: wrap; gap: 8px; padding-block: 6px; }
+ .catalog-header__search { margin-left: auto; } .catalog-header__mascot { display: none; } .catalog-view-tabs { order: 5; width: 100%; flex-basis: 100%; gap: 4px; } .catalog-view-tabs button { flex: 1; }
+ .catalog-hero h1 { font-size: 48px; } .catalog-hero__subtitle { font-size: 12px; letter-spacing: 0; }
+ .catalog-hero--leaderboard h1 { font-size: 64px; line-height: 84px; } .catalog-hero__leaderboard-subtitle { font-size: 16px; }
+ .catalog-library-filters { flex: 1 0 100%; } .catalog-library-filters button, .catalog-library-filters button:first-child { min-width: 0; flex: 1; }
+ // 手机工具栏固定两行：清单入口占首行，筛选与显示方式在第二行底部对齐。
+ .catalog-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: 12px 10px; padding-inline: 0; }
+ .catalog-library-filters { grid-column: 1 / -1; }
+ .catalog-categories, .catalog-sort { display: grid; min-width: 0; gap: 4px; }
+ .catalog-categories label, .catalog-sort label { color: #cde9ff; font-size: 13px; line-height: 18px; }
+ .catalog-categories select, .catalog-sort select { width: 100%; min-width: 0; }
+ .catalog-results { position: absolute; width: 1px; height: 1px; overflow: hidden; border: 0; clip-path: inset(50%); } .catalog-layout-toggle { margin-left: auto; }
+ .catalog-footer__inner { display: flex; flex-wrap: wrap; justify-content: center; padding: 12px; } .catalog-footer__motto { flex-wrap: wrap; justify-content: center; margin: 0; font-size: 12px; }
+ .catalog-footer::after { right: 8px; bottom: calc(100% - 32px); width: 90px; height: 90px; }
+ .catalog-grid--list .catalog-card { grid-template-columns: 190px minmax(0, 1fr); }
 }
-
-@media (max-width: 540px) {
-  .catalog-page { border-width: 4px; }
-  .catalog-page__wrap { width: calc(100% - 20px); }
-  .catalog-brand { font-size: 26px; }
-  .catalog-brand img { width: 60px; height: 56px; }
-  .catalog-header__submit { width: 126px; min-height: 48px; font-size: 21px; }
-  .catalog-view-tabs button { min-height: 46px; font-size: 19px; padding-inline: 6px; }
-  .catalog-hero { height: 240px; background-position: right bottom; }
-  .catalog-hero h1 { font-size: clamp(26px, 8.6vw, 36px); white-space: nowrap; }
-  .catalog-hero__inner { justify-content: flex-start; gap: 16px; padding: 24px 12px; }
-  .catalog-search { width: 100%; min-height: 56px; gap: 9px; border-width: 2px; }
-  .catalog-search > .catalog-icon { width: 24px; height: 24px; margin-left: 10px; }
-  .catalog-search input { font-size: 16px; }
-  .catalog-search button { width: 76px; min-height: 52px; flex-basis: 76px; font-size: 21px; }
-  .catalog-controls { gap: 10px 8px; margin-bottom: 18px; }
-  .catalog-library-filters { gap: 6px; }
-  .catalog-library-filters button { width: auto; min-height: 48px; font-size: 18px; padding-inline: 4px; }
-  .catalog-results { flex: 1 0 100%; line-height: 16px; }
-  .catalog-categories { margin-left: 0; }
-  .catalog-categories label { font-size: 17px; }
-  .catalog-categories select { width: 112px; height: 44px; font-size: 19px; }
-  .catalog-sort { margin-left: auto; }
-  .catalog-sort button { min-width: 58px; min-height: 44px; padding-inline: 6px; font-size: 18px; }
-  .catalog-card { padding: 2px; }
-  .catalog-footer { gap: 12px; padding-block: 20px; font-size: 13px; }
-  .catalog-footer__accent { width: 12px; height: 12px; flex-basis: 12px; }
-  .catalog-author-search { width: 100%; }
-  .catalog-author-dialog__header { padding: 12px; }
-  .catalog-author-dialog__games { padding-inline: 12px; }
-  .catalog-author-dialog__games img { width: 70px; flex-basis: 70px; }
+@media (max-width: 599px) {
+ .catalog-header__inner { width: calc(100% - 20px); } .catalog-header__submit { min-width: 126px; font-size: 15px; } .catalog-header__submit .anticon { width: 20px; height: 20px; font-size: 20px; }
+ .catalog-view-tabs button, .catalog-view-tabs button.is-active { min-width: 0; gap: 6px; font-size: 15px; } .catalog-view-tabs .anticon, .catalog-view-tabs .catalog-icon { width: 22px; height: 22px; font-size: 22px; }
+ .catalog-hero { height: 264px; } .catalog-hero__inner { padding: 28px 12px 0; } .catalog-hero h1 { font-size: clamp(26px, 8vw, 40px); line-height: 1.2; }
+ .catalog-page--authors .catalog-hero, .catalog-page--contributors .catalog-hero { height: 300px; }
+ .catalog-hero--leaderboard .catalog-hero__inner { padding-top: 24px; } .catalog-hero__emblem { width: 52px; height: 40px; margin-bottom: 8px; }
+ .catalog-hero--leaderboard h1 { font-size: 52px; line-height: 68px; } .catalog-hero__leaderboard-subtitle { width: min(290px, 100%); font-size: 15px; line-height: 24px; }
+ .catalog-hero--leaderboard .catalog-hero__motto { gap: 6px; font-size: 10px; }
+ .catalog-page--authors .catalog-author-count { font-size: 18px; } .catalog-page--authors .catalog-author-search { width: 100%; }
+ .catalog-hero__subtitle { max-width: 100%; margin-top: 12px; padding-inline: 8px; font-size: 11px; } .catalog-search { width: min(420px, 100%); } .catalog-search button { width: 78px; font-size: 20px; } .catalog-hero__motto { gap: 7px; font-size: 10px; }
+ .catalog-library-filters { gap: 6px; } .catalog-library-filters button, .catalog-library-filters button:first-child { padding-inline: 4px; gap: 5px; font-size: 13px; }
+ .catalog-library-filters .anticon, .catalog-library-filters .catalog-icon { width: 20px; height: 20px; font-size: 20px; }
+ .catalog-categories, .catalog-sort { gap: 4px; } .catalog-categories label, .catalog-sort label { font-size: 13px; } .catalog-categories select, .catalog-sort select { width: 98px; padding-left: 8px; padding-right: 28px; font-size: 14px; }
+ .catalog-controls { column-gap: 8px; } .catalog-categories select, .catalog-sort select { width: 100%; }
+ .catalog-layout-toggle { margin-left: 0; } .catalog-card { padding: 18px 11.5% 12px; } .catalog-card h2 { font-size: 17px; line-height: 22px; }
+ .catalog-card__footer { gap: 4px; } .catalog-card__open { width: 112px; flex-basis: 112px; font-size: 15px; } .catalog-grid--list .catalog-card { display: block; padding: 10px; } .catalog-grid--list .catalog-card__media { aspect-ratio: 2.12; }
+ .catalog-footer__brand strong { font-size: 24px; } .catalog-footer__motto { gap: 12px; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .catalog-state__spinner { animation: none; }
-}
+@media (pointer: coarse) { .catalog-card__title-link, .catalog-card__author a, .catalog-card__author button { display: flex; min-height: 44px; align-items: center; } }
+@media (prefers-reduced-motion: reduce) { .catalog-state__spinner { animation: none; } }

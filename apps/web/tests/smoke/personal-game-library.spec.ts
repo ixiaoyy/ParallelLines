@@ -146,6 +146,7 @@ test("想玩可用键盘切换、刷新恢复，并保持评分和原生打开�
   expect(requests.ratings).toEqual([]);
   expect(context.pages()).toHaveLength(1);
   expect((await savedLibrary(page))?.wantedIds).toEqual(["901"]);
+  await first.getByRole("button", { name: "查看打工摸鱼的评分", exact: true }).click();
   await first.getByRole("button", { name: "给打工摸鱼评3分", exact: true }).click();
   await expect(first.getByText("1 人评分", { exact: true })).toBeVisible();
   expect(requests.ratings).toEqual([{ id: "901", score: 3 }]);
@@ -158,6 +159,110 @@ test("想玩可用键盘切换、刷新恢复，并保持评分和原生打开�
   await expect(page.getByText("还没有加入想玩的游戏", { exact: true })).toBeVisible();
   expect((await savedLibrary(page))?.wantedIds).toEqual([]);
   expect(requests.unexpectedRequests).toEqual([]);
+});
+
+test("评分只展开一个面板，Escape 恢复入口焦点，外部点击不提交评分", async ({ page, context }) => {
+  const requests = await mockCatalog(context);
+  await page.goto("/");
+  const first = card(page, "打工摸鱼");
+  const second = card(page, "合成大西瓜");
+  const firstTrigger = first.getByRole("button", { name: "查看打工摸鱼的评分", exact: true });
+  const secondTrigger = second.getByRole("button", { name: "查看合成大西瓜的评分", exact: true });
+  // 键盘进入评分后直接聚焦分值；关闭时回到当前游戏入口。
+  await firstTrigger.focus();
+  await firstTrigger.press("Enter");
+  await expect(firstTrigger).toHaveAttribute("aria-expanded", "true");
+  await expect(first.getByRole("button", { name: "给打工摸鱼评1分", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(firstTrigger).toBeFocused();
+  await expect(page.locator(".catalog-card__rating-panel")).toHaveCount(0);
+  // 改看另一款评分时收起旧面板，页面最多保留一个评分操作区。
+  await firstTrigger.click();
+  await secondTrigger.click();
+  await expect(firstTrigger).toHaveAttribute("aria-expanded", "false");
+  await expect(second.getByRole("group", { name: "合成大西瓜的评分", exact: true })).toBeVisible();
+  await expect(page.locator(".catalog-card__rating-panel")).toHaveCount(1);
+  await page.locator("#catalog-title").click();
+  await expect(secondTrigger).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator(".catalog-card__rating-panel")).toHaveCount(0);
+  expect(requests.ratings).toEqual([]);
+  expect(requests.opened).toEqual([]);
+  expect(requests.unexpectedRequests).toEqual([]);
+});
+
+test("评分请求挂起或失败时 Escape 仍关闭面板并恢复入口焦点", async ({ page, context }) => {
+  const requests = await mockCatalog(context);
+  let releasePending = () => {};
+  const pendingResponse = new Promise<void>((resolve) => { releasePending = resolve; });
+  // 首次响应由测试显式放行，第二次直接失败；仅模拟当前评分接口，不写真实数据。
+  await context.route("**/api/v1/catalog/projects/901/ratings", async (route) => {
+    const score = (route.request().postDataJSON() as { score: number }).score;
+    requests.ratings.push({ id: "901", score });
+    if (requests.ratings.length === 1) await pendingResponse;
+    await route.fulfill({ status: 503, json: { error: { code: "TEST_UNAVAILABLE", message: "test" } }, headers: { "access-control-allow-origin": "*" } });
+  });
+  await page.goto("/");
+  const first = card(page, "打工摸鱼");
+  const trigger = first.getByRole("button", { name: "查看打工摸鱼的评分", exact: true });
+  const panel = first.getByRole("group", { name: "打工摸鱼的评分", exact: true });
+  await trigger.click();
+  try {
+    await first.getByRole("button", { name: "给打工摸鱼评3分", exact: true }).click();
+    await expect.poll(() => requests.ratings).toEqual([{ id: "901", score: 3 }]);
+    await expect(panel).toBeFocused();
+    await expect(first.getByRole("button", { name: "给打工摸鱼评3分", exact: true })).toBeDisabled();
+    await page.keyboard.press("Escape");
+    await expect(trigger).toBeFocused();
+    await expect(page.locator(".catalog-card__rating-panel")).toHaveCount(0);
+  } finally {
+    releasePending();
+  }
+  await expect(first.getByRole("alert")).toHaveText("评分暂时不可用，请稍后重试。");
+  // 失败不产生已评分结果；重新打开后仍可提交，失败时的焦点留在当前面板内。
+  await trigger.click();
+  await first.getByRole("button", { name: "给打工摸鱼评2分", exact: true }).click();
+  await expect.poll(() => requests.ratings).toEqual([{ id: "901", score: 3 }, { id: "901", score: 2 }]);
+  await expect(first.getByRole("alert")).toHaveText("评分暂时不可用，请稍后重试。");
+  await expect(first.getByRole("button", { name: "给打工摸鱼评2分", exact: true })).toBeEnabled();
+  await expect(panel).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await expect(page.locator(".catalog-card__rating-panel")).toHaveCount(0);
+  expect(requests.opened).toEqual([]);
+  expect((await savedLibrary(page))?.recent ?? []).toEqual([]);
+});
+
+test("排序下拉框沿用最新和热门顺序，网格列表切换保留排序与想玩记录", async ({ page, context }) => {
+  const requests = await mockCatalog(context);
+  const fixture = catalogFixture();
+  // 公共浏览量不同但发布日期顺序不变，两个排序入口须得到各自的既有结果。
+  for (const category of fixture.categories) {
+    for (const game of category.projects) game.view_count = ({ "901": 2, "902": 10, "903": 20 } as Record<string, number>)[game.id]!;
+  }
+  await context.route("**/api/v1/catalog", (route) => route.fulfill({
+    json: { data: fixture }, headers: { "access-control-allow-origin": "*" },
+  }));
+  await page.goto("/");
+  const sort = page.getByRole("combobox", { name: "游戏排序", exact: true });
+  await expect(sort).toHaveValue("latest");
+  await expect(page.locator(".catalog-card h2")).toHaveText(["打工摸鱼", "合成大西瓜", "蛇蛇出洞"]);
+  await sort.selectOption("hot");
+  await expect(page.locator(".catalog-card h2")).toHaveText(["蛇蛇出洞", "合成大西瓜", "打工摸鱼"]);
+  await card(page, "蛇蛇出洞").getByRole("button", { name: "加入想玩", exact: true }).click();
+  await page.getByRole("button", { name: "列表显示", exact: true }).click();
+  await expect(page.locator(".catalog-grid")).toHaveClass(/catalog-grid--list/);
+  await expect(page.getByRole("button", { name: "列表显示", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(sort).toHaveValue("hot");
+  await expect(page.locator(".catalog-card h2")).toHaveText(["蛇蛇出洞", "合成大西瓜", "打工摸鱼"]);
+  await expect(card(page, "蛇蛇出洞").getByRole("button", { name: "移出想玩", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "网格显示", exact: true }).click();
+  await expect(page.locator(".catalog-grid")).not.toHaveClass(/catalog-grid--list/);
+  await expect(page.getByRole("button", { name: "网格显示", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await sort.selectOption("latest");
+  await expect(page.locator(".catalog-card h2")).toHaveText(["打工摸鱼", "合成大西瓜", "蛇蛇出洞"]);
+  expect((await savedLibrary(page))?.wantedIds).toEqual(["903"]);
+  expect(requests.ratings).toEqual([]);
+  expect(requests.opened).toEqual([]);
 });
 
 test("封面、标题、试玩及作者弹窗各记录一次打开，最近列表更新顺序并可刷新", async ({ page, context }) => {
@@ -308,3 +413,184 @@ for (const width of [320, 390, 940, 1280]) {
     await page.screenshot({ path: testInfo.outputPath(`personal-library-${width}.png`), fullPage: true });
   });
 }
+
+test("首次评分成功后收起面板并恢复焦点，重新打开只读评分不重复提交", async ({ page, context }) => {
+  const requests = await mockCatalog(context);
+  await page.goto("/");
+  const first = card(page, "打工摸鱼");
+  const trigger = first.getByRole("button", { name: "查看打工摸鱼的评分", exact: true });
+  const panel = first.getByRole("group", { name: "打工摸鱼的评分", exact: true });
+
+  // 成功结果由既有评分响应更新真实查询缓存，关闭后应把键盘操作交回当前卡片。
+  await trigger.focus();
+  await trigger.press("Enter");
+  const score = first.getByRole("button", { name: "给打工摸鱼评3分", exact: true });
+  await score.focus();
+  await score.press("Enter");
+  await expect.poll(() => requests.ratings).toEqual([{ id: "901", score: 3 }]);
+  await expect(first.getByText("1 人评分", { exact: true })).toBeVisible();
+  await expect(page.locator(".catalog-card__rating-panel")).toHaveCount(0);
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(trigger).toBeFocused();
+
+  // 已评分项目只展示首次分值；没有可操作分值时，键盘焦点留在只读面板上。
+  await trigger.press("Enter");
+  await expect(panel).toBeFocused();
+  const readonlyScores = panel.getByRole("button", { name: "打工摸鱼已评3分，不能修改", exact: true });
+  await expect(readonlyScores).toHaveCount(5);
+  for (const readonlyScore of await readonlyScores.all()) await expect(readonlyScore).toBeDisabled();
+  await panel.press("Enter");
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await expect(page.locator(".catalog-card__rating-panel")).toHaveCount(0);
+  expect(requests.ratings).toEqual([{ id: "901", score: 3 }]);
+  expect(requests.opened).toEqual([]);
+  expect((await savedLibrary(page))?.recent ?? []).toEqual([]);
+  expect(requests.unexpectedRequests).toEqual([]);
+});
+
+test("开发预览保留开发进度入口且不开放评分，原生打开仍记录最近访问", async ({ page, context }) => {
+  const requests = await mockCatalog(context);
+  const fixture = catalogFixture();
+  const category = fixture.categories[0]!;
+  // 仅本用例追加开发预览，沿用模拟目标地址与拦截规则，不改其他用例的目录数据。
+  category.projects.push({
+    ...category.projects[0]!,
+    id: "904", slug: "fablespace", name: "预览数据原名称", url: "https://library-game.invalid/play/904",
+  });
+  await context.route("**/api/v1/catalog", (route) => route.fulfill({
+    json: { data: fixture }, headers: { "access-control-allow-origin": "*" },
+  }));
+  await page.goto("/");
+  const preview = card(page, "朝花夕拾");
+  await expect(preview.locator(".catalog-card__preview-note")).toHaveText("持续开发中");
+  await expect(preview.locator(".catalog-card__rating-trigger")).toHaveCount(0);
+  await expect(preview.locator(".catalog-card__rating-panel")).toHaveCount(0);
+  const open = preview.locator(".catalog-card__open");
+  await expect(open).toHaveText("开发进度");
+  await expect(open).toHaveAttribute("href", "https://library-game.invalid/play/904");
+  await expect(open).toHaveAttribute("target", "_blank");
+  await openGame(page, open, "keyboard");
+  await expect.poll(() => requests.opened).toEqual(["904"]);
+  await expect.poll(async () => (await savedLibrary(page))?.recent.map((item) => item.projectId)).toEqual(["904"]);
+  expect(requests.ratings).toEqual([]);
+  expect(requests.unexpectedRequests).toEqual([]);
+});
+
+test("切换筛选或榜单关闭旧评分，顶部搜索返回游戏目录并聚焦输入框", async ({ page, context }) => {
+  const requests = await mockCatalog(context);
+  await page.goto("/");
+  const trigger = card(page, "打工摸鱼").getByRole("button", { name: "查看打工摸鱼的评分", exact: true });
+  const category = page.getByRole("combobox", { name: "游戏分类", exact: true });
+
+  // 卡片被分类筛选隐藏后不能遗留评分面板，恢复全部分类也不能重新展开旧面板。
+  await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await category.selectOption("casual");
+  await expect(page.locator(".catalog-card h2")).toHaveText(["合成大西瓜"]);
+  await expect(page.locator(".catalog-card__rating-panel")).toHaveCount(0);
+  await category.selectOption("all");
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+  // 榜单与目录共用导航；顶部搜索必须切回目录并把键盘焦点放到真实搜索输入框。
+  await trigger.click();
+  await page.locator(".catalog-view-tabs").getByRole("button", { name: "作者榜", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "作者榜", exact: true })).toBeVisible();
+  await expect(page.locator(".catalog-card__rating-panel")).toHaveCount(0);
+  await page.getByRole("button", { name: "搜索游戏", exact: true }).click();
+  const search = page.getByRole("searchbox", { name: "搜索游戏名称", exact: true });
+  await expect(search).toBeFocused();
+  await expect(page.locator(".catalog-view-tabs").getByRole("button", { name: "游戏目录", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+  // 搜索同样关闭旧面板，筛选与导航本身都不提交评分或打开游戏。
+  await trigger.click();
+  await search.fill("合成");
+  await page.getByRole("button", { name: "搜索", exact: true }).click();
+  await expect(page.locator(".catalog-card h2")).toHaveText(["合成大西瓜"]);
+  await expect(page.locator(".catalog-card__rating-panel")).toHaveCount(0);
+  expect(requests.ratings).toEqual([]);
+  expect(requests.opened).toEqual([]);
+  expect(requests.unexpectedRequests).toEqual([]);
+});
+
+test("作者搜索保留原始名次，榜外结果不会变成领奖台冠军，无匹配保留空状态", async ({ page, context }) => {
+  const requests = await mockCatalog(context);
+  const fixture = catalogFixture(4);
+  // 只给本用例的四组作者设置不同总心数，预期名次来自排序规则而非搜索后的数组位置。
+  for (const category of fixture.categories) {
+    for (const game of category.projects) {
+      game.rating_score_sum = ({ "901": 40, "902": 30, "903": 20, "904": 10 } as Record<string, number>)[game.id]!;
+      if (game.id === "904") game.author_name = "榜外测试作者";
+    }
+  }
+  await context.route("**/api/v1/catalog", (route) => route.fulfill({
+    json: { data: fixture }, headers: { "access-control-allow-origin": "*" },
+  }));
+  await page.goto("/");
+  await page.locator(".catalog-view-tabs").getByRole("button", { name: "作者榜", exact: true }).click();
+  await expect(page.locator('.catalog-podium__place[data-rank="1"] .catalog-podium__name')).toHaveText("测试作者甲");
+  await expect(page.locator('.catalog-podium__place[data-rank="2"] .catalog-podium__name')).toHaveText("测试作者乙");
+  await expect(page.locator('.catalog-podium__place[data-rank="3"] .catalog-podium__name')).toHaveText("原创");
+  await expect(page.locator('.catalog-leaderboard__row[data-rank="4"] .catalog-leaderboard__identity strong'))
+    .toHaveText("榜外测试作者");
+
+  // 第二名被单独搜索时仍保留第二名的位置与有序列表值，不重新生成冠军。
+  const search = page.getByRole("searchbox", { name: "搜索作者", exact: true });
+  await search.fill("测试作者乙");
+  await expect(page.locator(".catalog-podium__place")).toHaveCount(1);
+  await expect(page.locator(".catalog-podium__place")).toHaveAttribute("data-rank", "2");
+  await expect(page.locator(".catalog-podium__place")).toHaveAttribute("value", "2");
+  await expect(page.locator(".catalog-podium__place--1")).toHaveCount(0);
+
+  // 原第四名只属于其他作者列表；无结果仍显示原空状态，不生成占位领奖台。
+  await search.fill("榜外测试作者");
+  await expect(page.locator(".catalog-podium__place")).toHaveCount(0);
+  await expect(page.locator(".catalog-leaderboard__row")).toHaveCount(1);
+  await expect(page.locator(".catalog-leaderboard__row")).toHaveAttribute("data-rank", "4");
+  await expect(page.locator(".catalog-leaderboard__row")).toHaveAttribute("value", "4");
+  await search.fill("不存在的作者");
+  await expect(page.locator(".catalog-leaderboard__empty")).toHaveText("没有找到匹配的作者。");
+  await expect(page.locator(".catalog-leaderboard__empty")).toHaveAttribute("role", "status");
+  await expect(page.locator(".catalog-podium__place, .catalog-leaderboard__row")).toHaveCount(0);
+  expect(requests.ratings).toEqual([]);
+  expect(requests.opened).toEqual([]);
+  expect(requests.unexpectedRequests).toEqual([]);
+});
+
+test("贡献来源固定第一且只用开源装饰，查看作者作品恢复全部游戏范围", async ({ page, context }) => {
+  const requests = await mockCatalog(context, 30);
+  await seedLibrary(context, { version: 1, wantedIds: ["902"], recent: [] });
+  await page.goto("/");
+  await page.locator(".catalog-library-filters").getByRole("button", { name: "想玩清单", exact: true }).click();
+  await expect(page.locator(".catalog-card h2")).toHaveText(["合成大西瓜"]);
+  await page.locator(".catalog-view-tabs").getByRole("button", { name: "贡献榜", exact: true }).click();
+
+  // 来源项不从个人范围或作者作品中推算排名，也不能把其他作者封面放进来源展示区。
+  const source = page.locator('.catalog-podium__place[data-rank="1"]');
+  await expect(source.locator(".catalog-podium__name")).toHaveText("martindelophy");
+  await expect(source).toHaveAttribute("value", "1");
+  await expect(source.locator(".catalog-podium__metric")).toHaveText("开源贡献");
+  await expect(source.locator(".catalog-podium__source-art svg[data-icon='github']")).toBeVisible();
+  await expect(source.locator(".catalog-podium__art > img")).toHaveCount(0);
+  await expect(source.getByRole("button", { name: "查看martindelophy的作品", exact: true })).toHaveCount(0);
+  for (const link of [source.locator(".catalog-podium__name"), source.locator(".catalog-leaderboard__open")]) {
+    await expect(link).toHaveAttribute("href", "https://github.com/MartinDelophy/awesome-gpt-6-astra");
+    await expect(link).toHaveAttribute("target", "_blank");
+    await expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  }
+
+  // 贡献榜查看作品也必须恢复公开作者的完整作品，不能继续受之前的个人想玩范围限制。
+  const author = page.locator(".catalog-podium__place").filter({ hasText: "测试作者甲" });
+  await expect(author).toHaveAttribute("data-rank", "2");
+  await author.getByRole("button", { name: "查看测试作者甲的作品", exact: true }).click();
+  await expect(page.locator(".catalog-library-filters").getByRole("button", { name: "全部游戏", exact: true }))
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".catalog-results")).toHaveText("28 个游戏");
+  await expect(page.locator(".catalog-author-selection")).toContainText("测试作者甲");
+  expect((await savedLibrary(page))?.wantedIds).toEqual(["902"]);
+  expect(requests.ratings).toEqual([]);
+  expect(requests.opened).toEqual([]);
+  expect(requests.unexpectedRequests).toEqual([]);
+});
