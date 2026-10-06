@@ -76,6 +76,12 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-09-29-v1/covers/backrooms.webp",
     "catalog/2026-09-30-v1/covers/snake-escape.webp",
     "catalog/2026-09-30-v1/covers/flappy-dunk.webp",
+    "catalog/2026-10-06-v1/covers/soulforge.webp",
+    "catalog/2026-10-06-v1/covers/achroma.webp",
+    "catalog/2026-10-06-v1/covers/pelican-rider.webp",
+    "catalog/2026-10-06-v1/covers/shousui.webp",
+    "catalog/2026-10-06-v1/covers/sketch-rts.webp",
+    "catalog/2026-10-06-v1/covers/bubble-tank.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 STATIC_ASSETS = (

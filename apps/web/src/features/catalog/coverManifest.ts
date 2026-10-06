@@ -164,6 +164,12 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   backrooms: "/catalog/2026-09-29-v1/covers/backrooms.webp",
   "snake-escape": "/catalog/2026-09-30-v1/covers/snake-escape.webp",
   "flappy-dunk": "/catalog/2026-09-30-v1/covers/flappy-dunk.webp",
+  soulforge: "/catalog/2026-10-06-v1/covers/soulforge.webp",
+  achroma: "/catalog/2026-10-06-v1/covers/achroma.webp",
+  "pelican-rider": "/catalog/2026-10-06-v1/covers/pelican-rider.webp",
+  shousui: "/catalog/2026-10-06-v1/covers/shousui.webp",
+  "sketch-rts": "/catalog/2026-10-06-v1/covers/sketch-rts.webp",
+  "bubble-tank": "/catalog/2026-10-06-v1/covers/bubble-tank.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {
