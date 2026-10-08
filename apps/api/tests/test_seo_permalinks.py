@@ -22,7 +22,7 @@ async def create_test_session() -> tuple[async_sessionmaker[AsyncSession], objec
 
 
 @pytest.mark.asyncio
-async def test_sitemap_filters_private_content_and_legacy_redirects(
+async def test_sitemap_excludes_retired_forum_paths_and_keeps_legacy_api_redirects(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     session_factory, engine = await create_test_session()
@@ -90,9 +90,11 @@ async def test_sitemap_filters_private_content_and_legacy_redirects(
         private_topic_data = private_topic.json()["data"]
         member_id = member["user"]["id"]
         assert public_topic_data["board_visibility"] == "public"
-        assert "/b/seo-public" in body
-        assert f"/topics/{public_topic_data['id']}/{public_topic_data['slug']}" in body
-        assert f"/members/{member_id}" in body
+        assert "<loc>http://test/</loc>" in body
+        assert "/play/generals-soldiers" not in body
+        assert "/b/seo-public" not in body
+        assert f"/topics/{public_topic_data['id']}/{public_topic_data['slug']}" not in body
+        assert f"/members/{member_id}" not in body
         assert "/b/seo-private" not in body
         assert f"/topics/{private_topic_data['id']}/{private_topic_data['slug']}" not in body
         assert "<changefreq>" not in body
@@ -118,7 +120,8 @@ async def test_sitemap_filters_private_content_and_legacy_redirects(
         assert refreshed_sitemap.headers["x-parallellines-cache"] == "miss"
         next_topic_data = next_public_topic.json()["data"]
         next_topic_path = f"/topics/{next_topic_data['id']}/{next_topic_data['slug']}"
-        assert next_topic_path in refreshed_sitemap.text
+        assert next_topic_path not in refreshed_sitemap.text
+        assert refreshed_sitemap.text == body
 
         robots = await client.get("/robots.txt")
         assert robots.status_code == 200
@@ -172,7 +175,8 @@ async def test_sitemap_filters_private_content_and_legacy_redirects(
         assert canonical_sitemap.status_code == 200
         assert canonical_sitemap.headers["x-parallellines-cache"] == "miss"
         assert "<loc>http://" not in canonical_sitemap.text
-        assert f"https://pingxingxian.space/members/{member_id}" in canonical_sitemap.text
+        assert "<loc>https://pingxingxian.space/</loc>" in canonical_sitemap.text
+        assert "/play/generals-soldiers" not in canonical_sitemap.text
 
         topic_path = f"/topics/{topic_data['id']}/{topic_data['slug']}"
         topic_page = await client.get(topic_path)

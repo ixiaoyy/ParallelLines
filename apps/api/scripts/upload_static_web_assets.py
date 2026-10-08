@@ -82,6 +82,22 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-10-06-v1/covers/shousui.webp",
     "catalog/2026-10-06-v1/covers/sketch-rts.webp",
     "catalog/2026-10-06-v1/covers/bubble-tank.webp",
+    # 本次新增游戏的封面随同版本发布，避免映射已上线但素材遗漏。
+    "catalog/2026-10-08-v1/covers/hollowmark.webp",
+    "catalog/2026-10-08-v1/covers/canyon-overdrive.webp",
+    "catalog/2026-10-08-v1/covers/flight-1073.webp",
+    "catalog/2026-10-08-v1/covers/foe-to-fleet.webp",
+    "catalog/2026-10-08-v1/covers/moxride.webp",
+    "catalog/2026-10-08-v1/covers/midway-1942.webp",
+    "catalog/2026-10-08-v1/covers/sandline.webp",
+    "catalog/2026-10-08-v1/covers/surge-for-oinja.webp",
+    "catalog/2026-10-08-v1/covers/jellyblob.webp",
+    "catalog/2026-10-08-v1/covers/astra-2048-eddy.webp",
+    "catalog/2026-10-08-v1/covers/the-fourth-knock.webp",
+    "catalog/2026-10-08-v1/covers/saber-descent.webp",
+    "catalog/2026-10-08-v1/covers/sulli-run.webp",
+    # 烬落封面与前端映射同批交付，可按独立版本发布。
+    "catalog/2026-10-08-v2/covers/greyfall.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 STATIC_ASSETS = (

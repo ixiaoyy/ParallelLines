@@ -111,7 +111,9 @@ class CatalogSubmissionService:
         except SQLAlchemyError as exc:
             await self.session.rollback()
             # 数据库异常可能携带投稿参数；日志只记录异常类型，不写联系信息或链接。
-            logger.error("catalog_submission_create_failed", extra={"error_type": type(exc).__name__})
+            logger.error(
+                "catalog_submission_create_failed", extra={"error_type": type(exc).__name__}
+            )
             raise CatalogSubmissionError("unavailable") from exc
         except Exception:
             await self.session.rollback()
@@ -262,7 +264,9 @@ class CatalogSubmissionService:
                 await self.session.rollback()
                 if attempt == 0 and decision == "approve":
                     continue
-                logger.warning("catalog_submission_review_conflict", extra={"submission_id": numeric_id})
+                logger.warning(
+                    "catalog_submission_review_conflict", extra={"submission_id": numeric_id}
+                )
                 raise CatalogSubmissionError("conflict") from exc
             except SQLAlchemyError as exc:
                 await self.session.rollback()
@@ -280,7 +284,11 @@ class CatalogSubmissionService:
 
         self._require_admin(current_user)
         submission = await self.session.get(CatalogSubmission, self._numeric_id(submission_id))
-        if submission is None or submission.status == "rejected" or submission.cover_upload_id is None:
+        if (
+            submission is None
+            or submission.status == "rejected"
+            or submission.cover_upload_id is None
+        ):
             raise CatalogSubmissionError("not_found")
         upload = await self.session.get(Upload, submission.cover_upload_id)
         if (
@@ -330,7 +338,9 @@ class CatalogSubmissionService:
             slug=self._stable_slug("submission-category", name),
             name=name,
             sort_order=int(
-                await self.session.scalar(select(func.coalesce(func.max(CatalogCategory.sort_order), 0)))
+                await self.session.scalar(
+                    select(func.coalesce(func.max(CatalogCategory.sort_order), 0))
+                )
             )
             + 1,
             is_visible=True,
@@ -355,7 +365,9 @@ class CatalogSubmissionService:
         if parsed.path in {"", "/"}:
             alternate_path = "" if parsed.path == "/" else "/"
             variants.add(
-                urlunsplit((parsed.scheme, parsed.netloc, alternate_path, parsed.query, parsed.fragment))
+                urlunsplit(
+                    (parsed.scheme, parsed.netloc, alternate_path, parsed.query, parsed.fragment)
+                )
             )
         return (
             await self.session.scalar(

@@ -28,6 +28,7 @@ from app.services.seo_renderer import (
     SEO_HEAD_END_MARKER,
     SEO_HEAD_START_MARKER,
     SEO_PAGE_STRUCTURED_DATA_ID,
+    render_link_section,
     render_seo_document,
     validate_app_shell,
 )
@@ -94,6 +95,23 @@ def test_renderer_preserves_vite_assets_and_escapes_dynamic_html() -> None:
     assert rendered.count('rel="canonical"') == 1
     assert rendered.count('name="applicable-device" content="pc,mobile"') == 1
     assert '<meta property="og:site_name" content="平行线 ParallelLines" />' in rendered
+
+
+def test_catalog_fallback_keeps_external_and_internal_links_distinct() -> None:
+    rendered = "\n".join(
+        render_link_section(
+            (
+                SeoPageLink(path="https://example.com/?a=1&b=2", label="站外游戏"),
+                SeoPageLink(path="/play/generals-soldiers", label="站内游戏"),
+            )
+        )
+    )
+
+    assert (
+        'href="https://example.com/?a=1&amp;b=2" target="_blank" rel="noopener noreferrer"'
+        in rendered
+    )
+    assert 'href="/play/generals-soldiers">站内游戏</a>' in rendered
 
 
 def test_site_schema_uses_unique_bilingual_name_and_legitimate_aliases() -> None:

@@ -9,7 +9,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin
 
 UploadKind = Literal["post_attachment", "avatar", "catalog_icon", "catalog_submission_cover"]
-UploadStatus = Literal["temporary", "attached", "avatar", "catalog_icon", "catalog_submission_cover", "deleted"]
+UploadStatus = Literal[
+    "temporary", "attached", "avatar", "catalog_icon", "catalog_submission_cover", "deleted"
+]
 
 
 class Upload(IntegerPrimaryKeyMixin, TimestampMixin, Base):
@@ -20,7 +22,9 @@ class Upload(IntegerPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_uploads_board_status", "board_id", "status"),
     )
 
-    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
     board_id: Mapped[str | None] = mapped_column(ForeignKey("boards.id", ondelete="SET NULL"))
     topic_id: Mapped[str | None] = mapped_column(ForeignKey("topics.id", ondelete="SET NULL"))
     post_id: Mapped[str | None] = mapped_column(ForeignKey("posts.id", ondelete="SET NULL"))

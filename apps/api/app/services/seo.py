@@ -110,7 +110,6 @@ class SeoService:
 
         return [
             SitemapUrl(loc=absolute_url(base_url, "/")),
-            SitemapUrl(loc=absolute_url(base_url, "/play/generals-soldiers")),
         ]
 
     async def robots_txt(self, base_url: str) -> str:

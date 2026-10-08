@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import socket
 from collections.abc import Sequence
-from datetime import timedelta
+from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -18,6 +18,7 @@ from app.models.interaction import Notification
 from app.models.user import UserSession
 from app.services.background_jobs import BackgroundJobHandler, BackgroundJobService
 from app.services.backups import BackupService
+from app.services.daily_reading import DailyReadingService
 from app.services.email import EmailService
 from app.services.email_notifications import EmailNotificationService
 from app.services.forum import calculate_hot_score
@@ -197,6 +198,40 @@ async def handle_publish_living_forum_day(
     }
 
 
+async def handle_publish_daily_reading(
+    session: AsyncSession,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    """Publish or preview one scheduled Shanghai reading-reflection slot.
+
+    Key parameters are the worker session plus scheduled local date and slot.
+    Return value is the service's JSON-safe summary. Side effects occur only in
+    `auto` mode and remain idempotent for that date-and-slot pair.
+    """
+
+    settings = get_settings()
+    try:
+        planned_date = date.fromisoformat(_payload_str(payload, "planned_date"))
+        slot = _payload_int(payload, "slot")
+    except ValueError as exc:
+        raise AppError(
+            "invalid_job_payload",
+            "Daily reading job requires a valid planned_date and slot",
+            status_code=422,
+        ) from exc
+    if slot not in (1, 2):
+        raise AppError(
+            "invalid_job_payload",
+            "Daily reading job slot must be 1 or 2",
+            status_code=422,
+        )
+    return await DailyReadingService(session, settings).publish_day(
+        planned_date,
+        dry_run=settings.daily_reading_publish_mode != "auto",
+        slots=(slot,),
+    )
+
+
 async def handle_retired_forum_job(
     _session: AsyncSession,
     _payload: dict[str, object],
@@ -295,6 +330,26 @@ def _payload_str(payload: dict[str, object], key: str) -> str:
 def _payload_optional_str(payload: dict[str, object], key: str) -> str | None:
     value = payload.get(key)
     return value if isinstance(value, str) and value else None
+
+
+def _payload_int(payload: dict[str, object], key: str) -> int:
+    """Return one required integer job field or raise a payload validation error.
+
+    Key parameters are the raw payload and field name. The parsed integer is
+    returned without side effects; booleans and non-numeric values are rejected.
+    """
+
+    value = payload.get(key)
+    if isinstance(value, bool):
+        raise AppError("invalid_job_payload", f"Invalid job payload field: {key}", status_code=422)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            pass
+    raise AppError("invalid_job_payload", f"Invalid job payload field: {key}", status_code=422)
 
 
 def _payload_dict(payload: dict[str, object], key: str) -> dict[str, object]:

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Sequence
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.base import utcnow
+from app.db.base import SHANGHAI_TZ, utcnow
 from app.models.background_job import BackgroundJob, BackgroundJobLog
 
 BackgroundJobHandler = Callable[
@@ -373,3 +373,25 @@ def _schedule_bucket(now: datetime, interval_seconds: int) -> datetime:
     epoch_seconds = int(aware_now.timestamp())
     bucket_epoch = epoch_seconds - (epoch_seconds % interval_seconds)
     return datetime.fromtimestamp(bucket_epoch, UTC)
+
+
+def daily_reading_due_slots(
+    now: datetime,
+    publish_times: Sequence[str],
+) -> list[tuple[int, date, datetime]]:
+    """Return today's reading slots whose configured Shanghai times have arrived.
+
+    Key parameters are the current timestamp and ordered ``HH:MM`` slot times.
+    The return value contains slot number, Shanghai calendar date, and intended
+    local timestamp; this pure helper performs no queue or database writes.
+    """
+
+    aware_now = now if now.tzinfo else now.replace(tzinfo=UTC)
+    local_now = aware_now.astimezone(SHANGHAI_TZ)
+    due: list[tuple[int, date, datetime]] = []
+    for slot, configured_time in enumerate(publish_times, start=1):
+        parsed_time = time.fromisoformat(configured_time)
+        scheduled_at = datetime.combine(local_now.date(), parsed_time, tzinfo=SHANGHAI_TZ)
+        if local_now >= scheduled_at:
+            due.append((slot, local_now.date(), scheduled_at))
+    return due

@@ -1,7 +1,7 @@
 // 独立游戏页用固定步长推进软体果池，并在本页处理绘制、投放与控制输入。
 import {World,TYPES,MODES,BOUNDS} from './physics.js';
 const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d');
-const W=500,H=600,N=18,TAU=Math.PI*2,reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const W=500,H=600,N=18,TAU=Math.PI*2;
 let score=0,best=0,energy=100,aim=250,current=0,next=0,cooldown=0,paused=false,ended=false,muted=true,audio,loaded=false,hasWon=false,toastUntil=0,heldTilt=0,combo=0,lastMerge=-10;
 let effects=[],ripples=[],sprites=[],last=0,accumulator=0,uiClock=0;
 const keys=new Set(),dialog=$('dialog');
@@ -63,7 +63,7 @@ canvas.addEventListener('pointerdown',e=>{e.preventDefault();if(pointer!==null)r
 canvas.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'||pointer===e.pointerId)pointerAim(e);});
 canvas.addEventListener('pointerup',e=>{if(pointer!==e.pointerId)return;pointerAim(e);pointer=null;drop();});canvas.addEventListener('pointercancel',()=>pointer=null);
 for(const[id,direction]of[['tilt-left',-1],['tilt-right',1]]){const button=$(id);button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);heldTilt=direction;});for(const name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,()=>heldTilt=0);}
-document.addEventListener('keydown',e=>{if(dialog.open)return;canvas.classList.remove('pointer-focused');const key=e.key.toLowerCase();if(['arrowleft','arrowright','a','d'].includes(key)){e.preventDefault();keys.add(key);}if((key===' '||key==='enter')&&!e.repeat&&!['BUTTON','A'].includes(document.activeElement.tagName)){e.preventDefault();key===' '?stir():drop();}if(key==='p'&&!e.repeat)$('pause').click();});
+document.addEventListener('keydown',e=>{if(dialog.open)return;canvas.classList.remove('pointer-focused');const key=e.key.toLowerCase();if(['arrowleft','arrowright','a','d'].includes(key)){e.preventDefault();keys.add(key);}if((key===' '||key==='enter')&&!e.repeat&&!['BUTTON','A'].includes(document.activeElement.tagName)){e.preventDefault();if(key===' ')stir();else drop();}if(key==='p'&&!e.repeat)$('pause').click();});
 document.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));window.addEventListener('blur',()=>{keys.clear();heldTilt=0;pointer=null;});document.addEventListener('visibilitychange',()=>{keys.clear();heldTilt=0;last=performance.now();});
 document.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>{world.mode=button.dataset.mode;document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));$('mode-desc').textContent=MODES[world.mode].label;tone(250,.05);}));
 $('stir').addEventListener('click',stir);

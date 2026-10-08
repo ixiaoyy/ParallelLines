@@ -6,7 +6,7 @@ const screenshotDir = process.env.GAME_QA_SCREENSHOT_DIR;
 
 test("玩家执将军可跳吃、悔棋并切换皮肤", async ({ page }) => {
   await page.goto("/play");
-  await expect(page.locator(".play-gallery > a")).toHaveCount(3);
+  await expect(page.locator(".play-gallery > a")).toHaveCount(5);
   if (screenshotDir) await page.screenshot({ path: path.join(screenshotDir, "play-hub-desktop.png"), fullPage: true });
   await page.getByRole("link", { name: /将军战小兵/ }).click();
   await expect(page.getByRole("heading", { name: "将军战小兵" })).toBeVisible();
@@ -36,7 +36,7 @@ test("游乐场卡片在窄屏保持完整且没有横向溢出", async ({ page 
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/play");
-    await expect(page.locator(".play-gallery > a")).toHaveCount(3);
+    await expect(page.locator(".play-gallery > a")).toHaveCount(5);
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
     if (screenshotDir) await page.screenshot({ path: path.join(screenshotDir, `play-hub-${width}.png`), fullPage: true });
   }

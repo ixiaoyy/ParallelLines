@@ -207,7 +207,8 @@ class CatalogService:
         self._require_nonempty(payload.name)
         await self._check_category_slug(payload.slug)
         upload = await self._validate_icon(payload.icon_upload_id, current_user)
-        category = CatalogCategory(**payload.model_dump())
+        # 新对象的空集合先在内存中初始化，提交后响应不触发异步懒加载。
+        category = CatalogCategory(**payload.model_dump(), projects=[])
         self.session.add(category)
         self._bind_icon(upload)
         await self._commit_admin()

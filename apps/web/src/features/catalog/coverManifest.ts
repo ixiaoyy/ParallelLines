@@ -170,6 +170,22 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   shousui: "/catalog/2026-10-06-v1/covers/shousui.webp",
   "sketch-rts": "/catalog/2026-10-06-v1/covers/sketch-rts.webp",
   "bubble-tank": "/catalog/2026-10-06-v1/covers/bubble-tank.webp",
+  // 本次新增游戏使用已核对内容的正式封面，保留旧游戏的版本地址。
+  hollowmark: "/catalog/2026-10-08-v1/covers/hollowmark.webp",
+  "canyon-overdrive": "/catalog/2026-10-08-v1/covers/canyon-overdrive.webp",
+  "flight-1073": "/catalog/2026-10-08-v1/covers/flight-1073.webp",
+  "foe-to-fleet": "/catalog/2026-10-08-v1/covers/foe-to-fleet.webp",
+  moxride: "/catalog/2026-10-08-v1/covers/moxride.webp",
+  "midway-1942": "/catalog/2026-10-08-v1/covers/midway-1942.webp",
+  sandline: "/catalog/2026-10-08-v1/covers/sandline.webp",
+  "surge-for-oinja": "/catalog/2026-10-08-v1/covers/surge-for-oinja.webp",
+  jellyblob: "/catalog/2026-10-08-v1/covers/jellyblob.webp",
+  "astra-2048-eddy": "/catalog/2026-10-08-v1/covers/astra-2048-eddy.webp",
+  "the-fourth-knock": "/catalog/2026-10-08-v1/covers/the-fourth-knock.webp",
+  "saber-descent": "/catalog/2026-10-08-v1/covers/saber-descent.webp",
+  "sulli-run": "/catalog/2026-10-08-v1/covers/sulli-run.webp",
+  // 烬落单独发布正式封面，保留同日其他收录批次的资源地址。
+  greyfall: "/catalog/2026-10-08-v2/covers/greyfall.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {

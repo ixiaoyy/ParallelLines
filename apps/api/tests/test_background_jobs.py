@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import cast
 
 import pytest
 from sqlalchemy import func, select
@@ -107,25 +108,37 @@ async def test_scheduled_jobs_are_idempotent_per_time_bucket() -> None:
     async with session_factory() as session:
         service = BackgroundJobService(session)
         first = await service.enqueue_due_scheduled_jobs(
-            background_hot_rank_interval_seconds=300,
             background_upload_cleanup_interval_seconds=3600,
             background_session_cleanup_interval_seconds=3600,
-            background_digest_interval_seconds=3600,
             now=scheduled_at,
         )
         second = await service.enqueue_due_scheduled_jobs(
-            background_hot_rank_interval_seconds=300,
             background_upload_cleanup_interval_seconds=3600,
             background_session_cleanup_interval_seconds=3600,
-            background_digest_interval_seconds=3600,
             now=scheduled_at,
         )
 
         assert {job.id for job in first} == {job.id for job in second}
         job_count = await session.scalar(select(func.count(BackgroundJob.id)))
-        assert job_count == 4
+        assert job_count == 2
 
     await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_queued_forum_jobs_are_skipped_without_touching_a_session() -> None:
+    """历史自动任务即使仍在队列中，也不能继续发帖或发送论坛摘要。"""
+
+    retired_jobs = (
+        "recompute_hot_scores",
+        "send_digest_emails",
+        "collect_frontier_news",
+        "publish_living_forum_day",
+        "publish_daily_reading",
+    )
+    for task_name in retired_jobs:
+        result = await JOB_HANDLERS[task_name](cast(AsyncSession, None), {})
+        assert result == {"status": "skipped", "reason": "forum_retired"}
 
 
 @pytest.mark.asyncio

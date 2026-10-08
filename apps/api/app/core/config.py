@@ -1,3 +1,4 @@
+from datetime import time
 from functools import lru_cache
 from typing import Literal
 from urllib.parse import urlsplit
@@ -28,16 +29,24 @@ class Settings(BaseSettings):
     background_digest_interval_seconds: int = 0
     background_frontier_news_interval_seconds: int = 0
     background_living_forum_interval_seconds: int = 0
+    daily_reading_publish_times: tuple[str, str] = ("08:00", "08:30")
     living_forum_publish_mode: Literal["auto", "review", "sample_review", "off"] = "off"
     living_forum_daily_topic_limit: int = 1
     living_forum_daily_reply_limit: int = 0
+    daily_reading_publish_mode: Literal["auto", "preview", "off"] = "off"
+    daily_reading_ai_provider: Literal["opencode", "openai_compatible", "local"] = "opencode"
+    daily_reading_ai_model: str = "deepseek-v4-flash-free"
+    daily_reading_ai_base_url: str = "https://opencode.ai/zen"
+    daily_reading_ai_api_key: str = ""
+    daily_reading_ai_timeout_seconds: float = 30.0
+    daily_reading_ai_temperature: float = 0.9
+    daily_reading_ai_max_tokens: int = 2200
     frontier_news_board_slug: str = "frontier"
     frontier_news_bot_username: str = "小小资讯"
     frontier_news_bot_email: str = "xiaoxiao-zixun@pingxingxian.space"
     frontier_news_ai_provider: str = "local"
     frontier_news_ai_model: str = "local-deterministic-v1"
     frontier_news_request_timeout_seconds: float = 15.0
-    catalog_rating_ip_secret: str = ""
     daily_report_ai_provider: Literal["opencode", "openai_compatible", "local"] = "opencode"
     daily_report_ai_model: str = "deepseek-v4-flash-free"
     daily_report_ai_base_url: str = "https://opencode.ai/zen"
@@ -75,6 +84,7 @@ class Settings(BaseSettings):
     )
 
     jwt_secret_key: str = "change-me-in-production-with-at-least-32-bytes"
+    catalog_rating_ip_secret: str = ""
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 360
     refresh_token_days: int = 30
@@ -171,6 +181,33 @@ class Settings(BaseSettings):
         ):
             raise ValueError("PUBLIC_SITE_URL must be an absolute HTTP(S) origin")
         return normalized
+
+    @field_validator("daily_reading_publish_times")
+    @classmethod
+    def validate_daily_reading_publish_times(
+        cls,
+        value: tuple[str, str],
+    ) -> tuple[str, str]:
+        """Validate the two ordered Asia/Shanghai reading publication times.
+
+        Key parameter ``value`` contains two ``HH:MM`` strings. The normalized
+        pair is returned in ascending order as supplied; validation performs no
+        I/O and rejects equal, reversed, or second-precision values.
+        """
+
+        normalized = tuple(item.strip() for item in value)
+        try:
+            parsed = tuple(time.fromisoformat(item) for item in normalized)
+        except ValueError as exc:
+            raise ValueError("DAILY_READING_PUBLISH_TIMES must contain two HH:MM times") from exc
+        if any(
+            len(item) != 5 or parsed_time.second or parsed_time.microsecond
+            for item, parsed_time in zip(normalized, parsed, strict=True)
+        ):
+            raise ValueError("DAILY_READING_PUBLISH_TIMES must contain two HH:MM times")
+        if parsed[0] >= parsed[1]:
+            raise ValueError("DAILY_READING_PUBLISH_TIMES must be distinct and ascending")
+        return (normalized[0], normalized[1])
 
     @field_validator("web_app_shell_url")
     @classmethod

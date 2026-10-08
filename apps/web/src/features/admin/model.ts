@@ -202,9 +202,11 @@ export interface AdminQueueOverview {
   digest_interval_seconds?: number;
   frontier_news_interval_seconds?: number;
   living_forum_interval_seconds?: number;
+  daily_reading_publish_times?: [string, string];
   living_forum_publish_mode?: "auto" | "review" | "sample_review" | "off";
   living_forum_daily_topic_limit?: number;
   living_forum_daily_reply_limit?: number;
+  daily_reading_publish_mode?: "auto" | "preview" | "off";
   counts?: Record<string, number>;
 }
 
