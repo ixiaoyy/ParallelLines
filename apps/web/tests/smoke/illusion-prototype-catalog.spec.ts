@@ -91,8 +91,8 @@ for (const viewport of [
       const card = cards.filter({ has: page.getByRole("heading", { name: game.name, exact: true }) });
       const oldCard = cards.filter({ has: page.getByRole("heading", { name: oldProject.name, exact: true }) });
       await expect(cards).toHaveCount(2);
-      await expect(card.locator(".catalog-card__author")).toHaveText("作者：原创");
-      await expect(card.locator(".catalog-card__author")).toHaveAttribute("title", "作者：原创");
+      await expect(card.locator(".catalog-card__author")).toHaveText("原创");
+      await expect(card.locator(".catalog-card__author")).toHaveAttribute("title", "原创");
 
       // 名称搜索和解谜筛选只改变可见目录，不能提前记录浏览或改变旧游戏归属。
       const search = page.getByRole("searchbox", { name: "搜索游戏名称", exact: true });
@@ -128,7 +128,7 @@ for (const viewport of [
           width: (img as HTMLImageElement).naturalWidth, height: (img as HTMLImageElement).naturalHeight,
         }))).toEqual({ width: 960, height: 452 });
         expect(await cover.evaluate((img) => getComputedStyle(img).objectFit)).toBe("cover");
-        const mediaBounds = await card.locator(".catalog-card__media").boundingBox();
+        const mediaBounds = await card.locator(layout === "grid" ? ".catalog-card__screen" : ".catalog-card__media").boundingBox();
         const coverBounds = await cover.boundingBox();
         expect(mediaBounds).not.toBeNull();
         expect(coverBounds).not.toBeNull();
@@ -177,7 +177,7 @@ for (const viewport of [
         await expect(popup.getByRole("main", { name: "回廊彼岸第一关", exact: true })).toBeVisible();
         await expect(popup.locator("#scene")).toBeVisible();
         await expect.poll(() => opened.length).toBe(index + 1);
-        await expect(card.locator(".catalog-card__views")).toHaveAttribute("aria-label", `${index + 1} 次浏览`);
+        await expect(card.locator(".catalog-card__heat")).toHaveAttribute("aria-label", `热度 ${index + 1}`);
         await expect.poll(() => page.evaluate((key) => {
           const snapshot = JSON.parse(localStorage.getItem(key) ?? "null") as {
             recent: Array<{ projectId: string; lastOpenedAt: number }>;

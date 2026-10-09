@@ -77,7 +77,7 @@ test("长标题和作者单行省略，同宽卡片跨行等高，触屏保留 4
   await page.goto("/");
   await expect(page.locator(".catalog-card")).toHaveCount(9);
   await expect(page.locator(".catalog-card__title-link").first()).toHaveAttribute("title", longName);
-  await expect(page.locator(".catalog-card__author").first()).toHaveAttribute("title", `作者：${longAuthor}`);
+  await expect(page.locator(".catalog-card__author").first()).toHaveAttribute("title", longAuthor);
   for (const width of [320, 390, 600, 960, 1280, 1536, 1920]) {
     await page.setViewportSize({ width, height: 1000 });
     const layout = await page.locator(".catalog-card").evaluateAll((cards) => ({
@@ -98,7 +98,7 @@ test("长标题和作者单行省略，同宽卡片跨行等高，触屏保留 4
     const touchPage = await phone.newPage();
     await touchPage.goto(baseURL);
     await expect(touchPage.locator(".catalog-card")).toHaveCount(9);
-    for (const selector of [".catalog-card__title-link", ".catalog-card__author a", ".catalog-card__wanted", ".catalog-card__rating-trigger", ".catalog-card__open"]) {
+    for (const selector of [".catalog-card__title-link", ".catalog-card__author a", ".catalog-card__wanted", ".catalog-card__open"]) {
       const box = await touchPage.locator(selector).first().boundingBox();
       expect(box!.height).toBeGreaterThanOrEqual(44);
     }
@@ -144,29 +144,107 @@ test("WASD 使用当前网格列数，行边界不越界，Enter 复用新标签
   expect(requests.unexpected).toEqual([]);
 });
 
-test("评分失败提示保持可见且不改变卡片高度，底部评分收藏和开始操作仍可用", async ({ page, context }) => {
+test("鼠标选择卡片、收藏及打开链接后，WASD 仍能继续选择且不触发其他操作", async ({ page, context }) => {
   const requests = await mockArcade(context);
-  let failedRatings = 0;
-  await context.route("**/api/v1/catalog/projects/1001/ratings", async (route) => {
-    failedRatings += 1;
-    await route.fulfill({ status: 503, headers: { "access-control-allow-origin": "*" }, json: { error: { code: "TEST_UNAVAILABLE", message: "test" } } });
-  });
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto("/");
+  await expectSelected(page, "1001");
+  const second = page.locator('.catalog-card[data-project-id="1002"]');
+  const third = page.locator('.catalog-card[data-project-id="1003"]');
+
+  // 鼠标从搜索框切到卡片热度区域后，选择与键盘焦点必须能继续配合。
+  await page.getByRole("searchbox", { name: "搜索游戏名称" }).focus();
+  await second.locator(".catalog-card__heat").click();
+  await expectSelected(page, "1002");
+  await page.keyboard.press("d");
+  await expectSelected(page, "1003");
+
+  // 收藏按钮保留点击结果，随后四个方向只移动选框，不再触发收藏或打开。
+  await second.locator(".catalog-card__wanted").click();
+  await expect(second.locator(".catalog-card__wanted")).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("d");
+  await expectSelected(page, "1003");
+  await page.keyboard.press("s");
+  await expectSelected(page, "1007");
+  await page.keyboard.press("w");
+  await expectSelected(page, "1003");
+  await page.keyboard.press("a");
+  await expectSelected(page, "1002");
+  await expect(second.locator(".catalog-card__wanted")).toHaveAttribute("aria-pressed", "true");
+  await expect(third.locator(".catalog-card__wanted")).toHaveAttribute("aria-pressed", "false");
+  expect(requests.opens).toEqual([]);
+
+  // 三个原生打开入口返回目录后会留下链接焦点，WASD 仍应接续当前卡片。
+  for (const selector of [".catalog-card__media-link", ".catalog-card__title-link", ".catalog-card__open"]) {
+    const target = third.locator(selector);
+    const popupPromise = context.waitForEvent("page");
+    await target.click();
+    const popup = await popupPromise;
+    await expect(popup.getByRole("heading", { name: "Mock game opened" })).toBeVisible();
+    await popup.close();
+    await expect(target).toBeFocused();
+    await expectSelected(page, "1003");
+    await page.keyboard.press("d");
+    await expectSelected(page, "1004");
+  }
+  await expect.poll(() => requests.opens).toEqual(["1003", "1003", "1003"]);
+  expect(requests.ratings).toEqual([]);
+  expect(requests.unexpected).toEqual([]);
+});
+
+test("封面铺满掌机屏幕，标题作者与底部操作不重叠，评分和浏览量不再展示", async ({ page, context }) => {
+  const requests = await mockArcade(context);
   await page.setViewportSize({ width: 1280, height: 1000 });
   await page.goto("/");
   const cards = page.locator(".catalog-card");
   await expect(cards).toHaveCount(9);
-  const before = await cards.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height));
   const first = cards.first();
-  const ratingTrigger = first.locator(".catalog-card__rating-trigger");
-  await ratingTrigger.click();
-  await first.getByRole("button", { name: `给${longName}评3分`, exact: true }).click();
-  const error = first.getByRole("alert");
-  await expect(error).toHaveText("评分暂时不可用，请稍后重试。");
-  expect(await cards.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height))).toEqual(before);
-  await page.keyboard.press("Escape");
-  await expect(first.locator(".catalog-card__rating-panel")).toHaveCount(0);
-  await expect(error).toBeVisible();
-  await expect(ratingTrigger).toBeFocused();
+  await expect(first.locator(".catalog-card__author")).toHaveText(longAuthor);
+  await expect(page.locator(".catalog-card__author-label, .catalog-card__stats, .catalog-card__views, .catalog-card__rating-trigger, .catalog-card__rating-panel, .catalog-card__rating-error")).toHaveCount(0);
+  // 文本和控件都应叠在封面内；长名称不能挤进右侧操作，也不能遮挡右上热度。
+  for (const width of [320, 390, 600, 960, 1280, 1536, 1920]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const layout = await first.evaluate((card) => {
+      const screen = card.querySelector(".catalog-card__screen")!.getBoundingClientRect();
+      const image = card.querySelector(".catalog-card__media img")!.getBoundingClientRect();
+      const title = card.querySelector(".catalog-card__title-link")!;
+      const author = card.querySelector(".catalog-card__author")!;
+      const heat = card.querySelector(".catalog-card__heat")!;
+      const wanted = card.querySelector(".catalog-card__wanted")!;
+      const open = card.querySelector(".catalog-card__open")!;
+      const titleBox = title.getBoundingClientRect();
+      const authorBox = author.getBoundingClientRect();
+      const heatBox = heat.getBoundingClientRect();
+      const wantedBox = wanted.getBoundingClientRect();
+      const openBox = open.getBoundingClientRect();
+      const contained = (box: DOMRect) => box.left >= screen.left - 1 && box.top >= screen.top - 1
+        && box.right <= screen.right + 1 && box.bottom <= screen.bottom + 1;
+      const separate = (left: DOMRect, right: DOMRect) => left.right <= right.left + 1 || right.right <= left.left + 1
+        || left.bottom <= right.top + 1 || right.bottom <= left.top + 1;
+      return {
+        coverFillsScreen: Math.abs(image.left - screen.left) < 1 && Math.abs(image.top - screen.top) < 1
+          && Math.abs(image.width - screen.width) < 1 && Math.abs(image.height - screen.height) < 1,
+        contained: [titleBox, authorBox, heatBox, wantedBox, openBox].every(contained),
+        noOverlap: [[titleBox, authorBox], [titleBox, wantedBox], [titleBox, openBox], [authorBox, wantedBox],
+          [authorBox, openBox], [wantedBox, openBox], [heatBox, titleBox], [heatBox, authorBox]].every(([left, right]) => separate(left!, right!)),
+        heatAtTopRight: heatBox.left >= screen.left + screen.width / 2 && heatBox.bottom <= screen.top + screen.height / 2,
+        infoAtBottomLeft: titleBox.left < screen.left + screen.width / 2 && authorBox.bottom > screen.top + screen.height / 2,
+        actionsAtBottomRight: openBox.left + openBox.width / 2 > screen.left + screen.width / 2
+          && openBox.bottom > screen.top + screen.height / 2,
+        titleColor: getComputedStyle(title).color,
+        authorColor: getComputedStyle(author.querySelector("a")!).color,
+      };
+    });
+    expect(layout.coverFillsScreen, `封面应铺满屏幕：${width}px`).toBe(true);
+    expect(layout.contained, `内容应位于屏幕内：${width}px`).toBe(true);
+    expect(layout.noOverlap, `文字与控件不能重叠：${width}px`).toBe(true);
+    expect(layout.heatAtTopRight, `热度应位于右上：${width}px`).toBe(true);
+    expect(layout.infoAtBottomLeft, `标题作者应位于左下：${width}px`).toBe(true);
+    expect(layout.actionsAtBottomRight, `开始按钮应位于右下：${width}px`).toBe(true);
+    expect(layout.titleColor).toBe("rgb(255, 255, 255)");
+    expect(layout.authorColor).not.toBe(layout.titleColor);
+  }
+  const before = await cards.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height));
   await first.locator(".catalog-card__wanted").click();
   await expect(first.locator(".catalog-card__wanted")).toHaveAttribute("aria-pressed", "true");
   const popupPromise = context.waitForEvent("page");
@@ -175,13 +253,12 @@ test("评分失败提示保持可见且不改变卡片高度，底部评分收�
   await expect(popup.getByRole("heading", { name: "Mock game opened" })).toBeVisible();
   await popup.close();
   await expect.poll(() => requests.opens).toEqual(["1001"]);
-  await expect(error).toBeVisible();
   expect(await cards.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().height))).toEqual(before);
-  expect(failedRatings).toBe(1);
+  expect(requests.ratings).toEqual([]);
   expect(requests.unexpected).toEqual([]);
 });
 
-test("输入、按钮、评分和作者弹窗不被街机快捷键接管，鼠标与中键仍只记录一次", async ({ page, context }) => {
+test("输入、控件确认和作者弹窗保留原操作，鼠标与中键仍只记录一次", async ({ page, context }) => {
   const requests = await mockArcade(context);
   await page.goto("/");
   await expectSelected(page, "1001");
@@ -193,15 +270,12 @@ test("输入、按钮、评分和作者弹窗不被街机快捷键接管，鼠�
   await search.fill("");
   const second = page.locator('.catalog-card[data-project-id="1002"]');
   await second.locator(".catalog-card__wanted").focus();
-  await page.keyboard.press("d");
   await expectSelected(page, "1002");
   await page.keyboard.press("Enter");
   await expect(second.locator(".catalog-card__wanted")).toHaveAttribute("aria-pressed", "true");
   expect(requests.opens).toEqual([]);
-  await second.locator(".catalog-card__rating-trigger").click();
   await page.keyboard.press("d");
-  await expectSelected(page, "1002");
-  await page.keyboard.press("Escape");
+  await expectSelected(page, "1003");
   await second.locator(".catalog-card__author button").click();
   await expect(page.locator(".catalog-author-dialog")).toBeVisible();
   await page.keyboard.press("s");
@@ -247,6 +321,27 @@ test("排序、筛选、列表与加载更多始终按当前可见结果选择",
   await page.getByRole("combobox", { name: "游戏分类" }).selectOption("casual");
   await expectSelected(page, "1028");
   await page.getByRole("button", { name: "列表显示" }).click();
+  // 列表沿用同一套封面与操作，窄屏切换后也不能出现卡片内部或页面横向溢出。
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const layout = await page.locator(".catalog-card").evaluateAll((cards) => ({
+      pageOverflow: document.documentElement.scrollWidth > innerWidth,
+      // 独立选框按设计向外延伸 7px，只用未选卡片的滚动宽度判断实际内容溢出。
+      cardOverflow: cards.some((card) => !card.classList.contains("is-selected") && card.scrollWidth > card.clientWidth + 1),
+      contentContained: cards.every((card) => {
+        const box = card.getBoundingClientRect();
+        return [...card.querySelectorAll(".catalog-card__title-link, .catalog-card__author, .catalog-card__wanted, .catalog-card__open")]
+          .every((element) => {
+            const content = element.getBoundingClientRect();
+            return content.left >= box.left - 1 && content.right <= box.right + 1
+              && content.top >= box.top - 1 && content.bottom <= box.bottom + 1;
+          });
+      }),
+    }));
+    expect(layout.pageOverflow).toBe(false);
+    expect(layout.cardOverflow).toBe(false);
+    expect(layout.contentContained).toBe(true);
+  }
   await blurControl(page);
   await page.keyboard.press("s");
   await expectSelected(page, "1002");
