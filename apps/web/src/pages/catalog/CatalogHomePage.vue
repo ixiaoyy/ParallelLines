@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AppstoreFilled, BarChartOutlined, CaretRightFilled, CloseOutlined, CrownFilled, EyeOutlined, FireFilled, HeartFilled, MenuOutlined, SearchOutlined, SendOutlined, StarFilled } from "@ant-design/icons-vue";
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 import type { CatalogProject } from "@/features/catalog/model";
 import { catalogAuthorKey, rankCatalogAuthors } from "@/features/catalog/authorRanking";
@@ -85,6 +85,9 @@ const ratingTrigger = ref<HTMLButtonElement | null>(null);
 const catalogSearchInput = ref<HTMLInputElement | null>(null);
 const authorDialog = ref<HTMLDialogElement | null>(null);
 const selectedAuthor = ref<string | null>(null);
+// 街机选框仅跟随当前可见游戏，不写入个人清单，也不替代链接与评分控件的原生焦点。
+const catalogGrid = ref<HTMLDivElement | null>(null);
+const selectedProjectId = ref<string | null>(null);
 // 个人清单仅属于当前浏览器；存储异常后本页继续使用内存状态，不覆盖原记录。
 const initialLibrary = readPersonalLibrary();
 const personalLibrary = ref(initialLibrary.library);
@@ -206,6 +209,12 @@ const visibleProjects = computed(() => {
 
 // 大目录只先渲染首批卡片；筛选变化后重新从首批展示，搜索仍覆盖全部项目。
 const displayedProjects = computed(() => visibleProjects.value.slice(0, visibleLimit.value));
+// 筛选后优先保留仍可见的选中游戏；原游戏消失时从当前结果的第一项重新选择。
+watch(() => displayedProjects.value.map((project) => project.id), (ids) => {
+  if (!selectedProjectId.value || !ids.includes(selectedProjectId.value)) {
+    selectedProjectId.value = ids[0] ?? null;
+  }
+}, { immediate: true });
 watch([normalizedSearch, selectedCategory, sortMode, selectedAuthorKey, libraryScope], () => {
   visibleLimit.value = PAGE_SIZE;
 });
@@ -214,6 +223,48 @@ watch(normalizedAuthorSearch, () => { authorVisibleLimit.value = AUTHOR_PAGE_SIZ
 watch([catalogView, normalizedSearch, selectedCategory, sortMode, selectedAuthorKey, libraryScope], () => {
   closeRatingPanel();
 });
+
+onMounted(() => window.addEventListener("keydown", handleArcadeKeydown));
+onUnmounted(() => window.removeEventListener("keydown", handleArcadeKeydown));
+
+/** 在目录空白区或页面初始焦点下移动选框；输入、原生控件与弹层继续独占自己的键盘操作。 */
+function handleArcadeKeydown(event: KeyboardEvent): void {
+  if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey
+    || catalogView.value !== "games" || submissionOpen.value || selectedAuthor.value !== null
+    || openRatingProjectId.value !== null) return;
+  const key = event.key.toLowerCase();
+  if (!["w", "a", "s", "d", "enter"].includes(key)) return;
+  const grid = catalogGrid.value;
+  const target = event.target;
+  if (!grid || !(target instanceof Element)) return;
+  // 初次访问的 body 可直接操作；其他区域必须位于目录内，且不能覆盖可编辑或可点击控件。
+  if (target !== document.body && target !== document.documentElement && !grid.contains(target)) return;
+  if (target.closest("a, button, input, select, textarea, summary, [contenteditable]:not([contenteditable='false']), [role='button'], [role='link'], [role='textbox'], [role='combobox']")
+    || document.querySelector("dialog[open], [role='dialog'][aria-modal='true']")) return;
+  const cards = [...grid.querySelectorAll<HTMLElement>(".catalog-card")];
+  const index = cards.findIndex((card) => card.dataset.projectId === selectedProjectId.value);
+  const current = cards[index];
+  if (!current) return;
+  event.preventDefault();
+  // Enter 在当前真实按键事件内同步点击原链接，保留新标签、最近打开与累计浏览量的既有链路。
+  if (key === "enter") {
+    if (!event.repeat) current.querySelector<HTMLAnchorElement>(".catalog-card__open")?.click();
+    return;
+  }
+  const columns = getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length;
+  const column = index % columns;
+  const row = Math.floor(index / columns);
+  // 水平移动不跨行，最后一行不足整列时向下落到该行末项；列表模式自然按一列移动。
+  const nextIndex = key === "w" && row > 0 ? index - columns
+    : key === "s" && row < Math.ceil(cards.length / columns) - 1 ? Math.min(cards.length - 1, index + columns)
+      : key === "a" && column > 0 ? index - 1
+        : key === "d" && column < columns - 1 ? Math.min(cards.length - 1, index + 1) : index;
+  const next = cards[nextIndex];
+  if (!next) return;
+  selectedProjectId.value = next.dataset.projectId ?? null;
+  next.focus({ preventScroll: true });
+  next.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
+}
 
 function loadMoreProjects(): void {
   visibleLimit.value += PAGE_SIZE;
@@ -461,23 +512,27 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
                 <button type="button" :class="{ 'is-active': layoutMode === 'list' }" :aria-pressed="layoutMode === 'list'" aria-label="列表显示" @click="layoutMode = 'list'"><MenuOutlined aria-hidden="true" /></button>
               </div>
             </div>
+            <p class="catalog-arcade-hint"><kbd>W/A/S/D</kbd> 选择 · <kbd>Enter</kbd> 开始游戏</p>
             <p v-if="!libraryCanPersist" class="catalog-library__notice" role="alert">本地存储不可用，当前清单只在本次页面访问期间保留。</p>
             <p v-if="wantedLimitReached" class="catalog-library__notice" role="alert">想玩清单最多保存 500 款游戏，请先移出部分游戏。</p>
             <div v-if="selectedAuthorKey" class="catalog-author-selection"><span>正在查看 <strong>{{ selectedAuthorName || '该作者' }}</strong> 的作品</span><button type="button" @click="clearAuthorGames">清除作者筛选</button></div>
             <div v-if="visibleProjects.length === 0" class="catalog-state" role="status"><span>{{ emptyLibraryText }}</span><button v-if="search || selectedCategory !== 'all' || selectedAuthorKey" type="button" @click="search = ''; searchInput = ''; selectedCategory = 'all'; selectedAuthorKey = null">清除筛选</button></div>
-            <div v-else class="catalog-grid" :class="{ 'catalog-grid--list': layoutMode === 'list' }">
-              <article v-for="(project, index) in displayedProjects" :key="project.id" class="catalog-card" :class="[`catalog-card--${cardTone(project.slug)}`, { 'catalog-card--preview': isPreviewProject(project) }]">
+            <div v-else ref="catalogGrid" class="catalog-grid" :class="{ 'catalog-grid--list': layoutMode === 'list' }">
+              <article v-for="(project, index) in displayedProjects" :key="project.id" class="catalog-card" :class="[`catalog-card--${cardTone(project.slug)}`, { 'catalog-card--preview': isPreviewProject(project), 'is-selected': selectedProjectId === project.id }]" :data-project-id="project.id" :aria-current="selectedProjectId === project.id ? 'true' : undefined" tabindex="-1" @pointerdown="selectedProjectId = project.id" @focusin="selectedProjectId = project.id">
+                <span v-if="selectedProjectId === project.id" class="catalog-card__selection-frame" aria-hidden="true"></span>
                 <div class="catalog-card__media">
                   <a class="catalog-card__media-link" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="isPreviewProject(project) ? `查看${displayName(project)}的开发进度` : `打开${displayName(project)}`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">
                     <img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" :loading="index < 3 ? 'eager' : 'lazy'" decoding="async" />
                     <span v-else class="catalog-card__cover-fallback" :class="`catalog-card__cover-fallback--${fallbackCoverTone(project.slug)}`" aria-hidden="true"><span>{{ categoryName(project.categorySlug) }}</span><strong>{{ displayName(project) }}</strong></span>
                   </a>
                   <div class="catalog-card__badges"><span v-if="isNew(project)" class="catalog-card__badge" role="img" aria-label="新游戏" title="新游戏"><span class="catalog-icon catalog-icon--clock" aria-hidden="true"></span></span><span v-if="isHot(project) && !isPreviewProject(project)" class="catalog-card__badge catalog-card__badge--hot" role="img" aria-label="热门游戏" title="热门游戏">HOT</span></div>
+                  <!-- 失败提示保留到下次评分尝试，独立叠在封面内，不撑高卡片或遮挡底部操作。 -->
+                  <p v-if="ratingErrorProjectId === project.id" class="catalog-card__rating-error" role="alert">评分暂时不可用，请稍后重试。</p>
                 </div>
                 <div class="catalog-card__body">
                   <div class="catalog-card__info">
-                    <h2><a class="catalog-card__title-link" :href="project.url" target="_blank" rel="noopener noreferrer" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">{{ displayName(project) }}</a></h2>
-                    <p class="catalog-card__author">作者：<span v-if="isOriginalProject(project)">原创</span><a v-else-if="project.authorName && project.authorUrl" :href="project.authorUrl" target="_blank" rel="noopener noreferrer" :aria-label="`查看${project.authorName}的作者链接`">{{ project.authorName }}</a><button v-else-if="project.authorName" type="button" :aria-label="`查看${project.authorName}的作品`" @click="openAuthorIntro(project.authorName)">{{ project.authorName }}</button><span v-else>待补充</span></p>
+                    <h2><a class="catalog-card__title-link" :href="project.url" :title="displayName(project)" target="_blank" rel="noopener noreferrer" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">{{ displayName(project) }}</a></h2>
+                    <p class="catalog-card__author" :title="`作者：${isOriginalProject(project) ? '原创' : project.authorName || '待补充'}`"><span class="catalog-card__author-label">作者：</span><span v-if="isOriginalProject(project)">原创</span><a v-else-if="project.authorName && project.authorUrl" :href="project.authorUrl" target="_blank" rel="noopener noreferrer" :aria-label="`查看${project.authorName}的作者链接`">{{ project.authorName }}</a><button v-else-if="project.authorName" type="button" :aria-label="`查看${project.authorName}的作品`" @click="openAuthorIntro(project.authorName)">{{ project.authorName }}</button><span v-else>待补充</span></p>
                     <!-- 浏览与热度仍来自真实目录，保留在作者下方的次级信息，不挤占评分入口。 -->
                     <div class="catalog-card__stats">
                       <span class="catalog-card__views" :aria-label="`${project.viewCount} 次浏览`" :title="`${project.viewCount} 次浏览`"><EyeOutlined aria-hidden="true" />{{ project.viewCount }}</span>
@@ -496,7 +551,6 @@ async function rateProject(project: CatalogProject, score: number): Promise<void
                       <button v-for="score in 5" :key="score" type="button" :disabled="project.myScore !== null || pendingProjectId !== null" :aria-label="project.myScore === null ? `给${displayName(project)}评${score}分` : `${displayName(project)}已评${project.myScore}分，不能修改`" :title="project.myScore === null ? `评${score}分` : `已评${project.myScore}分`" @mouseenter="previewScore(project, score)" @focus="previewScore(project, score)" @blur="clearPreview" @click="rateProject(project, score)"><HeartFilled v-if="isFilled(project, score)" aria-hidden="true" /><span v-else class="catalog-icon catalog-icon--heart" aria-hidden="true"></span></button>
                     </div>
                   </div>
-                  <p v-if="ratingErrorProjectId === project.id" class="catalog-card__rating-error" role="alert">评分暂时不可用，请稍后重试。</p>
                 </div>
               </article>
             </div>

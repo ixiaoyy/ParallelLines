@@ -98,6 +98,16 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-10-08-v1/covers/sulli-run.webp",
     # 烬落封面与前端映射同批交付，可按独立版本发布。
     "catalog/2026-10-08-v2/covers/greyfall.webp",
+    # 三款外部游戏的正式封面随本批次交付，可按版本定向发布。
+    "catalog/2026-10-09-v1/covers/entropy-blade.webp",
+    "catalog/2026-10-09-v1/covers/nexus.webp",
+    "catalog/2026-10-09-v1/covers/emberfall.webp",
+    # NANBEIDOU 封面与前端映射同批交付，可按独立版本发布。
+    "catalog/2026-10-09-v2/covers/nanbeidou.webp",
+    # 忍界纪行的正式封面与映射同批交付，可按独立版本发布。
+    "catalog/2026-10-09-v3/covers/shinobi-chronicles.webp",
+    # 回廊彼岸的实机封面与目录收录同批交付，可按独立版本定向发布。
+    "catalog/2026-10-09-v4/covers/illusion-prototype.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 STATIC_ASSETS = (

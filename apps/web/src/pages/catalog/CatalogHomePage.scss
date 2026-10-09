@@ -86,8 +86,25 @@
 .catalog-author-selection button { min-height: 44px; border: 0; padding: 6px 10px; color: #fff; background: transparent; font: inherit; text-decoration: underline; cursor: pointer; }
 // 掌机轮廓与细节均来自正式图片；两个同坐标纹理层保留透明开窗，只用页面色填壳体。
 .catalog-list { position: relative; z-index: 1; }
-.catalog-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 12px 16px; }
-.catalog-card { --device-color: #1594ff; position: relative; isolation: isolate; min-width: 0; padding: 13px 8.5% 8px 12.5%; color: var(--catalog-ink); }
+.catalog-grid { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: 1fr; align-items: stretch; gap: 12px 16px; }
+.catalog-card { --device-color: #1594ff; position: relative; isolation: isolate; display: flex; min-width: 0; flex-direction: column; padding: 13px 8.5% 8px 12.5%; color: var(--catalog-ink); }
+// 未选卡片降低亮度与饱和度，让当前游戏在彩色掌机列表中保持明显的视觉区分。
+.catalog-card:not(.is-selected) { filter: brightness(.6) saturate(.65); }
+.catalog-card.is-selected { z-index: 4; }
+// 粗黄框与白色四角独立于掌机外壳，不占布局空间，也不遮挡原操作的点击区域。
+.catalog-card__selection-frame { position: absolute; inset: -7px; z-index: 3; border: 6px solid #ffdf00; box-shadow: inset 0 0 0 2px #071c41, 0 0 0 2px #071c41; pointer-events: none; }
+.catalog-card__selection-frame::after {
+ position: absolute; inset: -6px; content: ""; pointer-events: none;
+ background:
+  linear-gradient(#fff 0 0) left top / 28px 6px no-repeat,
+  linear-gradient(#fff 0 0) left top / 6px 28px no-repeat,
+  linear-gradient(#fff 0 0) right top / 28px 6px no-repeat,
+  linear-gradient(#fff 0 0) right top / 6px 28px no-repeat,
+  linear-gradient(#fff 0 0) left bottom / 28px 6px no-repeat,
+  linear-gradient(#fff 0 0) left bottom / 6px 28px no-repeat,
+  linear-gradient(#fff 0 0) right bottom / 28px 6px no-repeat,
+  linear-gradient(#fff 0 0) right bottom / 6px 28px no-repeat;
+}
 .catalog-card::before, .catalog-card::after { position: absolute; inset: 0; z-index: -1; content: ""; pointer-events: none; }
 .catalog-card::before { background: var(--device-color); mask: url("/catalog/night-arcade-v1/device-shell.webp") center / 103.3% 113.3% no-repeat; }
 .catalog-card::after { background: url("/catalog/night-arcade-v1/device-shell.webp") center / 103.3% 113.3% no-repeat; filter: brightness(1.25); mix-blend-mode: multiply; }
@@ -100,15 +117,18 @@
 .catalog-card__badges { position: absolute; top: 4px; left: 4px; display: flex; gap: 4px; }
 .catalog-card__badge { display: grid; min-width: 24px; min-height: 24px; place-items: center; color: #fff; background: #057eb9; font-size: 12px; font-weight: 700; }
 .catalog-card__badge--hot { padding-inline: 7px; background: var(--catalog-red); } .catalog-card__badge .catalog-icon { width: 18px; height: 18px; }
-.catalog-card__body { min-width: 0; }
+.catalog-card__body { display: flex; min-width: 0; flex: 1; flex-direction: column; }
 .catalog-card__info { position: relative; min-height: 51px; padding: 4px 8px 3px; background: var(--catalog-paper); }
-.catalog-card h2 { margin: 0; color: var(--catalog-ink); font-size: 18px; font-weight: 800; line-height: 22px; overflow-wrap: anywhere; }
-.catalog-card__title-link { display: block; color: inherit; text-decoration: none; } .catalog-card__title-link:hover { text-decoration: underline; text-underline-offset: 2px; }
-.catalog-card__author { display: flex; min-width: 0; align-items: baseline; flex-wrap: wrap; max-width: calc(100% - 46px); margin: 0; font-size: 13px; line-height: 19px; overflow-wrap: anywhere; }
-.catalog-card__author a, .catalog-card__author button { min-width: 0; max-width: 100%; border: 0; padding: 0; color: #0a4a85; background: transparent; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; overflow-wrap: anywhere; }
+.catalog-card h2 { min-width: 0; margin: 0; color: var(--catalog-ink); font-size: 18px; font-weight: 800; line-height: 22px; }
+// 名称与作者始终占一行，完整内容保留在 DOM 与 title 中，避免长文本撑高任意卡片。
+.catalog-card__title-link { display: block; overflow: hidden; color: inherit; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; } .catalog-card__title-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+.catalog-card__author { display: flex; min-width: 0; min-height: 22px; align-items: center; max-width: calc(100% - 54px); margin: 0; font-size: 13px; line-height: 19px; }
+.catalog-card__author > :not(.catalog-card__author-label) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catalog-card__author-label { flex-shrink: 0; }
+.catalog-card__author a, .catalog-card__author button { display: block; max-width: 100%; border: 0; padding: 0; color: #0a4a85; background: transparent; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
 .catalog-card__stats { position: absolute; right: 5px; bottom: 4px; display: flex; max-width: 52px; align-items: center; flex-wrap: wrap; gap: 2px 4px; color: #587089; font-size: 10px; line-height: 1.2; }
 .catalog-card__stats > span { display: inline-flex; min-width: 0; align-items: center; gap: 2px; overflow-wrap: anywhere; } .catalog-card__heat .anticon { color: #bd723f; }
-.catalog-card__footer { display: flex; min-width: 0; min-height: 44px; align-items: center; gap: 6px; margin-right: -6%; }
+.catalog-card__footer { display: flex; min-width: 0; min-height: 44px; align-items: center; gap: 6px; margin-top: auto; margin-right: -6%; }
 .catalog-card__rating-trigger { display: flex; min-width: 74px; min-height: 44px; flex: 1; align-items: center; gap: 5px; border: 0; padding: 0; color: #fff; background: transparent; font: 12px / 1.2 var(--catalog-font); text-align: left; cursor: pointer; }
 .catalog-card__rating-trigger .anticon { width: 26px; height: 26px; flex: 0 0 26px; color: #fff; font-size: 24px; }
 .catalog-card__rating-trigger .anticon :deep(svg) { stroke: #ff326d; stroke-width: 90px; paint-order: stroke; }
@@ -127,7 +147,9 @@
 .catalog-card__hearts { display: flex; align-items: center; } .catalog-card__hearts button { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 0; padding: 0; color: #fa3270; background: transparent; cursor: pointer; }
 .catalog-card__hearts .catalog-icon { width: 28px; height: 28px; } .catalog-card__hearts .anticon { font-size: 28px; }
 .catalog-card__hearts button:disabled { cursor: default; } .catalog-card__hearts button:not(:disabled):hover { background: #ffe3ec; } .catalog-card__rating-panel.is-pending { opacity: .6; }
-.catalog-card__rating-error { margin: 5px 0 0; padding: 5px 7px; color: #7b1533; background: #fff4f4; font-size: 12px; line-height: 1.5; }
+.catalog-card__rating-error { position: absolute; inset: auto 4px 4px; z-index: 2; margin: 0; padding: 5px 7px; color: #7b1533; background: #fff4f4; font-size: 12px; line-height: 1.5; pointer-events: none; }
+.catalog-arcade-hint { display: flex; align-items: center; justify-content: flex-end; gap: 5px; margin: 0 0 8px; color: #cbe9ff; font-size: 12px; line-height: 20px; }
+.catalog-arcade-hint kbd { border: 1px solid #1884ba; padding: 0 4px; color: inherit; background: #031b40; font: inherit; }
 .catalog-load-more { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 20px; color: #cbe9ff; font-size: 14px; }
 .catalog-load-more button, .catalog-state button { min-height: 44px; border: 1px solid #52d7ff; padding: 8px 18px; color: #fff; background: #075ba8; font: 700 16px / 1.3 var(--catalog-font); cursor: pointer; }
 .catalog-state { display: flex; min-height: 180px; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 16px; border: 1px solid #1b73b6; padding: 24px; color: #dfeeff; font-size: 16px; text-align: center; }
@@ -218,5 +240,6 @@
  .catalog-card__footer { gap: 4px; } .catalog-card__open { width: 112px; flex-basis: 112px; font-size: 15px; } .catalog-grid--list .catalog-card { display: block; padding: 10px; } .catalog-grid--list .catalog-card__media { aspect-ratio: 2.12; }
  .catalog-footer__brand strong { font-size: 24px; } .catalog-footer__motto { gap: 12px; }
 }
-@media (pointer: coarse) { .catalog-card__title-link, .catalog-card__author a, .catalog-card__author button { display: flex; min-height: 44px; align-items: center; } }
+// 触屏仍给名称与作者链接完整 44px 命中高度，单行省略规则与卡片统一高度保持一致。
+@media (pointer: coarse) { .catalog-card__title-link, .catalog-card__author a, .catalog-card__author button { min-height: 44px; line-height: 44px; } .catalog-card__author { min-height: 44px; } }
 @media (prefers-reduced-motion: reduce) { .catalog-state__spinner { animation: none; } }

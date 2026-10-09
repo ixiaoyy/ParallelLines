@@ -41,7 +41,12 @@ from app.schemas.catalog import (
 logger = logging.getLogger(__name__)
 # 只允许已交付的游戏直达页，后台编辑与隐藏条目也使用同一白名单。
 INTERNAL_PROJECT_URLS = frozenset(
-    {"/play/generals-soldiers", "/play/snake-escape", "/play/flappy-dunk"}
+    {
+        "/play/generals-soldiers",
+        "/play/snake-escape",
+        "/play/flappy-dunk",
+        "/games/illusion-prototype/index.html",
+    }
 )
 RATING_UNAVAILABLE_MESSAGE = "评分暂时不可用，请稍后重试。"
 SAVE_FAILED_MESSAGE = "保存失败，请稍后重试。"
@@ -510,7 +515,7 @@ class CatalogService:
 
     @staticmethod
     def _validate_destination(kind: str, url: str) -> None:
-        # 外链仅允许 HTTPS；站内仅开放明确登记的三个游戏地址。
+        # 外链仅允许 HTTPS；站内仅开放白名单登记的精确游戏地址。
         if kind == "internal":
             if url not in INTERNAL_PROJECT_URLS:
                 raise ValidationError()

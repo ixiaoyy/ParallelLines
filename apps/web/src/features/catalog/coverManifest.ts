@@ -186,6 +186,16 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "sulli-run": "/catalog/2026-10-08-v1/covers/sulli-run.webp",
   // 烬落单独发布正式封面，保留同日其他收录批次的资源地址。
   greyfall: "/catalog/2026-10-08-v2/covers/greyfall.webp",
+  // 本批三款外部游戏使用正式封面，路径与静态资源发布清单保持一致。
+  "entropy-blade": "/catalog/2026-10-09-v1/covers/entropy-blade.webp",
+  nexus: "/catalog/2026-10-09-v1/covers/nexus.webp",
+  emberfall: "/catalog/2026-10-09-v1/covers/emberfall.webp",
+  // NANBEIDOU 使用独立版本的正式封面，保留前批游戏映射。
+  nanbeidou: "/catalog/2026-10-09-v2/covers/nanbeidou.webp",
+  // 忍界纪行沿用官网概念美术，使用独立版本封面。
+  "shinobi-chronicles": "/catalog/2026-10-09-v3/covers/shinobi-chronicles.webp",
+  // 自研回廊彼岸使用已上线关卡的正式实机封面，入口标识沿用现有游戏目录。
+  "illusion-prototype": "/catalog/2026-10-09-v4/covers/illusion-prototype.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {
