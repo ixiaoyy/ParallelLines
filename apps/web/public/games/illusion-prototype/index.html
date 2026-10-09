@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>空间错觉 · 第一关</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#c8dedb;background:#011a20}
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:clip}button{font:inherit}
+    .prototype{position:relative;width:100%;height:100%;min-height:280px;isolation:isolate;background:radial-gradient(ellipse at 50% 92%,#52606424 0%,transparent 63%),linear-gradient(#011a20 0%,#0a232b 37%,#283940 100%)}
+    canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
+    .controls{position:absolute;z-index:3;inset:auto 20px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}
+    .instructions{margin:0;font-size:13px;line-height:1.65;letter-spacing:.08em;text-align:center;max-width:100%;color:#bbd0d2}
+    .restart{pointer-events:auto;min-height:44px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;cursor:pointer}
+    .control-actions{display:flex;justify-content:center;align-items:center;gap:12px;pointer-events:auto}.sound{min-height:44px;padding:10px 14px;border:1px solid #89a7af66;border-radius:4px;background:#17313a;color:#c8dedb;font-size:12px;cursor:pointer}.sound:hover{background:#25434d}.sound:disabled{opacity:.65;cursor:default}
+    .restart:hover{background:#66b1ff}.restart:active{background:#3a8ee6}button:focus-visible{outline:3px solid #fff;outline-offset:4px}
+    .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:pointer;touch-action:none}
+    .scene-control:focus-visible{outline:2px solid #f8fcf5;outline-offset:3px;background:#fff3}.scene-control:disabled{cursor:default}
+    .knob{width:56px;height:56px;margin:-28px 0 0 -28px;cursor:grab}.knob[aria-disabled="true"]{cursor:default}.knob:active{cursor:grabbing}
+    .result{position:absolute;z-index:3;top:max(30px,env(safe-area-inset-top));left:16px;right:16px;margin:0;text-align:center;font-weight:400;font-size:21px;letter-spacing:.3em;color:#deefed;pointer-events:none}
+    .failure{position:absolute;z-index:4;inset:0;display:grid;place-items:center;padding:24px;background:#001f24;text-align:center;font-size:16px}.failure[hidden],.result[hidden],.scene-control[hidden]{display:none}
+    .prototype::after{content:"";position:absolute;z-index:2;inset:0;background:#01121794;opacity:0;pointer-events:none;transition:opacity .3s ease}
+    .prototype.is-ending .instructions{opacity:0;transition:opacity .25s ease}
+    .prototype.is-complete::after{opacity:1}
+    .prototype.is-complete .result{top:calc(50% - 65px);left:16px;right:16px;font-size:clamp(24px,4vw,31px);letter-spacing:.18em;color:#f2f5e9}
+    .prototype.is-complete .controls{inset:0;display:block;pointer-events:none}
+    .prototype.is-complete .instructions{display:none}
+    .prototype.is-complete .control-actions{position:absolute;inset:0;display:block;pointer-events:none}
+    .prototype.is-complete .restart{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);min-width:144px;pointer-events:auto}
+    .prototype.is-complete .sound{position:absolute;right:20px;bottom:max(24px,env(safe-area-inset-bottom));pointer-events:auto}
+    @media(max-width:480px){.controls{inset-inline:12px;gap:12px;bottom:max(18px,env(safe-area-inset-bottom))}.instructions{font-size:12px;letter-spacing:.035em}.restart{padding-inline:20px}.result{font-size:18px}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}.prototype::after,.prototype.is-ending .instructions{transition:none}}
+  </style>
+</head>
+<body>
+  <main class="prototype" aria-label="空间错觉第一关">
+    <canvas id="scene" aria-label="固定视角的建筑、道路和角色"></canvas>
+    <div id="road-controls" aria-label="可行走的道路"></div>
+    <button id="knob" class="scene-control knob" type="button" aria-label="拖动旋钮旋转，或使用方向键旋转横梁"></button>
+    <p id="result" class="result" role="status" hidden>到达终点</p>
+    <div class="controls"><p class="instructions">按住 WASD 移动，松开停止；点击道路指定位置，拖动旋钮旋转。</p><div class="control-actions"><button id="restart" class="restart" type="button">重新开始</button><button id="sound" class="sound" type="button" aria-label="声音：开" aria-pressed="true">声音：开</button></div></div>
+    <p id="failure" class="failure" role="alert" hidden>当前浏览器未启用 WebGL 2。</p>
+  </main>
+  <script>
+  (() => {
+    'use strict';
+
+    // 本地原型沿用现有游戏的矩阵与实例绘制方式，仅保留本关所需几何体。
+    const M = {
+      id: () => new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),
+      mul(a,b){const out=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++)out[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];return out;},
+      trs(x,y,z,sx,sy,sz,ry=0,rx=0,rz=0){const c=Math.cos(ry),s=Math.sin(ry),a=Math.cos(rx),b=Math.sin(rx),d=Math.cos(rz),e=Math.sin(rz);return new Float32Array([(c*d+s*b*e)*sx,a*e*sx,(-s*d+c*b*e)*sx,0,(-c*e+s*b*d)*sy,a*d*sy,(s*e+c*b*d)*sy,0,s*a*sz,-b*sz,c*a*sz,0,x,y,z,1]);},
+      ortho(l,r,b,t,n,f){const out=this.id();out[0]=2/(r-l);out[5]=2/(t-b);out[10]=-2/(f-n);out[12]=-(r+l)/(r-l);out[13]=-(t+b)/(t-b);out[14]=-(f+n)/(f-n);return out;},
+      look(eye,target){const norm=v=>{const length=Math.hypot(...v);return v.map(k=>k/length);},cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],dot=(a,b)=>a.reduce((sum,k,i)=>sum+k*b[i],0),z=norm(eye.map((k,i)=>k-target[i])),x=norm(cross([0,1,0],z)),y=cross(z,x);return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-dot(x,eye),-dot(y,eye),-dot(z,eye),1]);},
+      point(m,p){const [x,y,z]=p,w=m[3]*x+m[7]*y+m[11]*z+m[15];return[(m[0]*x+m[4]*y+m[8]*z+m[12])/w,(m[1]*x+m[5]*y+m[9]*z+m[13])/w,(m[2]*x+m[6]*y+m[10]*z+m[14])/w];}
+    };
+    const color = hex => [((hex>>16)&255)/255,((hex>>8)&255)/255,(hex&255)/255,1];
+    const mix = (a,b,t) => a.map((value,i)=>value+(b[i]-value)*t);
+    const distance = (a,b) => Math.hypot(...a.map((value,i)=>value-b[i]));
+    const TAU=Math.PI*2,QUARTER=Math.PI/2;
+    const prototype=document.querySelector('.prototype'),canvas=document.getElementById('scene'),knob=document.getElementById('knob'),restart=document.getElementById('restart'),soundButton=document.getElementById('sound'),result=document.getElementById('result'),failure=document.getElementById('failure');
+    const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+
+    /** 生成带法线的三角网格；kind 为本关需要的几何类型，返回顶点数组。 */
+    function makeGeometry(kind){
+      const vertices=[],tri=(a,b,c,normal,nb=normal,nc=normal)=>vertices.push(...a,...normal,...b,...nb,...c,...nc);
+      if(kind==='box'){
+        const faces=[[[1,0,0],[0,0,-1],[0,1,0]],[[-1,0,0],[0,0,1],[0,1,0]],[[0,1,0],[1,0,0],[0,0,-1]],[[0,-1,0],[1,0,0],[0,0,1]],[[0,0,1],[1,0,0],[0,1,0]],[[0,0,-1],[-1,0,0],[0,1,0]]];
+        for(const [normal,u,v] of faces){const p=(a,b)=>normal.map((value,i)=>value*.5+u[i]*a+v[i]*b),a=p(-.5,-.5),b=p(.5,-.5),c=p(.5,.5),d=p(-.5,.5);tri(a,b,c,normal);tri(a,c,d,normal);}
+      }else if(kind==='sphere'){
+        const rows=8,cols=12,p=(i,j)=>{const a=i/rows*Math.PI,b=j/cols*TAU;return[Math.sin(a)*Math.cos(b)*.5,Math.cos(a)*.5,Math.sin(a)*Math.sin(b)*.5];};
+        for(let i=0;i<rows;i++)for(let j=0;j<cols;j++){const a=p(i,j),b=p(i+1,j),c=p(i+1,j+1),d=p(i,j+1);tri(a,b,c,a.map(v=>v*2),b.map(v=>v*2),c.map(v=>v*2));tri(a,c,d,a.map(v=>v*2),c.map(v=>v*2),d.map(v=>v*2));}
+      }else if(kind==='cyl'){
+        const cols=24;
+        for(let i=0;i<cols;i++){const a=i/cols*TAU,b=(i+1)/cols*TAU,pa=[Math.cos(a)*.5,-.5,Math.sin(a)*.5],pb=[Math.cos(b)*.5,-.5,Math.sin(b)*.5],qa=[Math.cos(a)*.5,.5,Math.sin(a)*.5],qb=[Math.cos(b)*.5,.5,Math.sin(b)*.5],na=[Math.cos(a),0,Math.sin(a)],nb=[Math.cos(b),0,Math.sin(b)];tri(pa,qa,qb,na,na,nb);tri(pa,qb,pb,na,nb,nb);tri([0,-.5,0],pa,pb,[0,-1,0]);tri([0,.5,0],qb,qa,[0,1,0]);}
+      }
+      return new Float32Array(vertices);
+    }
+
+    /** 生成一体拱上墙；参数为开口宽、起拱高、拱升高、墙顶和厚度，返回位置/法线网格。 */
+    function makeArchWall(width,base,rise,top,thickness){
+      const out=[],half=width/2,z=thickness/2,strips=24,curve=x=>base+rise*Math.sqrt(Math.max(0,1-(x/half)**2));
+      const tri=(a,b,c,n)=>out.push(...a,...n,...b,...n,...c,...n),quad=(a,b,c,d,n)=>{tri(a,b,c,n);tri(a,c,d,n);};
+      // 拱面用相接三角形组成连续表面，内部不生成箱体侧壁，消除拼箱的条纹与深度冲突。
+      for(let i=0;i<strips;i++){
+        const a=-half+i/strips*width,b=-half+(i+1)/strips*width,ya=curve(a),yb=curve(b),slope=(yb-ya)/(b-a),norm=Math.hypot(slope,1);
+        quad([a,ya,z],[b,yb,z],[b,top,z],[a,top,z],[0,0,1]);quad([b,yb,-z],[a,ya,-z],[a,top,-z],[b,top,-z],[0,0,-1]);
+        quad([a,ya,-z],[b,yb,-z],[b,yb,z],[a,ya,z],[slope/norm,-1/norm,0]);
+      }
+      quad([-half,top,z],[half,top,z],[half,top,-z],[-half,top,-z],[0,1,0]);
+      for(const side of [-1,1])quad([side*half,base,-z],[side*half,base,z],[side*half,top,z],[side*half,top,-z],[side,0,0]);
+      return new Float32Array(out);
+    }
+
+    /** 本关的固定正交渲染器；canvas 为唯一画布，不加载外部素材。 */
+    class Tiny3D {
+      constructor(target){
+        this.canvas=target;this.gl=target.getContext('webgl2',{alpha:true,antialias:true,powerPreference:'low-power'});
+        if(!this.gl)throw new Error('WebGL2 context unavailable');
+        const gl=this.gl;
+        const vertex=`#version 300 es
+precision highp float;
+layout(location=0) in vec3 aPos;layout(location=1) in vec3 aNormal;layout(location=2) in mat4 aModel;layout(location=6) in vec4 aColor;
+uniform mat4 uVP;out vec3 vNormal;out vec4 vColor;
+void main(){mat3 normal=mat3(aModel);vec3 lengths=vec3(dot(normal[0],normal[0]),dot(normal[1],normal[1]),dot(normal[2],normal[2]));vNormal=normalize(normal*(aNormal/max(lengths,vec3(.00001))));vColor=aColor;gl_Position=uVP*aModel*vec4(aPos,1.);}`;
+        const fragment=`#version 300 es
+precision highp float;in vec3 vNormal;in vec4 vColor;out vec4 outColor;
+void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize(vec3(-.4,1.,.45))),0.);float lighting=.28+direct*.63;vec3 tint=mix(vec3(1.,1.08,1.13),vec3(1.08,1.04,1.),max(normal.y,0.));tint=mix(tint,vec3(.90,1.,1.16),max(normal.x,0.));if(vColor.a>1.5){lighting=.70+direct*.28;tint=vec3(1.);}else if(min(vColor.r,vColor.g)>.85){lighting=.74+direct*.24;tint=vec3(1.);}else if(vColor.g>.72&&vColor.b>.77&&vColor.r<.75){lighting=.54+direct*.40;tint=vec3(.98,1.,1.03);}outColor=vec4(vColor.rgb*lighting*tint,min(vColor.a,1.));}`;
+        this.program=this.programOf(vertex,fragment);this.vpLocation=gl.getUniformLocation(this.program,'uVP');this.geometries={};
+        for(const name of ['box','cyl','sphere'])this.createGeometry(name,makeGeometry(name));
+        gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);this.static=[];this.dynamic=[];this.vp=M.id();this.width=0;this.height=0;
+      }
+      /** 编译指定类型的 shader，返回句柄；失败保留驱动诊断并抛出。 */
+      shader(type,source){const gl=this.gl,shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS)){const detail=gl.getShaderInfoLog(shader);gl.deleteShader(shader);throw new Error(detail||'Shader compilation failed');}return shader;}
+      /** 链接顶点和片元程序，返回句柄；链接失败明确终止初始化。 */
+      programOf(vertex,fragment){const gl=this.gl,program=gl.createProgram(),vs=this.shader(gl.VERTEX_SHADER,vertex),fs=this.shader(gl.FRAGMENT_SHADER,fragment);gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);if(!gl.getProgramParameter(program,gl.LINK_STATUS)){const detail=gl.getProgramInfoLog(program);gl.deleteProgram(program);throw new Error(detail||'Shader linking failed');}return program;}
+      /** 上传一种几何体，data 含位置和法线；无返回值。 */
+      createGeometry(name,data){const gl=this.gl,vao=gl.createVertexArray();gl.bindVertexArray(vao);const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);for(let i=0;i<2;i++){gl.enableVertexAttribArray(i);gl.vertexAttribPointer(i,3,gl.FLOAT,false,24,i*12);}const instances=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,instances);for(let i=0;i<4;i++){gl.enableVertexAttribArray(i+2);gl.vertexAttribPointer(i+2,4,gl.FLOAT,false,80,i*16);gl.vertexAttribDivisor(i+2,1);}gl.enableVertexAttribArray(6);gl.vertexAttribPointer(6,4,gl.FLOAT,false,80,64);gl.vertexAttribDivisor(6,1);this.geometries[name]={vao,buffer,instances,count:data.length/6,vertices:data};gl.bindVertexArray(null);}
+      /** 更新已有几何顶点；只复用其顶点缓冲，不分配新的 VAO 或缓冲句柄。 */
+      updateGeometry(name,data){const gl=this.gl,geometry=this.geometries[name];gl.bindBuffer(gl.ARRAY_BUFFER,geometry.buffer);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);geometry.vertices=data;geometry.count=data.length/6;}
+      /** 按位置、尺寸、颜色添加物件；list 指定静态或当前帧列表，无返回值。 */
+      add(kind,x,y,z,sx,sy,sz,hex,rotation=0,list=this.static,parent=null,rx=0,rz=0){let matrix=M.trs(x,y,z,sx,sy,sz,rotation,rx,rz);if(parent)matrix=M.mul(parent,matrix);const object={kind,matrix,color:color(hex),occludes:list===this.static,walk:null};list.push(object);return object;}
+      /** 根据画布显示尺寸更新投影；相机方向固定，缩放不会改变错觉连接。 */
+      resize(){
+        const rect=this.canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,1.75);this.width=rect.width;this.height=rect.height;
+        const w=Math.max(1,Math.round(rect.width*ratio)),h=Math.max(1,Math.round(rect.height*ratio));if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
+        // 按参考建筑的统一比例取景，底部预留操作区；相机方向始终为(1,1,1)。
+        const reserve=Math.min(120,rect.height*.40),available=Math.max(1,rect.height-reserve-34),pixels=Math.min(90,rect.width/7.46,available/8.62)/(1+.07*completionCameraProgress()),span=rect.height/pixels,aspect=rect.width/Math.max(1,rect.height),offsetX=rect.width*.5-pixels*2.58,offsetY=34+available*.39;
+        const target=[0,4,0],eye=target.map(value=>value+16),shiftX=span*aspect*(offsetX/Math.max(1,rect.width)-.5),shiftY=span*(.5-offsetY/Math.max(1,rect.height));
+        this.vp=M.mul(M.ortho(-span*aspect/2-shiftX,span*aspect/2-shiftX,-span/2-shiftY,span/2-shiftY,.1,100),M.look(eye,target));
+      }
+      /** 将世界坐标 point 投影到 CSS 像素，返回屏幕位置和深度。 */
+      project(point){const p=M.point(this.vp,point);return{x:(p[0]+1)*this.width/2,y:(1-p[1])*this.height/2,depth:p[2]};}
+      /** 按种类批量绘制本帧物件；最多由本关固定数量的几何组成。 */
+      render(){const gl=this.gl;gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);gl.uniformMatrix4fv(this.vpLocation,false,this.vp);const groups=new Map();for(const object of [...this.static,...this.dynamic]){if(object.visible===false)continue;if(!groups.has(object.kind))groups.set(object.kind,[]);groups.get(object.kind).push(object);}for(const [kind,items] of groups){const geometry=this.geometries[kind],data=new Float32Array(items.length*20);items.forEach((item,i)=>{data.set(item.matrix,i*20);data.set(item.color,i*20+16);});gl.bindVertexArray(geometry.vao);gl.bindBuffer(gl.ARRAY_BUFFER,geometry.instances);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);gl.drawArraysInstanced(gl.TRIANGLES,0,geometry.count,items.length);}gl.bindVertexArray(null);}
+    }
+
+// 红帽旅人采用同一圆润鞋楦；绘制与踏面校验共用截面，鞋尖跨级时不钻入台阶。
+const TRAVELLER_BOOT_RINGS=[[0,.021,.033,.010],[.006,.025,.037,.010],[.018,.024,.036,.010],[.032,.020,.029,.006],[.043,.011,.015,.001],[.046,.002,.003,0]];
+const TRAVELLER_SOLE_SAMPLES=[];
+
+/** 生成人物平滑曲面；返回 meshName => 位置和单位法线各三项的 Float32Array，无外部素材。 */
+function makeTravellerMeshes(){
+  const meshes={},TAU=Math.PI*2,unit=v=>{const n=Math.hypot(...v)||1;return v.map(x=>x/n);},cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+  /** 将参数曲面采样为平滑网格；surface(u,v)返回坐标，flip用于帽内侧，返回顶点数组。 */
+  const surfaceMesh=(surface,rows,cols,flip=false)=>{
+    const out=[],sample=(u,v)=>{
+      const p=surface(u,v),epsilon=.0001,normalU=Math.max(.00001,Math.min(.99999,u)),lo=Math.max(0,normalU-epsilon),hi=Math.min(1,normalU+epsilon),a=surface(lo,v),b=surface(hi,v),c=surface(normalU,v-epsilon),d=surface(normalU,v+epsilon);
+      const normal=unit(cross(d.map((x,i)=>x-c[i]),b.map((x,i)=>x-a[i]))).map(x=>flip?-x:x);return{p,n:normal};
+    },tri=(a,b,c)=>out.push(...a.p,...a.n,...b.p,...b.n,...c.p,...c.n);
+    for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+      const a=sample(row/rows,col/cols),b=sample((row+1)/rows,col/cols),c=sample((row+1)/rows,(col+1)/cols),d=sample(row/rows,(col+1)/cols);tri(a,b,c);tri(a,c,d);
+    }
+    return new Float32Array(out);
+  };
+  /** 按平滑截面重建衣袍、鞋及袖筒；rings为高度/左右半径/前后半径/前后偏移，返回网格。 */
+  const lathe=(rings,rows=40,cols=32)=>{
+    const profile=u=>{
+      const y=rings[0][0]+Math.max(0,Math.min(1,u))*(rings.at(-1)[0]-rings[0][0]);let index=0;while(index<rings.length-2&&y>rings[index+1][0])index++;
+      const a=rings[Math.max(0,index-1)],b=rings[index],c=rings[index+1],d=rings[Math.min(rings.length-1,index+2)],span=c[0]-b[0],t=(y-b[0])/span;
+      // 半径按真实高度插值并保持一阶导数连续，避免不同环距在肩口和裙摆照出分段硬边。
+      return b.map((n,k)=>{if(k===0)return y;const before=(c[k]-a[k])/(c[0]-a[0]),after=(d[k]-b[k])/(d[0]-b[0]);return(2*t*t*t-3*t*t+1)*n+(t*t*t-2*t*t+t)*before*span+(-2*t*t*t+3*t*t)*c[k]+(t*t*t-t*t)*after*span;});
+    };
+    const data=Array.from(surfaceMesh((u,v)=>{const [y,rx,rz,z=0]=profile(u),a=v*TAU;return[Math.sin(a)*Math.max(0,rx),y,Math.cos(a)*Math.max(0,rz)+z];},rows,cols));
+    // 首尾封口位于衣服内部或鞋底，端面独立法线避免把软布边缘照出塑料折面。
+    for(const [r,normal] of [[rings[0],[0,-1,0]],[rings.at(-1),[0,1,0]]])for(let i=0;i<cols;i++){
+      const p=angle=>[Math.sin(angle)*r[1],r[0],Math.cos(angle)*r[2]+(r[3]||0)],a=p(i/cols*TAU),b=p((i+1)/cols*TAU);data.push(0,r[0],r[3]||0,...normal,...a,...normal,...b,...normal);
+    }
+    return new Float32Array(data);
+  };
+  meshes.traveller_robe=lathe([[.112,.103,.065,.004],[.120,.111,.069,.004],[.135,.110,.070,.003],[.188,.094,.063,.002],[.246,.075,.054,0],[.303,.059,.045,0],[.336,.048,.037,0],[.355,.032,.027,0],[.365,.021,.021,0]],48,40);
+  meshes.traveller_sleeve=lathe([[0,.82,.82,0],[.035,1,1,0],[.14,.96,.96,0],[.38,.80,.80,0],[.72,.64,.64,0],[.94,.48,.48,0],[1,.30,.30,0]],32,24);
+  meshes.traveller_leg=lathe([[0,.38,.38,0],[.04,.49,.49,0],[.95,.50,.50,0],[1,.36,.36,0]],14,16);
+  meshes.traveller_boot=lathe(TRAVELLER_BOOT_RINGS,24,24);
+  // 踏面采样取实际网格的所有独立顶点，样条鞋楦在截面之间鼓起的部位也参与防穿阶。
+  TRAVELLER_SOLE_SAMPLES.length=0;const uniqueFoot=new Set();for(let i=0;i<meshes.traveller_boot.length;i+=6){const p=Array.from(meshes.traveller_boot.slice(i,i+3)),key=p.map(n=>n.toFixed(7)).join(',');if(!uniqueFoot.has(key)){uniqueFoot.add(key);TRAVELLER_SOLE_SAMPLES.push(p);}}
+  // 暖色脸与小手用高密度球面和逐顶点法线，不在脸上追加黑面罩或眼睛。
+  meshes.traveller_round=surfaceMesh((u,v)=>{const a=u*Math.PI,b=v*TAU;return[Math.sin(a)*Math.sin(b)*.5,Math.cos(a)*.5,Math.sin(a)*Math.cos(b)*.5];},24,40,true);
+
+  // 罩帽真实包住后脑，正面挖出椭圆脸口；帽尖向侧边短弯，避免旧木偶的长直圆锥。
+  const hoodRings=[
+    [.359,.032,.037,-.011,0,0],[.374,.071,.065,-.015,0,.12],[.391,.090,.078,-.017,0,.55],[.416,.100,.084,-.018,0,.81],[.451,.101,.083,-.019,0,.90],[.481,.093,.078,-.020,0,.75],[.509,.082,.071,-.021,0,.24],[.526,.076,.065,-.022,0,0],[.561,.060,.055,-.019,.005,0],[.597,.044,.041,-.014,.014,0],[.628,.029,.028,-.010,.028,0],[.651,.017,.017,-.006,.043,0],[.660,.011,.011,-.002,.059,0],[.655,.009,.008,.001,.074,0],[.645,.004,.005,.003,.081,0],[.640,0,0,.004,.083,0]
+  ];
+  const hoodProfile=u=>{
+    const q=Math.min(hoodRings.length-1-.0000001,Math.max(0,u)*(hoodRings.length-1)),i=Math.floor(q),t=q-i,a=hoodRings[Math.max(0,i-1)],b=hoodRings[i],c=hoodRings[i+1],d=hoodRings[Math.min(hoodRings.length-1,i+2)];
+    return b.map((n,k)=>.5*((2*n)+(-a[k]+c[k])*t+(2*a[k]-5*n+4*c[k]-d[k])*t*t+(-a[k]+3*n-3*c[k]+d[k])*t*t*t));
+  },hoodSurface=(u,v,inset=0)=>{
+    const [y,rx,rz,z,x]=hoodProfile(u),faceRatio=(y-.445)/.075,cut=Math.abs(faceRatio)<1?.95*Math.sqrt(1-faceRatio*faceRatio):0,a=cut+v*(TAU-2*cut);return[x+Math.sin(a)*Math.max(0,rx-inset),y,Math.cos(a)*Math.max(0,rz-inset)+z];
+  };
+  // 帽口厚边只覆盖真实开口，不把闭合帽身的参数接缝绘成前额硬线。
+  const openingAtHeight=height=>{let low=0,high=.6;for(let i=0;i<24;i++){const middle=(low+high)/2;if(hoodProfile(middle)[0]<height)low=middle;else high=middle;}return(low+high)/2;},openingBottom=openingAtHeight(.370),openingTop=openingAtHeight(.520);
+  meshes.traveller_hood=surfaceMesh((u,v)=>hoodSurface(u,v),80,40);
+  meshes.traveller_hood_inner=surfaceMesh((u,v)=>hoodSurface(u*openingTop,v,.005),44,40,true);
+  // 脸口的一圈软布厚边只连结内外曲面，颜色轻微变深，轮廓不加硬质帽沿。
+  const lip=(u,v)=>{
+    const side=u<.5?0:1,t=u<.5?u*2:(1-u)*2,at=openingBottom+(openingTop-openingBottom)*t,outer=hoodSurface(at,side),inner=hoodSurface(at,side,.005);return outer.map((n,i)=>n+(inner[i]-n)*v);
+  };
+  meshes.traveller_hood_lip=surfaceMesh(lip,80,3);
+  return meshes;
+}
+
+/** 绘制红帽旅人；point为脚底基点，gait为真实路程，motionBlend为0..1停走权重；groundAt返回指定世界X/Z的踏面高度。 */
+function drawTraveller(renderer,point,heading,gait,motionBlend,groundAt){
+  const R=renderer,list=R.dynamic,blend=Math.max(0,Math.min(1,motionBlend)),phase=gait/.50*Math.PI*2,oscillation=Math.sin(phase)*blend,bob=.0025*Math.abs(Math.sin(phase*2))*blend;
+  const root=M.trs(...point,1,1,1,heading),body=M.mul(root,M.trs(0,bob,0,1,1,1)),red=0xde574e,skin=0xf3dfbd,boots=0x30393d;
+  /** 添加专用软哑光人体部件；材质alpha=2仅作光照标记，片元输出仍为不透明。 */
+  const add=(kind,x,y,z,sx,sy,sz,hex,parent=body)=>{R.add(kind,x,y,z,sx,sy,sz,hex,0,list,parent);list.at(-1).color[3]=2;};
+  const centerGround=groundAt(point[0],point[2])-point[1];
+  for(const [size,alpha] of [[.19,.07],[.14,.11],[.09,.15]]){R.add('cyl',0,centerGround+.002+(.19-size)*.02,0,size,.002,size*.64,0x21323b,0,list,root);list.at(-1).color[3]=alpha;}
+  add('traveller_robe',0,0,0,1,1,1,red);
+  // 小脸比旧人物头部明显大，脖子埋在肩领内，罩帽遮住后脑形成儿童比例。
+  add('traveller_round',0,.363,0,.042,.057,.046,skin);
+  add('traveller_round',0,.444,.013,.151,.155,.132,skin);
+  add('traveller_hood_inner',0,0,0,1,1,1,0xa03932);
+  add('traveller_hood',0,0,0,1,1,1,red);
+  add('traveller_hood_lip',0,0,0,1,1,1,0xc3483f);
+
+  /** 在两局部点间放置袖筒或腿；kind为单位长度网格，width为截面倍率，无返回值。 */
+  const segment=(kind,a,b,width,hex,parent=body)=>{
+    const d=b.map((v,i)=>v-a[i]),length=Math.hypot(...d),n=d.map(v=>v/length),helper=Math.abs(n[1])>.95?[1,0,0]:[0,1,0],cross=(u,v)=>[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],x=cross(helper,n),xl=Math.hypot(...x),u=x.map(v=>v/xl),z=cross(u,n);
+    const local=new Float32Array([u[0]*width,u[1]*width,u[2]*width,0,...d,0,z[0]*width,z[1]*width,z[2]*width,0,...a,1]);list.push({kind,matrix:M.mul(parent,local),color:[...color(hex).slice(0,3),2]});
+  };
+  for(const side of [-1,1]){
+    const armSwing=-side*oscillation,cuff=[side*.115,.161,armSwing*.025+.003],shoulder=[side*.039,.340,0];
+    segment('traveller_sleeve',cuff,shoulder,.034,red);add('traveller_round',cuff[0],cuff[1]-.010,cuff[2],.029,.031,.028,skin);
+    // 一只脚着地、另一只短抬；松开后只平滑收腿，root与实际行走点立即停止移动。
+    const legPhase=phase+(side===1?Math.PI:0),lift=.022*Math.max(0,Math.sin(legPhase))*blend,footZ=.045*Math.cos(legPhase)*blend;
+    let groundDelta=-Infinity;
+    // 八点外轮廓先采样，随后按实际鞋楦全部截面补齐；踏面最高值只抬鞋，不改变导航路径。
+    for(let corner=0;corner<8;corner++){
+      const angle=corner/8*Math.PI*2,foot=M.point(root,[side*.037+Math.sin(angle)*.025,0,footZ+.010+Math.cos(angle)*.037]);groundDelta=Math.max(groundDelta,groundAt(foot[0],foot[2])-point[1]);
+    }
+    for(const [x,y,z] of TRAVELLER_SOLE_SAMPLES){const foot=M.point(root,[side*.037+x,0,footZ+z]);groundDelta=Math.max(groundDelta,groundAt(foot[0],foot[2])-point[1]-y);}
+    const ankle=[side*.037,groundDelta+lift+.030,footZ],hip=[side*.037,.139+bob,0];
+    segment('traveller_leg',ankle,hip,.035,boots,root);add('traveller_boot',side*.037,groundDelta+lift,footZ,1,1,1,boots,root);
+  }
+}
+
+// 音色建图同时供实时播放与离线验证使用，避免试听文件和页面声音各维护一份。
+/** 生成可复用的短噪声；context 为实时或离线音频上下文，返回单声道 AudioBuffer。 */
+function makeGameNoise(context){
+  const buffer=context.createBuffer(1,Math.ceil(context.sampleRate*.6),context.sampleRate),data=buffer.getChannelData(0);let seed=8173;
+  for(let i=0;i<data.length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;data[i]=(seed/4294967296)*2-1;}
+  return buffer;
+}
+
+/** 构建并安排一声；kind 为 footstep/snap/complete，when 为音频时间，variation 只轻微改变脚步音色；返回有界声部及停止入口。 */
+function buildGameSound(context,destination,noise,kind,when,variation=0,onEnd=()=>{}){
+  const nodes=[],sources=[],output=context.createGain();nodes.push(output);output.gain.value=1;output.connect(destination);
+  let finished=false,stopping=false,remaining=0,endsAt=when;
+  const clean=()=>{if(finished)return;finished=true;for(const node of nodes)try{node.disconnect();}catch{}onEnd();};
+  // 短声只含有限声源，每个源结束后释放连接；停止时先做极短衰减，避免截断爆音。
+  const register=(source,start,duration,offset=0)=>{sources.push(source);nodes.push(source);remaining++;endsAt=Math.max(endsAt,start+duration);source.onended=()=>{if(--remaining===0)clean();};if(source.buffer)source.start(start,offset,duration);else{source.start(start);source.stop(start+duration);}};
+  const envelope=(gain,start,attack,decay,level)=>{gain.gain.setValueAtTime(.00001,start);gain.gain.exponentialRampToValueAtTime(level,start+attack);gain.gain.exponentialRampToValueAtTime(.00001,start+decay);};
+  const noiseHit=(start,duration,level,frequency,q,offset)=>{
+    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();source.buffer=noise;filter.type='bandpass';filter.frequency.value=frequency;filter.Q.value=q;nodes.push(filter,gain);source.connect(filter);filter.connect(gain);gain.connect(output);envelope(gain,start,.002,duration,level);register(source,start,duration,offset);
+  };
+  const tone=(start,duration,level,frequency,type,attack=.003,endFrequency=frequency)=>{
+    const source=context.createOscillator(),gain=context.createGain();source.type=type;source.frequency.setValueAtTime(frequency,start);if(endFrequency!==frequency)source.frequency.exponentialRampToValueAtTime(endFrequency,start+duration*.68);nodes.push(gain);source.connect(gain);gain.connect(output);envelope(gain,start,attack,duration,level);register(source,start,duration);
+  };
+  if(kind==='footstep'){
+    // 石面脚步由低频轻拍和滤过的鞋底接触噪声组成，交替微调音高与噪声片段。
+    const alternate=variation%2,offset=(variation%5)*.075;
+    tone(when,.078,.21,114+alternate*9,'sine',.002,68+alternate*5);
+    noiseHit(when,.063,.20,1450+alternate*140,.62,offset);
+  }else if(kind==='snap'){
+    // 机关停稳只响一次：短促咔声加低频实体碰触，不用持续电子提示音。
+    noiseHit(when,.075,.23,2350,.75,.35);
+    tone(when,.11,.13,276,'triangle',.002,184);
+    tone(when+.006,.12,.028,1098,'sine',.002,940);
+  }else if(kind==='complete'){
+    // 三个柔和音依次落入A大调和弦；延长尾音衔接通关演出，仍只创建三个声源。
+    for(const [i,frequency] of [440,554.365,659.255].entries())tone(when+i*.095,1.08,.105,frequency,'sine',.025);
+  }else{clean();throw new Error('Unknown game sound');}
+  return{kind,sources,nodes,endsAt,stop(){if(finished||stopping)return;stopping=true;const now=context.currentTime;try{output.gain.cancelScheduledValues(now);output.gain.setTargetAtTime(.00001,now,.003);}catch{}for(const source of sources)try{source.stop(now+.018);}catch{}},dispose:clean};
+}
+
+/** 用原生离线音频异步合成32秒原创音乐，返回 Promise<AudioBuffer>；首尾渐隐，实时只使用一个循环声源。 */
+async function makeGameMusic(){
+  const OfflineContext=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!OfflineContext)throw new Error('Offline audio unavailable');
+  const duration=32,context=new OfflineContext(2,44100*duration,44100),mix=context.createGain();mix.connect(context.destination);
+  // 循环边缘保持连续低能量，不在主线程逐采样计算正弦，也不加载网络音乐。
+  mix.gain.setValueAtTime(0,0);mix.gain.linearRampToValueAtTime(1,.9);mix.gain.setValueAtTime(1,duration-1.2);mix.gain.linearRampToValueAtTime(0,duration);
+  const bell=(when,frequency,pan)=>{
+    const panner=context.createStereoPanner();panner.pan.value=pan;panner.connect(mix);
+    // 轻钟琴含衰减速度不同的三个泛音，稀疏旋律留出脚步和机关的空间。
+    for(const [multiple,level,length]of [[1,.22,2.6],[2.006,.078,1.30],[3.01,.024,.78]]){
+      const oscillator=context.createOscillator(),gain=context.createGain();oscillator.type='sine';oscillator.frequency.value=frequency*multiple;oscillator.connect(gain);gain.connect(panner);gain.gain.setValueAtTime(.00001,when);gain.gain.exponentialRampToValueAtTime(level,when+.015);gain.gain.exponentialRampToValueAtTime(.00001,when+length);oscillator.start(when);oscillator.stop(Math.min(duration,when+length));
+    }
+  };
+  const melody=[[.85,440,-.18],[2.60,554.365,.08],[4.65,659.255,.18],[6.40,554.365,-.08],[9.00,739.989,.14],[11.10,659.255,.02],[13.20,554.365,-.17],[15.15,493.883,.09],[17.0,440,-.12],[19.10,554.365,.12],[21.40,659.255,.20],[23.15,739.989,-.05],[25.10,659.255,.15],[27.05,554.365,-.16],[29.00,493.883,.07],[30.30,440,-.08]];
+  for(const [when,frequency,pan]of melody)bell(when,frequency,pan);
+  // 四个缓慢变化的和弦用柔和正弦铺底，重叠换和弦，没有鼓点或短提示音式循环。
+  const chords=[[0,[110,164.814,277.183]],[8,[92.499,138.591,220]],[16,[146.832,184.997,220]],[24,[110,164.814,277.183]]];
+  for(const [when,frequencies]of chords){
+    const end=Math.min(duration,when+10),panner=context.createStereoPanner();panner.pan.value=when%16===0?-.13:.13;panner.connect(mix);
+    for(const [i,frequency]of frequencies.entries()){
+      const oscillator=context.createOscillator(),gain=context.createGain();oscillator.type='sine';oscillator.frequency.value=frequency;oscillator.detune.value=(i-1)*3;oscillator.connect(gain);gain.connect(panner);gain.gain.setValueAtTime(.00001,when);gain.gain.exponentialRampToValueAtTime(.042,when+2.2);gain.gain.setValueAtTime(.042,end-2.0);gain.gain.exponentialRampToValueAtTime(.00001,end);oscillator.start(when);oscillator.stop(end);
+    }
+  }
+  return context.startRendering();
+}
+
+/** 本地单页声音管理；onStatus 接收 {enabled,available,ready}，音乐只在真实输入解锁后播放。 */
+class GameAudio{
+  constructor(onStatus){
+    this.context=null;this.master=null;this.noise=null;this.voices=new Set();this.sourceCount=0;this.stepIndex=0;this.lastStep=-Infinity;this.lastSnap=-Infinity;
+    this.enabled=true;this.ready=false;this.available=!!(window.AudioContext||window.webkitAudioContext);this.onStatus=onStatus;this.resuming=null;this.suspending=null;this.suspendTimer=null;this.generation=0;this.volume=.62;
+    this.musicBuffer=null;this.music=null;this.musicOffset=0;this.musicVolume=.24;this.completionMix=1;this.pendingComplete=false;this.completeTimer=null;
+    if(!this.available)this.enabled=false;this.notify();
+    // 离线合成不产生扬声器输出；完成时仍检查手势、开关和前台状态，不抢先开播。
+    this.preparing=this.available?makeGameMusic().then(buffer=>{if(this.available){this.musicBuffer=buffer;this.startMusic();}return buffer;}).catch(error=>{this.fail(error);return null;}):Promise.resolve(null);
+  }
+  /** 通知声音按钮状态，无返回值；界面异常不传播到游戏帧循环。 */
+  notify(){try{this.onStatus?.({enabled:this.enabled,available:this.available,ready:this.ready});}catch(error){console.warn('Illusion audio status callback failed:',error);}}
+  /** 真实按下或重开按钮click解锁声音，返回 Promise<boolean>；模拟事件、后台和不可用状态不触发。 */
+  unlockGesture(event){
+    if(!event?.isTrusted||!['pointerdown','keydown','click'].includes(event.type)||document.hidden||!this.available)return Promise.resolve(false);
+    const generation=++this.generation;clearTimeout(this.suspendTimer);this.suspendTimer=null;
+    try{
+      if(!this.context){
+        const AudioContextClass=window.AudioContext||window.webkitAudioContext;this.context=new AudioContextClass({latencyHint:'interactive'});this.master=this.context.createGain();this.master.gain.value=this.enabled?this.volume:0;this.master.connect(this.context.destination);this.noise=makeGameNoise(this.context);
+        // 浏览器自行中断上下文时收回 ready；恢复必须经过下一次真实用户输入。
+        this.context.addEventListener('statechange',()=>{if(!this.available)return;if(this.context.state==='closed'){this.fail(new Error('Audio context closed'));return;}if(this.context.state!=='running'&&this.ready){this.ready=false;this.notify();}});
+      }
+      const context=this.context;
+      // 新输入先等已发出的suspend结束，再恢复；旧的异步结果不能覆盖stop后的状态。
+      return Promise.resolve(this.suspending).then(()=>{
+        if(generation!==this.generation||!this.available||document.hidden)return false;
+        if(context.state==='running')return true;
+        if(!this.resuming)this.resuming=Promise.resolve(context.resume()).finally(()=>{this.resuming=null;});
+        return this.resuming.then(()=>true);
+      }).then(active=>{
+        if(!active||generation!==this.generation||!this.available||document.hidden)return false;
+        this.ready=context.state==='running';if(!this.ready){this.fail(new Error('Audio resume did not reach running state'));return false;}this.notify();this.startMusic();return true;
+      }).catch(error=>{this.fail(error);return false;});
+    }catch(error){this.fail(error);return Promise.resolve(false);}
+  }
+  /** 播放一声并限制总声源不超过 8 个；kind 为内部三种音色，返回是否真的开始播放。 */
+  play(kind){
+    if(!this.enabled||!this.available||!this.ready||document.hidden||this.context?.state!=='running')return false;
+    try{
+      const context=this.context,required=kind==='footstep'?2:3;if(this.sourceCount+required>8)return false;
+      // 包含一个背景声源，总计最多8源；普通短声满额直接略过，不建立无限播放队列。
+      let voice;voice=buildGameSound(context,this.master,this.noise,kind,context.currentTime+.004,this.stepIndex,()=>this.releaseVoice(voice));
+      this.voices.add(voice);this.sourceCount+=voice.sources.length;return true;
+    }catch(error){this.fail(error);return false;}
+  }
+  /** 足落地时调用，一帧由调用方至多调用一次；150ms 内不重复，返回是否播放。 */
+  footstep(){const now=this.context?.currentTime??0;if(now-this.lastStep<.15)return false;const played=this.play('footstep');if(played){this.lastStep=now;this.stepIndex++;}return played;}
+  /** 角度确实改变并停在 90° 时调用；连续 100ms 内拒绝重复，返回是否播放。 */
+  snap(){const now=this.context?.currentTime??0;if(now-this.lastSnap<.1)return false;const played=this.play('snap');if(played)this.lastSnap=now;return played;}
+  /** 释放结束声部并尝试有界通关收尾；voice 为内部声部，无返回值。 */
+  releaseVoice(voice){
+    if(!this.voices.delete(voice))return;this.sourceCount-=voice.sources.length;
+    if(this.music===voice)this.music=null;
+    if(this.pendingComplete&&this.sourceCount<=5){this.pendingComplete=false;clearTimeout(this.completeTimer);this.completeTimer=null;this.play('complete');}
+    this.startMusic();
+  }
+  /** 真实输入解锁后播放已预合成的音乐；单个循环声源淡入，返回是否开播。 */
+  startMusic(){
+    if(!this.available||!this.enabled||!this.ready||document.hidden||!this.musicBuffer||this.music||this.context?.state!=='running'||this.sourceCount>=8)return false;
+    try{
+      const context=this.context,source=context.createBufferSource(),gain=context.createGain(),when=context.currentTime+.004,offset=this.musicOffset%this.musicBuffer.duration;let finished=false,stopping=false,voice;
+      source.buffer=this.musicBuffer;source.loop=true;source.connect(gain);gain.connect(this.master);gain.gain.setValueAtTime(0,when);gain.gain.linearRampToValueAtTime(this.musicVolume*this.completionMix,when+.28);
+      const clean=()=>{if(finished)return;finished=true;try{source.disconnect();gain.disconnect();}catch{}this.releaseVoice(voice);};
+      voice={kind:'music',sources:[source],nodes:[source,gain],gain,get stopping(){return stopping;},stop:()=>{if(finished||stopping)return;stopping=true;const now=context.currentTime;this.musicOffset=(offset+Math.max(0,now-when))%source.buffer.duration;try{gain.gain.cancelScheduledValues(now);gain.gain.setTargetAtTime(.00001,now,.009);source.stop(now+.065);}catch{clean();}},dispose:clean};
+      source.onended=clean;this.music=voice;this.voices.add(voice);this.sourceCount++;source.start(when,offset);return true;
+    }catch(error){this.fail(error);return false;}
+  }
+  /** 调整通关混音；active 为通关状态，返回音乐系数；只改音乐增益，不解锁声音或启动声源。 */
+  setCompletionMix(active){
+    this.completionMix=active ? .28 : 1;
+    // 通关时平滑压低背景音乐突出收尾和弦；后台、静音和迟到合成后仍沿用当前通关系数。
+    if(this.music&&!this.music.stopping){try{const gain=this.music.gain.gain,now=this.context.currentTime,current=gain.value;gain.cancelScheduledValues(now);gain.setValueAtTime(current,now);gain.setTargetAtTime(this.musicVolume*this.completionMix,now,.065);}catch(error){this.fail(error);}}
+    return this.completionMix;
+  }
+  /** 通关false→true时调用；满额先淡出短声，最多等待120ms释放源，返回是否播放或接受收尾。 */
+  complete(){
+    if(!this.available||!this.enabled||!this.ready||document.hidden||this.context?.state!=='running'||this.pendingComplete||[...this.voices].some(voice=>voice.kind==='complete'))return false;
+    if(this.sourceCount<=5)return this.play('complete');
+    this.pendingComplete=true;this.completeTimer=setTimeout(()=>{this.pendingComplete=false;this.completeTimer=null;},120);
+    for(const voice of this.voices)if(voice.kind!=='music')voice.stop();return true;
+  }
+  /** 设置声音开关；value 为布尔值，返回最终启用状态；渐变主音量且关声不保留待播声。 */
+  setEnabled(value){
+    this.enabled=this.available&&!!value;
+    try{if(this.master){const now=this.context.currentTime;this.master.gain.cancelScheduledValues(now);this.master.gain.setTargetAtTime(this.enabled?this.volume:0,now,.012);}if(!this.enabled)this.stop();else this.startMusic();}catch(error){this.fail(error);return false;}
+    this.notify();return this.enabled;
+  }
+  /** 切换声音并返回最终启用状态；本方法不代替真实输入解锁。 */
+  toggle(){return this.setEnabled(!this.enabled);}
+  /** 淡出全部声音并收回ready；reset/blur/pagehide 后等待真实输入，音乐保留位置，无返回值。 */
+  stop(){this.generation++;clearTimeout(this.completeTimer);this.completeTimer=null;this.pendingComplete=false;clearTimeout(this.suspendTimer);this.suspendTimer=null;if(this.ready){this.ready=false;this.notify();}for(const voice of [...this.voices])voice.stop();this.lastStep=-Infinity;this.lastSnap=-Infinity;}
+  /** 切后台先淡出再有界suspend，无返回值；返回页面取消迟到挂起，仍只等待真实输入恢复。 */
+  suspendOnHidden(){
+    this.stop();this.ready=false;this.notify();
+    if(!this.context||!this.available||this.context.state==='closed')return;
+    const generation=this.generation;
+    this.suspendTimer=setTimeout(()=>{this.suspendTimer=null;if(generation!==this.generation||!document.hidden||!this.available)return;try{this.suspending=Promise.resolve(this.context.suspend()).catch(error=>this.fail(error)).finally(()=>{this.suspending=null;});}catch(error){this.fail(error);}},80);
+  }
+  /** 音频失败仅禁用声音并通知按钮，保留游戏运行；error 只用于控制台诊断，无返回值。 */
+  fail(error){
+    if(!this.available)return;this.available=false;this.enabled=false;this.ready=false;this.stop();try{this.master?.disconnect();}catch{}for(const voice of [...this.voices])voice.dispose();this.notify();console.warn('Illusion audio unavailable:',error);
+    // 失败关闭上下文只负责释放资源；关闭本身再次失败时不重复报警或影响游戏。
+    try{Promise.resolve(this.context?.close()).catch(()=>{});}catch{}
+  }
+}
+
+    const PALETTE={stone:0x94a0a9,dark:0x34414a,cream:0xf1f0e7,knob:0xa5c7d5};
+    const BRIDGE_CENTER=[4,3.8,0],BRIDGE_LENGTH=3,KNOB_POINT=[5.10,3.8,0],STAIR_STEPS=32,STAIR_RISE=1.95,STAIR_DEPTH=2.22,GOAL_POINT=[.25,5.95,-2.65];
+    // 道路统一宽 .56、厚 .44；保留轴心和顶面 +.2，因此实体下沿为 -.24。
+    const ROAD_HALF=.28,ROAD_LOW=-.24,ROAD_TOP=.20,SHORT_END=1.8,STAGE_END=3.72,GEOMETRY_EPS=1e-9;
+
+    /** 返回刚体短臂、转角长臂及固定道路的局部 YZ 截面；angle 为整件绕 X 轴的弧度。 */
+    function rotorSections(angle){
+      const rectangle=(lo,hi)=>[[ROAD_LOW,lo],[ROAD_TOP,lo],[ROAD_TOP,hi],[ROAD_LOW,hi]];
+      const exact=n=>Math.abs(n)<1e-12?0:Math.abs(n-1)<1e-12?1:Math.abs(n+1)<1e-12?-1:n,c=exact(Math.cos(angle)),s=exact(Math.sin(angle)),rotate=polygon=>polygon.map(([y,z])=>[c*y-s*z,s*y+c*z]);
+      const fixed=rectangle(-ROAD_HALF,ROAD_HALF);return{short:rotate(fixed),full:rotate(rectangle(-ROAD_HALF,BRIDGE_LENGTH)),stage:rectangle(BRIDGE_LENGTH,STAGE_END),fixed};
+    }
+    /** 返回二维有向面积；用于本关矩形截面的边界裁剪。 */
+    function polygonCross(a,b,p){return(b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0]);}
+    /** 按有向直线裁剪凸多边形；keepInside 选择左侧，返回至多增加一个顶点的多边形。 */
+    function clipConvex(polygon,a,b,keepInside){
+      const out=[],value=p=>(keepInside?1:-1)*polygonCross(a,b,p);
+      for(let i=0;i<polygon.length;i++){const p=polygon[i],q=polygon[(i+1)%polygon.length],u=value(p),v=value(q),pin=u>=-GEOMETRY_EPS,qin=v>=-GEOMETRY_EPS;if(pin)out.push(p);if(pin!==qin){const t=u/(u-v);out.push([p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t]);}}
+      return out.filter((p,i)=>!i||Math.hypot(p[0]-out[i-1][0],p[1]-out[i-1][1])>GEOMETRY_EPS);
+    }
+    /** 从凸 polygon 扣除 convex 截面；返回不重叠凸片，用于删除相接实体的内部面。 */
+    function subtractConvex(polygon,convex){
+      const pieces=[];let inside=polygon;
+      for(let i=0;i<convex.length&&inside.length>=3;i++){const a=convex[i],b=convex[(i+1)%convex.length],outside=clipConvex(inside,a,b,false);if(outside.length>=3)pieces.push(outside);inside=clipConvex(inside,a,b,true);}
+      return pieces;
+    }
+    /** 从本关凸矩形取外边界；相交边先共享交点，重合内部边删除，返回有限个轮廓。 */
+    function unionOutlines(polygons){
+      const edges=[],near=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1])<1e-8;
+      for(let owner=0;owner<polygons.length;owner++)for(let i=0;i<polygons[owner].length;i++){
+        const a=polygons[owner][i],b=polygons[owner][(i+1)%polygons[owner].length],d=[b[0]-a[0],b[1]-a[1]],length2=d[0]*d[0]+d[1]*d[1],cuts=[0,1];
+        for(let other=0;other<polygons.length;other++)if(other!==owner)for(let j=0;j<polygons[other].length;j++){
+          const p=polygons[other][j],q=polygons[other][(j+1)%polygons[other].length],u=[q[0]-p[0],q[1]-p[1]],det=d[0]*u[1]-d[1]*u[0],delta=[p[0]-a[0],p[1]-a[1]];
+          if(Math.abs(det)>GEOMETRY_EPS){const t=(delta[0]*u[1]-delta[1]*u[0])/det,v=(delta[0]*d[1]-delta[1]*d[0])/det;if(t>-GEOMETRY_EPS&&t<1+GEOMETRY_EPS&&v>-GEOMETRY_EPS&&v<1+GEOMETRY_EPS)cuts.push(Math.max(0,Math.min(1,t)));}
+          else if(Math.abs(polygonCross(a,b,p))<GEOMETRY_EPS)for(const point of [p,q]){const t=((point[0]-a[0])*d[0]+(point[1]-a[1])*d[1])/length2;if(t>0&&t<1)cuts.push(t);}
+        }
+        const sorted=cuts.sort((x,y)=>x-y).filter((t,index,array)=>!index||t-array[index-1]>GEOMETRY_EPS);
+        for(let cut=0;cut<sorted.length-1;cut++){
+          const lo=sorted[cut],hi=sorted[cut+1],mid=[a[0]+d[0]*(lo+hi)/2,a[1]+d[1]*(lo+hi)/2];let internal=false;
+          for(let other=0;other<polygons.length&&!internal;other++)if(other!==owner){
+            const polygon=polygons[other],sides=polygon.map((p,j)=>polygonCross(p,polygon[(j+1)%polygon.length],mid));
+            if(sides.every(n=>n>GEOMETRY_EPS)){internal=true;continue;}
+            if(sides.every(n=>n>=-GEOMETRY_EPS))for(let j=0;j<polygon.length;j++)if(Math.abs(sides[j])<=GEOMETRY_EPS){const p=polygon[j],q=polygon[(j+1)%polygon.length],dot=d[0]*(q[0]-p[0])+d[1]*(q[1]-p[1]);if(dot<0||owner>other)internal=true;}
+          }
+          if(!internal)edges.push([[a[0]+d[0]*lo,a[1]+d[1]*lo],[a[0]+d[0]*hi,a[1]+d[1]*hi]]);
+        }
+      }
+      const loops=[];
+      // 本关的两个四边形外边段不超过 36 个；每段只消费一次，无法闭合时明确终止。
+      for(let component=0;component<polygons.length&&edges.length;component++){
+        const first=edges.shift(),loop=[first[0]],start=first[0];let end=first[1];
+        for(let step=0;step<36&&!near(end,start);step++){loop.push(end);const next=edges.findIndex(edge=>near(edge[0],end));if(next<0)throw new Error('Corner boundary did not close');end=edges.splice(next,1)[0][1];}
+        if(!near(end,start))throw new Error('Corner boundary exceeded its limit');
+        // 共线交点按同一轮廓删去，顶面与周边面继续共用剩余的精确顶点。
+        for(let pass=0;pass<36&&loop.length>3;pass++){const index=loop.findIndex((p,i)=>Math.abs(polygonCross(loop[(i+loop.length-1)%loop.length],p,loop[(i+1)%loop.length]))<GEOMETRY_EPS);if(index<0)break;loop.splice(index,1);}
+        loops.push(loop);
+      }
+      if(edges.length)throw new Error('Union boundary exceeded component limit');return loops;
+    }
+    /** 对无孔轮廓作有界耳切；返回不重叠的三角片，禁止失败后退回叠盒。 */
+    function triangulateOutline(polygon){
+      const triangles=[],remaining=[...polygon];
+      for(let iteration=0;iteration<36&&remaining.length>3;iteration++){
+        let ear=-1;
+        for(let i=0;i<remaining.length;i++){const a=remaining[(i+remaining.length-1)%remaining.length],b=remaining[i],c=remaining[(i+1)%remaining.length];if(polygonCross(a,b,c)<=GEOMETRY_EPS)continue;const occupied=remaining.some((p,j)=>j!==i&&j!==(i+1)%remaining.length&&j!==(i+remaining.length-1)%remaining.length&&polygonCross(a,b,p)>=-GEOMETRY_EPS&&polygonCross(b,c,p)>=-GEOMETRY_EPS&&polygonCross(c,a,p)>=-GEOMETRY_EPS);if(!occupied){ear=i;triangles.push([a,b,c]);break;}}
+        if(ear<0)throw new Error('Corner face could not be triangulated');remaining.splice(ear,1);
+      }
+      if(remaining.length!==3)throw new Error('Corner triangulation exceeded its limit');triangles.push(remaining);return triangles;
+    }
+    /** 追加非退化三角形；a/b/c 为世界位置，normal 为单位外法线，无返回值。 */
+    function appendMeshTriangle(out,a,b,c,normal){const u=b.map((v,i)=>v-a[i]),v=c.map((value,i)=>value-a[i]),area=Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]);if(area>GEOMETRY_EPS)out.push(...a,...normal,...b,...normal,...c,...normal);}
+    /** 将凸截面绘制为指定 X 位置的端面；sign 为外法线 X 方向，无返回值。 */
+    function appendSectionFace(out,polygon,x,sign){const world=p=>[x,BRIDGE_CENTER[1]+p[0],p[1]];for(let i=1;i<polygon.length-1;i++)appendMeshTriangle(out,world(polygon[0]),world(polygon[sign>0?i:i+1]),world(polygon[sign>0?i+1:i]),[sign,0,0]);}
+    /** 沿 X 挤出截面周边；openStageEnd 只删起点台与固定底梁共有的末端面。 */
+    function appendSectionWalls(out,polygon,left,right,openStageEnd=false){
+      const world=(x,p)=>[x,BRIDGE_CENTER[1]+p[0],p[1]];
+      for(let i=0;i<polygon.length;i++){const a=polygon[i],b=polygon[(i+1)%polygon.length],dy=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dy,dz),normal=[0,dz/length,-dy/length];
+        // 台末与底梁只在 x≥3.75 接合，该区域不生成相对的内部封口。
+        const edgeRight=openStageEnd&&Math.abs(a[1]-STAGE_END)<GEOMETRY_EPS&&Math.abs(b[1]-STAGE_END)<GEOMETRY_EPS?3.75:right;
+        appendMeshTriangle(out,world(left,a),world(left,b),world(edgeRight,b),normal);appendMeshTriangle(out,world(left,a),world(edgeRight,b),world(edgeRight,a),normal);
+      }
+    }
+    /** 重建同一角度的完整 L 刚体及固定起点台外壳；返回世界位置/法线网格。 */
+    function makeRigidLShell(angle){
+      const section=rotorSections(angle),out=[],elbow=BRIDGE_CENTER[0]-ROAD_HALF,right=BRIDGE_CENTER[0]+ROAD_HALF;
+      // 短臂与转角同一截面旋转；接固定梁只保留 Qθ\Q0，接角处整面位于刚体内部。
+      appendSectionWalls(out,section.short,SHORT_END,elbow);
+      for(const piece of subtractConvex(section.short,section.fixed))appendSectionFace(out,piece,SHORT_END,-1);
+      for(const loop of unionOutlines([section.full,section.stage])){
+        for(const triangle of triangulateOutline(loop)){
+          appendSectionFace(out,triangle,right,1);
+          // 转角左侧扣除同步运动的短臂截面，禁止留下固定帽或重复封口。
+          for(const piece of subtractConvex(triangle,section.short))appendSectionFace(out,piece,elbow,-1);
+        }
+        appendSectionWalls(out,loop,elbow,right,true);
+      }
+      return new Float32Array(out);
+    }
+    /** 绘制固定左上梁；angle 只决定 +X 端面的 Q0\Qθ 开口，固定道路不随机关运动。 */
+    function makeFixedUpperShell(angle){
+      const section=rotorSections(angle),out=[];appendSectionWalls(out,section.fixed,-.33,SHORT_END);appendSectionFace(out,section.fixed,-.33,-1);
+      for(const piece of subtractConvex(section.fixed,section.short))appendSectionFace(out,piece,SHORT_END,1);return new Float32Array(out);
+    }
+    /** 生成固定底梁外壳；仅删与起点台真实接合的 -Z 局部面，返回世界位置/法线网格。 */
+    function makeBottomShell(){
+      const lo=[3.75,3.56,STAGE_END],hi=[8.25,4,4.28],out=[],box=makeGeometry('box');
+      for(let index=0;index<box.length;index+=18){const normal=Array.from(box.slice(index+3,index+6));for(let corner=0;corner<3;corner++){const p=Array.from(box.slice(index+corner*6,index+corner*6+3)),world=p.map((n,i)=>(n+.5)*(hi[i]-lo[i])+lo[i]);if(normal[2]===-1)world[0]=p[0]<0?BRIDGE_CENTER[0]+ROAD_HALF:hi[0];out.push(...world,...normal);}}
+      return new Float32Array(out);
+    }
+    // 台阶记录同时用于导航、模型与脚面采样；末级只保留前半面，在平台前缘真实接边。
+    const stairSurfaces=Array.from({length:STAIR_STEPS},(_,index)=>{const step=index+1,rise=STAIR_RISE/STAIR_STEPS,depth=STAIR_DEPTH/STAIR_STEPS,last=step===STAIR_STEPS,extent=last?depth/2+.0005:depth+.001,point=[.10,4+step*rise,-step*depth];return{point,z:last?point[2]+extent/2:point[2],width:.47,depth:extent,thickness:rise*1.08};});
+    // 4～7 属于同一完整 L 刚体；8 为固定上梁入口，保留 .12 长度的真实外接边。
+    const fixedNodes=[[4.08,4,3.60],[4,4,4],[6,4,4],[7.45,4,4],null,null,null,null,[1.68,4,0],[0,4,0]];
+    for(const stair of stairSurfaces)fixedNodes.push([...stair.point]);
+    fixedNodes.push([...GOAL_POINT]);
+    const ROTOR_NODES=[4,5,6,7],ROTOR_LOCAL=[[0,.2,BRIDGE_LENGTH],[0,.2,BRIDGE_LENGTH/2],[0,.2,0],[-2.2,.2,0]],GOAL=fixedNodes.length-1,START=0;
+    const MOVEMENT_KEYS={KeyW:[0,-1],KeyS:[0,1],KeyA:[-1,0],KeyD:[1,0]},heldKeys=new Set(),FOOT_RADIUS=.11;
+    const roadButtons=[],goalFrames=[];
+    let renderer=null,animation=0,lastTime=0,failed=false,pointer=null,tap=null;
+    // 横梁朝向、角色节点和行走队列由本页统一持有，不存档或调用后端。
+    const state={angle:QUARTER,targetAngle:QUARTER,location:{node:START},surfaceId:'stage',player:[...fixedNodes[START]],heading:0,targetHeading:0,gait:0,motionBlend:0,moving:false,justStopped:false,route:[],segment:null,input:null,won:false,endingElapsed:0,endingReady:false,pulse:null};
+    // 单一声音开关控制背景音乐和三种动作音；故障只禁音，不影响移动或机关。
+    const audio=new GameAudio(status=>{const text=!status.available?'声音不可用':status.enabled?'声音：开':'声音：关';soundButton.textContent=text;soundButton.setAttribute('aria-label',text);soundButton.setAttribute('aria-pressed',String(status.available&&status.enabled));soundButton.disabled=!status.available;});
+    let lastSettledAngle=QUARTER;
+    let shellAngle=NaN;
+    let matrixAngle=NaN,rotorPose=null;
+
+    /** 返回通关相机的平滑退后进度；减少动态效果时始终为零，不改变固定观察方向。 */
+    function completionCameraProgress(){if(!state.won||reducedMotion.matches)return 0;const t=Math.max(0,Math.min(1,(state.endingElapsed-.85)/1.1));return t*t*(3-2*t);}
+    /** 首次通关时开始唯一演出；清理点击标记并降低背景音乐，重复输入不会重启时间线。 */
+    function beginCompletion(){state.endingElapsed=0;state.endingReady=false;state.pulse=null;prototype.classList.add('is-ending');audio.setCompletionMix(true);}
+    /** 按可见页面的帧时间推进两秒演出；完成后只设置一次结果与重开按钮焦点。 */
+    function updateCompletion(dt){
+      if(!state.won)return;state.endingElapsed=reducedMotion.matches?2:Math.min(2,state.endingElapsed+dt);
+      // 音频故障或静音不参与视觉完成判定；减少动态效果直接进入静态完成态。
+      if(state.endingElapsed>=2&&!state.endingReady){state.endingReady=true;prototype.classList.add('is-complete');result.hidden=false;restart.focus({preventScroll:true});}
+    }
+    /** 返回当前完整 L 的唯一变换矩阵；同一角度的节点与踏面复用同一实例。 */
+    function rotorMatrix(){if(matrixAngle!==state.angle){rotorPose=M.trs(...BRIDGE_CENTER,1,1,1,0,state.angle);matrixAngle=state.angle;}return rotorPose;}
+    /** 返回道路节点的真实位置；四个运动节点统一使用刚体矩阵，不补偿高度或世界深度。 */
+    function nodePoint(index){const rotor=ROTOR_NODES.indexOf(index);return rotor<0?[...fixedNodes[index]]:M.point(rotorMatrix(),ROTOR_LOCAL[rotor]);}
+    /** 判断横梁是否已稳定对齐；拖动与吸附过程中禁止跨接缝寻路。 */
+    function connected(){return!pointer&&state.angle===state.targetAngle&&Math.abs(Math.sin(state.targetAngle))<.000001&&Math.cos(state.targetAngle)>.999999;}
+    /** 建立有界道路图；完整 L 内部与两侧外接都只在水平停稳时开放，固定上梁始终通楼梯。 */
+    function adjacency(){const graph=Array.from({length:fixedNodes.length},()=>[]),edge=(a,b)=>{graph[a].push(b);graph[b].push(a);};edge(0,1);edge(1,2);edge(2,3);for(let i=8;i<GOAL;i++)edge(i,i+1);if(connected()){edge(0,4);edge(4,5);edge(5,6);edge(6,7);edge(7,8);}return graph;}
+    /** 为实际盒体顶面登记行走区域；edges是关联道路边，返回物件供设置拾取属性。 */
+    function addWalkBox(id,x,y,z,sx,sy,sz,hex,edges,list=renderer.static,parent=null){const object=renderer.add('box',x,y,z,sx,sy,sz,hex,0,list,parent);object.walk={id,edges};object.occludes=true;return object;}
+    /** 返回当前可用的真实踏面；未对齐时短臂、转角、长臂统一只遮挡，不允许行走。 */
+    function walkObjects(){return[...renderer.static,...renderer.dynamic].filter(object=>object.walk&&(!object.walk.rotor||connected()));}
+    /** 解析盒体顶面的世界基向量；返回矩形原点、两轴和真实边长。 */
+    function surfaceBasis(object){const origin=M.point(object.matrix,[-.5,.5,-.5]),x=M.point(object.matrix,[.5,.5,-.5]).map((n,i)=>n-origin[i]),z=M.point(object.matrix,[-.5,.5,.5]).map((n,i)=>n-origin[i]);return{origin,x,z,width:Math.hypot(...x),depth:Math.hypot(...z)};}
+    /** 把世界点映到顶面矩形参数，返回u/v；只投影，不替代真实深度遮挡检查。 */
+    function surfaceCoordinates(point,basis){const delta=point.map((n,i)=>n-basis.origin[i]);return{u:delta.reduce((s,n,i)=>s+n*basis.x[i],0)/(basis.width*basis.width),v:delta.reduce((s,n,i)=>s+n*basis.z[i],0)/(basis.depth*basis.depth)};}
+    /** 按顶面参数恢复真实世界点，u/v允许边界，返回三维坐标。 */
+    function surfacePoint(basis,u,v){return basis.origin.map((n,i)=>n+basis.x[i]*u+basis.z[i]*v);}
+    /** 判断完整未接通 L 是否侵入脚幅；point 为真实脚底，两段凸截面最多各求交四边。 */
+    function wholeRotorFootBlocked(point){
+      if(connected())return false;const section=rotorSections(state.angle),height=point[1]-BRIDGE_CENTER[1]+.00001;
+      // 短臂与长臂按同一角度检查；只查略高于脚面的实体，向下的梁不阻挡固定道路。
+      for(const [left,right,polygon] of [[SHORT_END,BRIDGE_CENTER[0]-ROAD_HALF,section.short],[BRIDGE_CENTER[0]-ROAD_HALF,BRIDGE_CENTER[0]+ROAD_HALF,section.full]]){
+        if(point[0]+FOOT_RADIUS<=left+.000001||point[0]-FOOT_RADIUS>=right-.000001)continue;const cuts=[];
+        for(let i=0;i<polygon.length;i++){const a=polygon[i],b=polygon[(i+1)%polygon.length],dy=b[0]-a[0];if(Math.abs(dy)<GEOMETRY_EPS){if(Math.abs(height-a[0])<GEOMETRY_EPS)cuts.push(a[1],b[1]);}else{const t=(height-a[0])/dy;if(t>=0&&t<=1)cuts.push(a[1]+(b[1]-a[1])*t);}}
+        if(cuts.length>=2&&point[2]+FOOT_RADIUS>Math.min(...cuts)+.000001&&point[2]-FOOT_RADIUS<Math.max(...cuts)-.000001)return true;
+      }
+      return false;
+    }
+    /** 查找XZ下真实可走面；返回最高支撑物件，不把建筑侧面或角色当作道路。 */
+    function surfaceAt(point){let best=null,height=-Infinity;for(const object of walkObjects()){const basis=surfaceBasis(object),at=surfaceCoordinates(point,basis);if(at.u<-.00001||at.u>1.00001||at.v<-.00001||at.v>1.00001)continue;const y=surfacePoint(basis,at.u,at.v)[1];if(y>height+.000001||Math.abs(y-height)<.000001&&object.walk.rotor){best=object;height=y;}}return best;}
+    /** 判断边外同高道路是否接住脚；point是边外采样点，height是当前踏面高度。 */
+    function adjacentSupport(point,height){const object=surfaceAt(point);if(!object)return false;const basis=surfaceBasis(object),at=surfaceCoordinates(point,basis);return Math.abs(surfacePoint(basis,at.u,at.v)[1]-height)<.002;}
+    /** 将落点限制在真实可站区；仅外沿预留脚半径，内侧接边和台阶进深不吸附节点。 */
+    function clampWalkPoint(point,object){
+      const basis=surfaceBasis(object),at=surfaceCoordinates(point,basis),height=point[1],margins=[];
+      for(const [axis,index,sign] of [[basis.x,0,-1],[basis.x,0,1],[basis.z,1,-1],[basis.z,1,1]]){
+        const u=index===0?(sign<0?0:1):at.u,v=index===1?(sign<0?0:1):at.v,edge=surfacePoint(basis,u,v),length=Math.hypot(...axis),outside=edge.map((n,i)=>n+axis[i]/length*sign*FOOT_RADIUS);
+        margins.push(object.walk.id.startsWith('stair-')&&index===1||adjacentSupport(outside,height)?0:Math.min(.45,FOOT_RADIUS/length));
+      }
+      const u=Math.max(margins[0],Math.min(1-margins[1],at.u)),v=Math.max(margins[2],Math.min(1-margins[3],at.v)),safe=surfacePoint(basis,u,v);
+      // 右矮柱占据梁的最右端，鞋前缘不得进入柱身；此约束只收落点，不开放新道路。
+      if(object.walk.id==='bottom')safe[0]=Math.min(safe[0],7.72-FOOT_RADIUS);
+      return safe;
+    }
+    /** 在关联合法边中记录连续位置；返回node或edge+t+偏移，保留实际点击点。 */
+    function locatePoint(point,edges){const graph=adjacency();let best=null;for(const edge of edges){const [a,b]=edge;if(!graph[a].includes(b))continue;const start=nodePoint(a),end=nodePoint(b),vector=end.map((n,i)=>n-start[i]),length2=vector.reduce((s,n)=>s+n*n,0),t=Math.max(0,Math.min(1,point.reduce((s,n,i)=>s+(n-start[i])*vector[i],0)/length2)),base=mix(start,end,t),error=distance(point,base);if(!best||error<best.error-.000001)best={edge:[a,b],t,base,error};}if(!best)return null;for(const node of best.edge)if(distance(point,nodePoint(node))<.000001)return{node};return{edge:best.edge,t:best.t,offset:point.map((n,i)=>n-best.base[i])};}
+    /** 为顶面上的实际落点生成目标；point不靠到道路端点，返回连续位置与表面标识。 */
+    // 精确落点收边后仍须避开完整活动 L，不能从固定道路的细边收进旋转实体。
+    function surfaceTarget(point,object,clamp=true){const safe=clamp?clampWalkPoint(point,object):[...point];if(wholeRotorFootBlocked(safe))return null;const location=locatePoint(safe,object.walk.edges);return location?{point:safe,location,surfaceId:object.walk.id}:null;}
+    /** 将辅助道路按钮的节点目标转换为真实顶面目标，返回null表示该朝向没有安全表面。 */
+    function nodeTarget(index){if(ROTOR_NODES.includes(index)&&!connected())return null;const point=nodePoint(index),object=surfaceAt(point);if(!object)return null;const basis=surfaceBasis(object),at=surfaceCoordinates(point,basis);if(Math.abs(surfacePoint(basis,at.u,at.v)[1]-point[1])>.002)return null;return surfaceTarget(point,object,false);}
+    /** 判断两个连续位置是否属于同一道路边；返回布尔值，不依赖旧的最近节点。 */
+    function sameEdge(a,b){return a.edge&&b.edge&&a.edge.includes(b.edge[0])&&a.edge.includes(b.edge[1]);}
+    /** 检查直连是否始终有真实道路支撑；最多128个采样，仅重规划时运行。 */
+    function lineWalkable(start,end){
+      const steps=Math.min(128,Math.max(2,Math.ceil(distance(start,end)/.025))),stepAllowance=STAIR_RISE/STAIR_STEPS/2+.004;
+      // 只允许半级台阶高度误差；每个接入采样同时避开未接通梁体，不能从偏移落点绕过障碍。
+      for(let i=0;i<=steps;i++){const point=mix(start,end,i/steps),object=surfaceAt(point);if(!object||wholeRotorFootBlocked(point))return false;const basis=surfaceBasis(object),at=surfaceCoordinates(point,basis);if(Math.abs(surfacePoint(basis,at.u,at.v)[1]-point[1])>stepAllowance)return false;}return true;
+    }
+    /** 检查一条接入道路的短腿；返回零或一个实际折点，null表示不能合法接入。 */
+    function connectionCorners(from,to){
+      if(lineWalkable(from,to))return[];
+      // 阶梯侧面的平地窄条只经同高直角折点接回道路，两段都合法才开放，键鼠共用此限制。
+      if(Math.abs(from[1]-to[1])>.002)return null;
+      for(const corner of [[from[0],from[1],to[2]],[to[0],from[1],from[2]]])if(lineWalkable(from,corner)&&lineWalkable(corner,to))return[corner];return null;
+    }
+    /** 从当前连续位置到目标做有界距离寻路；返回实际线段列表，未接通返回null。 */
+    function pathTo(target){
+      const graph=adjacency(),count=graph.length,startIndex=count,endIndex=count+1,points=Array.from({length:count},(_,i)=>nodePoint(i)),links=Array.from({length:count+2},()=>[]);points.push([...state.player],[...target.point]);
+      const link=(a,b,edge=null,via=[])=>{const chain=[points[a],...via,points[b]],weight=chain.slice(1).reduce((sum,point,i)=>sum+distance(chain[i],point),0);links[a].push({to:b,weight,edge,via});links[b].push({to:a,weight,edge,via:[...via].reverse()});};
+      for(let a=0;a<count;a++)for(const b of graph[a])if(b>a)link(a,b,[a,b]);
+      // 起点和目标临时接入各自所在边的两端，当前位置不是旧节点，反向重规划不会先走旧端点。
+      const attach=(index,location)=>{
+        const nodes=location.node!==undefined?[location.node]:graph[location.edge[0]].includes(location.edge[1])?location.edge:[];
+        for(const node of nodes){const corners=connectionCorners(points[index],points[node]);if(corners!==null)link(index,node,location.edge||null,corners);}
+      };attach(startIndex,state.location);attach(endIndex,target.location);
+      const sourceSurface=surfaceAt(state.player),targetSurface=walkObjects().find(object=>object.walk.id===target.surfaceId);
+      const sameSurface=sourceSurface&&targetSurface&&sourceSurface.walk.id===targetSurface.walk.id;
+      if((sameSurface||sameEdge(state.location,target.location))&&lineWalkable(state.player,target.point))link(startIndex,endIndex,sameEdge(state.location,target.location)?target.location.edge:null);
+      const costs=new Array(count+2).fill(Infinity),previous=new Array(count+2).fill(null),visited=new Set();costs[startIndex]=0;
+      for(let iteration=0;iteration<count+2;iteration++){let current=-1;for(let i=0;i<count+2;i++)if(!visited.has(i)&&(current<0||costs[i]<costs[current]))current=i;if(current<0||!Number.isFinite(costs[current]))break;if(current===endIndex)break;visited.add(current);for(const edge of links[current]){const value=costs[current]+edge.weight;if(value<costs[edge.to]-.0000001){costs[edge.to]=value;previous[edge.to]={from:current,edge:edge.edge,via:edge.via};}}}
+      if(!Number.isFinite(costs[endIndex]))return null;
+      const order=[];for(let current=endIndex;current!==startIndex;current=previous[current].from)order.unshift({index:current,edge:previous[current].edge,via:previous[current].via});
+      return order.flatMap(item=>[...item.via.map(point=>({point:[...point],location:null,edge:item.edge,surfaceId:null})),{point:[...points[item.index]],location:item.index===endIndex?target.location:{node:item.index},edge:item.edge,surfaceId:item.index===endIndex?target.surfaceId:null}]);
+    }
+    /** 接管一个有效鼠标/辅助按钮目标；重新规划保留当前点，允许行走中立即改路。 */
+    function walkTo(target){if(failed||state.won||pointer||state.angle!==state.targetAngle)return;if(typeof target==='number')target=nodeTarget(target);if(!target)return;const route=pathTo(target);state.pulse={point:[...target.point],elapsed:0,valid:route!==null};if(route===null)return;releaseMovement();state.segment=null;state.route=route;state.input=route.length?'click':null;}
+    /** 返回当前WASD屏幕方向的单位向量，无有效方向时返回null。 */
+    function heldDirection(){const direction=[0,0];for(const key of heldKeys){direction[0]+=MOVEMENT_KEYS[key][0];direction[1]+=MOVEMENT_KEYS[key][1];}const length=Math.hypot(...direction);return length?direction.map(n=>n/length):null;}
+    /** 按实际当前位置选合法相邻端点；边内可当帧反向，不提交剩余整条边队列。 */
+    function keyboardDestination(){const direction=heldDirection();if(!direction)return null;const graph=adjacency(),location=state.location,candidates=location.node!==undefined?graph[location.node].map(next=>({next,edge:[location.node,next]})):graph[location.edge[0]].includes(location.edge[1])?location.edge.map(next=>({next,edge:location.edge})):[],origin=renderer.project(state.player),offRoute=location.offset?.some(n=>Math.abs(n)>.00001);let best=null;
+      // 中心线本身已由固定关卡边限定；只有精确鼠标落点产生的侧向偏移才重查接入，避免每帧扫描整条普通道路。
+      for(const candidate of candidates){const end=nodePoint(candidate.next),corners=offRoute?connectionCorners(state.player,end):[];if(corners===null)continue;const point=corners[0]||end,projected=renderer.project(end),dx=projected.x-origin.x,dy=projected.y-origin.y,length=Math.hypot(dx,dy);if(length<.000001)continue;const score=(dx*direction[0]+dy*direction[1])/length;if(score>.15&&(!best||score>best.score+.000001))best={point,location:corners.length?null:{node:candidate.next},edge:candidate.edge,score};}return best;}
+    /** 清空持续移动按键并立即取消键盘意图，人物实际点保持原位。 */
+    function releaseMovement(){heldKeys.clear();if(state.input==='keyboard'){state.input=null;state.moving=false;}}
+    /** 根据连续位置及脚幅判断完整机关占用；返回布尔值，固定道路入口也留脚幅余量。 */
+    // 短臂、转角和长臂统一锁定；固定上梁末端脚幅进入短臂 X 范围时同样禁止旋转。
+    function rotorOccupied(){if(['upper-arm','turn','long-arm'].includes(state.surfaceId))return true;const sweep=Math.hypot(BRIDGE_LENGTH,-ROAD_LOW)+FOOT_RADIUS+.003;return state.surfaceId==='stage'&&state.player[2]<=sweep||state.surfaceId==='upper-fixed'&&state.player[0]+FOOT_RADIUS>=SHORT_END-.003;}
+    /** 无参数；返回真实占用与角度是否允许机关接管，不把固定面的待走路线当成人物。 */
+    function canRotate(){return!failed&&!state.won&&!pointer&&state.angle===state.targetAngle&&!rotorOccupied();}
+    /** 接管固定面上的旋钮输入；只重登记永久固定边，保持人物世界位置与步态距离。 */
+    function takeRotationControl(){
+      if(!canRotate())return false;const support=walkObjects().find(object=>object.walk.id===state.surfaceId);if(!support||support.walk.rotor)return false;
+      // 起点台和固定上梁的连续位置可能挂在外接边上；旋转前必须去掉将断开的四个活动节点。
+      const fixedEdges=support.walk.edges.filter(edge=>edge.every(node=>!ROTOR_NODES.includes(node))),location=locatePoint(state.player,fixedEdges);if(!location)return false;state.location=location;
+      state.justStopped=state.justStopped||state.moving;releaseMovement();state.route=[];state.segment=null;state.input=null;state.moving=false;return!rotorOccupied();
+    }
+
+    /** 创建本关静态建筑和楼梯，所有道路顶面与导航节点共用同一高度。 */
+    function buildScene(){
+      const R=renderer,P=PALETTE;
+      // 近层底梁、右柱和窄起点台连成真实行走面；后层柱脚只贡献建筑错觉，不参与寻路。
+      const bottom=addWalkBox('bottom',6,3.78,4,4.50,.44,.56,P.stone,[[0,1],[1,2],[2,3]]);bottom.visible=false;bottom.occludes=false;
+      R.createGeometry('bottom-shell',makeBottomShell());R.add('bottom-shell',0,0,0,1,1,1,P.stone).support=bottom;
+      // 右柱从底梁顶y=4接起，保留柱顶5.85，外侧面不再与梁身共面重叠。
+      R.add('box',8,4.925,4,.56,1.85,.56,P.stone);
+      const stage=addWalkBox('stage',4,3.78,3.36,.56,.44,.72,P.stone,[[0,1],[0,4]]);stage.visible=false;stage.occludes=false;
+      // 左段固定道路止于 x=1.8；端面按活动短臂实际截面开合，不保留固定的右上臂或角帽。
+      const upper=addWalkBox('upper-fixed',.735,3.78,0,2.13,.44,.56,P.stone,[[7,8],[8,9],[9,10]]);upper.visible=false;upper.occludes=false;
+      R.createGeometry('fixed-upper-shell',makeFixedUpperShell(state.angle));R.add('fixed-upper-shell',0,0,0,1,1,1,P.stone).support=upper;
+      R.createGeometry('rigid-l-shell',makeRigidLShell(state.angle));R.add('rigid-l-shell',0,0,0,1,1,1,P.stone).walkShell=true;shellAngle=state.angle;
+      // 三根细柱沿+x形成两道高拱洞，投影随上梁向右下倾斜，墙顶与梁底连续相接。
+      const columns=[-.29,.22,.73],pillarWidth=.065,wallZ=.24,archBase=3.18,wallTop=3.80;
+      for(const x of columns)R.add('box',x,wallTop/2,wallZ,pillarWidth,wallTop,.09,P.stone);
+      R.createGeometry('archwall',makeArchWall(columns[1]-columns[0]-pillarWidth,archBase,.22,wallTop,.09));
+      for(let opening=0;opening<columns.length-1;opening++){
+        const center=(columns[opening]+columns[opening+1])/2;R.add('archwall',center,0,wallZ,1,1,1,P.stone);
+      }
+      // 三十二级薄阶和导航共用升高、进深，脚下顶面与节点高度一致。
+      for(const [index,stair] of stairSurfaces.entries()){const node=10+index;addWalkBox(`stair-${index+1}`,stair.point[0],stair.point[1]-stair.thickness/2,stair.z,stair.width,stair.thickness,stair.depth,P.stone,[[node-1,node],[node,node+1]]);}
+      addWalkBox('goal',GOAL_POINT[0],GOAL_POINT[1]-.07,GOAL_POINT[2],.86,.14,.86,P.stone,[[GOAL-1,GOAL]]);
+      // 四层白框登记原模型与亮度；光纹不遮挡点击、不形成道路，重开可恢复原样。
+      for(const [layer,width] of [.75,.54,.33,.12].entries())for(let side=0;side<4;side++){const angle=side*QUARTER,cx=Math.sin(angle)*width/2,cz=Math.cos(angle)*width/2,object=R.add('box',GOAL_POINT[0]+cx,GOAL_POINT[1]+.007,GOAL_POINT[2]+cz,width,.014,.027,P.cream,angle);object.occludes=false;goalFrames.push({object,width,side,layer,light:0});}
+      // 旋转梁和可见轴使用同一真实轴心；轴杆沿+x伸出，旋钮中心与输入面同步。
+      R.add('cyl',4.55,3.8,0,.13,1.10,.13,P.stone,0,R.static,null,0,QUARTER);
+    }
+
+    /** 读取本关实际踏面高度，worldX/worldZ只用于脚与影子绘制；合法行走仍由道路图决定。 */
+    function groundAt(worldX,worldZ){
+      let height=4;
+      // 平台前缘接最后一级，不覆盖低一级台阶；采样范围与静态台面尺寸严格一致。
+      if(Math.abs(worldX-GOAL_POINT[0])<=.43&&Math.abs(worldZ-GOAL_POINT[2])<=.43)height=GOAL_POINT[1];
+      // 极小相接边重叠取较高踏面，避免鞋尖跨阶时穿进下一层，不修改身体路线或寻路许可。
+      for(const stair of stairSurfaces)if(Math.abs(worldX-stair.point[0])<=stair.width/2&&Math.abs(worldZ-stair.z)<=stair.depth/2)height=Math.max(height,stair.point[1]);
+      return height;
+    }
+
+    /** 绘制通关平台光纹；四层依次亮起，外围细环避开人物，所有装饰均不参与遮挡。 */
+    function drawCompletionGlow(){
+      for(const frame of goalFrames){
+        const t=state.won?(reducedMotion.matches?1:Math.max(0,Math.min(1,(state.endingElapsed-.25-(3-frame.layer)*.22)/.22))):0;frame.light=t*t*(3-2*t);
+        const angle=frame.side*QUARTER,cx=Math.sin(angle)*frame.width/2,cz=Math.cos(angle)*frame.width/2;
+        frame.object.matrix=M.trs(GOAL_POINT[0]+cx,GOAL_POINT[1]+.007+frame.light*.004,GOAL_POINT[2]+cz,frame.width,.014,.027+frame.light*.010,angle);frame.object.color=mix(color(PALETTE.cream),color(0xffffff),frame.light);
+      }
+      if(!state.won)return;
+      const onset=reducedMotion.matches?1:Math.max(0,Math.min(1,(state.endingElapsed-.7)/.45));
+      // 光环始终在平台外缘，保持低透明度；扩散结束后留下安静的静态外圈。
+      const ring=(width,opacity)=>{if(opacity<=.001)return;for(let side=0;side<4;side++){const angle=side*QUARTER,object=renderer.add('box',GOAL_POINT[0]+Math.sin(angle)*width/2,GOAL_POINT[1]+.027,GOAL_POINT[2]+Math.cos(angle)*width/2,width,.006,.012,0xf4efd9,angle,renderer.dynamic);object.color[3]=opacity;object.occludes=false;}};
+      ring(.92,onset*.42);
+      if(!reducedMotion.matches){const wave=Math.max(0,Math.min(1,(state.endingElapsed-.7)/.9));ring(.88+wave*.20,Math.sin(wave*Math.PI)*.25);}
+    }
+
+    /** 绘制旋转横梁与角色；动态列表每帧清空，避免持续累积物件。 */
+    function drawDynamic(){
+      const R=renderer,P=PALETTE;R.dynamic=[];const add=(...args)=>R.add(...args),rotor=rotorMatrix();
+      // 一个角度控制完整 L 和固定端面开口；静止时不重算，变动时复用原有 GPU 缓冲。
+      if(shellAngle!==state.angle){R.updateGeometry('rigid-l-shell',makeRigidLShell(state.angle));R.updateGeometry('fixed-upper-shell',makeFixedUpperShell(state.angle));shellAngle=state.angle;}
+      // 三个踏面只登记导航，共享同一个刚体矩阵；未接通时统一禁走，旧盒体不绘制也不遮挡。
+      for(const [id,x,z,sx,sz,edges] of [['upper-arm',-1.24,0,1.92,.56,[[6,7],[7,8]]],['turn',0,0,.56,.56,[[5,6],[6,7]]],['long-arm',0,(BRIDGE_LENGTH+ROAD_HALF)/2,.56,BRIDGE_LENGTH-ROAD_HALF,[[4,5],[5,6]]]]){const support=addWalkBox(id,x,-.02,z,sx,.44,sz,P.stone,edges,R.dynamic,rotor);support.walk.rotor=true;support.visible=false;support.occludes=false;}
+      const wheel=M.trs(...KNOB_POINT,1,1,1,0,state.angle);
+      // 圆柱四臂围绕真实YZ轴面转动，端部握柄与中央环孔保留简洁体积。
+      add('cyl',.025,0,0,.09,1.64,.09,P.knob,0,R.dynamic,wheel);
+      add('cyl',.025,0,0,.09,1.64,.09,P.knob,0,R.dynamic,wheel,QUARTER);
+      for(const side of [-1,1]){add('cyl',.025,side*.82,0,.18,.22,.18,P.knob,0,R.dynamic,wheel);add('cyl',.025,0,side*.82,.18,.22,.18,P.knob,0,R.dynamic,wheel,QUARTER);}
+      add('cyl',.035,0,0,.44,.20,.44,P.knob,0,R.dynamic,wheel,0,QUARTER);
+      add('cyl',.142,0,0,.22,.016,.22,P.dark,0,R.dynamic,wheel,0,QUARTER);
+      // 旅人以真实导航点为脚底，步态只累计走过的世界距离，不做世界层或楼梯偏移。
+      drawTraveller(R,state.player,state.heading,state.gait,reducedMotion.matches?0:state.motionBlend,groundAt);
+      if(state.pulse){const point=state.pulse.point,scale=.12+state.pulse.elapsed*.3;add('cyl',point[0],point[1]+.028,point[2],scale,.013,scale,state.pulse.valid?0xddeee9:0x718f9b,0,R.dynamic);}
+      drawCompletionGlow();
+    }
+
+    /** 保存一个实际移动点及其连续位置；edge为当前合法边，endLocation只在确实到达时使用。 */
+    function placePlayer(point,edge,endLocation=null){state.player=[...point];const object=surfaceAt(point);if(object)state.surfaceId=object.walk.id;if(endLocation)state.location=endLocation;else{const location=edge?locatePoint(point,[edge]):object?locatePoint(point,object.walk.edges):null;if(location)state.location=location;}}
+    /** 标记实际到达中央白框；只触发一次，不把平台外沿点击强制吸到中心。 */
+    function checkGoal(){if(state.input==='click'&&(state.segment||state.route.length))return;if(!state.won&&state.surfaceId==='goal'&&Math.hypot(state.player[0]-GOAL_POINT[0],state.player[2]-GOAL_POINT[2])<.16){state.won=true;state.route=[];state.segment=null;releaseMovement();state.input=null;}}
+    /** 有界更新即时WASD、可替换鼠标路线与机关吸附；键松后没有残余整边任务。 */
+    function update(dt){
+      const oldGait=state.gait,wasMoving=state.moving,wasWon=state.won;
+      const gap=state.targetAngle-state.angle;state.angle=Math.abs(gap)<.002?state.targetAngle:state.angle+gap*(1-Math.exp(-dt*22));
+      let remaining=dt*1.10;state.moving=false;
+      // 每帧只消费真实距离预算，节点转换最多图大小+2次；边内反向直接从当前点开始。
+      for(let transitions=0;transitions<fixedNodes.length+2&&!state.won;transitions++){
+        let step=null;
+        if(state.input==='keyboard'&&heldKeys.size&&!pointer&&state.angle===state.targetAngle)step=keyboardDestination();
+        else if(state.input==='click'){if(!state.segment&&state.route.length)state.segment=state.route.shift();step=state.segment;}
+        if(!step)break;
+        const length=distance(state.player,step.point);
+        // 节点按钮和键盘共用真实梁体限制，不能用零长度节点转换跳进竖起的横梁。
+        if(length<.000001&&wholeRotorFootBlocked(step.point)){if(state.input==='click'){state.route=[];state.segment=null;state.input=null;}break;}
+        if(length<.000001){placePlayer(step.point,step.edge,step.location);if(state.input==='click'){state.segment=null;if(!state.route.length)state.input=null;}checkGoal();continue;}
+        if(remaining<=.0000001)break;
+        const budget=Math.min(remaining,length),old=[...state.player],point=mix(old,step.point,budget/length),reached=budget>=length-.0000001;
+        if(wholeRotorFootBlocked(point)){
+          // 只截断本次短步，八次二分停在旧道路边的安全连续位置，不新增道路或绕行。
+          let lo=0,hi=1;for(let sample=0;sample<8;sample++){const t=(lo+hi)/2;if(wholeRotorFootBlocked(mix(old,point,t)))hi=t;else lo=t;}
+          const safe=mix(old,point,lo),travelled=distance(old,safe);if(travelled>.000001){state.targetHeading=Math.atan2(safe[0]-old[0],safe[2]-old[2]);state.gait+=travelled;state.moving=true;placePlayer(safe,step.edge);}
+          if(state.input==='click'){state.route=[];state.segment=null;state.input=null;}break;
+        }
+        state.targetHeading=Math.atan2(point[0]-old[0],point[2]-old[2]);state.gait+=distance(old,point);remaining-=budget;state.moving=true;
+        placePlayer(point,step.edge,reached?step.location:null);checkGoal();
+        if(state.input==='click'&&reached){state.segment=null;if(!state.route.length)state.input=null;}
+        if(!reached)break;
+      }
+      checkGoal();
+      // 只在真实跨步、收脚、90度停稳和首次通关时播放动作音，一帧最多一声脚步。
+      if(Math.floor(state.gait/.25)>Math.floor(oldGait/.25))audio.footstep();else if((state.justStopped||wasMoving&&!state.moving)&&state.gait>0&&!state.won)audio.footstep();state.justStopped=false;
+      if(!pointer&&state.angle===state.targetAngle&&Math.abs(state.targetAngle/QUARTER-Math.round(state.targetAngle/QUARTER))<.000001&&state.targetAngle!==lastSettledAngle){lastSettledAngle=state.targetAngle;audio.snap();}
+      if(!wasWon&&state.won){beginCompletion();audio.complete();}updateCompletion(dt);
+      // point立即停止，只有腿脚权重和朝向渐变；静止帧不会增加路程相位或偷移人物位置。
+      const turn=Math.atan2(Math.sin(state.targetHeading-state.heading),Math.cos(state.targetHeading-state.heading));state.heading+=turn*(1-Math.exp(-dt*14));state.motionBlend+=(Number(state.moving)-state.motionBlend)*(1-Math.exp(-dt*20));if(!state.moving&&state.motionBlend<.001)state.motionBlend=0;
+      if(state.pulse){state.pulse.elapsed+=dt;if(state.pulse.elapsed>.55)state.pulse=null;}
+    }
+
+    /** 更新键盘道路按钮和旋钮位置；投影坐标始终使用显示像素。 */
+    function positionControls(){const point=renderer.project(KNOB_POINT);knob.style.left=`${point.x}px`;knob.style.top=`${point.y}px`;
+      // 圆形操作区跟随端帽的实际投影半径，外沿可直接起拖，并保持固定中心与键盘焦点。
+      const wheel=M.trs(...KNOB_POINT,1,1,1,0,state.angle);let radius=0;for(const arm of [[0,.93,0],[0,-.93,0],[0,0,.93],[0,0,-.93]]){const p=renderer.project(M.point(wheel,arm));radius=Math.max(radius,Math.hypot(p.x-point.x,p.y-point.y));}const size=Math.min(140,Math.max(56,(radius+6)*2));knob.style.width=`${size}px`;knob.style.height=`${size}px`;knob.style.margin=`${-size/2}px 0 0 ${-size/2}px`;
+      // 转动动画仅标记忙碌并由输入守卫拒绝操作，保留原生按钮焦点供停稳后继续键盘操作。
+      knob.disabled=!pointer&&(failed||state.won||rotorOccupied());knob.setAttribute('aria-disabled',String(!canRotate()));
+      for(const [index,button] of roadButtons.entries()){const p=renderer.project(nodePoint(index));button.style.left=`${p.x}px`;button.style.top=`${p.y}px`;button.disabled=failed||state.won||!!pointer||state.angle!==state.targetAngle;}}
+
+    /** 返回屏幕点在三角形中的重心权重，三角外或退化时返回null。 */
+    function triangleWeights(x,y,a,b,c){const det=(b.y-c.y)*(a.x-c.x)+(c.x-b.x)*(a.y-c.y);if(Math.abs(det)<.000001)return null;const u=((b.y-c.y)*(x-c.x)+(c.x-b.x)*(y-c.y))/det,v=((c.y-a.y)*(x-c.x)+(a.x-c.x)*(y-c.y))/det,w=1-u-v;return u>=-.000001&&v>=-.000001&&w>=-.000001?[u,v,w]:null;}
+    /** 将外壳真实命中映到同高踏面；未对齐的整件 L 和倾斜面不能投向旧固定高度。 */
+    function shellSupport(point,object){
+      if(!object.walkShell)return object.support||object;
+      for(const support of walkObjects())if(support.walk.rotor||support.walk.id==='stage'){const basis=surfaceBasis(support),at=surfaceCoordinates(point,basis);if(at.u>=-.00001&&at.u<=1.00001&&at.v>=-.00001&&at.v<=1.00001&&distance(point,surfacePoint(basis,at.u,at.v))<.00002)return support;}
+      return null;
+    }
+    /** 点击时以真实CPU三角做一次深度拾取；只允许最近可见顶面，返回实际世界落点目标。 */
+    function pickRoad(x,y){
+      let nearest=null;
+      // 建筑侧面、柱子和未接通梁参与遮挡；人物、影子、白框和反馈标记均不阻挡道路点击。
+      for(const object of [...renderer.static,...renderer.dynamic]){
+        if(!object.occludes)continue;const vertices=renderer.geometries[object.kind].vertices;
+        for(let index=0;index<vertices.length;index+=18){const world=[];for(let corner=0;corner<3;corner++)world.push(M.point(object.matrix,Array.from(vertices.slice(index+corner*6,index+corner*6+3))));const projected=world.map(point=>renderer.project(point)),weights=triangleWeights(x,y,...projected);if(!weights)continue;const depth=projected.reduce((sum,p,i)=>sum+p.depth*weights[i],0);if(nearest&&depth>=nearest.depth-.0000001)continue;const point=world[0].map((_,axis)=>world.reduce((sum,p,i)=>sum+p[axis]*weights[i],0));nearest={object,point,depth,top:vertices[index+4]>.999};}
+      }
+      if(!nearest||!nearest.top)return null;const support=shellSupport(nearest.point,nearest.object);
+      if(!support?.walk||support.walk.rotor&&!connected())return null;
+      return surfaceTarget(nearest.point,support);
+    }
+
+    /** 返回指针在旋钮真实YZ平面的极角；中心区返回null，防止穿心时发生180°跳变。 */
+    function knobPolar(clientX,clientY,drag){const dx=clientX-drag.center.x,dy=clientY-drag.center.y;if(Math.hypot(dx,dy)<8)return null;const [a,b,c,d]=drag.inverse;return Math.atan2(c*dx+d*dy,a*dx+b*dy);}
+    /** 累计相邻圆周样本的最短角差；总角度不归一化，中心和边缘起拖共用同一算法。 */
+    function dragKnob(event){if(!pointer||event.pointerId!==pointer.id)return;const dx=event.clientX-pointer.x,dy=event.clientY-pointer.y;if(Math.hypot(dx,dy)>8)pointer.dragged=true;const polar=knobPolar(event.clientX,event.clientY,pointer);if(polar===null){pointer.lastPolar=null;return;}if(pointer.lastPolar!==null){const delta=polar-pointer.lastPolar;pointer.turn+=Math.atan2(Math.sin(delta),Math.cos(delta));}pointer.lastPolar=polar;if(pointer.dragged)state.targetAngle=pointer.angle+pointer.turn;}
+    /** 清理指针；snap 决定吸附，activate 仅供真实抬起时将轻点转为逆时针90°。 */
+    function finishDrag(snap=true,activate=false){if(!pointer)return;const drag=pointer;pointer=null;if(snap)state.targetAngle=activate&&!drag.dragged?drag.angle-QUARTER:Math.round(state.targetAngle/QUARTER)*QUARTER;if(knob.hasPointerCapture(drag.id))knob.releasePointerCapture(drag.id);}
+    /** 完整重开：中断路径、指针和吸附，恢复角色与横梁初态。 */
+    function reset(event){finishDrag(false);releaseMovement();audio.stop();audio.setCompletionMix(false);
+      // 重开按钮本次真实手势在清理旧声部后恢复音乐；初始化reset和脚本click仍不得自动开声。
+      if(event?.isTrusted&&event.type==='click')audio.unlockGesture(event);
+      // 重开立即撤销演出和完成布局，下一次渲染恢复原投影、白框与未接通的机关。
+      tap=null;state.angle=QUARTER;state.targetAngle=QUARTER;lastSettledAngle=QUARTER;state.location={node:START};state.surfaceId='stage';state.player=[...fixedNodes[START]];state.heading=0;state.targetHeading=0;state.gait=0;state.motionBlend=0;state.moving=false;state.justStopped=false;state.route=[];state.segment=null;state.input=null;state.won=false;state.endingElapsed=0;state.endingReady=false;state.pulse=null;prototype.classList.remove('is-ending','is-complete');result.hidden=true;render();}
+    /** 终止渲染并显示已确认的启动失败文字；技术诊断只写控制台。 */
+    function fatal(error){console.error('Illusion prototype failed:',error);failed=true;cancelAnimationFrame(animation);finishDrag(false);releaseMovement();audio.stop();state.route=[];state.segment=null;state.input=null;failure.hidden=false;knob.hidden=true;for(const button of roadButtons)button.hidden=true;restart.disabled=true;}
+    /** 渲染一帧场景；不修改关卡状态，重开与尺寸变化可直接调用。 */
+    function render(){if(!renderer||failed)return;renderer.resize();drawDynamic();renderer.render();positionControls();}
+    /** 有界推进动画，后台不补算时间；返回页面后从当前状态继续。 */
+    function frame(time){if(failed||document.hidden)return;try{const dt=lastTime?Math.min((time-lastTime)/1000,.04):0;lastTime=time;update(dt);render();animation=requestAnimationFrame(frame);}catch(error){fatal(error);}}
+    /** 开始前台帧循环，重置时间基准以避免切回页面时角色突然跳跃。 */
+    function resume(){if(failed||document.hidden)return;cancelAnimationFrame(animation);lastTime=0;animation=requestAnimationFrame(frame);}
+
+    restart.addEventListener('click',reset);
+    soundButton.addEventListener('click',()=>audio.toggle());
+    // 仅真实前台手势解锁声音；首屏、模拟事件及恢复页面均不自动播放。
+    for(const name of ['pointerdown','keydown'])window.addEventListener(name,event=>{if(!failed)audio.unlockGesture(event);},{capture:true});
+    // 使用物理按键码避免输入法改变key导致粘键；文本输入和快捷键不接管游戏方向。
+    window.addEventListener('keydown',event=>{const textInput=event.target instanceof Element&&(event.target.matches('input,textarea,select')||event.target.isContentEditable);if(event.ctrlKey||event.metaKey||event.altKey||textInput){releaseMovement();return;}const code=event.code;if(!Object.hasOwn(MOVEMENT_KEYS,code))return;event.preventDefault();if(event.repeat||heldKeys.has(code)||failed||state.won||pointer||state.angle!==state.targetAngle)return;state.route=[];state.segment=null;state.input='keyboard';heldKeys.add(code);tap=null;});
+    window.addEventListener('keyup',event=>{if(!Object.hasOwn(MOVEMENT_KEYS,event.code))return;heldKeys.delete(event.code);if(!heldKeys.size&&state.input==='keyboard'){state.justStopped=state.moving;state.input=null;state.moving=false;}});
+    // 旋钮仅捕获稳定、空闲时开始的单个指针；捕获期间保持按钮启用以连续接收拖动。
+    knob.addEventListener('pointerdown',event=>{if(event.button!==0||!takeRotationControl())return;event.preventDefault();tap=null;
+      // 逆解固定投影的YZ基向量，圆周手势按四臂真实椭圆跟随，避免屏幕角度非线性或反向。
+      const center=renderer.project(KNOB_POINT),y=renderer.project([KNOB_POINT[0],KNOB_POINT[1]+1,KNOB_POINT[2]]),z=renderer.project([KNOB_POINT[0],KNOB_POINT[1],KNOB_POINT[2]+1]),yx=y.x-center.x,yy=y.y-center.y,zx=z.x-center.x,zy=z.y-center.y,det=yx*zy-zx*yy,rect=canvas.getBoundingClientRect();
+      pointer={id:event.pointerId,x:event.clientX,y:event.clientY,angle:state.targetAngle,dragged:false,center:{x:center.x+rect.left,y:center.y+rect.top},inverse:[zy/det,-zx/det,-yy/det,yx/det],lastPolar:null,turn:0};pointer.lastPolar=knobPolar(event.clientX,event.clientY,pointer);knob.setPointerCapture(event.pointerId);
+    });
+    knob.addEventListener('pointermove',event=>{if(!pointer||event.pointerId!==pointer.id)return;event.preventDefault();dragKnob(event);});
+    // 真实轻点仅由抬起处理；取消、失去捕获或离页只吸附，原生鼠标click不再叠加转动。
+    knob.addEventListener('pointerup',event=>{if(!pointer||event.pointerId!==pointer.id)return;dragKnob(event);finishDrag(true,true);});
+    for(const name of ['pointercancel','lostpointercapture'])knob.addEventListener(name,event=>{if(pointer&&event.pointerId===pointer.id)finishDrag();});
+    // Enter和空格沿用按钮原生click；方向键保留各自的90°方向，动画中不累计新操作。
+    knob.addEventListener('click',event=>{if(event.detail===0&&takeRotationControl())state.targetAngle-=QUARTER;});
+    knob.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();if(event.repeat||!takeRotationControl())return;const direction=event.key==='ArrowLeft'||event.key==='ArrowDown'?-1:1;state.targetAngle+=direction*QUARTER;});
+    // 道路点击只在轻触完成时提交，拖拽画布不误触发角色行走。
+    canvas.addEventListener('pointerdown',event=>{if(event.button===0&&!pointer)tap={id:event.pointerId,x:event.clientX,y:event.clientY};});
+    canvas.addEventListener('pointerup',event=>{if(!tap||tap.id!==event.pointerId)return;const start=tap;tap=null;if(Math.hypot(event.clientX-start.x,event.clientY-start.y)>8)return;const rect=canvas.getBoundingClientRect(),target=pickRoad(event.clientX-rect.left,event.clientY-rect.top);if(target!==null)walkTo(target);});
+    canvas.addEventListener('pointercancel',()=>{tap=null;});
+    // 失焦、切后台或离页时释放输入并停帧，不把后台时间补算到行走过程中。
+    window.addEventListener('blur',()=>{finishDrag();releaseMovement();audio.stop();state.justStopped=false;tap=null;});
+    window.addEventListener('resize',()=>{finishDrag();releaseMovement();tap=null;render();});
+    document.addEventListener('visibilitychange',()=>{finishDrag();releaseMovement();state.justStopped=false;tap=null;if(document.hidden){audio.suspendOnHidden();cancelAnimationFrame(animation);lastTime=0;}else resume();});
+    window.addEventListener('pagehide',()=>{finishDrag();releaseMovement();audio.stop();state.justStopped=false;tap=null;cancelAnimationFrame(animation);lastTime=0;});
+    window.addEventListener('pageshow',resume);
+    canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();fatal(new Error('WebGL2 context lost'));});
+    try{
+      renderer=new Tiny3D(canvas);for(const [name,mesh] of Object.entries(makeTravellerMeshes()))renderer.createGeometry(name,mesh);buildScene();
+      for(let index=0;index<fixedNodes.length;index++){const button=document.createElement('button');button.type='button';button.className='scene-control road';button.setAttribute('aria-label',index===GOAL?'走到终点':`走到道路位置${index+1}`);button.style.pointerEvents='none';button.addEventListener('click',()=>walkTo(index));document.getElementById('road-controls').append(button);roadButtons.push(button);}
+      reset();resume();
+    }catch(error){fatal(error);}
+  })();
+  </script>
+</body>
+</html>
