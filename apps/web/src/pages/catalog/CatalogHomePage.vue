@@ -202,8 +202,11 @@ const visibleProjects = computed(() => {
     }
     const created = Date.parse(right.createdAt) - Date.parse(left.createdAt);
     if (created) return created;
-    return (seedOrder.get(left.slug) ?? Number.MAX_SAFE_INTEGER)
+    const seeded = (seedOrder.get(left.slug) ?? Number.MAX_SAFE_INTEGER)
       - (seedOrder.get(right.slug) ?? Number.MAX_SAFE_INTEGER);
+    if (seeded) return seeded;
+    // 同秒迁移入库的新游戏按记录 ID 倒序；十进制字符串先比位数，避免大整数转 Number 丢失精度。
+    return right.id.length - left.id.length || (left.id < right.id ? 1 : left.id > right.id ? -1 : 0);
   });
 });
 

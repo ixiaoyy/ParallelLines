@@ -266,3 +266,55 @@ test("排序、筛选、列表与加载更多始终按当前可见结果选择",
   expect(requests.opens).toEqual([]);
   expect(requests.unexpected).toEqual([]);
 });
+
+test("同秒跨分类新增记录按 ID 倒序默认选中最新项，保留种子及最近打开顺序和大整数精度", async ({ page, context }) => {
+  const requests = await mockArcade(context);
+  const makeProject = (id: string, slug: string, name: string, createdAt: string) => ({
+    id, slug, name, url: `https://arcade-game.invalid/${id}`, kind: "external",
+    description: null, author_name: "测试作者", author_url: null,
+    icon_url: "/uploads/arcade-fixture/content", created_at: createdAt,
+    average_score: null, rating_count: 0, rating_score_sum: 0, view_count: 0, my_score: null,
+  });
+  const sameSecond = "2026-10-09T15:03:41+08:00";
+  const newProjects = [
+    makeProject("211", "entropy-blade", "熵刃", sameSecond),
+    makeProject("212", "nexus", "NEXUS", sameSecond),
+    makeProject("213", "emberfall", "EmberFall", sameSecond),
+    makeProject("214", "nanbeidou", "NANBEIDOU", sameSecond),
+    makeProject("215", "shinobi-chronicles", "忍者游戏", sameSecond),
+    makeProject("216", "illusion-prototype", "回廊", sameSecond),
+  ];
+  // 分类展开顺序与最新顺序相反；旧种子的 ID 顺序也故意与约定 seedOrder 相反。
+  const seedProjects = [
+    makeProject("800", "merge-watermelon", "合成大西瓜", "2026-10-08T00:00:00Z"),
+    makeProject("500", "clock-out", "打工摸鱼", "2026-10-08T00:00:00Z"),
+  ];
+  const largeIds = ["9007199254740992", "9007199254740993", "9999999999999999", "10000000000000000"];
+  await context.route("**/api/v1/catalog", async (route) => {
+    await route.fulfill({ headers: { "access-control-allow-origin": "*" }, json: { data: { categories: [
+      { id: "1", slug: "puzzle", name: "解谜", icon_url: null, projects: [
+        ...newProjects.filter((_, index) => index % 2 === 0), ...seedProjects,
+        ...largeIds.map((id) => makeProject(id, `large-id-${id}`, `大整数 ${id}`, "2026-10-07T00:00:00Z")),
+      ] },
+      { id: "2", slug: "casual", name: "休闲", icon_url: null, projects: newProjects.filter((_, index) => index % 2 !== 0) },
+    ] } } });
+  });
+  await context.addInitScript(() => {
+    localStorage.setItem("parallellines.catalog-library.v1", JSON.stringify({
+      version: 1, wantedIds: [], recent: [{ projectId: "211", lastOpenedAt: 42 }, { projectId: "216", lastOpenedAt: 42 }],
+    }));
+  });
+  await page.goto("/");
+  const cards = page.locator(".catalog-card");
+  await expect(cards).toHaveCount(12);
+  expect(await cards.evaluateAll((items) => items.map((item) => item.getAttribute("data-project-id"))))
+    .toEqual(["216", "215", "214", "213", "212", "211", "500", "800", ...[...largeIds].reverse()]);
+  await expect(cards.first().getByRole("heading", { name: "回廊", exact: true })).toBeVisible();
+  await expectSelected(page, "216");
+  await page.getByRole("button", { name: "最近打开", exact: true }).click();
+  await expect(cards).toHaveCount(2);
+  expect(await cards.evaluateAll((items) => items.map((item) => item.getAttribute("data-project-id"))))
+    .toEqual(["211", "216"]);
+  expect(requests.opens).toEqual([]);
+  expect(requests.unexpected).toEqual([]);
+});
