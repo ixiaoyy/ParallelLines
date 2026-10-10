@@ -65,13 +65,6 @@ async function expectSelected(page: Page, id: string) {
   await expect(page.locator(".catalog-card__selection-frame")).toHaveCount(1);
 }
 
-/** 只退出原控件焦点，使真实键盘事件由页面初始 body 接收。 */
-async function blurControl(page: Page) {
-  await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-  });
-}
-
 test("长标题和作者单行省略，同宽卡片跨行等高，触屏保留 44px 操作区域", async ({ page, context }) => {
   const requests = await mockArcade(context);
   await page.goto("/");
@@ -192,6 +185,129 @@ test("鼠标选择卡片、收藏及打开链接后，WASD 仍能继续选择且
   expect(requests.unexpected).toEqual([]);
 });
 
+test("连续加载更多保留按钮焦点时，WASD 能跨批次移动且 Enter 仍加载游戏", async ({ page, context }) => {
+  const requests = await mockArcade(context, 73);
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto("/");
+  const cards = page.locator(".catalog-card");
+  const loadMore = page.getByRole("button", { name: "加载更多", exact: true });
+  await expect(cards).toHaveCount(24);
+  await page.locator('.catalog-card[data-project-id="1024"] .catalog-card__heat').click();
+  await expectSelected(page, "1024");
+
+  // 首次追加后按钮仍存在并持有焦点，四个方向应接续选框并跨过首批末行。
+  await loadMore.click();
+  await expect(cards).toHaveCount(48);
+  await expect(loadMore).toBeFocused();
+  await page.keyboard.press("s");
+  await expectSelected(page, "1028");
+  await page.keyboard.press("a");
+  await expectSelected(page, "1027");
+  await page.keyboard.press("w");
+  await expectSelected(page, "1023");
+  await page.keyboard.press("d");
+  await expectSelected(page, "1024");
+
+  // Enter 保留加载按钮的原生操作，不能同时启动当前游戏；追加后继续跨过第二批边界。
+  await page.locator('.catalog-card[data-project-id="1048"] .catalog-card__heat').click();
+  await loadMore.focus();
+  await page.keyboard.press("Enter");
+  await expect(cards).toHaveCount(72);
+  await expect(loadMore).toBeFocused();
+  await expectSelected(page, "1048");
+  expect(requests.opens).toEqual([]);
+  await page.keyboard.press("s");
+  await expectSelected(page, "1052");
+
+  // 最后一批不足一行，按钮移除后仍能落到最后一项并返回上一行。
+  await page.locator('.catalog-card[data-project-id="1072"] .catalog-card__heat').click();
+  await loadMore.click();
+  await expect(cards).toHaveCount(73);
+  await expect(loadMore).toHaveCount(0);
+  await page.keyboard.press("s");
+  await expectSelected(page, "1073");
+  await page.keyboard.press("w");
+  await expectSelected(page, "1069");
+  expect(requests.opens).toEqual([]);
+  expect(requests.ratings).toEqual([]);
+  expect(requests.unexpected).toEqual([]);
+});
+
+test("搜索、显示方式、个人清单和榜单返回目录后，WASD 接续当前可见游戏", async ({ page, context }) => {
+  const requests = await mockArcade(context);
+  await context.addInitScript(() => {
+    localStorage.setItem("parallellines.catalog-library.v1", JSON.stringify({
+      version: 1, wantedIds: ["1002", "1004", "1006"],
+      recent: [{ projectId: "1005", lastOpenedAt: 3 }, { projectId: "1007", lastOpenedAt: 2 }, { projectId: "1008", lastOpenedAt: 1 }],
+    }));
+  });
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto("/");
+  const cards = page.locator(".catalog-card");
+  await expectSelected(page, "1001");
+
+  // 搜索提交按钮与两种显示方式均保留真实焦点，方向键只移动当前结果内的选框。
+  const search = page.getByRole("searchbox", { name: "搜索游戏名称" });
+  const submitSearch = page.getByRole("button", { name: "搜索", exact: true });
+  await search.fill("测试游戏");
+  await submitSearch.click();
+  await expect(cards).toHaveCount(8);
+  await expect(submitSearch).toBeFocused();
+  await expectSelected(page, "1002");
+  await page.keyboard.press("d");
+  await expectSelected(page, "1003");
+  await search.fill("");
+  await submitSearch.click();
+  await expect(cards).toHaveCount(9);
+  await page.keyboard.press("s");
+  await expectSelected(page, "1007");
+  await page.getByRole("button", { name: "列表显示" }).click();
+  await page.keyboard.press("w");
+  await expectSelected(page, "1006");
+  await page.getByRole("button", { name: "网格显示" }).click();
+  await page.keyboard.press("w");
+  await expectSelected(page, "1002");
+
+  // 切换个人范围应按新结果选择；键盘移动不能顺便改动想玩或最近打开记录。
+  await page.getByRole("button", { name: "想玩清单", exact: true }).click();
+  await expect(cards).toHaveCount(3);
+  await expectSelected(page, "1002");
+  await page.keyboard.press("d");
+  await expectSelected(page, "1004");
+  await page.getByRole("button", { name: "最近打开", exact: true }).click();
+  await expect(cards).toHaveCount(3);
+  await expectSelected(page, "1005");
+  await page.keyboard.press("d");
+  await expectSelected(page, "1007");
+  await page.getByRole("button", { name: "全部游戏", exact: true }).click();
+  await expect(cards).toHaveCount(9);
+  await expectSelected(page, "1007");
+  await page.keyboard.press("a");
+  await expectSelected(page, "1006");
+
+  // 榜单页面不接管方向键；通过顶部按钮返回后无需清除焦点即可接续原选择。
+  for (const view of ["作者榜", "贡献榜"]) {
+    await page.getByRole("button", { name: view, exact: true }).click();
+    await expect(page.getByRole("heading", { name: view, exact: true })).toBeVisible();
+    await page.keyboard.press("d");
+    await expect(cards).toHaveCount(0);
+    const gameView = page.getByRole("button", { name: "游戏目录", exact: true });
+    await gameView.click();
+    await expect(gameView).toBeFocused();
+    await expectSelected(page, "1006");
+    await page.keyboard.press("d");
+    await expectSelected(page, "1007");
+    await page.keyboard.press("a");
+    await expectSelected(page, "1006");
+  }
+  const library = await page.evaluate(() => JSON.parse(localStorage.getItem("parallellines.catalog-library.v1")!));
+  expect(library.wantedIds).toEqual(["1002", "1004", "1006"]);
+  expect(library.recent.map((item: { projectId: string }) => item.projectId)).toEqual(["1005", "1007", "1008"]);
+  expect(requests.opens).toEqual([]);
+  expect(requests.ratings).toEqual([]);
+  expect(requests.unexpected).toEqual([]);
+});
+
 test("封面铺满掌机屏幕，标题作者与底部操作不重叠，评分和浏览量不再展示", async ({ page, context }) => {
   const requests = await mockArcade(context);
   await page.setViewportSize({ width: 1280, height: 1000 });
@@ -268,6 +384,12 @@ test("输入、控件确认和作者弹窗保留原操作，鼠标与中键仍�
   await expect(search).toHaveValue("wasdd");
   await expectSelected(page, "1001");
   await search.fill("");
+  // 原生 select 持有焦点时保留自身键盘操作，不能移动页面选框。
+  for (const name of ["游戏分类", "游戏排序"]) {
+    await page.getByRole("combobox", { name }).focus();
+    await page.keyboard.press("s");
+    await expectSelected(page, "1001");
+  }
   const second = page.locator('.catalog-card[data-project-id="1002"]');
   await second.locator(".catalog-card__wanted").focus();
   await expectSelected(page, "1002");
@@ -281,11 +403,20 @@ test("输入、控件确认和作者弹窗保留原操作，鼠标与中键仍�
   await page.keyboard.press("s");
   await expectSelected(page, "1002");
   await page.getByRole("button", { name: "关闭作者窗口" }).click();
+  await expect(page.locator(".catalog-author-dialog")).not.toBeVisible();
+  await expect(second.locator(".catalog-card__author button")).toBeFocused();
+  await page.keyboard.press("d");
+  await expectSelected(page, "1003");
   await page.getByRole("button", { name: "投稿游戏", exact: true }).click();
   await expect(page.locator(".catalog-submission-dialog")).toBeVisible();
   await page.keyboard.press("d");
-  await expectSelected(page, "1002");
+  await expectSelected(page, "1003");
   await page.getByRole("button", { name: "关闭投稿窗口" }).click();
+  // 关闭投稿会恢复顶部按钮焦点，直接按方向键仍应接续原选择。
+  await expect(page.locator(".catalog-submission-dialog")).not.toBeVisible();
+  await expect(page.getByRole("button", { name: "投稿游戏", exact: true })).toBeFocused();
+  await page.keyboard.press("d");
+  await expectSelected(page, "1004");
   const third = page.locator('.catalog-card[data-project-id="1003"]');
   const target = third.locator(".catalog-card__open");
   for (const button of ["left", "middle"] as const) {
@@ -342,7 +473,6 @@ test("排序、筛选、列表与加载更多始终按当前可见结果选择",
     expect(layout.cardOverflow).toBe(false);
     expect(layout.contentContained).toBe(true);
   }
-  await blurControl(page);
   await page.keyboard.press("s");
   await expectSelected(page, "1002");
   await page.keyboard.press("d");
@@ -356,7 +486,6 @@ test("排序、筛选、列表与加载更多始终按当前可见结果选择",
   await page.getByRole("searchbox", { name: "搜索游戏名称" }).fill("没有这种游戏");
   await page.getByRole("button", { name: "搜索", exact: true }).click();
   await expect(page.locator(".catalog-card__selection-frame")).toHaveCount(0);
-  await blurControl(page);
   await page.keyboard.press("Enter");
   expect(requests.opens).toEqual([]);
   expect(requests.unexpected).toEqual([]);

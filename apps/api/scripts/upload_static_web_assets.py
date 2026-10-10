@@ -108,6 +108,8 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-10-09-v3/covers/shinobi-chronicles.webp",
     # 回廊彼岸的实机封面与目录收录同批交付，可按独立版本定向发布。
     "catalog/2026-10-09-v4/covers/illusion-prototype.webp",
+    # 黄金右脚正式封面与目录映射同批交付，支持按独立版本发布。
+    "catalog/2026-10-10-v1/covers/1589n-golden-right-foot.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 STATIC_ASSETS = (

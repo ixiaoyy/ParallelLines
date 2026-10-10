@@ -196,6 +196,8 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "shinobi-chronicles": "/catalog/2026-10-09-v3/covers/shinobi-chronicles.webp",
   // 自研回廊彼岸使用已上线关卡的正式实机封面，入口标识沿用现有游戏目录。
   "illusion-prototype": "/catalog/2026-10-09-v4/covers/illusion-prototype.webp",
+  // 黄金右脚使用实机画面整理的正式封面，与本批静态资源发布清单保持一致。
+  "1589n-golden-right-foot": "/catalog/2026-10-10-v1/covers/1589n-golden-right-foot.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {

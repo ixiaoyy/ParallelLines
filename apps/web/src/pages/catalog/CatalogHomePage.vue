@@ -79,6 +79,7 @@ const catalogSearchInput = ref<HTMLInputElement | null>(null);
 const authorDialog = ref<HTMLDialogElement | null>(null);
 const selectedAuthor = ref<string | null>(null);
 // 街机选框仅跟随当前可见游戏，不写入个人清单，也不替代链接与收藏控件的原生焦点。
+const catalogPage = ref<HTMLElement | null>(null);
 const catalogGrid = ref<HTMLDivElement | null>(null);
 const selectedProjectId = ref<string | null>(null);
 // 个人清单仅属于当前浏览器；存储异常后本页继续使用内存状态，不覆盖原记录。
@@ -219,7 +220,7 @@ watch(normalizedAuthorSearch, () => { authorVisibleLimit.value = AUTHOR_PAGE_SIZ
 onMounted(() => window.addEventListener("keydown", handleArcadeKeydown));
 onUnmounted(() => window.removeEventListener("keydown", handleArcadeKeydown));
 
-/** 在目录内或页面初始焦点下用 WASD 移动选框；Enter 保留当前原生控件的操作。 */
+/** 在首页非编辑区域或页面初始焦点下用 WASD 移动选框；Enter 保留当前原生控件的操作。 */
 function handleArcadeKeydown(event: KeyboardEvent): void {
   if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey
     || catalogView.value !== "games" || submissionOpen.value || selectedAuthor.value !== null) return;
@@ -228,8 +229,8 @@ function handleArcadeKeydown(event: KeyboardEvent): void {
   const grid = catalogGrid.value;
   const target = event.target;
   if (!grid || !(target instanceof Element)) return;
-  // 初次访问的 body 可直接操作；其他区域必须位于目录内，编辑控件与弹层独占键盘操作。
-  if (target !== document.body && target !== document.documentElement && !grid.contains(target)) return;
+  // 加载更多、筛选及视图按钮保留焦点时仍可移动选框；范围限于本首页，编辑控件与弹层继续独占按键。
+  if (target !== document.body && target !== document.documentElement && !catalogPage.value?.contains(target)) return;
   if (target.closest("input, select, textarea, [contenteditable]:not([contenteditable='false']), [role='textbox'], [role='combobox']")
     || document.querySelector("dialog[open], [role='dialog'][aria-modal='true']")) return;
   // 卡片链接和按钮不阻断 WASD；Enter 仍交给当前控件，避免再次打开选中游戏。
@@ -380,7 +381,7 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
 </script>
 
 <template>
-  <main class="catalog-page" :class="`catalog-page--${catalogView}`" aria-labelledby="catalog-title">
+  <main ref="catalogPage" class="catalog-page" :class="`catalog-page--${catalogView}`" aria-labelledby="catalog-title">
     <header class="catalog-header">
       <div class="catalog-page__wrap catalog-header__inner">
         <RouterLink class="catalog-brand" to="/" aria-label="平行线首页">
