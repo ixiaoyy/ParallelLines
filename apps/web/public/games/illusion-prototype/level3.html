@@ -122,10 +122,18 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
         const w=Math.max(1,Math.round(rect.width*ratio)),h=Math.max(1,Math.round(rect.height*ratio));if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
         // 外景整座双塔取景；内景按人物真实高度跟随，拖动期间保持当前投影不变。
         // 人物投影仍有十八像素以上的长竖屏才展示完整内景，小屏保留按人物高度取景，顶端归还物和下部基座均保留在导航安全区内。
-        const reserve=Math.min(150,rect.height*.38),available=Math.max(1,rect.height-reserve-60),short=rect.height<500,fullPixels=Math.min(65,rect.width/7.8,Math.max(1,rect.height-reserve-96)/16.7),full=state.area==='inside'&&!short&&fullPixels>=34?state.buildingRise:0,blend=full*full*(3-2*full),closePixels=Math.min(65,rect.width/7.8,available/(state.area==='outside'?(short?4.7:10.6):(short?4.7:8.6))),pixels=(closePixels*(1-blend)+fullPixels*blend)/(1+.07*completionCameraProgress()),span=rect.height/pixels,aspect=rect.width/Math.max(1,rect.height);
-        const center=state.area==='outside'?[1.9,short?state.outsideCameraY:5.4,2.4]:[-1.0,state.cameraY*(1-blend)+5.25*blend,1.5+1.4*(1-state.buildingRise)],eye=center.map((v,i)=>v+(state.area==='outside'?[-25,25,25]:[18,25,35])[i]);
-        // 窄屏只左移投影十四像素避开右上导航，不缩小人物或改变机关世界坐标。
-        const shiftX=state.area==='outside'&&rect.width<=360?14/pixels:0;
+        const reserve=Math.min(150,rect.height*.38),available=Math.max(1,rect.height-reserve-60),short=rect.height<500;
+        // 小屏登上第二横台后逐步取近景，放大C圆点与真实路面之间的像素间隔；初态及普通竖屏仍展示双塔全景。
+        // 外景载人台的高度都在渐变区间之外，拖动时此比例恒定，沿用已冻结的高度跟随与投影逆解。
+        const outsideFocus=state.area==='outside'&&(rect.width<=360||short)?Math.max(0,Math.min(1,(state.player[1]-2.8)/.7)):0;
+        const outsideWidth=7.8-2.3*outsideFocus,outsideHeight=short?4.7-1.7*outsideFocus:10.6-5.9*outsideFocus;
+        const fullPixels=Math.min(65,rect.width/7.8,Math.max(1,rect.height-reserve-96)/16.7),full=state.area==='inside'&&!short&&fullPixels>=34?state.buildingRise:0,blend=full*full*(3-2*full),closePixels=Math.min(65,rect.width/(state.area==='outside'?outsideWidth:7.8),available/(state.area==='outside'?outsideHeight:(short?4.7:8.6))),pixels=(closePixels*(1-blend)+fullPixels*blend)/(1+.07*completionCameraProgress()),span=rect.height/pixels,aspect=rect.width/Math.max(1,rect.height);
+        const outsideFollow=short?1:outsideFocus;
+        // 短横屏抬高C台附近的画面，避免圆点被底部渐隐盖住；各载人段偏移固定，向高门攀爬时逐步收回以保留帽顶。
+        const outsideLift=short?1.1*outsideFocus*Math.max(0,Math.min(1,(7.05-state.player[1])/.75)):0;
+        const center=state.area==='outside'?[1.9,5.4*(1-outsideFollow)+state.outsideCameraY*outsideFollow-outsideLift,2.4]:[-1.0,state.cameraY*(1-blend)+5.25*blend,1.5+1.4*(1-state.buildingRise)],eye=center.map((v,i)=>v+(state.area==='outside'?[-25,25,25]:[18,25,35])[i]);
+        // 窄屏初态左移十四像素避开导航；近景按整段道路的横向中点取景，为右梯登顶和左侧落脚点同时留出人物宽度。
+        const shiftX=state.area==='outside'&&rect.width<=360?14/pixels*(1-outsideFocus)+.54*outsideFocus:0;
         const offsetY=(48+available*.5)*(1-blend)+(74+(rect.height-reserve-22))*blend/2,shiftY=span*(.5-offsetY/Math.max(1,rect.height));
         this.vp=M.mul(M.ortho(-span*aspect/2+shiftX,span*aspect/2+shiftX,-span/2-shiftY,span/2-shiftY,.1,160),M.look(eye,center));
       }
