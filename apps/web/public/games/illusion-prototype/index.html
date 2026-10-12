@@ -637,8 +637,8 @@ class GameAudio{
       const order=[];for(let current=endIndex;current!==startIndex;current=previous[current].from)order.unshift({index:current,edge:previous[current].edge,via:previous[current].via});
       return order.flatMap(item=>[...item.via.map(point=>({point:[...point],location:null,edge:item.edge,surfaceId:null})),{point:[...points[item.index]],location:item.index===endIndex?target.location:{node:item.index},edge:item.edge,surfaceId:item.index===endIndex?target.surfaceId:null}]);
     }
-    /** 接管一个有效鼠标/辅助按钮目标；重新规划保留当前点，允许行走中立即改路。 */
-    function walkTo(target){if(failed||state.won||pointer||state.angle!==state.targetAngle)return;if(typeof target==='number')target=nodeTarget(target);if(!target)return;const route=pathTo(target);state.pulse={point:[...target.point],elapsed:0,valid:route!==null};if(route===null)return;releaseMovement();state.segment=null;state.route=route;state.input=route.length?'click':null;}
+    /** 接管一个有效鼠标/辅助按钮目标；普通行走可立即改路，终点归中时不接受新目标。 */
+    function walkTo(target){if(failed||state.won||state.input==='goal'||pointer||state.angle!==state.targetAngle)return;if(typeof target==='number')target=nodeTarget(target);if(!target)return;const route=pathTo(target);state.pulse={point:[...target.point],elapsed:0,valid:route!==null};if(route===null)return;releaseMovement();state.segment=null;state.route=route;state.input=route.length?'click':null;}
     /** 返回当前WASD屏幕方向的单位向量，无有效方向时返回null。 */
     function heldDirection(){const direction=[0,0];for(const key of heldKeys){direction[0]+=MOVEMENT_KEYS[key][0];direction[1]+=MOVEMENT_KEYS[key][1];}const length=Math.hypot(...direction);return length?direction.map(n=>n/length):null;}
     /** 按实际当前位置选合法相邻端点；边内可当帧反向，不提交剩余整条边队列。 */
@@ -650,8 +650,8 @@ class GameAudio{
     /** 根据连续位置及脚幅判断完整机关占用；返回布尔值，固定道路入口也留脚幅余量。 */
     // 短臂、转角和长臂统一锁定；固定上梁末端脚幅进入短臂 X 范围时同样禁止旋转。
     function rotorOccupied(){if(['upper-arm','turn','long-arm'].includes(state.surfaceId))return true;const sweep=Math.hypot(BRIDGE_LENGTH,-ROAD_LOW)+FOOT_RADIUS+.003;return state.surfaceId==='stage'&&state.player[2]<=sweep||state.surfaceId==='upper-fixed'&&state.player[0]+FOOT_RADIUS>=SHORT_END-.003;}
-    /** 无参数；返回真实占用与角度是否允许机关接管，不把固定面的待走路线当成人物。 */
-    function canRotate(){return!failed&&!state.won&&!pointer&&state.angle===state.targetAngle&&!rotorOccupied();}
+    /** 无参数；按真实占用与角度判断机关能否接管，终点归中期间禁止旋转打断。 */
+    function canRotate(){return!failed&&!state.won&&state.input!=='goal'&&!pointer&&state.angle===state.targetAngle&&!rotorOccupied();}
     /** 接管固定面上的旋钮输入；只重登记永久固定边，保持人物世界位置与步态距离。 */
     function takeRotationControl(){
       if(!canRotate())return false;const support=walkObjects().find(object=>object.walk.id===state.surfaceId);if(!support||support.walk.rotor)return false;
@@ -736,8 +736,16 @@ class GameAudio{
 
     /** 保存一个实际移动点及其连续位置；edge为当前合法边，endLocation只在确实到达时使用。 */
     function placePlayer(point,edge,endLocation=null){state.player=[...point];const object=surfaceAt(point);if(object)state.surfaceId=object.walk.id;if(endLocation)state.location=endLocation;else{const location=edge?locatePoint(point,[edge]):object?locatePoint(point,object.walk.edges):null;if(location)state.location=location;}}
-    /** 标记实际到达中央白框；只触发一次，不把平台外沿点击强制吸到中心。 */
-    function checkGoal(){if(state.input==='click'&&(state.segment||state.route.length))return;if(!state.won&&state.surfaceId==='goal'&&Math.hypot(state.player[0]-GOAL_POINT[0],state.player[2]-GOAL_POINT[2])<.16){state.won=true;state.route=[];state.segment=null;releaseMovement();state.input=null;}}
+    /** 按真实终点台面的边界和高度启动归中；抵达中心才停止并通关。 */
+    function checkGoal(){
+      if(state.won)return;
+      const platform=renderer.static.find(object=>object.walk?.id==='goal'),basis=surfaceBasis(platform),at=surfaceCoordinates(state.player,basis);
+      // 末级台阶与平台共享边可能仍登记为台阶；按真实台面判定，并沿用踏面浮点容差。
+      if(at.u<-.00001||at.u>1.00001||at.v<-.00001||at.v>1.00001||Math.abs(state.player[1]-surfacePoint(basis,at.u,at.v)[1])>.002)return;
+      if(distance(state.player,GOAL_POINT)<.000001){state.won=true;state.route=[];state.segment=null;releaseMovement();state.input=null;state.moving=false;return;}
+      // 平台为固定矩形，台内直线归中沿用正常速度与步态；接管后不再接受玩家改路。
+      if(state.input!=='goal'){releaseMovement();tap=null;state.pulse=null;state.route=[];state.segment={point:[...GOAL_POINT],location:{node:GOAL},edge:[GOAL-1,GOAL],surfaceId:'goal'};state.input='goal';}
+    }
     /** 有界更新即时WASD、可替换鼠标路线与机关吸附；键松后没有残余整边任务。 */
     function update(dt){
       const oldGait=state.gait,wasMoving=state.moving,wasWon=state.won;
@@ -747,7 +755,8 @@ class GameAudio{
       for(let transitions=0;transitions<fixedNodes.length+2&&!state.won;transitions++){
         let step=null;
         if(state.input==='keyboard'&&heldKeys.size&&!pointer&&state.angle===state.targetAngle)step=keyboardDestination();
-        else if(state.input==='click'){if(!state.segment&&state.route.length)state.segment=state.route.shift();step=state.segment;}
+        // 自动归中复用逐帧距离预算，只有抵达中心才进入既有通关演出。
+        else if(state.input==='click'||state.input==='goal'){if(!state.segment&&state.route.length)state.segment=state.route.shift();step=state.segment;}
         if(!step)break;
         const length=distance(state.player,step.point);
         // 节点按钮和键盘共用真实梁体限制，不能用零长度节点转换跳进竖起的横梁。
@@ -780,9 +789,9 @@ class GameAudio{
     function positionControls(){const point=renderer.project(KNOB_POINT);knob.style.left=`${point.x}px`;knob.style.top=`${point.y}px`;
       // 圆形操作区跟随端帽的实际投影半径，外沿可直接起拖，并保持固定中心与键盘焦点。
       const wheel=M.trs(...KNOB_POINT,1,1,1,0,state.angle);let radius=0;for(const arm of [[0,.93,0],[0,-.93,0],[0,0,.93],[0,0,-.93]]){const p=renderer.project(M.point(wheel,arm));radius=Math.max(radius,Math.hypot(p.x-point.x,p.y-point.y));}const size=Math.min(140,Math.max(56,(radius+6)*2));knob.style.width=`${size}px`;knob.style.height=`${size}px`;knob.style.margin=`${-size/2}px 0 0 ${-size/2}px`;
-      // 转动动画仅标记忙碌并由输入守卫拒绝操作，保留原生按钮焦点供停稳后继续键盘操作。
-      knob.disabled=!pointer&&(failed||state.won||rotorOccupied());knob.setAttribute('aria-disabled',String(!canRotate()));
-      for(const [index,button] of roadButtons.entries()){const p=renderer.project(nodePoint(index));button.style.left=`${p.x}px`;button.style.top=`${p.y}px`;button.disabled=failed||state.won||!!pointer||state.angle!==state.targetAngle;}}
+      // 终点归中与通关均锁定道路和旋钮；其他转动过程保留原生焦点供停稳后操作。
+      knob.disabled=!pointer&&(failed||state.won||state.input==='goal'||rotorOccupied());knob.setAttribute('aria-disabled',String(!canRotate()));
+      for(const [index,button] of roadButtons.entries()){const p=renderer.project(nodePoint(index));button.style.left=`${p.x}px`;button.style.top=`${p.y}px`;button.disabled=failed||state.won||state.input==='goal'||!!pointer||state.angle!==state.targetAngle;}}
 
     /** 返回屏幕点在三角形中的重心权重，三角外或退化时返回null。 */
     function triangleWeights(x,y,a,b,c){const det=(b.y-c.y)*(a.x-c.x)+(c.x-b.x)*(a.y-c.y);if(Math.abs(det)<.000001)return null;const u=((b.y-c.y)*(x-c.x)+(c.x-b.x)*(y-c.y))/det,v=((c.y-a.y)*(x-c.x)+(a.x-c.x)*(y-c.y))/det,w=1-u-v;return u>=-.000001&&v>=-.000001&&w>=-.000001?[u,v,w]:null;}
@@ -837,8 +846,8 @@ class GameAudio{
     });
     // 仅真实前台手势解锁声音；首屏、模拟事件及恢复页面均不自动播放。
     for(const name of ['pointerdown','keydown'])window.addEventListener(name,event=>{if(!failed)audio.unlockGesture(event);},{capture:true});
-    // 使用物理按键码避免输入法改变key导致粘键；文本输入和快捷键不接管游戏方向。
-    window.addEventListener('keydown',event=>{const textInput=event.target instanceof Element&&(event.target.matches('input,textarea,select')||event.target.isContentEditable);if(event.ctrlKey||event.metaKey||event.altKey||textInput){releaseMovement();return;}const code=event.code;if(!Object.hasOwn(MOVEMENT_KEYS,code))return;event.preventDefault();if(event.repeat||heldKeys.has(code)||failed||state.won||pointer||state.angle!==state.targetAngle)return;state.route=[];state.segment=null;state.input='keyboard';heldKeys.add(code);tap=null;});
+    // 使用物理按键码避免粘键；文本输入、快捷键及终点归中期间不接管游戏方向。
+    window.addEventListener('keydown',event=>{const textInput=event.target instanceof Element&&(event.target.matches('input,textarea,select')||event.target.isContentEditable);if(event.ctrlKey||event.metaKey||event.altKey||textInput){releaseMovement();return;}const code=event.code;if(!Object.hasOwn(MOVEMENT_KEYS,code))return;event.preventDefault();if(event.repeat||heldKeys.has(code)||failed||state.won||state.input==='goal'||pointer||state.angle!==state.targetAngle)return;state.route=[];state.segment=null;state.input='keyboard';heldKeys.add(code);tap=null;});
     window.addEventListener('keyup',event=>{if(!Object.hasOwn(MOVEMENT_KEYS,event.code))return;heldKeys.delete(event.code);if(!heldKeys.size&&state.input==='keyboard'){state.justStopped=state.moving;state.input=null;state.moving=false;}});
     // 旋钮仅捕获稳定、空闲时开始的单个指针；捕获期间保持按钮启用以连续接收拖动。
     knob.addEventListener('pointerdown',event=>{if(event.button!==0||!takeRotationControl())return;event.preventDefault();tap=null;
@@ -853,8 +862,8 @@ class GameAudio{
     // Enter和空格沿用按钮原生click；方向键保留各自的90°方向，动画中不累计新操作。
     knob.addEventListener('click',event=>{if(event.detail===0&&takeRotationControl())state.targetAngle-=QUARTER;});
     knob.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();if(event.repeat||!takeRotationControl())return;const direction=event.key==='ArrowLeft'||event.key==='ArrowDown'?-1:1;state.targetAngle+=direction*QUARTER;});
-    // 道路点击只在轻触完成时提交，拖拽画布不误触发角色行走。
-    canvas.addEventListener('pointerdown',event=>{if(event.button===0&&!pointer)tap={id:event.pointerId,x:event.clientX,y:event.clientY};});
+    // 道路点击只在轻触完成时提交；终点归中或通关后不再登记新行走手势。
+    canvas.addEventListener('pointerdown',event=>{if(event.button===0&&!pointer&&!state.won&&state.input!=='goal')tap={id:event.pointerId,x:event.clientX,y:event.clientY};});
     canvas.addEventListener('pointerup',event=>{if(!tap||tap.id!==event.pointerId)return;const start=tap;tap=null;if(Math.hypot(event.clientX-start.x,event.clientY-start.y)>8)return;const rect=canvas.getBoundingClientRect(),target=pickRoad(event.clientX-rect.left,event.clientY-rect.top);if(target!==null)walkTo(target);});
     canvas.addEventListener('pointercancel',()=>{tap=null;});
     // 失焦、切后台或离页时释放输入并停帧，不把后台时间补算到行走过程中。
