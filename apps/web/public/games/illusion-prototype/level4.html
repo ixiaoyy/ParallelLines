@@ -16,6 +16,7 @@
     .controls{position:absolute;z-index:3;inset:auto 20px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}
     .instructions{margin:0;font-size:13px;line-height:1.65;letter-spacing:.08em;text-align:center;max-width:100%;color:#705d59}
     .restart{pointer-events:auto;min-height:44px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;cursor:pointer}
+    .finish-actions{display:flex;align-items:center;justify-content:center;gap:12px}.next-level{display:inline-flex;align-items:center;justify-content:center;pointer-events:auto;min-height:44px;min-width:116px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;text-decoration:none}.next-level[hidden]{display:none}.next-level:hover{background:#66b1ff}.next-level:active{background:#3a8ee6}.next-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
     .control-actions{display:flex;justify-content:center;align-items:center;gap:12px;pointer-events:auto}.sound{min-height:44px;padding:10px 14px;border:1px solid #89a7af66;border-radius:4px;background:#f5e6df;color:#695b58;font-size:12px;cursor:pointer}.sound:hover{background:#ebd7cd}.sound:disabled{opacity:.65;cursor:default}
     .restart:hover{background:#66b1ff}.restart:active{background:#3a8ee6}button:focus-visible{outline:3px solid #fff;outline-offset:4px}
     .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:pointer;touch-action:none}
@@ -29,7 +30,8 @@
     .prototype.is-complete .controls{inset:0;display:block;pointer-events:none}
     .prototype.is-complete .instructions{display:none}
     .prototype.is-complete .control-actions{position:absolute;inset:0;display:block;pointer-events:none}
-    .prototype.is-complete .restart{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);min-width:144px;pointer-events:auto}
+    .prototype.is-complete .finish-actions{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:calc(100% - 32px);max-width:360px;pointer-events:auto}
+    .prototype.is-complete .restart{position:static;transform:none;min-width:132px;pointer-events:auto}
     .prototype.is-complete .sound{position:absolute;right:20px;bottom:max(24px,env(safe-area-inset-bottom));pointer-events:auto}
     @media(max-width:480px){.controls{inset-inline:12px;gap:12px;bottom:max(18px,env(safe-area-inset-bottom))}.instructions{font-size:12px;letter-spacing:.035em}.restart{padding-inline:20px}.result{font-size:18px}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}.prototype::after,.prototype.is-ending .instructions{transition:none}}
@@ -46,7 +48,7 @@
     <button id="talk" class="scene-control talk" type="button" aria-label="与说书人交谈" hidden>☰</button>
     <div id="dialogue" class="dialogue" role="dialog" aria-label="说书人" hidden><p id="dialogue-text"></p><button id="dialogue-next" type="button" aria-label="继续对白">○</button></div>
     <p id="result" class="result" role="status" hidden>到达终点</p>
-    <div class="controls"><p class="instructions">按住 WASD 移动，松开停止；点击道路行走，点按或拖动旋钮翻桥，踩下踏板打开新路线。</p><div class="control-actions"><button id="restart" class="restart" type="button">重新开始</button><button id="sound" class="sound" type="button" aria-label="声音：开" aria-pressed="true">声音：开</button></div></div>
+    <div class="controls"><p class="instructions">按住 WASD 移动，松开停止；点击道路行走，点按或拖动旋钮翻桥，踩下踏板打开新路线。</p><div class="control-actions"><div class="finish-actions"><button id="restart" class="restart" type="button">重新开始</button><a id="next-level" class="next-level" href="./level5.html" hidden>下一关</a></div><button id="sound" class="sound" type="button" aria-label="声音：开" aria-pressed="true">声音：开</button></div></div>
     <p id="failure" class="failure" role="alert" hidden>当前浏览器未启用 WebGL 2。</p>
   </main>
   <script>
@@ -1079,7 +1081,7 @@ function drawBControl() {
     /** 最后亭台才开始归还蓝绿八面体；没有不存在的第五关入口。 */
     function beginCompletion(){state.endingElapsed=0;state.endingReady=false;state.pulse=null;prototype.classList.add('is-ending');audio.setCompletionMix(true);}
     /** 声音和存储失败不影响最后有界完成演出。 */
-    function updateCompletion(dt){if(!state.won)return;state.endingElapsed=reducedMotion.matches?2:Math.min(2,state.endingElapsed+dt);if(state.endingElapsed===2&&!state.endingReady){state.endingReady=true;prototype.classList.add('is-complete');result.hidden=false;restart.focus({preventScroll:true});}}
+    function updateCompletion(dt){if(!state.won)return;state.endingElapsed=reducedMotion.matches?2:Math.min(2,state.endingElapsed+dt);if(state.endingElapsed===2&&!state.endingReady){state.endingReady=true;prototype.classList.add('is-complete');result.hidden=false;document.getElementById('next-level').hidden=false;restart.focus({preventScroll:true});}}
     /** 完成镜头仅做少量退让，不改变真实支撑。 */
     function completionCameraProgress(){return state.won&&!reducedMotion.matches?Math.max(0,Math.min(1,(state.endingElapsed-.8)/1.2)):0;}
     /** 蓝绿八面体从人物胸前移入原作终台，并按同一台面扩散波纹。 */
@@ -1091,7 +1093,7 @@ function drawBControl() {
     /** 当前楼控制和说书人使用44px热区；归中和完成时禁用机关，普通行走仍优先拾取路面。 */
     function positionControls(){for(const[id,b]of Object.entries(groupButtons)){const p=renderer.project(handlePoint(id));b.hidden=!groupVisible(id)||state.won||!!state.transition||state.dialogue.active;b.style.left=`${p.x}px`;b.style.top=`${p.y}px`;b.disabled=failed||state.won||state.input==='goal';b.setAttribute('aria-disabled',String(!groupControl(id)));}const p=renderer.project([.3,4.16,-.55]);talkButton.style.left=`${p.x}px`;talkButton.style.top=`${p.y}px`;talkButton.hidden=state.area!=='inside'||state.dialogue.done||state.dialogue.active||!!state.transition;talkButton.disabled=distance(state.player,[0,3.3,0])>.26;}
     /** 重开恢复全章所有不可逆阶段，保留用户会话声音选择。 */
-    function reset(e){finishDrag(false);clearIntent();audio.stop();audio.setCompletionMix(false);if(e?.isTrusted&&e.type==='click')audio.unlockGesture(e);for(const[id,g]of Object.entries(GROUPS))Object.assign(state.groups[id],{q:g.initial,target:g.initial});Object.assign(state,{area:'outside',zone:'A',activeMotion:null,player:[-1.6,.7,2.2],frameId:'world',surfaceId:'entry',location:{node:ids.outside.start},heading:Math.PI,targetHeading:Math.PI,gait:0,motionBlend:0,moving:false,input:null,route:[],segment:null,curve:null,transition:null,progress:{},seamHistory:[],P1:false,corner:0,bridgeAB:0,P2:false,P3:false,blockTurn:0,baseDrop:0,P4:false,bridgeBC:0,dialogue:{active:false,index:0,done:false},returned:false,won:false,endingElapsed:0,endingReady:false,pulse:null,camera:[0,2.7,0],cameraLift:0});elapsed=0;curtain.style.opacity='0';dialogueBox.hidden=true;prototype.classList.remove('is-inside','is-ending','is-complete');result.hidden=true;render();}
+    function reset(e){finishDrag(false);clearIntent();audio.stop();audio.setCompletionMix(false);if(e?.isTrusted&&e.type==='click')audio.unlockGesture(e);for(const[id,g]of Object.entries(GROUPS))Object.assign(state.groups[id],{q:g.initial,target:g.initial});Object.assign(state,{area:'outside',zone:'A',activeMotion:null,player:[-1.6,.7,2.2],frameId:'world',surfaceId:'entry',location:{node:ids.outside.start},heading:Math.PI,targetHeading:Math.PI,gait:0,motionBlend:0,moving:false,input:null,route:[],segment:null,curve:null,transition:null,progress:{},seamHistory:[],P1:false,corner:0,bridgeAB:0,P2:false,P3:false,blockTurn:0,baseDrop:0,P4:false,bridgeBC:0,dialogue:{active:false,index:0,done:false},returned:false,won:false,endingElapsed:0,endingReady:false,pulse:null,camera:[0,2.7,0],cameraLift:0});elapsed=0;curtain.style.opacity='0';dialogueBox.hidden=true;prototype.classList.remove('is-inside','is-ending','is-complete');result.hidden=true;const next=document.getElementById('next-level');if(document.activeElement===next)restart.focus({preventScroll:true});next.hidden=true;render();}
     /** 图形错误明确终止唯一循环，不伪装成功。 */
     function fatal(error){console.error('Full Water Palace failed:',error);failed=true;cancelAnimationFrame(animation);finishDrag(false);clearIntent();audio.stop();failure.hidden=false;for(const b of Object.values(groupButtons))b.hidden=true;talkButton.hidden=true;restart.disabled=true;}
     /** 只绘制实际状态，不在render内推进机关或补偿玩家位置。 */
