@@ -11,7 +11,7 @@
     .prototype{position:relative;width:100%;height:100%;min-height:280px;isolation:isolate;background:radial-gradient(ellipse at 50% 92%,#52606424 0%,transparent 63%),linear-gradient(#011a20 0%,#0a232b 37%,#283940 100%)}
     canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
     .controls{position:absolute;z-index:3;inset:auto 20px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}
-    .instructions{margin:0;font-size:13px;line-height:1.65;letter-spacing:.08em;text-align:center;max-width:100%;color:#bbd0d2}
+
     .restart{pointer-events:auto;min-height:44px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;cursor:pointer}
     .finish-actions{display:flex;align-items:center;justify-content:center;gap:12px}.next-level{display:inline-flex;align-items:center;justify-content:center;pointer-events:auto;min-height:44px;min-width:116px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;text-decoration:none}.next-level[hidden]{display:none}.next-level:hover{background:#66b1ff}.next-level:active{background:#3a8ee6}.next-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
     .control-actions{display:flex;justify-content:center;align-items:center;gap:12px;pointer-events:auto}.sound{min-height:44px;padding:10px 14px;border:1px solid #89a7af66;border-radius:4px;background:#17313a;color:#c8dedb;font-size:12px;cursor:pointer}.sound:hover{background:#25434d}.sound:disabled{opacity:.65;cursor:default}
@@ -22,17 +22,22 @@
     .result{position:absolute;z-index:3;top:max(30px,env(safe-area-inset-top));left:16px;right:16px;margin:0;text-align:center;font-weight:400;font-size:21px;letter-spacing:.3em;color:#deefed;pointer-events:none}
     .failure{position:absolute;z-index:4;inset:0;display:grid;place-items:center;padding:24px;background:#001f24;text-align:center;font-size:16px}.failure[hidden],.result[hidden],.scene-control[hidden]{display:none}
     .prototype::after{content:"";position:absolute;z-index:2;inset:0;background:#01121794;opacity:0;pointer-events:none;transition:opacity .3s ease}
-    .prototype.is-ending .instructions{opacity:0;transition:opacity .25s ease}
+
     .prototype.is-complete::after{opacity:1}
     .prototype.is-complete .result{top:calc(50% - 65px);left:16px;right:16px;font-size:clamp(24px,4vw,31px);letter-spacing:.18em;color:#f2f5e9}
     .prototype.is-complete .controls{inset:0;display:block;pointer-events:none}
-    .prototype.is-complete .instructions{display:none}
+
     .prototype.is-complete .control-actions{position:absolute;inset:0;display:block;pointer-events:none}
     .prototype.is-complete .finish-actions{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:calc(100% - 32px);max-width:360px;pointer-events:auto}
     .prototype.is-complete .restart{position:static;transform:none;min-width:132px;pointer-events:auto}
     .prototype.is-complete .sound{position:absolute;right:20px;bottom:max(24px,env(safe-area-inset-bottom));pointer-events:auto}
-    @media(max-width:480px){.controls{inset-inline:12px;gap:12px;bottom:max(18px,env(safe-area-inset-bottom))}.instructions{font-size:12px;letter-spacing:.035em}.restart{padding-inline:20px}.result{font-size:18px}}
-    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}.prototype::after,.prototype.is-ending .instructions{transition:none}}
+    @media(max-width:480px){.controls{inset-inline:12px;gap:12px;bottom:max(18px,env(safe-area-inset-bottom))}.restart{padding-inline:20px}.result{font-size:18px}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}.prototype::after{transition:none}}
+
+    html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+    .prototype{height:100vh;height:100dvh}
+    .restart,.sound,.previous-level,.next-level{touch-action:manipulation}
+    @media(max-width:600px),(max-height:500px){.controls{left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right))}.prototype::before{height:84px}}
   </style>
 </head>
 <body>
@@ -41,7 +46,7 @@
     <div id="road-controls" aria-label="可行走的道路"></div>
     <button id="knob" class="scene-control knob" type="button" aria-label="拖动旋钮旋转，或使用方向键旋转横梁"></button>
     <p id="result" class="result" role="status" hidden>到达终点</p>
-    <div class="controls"><p class="instructions">按住 WASD 移动，松开停止；点击道路指定位置，拖动旋钮旋转。</p><div class="control-actions"><div class="finish-actions"><button id="restart" class="restart" type="button">重新开始</button><a id="next-level" class="next-level" href="./level2.html" hidden>下一关</a></div><button id="sound" class="sound" type="button" aria-label="声音：开" aria-pressed="true">声音：开</button></div></div>
+    <div class="controls"><div class="control-actions"><div class="finish-actions"><button id="restart" class="restart" type="button">重新开始</button><a id="next-level" class="next-level" href="./level2.html" hidden>下一关</a></div><button id="sound" class="sound" type="button" aria-label="声音：开" aria-pressed="true">声音：开</button></div></div>
     <p id="failure" class="failure" role="alert" hidden>当前浏览器未启用 WebGL 2。</p>
   </main>
   <script>
@@ -129,7 +134,8 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
         const rect=this.canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,1.75);this.width=rect.width;this.height=rect.height;
         const w=Math.max(1,Math.round(rect.width*ratio)),h=Math.max(1,Math.round(rect.height*ratio));if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
         // 按参考建筑的统一比例取景，底部预留操作区；相机方向始终为(1,1,1)。
-        const reserve=Math.min(120,rect.height*.40),available=Math.max(1,rect.height-reserve-34),pixels=Math.min(90,rect.width/7.46,available/8.62)/(1+.07*completionCameraProgress()),span=rect.height/pixels,aspect=rect.width/Math.max(1,rect.height),offsetX=rect.width*.5-pixels*2.58,offsetY=34+available*.39;
+        // 通关弹层会铺满 controls，仅用实际底部声音按钮计算留白。
+        const reserve=Math.max(64,rect.height-(document.getElementById('sound').getBoundingClientRect().top-rect.top)+16),available=Math.max(1,rect.height-reserve-34),pixels=Math.min(90,rect.width/7.46,available/8.62)/(1+.07*completionCameraProgress()),span=rect.height/pixels,aspect=rect.width/Math.max(1,rect.height),offsetX=rect.width*.5-pixels*2.58,offsetY=34+available*.39;
         const target=[0,4,0],eye=target.map(value=>value+16),shiftX=span*aspect*(offsetX/Math.max(1,rect.width)-.5),shiftY=span*(.5-offsetY/Math.max(1,rect.height));
         this.vp=M.mul(M.ortho(-span*aspect/2-shiftX,span*aspect/2-shiftX,-span/2-shiftY,span/2-shiftY,.1,100),M.look(eye,target));
       }
@@ -868,7 +874,7 @@ class GameAudio{
     canvas.addEventListener('pointercancel',()=>{tap=null;});
     // 失焦、切后台或离页时释放输入并停帧，不把后台时间补算到行走过程中。
     window.addEventListener('blur',()=>{finishDrag();releaseMovement();audio.stop();state.justStopped=false;tap=null;});
-    window.addEventListener('resize',()=>{finishDrag();releaseMovement();tap=null;render();});
+    const onViewportResize=()=>{finishDrag();releaseMovement();tap=null;render();};window.addEventListener('resize',onViewportResize);window.visualViewport?.addEventListener('resize',onViewportResize);
     document.addEventListener('visibilitychange',()=>{finishDrag();releaseMovement();state.justStopped=false;tap=null;if(document.hidden){audio.suspendOnHidden();cancelAnimationFrame(animation);lastTime=0;}else resume();});
     window.addEventListener('pagehide',()=>{finishDrag();releaseMovement();audio.stop();state.justStopped=false;tap=null;cancelAnimationFrame(animation);lastTime=0;});
     window.addEventListener('pageshow',resume);
