@@ -2,12 +2,6 @@ name: Deploy
 
 on:
   workflow_dispatch:
-    inputs:
-      repair_fablespace_sso:
-        description: Repair the shared ParallelLines/FableSpace SSO configuration
-        required: true
-        default: true
-        type: boolean
   push:
     branches:
       - main
@@ -16,6 +10,7 @@ on:
       - "apps/web/**"
       - "deploy/nginx/**"
       - "docker-compose.yml"
+      - "deploy/docker-compose.migration.yml"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -53,97 +48,13 @@ jobs:
               - 'deploy/nginx/**'
             compose:
               - 'docker-compose.yml'
-
-  repair-fablespace-sso:
-    name: Repair FableSpace SSO
-    runs-on: ubuntu-latest
-    needs: changes
-    if: github.event_name == 'workflow_dispatch' && inputs.repair_fablespace_sso
-
-    steps:
-      - name: Validate server configuration
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-        run: |
-          set -euo pipefail
-          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY; do
-            if [ -z "${!name:-}" ]; then
-              echo "::error::Missing required GitHub Actions secret: ${name}"
-              exit 1
-            fi
-          done
-
-      - name: Synchronize SSO configuration and restart backends
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT }}
-          command_timeout: 20m
-          script: |
-            set -eu
-            FABLESPACE_PATH="/opt/fablespace"
-            cd "${FABLESPACE_PATH}"
-            git remote set-url origin https://github.com/ixiaoyy/FableSpace.git
-            git fetch --prune origin main
-            git reset --hard origin/main
-
-            CONFIG_OUTPUT="$(sudo python3 deploy/server/configure_shared_services.py --cors-origin https://fable.pingxingxian.space)"
-            printf '%s\n' "${CONFIG_OUTPUT}"
-
-            cd /opt/parallellines
-            if sudo docker compose version >/dev/null 2>&1; then
-              PARALLELLINES_COMPOSE="sudo docker compose"
-            else
-              PARALLELLINES_COMPOSE="sudo docker-compose"
-            fi
-            $PARALLELLINES_COMPOSE up -d --no-deps --force-recreate api worker
-            PARALLELLINES_READY=false
-            for ATTEMPT in $(seq 1 30); do
-              if $PARALLELLINES_COMPOSE exec -T api python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).read()" >/dev/null 2>&1; then
-                PARALLELLINES_READY=true
-                break
-              fi
-              sleep 2
-            done
-            if [ "${PARALLELLINES_READY}" != "true" ]; then
-              $PARALLELLINES_COMPOSE logs --tail=120 api
-              echo "ParallelLines API health check failed after SSO repair"
-              exit 1
-            fi
-
-            cd "${FABLESPACE_PATH}"
-            if sudo docker compose version >/dev/null 2>&1; then
-              FABLESPACE_COMPOSE="sudo docker compose"
-            else
-              FABLESPACE_COMPOSE="sudo docker-compose"
-            fi
-            FABLESPACE_COMPOSE_FILES="-f docker-compose.yml -f deploy/docker-compose.shared.yml"
-            $FABLESPACE_COMPOSE $FABLESPACE_COMPOSE_FILES up -d --build backend
-            FABLESPACE_READY=false
-            for ATTEMPT in $(seq 1 30); do
-              if $FABLESPACE_COMPOSE $FABLESPACE_COMPOSE_FILES exec -T backend python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3).read()" >/dev/null 2>&1; then
-                FABLESPACE_READY=true
-                break
-              fi
-              sleep 2
-            done
-            if [ "${FABLESPACE_READY}" != "true" ]; then
-              $FABLESPACE_COMPOSE $FABLESPACE_COMPOSE_FILES logs --tail=120 backend
-              echo "FableSpace backend health check failed after SSO repair"
-              exit 1
-            fi
-
-            sudo docker image prune -f
+              - 'deploy/docker-compose.migration.yml'
 
   deploy-full-stack:
     name: Deploy full stack (compose)
     runs-on: ubuntu-latest
     needs: changes
-    if: github.event_name == 'push' && needs.changes.outputs.compose == 'true'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && needs.changes.outputs.compose == 'true')
 
     steps:
       - uses: actions/checkout@v4
@@ -176,8 +87,10 @@ jobs:
           printf '%s\n' "${DEPLOY_SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           PORT="${DEPLOY_PORT:-22}"
-          ssh-keyscan -p "${PORT}" "${DEPLOY_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
-          scp -P "${PORT}" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "/tmp/parallellines-web-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/parallellines-web-${GITHUB_SHA}.tar.gz"
+          ssh-keyscan -T 10 -t ed25519 -p "${PORT}" "${DEPLOY_HOST}" > /tmp/deploy-host-key 2>/dev/null
+          test "$(ssh-keygen -lf /tmp/deploy-host-key | awk '{print $2}')" = "SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA"
+          cat /tmp/deploy-host-key >> ~/.ssh/known_hosts
+          scp -P "${PORT}" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "/tmp/parallellines-web-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/parallellines-web-${GITHUB_SHA}.tar.gz"
 
       - name: Deploy all services to server
         uses: appleboy/ssh-action@v1.0.3
@@ -185,10 +98,15 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          fingerprint: SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA
           port: ${{ secrets.DEPLOY_PORT }}
           command_timeout: 30m
           script: |
-            set -e
+            set -eu
+            sudo mountpoint -q /data
+            sudo test -d /data/uploads/parallellines
+            sudo test -d /data/backups/parallellines
+            sudo test -s /opt/parallellines/apps/api/.env
             WEB_IMAGE_ARCHIVE="/tmp/parallellines-web-${{ github.sha }}.tar.gz"
             DEPLOY_STARTED_AT=$(date +%s)
             echo "[deploy] mode=full stack reason=docker-compose changed"
@@ -202,8 +120,8 @@ jobs:
             echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
-            sudo install -d -m 0775 -o root -g root /opt/parallellines/var/uploads /opt/parallellines/var/backups /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
-            sudo chmod 0775 /opt/parallellines/var/uploads /opt/parallellines/var/backups /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
+            sudo test -d /opt/parallellines/var/letsencrypt
+            sudo install -d -m 0755 -o root -g root /opt/parallellines/var/certbot
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] storage directory check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -219,12 +137,14 @@ jobs:
             else
               COMPOSE="sudo docker-compose"
             fi
+            COMPOSE_FILES="-f docker-compose.yml -f deploy/docker-compose.migration.yml"
+            test -f deploy/docker-compose.migration.yml
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
-            $COMPOSE build api worker nginx
-            $COMPOSE up -d --no-build
+            $COMPOSE $COMPOSE_FILES build api worker nginx
+            $COMPOSE $COMPOSE_FILES up -d --no-build
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] compose full deploy took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -233,8 +153,8 @@ jobs:
               echo "[deploy] certificate already exists; skipping certbot bootstrap"
             else
               echo "[deploy] certificate missing; requesting initial Let's Encrypt certificate"
-              if $COMPOSE run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
-                $COMPOSE exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
+              if $COMPOSE $COMPOSE_FILES run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
+                $COMPOSE $COMPOSE_FILES exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
               else
                 echo "::warning::Let's Encrypt certificate request failed; Nginx is running with a temporary self-signed certificate."
               fi
@@ -263,10 +183,15 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          fingerprint: SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA
           port: ${{ secrets.DEPLOY_PORT }}
           command_timeout: 20m
           script: |
-            set -e
+            set -eu
+            sudo mountpoint -q /data
+            sudo test -d /data/uploads/parallellines
+            sudo test -d /data/backups/parallellines
+            sudo test -s /opt/parallellines/apps/api/.env
             DEPLOY_STARTED_AT=$(date +%s)
             echo "[deploy] mode=backend services=api,worker"
 
@@ -279,8 +204,8 @@ jobs:
             echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
-            sudo install -d -m 0775 -o root -g root /opt/parallellines/var/uploads /opt/parallellines/var/backups /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
-            sudo chmod 0775 /opt/parallellines/var/uploads /opt/parallellines/var/backups /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
+            sudo test -d /opt/parallellines/var/letsencrypt
+            sudo install -d -m 0755 -o root -g root /opt/parallellines/var/certbot
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] storage directory check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -290,18 +215,20 @@ jobs:
             else
               COMPOSE="sudo docker-compose"
             fi
+            COMPOSE_FILES="-f docker-compose.yml -f deploy/docker-compose.migration.yml"
+            test -f deploy/docker-compose.migration.yml
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
             FULL_BOOTSTRAP=false
-            if ! $COMPOSE ps --services --status running 2>/dev/null | grep -qx nginx; then
+            if ! $COMPOSE $COMPOSE_FILES ps --services --status running 2>/dev/null | grep -qx nginx; then
               echo "[deploy] nginx is not running; falling back to full bootstrap"
               FULL_BOOTSTRAP=true
-              $COMPOSE up -d --build
+              $COMPOSE $COMPOSE_FILES up -d --build
             else
-              $COMPOSE up -d --build api worker
-              $COMPOSE exec -T nginx nginx -s reload
+              $COMPOSE $COMPOSE_FILES up -d --build api worker
+              $COMPOSE $COMPOSE_FILES exec -T nginx nginx -s reload
             fi
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] backend deploy took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
@@ -312,8 +239,8 @@ jobs:
                 echo "[deploy] certificate already exists; skipping certbot bootstrap"
               else
                 echo "[deploy] certificate missing after bootstrap; requesting initial Let's Encrypt certificate"
-                if $COMPOSE run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
-                  $COMPOSE exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
+                if $COMPOSE $COMPOSE_FILES run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
+                  $COMPOSE $COMPOSE_FILES exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
                 else
                   echo "::warning::Let's Encrypt certificate request failed; Nginx is running with a temporary self-signed certificate."
                 fi
@@ -374,8 +301,10 @@ jobs:
           printf '%s\n' "${DEPLOY_SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           PORT="${DEPLOY_PORT:-22}"
-          ssh-keyscan -p "${PORT}" "${DEPLOY_HOST}" >> ~/.ssh/known_hosts 2>/dev/null || true
-          scp -P "${PORT}" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no "/tmp/parallellines-web-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/parallellines-web-${GITHUB_SHA}.tar.gz"
+          ssh-keyscan -T 10 -t ed25519 -p "${PORT}" "${DEPLOY_HOST}" > /tmp/deploy-host-key 2>/dev/null
+          test "$(ssh-keygen -lf /tmp/deploy-host-key | awk '{print $2}')" = "SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA"
+          cat /tmp/deploy-host-key >> ~/.ssh/known_hosts
+          scp -P "${PORT}" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "/tmp/parallellines-web-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/parallellines-web-${GITHUB_SHA}.tar.gz"
 
       - name: Deploy frontend service to server
         uses: appleboy/ssh-action@v1.0.3
@@ -383,10 +312,15 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          fingerprint: SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA
           port: ${{ secrets.DEPLOY_PORT }}
           command_timeout: 20m
           script: |
-            set -e
+            set -eu
+            sudo mountpoint -q /data
+            sudo test -d /data/uploads/parallellines
+            sudo test -d /data/backups/parallellines
+            sudo test -s /opt/parallellines/apps/api/.env
             DEPLOY_STARTED_AT=$(date +%s)
             WEB_IMAGE_ARCHIVE="/tmp/parallellines-web-${{ github.sha }}.tar.gz"
             echo "[deploy] mode=frontend service=web"
@@ -400,8 +334,8 @@ jobs:
             echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
-            sudo install -d -m 0775 -o root -g root /opt/parallellines/var/uploads /opt/parallellines/var/backups /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
-            sudo chmod 0775 /opt/parallellines/var/uploads /opt/parallellines/var/backups /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
+            sudo test -d /opt/parallellines/var/letsencrypt
+            sudo install -d -m 0755 -o root -g root /opt/parallellines/var/certbot
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] storage directory check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
             STEP_STARTED_AT=$(date +%s)
@@ -416,21 +350,23 @@ jobs:
             else
               COMPOSE="sudo docker-compose"
             fi
+            COMPOSE_FILES="-f docker-compose.yml -f deploy/docker-compose.migration.yml"
+            test -f deploy/docker-compose.migration.yml
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
             FULL_BOOTSTRAP=false
-            if ! $COMPOSE ps --services --status running 2>/dev/null | grep -qx nginx; then
+            if ! $COMPOSE $COMPOSE_FILES ps --services --status running 2>/dev/null | grep -qx nginx; then
               echo "[deploy] nginx is not running; falling back to full bootstrap"
               FULL_BOOTSTRAP=true
-              $COMPOSE up -d --build db redis api worker
-              $COMPOSE up -d --no-deps --no-build --force-recreate web
-              $COMPOSE up -d --no-deps --build nginx
-              $COMPOSE up -d --no-deps certbot
+              $COMPOSE $COMPOSE_FILES up -d --build db redis api worker
+              $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build --force-recreate web
+              $COMPOSE $COMPOSE_FILES up -d --no-deps --build nginx
+              $COMPOSE $COMPOSE_FILES up -d --no-deps certbot
             else
-              $COMPOSE up -d --no-deps --no-build --force-recreate web
-              $COMPOSE exec -T nginx nginx -s reload
+              $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build --force-recreate web
+              $COMPOSE $COMPOSE_FILES exec -T nginx nginx -s reload
             fi
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] frontend deploy took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
@@ -441,8 +377,8 @@ jobs:
                 echo "[deploy] certificate already exists; skipping certbot bootstrap"
               else
                 echo "[deploy] certificate missing after bootstrap; requesting initial Let's Encrypt certificate"
-                if $COMPOSE run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
-                  $COMPOSE exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
+                if $COMPOSE $COMPOSE_FILES run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
+                  $COMPOSE $COMPOSE_FILES exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
                 else
                   echo "::warning::Let's Encrypt certificate request failed; Nginx is running with a temporary self-signed certificate."
                 fi
@@ -481,10 +417,15 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          fingerprint: SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA
           port: ${{ secrets.DEPLOY_PORT }}
           command_timeout: 20m
           script: |
-            set -e
+            set -eu
+            sudo mountpoint -q /data
+            sudo test -d /data/uploads/parallellines
+            sudo test -d /data/backups/parallellines
+            sudo test -s /opt/parallellines/apps/api/.env
             DEPLOY_STARTED_AT=$(date +%s)
             echo "[deploy] mode=nginx service=nginx"
 
@@ -497,8 +438,8 @@ jobs:
             echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
-            sudo install -d -m 0775 -o root -g root /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
-            sudo chmod 0775 /opt/parallellines/var/letsencrypt /opt/parallellines/var/certbot
+            sudo test -d /opt/parallellines/var/letsencrypt
+            sudo install -d -m 0755 -o root -g root /opt/parallellines/var/certbot
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] certificate directory check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -508,15 +449,17 @@ jobs:
             else
               COMPOSE="sudo docker-compose"
             fi
+            COMPOSE_FILES="-f docker-compose.yml -f deploy/docker-compose.migration.yml"
+            test -f deploy/docker-compose.migration.yml
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
-            if ! $COMPOSE ps --services --status running 2>/dev/null | grep -qx nginx; then
+            if ! $COMPOSE $COMPOSE_FILES ps --services --status running 2>/dev/null | grep -qx nginx; then
               echo "[deploy] nginx is not running; falling back to full bootstrap"
-              $COMPOSE up -d --build
+              $COMPOSE $COMPOSE_FILES up -d --build
             else
-              $COMPOSE up -d --no-deps --build nginx
+              $COMPOSE $COMPOSE_FILES up -d --no-deps --build nginx
             fi
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] nginx deploy took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
@@ -526,8 +469,8 @@ jobs:
               echo "[deploy] certificate already exists; skipping certbot bootstrap"
             else
               echo "[deploy] certificate missing; requesting initial Let's Encrypt certificate"
-              if $COMPOSE run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
-                $COMPOSE exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
+              if $COMPOSE $COMPOSE_FILES run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
+                $COMPOSE $COMPOSE_FILES exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
               else
                 echo "::warning::Let's Encrypt certificate request failed; Nginx is running with a temporary self-signed certificate."
               fi

@@ -3,3 +3,14 @@ __pycache__
 .pytest_cache
 .ruff_cache
 .env
+
+# Migration: never send runtime secrets/private backups to a build context.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/.git
+**/backups
+**/.deploy

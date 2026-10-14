@@ -23,3 +23,17 @@ apps/api/.ruff_cache
 CURRENT_HOME.png
 docs
 参考
+
+# Migration: never send runtime secrets/private backups to a build context.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/.git
+**/backups
+**/.deploy
+
+# Host database, certificates, uploads, and runtime files stay out of builds.
+var
