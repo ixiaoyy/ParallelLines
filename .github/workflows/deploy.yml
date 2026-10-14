@@ -98,7 +98,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          fingerprint: SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           port: ${{ secrets.DEPLOY_PORT }}
           command_timeout: 30m
           script: |
@@ -183,7 +183,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          fingerprint: SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           port: ${{ secrets.DEPLOY_PORT }}
           command_timeout: 20m
           script: |
@@ -312,7 +312,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          fingerprint: SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           port: ${{ secrets.DEPLOY_PORT }}
           command_timeout: 20m
           script: |
@@ -417,7 +417,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          fingerprint: SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           port: ${{ secrets.DEPLOY_PORT }}
           command_timeout: 20m
           script: |
