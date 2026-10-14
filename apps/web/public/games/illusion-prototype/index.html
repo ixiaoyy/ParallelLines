@@ -2,13 +2,13 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <title>回廊彼岸 · 第一关</title>
   <style>
     :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#c8dedb;background:#011a20}
     *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:clip}button{font:inherit}
-    .prototype{position:relative;width:100%;height:100%;min-height:280px;isolation:isolate;background:radial-gradient(ellipse at 50% 92%,#52606424 0%,transparent 63%),linear-gradient(#011a20 0%,#0a232b 37%,#283940 100%)}
+    .prototype{position:relative;width:100%;height:100%;min-height:280px;isolation:isolate;background:radial-gradient(ellipse 130px 62px at 49% 75%,#6f8b8c20,transparent 100%),linear-gradient(#01191f 0%,#0c1c24 42%,#191f28 100%)}
     canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
     .controls{position:absolute;z-index:3;inset:auto 20px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}
 
@@ -34,6 +34,8 @@
     @media(max-width:480px){.controls{inset-inline:12px;gap:12px;bottom:max(18px,env(safe-area-inset-bottom))}.restart{padding-inline:20px}.result{font-size:18px}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}.prototype::after{transition:none}}
 
+    /* 整页触控由关卡处理，避免双击或双指手势触发浏览器缩放。 */
+    html,body{touch-action:none}
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     .prototype{height:100vh;height:100dvh}
     .restart,.sound,.previous-level,.next-level{touch-action:manipulation}
@@ -114,7 +116,10 @@ uniform mat4 uVP;out vec3 vNormal;out vec4 vColor;
 void main(){mat3 normal=mat3(aModel);vec3 lengths=vec3(dot(normal[0],normal[0]),dot(normal[1],normal[1]),dot(normal[2],normal[2]));vNormal=normalize(normal*(aNormal/max(lengths,vec3(.00001))));vColor=aColor;gl_Position=uVP*aModel*vec4(aPos,1.);}`;
         const fragment=`#version 300 es
 precision highp float;in vec3 vNormal;in vec4 vColor;out vec4 outColor;
-void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize(vec3(-.4,1.,.45))),0.);float lighting=.28+direct*.63;vec3 tint=mix(vec3(1.,1.08,1.13),vec3(1.08,1.04,1.),max(normal.y,0.));tint=mix(tint,vec3(.90,1.,1.16),max(normal.x,0.));if(vColor.a>1.5){lighting=.70+direct*.28;tint=vec3(1.);}else if(min(vColor.r,vColor.g)>.85){lighting=.74+direct*.24;tint=vec3(1.);}else if(vColor.g>.72&&vColor.b>.77&&vColor.r<.75){lighting=.54+direct*.40;tint=vec3(.98,1.,1.03);}outColor=vec4(vColor.rgb*lighting*tint,min(vColor.a,1.));}`;
+void main(){vec3 normal=normalize(vNormal);
+// 冷灰建筑保留原图的亮顶、中灰正面和蓝灰背光；人物与旋钮继续使用各自原有材质。
+if(vColor.a>2.5){vec3 key=vec3(dot(normal,vec3(0.,.635,.284)),dot(normal,vec3(0.,.575,.262)),dot(normal,vec3(0.,.515,.231)));outColor=vec4(vColor.rgb*(vec3(.25,.294,.343)+max(key,vec3(0.))),1.);return;}
+float direct=max(dot(normal,normalize(vec3(-.4,1.,.45))),0.);float lighting=.28+direct*.63;vec3 tint=mix(vec3(1.,1.08,1.13),vec3(1.08,1.04,1.),max(normal.y,0.));tint=mix(tint,vec3(.90,1.,1.16),max(normal.x,0.));if(vColor.a>1.5){lighting=.70+direct*.28;tint=vec3(1.);}else if(min(vColor.r,vColor.g)>.85){lighting=.74+direct*.24;tint=vec3(1.);}else if(vColor.g>.72&&vColor.b>.77&&vColor.r<.75){lighting=.54+direct*.40;tint=vec3(.98,1.,1.03);}outColor=vec4(vColor.rgb*lighting*tint,min(vColor.a,1.));}`;
         this.program=this.programOf(vertex,fragment);this.vpLocation=gl.getUniformLocation(this.program,'uVP');this.geometries={};
         for(const name of ['box','cyl','sphere'])this.createGeometry(name,makeGeometry(name));
         gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);this.static=[];this.dynamic=[];this.vp=M.id();this.width=0;this.height=0;
@@ -135,7 +140,7 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
         const w=Math.max(1,Math.round(rect.width*ratio)),h=Math.max(1,Math.round(rect.height*ratio));if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
         // 按参考建筑的统一比例取景，底部预留操作区；相机方向始终为(1,1,1)。
         // 通关弹层会铺满 controls，仅用实际底部声音按钮计算留白。
-        const reserve=Math.max(64,rect.height-(document.getElementById('sound').getBoundingClientRect().top-rect.top)+16),available=Math.max(1,rect.height-reserve-34),pixels=Math.min(90,rect.width/7.46,available/8.62)/(1+.07*completionCameraProgress()),span=rect.height/pixels,aspect=rect.width/Math.max(1,rect.height),offsetX=rect.width*.5-pixels*2.58,offsetY=34+available*.39;
+        const reserve=Math.max(64,rect.height-(document.getElementById('sound').getBoundingClientRect().top-rect.top)+16),available=Math.max(1,rect.height-reserve-34),pixels=Math.min(90,rect.width/7.46,available/11.1)/(1+.07*completionCameraProgress()),span=rect.height/pixels,aspect=rect.width/Math.max(1,rect.height),offsetX=rect.width*.5-pixels*2.0,offsetY=34+available*.48;
         const target=[0,4,0],eye=target.map(value=>value+16),shiftX=span*aspect*(offsetX/Math.max(1,rect.width)-.5),shiftY=span*(.5-offsetY/Math.max(1,rect.height));
         this.vp=M.mul(M.ortho(-span*aspect/2-shiftX,span*aspect/2-shiftX,-span/2-shiftY,span/2-shiftY,.1,100),M.look(eye,target));
       }
@@ -421,7 +426,7 @@ class GameAudio{
   }
 }
 
-    const PALETTE={stone:0x94a0a9,dark:0x34414a,cream:0xf1f0e7,knob:0xa5c7d5};
+    const PALETTE={stone:0x94a0a9,dark:0x34414a,cream:0xd3dbea,knob:0xa5c7d5};
     const BRIDGE_CENTER=[4,3.8,0],BRIDGE_LENGTH=3,KNOB_POINT=[5.10,3.8,0],STAIR_STEPS=32,STAIR_RISE=1.95,STAIR_DEPTH=2.22,GOAL_POINT=[.25,5.95,-2.65];
     // 道路统一宽 .56、厚 .44；保留轴心和顶面 +.2，因此实体下沿为 -.24。
     const ROAD_HALF=.28,ROAD_LOW=-.24,ROAD_TOP=.20,SHORT_END=1.8,STAGE_END=3.72,GEOMETRY_EPS=1e-9;
@@ -689,10 +694,13 @@ class GameAudio{
       // 三十二级薄阶和导航共用升高、进深，脚下顶面与节点高度一致。
       for(const [index,stair] of stairSurfaces.entries()){const node=10+index;addWalkBox(`stair-${index+1}`,stair.point[0],stair.point[1]-stair.thickness/2,stair.z,stair.width,stair.thickness,stair.depth,P.stone,[[node-1,node],[node,node+1]]);}
       addWalkBox('goal',GOAL_POINT[0],GOAL_POINT[1]-.07,GOAL_POINT[2],.86,.14,.86,P.stone,[[GOAL-1,GOAL]]);
-      // 四层白框登记原模型与亮度；光纹不遮挡点击、不形成道路，重开可恢复原样。
-      for(const [layer,width] of [.75,.54,.33,.12].entries())for(let side=0;side<4;side++){const angle=side*QUARTER,cx=Math.sin(angle)*width/2,cz=Math.cos(angle)*width/2,object=R.add('box',GOAL_POINT[0]+cx,GOAL_POINT[1]+.007,GOAL_POINT[2]+cz,width,.014,.027,P.cream,angle);object.occludes=false;goalFrames.push({object,width,side,layer,light:0});}
+      // 四层方框使用贴面光纹，避免缩小取景后盒体侧面形成杂纹；不遮挡点击，也不形成道路。
+      R.createGeometry('goal-inlay',new Float32Array([-.5,0,-.5,0,1,0,-.5,0,.5,0,1,0,.5,0,.5,0,1,0,-.5,0,-.5,0,1,0,.5,0,.5,0,1,0,.5,0,-.5,0,1,0]));
+      for(const [layer,width] of [.75,.54,.33,.12].entries())for(let side=0;side<4;side++){const angle=side*QUARTER,cx=Math.sin(angle)*width/2,cz=Math.cos(angle)*width/2,object=R.add('goal-inlay',GOAL_POINT[0]+cx,GOAL_POINT[1]+.007,GOAL_POINT[2]+cz,width,1,.027,P.cream,angle);object.occludes=false;goalFrames.push({object,width,side,layer,light:0});}
       // 旋转梁和可见轴使用同一真实轴心；轴杆沿+x伸出，旋钮中心与输入面同步。
       R.add('cyl',4.55,3.8,0,.13,1.10,.13,P.stone,0,R.static,null,0,QUARTER);
+      // 只给冷灰建筑登记专属面向光照；材质标签不改变网格、承重与触屏拾取属性。
+      const stone=color(P.stone);for(const object of R.static)if(object.color.slice(0,3).every((value,index)=>value===stone[index]))object.color[3]=3;
     }
 
     /** 读取本关实际踏面高度，worldX/worldZ只用于脚与影子绘制；合法行走仍由道路图决定。 */
@@ -710,7 +718,7 @@ class GameAudio{
       for(const frame of goalFrames){
         const t=state.won?(reducedMotion.matches?1:Math.max(0,Math.min(1,(state.endingElapsed-.25-(3-frame.layer)*.22)/.22))):0;frame.light=t*t*(3-2*t);
         const angle=frame.side*QUARTER,cx=Math.sin(angle)*frame.width/2,cz=Math.cos(angle)*frame.width/2;
-        frame.object.matrix=M.trs(GOAL_POINT[0]+cx,GOAL_POINT[1]+.007+frame.light*.004,GOAL_POINT[2]+cz,frame.width,.014,.027+frame.light*.010,angle);frame.object.color=mix(color(PALETTE.cream),color(0xffffff),frame.light);
+        frame.object.matrix=M.trs(GOAL_POINT[0]+cx,GOAL_POINT[1]+.007+frame.light*.004,GOAL_POINT[2]+cz,frame.width,1,.027+frame.light*.010,angle);frame.object.color=mix(color(PALETTE.cream),color(0xffffff),frame.light);
       }
       if(!state.won)return;
       const onset=reducedMotion.matches?1:Math.max(0,Math.min(1,(state.endingElapsed-.7)/.45));
