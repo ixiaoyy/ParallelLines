@@ -1,0 +1,37 @@
+# Requires Compose supporting !reset/!override; new host uses v5.6.
+services:
+  db:
+    image: mysql:8.4@sha256:563602a18ffd5be220968e8508d84c9dcd80fbffe69e28af51572db29e3285b2
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max-connections=30
+      - --innodb-buffer-pool-size=256M
+      - --event-scheduler=OFF
+    ports: !reset []
+  redis:
+    ports: !reset []
+  api:
+    ports: !reset []
+    volumes:
+      - type: bind
+        source: /data/uploads/parallellines
+        target: /var/lib/parallellines/uploads
+        bind: {create_host_path: false}
+      - type: bind
+        source: /data/backups/parallellines
+        target: /var/lib/parallellines/backups
+        bind: {create_host_path: false}
+  worker:
+    volumes:
+      - type: bind
+        source: /data/uploads/parallellines
+        target: /var/lib/parallellines/uploads
+        bind: {create_host_path: false}
+      - type: bind
+        source: /data/backups/parallellines
+        target: /var/lib/parallellines/backups
+        bind: {create_host_path: false}
+  nginx:
+    ports: !override ["0.0.0.0:80:80", "0.0.0.0:443:443"]
+    networks: [default, fablespace]
