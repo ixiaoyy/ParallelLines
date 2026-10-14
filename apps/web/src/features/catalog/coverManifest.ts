@@ -198,6 +198,10 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "illusion-prototype": "/catalog/2026-10-09-v4/covers/illusion-prototype.webp",
   // 黄金右脚使用实机画面整理的正式封面，与本批静态资源发布清单保持一致。
   "1589n-golden-right-foot": "/catalog/2026-10-10-v1/covers/1589n-golden-right-foot.webp",
+  // 妖潮渡劫使用主菜单美术整理的正式封面，与静态资源发布清单保持一致。
+  "yaochao-dujie": "/catalog/2026-10-14-v1/covers/yaochao-dujie.webp",
+  // 反向贪吃蛇使用实机画面整理的正式封面，与静态资源发布清单保持一致。
+  "reverse-snake-3d": "/catalog/2026-10-14-v2/covers/reverse-snake-3d.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {

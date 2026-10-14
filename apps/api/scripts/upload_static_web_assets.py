@@ -110,6 +110,10 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-10-09-v4/covers/illusion-prototype.webp",
     # 黄金右脚正式封面与目录映射同批交付，支持按独立版本发布。
     "catalog/2026-10-10-v1/covers/1589n-golden-right-foot.webp",
+    # 妖潮渡劫正式封面与目录映射同批交付，支持按独立版本发布。
+    "catalog/2026-10-14-v1/covers/yaochao-dujie.webp",
+    # 反向贪吃蛇正式封面与目录映射同批交付，支持按独立版本发布。
+    "catalog/2026-10-14-v2/covers/reverse-snake-3d.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 STATIC_ASSETS = (
