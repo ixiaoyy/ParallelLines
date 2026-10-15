@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <title>回廊彼岸 · 第六关：迷宫</title>
   <style>
@@ -22,6 +22,8 @@
     .finish-actions{display:flex;align-items:center;justify-content:center;gap:12px}.next-level{display:inline-flex;align-items:center;justify-content:center;pointer-events:auto;min-height:44px;min-width:116px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;text-decoration:none}.next-level[hidden]{display:none}.next-level:hover{background:#66b1ff}.next-level:active{background:#3a8ee6}.next-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
     .prototype.is-complete .finish-actions{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:calc(100% - 32px);max-width:360px;pointer-events:auto}.prototype.is-complete .restart{position:static;transform:none;min-width:132px}
 
+    /* 整页触控由关卡处理，避免双击或双指手势触发浏览器缩放。 */
+    html,body{touch-action:none}
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     .prototype{height:100vh;height:100dvh}
     .restart,.sound,.previous-level,.next-level{touch-action:manipulation}
@@ -77,14 +79,16 @@
         this.canvas=target;this.gl=target.getContext('webgl2',{alpha:true,antialias:true,powerPreference:'low-power'});
         if(!this.gl)throw new Error('WebGL2 context unavailable');
         const gl=this.gl;
+        // 世界坐标仅供外围背景雾色取样，原投影表达式与所有实例矩阵保持不变。
         const vertex=`#version 300 es
 precision highp float;
 layout(location=0) in vec3 aPos;layout(location=1) in vec3 aNormal;layout(location=2) in mat4 aModel;layout(location=6) in vec4 aColor;
-uniform mat4 uVP;out vec3 vNormal;out vec4 vColor;
-void main(){mat3 normal=mat3(aModel);vec3 lengths=vec3(dot(normal[0],normal[0]),dot(normal[1],normal[1]),dot(normal[2],normal[2]));vNormal=normalize(normal*(aNormal/max(lengths,vec3(.00001))));vColor=aColor;gl_Position=uVP*aModel*vec4(aPos,1.);}`;
+uniform mat4 uVP;out vec3 vNormal;out vec4 vColor;out vec3 vWorld;
+void main(){mat3 normal=mat3(aModel);vec3 lengths=vec3(dot(normal[0],normal[0]),dot(normal[1],normal[1]),dot(normal[2],normal[2]));vNormal=normalize(normal*(aNormal/max(lengths,vec3(.00001))));vColor=aColor;vWorld=(aModel*vec4(aPos,1.)).xyz;gl_Position=uVP*aModel*vec4(aPos,1.);}`;
+        // 材质3为红遗迹，4为不透明远景雾色；原人物/图腾材质2的光照分支保持原样。
         const fragment=`#version 300 es
-precision highp float;in vec3 vNormal;in vec4 vColor;out vec4 outColor;
-void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize(vec3(-.4,1.,.45))),0.);float lighting=.28+direct*.63;vec3 tint=mix(vec3(1.,1.08,1.13),vec3(1.08,1.04,1.),max(normal.y,0.));tint=mix(tint,vec3(.90,1.,1.16),max(normal.x,0.));if(vColor.a>1.5){lighting=.70+direct*.28;tint=vec3(1.);}else if(min(vColor.r,vColor.g)>.85){lighting=.74+direct*.24;tint=vec3(1.);}else if(vColor.g>.72&&vColor.b>.77&&vColor.r<.75){lighting=.54+direct*.40;tint=vec3(.98,1.,1.03);}outColor=vec4(vColor.rgb*lighting*tint,min(vColor.a,1.));}`;
+precision highp float;in vec3 vNormal;in vec4 vColor;in vec3 vWorld;out vec4 outColor;
+void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize(vec3(-.4,1.,.45))),0.);float lighting=.28+direct*.63;vec3 tint=mix(vec3(1.,1.08,1.13),vec3(1.08,1.04,1.),max(normal.y,0.));tint=mix(tint,vec3(.90,1.,1.16),max(normal.x,0.));if(vColor.a>3.5){lighting=.90+direct*.10;tint=vec3(1.);}else if(vColor.a>2.5){lighting=1.04+direct*.18;tint=vec3(1.);}else if(vColor.a>1.5){lighting=.70+direct*.28;tint=vec3(1.);}else if(min(vColor.r,vColor.g)>.85){lighting=.74+direct*.24;tint=vec3(1.);}else if(vColor.g>.72&&vColor.b>.77&&vColor.r<.75){lighting=.54+direct*.40;tint=vec3(.98,1.,1.03);}vec3 shaded=vColor.rgb*lighting*tint;if(vColor.a>3.5){float lowFog=1.-smoothstep(-1.9,-.25,vWorld.y);float distanceFog=smoothstep(7.,17.,length(vWorld.xz));float fog=clamp(.08+lowFog*.72+distanceFog*.14,.08,.96);shaded=mix(shaded,vec3(.55294,.78039,.70588),fog);}outColor=vec4(shaded,min(vColor.a,1.));}`;
         this.program=this.programOf(vertex,fragment);this.vpLocation=gl.getUniformLocation(this.program,'uVP');this.geometries={};
         for(const name of ['box','cyl','sphere'])this.createGeometry(name,makeGeometry(name));
         gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);this.static=[];this.dynamic=[];this.vp=M.id();this.width=0;this.height=0;
@@ -436,11 +440,26 @@ function installLabyrinthMeshes(R) {
   for (const x of [-.32, .32]) quad(arch, [x, 0, -.5], [x, .55, -.5], [x, .55, .5], [x, 0, .5]);
   R.createGeometry('labyrinth-open-arch', new Float32Array(arch));
 
+  /** 将正交刻线写入装饰平面；线条贴在既有石面，不生成道路或碰撞体。 */
+  const stroke=(data,a,b,width=.022)=>{const dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);if(!length)return;const nx=-dy/length*width/2,ny=dx/length*width/2;quad(data,[a[0]+nx,a[1]+ny,0],[a[0]-nx,a[1]-ny,0],[b[0]-nx,b[1]-ny,0],[b[0]+nx,b[1]+ny,0]);};
+  const glyph=[],path=[[-.45,-.45],[-.45,.45],[.45,.45],[.45,-.45],[-.27,-.45],[-.27,.27],[.27,.27],[.27,-.27],[-.09,-.27],[-.09,.09],[.09,.09],[.09,-.09]];
+  // 双层方回纹沿用原图石刻，不用等距横线替代整面图案。
+  for(let i=1;i<path.length;i++)stroke(glyph,path[i-1],path[i]);
+  R.createGeometry('labyrinth-wall-glyph',new Float32Array(glyph));
+  const mural=[];
+  // 门塔侧面的几何人形使用独立壁画，圆头和直折腿与外墙方纹分开。
+  for(const x of[-.32,0,.32]){for(let i=0;i<20;i++){const a=i/20*Math.PI*2,b=(i+1)/20*Math.PI*2;stroke(mural,[x+Math.cos(a)*.075,.30+Math.sin(a)*.075],[x+Math.cos(b)*.075,.30+Math.sin(b)*.075],.016);}stroke(mural,[x,.225],[x,-.05],.018);stroke(mural,[x,-.05],[x-.10,-.40],.016);stroke(mural,[x,-.05],[x+.10,-.40],.016);stroke(mural,[x-.12,.05],[x+.12,.05],.014);}
+  R.createGeometry('labyrinth-door-mural',new Float32Array(mural));
+  const flag=[],profile=[[0,.08,0],[.30,.03,.018],[.62,-.035,-.013],[.86,-.10,.013],[1,-.16,0]];
+  // 长旗从固定旗根收窄到尖端，摆动沿用原来的有界旋转，不新增计时器。
+  for(let i=0;i<profile.length-1;i++){const a=profile[i],b=profile[i+1],wa=.14*(1-a[0]),wb=.14*(1-b[0]);quad(flag,[a[0],a[1],a[2]],[a[0],a[1]-wa,a[2]],[b[0],b[1]-wb,b[2]],[b[0],b[1],b[2]]);}
+  R.createGeometry('labyrinth-narrow-flag',new Float32Array(flag));
+
 }
 
 /** 添加粉顶亭子；x/y/z为亭底、width为边宽、height为柱高；base=false用于已有阶梯缺口的顶台，parent继承楼体姿态；不创建支撑。 */
 function addLabyrinthPavilion(R, { x, y, z, width = .85, height = 1.1, pink = 0xee8daa, stone = 0xe5dcc0, columns = true, finial = true, base = true }, list = R.static, parent = null) {
-  const add = (kind, a, b, c, sx, sy, sz, hex) => R.add(kind, a, b, c, sx, sy, sz, hex, 0, list, parent);
+  const add = (kind, a, b, c, sx, sy, sz, hex) => {const o=R.add(kind,a,b,c,sx,sy,sz,hex,0,list,parent);o.color[3]=2;return o;};
   if (base) add('box', x, y - .06, z, width * 1.12, .12, width * 1.12, stone);
   if (columns) for (const dx of [-.38, .38]) for (const dz of [-.38, .38]) add('box', x + dx * width, y + height / 2, z + dz * width, width * .065, height, width * .065, stone);
   add('box', x, y + height, z, width * 1.12, .09, width * 1.12, pink);
@@ -866,9 +885,13 @@ function checkProgress(){if(state.transition)return;const a=state.traveller;
 function update(dt){elapsed+=dt;updateDoor(dt);updateControls(dt);updateScenes(dt);updateTotem(dt);drawArchitecture();updatePlates();checkProgress();if(walkingReady()&&!state.won)updatePlayer(dt);const a=state.traveller,turn=Math.atan2(Math.sin(a.targetHeading-a.heading),Math.cos(a.targetHeading-a.heading));a.heading+=turn*(1-Math.exp(-dt*14));a.motionBlend+=(Number(a.moving)-a.motionBlend)*(1-Math.exp(-dt*20));if(!a.moving&&a.motionBlend<.001)a.motionBlend=0;if(state.pulse&&(state.pulse.time+=dt)>.55)state.pulse=null;if(state.won){state.endingElapsed=Math.min(12.2,state.endingElapsed+dt);a.point=M.point(actorFrame(),a.local);if(state.endingElapsed===12.2&&!state.endingReady){state.endingReady=true;prototype.classList.add('is-complete');result.hidden=false;/* 原离别演出完成后才开放第七关入口。 */document.getElementById('next-level').hidden=false;restart.focus({preventScroll:true});}}}
 
 /** 添加建筑实体，稳定id与owner用于实际拾取、支撑和净空检查。 */
-function solid(id,owner,x,y,z,sx,sy,sz,hex=areaDef().stone,occludes=true){const o=renderer.add('box',x,y,z,sx,sy,sz,hex,0,renderer.static,frameMatrix(owner));o.objectId=id;o.owner=owner;o.occludes=occludes;return o;}
+function solid(id,owner,x,y,z,sx,sy,sz,hex=areaDef().stone,occludes=true){const o=renderer.add('box',x,y,z,sx,sy,sz,hex,0,renderer.static,frameMatrix(owner));o.objectId=id;o.owner=owner;o.occludes=occludes;
+  // 红色遗迹采用已有柔光材质标记，保留A区暗石气氛，不修改碰撞或支持元数据。
+  if(state.area!=='A')o.color[3]=2;return o;}
 /** 镂空拱使用真实孔洞网格，不能以深色贴片冒充通行空腔。 */
-function arch(id,owner,x,y,z,width,height,depth=.2,rotation=0,hex=areaDef().stone){const o=renderer.add('labyrinth-open-arch',x,y,z,width,height,depth,hex,rotation,renderer.static,frameMatrix(owner));o.objectId=id;o.owner=owner;return o;}
+function arch(id,owner,x,y,z,width,height,depth=.2,rotation=0,hex=areaDef().stone){const o=renderer.add('labyrinth-open-arch',x,y,z,width,height,depth,hex,rotation,renderer.static,frameMatrix(owner));o.objectId=id;o.owner=owner;o.color[3]=2;return o;}
+/** 添加石面方纹或壁画；owner继承该面刚体，width/height只缩放装饰，不建立支持或遮挡。 */
+function labyrinthCarving(owner,x,y,z,width,height,kind='labyrinth-wall-glyph',rotation=0,hex=0xe3987e){const o=renderer.add(kind,x,y,z,width,height,1,hex,rotation,renderer.static,frameMatrix(owner));o.objectId=kind;o.owner=owner;o.occludes=false;o.decorative=true;o.color[3]=2;return o;}
 /** 四柱亭保留中央人行净空，亭底只由声明道路提供支撑。 */
 function pavilion(owner,x,y,z,width=.82,height=.85){addLabyrinthPavilion(renderer,{x,y,z,width,height,pink:areaDef().pink,stone:areaDef().stone,base:false},renderer.static,frameMatrix(owner));}
 /** 门柱、门楣围出真实门洞，暗面在门内脚点之后。 */
@@ -895,9 +918,22 @@ function drawCurvedDRail(e,drawn){const d=defs.D,a=d.rails[e.a],b=d.rails[e.b];l
   const matrix=M.mul(frameMatrix(a.owner),M.trs(0,0,0,1,1,1,rotation)),o={kind:mesh.kind,matrix,color:color(0xd76354),occludes:true,objectId:'rail-'+e.name,owner:a.owner,rail:{owner:a.owner,edges,polygon:mesh.polygon,quads:mesh.quads}};renderer.static.push(o);if(a.owner==='Dbridge')for(const z of[-1.55,-.93,-.31,.31,.93,1.55])for(const x of[-.265,.265]){const mark=renderer.add('box',x,.997,z,.024,.004,.52,0xf9ab74,0,renderer.static,matrix);mark.decorative=true;mark.occludes=false;}return true;}
 /** 梯子横档、侧杆共享梯顶目标，鼠标和触控都可拾取真实构件。 */
 function drawLadders(){for(const l of areaDef().ladders){if(!l.when())continue;const f=frameMatrix(l.owner),target=ids[state.area][l.name+'-top'],count=Math.max(5,Math.round((l.top-l.bottom)/.11));for(const dx of[-.18,.18]){const o=renderer.add('cyl',l.x+dx,(l.bottom+l.top)/2+.08,l.z-.13,.035,l.top-l.bottom+.3,.035,0xeeba83,0,renderer.static,f);o.objectId=l.name;o.owner=l.owner;o.ladder={target};}for(let i=0;i<=count;i++){const o=renderer.add('cyl',l.x,l.bottom+(l.top-l.bottom)*i/count,l.z-.13,.03,.39,.03,0xeeba83,0,renderer.static,f,0,QUARTER);o.objectId=l.name;o.owner=l.owner;o.ladder={target};}}}
-/** 同一场景有限远景遗迹仅作装饰，不进入拾取、支撑或碰撞域。 */
-function drawBackground(){if(state.area==='A'||state.area==='E')return;for(let i=0;i<16;i++){const x=-12+(i*7%23),z=-12+(i*11%19),y=-2.1+(i%4)*.2,w=1.3+(i%3)*.4,hex=i%3===0?0xcbad88:0xb6c8a0;for(const[dx,dz,sx,sz]of[[0,-w/2,w,.25],[0,w/2,w,.25],[-w/2,0,.25,w],[w/2,0,.25,w]]){const o=renderer.add('box',x+dx,y,z+dz,sx,.65,sz,hex,0,renderer.static);o.occludes=false;o.decorative=true;o.color[3]=.30;}if(i%4===0){const o=renderer.add('labyrinth-octahedron',x,y+1,z,.85,2,.85,0x9cad95,0,renderer.static);o.occludes=false;o.decorative=true;o.color[3]=.27;}}
-  for(let i=0;i<7;i++){const o=renderer.add('labyrinth-open-arch',-7+i*2.0,1.8,-7.8,2.02,2.8,.28,0xe9a37e,0,renderer.static);o.occludes=false;o.decorative=true;o.color[3]=.3;}
+/** 同一场景有限远景遗迹仅作装饰；缩小外围建筑并用不透明雾色材质，不进入活动域。 */
+function drawBackground(){if(state.area==='A'||state.area==='E')return;
+  /** 添加一件不透明雾中废墟；位置和尺寸为世界坐标，返回仅装饰、不可拾取且无支撑的实例。 */
+  const add=(kind,x,y,z,sx,sy,sz,hex,rotation=0)=>{const o=renderer.add(kind,x,y,z,sx,sy,sz,hex,rotation,renderer.static);o.occludes=false;o.decorative=true;o.color[3]=4;return o;};
+  // 固定重复布局限制总量；墙宽与高度约为原来的六成，完整外沿也须避开B/C/D活动排除矩形。
+  const scale=.6,base=-1.9;
+  for(let i=0;i<36;i++){const x=-12+(i*7%24),z=-12+(i*11%23),w=(1.5+(i%3)*.55)*scale,h=(2.1+(i%4)*.22)*scale,extent=w/2+.3;
+    if(x+extent>-5.3&&x-extent<6.3&&z+extent>-7.3&&z-extent<5.1)continue;
+    const top=base+h,wall=.36+(i%3)*.09,y=top-wall/2,hex=[0xc4c5a3,0xcfc09c,0xc4b99c][i%3];
+    // 低矮薄壁显出空心院落；有拱组不再保留会填住拱洞的整面正墙，外沿仍在原外围包围内。
+    for(const[dx,dz,sx,sz]of[[0,-w/2,w,.24*scale],[0,w/2,w,.24*scale],[-w/2,0,.24*scale,w],[w/2,0,.24*scale,w]])if(!(i%3===0&&dz===w/2))add('box',x+dx,y,z+dz,sx,wall,sz,hex);
+    if(i%3===0){const gateTop=Math.min(top+.18,base+2.8*scale);add('labyrinth-open-arch',x,gateTop-.86,z+w/2,w,.86,.36*scale,0xc8b692);for(let k=0;k<3;k++)add('box',x-w*.32+k*w*.32,gateTop+.06,z+w/2,w*.18,.12,.36*scale,0xc5ad8e);}
+    if(i%4===0){for(let k=0;k<4;k++)add('box',x+w/2+.2*scale,base+(.8+k*.22)*scale,z+(-.50+k*.27)*scale,.60*scale,.42*scale,.30*scale,0xc9b996);add('labyrinth-onion-roof',x-.3*scale,base+2.75*scale,z-.3*scale,.75*scale,1.1*scale,.75*scale,0xbac0a0);}
+  }
+  // 后方低拱渠保留连续轮廓，位置仍在最远滑轨后方，不添加透明雾面或深度写入特例。
+  for(let i=0;i<10;i++)add('labyrinth-open-arch',-10+i*2.8*scale,base,-10,2.8*scale,3.9*scale,.34*scale,0xcfb695);
 }
 /** A保留青绿方石主墙、三根旧柱和入口四圆孔可降升柱。 */
 /** 绘制相遇区的空心厚墙、旧柱与入口控制柱；所有可行走面仍由现有道路和滑轨提供。 */
@@ -951,6 +987,9 @@ function drawA() {
     carving('A-left-stone-joint-edge', 'box', deck, 'Adeck', -2.73, y - .012, z + .09, .006, .008, length * .35, seamEdge);
   }
 
+  // 墙顶宽窄石格只贴在既有后墙和前壁上，不跨入中间黄图腾的滑行空腔。
+  for(let i=0;i<9;i++){const x=-2.4+i*.6;for(const z of[-1.38,-.12]){if(z>-.5&&x< -1.65)continue;const w=i%3===0?.40:.55;carving('A-wall-cap-stone','box',deck,'Adeck',x,deckTop+.0002,z,w,.0004,z<-.5?.76:.20,i%2?0x567e79:0x638c81);carving('A-wall-cap-inlay','box',deck,'Adeck',x,deckTop+.0006,z,w*.80,.0004,.015,0x769e90);}}
+
   // 旧柱与黄图腾同为方柱宽；固定格数只做刚体下移，顶纹、圆眼和石缝随同一柱框架沉降。
   for (const [index, x, count] of [[0, -1.8, 4], [1, .3, 6], [2, 1.65, 5]]) {
     const height = count * ROAD;
@@ -985,6 +1024,8 @@ function drawA() {
     ring.owner = 'Alift';
     carving('A-entry-circular-handle-center', 'cyl', frame, 'Alift', -3.526, y, 1, .067, .012, .067, 0x29474d, 0, QUARTER);
   }
+  // 入口柱的分格低于原承载顶面，四个圆孔与原命中侧保持一致。
+  for(let i=0;i<4;i++)carving('A-lift-stone-joint','box',frameMatrix('Alift'),'Alift',-3.2,-.15+i*.30,1.314,.56,.014,.006,0x6e9186);
 
   // 入口桥墩保留原有完整包围范围，底部用黑绿石色衔接暗背景，减少细长竖柱的视觉重量。
   solid('A-entry-road-pier', 'world', -3.2, -1.375, 2.1, ROAD, 2.25, ROAD, 0x1b393d);
@@ -993,8 +1034,11 @@ function drawA() {
 
 /** B迷宫由高旗门塔、两段小阶、细柱梯、亭下持续板与镂空红拱组成。 */
 function drawB(){const P=areaDef();const mist=renderer.add('box',0,-1.31,0,80,.32,80,0x8dc7b4,0,renderer.static);mist.decorative=true;mist.occludes=false;for(const[x,z,top]of[[-3.1,0,3.48],[-3.1,1.2,3.48],[3.05,1.2,3.48]])solid('B-pier','world',x,(top-2)/2,z,ROAD,top+2,ROAD,P.pink);
-  for(const x of[-1.2,1.2])arch('B-middle-open-arch','world',x,-1.5,-3.8,2.4,4.92,.22,0,P.pink);
-  arch('B-upper-cross-arch','world',0,1.4,-3.8,3.2,2.6,.24,0,P.pink);pavilion('world',-3.05,7.06,0,.82,.95);
+  // 雾层同样使用柔光，避免明亮青雾被建筑侧面照明压成暗绿底。
+  mist.color[3]=2;
+  // 后拱增加墙厚和断冠，仍停在横倒图腾滑轨后方，不改变任何承载面。
+  for(const x of[-1.2,1.2])arch('B-middle-open-arch','world',x,-1.5,-3.8,2.4,4.92,.34,0,P.pink);
+  arch('B-upper-cross-arch','world',0,1.4,-3.8,3.2,2.6,.34,0,P.pink);for(let i=0;i<8;i++)solid('B-arch-crown','world',-1.45+i*.42,4.13,-3.8,.20,.26,.34);pavilion('world',-3.05,7.06,0,.82,.95);
   solid('B-ladder-column','world',3.45,2.62,0,.62,9.24,.42,P.pink);solid('B-door-tower','world',4.65,3.45,-3.65,1.35,6.9,1.0,P.pink);doorway('BdoorRoof',4.5,7.24,-2.8,-QUARTER);solid('B-tower-cap','BdoorRoof',5.09,7.09,-3.65,1.22,.3,1.7);for(let i=0;i<6;i++)solid('B-battlement','BdoorRoof',3.85+i*.31,7.28,-4.15,.2,.4,.18);
   // 小塔柱前沿留出横倒图腾的滑行空间，保留屋顶、门台及转动中心。
   renderer.add('labyrinth-onion-roof',4.65,7.7,-3.35,.6,.8,.6,P.pink,0,renderer.static,frameMatrix('BdoorRoof'));solid('B-door-turret','BdoorRoof',4.65,7.05,-3.35,.62,1.2,.46);
@@ -1003,19 +1047,41 @@ function drawB(){const P=areaDef();const mist=renderer.add('box',0,-1.31,0,80,.3
   solid('B-bridge-bearing-seat','BbridgeBearing',3.58,4.2,-2.8,.2,1.6,.62,P.pink);
   if(state.flags.bPersonDoor)solid('B-revealed-button-host','BdoorPlate',0,-.055,0,.48,.11,.48,P.pink);
   for(const x of[2.0])solid('B-lift-pier','Blift',x,-.7,0,ROAD,3.4,ROAD,P.pink);
+  // 细窗和方纹均收在既有塔面内，门顶转动仍只由BdoorRoof控制。
+  for(let i=0;i<4;i++){solid('B-tower-thin-slot','world',4.20+i*.30,5.65,-3.142,.045,.42,.012,0xa3544d,false);solid('B-roof-front-tooth','BdoorRoof',4.10+i*.36,7.27,-3.22,.18,.36,.16);}
+  labyrinthCarving('world',4.65,4.1,-3.142,.84,1.4);labyrinthCarving('world',3.969,3.8,-3.65,.70,1.5,'labyrinth-wall-glyph',-QUARTER);
 }
 /** C双窗塔置于上下U廊之后，左前门与右侧翻阶使用对应真实构件。 */
-function drawC(){const P=areaDef(),sink=state.automatic.cSink;const f=frameMatrix('world'),add=(kind,x,y,z,sx,sy,sz,hex=P.stone)=>{const o=renderer.add(kind,x,y,z,sx,sy,sz,hex,0,renderer.static,f);o.objectId='C-main-tower';o.owner='Cmain';return o;};add('box',0,3.5,-2.0,1.25,9.0,1.25,P.pink);add('box',0,7.9,-2.0,1.5,.35,1.5);add('labyrinth-onion-roof',0,8.06,-2,1.25,1.45,1.25);for(const dx of[-.58,.58])for(const dz of[-.58,.58]){add('box',dx,8.1,-2+dz,.25,.6,.25);add('labyrinth-onion-roof',dx,8.4,-2+dz,.34,.44,.34,P.pink);}for(const[x,z,yaw,name]of[[-.635,-1.83,-QUARTER,'c-left-hold'],[.18,-1.365,0,'c-right-hold']]){const lit=state.plates[name].occupied,o=renderer.add('cyl',x,7.13,z,.24,.025,.24,lit?0xffee97:0x594b59,yaw,renderer.static,f,QUARTER);o.objectId='C-window-'+name;o.occludes=true;}
+function drawC(){const P=areaDef(),sink=state.automatic.cSink;const f=frameMatrix('world'),add=(kind,x,y,z,sx,sy,sz,hex=P.stone)=>{const o=renderer.add(kind,x,y,z,sx,sy,sz,hex,0,renderer.static,f);o.objectId='C-main-tower';o.owner='Cmain';o.color[3]=2;return o;};
+  // 上塔两面的细窗是石面真实缺口，拆分范围保持在原塔体包围盒内，不扩入倒挂轨道。
+  add('box',0,2.525,-2,1.25,7.05,1.25,P.pink);add('box',.14,6.975,-2.175,.97,1.85,.90,P.pink);
+  for(const[x,w]of[[-.2525,.745],[.4325,.385]])add('box',x,6.975,-1.475,w,1.85,.20,P.pink);
+  for(const[y,h]of[[6.10,.10],[7.30,1.20]])add('box',.18,y,-1.475,.12,h,.20,P.pink);
+  for(const[z,d]of[[-2.2625,.725],[-1.5775,.405]])add('box',-.57,6.975,z,.11,1.85,d,P.pink);
+  for(const[y,h]of[[6.10,.10],[7.30,1.20]])add('box',-.57,y,-1.84,.11,h,.12,P.pink);
+  // 中央洋葱顶在原锚点上加高，周边改细柱小尖顶；最低新冠部7.81，高于图腾保守扫掠7.051。
+  add('box',0,7.9,-2.0,1.5,.35,1.5);add('labyrinth-onion-roof',0,8.06,-2,1.55,2.15,1.55);for(const dx of[-.58,.58])for(const dz of[-.58,.58]){add('box',dx,8.16,-2+dz,.10,.70,.10);add('labyrinth-onion-roof',dx,8.51,-2+dz,.18,.25,.18,P.pink);}for(const[x,z,yaw,name]of[[-.635,-1.83,-QUARTER,'c-left-hold'],[.18,-1.365,0,'c-right-hold']]){const lit=state.plates[name].occupied,o=renderer.add('cyl',x,7.13,z,.24,.025,.24,lit?0xffee97:0x594b59,yaw,renderer.static,f,QUARTER);o.objectId='C-window-'+name;o.occludes=true;}
+  // 窄塔冠和方石檐贴在原顶盖，四个小葱顶保留，远离人物及两侧图腾滑轨。
+  for(const side of[-1,1])for(let i=0;i<3;i++){add('box',-.45+i*.45,8.16,-2+side*.69,.16,.20,.14);add('box',side*.69,8.16,-2.45+i*.45,.14,.20,.16);}
   for(const x of[-.9,.9])solid('C-button-pillar','world',x,.83,-.65,ROAD,5.66,ROAD,P.pink);
   // 右拱后退到最终横轨之外，拱腿不占用翻正图腾去右按钮的实体通道。
-  arch('C-upper-left-arch','world',-1.7,1.1,-1.9,2.15,4.6,.25,QUARTER);arch('C-upper-right-arch','world',1.36,1.1,-2.05,2.15,4.6,.22,QUARTER);
+  arch('C-upper-left-arch','world',-1.7,1.1,-1.9,2.15,2.38,.25,QUARTER);arch('C-upper-right-arch','world',1.36,1.1,-2.05,2.15,2.38,.22,QUARTER);
   // 门叶开启后收至高位通道完整身高以上，原门洞和左侧高按钮的真实通路都保留净空。
   doorway('Cdoor',-2.8,1,2,0);solid('C-door-leaf','Cdoor',-2.8,1.6+3.22*state.automatic.cDoor,2.02,.72,1.2,.024,0x42b3bb);solid('C-door-wall','Cdoor',-2.8,-.8,2.25,.62,3.6,.4,P.pink);
-  solid('C-tower-flagpole','world',0,9.6,-2,.025,1.1,.025,0xffe1a2);renderer.add('box',.5,9.93,-2,1.0,.17,.018,0xffefd3,.04*Math.sin(elapsed*1.7),renderer.static,f).occludes=false;
+  solid('C-tower-flagpole','world',0,9.6,-2,.025,1.1,.025,0xffe1a2);renderer.add('labyrinth-narrow-flag',0,9.96,-2,1.65,1,1,0xffefd3,.04*Math.sin(elapsed*1.7),renderer.static,f).occludes=false;
+  labyrinthCarving('world',0,5.0,-1.365,.9,1.2);labyrinthCarving('world',-.636,5.0,-2,.9,1.2,'labyrinth-wall-glyph',-QUARTER);
 }
 /** D十字桥下有旋柄；远端斜阶与最终升起的旗门塔均为独立实体。 */
 function drawD(){const P=areaDef();const mist=renderer.add('box',0,-1.31,0,80,.32,80,0x8dc7b4,0,renderer.static);mist.decorative=true;mist.occludes=false;for(const[x,z,top]of[[-3,1.7,3.48],[-2.4,0,1],[0,-2.4,1],[2.4,-1.6,4.18]])solid('D-high-pier','world',x,(top-3)/2,z,ROAD,top+3,ROAD,P.pink);arch('D-turn-bridge-arch','Dbridge',0,-.6,0,3.3,1.25,.32,0,P.pink);solid('D-axis','Dbridge',0,.3,0,.3,1.0,.3,0xbc6b54);
+  // 雾色与B区一致，旋桥底下的青绿十字仍通过真实深度显示。
+  mist.color[3]=2;
+  // 青绿十字与四个红端块位于旋桥底下，全部继承Dbridge；不占用图腾底面或外部承托面。
+  solid('D-under-cyan-cross','Dbridge',0,-.28,0,.23,.18,1.7,0x5d958c);solid('D-under-cyan-cross','Dbridge',0,-.28,0,1.7,.18,.23,0x5d958c);
+  for(const[x,z]of[[-.85,0],[.85,0],[0,-.85],[0,.85]])solid('D-under-red-end','Dbridge',x,-.25,z,.28,.24,.28,P.pink);
   solid('D-lift-pillar','Dlift',0,-.6,-3.6,.62,3.2,.62,P.pink);solid('D-final-tower','Dtower',0,2.55,-5.75,.8,5.6,.75,P.pink);solid('D-door-landing','Dtower',0,5.59,-5.455,.62,.18,1.09);doorway('Dtower',0,5.68,-5.6);solid('D-tower-cap','Dtower',0,7.07,-5.75,1.05,.25,1.0);renderer.add('labyrinth-onion-roof',0,7.2,-5.75,.75,.95,.75,P.pink,0,renderer.static,frameMatrix('Dtower'));const landing=solid('D-return-landing','Dreveal',0,3.57,1.2,ROAD,THICK,ROAD);landing.walk={id:'D-return-landing',owner:'Dreveal',edges:[[ids.D['d-return-high'],ids.D['d-return-low']],[ids.D['d-return-low'],ids.D['d-return-south']]],enabled:true,kind:'road'};solid('D-revealed-long-wall','Dreveal',3.6,1,-.8,.35,6,2.5,P.pink);for(let i=0;i<6;i++)solid('D-revealed-wall-window','Dreveal',3.415,2.6,-1.8+i*.4,.025,.42,.12,0x854b4b,false);solid('D-lowering-control-column','Dcontrol',-.54,1.0,-3.6,.26,1.6,.62,P.pink);for(let i=0;i<4;i++){const h=renderer.add('cyl',-.678,.55+i*.3,-3.6,.095,.025,.095,0xf7b077,0,renderer.static,frameMatrix('Dcontrol'),0,QUARTER);h.objectId='D-lift-circular-handle';h.owner='Dcontrol';}
+  // 门塔的孔列与壁画沿Dtower共同升出，反向升降控制柱仍保留原四孔和局部坐标。
+  for(let i=0;i<4;i++){const y=1.65+i*.52;renderer.add('cyl',-.408,y,-5.75,.16,.012,.16,0xb96555,0,renderer.static,frameMatrix('Dtower'),0,QUARTER).occludes=false;renderer.add('cyl',-.415,y,-5.75,.105,.012,.105,0x714c50,0,renderer.static,frameMatrix('Dtower'),0,QUARTER).occludes=false;}
+  labyrinthCarving('Dtower',0,3.60,-5.367,.57,1.15);labyrinthCarving('Dreveal',3.414,1.05,-.80,1.7,1.4,'labyrinth-door-mural',-QUARTER,0xad7a65);
 }
 /** E横贯外墙、门洞与独立阳台保留原作离别位置，海面几何不参与人物拾取。 */
 function drawE(){const P=areaDef();
@@ -1027,11 +1093,20 @@ function drawE(){const P=areaDef();
   solid('E-low-opening-lintel','world',.72,3.875,-1.38,.84,3.85,.9,P.pink);
   solid('E-low-opening-floor','world',.72,-.75,-1.95,.84,.2,2.1,P.pink);
   solid('E-low-opening-dark','world',.72,.65,-3.4,.76,2.55,.015,0x5b626e,false);
-  for(let row=0;row<7;row++)for(let col=0;col<18;col++){const x=-5.9+col*.68+(row%2)*.2,y=.2+row*.75;if(Math.abs(x-.72)<.53&&y<1.95)continue;solid('E-stone-line','world',x,y,-.918,.62,.022,.018,0xf9a287,false);}
+  // 外墙使用原图错位方纹；低门和高门附近保留既有真实缺口，图腾离门时不贴到装饰面。
+  for(let row=0;row<3;row++)for(let col=0;col<7;col++){const x=-5.4+col*1.65+(row%2)*.10,y=.70+row*1.62;if(Math.abs(x-.72)<1.0&&y<2.5)continue;labyrinthCarving('world',x,y,-.918,1.30,1.30,'labyrinth-wall-glyph',0,0xc97965);}
   doorway('world',2.4,5.4,-.72);for(let i=0;i<20;i++){const x=-6+i*.66;if(Math.abs(x-2.4)>.9)solid('E-battlement','world',x,6.0,-1.38,.35,.35,.9);}
   const platform=solid('goal-platform','Ebalcony',.72,5.31,.45,1.72,.18,.84);platform.walk={id:'goal-platform',owner:'Ebalcony',edges:[[ids.E['e-platform-entry'],ids.E['e-platform-corner']],[ids.E['e-platform-corner'],ids.E.goal]],enabled:true,kind:'road'};
-  solid('E-balcony-column','Ebalcony',.72,2.33,-.55,.84,5.96,.55);arch('E-balcony-open-arch','Ebalcony',.75,3.75,.1,1.65,1.5,.2,QUARTER);
-  solid('E-flag-pole','Ebalcony',-.28,6.04,.45,.025,1.28,.025,0xffe4bb);renderer.add('box',-.02,6.52,.45,.52,.18,.018,0xffead0,.05*Math.sin(elapsed*1.8),renderer.static,frameMatrix('Ebalcony')).occludes=false;
+  // 阳台由两窄墩和真实开拱承托；全部子件继承Ebalcony，离别下沉和漂移时不会留在墙边。
+  for(const x of[.09,1.35])solid('E-balcony-column','Ebalcony',x,2.33,.45,.28,5.96,.55);
+  arch('E-balcony-open-arch','Ebalcony',.72,3.80,.45,1.54,1.51,.84,0);
+  solid('E-balcony-front-parapet','Ebalcony',.72,5.48,.845,1.72,.16,.055);
+  solid('E-balcony-back-parapet','Ebalcony',.72,5.465,.025,1.72,.13,.055);
+  solid('E-balcony-left-parapet','Ebalcony',-.11,5.465,.45,.055,.13,.79);
+  for(let i=0;i<5;i++)solid('E-balcony-parapet-tooth','Ebalcony',-.03+i*.35,5.61,.845,.10,.10,.065);
+  // 墙前两窄柱固定在world，低门仍可让完整图腾转出；柱底不延伸到落水后游离的范围。
+  for(const x of[-.06,1.42]){solid('E-wall-narrow-pillar','world',x,2.40,-.65,.24,6.0,.35);solid('E-wall-pillar-cap','world',x,5.49,-.65,.29,.18,.40);for(let i=0;i<10;i++)solid('E-pillar-joint','world',x,-.30+i*.58,-.468,.22,.013,.008,0xf1ab82,false);}
+  solid('E-flag-pole','Ebalcony',-.28,6.04,.45,.025,1.28,.025,0xffe4bb);renderer.add('labyrinth-narrow-flag',-.28,6.55,.45,1.35,1,1,0xffead0,.05*Math.sin(elapsed*1.8),renderer.static,frameMatrix('Ebalcony')).occludes=false;
   drawLabyrinthSea();
 }
 
@@ -1120,7 +1195,10 @@ function groundSampler(actor){const f=actorFrame(actor),p=inversePoint(f,actor.p
 /** 衣摆跨实阶时仅抬髋，鞋底仍按真实踏级逐点取高。 */
 function travellerTerrainLift(ground){const a=state.traveller;if(a.climbing)return 0;const f=actorFrame(),p=inversePoint(f,a.point),local=M.trs(...p,1,1,1,a.heading);let lift=0;for(let i=0;i<16;i++){const angle=i/16*TAU,q=M.point(local,[Math.sin(angle)*BODY,0,Math.cos(angle)*BODY]);lift=Math.max(lift,ground(q[0],q[2])-p[1]);}return lift;}
 /** 本区实体/轨道/道路/按钮一次重建，动态人物与图腾随后绘制。 */
-function drawArchitecture(){renderer.static=[];renderer.dynamic=[];drawBackground();({A:drawA,B:drawB,C:drawC,D:drawD,E:drawE})[state.area]();drawRails();drawRoads();drawLadders();drawPlates();drawHandles();if(state.area!=='E')drawTotem();}
+function drawArchitecture(){renderer.static=[];renderer.dynamic=[];drawBackground();({A:drawA,B:drawB,C:drawC,D:drawD,E:drawE})[state.area]();drawRails();drawRoads();drawLadders();drawPlates();drawHandles();
+  // 仅红遗迹的建筑/道路使用专用明亮材质；背景4、机关、窗孔及随后绘制的人物/图腾保留各自材质。
+  if(['B','C','D'].includes(state.area))for(const o of renderer.static)if(o.occludes!==false&&!o.decorative&&!o.objectId?.startsWith('handle-')&&!o.objectId?.startsWith('C-window-')&&o.objectId!=='door-shadow')o.color[3]=3;
+  if(state.area!=='E')drawTotem();}
 /** 终点图案读取既定标记；离别图腾从低墙口转出短落，再入水追随真实漂离阳台。 */
 function drawEnding(){if(state.area!=='E')return;const f=frameMatrix('Ebalcony'),goal=areaDef().nodes[ids.E.goal].local;for(let layer=0;layer<3;layer++){const size=.52-layer*.13;for(let side=0;side<4;side++)renderer.add('box',goal[0]+Math.sin(side*QUARTER)*size/2,goal[1]+.0003,goal[2]+Math.cos(side*QUARTER)*size/2,size,.0006,.016,state.won?0xfff3cb:0xf9bd8c,side*QUARTER,renderer.dynamic,f).occludes=false;}
   if(state.won){
