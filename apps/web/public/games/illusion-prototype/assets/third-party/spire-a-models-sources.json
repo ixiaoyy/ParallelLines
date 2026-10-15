@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "output": {
+    "path": "assets/spire-a-models.js",
+    "sha256": "a96ffcba5f990d919a70df413ed8d78fc00711b8e2e3e41198cbc891e3115bc6",
+    "bytes": 98942
+  },
+  "models": [
+    {
+      "name": "TowerTopper",
+      "triangles": 316,
+      "parts": 2,
+      "height": 1.6303567,
+      "width": 1
+    },
+    {
+      "name": "JustLegs",
+      "triangles": 32,
+      "parts": 1,
+      "height": 2.5810599,
+      "width": 1
+    },
+    {
+      "name": "rock_tallC",
+      "triangles": 37,
+      "parts": 3,
+      "height": 1.7162332549456984,
+      "width": 1
+    },
+    {
+      "name": "rock_tallH",
+      "triangles": 78,
+      "parts": 3,
+      "height": 1.0706521739130435,
+      "width": 1
+    },
+    {
+      "name": "rock_tallJ",
+      "triangles": 42,
+      "parts": 3,
+      "height": 1.1519174781182129,
+      "width": 1
+    }
+  ],
+  "mixAndJam": {
+    "repository": "https://github.com/MixAndJam/MonumentValley-LevelDesign",
+    "commit": "265bd4d6100dfddd7cdf6ff403339b3bc37f8dba",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2019 Mix and Jam",
+    "assetCredit": "Max Turnbull (MaxTurnbull asset directory)",
+    "assetSourceURL": "https://github.com/MixAndJam/MonumentValley-LevelDesign/tree/265bd4d6100dfddd7cdf6ff403339b3bc37f8dba/Assets/MaxTurnbull/MonumentValleyFiles",
+    "sourceFiles": [
+      {
+        "path": "Assets/MaxTurnbull/MonumentValleyFiles/Props/TowerTopper.fbx",
+        "source": "MixAndJam/MonumentValley-LevelDesign",
+        "bytes": 35052,
+        "sha256": "efc8084be1f3a20a435a486abb79a257144f51cbb20bd3817d898bbc21564835"
+      },
+      {
+        "path": "Assets/MaxTurnbull/MonumentValleyFiles/Props/JustLegs.fbx",
+        "source": "MixAndJam/MonumentValley-LevelDesign",
+        "bytes": 23036,
+        "sha256": "1ecfc397eb1e9c1ec4091a54de21e538d4e7b9a68767d41aa9adb33c64d383c8"
+      },
+      {
+        "path": "Assets/MaxTurnbull/MonumentValleyFiles/Textures/ColourAtlas.png",
+        "source": "MixAndJam/MonumentValley-LevelDesign",
+        "bytes": 3385,
+        "sha256": "37f27d2d3ffded1fabc99ea8c29b95a92334142951a45cb9fb3700ba40b709a3"
+      },
+      {
+        "path": "LICENSE",
+        "source": "MixAndJam/MonumentValley-LevelDesign",
+        "bytes": 1089,
+        "sha256": "045ba8b2e8bf091b118b77a01b9cd12a059609048590175aaccfb6f7d4e4000f"
+      }
+    ]
+  },
+  "kenney": {
+    "author": "Kenney",
+    "package": "Nature Kit",
+    "version": "2.1",
+    "license": "CC0 1.0",
+    "sourceURL": "https://kenney.nl/assets/nature-kit",
+    "downloadURL": "https://kenney.nl/media/pages/assets/nature-kit/37ac38a37b-1677698939/kenney_nature-kit.zip",
+    "archiveSHA256": "fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d",
+    "archiveBytes": 10537521,
+    "repositoryCommit": null,
+    "sourceFiles": [
+      {
+        "path": "Models/OBJ format/rock_tallC.obj",
+        "source": "Kenney Nature Kit 2.1",
+        "bytes": 3359,
+        "sha256": "b4ed484c620734c67675ddbfca5273a6e253490d795aa617acbf79ccf9cbcfa2"
+      },
+      {
+        "path": "Models/OBJ format/rock_tallC.mtl",
+        "source": "Kenney Nature Kit 2.1",
+        "bytes": 169,
+        "sha256": "e866ef7615bf6de9e3ae697d05275cc6bc31145bec66f74af8a44bebd5536fe9"
+      },
+      {
+        "path": "Models/OBJ format/rock_tallH.obj",
+        "source": "Kenney Nature Kit 2.1",
+        "bytes": 7119,
+        "sha256": "09c25bbf3b1d9899e84f4ba65f3a4f99dad5018b1232fbc3e936124c36872522"
+      },
+      {
+        "path": "Models/OBJ format/rock_tallH.mtl",
+        "source": "Kenney Nature Kit 2.1",
+        "bytes": 169,
+        "sha256": "db75535695bc97d26e50a03f55306f04938b123f0fc3622cac4ac15e5ef27ab8"
+      },
+      {
+        "path": "Models/OBJ format/rock_tallJ.obj",
+        "source": "Kenney Nature Kit 2.1",
+        "bytes": 4030,
+        "sha256": "b4ab81da6deb95fdf40eb22316644ac5f668823f3c802863f170b43fc5e9570c"
+      },
+      {
+        "path": "Models/OBJ format/rock_tallJ.mtl",
+        "source": "Kenney Nature Kit 2.1",
+        "bytes": 169,
+        "sha256": "8cc6d636a5cfd5ebbe6f51c11fa8566b7cb78141ae697b14a665e623575751e5"
+      },
+      {
+        "path": "License.txt",
+        "source": "Kenney Nature Kit 2.1",
+        "bytes": 611,
+        "sha256": "cb96b75e3560ac78d7a53ce6f083f4cdb5c53faea6141b62d63458dcfe1e4b9d"
+      }
+    ]
+  },
+  "notOfficialUstwoAssets": true,
+  "conversion": {
+    "parser": "Project-authored bounded offline FBX 7400 / PNG / OBJ / MTL data parser; no source code or Unity plugins executed.",
+    "normalization": "Apply original FBX local TRS; center XZ; lowest Y to 0; divide all axes by max X/Z span.",
+    "normals": "Preserve and normalize authored normals; inverse-transpose of FBX nonuniform scale applied.",
+    "colors": "TowerTopper uses raw uniform atlas RGB before Unity tint; JustLegs has no source material and is explicit grey; rock parts preserve usemtl grouping and MTL Kd RGB.",
+    "data": "Non-indexed triangles; interleaved px,py,pz,nx,ny,nz; no runtime parsing/dependency.",
+    "knownSourceIssue": "rock_tallH source face 51 is a zero-area triangle. It is retained unchanged and reported in sourceZeroAreaFaces; all other selected models have zero degenerate triangles.",
+    "windingAdjustment": "rock_tallC has one extremely thin source triangle whose winding opposes its authored normals after OBJ decimal truncation. Its corner order is reversed without moving vertices; affected source face numbers are in windingAdjustedFaces.",
+    "adaptation": "Pole widths increased inward by 25 percent at unchanged outer XZ bounds and height; normals use inverse transpose; authored faces retained. Center clearance exceeds the full traveller body width."
+  },
+  "validation": [
+    {
+      "name": "TowerTopper",
+      "degenerateTriangles": 0,
+      "windingAdjustedFaces": []
+    },
+    {
+      "name": "JustLegs",
+      "degenerateTriangles": 0,
+      "windingAdjustedFaces": []
+    },
+    {
+      "name": "rock_tallC",
+      "degenerateTriangles": 0,
+      "windingAdjustedFaces": [
+        7
+      ]
+    },
+    {
+      "name": "rock_tallH",
+      "degenerateTriangles": 1,
+      "windingAdjustedFaces": []
+    },
+    {
+      "name": "rock_tallJ",
+      "degenerateTriangles": 0,
+      "windingAdjustedFaces": []
+    }
+  ]
+}
