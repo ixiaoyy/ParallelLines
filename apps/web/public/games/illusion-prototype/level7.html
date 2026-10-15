@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <title>回廊彼岸 · 第七关：乌鸦巢</title>
   <style>
@@ -30,6 +30,8 @@
 
 
 
+    /* 整页触控由关卡处理，避免双击或双指手势触发浏览器缩放。 */
+    html,body{touch-action:none}
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     .prototype{height:100vh;height:100dvh}
     .restart,.sound,.previous-level,.next-level{touch-action:manipulation}
@@ -683,28 +685,86 @@ function drawPlate(p){const n=N(p.name),active=p.mode==='once'?!!state.flags['pl
 function drawHandles(){for(const[id,g]of Object.entries(groups)){if(g.area!==state.area)continue;const p=handlePoint(id),f=M.trs(...p,1,1,1),tone=state.area==='E'?0xf1c5a9:0xe29c94;if(id==='Ar'){for(let i=0;i<4;i++)renderer.add('box',Math.sin(i*QUARTER)*.24,0,Math.cos(i*QUARTER)*.24,.16,.12,.16,tone,0,renderer.static,f);}else{for(let i=0;i<3;i++)renderer.add('cyl',(i-1)*.15,0,0,.085,.025,.085,0xf6f0de,0,renderer.static,f,QUARTER);}}}
 /** 返回机关的世界操作点；随整体转场转动，回落柄按真实下拉行程移动。 */
 function handlePoint(id){if(id==='Bs')return M.point(frameMatrix('Bs'),[0,-.20,.34]);if(id==='Cwall')return[0,.25-state.groups.Cwall.q*.8,1.9];if(id==='Et')return M.point(frameMatrix('Et'),groups.Et.handle);return groups[id].handle;}
+/** 登记原旗塔的四面尖冠和圆窗内缘；仅复用本页绘制器，无道路、状态或外部资源。 */
+function installRookeryArchitectureMeshes(){
+ if(renderer.geometries['rookery-flag-roof'])return;
+ const triangle=(out,a,b,c)=>{const u=b.map((v,i)=>v-a[i]),v=c.map((n,i)=>n-a[i]),n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],length=Math.hypot(...n);if(length<1e-9)return;for(const p of[a,b,c])out.push(...p,...n.map(x=>x/length));};
+ const roof=[],corners=[[-.5,0,-.5],[-.5,0,.5],[.5,0,.5],[.5,0,-.5]];
+ for(let i=0;i<4;i++)triangle(roof,corners[i],corners[(i+1)%4],[0,1,0]);
+ triangle(roof,corners[0],corners[2],corners[1]);triangle(roof,corners[0],corners[3],corners[2]);
+ renderer.createGeometry('rookery-flag-roof',new Float32Array(roof));
+ const ring=[];
+ // 圆窗中部是真实空腔；环的前后面及内缘均保留实体，不用关闭遮挡的黑圆片冒充孔。
+ for(let i=0;i<16;i++){const a=i/16*TAU,b=(i+1)/16*TAU,p=(angle,r,z)=>[Math.cos(angle)*r,Math.sin(angle)*r,z];
+  for(const z of[-.5,.5]){const q=[p(a,.5,z),p(b,.5,z),p(b,.32,z),p(a,.32,z)];if(z<0)q.reverse();triangle(ring,q[0],q[1],q[2]);triangle(ring,q[0],q[2],q[3]);}
+  for(const r of[.32,.5]){const q=[p(a,r,-.5),p(a,r,.5),p(b,r,.5),p(b,r,-.5)];if(r===.32)q.reverse();triangle(ring,q[0],q[1],q[2]);triangle(ring,q[0],q[2],q[3]);}
+ }
+ renderer.createGeometry('rookery-window-ring',new Float32Array(ring));
+}
+/** 把既有方墙分割成带真实矩形窗的片体；开口为本地XY坐标，原owner、外边界和厚度保持。 */
+function rookeryWindowWall(owner,id,x,y,z,width,height,depth,openings,tone,rotation=0){
+ const xs=[-width/2,width/2],ys=[-height/2,height/2];for(const[a,b,w,h]of openings){xs.push(a-w/2,a+w/2);ys.push(b-h/2,b+h/2);}
+ const cuts=(values,limit)=>[...new Set(values.filter(v=>v>=-limit&&v<=limit))].sort((a,b)=>a-b),xx=cuts(xs,width/2),yy=cuts(ys,height/2),f=M.mul(frameMatrix(owner),M.trs(x,y,z,1,1,1,rotation));
+ // 每片都在原墙包围范围内；窗只能去掉旧体积，不能侵占角色或机关原有净空。
+ for(let row=0;row<yy.length-1;row++)for(let col=0;col<xx.length-1;col++){const a=(xx[col]+xx[col+1])/2,b=(yy[row]+yy[row+1])/2;if(openings.some(([px,py,w,h])=>Math.abs(a-px)<w/2&&Math.abs(b-py)<h/2))continue;
+  const o=renderer.add('box',a,b,0,xx[col+1]-xx[col],yy[row+1]-yy[row],depth,tone,0,renderer.static,f);Object.assign(o,{owner,id:id+'-'+row+'-'+col,occludes:true});
+ }
+}
+/** 添加本关既有镂空拱网格；bottom为拱底，所有体积保留指定owner且不新增行走面。 */
+function rookeryArch(owner,id,x,bottom,z,width,height,depth,tone,rotation=0){return solid(owner,id,'spire-open-arch',x,bottom,z,width,height,depth,tone,rotation);}
+/** 旗塔仍使用原门洞和门基，只有冠顶采用原图尖锥轮廓；不改变门触发点。 */
+function rookeryFlagTower(owner,id,p,rotation=0,tone=areaDef().accent){
+ installRookeryArchitectureMeshes();doorway(owner,id,p,rotation,false);
+ const f=M.mul(frameMatrix(owner),M.trs(...p,1,1,1,rotation));
+ for(const[kind,x,y,z,sx,sy,sz,hex]of[['box',0,1.55,0,1.04,.22,.64,areaDef().stone],['rookery-flag-roof',0,1.68,0,.96,1.12,.96,tone]]){const o=renderer.add(kind,x,y,z,sx,sy,sz,hex,0,renderer.static,f);Object.assign(o,{owner,id:id+'-crown',occludes:true});}
+}
+
 /** A 的旗塔、长阶围墙与乌鸦列保持与低层入口同场。 */
 function architectureA(){
- const d=areaDef();for(const[x,y,z]of[[-2.45,2,1.6],[2.5,0,1.6]]){solid('world','A-column','box',x,y-1.8,z,.64,3.4,.64,d.stone);for(const dx of[-.22,.22])solid('world','A-column-foot','box',x+dx,y-3.9,z,.045,1.1,.045,d.stone);}
+ const d=areaDef();
+ // 两座固定门柱保持原边界，只在远离道路的一侧切出窄窗，粉色双层转路仍独立旋转。
+ for(const[x,y,z]of[[-2.45,2,1.6],[2.5,0,1.6]]){rookeryWindowWall('world','A-column',x,y-1.8,z,.64,3.4,.64,x<0?[[0,.35,.075,.40],[.24,.12,.34,.54]]:[[0,.35,.075,.40]],d.stone);for(const dx of[-.22,.22])solid('world','A-column-foot','box',x+dx,y-3.9,z,.045,1.1,.045,d.stone);}
  solid('Ar','A-spindle','box',0,-.65,0,.14,1.3,.14,0x899895);
- for(let i=0;i<11;i++){const t=i/10,p=[-1.98,4*t,1.6-t*6];solid('world','A-stair-wall','box',p[0],p[1]-.65,p[2],.18,1.3,.48,d.stone);if(i%2===0)idleBird('world',[p[0],p[1]+.02,p[2]],-QUARTER);}
- doorway('world','A-exit',N('a-door').p,0,true);flag('world',-1.6,6.6,-5,0xea7b85);
+ // 原侧墙边界不变，鸟列只在向外相连的局部墙帽上站立，避免整墙增厚侵入转路的携带扫掠面。
+ // 第三只守鸟原位进入灰上桥整圈扫掠，仅将该鸟向外移至真实网格净空界外；低墙帽实接原阶墙，脚高和其余鸟不变。
+ for(let i=0;i<11;i++){const t=i/10,p=[-1.98,4*t,1.6-t*6];solid('world','A-stair-wall','box',p[0],p[1]-.65,p[2],.18,1.3,.48,d.stone);if(i%2===0){if(i===4)solid('world','A-bird-perch','box',-2.435,p[1]-.03,p[2],.91,.10,.30,d.stone);else solid('world','A-bird-perch','box',-2.10,p[1]-.03,p[2],.28,.10,.30,d.stone);idleBird('world',[i===4?-2.75:-2.10,p[1]+.02,p[2]],-QUARTER);}}
+ // 连续外墙保留低转路完整身体经过的真实横向空腔，不能只按脚点或整数停位避让。
+ for(const[a,b]of[[N('a-white-low').p,N('a-white-top').p],[N('a-exit-port').p,N('a-exit-stair').p]])for(let i=0;i<16;i++){const t=(i+.5)/16,p=mix(a,b,t),length=Math.abs(b[2]-a[2])/16,bottom=p[1]-1.32,top=p[1]-.20;for(const[lo,hi]of[[bottom,Math.min(top,0)],[Math.max(bottom,.66),top]])if(hi>lo)solid('world','A-continuous-stair-wall','box',-2.12,(lo+hi)/2,p[2],.09,hi-lo,length+.012,d.stone);}
+ rookeryFlagTower('world','A-exit',N('a-door').p,0,0xe791a0);flag('world',-1.6,6.6,-5,0xea7b85);
  solid('Ar','A-link-support','box',0,.75,-1.6,.12,1.5,.12,0x899895);
-}
-/** B 两根细柱保留上层乌鸦按钮和中段灰色 L 腰身，视角切换转动整个场景。 */
+}/** B 两根细柱保留上层乌鸦按钮和中段灰色 L 腰身，视角切换转动整个场景。 */
 function architectureB(){
- const d=areaDef();for(const[x,z,h]of[[-3.6,-.6,5.8],[3.6,-.6,5.8]]){solid('Broot','B-tower','box',x,2.2,z,.55,7.2,.55,d.stone);for(let j=0;j<3;j++)solid('Broot','B-slit','box',x,1+j*1.5,z+.281,.07,.30,.012,0x7b8b91);const end=[Math.sign(x)*2.4,5.8,0],dx=end[0]-x,dz=end[2]-z;solid('Broot','B-top-cantilever','box',(x+end[0])/2,5.71,(z+end[2])/2,.55,.18,Math.hypot(dx,dz),d.stone,Math.atan2(dx,dz));}
- for(const owner of['Bl','Br']){solid(owner,'B-rotor-upright','box',0,1.05,0,.62,2.1,.62,0x849596);solid(owner,'B-rotor-window','box',0,.95,.316,.065,.30,.012,0x566a74);}
- for(const x of[-.22,.22])solid('Broot','B-arch-leg','box',x,-.1,0,.05,2.2,.08,d.stone);
- if(state.flags.bTurned)doorway('Broot','B-exit',N('b-door').p,QUARTER,true);
-}
-/** 雨中双悬塔高度由同一开门值反向驱动；底部回落柄通过实体挡墙拦鸟。 */
+ const d=areaDef();installRookeryArchitectureMeshes();
+ // 固定白塔对准真实灰腰枢轴，底段在道路下方，顶部承接原乌鸦按钮；不改Bl/Br的轴或任何投影接口。
+ for(const[owner,x,z,pivot,head,end]of[['Br',0,0,2,4.1,[2.4,5.8,0]],['Bl',-1.2,-2,3.2,5.3,[-2.4,5.8,0]]]){
+  if(owner==='Br')for(let i=0;i<3;i++)rookeryArch('Broot','B-lower-three-arches',x+(i-1)*.205,-1.3,z,.205,pivot+1.12,.19,d.stone);
+  else{
+   // 右转路携人经过左塔脚时有完整贯通腔；后侧窄扶壁在整圈身体扫掠半径外承托上段，不移动左塔枢轴。
+   rookeryWindowWall('Broot','B-left-fixed-stem',x,(pivot-1.48)/2,z,.62,pivot+1.12,.62,[[0,.15,.07,.45],[0,1.45,.64,1.10]],d.stone);
+   solid('Broot','B-left-rear-buttress','box',x,(pivot-1.48)/2,z-.34,.62,pivot+1.12,.12,d.stone);
+  }
+  solid('Broot','B-fixed-upper-tower','box',x,(head+5.8)/2,z,.55,5.8-head,.55,d.stone);
+  const dx=end[0]-x,dz=end[2]-z;solid('Broot','B-top-cantilever','box',(x+end[0])/2,5.62,(z+end[2])/2,.52,.18,Math.hypot(dx,dz)+.12,d.stone,Math.atan2(dx,dz));
+  if(owner==='Br'){
+   // 右柱前侧留出左转路乘客的全身通道；后侧薄脊仍连接上下段，原窄窗、轴与道路不变。
+   rookeryWindowWall(owner,'B-rotor-upright',0,1.05,.02,.62,2.1,.58,[[0,.05,.075,.37],[0,.48,.64,.74]],0x849596);
+   rookeryWindowWall(owner,'B-rotor-upright-rear',0,1.05,-.29,.62,2.1,.04,[[0,.05,.075,.37]],0x849596);
+  }else rookeryWindowWall(owner,'B-rotor-upright',0,1.05,0,.62,2.1,.62,[[0,.05,.075,.37]],0x849596);
+ }
+ // 原滑块的三个圆孔置于真实踏面下的窄面板，孔和内缘都随Bs移动，不能连出新的鸟路。
+ rookeryWindowWall('Bs','B-slider-window-face',0,-.29,.32,1.45,.25,.10,[[-.4,0,.16,.16],[0,0,.16,.16],[.4,0,.16,.16]],d.stone);
+ for(const x of[-.4,0,.4])solid('Bs','B-slider-round-window','rookery-window-ring',x,-.29,.38,.16,.16,.06,0xece9d3);
+ if(state.flags.bTurned){rookeryFlagTower('Broot','B-exit',N('b-door').p,QUARTER,0xb0bec2);const p=N('b-door').p;flag('Broot',p[0],p[1]+2.7,p[2],0x70bfc5);}
+}/** 雨中双悬塔高度由同一开门值反向驱动；底部回落柄通过实体挡墙拦鸟。 */
 function architectureC(){
- const d=areaDef();solid('world','C-central-tower','box',0,2.3,-.6,1.35,6.8,1.3,d.stone);
- battlements('world','C-crown',0,5.7,-.6,1.45,1.4);doorway('world','C-throne-door',[0,5.7,-.3],0,true);flag('world',0,8.0,-.3,0x3d465b);
+ const d=areaDef();rookeryWindowWall('world','C-central-tower',0,2.3,-.6,1.35,6.8,1.3,[[-.36,-1.0,.085,.48],[.36,.4,.085,.48]],d.stone);
+ // 后排齿口降为守鸟承台；前排墙帽与原高廊相接，托住外让后的完整脚柱，不登记额外道路。
+ battlements('world','C-crown',0,5.7,-.6,1.45,1.4);for(const o of renderer.static)if(o.id==='C-crown'&&Math.abs(Math.abs(o.matrix[12])-.725)<.001&&Math.abs(o.matrix[14]+.12)<.001){o.matrix[13]-=.2;o.matrix[14]=-.2;}for(const x of[-.72,.72])solid('world','C-bird-perch','box',x,5.64,.9,.22,.12,.28,d.stone);rookeryFlagTower('world','C-throne-door',[0,5.7,-.3],0,0x708393);flag('world',0,8.0,-.3,0x3d465b);
  solid('world','C-pulley-anchor','box',0,5.3,.5,.24,.22,1.3,d.stone);solid('world','C-pulley-crossbar','box',-1.5,5.3,1.05,3.1,.22,.24,d.stone);
  for(const[owner,x]of[['Cleft',-2.5],['Cright',-.4]]){
-  solid(owner,'C-hanging-block','box',x,1.4+.68,owner==='Cleft'?.8:1.3,.95,1.36,.95,d.stone);
+  // 悬塔使用真实侧窗；右门后方保留塔体，前面原门腔始终开放。
+  if(owner==='Cleft')rookeryWindowWall(owner,'C-hanging-block',x,1.4+.68,.8,.95,1.36,.95,[[0,.1,.10,.38]],d.stone);
+  else rookeryWindowWall(owner,'C-hanging-back',x,1.4+.68,.66,.95,1.36,.95,[[0,.1,.10,.38]],d.stone);
   // 前侧留出人物过门和乌鸦往返的真实开口，齿口只围在不通行的背缘。
   for(let i=0;i<3;i++)solid(owner,'C-hanging-edge','box',x-.34+i*.34,owner==='Cright'?2.96:2.86,owner==='Cright'?.8:.3,.16,.20,.14,d.stone);
   // 链顶固定在横梁，随悬塔高度收放链长；固定前廊上的乌鸦不会被抬升构件穿过。
@@ -712,22 +772,33 @@ function architectureC(){
   for(const dx of[-.2,.2])for(let y=2.98+rise;y<5.2;y+=.19)solid('world','C-chain','box',x+dx,y,1.05,.055,.15,.055,0x795b56);
   if(owner==='Cright'){
    // 门正面留出实际空腔，悬塔主体在门脚点之后，不遮死人物入口。
-   renderer.static=renderer.static.filter(o=>!(o.owner===owner&&o.id==='C-hanging-block'));
    doorway(owner,'C-lower',N('c-lower-door').p,0,false);
   }
  }
- solid('Cwall','C-blocker','box',-1.95,.55,1.6,.22,1.05,.68,0x849299);
+ // 固定入口的短塔基和倒齿均止于踏面下，不能把原水平道路替换成额外可走阶梯。
+ solid('world','C-entry-stem','box',3.1,.47,1.6,.64,1.70,.64,d.stone);
+ for(let i=0;i<3;i++)solid('world','C-entry-stone-course','box',3.1,.23+i*.27,1.60,.67,.025,.67,0xe7d6bd);
+ // 原挡墙前侧留真实凹腔容纳等待中的白喙与头部；后脊实接两侧，导航仍沿用原q<.35条件。
+ for(const z of[1.38,1.82])solid('Cwall','C-blocker','box',-1.95,.55,z,.22,1.05,.24,0x849299);
+ solid('Cwall','C-blocker','box',-1.86,.55,1.6,.04,1.05,.68,0x849299);
  for(const x of[-.17,.17])solid('world','C-upper-bridge','box',x,4.9,.5,.06,1.4,.08,d.stone);
  // 空王座及四只守鸟位于真正经过的上层平台，皇冠只作墙面纹样。
- for(const[x,z,h]of[[-.72,-.2,0],[.72,-.2,Math.PI],[-.72,.5,0],[.72,.5,Math.PI]])idleBird('world',[x,5.7,z],h);
+ // 四鸟仍在王座两侧分为前后两排；仅前排外让.4，腾出人物去右门的既有高廊，后排与朝向保持。
+ for(const[x,z,h]of[[-.72,-.2,0],[.72,-.2,Math.PI],[-.72,.9,0],[.72,.9,Math.PI]])idleBird('world',[x,5.7,z],h);
  for(let i=0;i<3;i++)solid('world','C-crown-mark','box',(i-1)*.10,6.6+(i===1?.08:0),-.125,.075,.13,.014,0xf7df9b);
- doorway('world','C-upper-exit',N('c-upper-door').p,0,false);
+ // 出口左柱退到原位守鸟的完整身外，门触发点、后壁与人物入口不变。
+ solid('world','C-upper-exit','box',.94,6.34,-.2,.12,1.28,.30,d.stone);solid('world','C-upper-exit','box',1.63,6.34,-.2,.18,1.28,.30,d.stone);
+ solid('world','C-upper-exit','box',1.2,7.06,-.2,1.04,.18,.32,d.stone);solid('world','C-upper-exit','box',1.2,6.32,-.52,.68,1.24,.025,0x344152);
  // 雨丝数量固定，切后台不补算雨滴或产生无限对象。
  for(let i=0;i<32;i++){const x=-4+(i*1.37)%8,z=-2+(i*.81)%5,y=8-((elapsed*1.6+i*.33)%9);const o=solid('world','rain','box',x,y,z,.009,.24,.009,0xa7b6c2,0,0,-.3);o.occludes=false;}
 }
 /** 暗室的 U 廊与上方三角互不形成导航；人物必须攀梯抵达说书人。 */
 function architectureD(){
- const d=areaDef();for(const x of[-1,1])solid('world','D-pillar','box',x,.6,-.8,.45,3.5,.45,d.stone);
+ const d=areaDef();
+ // U廊下的实体拱接住现有薄路，顶部严格止于道路底；左前梯口保留完整身体通过的缺口。
+ rookeryArch('world','D-continuous-under-arch',0,-1.15,-.8,2.45,3.37,.38,d.stone);
+ rookeryWindowWall('world','D-left-wall',-1,-.05,-.32,1.04,2.24,.42,[[0,0,.10,.36]],d.stone,QUARTER);
+ rookeryWindowWall('world','D-right-wall',1,-.05,-.10,1.48,2.24,.42,[[0,0,.10,.36]],d.stone,QUARTER);
  doorway('world','D-entry',N('d-entry-door').p,Math.PI,false);
  doorway('world','D-exit',N('d-exit').p,-QUARTER,false);
  // 三条正交梁的首尾沿观察射线重合，形成景观彭罗斯三角；这里不登记任何可走面或跨深度通路。
@@ -740,26 +811,73 @@ function architectureD(){
 }
 /** 紫色末城保留水院、断层长墙、王座高塔与展开的红阶；道路另由实体边统一生成。 */
 function architectureE(){
- const d=areaDef();solid('Et','E-base','box',-.5,-1.1,-1.3,5.5,.65,6.6,0xcbbbd2);solid('Et','E-water','box',-.5,-.76,-1.3,4.9,.035,6.1,0x76cfd0);
- for(const[x,z,h,tone]of[[-2.7,-1,4.1,0xe6d5db],[1.5,-2.0,6.2,0xb49cce],[1.1,-5.2,7.0,0xbfa7d2]]){
-  solid('Et','E-city-wall','box',x,(h-1)/2,z,.48,h+1,1.3,tone);battlements('Et','E-battlement',x,h,z,.5,1.3,tone);
-  for(let j=0;j<Math.floor(h/1.1);j++)solid('Et','E-window','box',x-.247,j*1.15+.25,z,.012,.28,.08,0x725e8d);
- }
- // 空中阶梯下的梁只支撑已有道路；第三层柱放在端台外侧角下，避开半周停位时第二层的观察射线。
+ const d=areaDef();
+ // 水院向原高台后方延伸，前缘保持在Z=2，避免埋住原Et旋钮；入口下的窄基座只承接已有路。
+ solid('Et','E-base','box',-.5,-1.1,-2.95,5.5,.65,9.9,0xcbbbd2);solid('Et','E-water','box',-.5,-.76,-2.90,4.9,.035,9.70,0x83d2ce);
+ solid('Et','E-entry-plinth','box',-1.8,-.64,2.55,.88,.62,1.20,0xded0d8);
+ // 连续开拱的城墙围住水院，内腔保留原阶梯、按钮和侧面接路；不登记任何新踏面或捷径。
+ rookeryArch('Et','E-courtyard-front-arch',-.50,-.76,-.92,5.5,2.98,.38,0xe7d7df);
+ rookeryArch('Et','E-left-long-gallery',-2.75,-.76,-3.70,6.80,7.00,.36,0xe6d5db,QUARTER);
+ rookeryArch('Et','E-right-long-gallery',2.00,-.76,-2.80,5.20,5.55,.34,0xc9b1d9,QUARTER);
+ rookeryArch('Et','E-rear-high-gallery',-1.15,-.76,-7.38,3.00,10.45,.32,0xc5abd4);
+ // 王座门塔接住原e-button台；左面退到固定鸟完整尾羽外，塔顶仍低于原道路下沿。
+ rookeryWindowWall('Et','E-central-door-tower',.65,2.71,-3.05,1.10,7.02,.28,[[0,1.15,.56,1.65]],0xb498ce);
  for(const[name,dx,dz]of[['e-mark1',0,-.3],['e-mark2',0,-.3],['e-mark3',.3,-.45],['e-button',0,0],['e-red-approach',0,-.3]]){const p=N(name).p;solid('Et','E-support-column','box',p[0]+dx,(p[1]-.5)/2,p[2]+dz,.48,p[1]+.5,.48,d.stone);}
+ // 两排独立城垛只在水院远边，所有开口留在既有按钮/角色路线之外。
+ for(const[x,z,h,tone]of[[-2.75,-1.0,4.1,0xe6d5db],[2.00,-2.0,4.79,0xc9b1d9],[-2.75,-5.2,6.24,0xe6d5db]])battlements('Et','E-gallery-crown',x,h,z,.45,1.3,tone);
+ for(const[x,z,w]of[[-.5,1.77,5.3],[-.5,-7.72,5.3]])solid('Et','E-courtyard-rim','box',x,-.30,z,w,.32,.16,0xded0dd);
+ installRookeryArchitectureMeshes();
+ for(let i=0;i<4;i++)solid('Et','E-water-court-four-holes','rookery-window-ring',-1.20+i*.46,-1.10,2.008,.15,.15,.022,0xf3e6e2);
+ // 原三对守鸟保留原位，脚下横梁接入已有柱与台板；横梁不登记可走面，也不连接新路线。
+ for(const name of['e-mark2','e-mark3','e-button']){const p=N(name).p;solid('Et','E-bird-perch-beam','box',p[0],p[1]-.09,p[2]-.30,1.12,.18,.24,d.stone);}
  if(state.auto.red>0&&state.auto.red<1){const a=N('e-red-base').p,b=N('e-red-top').p,q=state.auto.red;for(let i=0;i<14;i++){const t=(i+.5)/14,p=mix(a,b,t);solid('Et','E-unfolding-stair','box',p[0]+(1-q)*(i%2?.12:-.12),p[1]-.06-(1-q)*.8,p[2],ROAD,.12,(Math.abs(a[2]-b[2])/14)*q+.002,0xec877b);}}
- const goal=N('e-goal').p;for(const dx of[-.42,.42])for(const dz of[-.42,.42])solid('Et','E-goal-pillar','box',goal[0]+dx,goal[1]+.7,goal[2]+dz,.045,1.4,.045,0xe7d7db);
+ const goal=N('e-goal').p;
+ // 终亭不再悬空：高门塔从水院起，顶面与现有最终道路底共面，前侧为真实贯通拱。
+ rookeryArch('Et','E-final-pavilion-open-tower',goal[0],-.76,goal[2],1.12,goal[1]-.18+.76,.86,0xdccbe1);
+ for(const dx of[-.42,.42])for(const dz of[-.42,.42])solid('Et','E-goal-pillar','box',goal[0]+dx,goal[1]+.7,goal[2]+dz,.045,1.4,.045,0xe7d7db);
  solid('Et','E-goal-roof','spire-onion-roof',goal[0],goal[1]+1.45,goal[2],1.05,.75,1.05,0xeaaa8a);
- for(const[dx,dz]of[[-.35,0],[.35,0],[0,-.35],[0,.35]])solid('Et','E-goal-mark','box',goal[0]+dx,goal[1]+.012,goal[2]+dz,dx===0?.70:.014,.012,dz===0?.70:.014,0xffe6b9);
+ // 既定终点标记改为真实薄嵌条，上沿只高出台面.002，保留原中心与平面图形，归中鞋底不再撞到装饰突起。
+ for(const[dx,dz]of[[-.35,0],[.35,0],[0,-.35],[0,.35]])solid('Et','E-goal-mark','box',goal[0]+dx,goal[1]+.001,goal[2]+dz,dx===0?.70:.014,.002,dz===0?.70:.014,0xffe6b9);
  for(let i=0;i<42;i++){const p=[-6+(i*1.71)%12,1+(i*.83)%13,-7+(i*1.31)%8],o=solid('world','E-star','sphere',...p,.022,.022,.022,0xe2b9b1);o.occludes=false;}
  for(const name of['e-mark2','e-mark3','e-button']){const p=N(name).p;for(const dx of[-.4,.4])idleBird('Et',[p[0]+dx,p[1],p[2]-.3],dx>0?-QUARTER:QUARTER);}
 }
 /** 黑身白喙乌鸦的完整姿态服从支持构件，行走步相只改变腿与短尾。 */
 function drawCrow(actor,list=renderer.dynamic){
- const f=M.mul(frameMatrix(actor.owner),M.trs(...actor.local,.9,.9,.9,actor.heading)),phase=actor.gait/.42*TAU,blend=actor.blend||0;
- for(const[kind,x,y,z,sx,sy,sz,tone]of[['sphere',0,.21,0,.19,.29,.19,0x26343b],['sphere',0,.36,.015,.18,.18,.18,0x202c33],['spire-octahedron',0,.34,.15,.13,.075,.22,0xf5efe0],['spire-octahedron',0,.18,-.12,.13,.21,.15,0x26343b],['sphere',-.064,.38,.065,.033,.033,.033,0xf5efe0],['sphere',.064,.38,.065,.033,.033,.033,0xf5efe0]]){const o=renderer.add(kind,x,y,z,sx,sy,sz,tone,0,list,f);o.occludes=false;}
- for(const s of[-1,1])renderer.add('cyl',s*.045,.065,s*Math.cos(phase)*.02*blend,.018,.13,.018,0x29353a,0,list,f);
+ const f=M.mul(frameMatrix(actor.owner),M.trs(...actor.local,.9,.9,.9,actor.heading)),phase=actor.gait/.42*TAU,blend=actor.blend||0,parts=[['sphere',0,.21,0,.19,.29,.19,0x26343b],['sphere',0,.36,.015,.18,.18,.18,0x202c33],['spire-octahedron',0,.34,.15,.13,.075,.22,0xf5efe0],['spire-octahedron',0,.18,-.12,.13,.21,.15,0x26343b],['sphere',-.064,.38,.065,.033,.033,.033,0xf5efe0],['sphere',.064,.38,.065,.033,.033,.033,0xf5efe0]];
+ let bodyY=0,tailY=0,legY=[0,0];
+ // 仅校准A活动鸟在白阶及停稳真实接边上的可见站姿，不写逻辑脚点、归属、AI或速度；固定鸟与其他区原样绘制。
+ if(actor.kind==='crow'&&state.area==='A'&&['world','Ar'].includes(actor.owner)){
+  const whiteId='A-a-white-low-a-white-top',onWhite=actor.owner==='world'&&([whiteId,'A-a-white-top-a-white-high'].includes(actor.location.edge?.id)||['a-white-low','a-white-top','a-white-high'].includes(actor.location.node)),world=actorPoint(actor);
+  const nearPorts=settled('Ar')?ports().filter(p=>[p.a,p.b].some(n=>/^a-white-/.test(n))&&[p.a,p.b].some(n=>N(n).owner==='Ar')&&distance(world,point(p.a))<=ROAD/2+.14):[],atPort=actor.owner==='Ar'&&nearPorts.length>0;
+  if(onWhite||atPort){
+   // 所有候选都来自本帧真实可见的world/Ar踏面；足底之外没有踏面时返回null，不补虚拟支撑。
+   const allowed=new Set([actor.owner]);for(const p of nearPorts)for(const name of[p.a,p.b])allowed.add(N(name).owner);
+   const faces=renderer.static.filter(o=>o.walk&&o.visible!==false&&allowed.has(o.owner)).map(o=>{const b=basis(o);return{top:b.p[1],b};});
+   const floor=p=>{let top=null;for(const s of faces){if(Math.abs(s.top-world[1])>=.25)continue;const d=p.map((v,i)=>v-s.b.p[i]),u=d.reduce((sum,v,i)=>sum+v*s.b.u[i],0)/s.b.uu,v=d.reduce((sum,v,i)=>sum+v*s.b.v[i],0)/s.b.vv;if(u>=0&&u<=1&&v>=0&&v<=1)top=top===null?s.top:Math.max(top,s.top);}return top;};
+   // 只缓存原网格的独立顶点与三角索引，不缓存姿态或台面；输入是原几何类型，返回原实体拓扑。
+   const supportMesh=kind=>{const mesh=renderer.geometries[kind];if(!mesh.crowSupportMesh){const seen=new Map(),points=[],indices=[];for(let i=0;i<mesh.vertices.length;i+=6){const p=Array.from(mesh.vertices.slice(i,i+3)),key=p.join(',');if(!seen.has(key)){seen.set(key,points.length);points.push(p);}indices.push(seen.get(key));}mesh.crowSupportMesh={points,indices};}return mesh.crowSupportMesh;};
+   const feet=[];for(const side of[-1,1]){const matrix=M.mul(f,M.trs(side*.045,.065,side*Math.cos(phase)*.02*blend,.018,.13,.018));let top=null;for(const p of supportMesh('cyl').points)if(p[1]<=-.5+1e-7){const height=floor(M.point(matrix,p));if(height!==null)top=top===null?height:Math.max(top,height);}feet.push(top);}
+   if(feet.every(h=>h!==null)){
+    // 鸟身只上移到真实网格不穿台所需的最低高度，保留原长腿上端与鸟身的实体连接空间。
+    // 顶点在台面外时三角面仍可能跨进台阶；在每个真实踏面UV内裁切原三角，取交叠部分最低点，仅计算所需Y平移。
+    const clip=(polygon,axis,limit,greater)=>{const out=[];for(let i=0;i<polygon.length;i++){const a=polygon[i],b=polygon[(i+1)%polygon.length],insideA=greater?a[axis]>=limit:a[axis]<=limit,insideB=greater?b[axis]>=limit:b[axis]<=limit;if(insideA)out.push(a);if(insideA!==insideB){const t=(limit-a[axis])/(b[axis]-a[axis]);out.push(a.map((n,j)=>n+(b[j]-n)*t));}}return out;};
+    // 尾羽与鸟身分别取自身最低净空，避免尾羽跨到第二级时把整个身体抬离原长腿；两者都只平移Y。
+    const required=[-Infinity,-Infinity];for(const[index,part]of parts.entries()){const[kind,x,y,z,sx,sy,sz]=part,matrix=M.mul(f,M.trs(x,y,z,sx,sy,sz)),mesh=supportMesh(kind),points=mesh.points.map(v=>M.point(matrix,v)),group=index===3?1:0;for(const s of faces){if(Math.abs(s.top-world[1])>=.25)continue;const uv=points.map(p=>{const d=p.map((v,i)=>v-s.b.p[i]);return[d.reduce((sum,v,i)=>sum+v*s.b.u[i],0)/s.b.uu,d.reduce((sum,v,i)=>sum+v*s.b.v[i],0)/s.b.vv,p[1]];});if(Math.max(...uv.map(p=>p[0]))<0||Math.min(...uv.map(p=>p[0]))>1||Math.max(...uv.map(p=>p[1]))<0||Math.min(...uv.map(p=>p[1]))>1)continue;for(let i=0;i<mesh.indices.length;i+=3){let polygon=mesh.indices.slice(i,i+3).map(j=>uv[j]);for(const[axis,limit,greater]of[[0,0,true],[0,1,false],[1,0,true],[1,1,false]]){polygon=clip(polygon,axis,limit,greater);if(!polygon.length)break;}for(const p of polygon)required[group]=Math.max(required[group],s.top-p[2]+.0002);}}}
+    const base=Math.min(...feet)-world[1];bodyY=Math.max(base,required[0]);tailY=Math.max(base,required[1]);legY=feet.map(h=>h-world[1]);
+   }
+  }
+ }
+ const body=M.mul(M.trs(0,bodyY,0,1,1,1),f),tail=M.mul(M.trs(0,tailY,0,1,1,1),f);
+ for(const[index,part]of parts.entries()){const[kind,x,y,z,sx,sy,sz,tone]=part,o=renderer.add(kind,x,y,z,sx,sy,sz,tone,0,list,index===3?tail:body);o.occludes=false;}
+ for(const[index,s]of[-1,1].entries())renderer.add('cyl',s*.045,.065,s*Math.cos(phase)*.02*blend,.018,.13,.018,0x29353a,0,list,M.mul(M.trs(0,legY[index],0,1,1,1),f));
 }
+/** A从真实相接台面取脚高，Broot仅复用原同owner台面；actor为原人物，返回局部地面回调与已有terrainLift，不写状态、不缓存高度、不开放路由。 */
+function rookeryTravellerGround(actor){const frame=frameMatrix(actor.owner),world=actorPoint(actor),bodyRadius=.14,up=Array.from(frame.slice(4,7)),own=(x,z)=>groundLocal(actor.owner,x,z,actor.local[1]),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0),sub=(a,b)=>a.map((v,i)=>v-b[i]);
+  if(actor.climbing)return{ground:own,lift:0};const planes=renderer.static.filter(o=>o.walk&&o.visible!==false).map(o=>{const b=basis(o),v=Array.from(o.matrix.slice(4,7)),l=Math.hypot(...v),n=v.map(x=>x/l),corners=[[0,0],[1,0],[0,1],[1,1]].map(([u,v])=>b.p.map((p,i)=>p+b.u[i]*u+b.v[i]*v));return{o,b,n,corners};}).filter(p=>distance(p.n,up)<.0001);
+  const touch=(a,b)=>{if(Math.abs(dot(sub(a.b.p,b.b.p),up))>.004)return false;for(const axis of[a.b.u,a.b.v,b.b.u,b.b.v]){const length=Math.hypot(...axis),v=axis.map(n=>n/length),aa=a.corners.map(p=>dot(p,v)),bb=b.corners.map(p=>dot(p,v));if(Math.min(...aa)>Math.max(...bb)+.00002||Math.min(...bb)>Math.max(...aa)+.00002)return false;}return true;};
+  const owners=new Set([actor.owner]);if(state.area==='A')for(const p of defs.A.ports){const a=N(p.a),b=N(p.b),pair=[a.owner,b.owner];if(!pair.includes(actor.owner)||!pair.includes('world')||!pair.some(o=>o==='Ar'||o==='Aflip'))continue;const pa=point(p.a),pb=point(p.b);if(distance(world,pa)>ROAD/2+bodyRadius||distance(world,pb)>ROAD/2+bodyRadius)continue;const aa=planes.filter(s=>s.o.owner===a.owner&&surfaceContains(s.o,pa)),bb=planes.filter(s=>s.o.owner===b.owner&&surfaceContains(s.o,pb));if(!aa.some(x=>bb.some(y=>touch(x,y))))continue;owners.add(a.owner);owners.add(b.owner);}
+  const neighbors=planes.filter(p=>owners.has(p.o.owner)&&p.o.owner!==actor.owner),ground=(x,z)=>{let height=own(x,z);const worldFoot=M.point(frame,[x,actor.local[1],z]);for(const p of neighbors){const d=sub(worldFoot,p.b.p),u=dot(d,p.b.u)/p.b.uu,v=dot(d,p.b.v)/p.b.vv;if(u<0||u>1||v<0||v>1)continue;const signed=dot(d,p.n),on=worldFoot.map((n,i)=>n-p.n[i]*signed),local=inversePoint(frame,on);if(Math.abs(local[1]-actor.local[1])>=.25)continue;height=Math.max(height,local[1]);}return height;};
+  const local=M.trs(...actor.local,1,1,1,actor.heading);let lift=0;if(!actor.climbing)for(let i=0;i<16;i++){const angle=i/16*TAU,p=M.point(local,[Math.sin(angle)*bodyRadius,0,Math.cos(angle)*bodyRadius]);lift=Math.max(lift,ground(p[0],p[2])-actor.local[1]);}return{ground,lift};}
 /** 当前区完整重绘使用固定上限数据，场景外的机关不会产生对象或巡逻。 */
 function drawWorld(){
  renderer.static=[];renderer.dynamic=[];
@@ -767,7 +885,7 @@ function drawWorld(){
  for(const p of areaDef().plates)if(p.actor==='crow'||state.area!=='A'||state.auto.reveal===1)drawPlate(p);
  ({A:architectureA,B:architectureB,C:architectureC,D:architectureD,E:architectureE})[state.area]();drawHandles();
  for(const a of state.crows[state.area])drawCrow(a);
- const a=state.player;if(state.area!=='A'||state.flags.revealed){const sample=(x,z)=>groundLocal(a.owner,x,z,a.local[1]);drawTraveller(renderer,a.local,a.heading,a.gait,reducedMotion.matches?0:a.blend,sample,frameMatrix(a.owner),!!a.climbing,state.won);}
+ const a=state.player;if(state.area!=='A'||state.flags.revealed){if(state.area==='A'||state.area==='B'&&a.owner==='Broot'){const stance=rookeryTravellerGround(a);drawTraveller(renderer,a.local,a.heading,a.gait,reducedMotion.matches?0:a.blend,stance.ground,frameMatrix(a.owner),!!a.climbing,state.won,stance.lift);}else{const sample=(x,z)=>groundLocal(a.owner,x,z,a.local[1]);drawTraveller(renderer,a.local,a.heading,a.gait,reducedMotion.matches?0:a.blend,sample,frameMatrix(a.owner),!!a.climbing,state.won);}}
  if(state.won){const p=point('e-goal'),t=Math.min(1,state.endingElapsed/2),o=renderer.add('spire-octahedron',p[0],p[1]+.9+t*.45,p[2],.25*t,.35*t,.25*t,0x7ad4d2,elapsed*.45,renderer.dynamic);o.occludes=false;}
 }
 
@@ -790,7 +908,10 @@ function groundLocal(owner,x,z,fallback){let best=-Infinity;for(const o of rende
 /** 普通端口必须三维重合；投影接缝必须两端有真实台面并在当前画面精确重合。 */
 function ports(){return areaDef().ports.filter(p=>{if(!p.when())return false;const a=point(p.a),b=point(p.b);if(!supportAt(a,N(p.a).owner)||!supportAt(b,N(p.b).owner))return false;if(!p.seam)return distance(a,b)<.00002;const x=renderer.project(a),y=renderer.project(b);return Math.hypot(x.x-y.x,x.y-y.y)<.05;});}
 /** 乌鸦活动域与人物分离；每条边仍需当前实体开放，禁止跨区或走人物专用门。 */
-function edgeAllowed(e,actor){if(e.when&&!e.when())return false;if(actor.kind==='player')return!e.crowOnly&&!(state.area==='B'&&['Bs'].includes(e.owner))&&!(state.area==='B'&&/b-(left|right)-(port|plate)/.test(e.a+e.b));if(e.ladder)return false;if(state.area==='A')return e.owner==='Ar'||/^a-(crow|plate|white)/.test(e.a);if(state.area==='B')return e.owner==='Bs'||/^b-(left|right)-/.test(e.a);if(state.area==='C')return e.crowOnly;return false;}
+function edgeAllowed(e,actor){if(e.when&&!e.when())return false;
+ // A重叠停位只关闭被实体覆盖的路段：q1白阶主边、q3下层两灰边，玩家和活动鸟双向均等待转开。
+ if(state.area==='A'&&settled('Ar')&&(stop(state.groups.Ar.q)===1&&e.id==='A-a-white-low-a-white-top'||stop(state.groups.Ar.q)===3&&['A-ar-low-ar-foot','A-ar-foot-ar-back'].includes(e.id)))return false;
+ if(actor.kind==='player')return!e.crowOnly&&!(state.area==='B'&&['Bs'].includes(e.owner))&&!(state.area==='B'&&/b-(left|right)-(port|plate)/.test(e.a+e.b));if(e.ladder)return false;if(state.area==='A')return e.owner==='Ar'||/^a-(crow|plate|white)/.test(e.a);if(state.area==='B')return e.owner==='Bs'||/^b-(left|right)-/.test(e.a);if(state.area==='C')return e.crowOnly;return false;}
 /** 有限图由实体道路与已核验端口组成，边数受本区数据上限约束。 */
 function graph(actor){const result=new Map(areaDef().nodes.map(n=>[n.name,[]]));const add=(a,b,edge,seam=false)=>{result.get(a).push({to:b,edge,seam});result.get(b).push({to:a,edge,seam});};for(const e of areaDef().edges)if(edgeAllowed(e,actor))add(e.a,e.b,e);for(const p of ports()){const a=N(p.a),b=N(p.b);if(actor.kind==='crow'&&state.area==='B'&&![a.owner,b.owner].includes('Bs'))continue;if(actor.kind==='crow'&&state.area==='A'&&![p.a,p.b].every(n=>/^a-(crow|plate|white)|^ar-/.test(n)))continue;if(actor.kind==='player'&&state.area==='B'&&[a.owner,b.owner].includes('Bs'))continue;add(p.a,p.b,p,p.seam);}return result;}
 /** 本地直路参数取真实踏面高度；阶梯按每级台面取高，不把可见阶梯当斜坡。 */
@@ -892,8 +1013,11 @@ function update(dt){
  if(!state.dialogue.active)for(const d of areaDef().doors){if(d.when()&&distance(actorPoint(),point(d.name))<.11){beginDoor(d);break;}}
  updateGoal(dt);for(const a of[state.player,...state.crows[state.area]])a.blend+=(Number(a.moving)-a.blend)*Math.min(1,dt*10);if(state.player.moving)audio.footstep();if(state.pulse){state.pulse.time+=dt;if(state.pulse.time>.6)state.pulse=null;}
 }
-/** 操作只在当前区有效且未被演出接管时开放，不重置已在路上的鸟。 */
-function controlReady(id){const g=groups[id];if(failed||g.area!==state.area||state.won||state.goalCentering||state.transition||state.dialogue.active)return false;if(state.player?.climbing)return false;if(state.area==='A'&&!settled('reveal'))return false;if(state.area==='B'&&['left','right','bView'].some(k=>!settled(k)))return false;if(state.area==='E'&&!settled('lift'))return false;return true;}
+/** id为原机关名，返回当前是否可操作；A乘客安全限制只读取角色位置，离开受限路段后恢复，不改路线。 */
+function controlReady(id){const g=groups[id];if(failed||g.area!==state.area||state.won||state.goalCentering||state.transition||state.dialogue.active)return false;if(state.player?.climbing)return false;if(state.area==='A'&&!settled('reveal'))return false;if(state.area==='B'&&['left','right','bView'].some(k=>!settled(k)))return false;if(state.area==='E'&&!settled('lift'))return false;
+ // 白阶中段或灰桥下层有可见乘客时，先沿原路离开下层再转；只读实际归属与位置，不改行走或承载。
+ if(id==='Ar'&&state.area==='A'&&[state.player,...state.crows.A].some(a=>!(a.kind==='player'&&!state.flags.revealed)&&(a.owner==='world'&&a.location.edge?.id==='A-a-white-low-a-white-top'&&a.location.t>1e-7&&a.location.t<1-1e-7||a.owner==='Ar'&&(['ar-low','ar-foot','ar-back'].includes(a.location.node)||['A-ar-low-ar-foot','A-ar-foot-ar-back'].includes(a.location.edge?.id)))))return false;
+ return true;}
 /** 开始手势保留所有乘客局部脚点；清掉旧步行，不把实体重置到停位。 */
 function startPointer(e,id){if(e.button!==0||pointer||!controlReady(id))return;e.preventDefault();audio.unlockGesture(e);clearIntent();pointer={id:e.pointerId,group:id,x:e.clientX,y:e.clientY,q:state.groups[id].q,dragged:false};buttons[id].setPointerCapture(e.pointerId);}
 /** 每次拖动最多一整周；直线机关使用本关有限行程。 */
