@@ -2,14 +2,13 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <title>回廊彼岸 · 第二关：花园</title>
   <style>
     :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#52674d;background:#f6e8bb}
     *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:clip}button{font:inherit}
-    .prototype{position:relative;width:100%;height:100%;min-height:280px;isolation:isolate;background:radial-gradient(ellipse at 55% 15%,#fff6d1 0%,#f1e6b2 58%,#d5dc9a 100%)}
-    .prototype::before{content:"";position:absolute;z-index:1;inset:auto 0 0;height:min(172px,41%);background:linear-gradient(transparent,#f5edc9 42%);pointer-events:none}
+    .prototype{position:relative;width:100%;height:100%;min-height:280px;isolation:isolate;background:radial-gradient(ellipse at 50% 43%,#f9e99f 0%,#f8e89e 62%,#e6d68e 100%)}
     .previous-level{position:absolute;z-index:3;top:max(12px,env(safe-area-inset-top));right:20px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid #92a17766;border-radius:4px;background:#edf1d1;color:#52674d;font-size:12px;text-decoration:none}.previous-level:hover{background:#e0e8b8}.previous-level:focus-visible{outline:3px solid #4f6954;outline-offset:4px}
     .level-name{position:absolute;z-index:2;top:max(20px,env(safe-area-inset-top));left:24px;margin:0;font-size:14px;letter-spacing:.2em;color:#6b7954;pointer-events:none}.is-ending .level-name{opacity:0}
     canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
@@ -37,10 +36,12 @@
     @media(max-width:480px){.controls{inset-inline:12px;gap:12px;bottom:max(18px,env(safe-area-inset-bottom))}.restart{padding-inline:20px}.result{font-size:18px}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}.prototype::after{transition:none}}
 
+    /* 整页触控由关卡处理，避免双击或双指手势触发浏览器缩放。 */
+    html,body{touch-action:none}
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     .prototype{height:100vh;height:100dvh}
     .restart,.sound,.previous-level,.next-level{touch-action:manipulation}
-    @media(max-width:600px),(max-height:500px){.controls{left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right))}.prototype::before{height:84px}}
+    @media(max-width:600px),(max-height:500px){.controls{left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right))}}
   </style>
 </head>
 <body>
@@ -54,6 +55,7 @@
     <div class="controls"><div class="control-actions"><div class="finish-actions"><button id="restart" class="restart" type="button">重新开始</button><a id="next-level" class="next-level" href="./level3.html" hidden>下一关</a></div><button id="sound" class="sound" type="button" aria-label="声音：开" aria-pressed="true">声音：开</button></div></div>
     <p id="failure" class="failure" role="alert" hidden>当前浏览器未启用 WebGL 2。</p>
   </main>
+  <script src="./assets/garden-roof-model.js"></script>
   <script>
   (() => {
     'use strict';
@@ -91,7 +93,7 @@
       return new Float32Array(vertices);
     }
 
-    /** 本关的固定正交渲染器；canvas 为唯一画布，不加载外部素材。 */
+    /** 本关的固定正交渲染器；canvas为唯一画布，仅使用本地固定网格。 */
     class Tiny3D {
       constructor(target){
         this.canvas=target;this.gl=target.getContext('webgl2',{alpha:true,antialias:true,powerPreference:'low-power'});
@@ -123,9 +125,9 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
       resize(){
         const rect=this.canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,1.75);this.width=rect.width;this.height=rect.height;
         const w=Math.max(1,Math.round(rect.width*ratio)),h=Math.max(1,Math.round(rect.height*ratio));if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
-        // 花园使用固定(-1,1,1)方向，底部独立留出说明和按钮，移动平台的视线补偿严格依赖此方向。
+        // 花园使用固定(-1,1,1)方向，底部为按钮留白，移动平台的视线补偿严格依赖此方向。
         // 通关弹层会铺满 controls，仅用实际底部声音按钮计算留白。
-        const reserve=Math.max(64,rect.height-(document.getElementById('sound').getBoundingClientRect().top-rect.top)+16),available=Math.max(1,rect.height-reserve-44),pixels=Math.min(88,rect.width/6.8,available/8.3)/(1+.07*completionCameraProgress()),span=rect.height/pixels,aspect=rect.width/Math.max(1,rect.height),offsetX=rect.width*.5,offsetY=36+available*.90;
+        const reserve=Math.max(64,rect.height-(document.getElementById('sound').getBoundingClientRect().top-rect.top)+16),available=Math.max(1,rect.height-reserve-44),pixels=Math.min(88,rect.width/7.8,available/9.2)/(1+.07*completionCameraProgress()),span=rect.height/pixels,aspect=rect.width/Math.max(1,rect.height),offsetX=rect.width*.5,offsetY=36+available*.86;
         const target=[0,0,0],eye=[-16,16,16],shiftX=span*aspect*(offsetX/Math.max(1,rect.width)-.5),shiftY=span*(.5-offsetY/Math.max(1,rect.height));
         this.vp=M.mul(M.ortho(-span*aspect/2-shiftX,span*aspect/2-shiftX,-span/2-shiftY,span/2-shiftY,.1,100),M.look(eye,target));
       }
@@ -411,6 +413,9 @@ class GameAudio{
   }
 }
 
+// 岛轮廓同时约束地面网格与植物位置，避免窄岛改形后灌木悬在台外。
+const GARDEN_ISLAND_OUTLINE=[[-3.7,-.6],[-3.3,-1.4],[-2.2,-1.6],[-1.4,-2.6],[-.6,-3.3],[.55,-3.35],[1.6,-2.9],[2.45,-2.25],[2.75,-1.2],[3.60,-.65],[3.80,.20],[3.55,.85],[2.70,1.15],[1.9,1.4],[.75,1.8],[-.45,2.0],[-1.45,1.7],[-2.5,1.25],[-3.25,.6]].map(([x,z])=>[x+(x+z)*.08,z+(x+z)*.08]);
+
 /** 注册花园装饰的固定网格；renderer沿用本关实例渲染器，不分配逐帧资源。 */
 function createGardenDecorGeometry(renderer){
   const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],unit=v=>{const n=Math.hypot(...v)||1;return v.map(x=>x/n);};
@@ -419,25 +424,33 @@ function createGardenDecorGeometry(renderer){
     const raw=cross(b.map((x,i)=>x-a[i]),c.map((x,i)=>x-a[i]));if(Math.hypot(...raw)<1e-10)return;
     const na=normal||unit(raw);out.push(...a,...na,...b,...(nb||na),...c,...(nc||na));
   };
-  // 八片曲面构成削角方形葱顶；单调截面防止采样间反折，鼓起的下腹与细尖轮廓保持连续。
-  const rings=[[0,.38],[.045,.49],[.13,.55],[.24,.51],[.40,.32],[.56,.10],[.72,.018],[.78,0]],secants=rings.slice(0,-1).map((r,i)=>(rings[i+1][1]-r[1])/(rings[i+1][0]-r[0]));
-  const slopes=rings.map((r,i)=>i===0?secants[0]:i===rings.length-1?secants.at(-1):secants[i-1]*secants[i]<=0?0:2/(1/secants[i-1]+1/secants[i]));
-  /** 按高度求金顶半宽及导数；y范围为0..0.78，返回[radius,slope]。 */
-  const roofProfile=y=>{
-    let i=0;while(i<rings.length-2&&y>rings[i+1][0])i++;
-    const a=rings[i],b=rings[i+1],span=b[0]-a[0],t=(y-a[0])/span,m=slopes[i],n=slopes[i+1];
-    const radius=(2*t*t*t-3*t*t+1)*a[1]+(t*t*t-2*t*t+t)*m*span+(-2*t*t*t+3*t*t)*b[1]+(t*t*t-t*t)*n*span;
-    const slope=((6*t*t-6*t)*a[1]+(3*t*t-4*t+1)*m*span+(-6*t*t+6*t)*b[1]+(3*t*t-2*t)*n*span)/span;
-    return[Math.max(0,radius),slope];
-  };
-  const roof=[],outline=[[1,.62],[.62,1],[-.62,1],[-1,.62],[-1,-.62],[-.62,-1],[.62,-1],[1,-.62]];
-  for(let side=0;side<outline.length;side++)for(let row=0;row<32;row++){
-    const ya=row/32*.78,yb=(row+1)/32*.78,[ra,da]=roofProfile(ya),[rb,db]=roofProfile(yb),pa=outline[side],pb=outline[(side+1)%outline.length],edge=pb.map((v,i)=>v-pa[i]),n=unit([edge[1],0,-edge[0]]),support=pa[0]*n[0]+pa[1]*n[2];
-    const point=(r,y,p)=>[p[0]*r,y,p[1]*r],normal=d=>unit([n[0],-d*support,n[2]]),a=point(ra,ya,pa),b=point(ra,ya,pb),d=point(rb,yb,pa),e=point(rb,yb,pb),na=normal(da),nb=normal(db);
-    triangle(roof,a,b,e,na,na,nb);triangle(roof,a,e,d,na,nb,nb);
+  // 只复用社区模型的完整四面葱顶与檐口；球冠已在离线导出时去除，静态网格不参与导航。
+  for(const [index,part]of GARDEN_ROOF_MODEL.parts.entries())renderer.createGeometry(`garden_roof_${index}`,new Float32Array(part.data));
+
+  // 薄岛采用固定闭合轮廓；每层共用同一边界，保留柔和园地边缘而不形成硬地台。
+  const island=[],islandOutline=GARDEN_ISLAND_OUTLINE;
+  const islandPoint=(i,y,scale=1)=>{const p=islandOutline[(i+islandOutline.length)%islandOutline.length];return[p[0]*scale,y,p[1]*scale];};
+  for(let i=0;i<islandOutline.length;i++){
+    const a=islandPoint(i,0),b=islandPoint(i+1,0),c=islandPoint(i+1,-.075,.98),d=islandPoint(i,-.075,.98);
+    triangle(island,[0,0,0],b,a,[0,1,0]);triangle(island,a,b,c);triangle(island,a,c,d);
+    triangle(island,[0,-.075,0],d,c,[0,-1,0]);
   }
-  for(let side=0;side<outline.length;side++)triangle(roof,[0,0,0],[outline[side][0]*.38,0,outline[side][1]*.38],[outline[(side+1)%outline.length][0]*.38,0,outline[(side+1)%outline.length][1]*.38],[0,-1,0]);
-  renderer.createGeometry('garden_onion_roof',new Float32Array(roof));
+  renderer.createGeometry('garden_island',new Float32Array(island));
+
+  // 两个通透圆拱由带厚度的半圆环构成；拱洞保持真实开口，不用深色贴片遮住窗口。
+  const arch=[],archPoint=(a,r,x)=>[x,Math.sin(a)*r,Math.cos(a)*r];
+  for(let i=0;i<16;i++){
+    const a=i*Math.PI/16,b=(i+1)*Math.PI/16;
+    for(const x of[-.10,.10]){
+      const p=archPoint(a,.205,x),q=archPoint(b,.205,x),r=archPoint(b,.145,x),s=archPoint(a,.145,x);
+      triangle(arch,p,q,r,[x<0?-1:1,0,0]);triangle(arch,p,r,s,[x<0?-1:1,0,0]);
+    }
+    for(const radius of[.145,.205]){
+      const p=archPoint(a,radius,-.10),q=archPoint(b,radius,-.10),r=archPoint(b,radius,.10),s=archPoint(a,radius,.10);
+      triangle(arch,p,q,r);triangle(arch,p,r,s);
+    }
+  }
+  renderer.createGeometry('garden_arch',new Float32Array(arch));
 
   // 旗面采用真实弯曲薄片；波形固定，不为装饰增加持续更新或额外动画状态。
   const flag=[];
@@ -477,12 +490,17 @@ function createGardenDecorGeometry(renderer){
 
 /** 添加固定装饰；extent为[xmin,xmax,zmin,zmax]，亭子y为地板高度，avoidRects排除道路及机关扫掠区，返回实例数组。 */
 function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions=[],avoidRects=[]}={}){
-  const R=renderer,objects=[],plantColors=[0xa9bd65,0xb9c66b,0x92ab5b,0xc4cc78],column=0xa7b990,gold=0xe9ad49,trim=0xd39c41,flagColor=0x54bda7;
+  const R=renderer,objects=[],plantColors=[0xa9bd65,0xb9c66b,0x92ab5b,0xc4cc78],column=0xa7b990,gold=0xffb328,trim=0xd79a38,flagColor=0x6ddbb9;
   /** 创建不可行走装饰实例；opaque决定是否参与最近面遮挡，返回渲染对象。 */
   const add=(kind,x,y,z,sx,sy,sz,hex,rotation=0,opaque=false)=>{const object=R.add(kind,x,y,z,sx,sy,sz,hex,rotation);object.occludes=opaque;object.walk=null;objects.push(object);return object;};
-  const [minX,maxX,minZ,maxZ]=extent,blocked=[...avoidRects,[-.55,2.55,-.55,2.55]];
-  /** 检查植物半径与已有道路/平台排除矩形；返回是否允许生成。 */
-  const clear=(x,z,radius)=>!blocked.some(rect=>{const r=Array.isArray(rect)?rect:[rect.minX,rect.maxX,rect.minZ,rect.maxZ];return x+radius>r[0]&&x-radius<r[1]&&z+radius>r[2]&&z-radius<r[3];});
+  // 灌木最高不足低桥底，桥下园地可种植；只排除中央矮房、塔根和移动右台落地范围。
+  const [minX,maxX,minZ,maxZ]=extent,blocked=[...avoidRects,[-.7,.7,-.7,.7]];
+  /** 检查固定岛轮廓内的点；射线只遍历有限边表，返回是否位于台面内。 */
+  const onIsland=(x,z)=>{let inside=false;for(let i=0,j=GARDEN_ISLAND_OUTLINE.length-1;i<GARDEN_ISLAND_OUTLINE.length;j=i++){
+    const a=GARDEN_ISLAND_OUTLINE[i],b=GARDEN_ISLAND_OUTLINE[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])inside=!inside;
+  }return inside;};
+  /** 植物整簇须在薄岛内，且避开既有道路/平台排除矩形；返回是否允许生成。 */
+  const clear=(x,z,radius)=>[[x,z],[x-radius,z],[x+radius,z],[x,z-radius],[x,z+radius]].every(p=>onIsland(...p))&&!blocked.some(rect=>{const r=Array.isArray(rect)?rect:[rect.minX,rect.maxX,rect.minZ,rect.maxZ];return x+radius>r[0]&&x-radius<r[1]&&z+radius>r[2]&&z-radius<r[3];});
   // 布局为固定有界表，不在每帧或重开时随机漂移；中央和右台对角扫掠区保持净空。
   const patches=[
     [.10,.22,.44],[.10,.44,.62],[.14,.67,.46],[.20,.83,.43],[.30,.88,.58],[.45,.85,.49],
@@ -513,26 +531,29 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
   pavilions.forEach(({x,y,z,scale=1,rotation=0,columns=true})=>{
     const place=(kind,dx,dy,dz,sx,sy,sz,hex,ry=0)=>add(kind,x+dx*scale,y+dy*scale,z+dz*scale,sx*scale,sy*scale,sz*scale,hex,rotation+ry,true);
     // 相机朝(-X,+Z)看向亭子，前角不设柱；细柱与地板净空均保留角色和点击目标可见。
-    if(columns)for(const [dx,dz] of [[-.42,-.42],[.42,-.42],[.42,.42]]){
-      place('box',dx,.55,dz,.047,1.10,.047,column);place('box',dx,.045,dz,.080,.09,.080,0xb7c49a);place('box',dx,1.075,dz,.075,.055,.075,column);
+    if(columns)for(const [dx,dz] of [[-.31,-.31],[.31,-.31],[.31,.31]]){
+      place('box',dx,.60,dz,.047,1.20,.047,column);place('box',dx,.045,dz,.080,.09,.080,0xb7c49a);place('box',dx,1.175,dz,.075,.055,.075,column);
     }
-    place('box',0,1.105,0,.99,.07,.99,trim);place('garden_onion_roof',0,1.14,0,1,1,1,gold);
-    place('cyl',0,2.03,0,.022,.23,.022,0xc89942);place('sphere',0,2.15,0,.044,.050,.044,0xc89942);
-    place('garden_flag',.008,2.105,0,1,1,1,flagColor);
+    // 亭顶保持模型三轴等比缩放；金顶复用柔哑光标记且仍不透明，原亭柱留出正面入口。
+    for(const [index,part]of GARDEN_ROOF_MODEL.parts.entries())place(`garden_roof_${index}`,0,1.23,0,.64,.64,.64,index===0?trim:gold).color[3]=2;
+    place('cyl',0,1.96,0,.018,.19,.018,0xc89942);
+    // 旗尾朝镜头右下方伸展，固定薄片方向与原图相同，不引入逐帧飘动状态。
+    place('garden_flag',.008,2.03,0,2,1.1,2,flagColor,-Math.PI/2).color[3]=2;
   });
   return objects;
 }
 
     const PALETTE={stone:0xe7dfb7,dark:0x465854,cream:0xfff8dc,knob:0x729f94,column:0x91a282,ground:0xb6c66c};
-    const H=2.4,L=2,ROAD_WIDTH=.54,ROAD_HALF=ROAD_WIDTH/2,ROAD_THICKNESS=.25,FOOT_RADIUS=.09;
+    // 花园低路降低、水平跨度加长，顶层仍为4.4；起点侧路位于整圈旋转扫掠之外。
+    const H=1.6,L=2.8,START_RUN=1,LADDER_HEADING=-QUARTER,ROAD_WIDTH=.54,ROAD_HALF=ROAD_WIDTH/2,ROAD_THICKNESS=.25,FOOT_RADIUS=.09;
     const START=0,S=1,A=2,AH=3,C=4,BH=5,B=6,P=7,LT=8,LB=9,FIRST=10,Q=11,SECOND=12,R=13,RC=14,GOAL=15,LEFT=16,LADDER_CREST=17;
     const GOAL_POINT=[L,H+L,-L],INITIAL_ANGLE=3*QUARTER;
     const ROTOR_NODES=[A,AH,C,BH,B],ROTOR_LOCAL=[[L,0,0],[L/2,0,0],[0,0,0],[0,0,L/2],[0,0,L]];
-    const fixedNodes=[[0,H,-2.8],[0,H,-L],null,null,null,null,null,[-L,H,0],[-2.5,H,0],[-2.65,H-1,0],[-3.05,H-1,0],null,null,[L,H+L,0],[L,H+L,-1],GOAL_POINT,[0,H+L,-L],[-2.65,H+.10,0]];
+    const fixedNodes=[[START_RUN,H,-L],[0,H,-L],null,null,null,null,null,[-L,H,0],[-L+.5,H,0],[-L+.65,H-1,0],[-L+1.05,H-1,0],null,null,[L,H+L,0],[L,H+L,-L/2],GOAL_POINT,[0,H+L,-L],[-L+.65,H+.10,0]];
     const PERMANENT_EDGES=[[START,S],[P,LT],[LT,LADDER_CREST],[LADDER_CREST,LB],[LB,FIRST],[Q,SECOND],[R,RC],[RC,GOAL],[GOAL,LEFT]];
     const MOVEMENT_KEYS={KeyW:[0,-1],KeyS:[0,1],KeyA:[-1,0],KeyD:[1,0]},heldKeys=new Set(),roadButtons=[];
     let renderer=null,animation=0,lastTime=0,failed=false,pointer=null,tap=null,goalFrames=[],topShell=null,roadShellKey='';
-    const TOP_RECTS=[[L-ROAD_HALF,L+ROAD_HALF,-L,0],[0,L,-L-ROAD_HALF,-L+ROAD_HALF],[-.47,.47,-L-.47,-L+.47],[L-.47,L+.47,-.47,.47],[L-.47,L+.47,-L-.47,-L+.47]];
+    const TOP_RECTS=[[L-ROAD_HALF,L+ROAD_HALF,-L,0],[0,L,-L-ROAD_HALF,-L+ROAD_HALF],[-.37,.37,-L-.37,-L+.37],[L-.37,L+.37,-.37,.37],[L-.37,L+.37,-L-.37,-L+.37]];
     // 两次机关只推进一次；位置保留连续边参数，升起父变换不改变人物局部站点。
     const state={phase:0,firstPressed:false,secondPressed:false,rightRise:0,bridgeRise:0,lift:null,angle:INITIAL_ANGLE,targetAngle:INITIAL_ANGLE,location:{node:START},surfaceId:'start',player:[...fixedNodes[START]],heading:0,targetHeading:0,gait:0,motionBlend:0,moving:false,justStopped:false,route:[],segment:null,input:null,won:false,endingElapsed:0,endingReady:false,pulse:null};
     const audio=new GameAudio(status=>{const text=!status.available?'声音不可用':status.enabled?'声音：开':'声音：关';soundButton.textContent=text;soundButton.setAttribute('aria-label',text);soundButton.setAttribute('aria-pressed',String(status.available&&status.enabled));soundButton.disabled=!status.available;});
@@ -626,32 +647,51 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
     function updateLift(dt){if(!state.lift)return;const lift=state.lift;lift.elapsed=Math.min(1.6,lift.elapsed+dt);const t=reducedMotion.matches?1:lift.elapsed/1.6,f=t*t*(3-2*t);if(lift.kind==='right')state.rightRise=f;else{state.bridgeRise=f;state.player=M.point(rightMatrix(),lift.local);}if(t>=1){state.lift=null;if(lift.kind==='right'){state.rightRise=1;state.phase=1;}else{state.bridgeRise=1;state.phase=2;state.location=locatePoint(state.player,[[Q,SECOND]])||{node:SECOND};state.surfaceId='right-pad';}audio.snap();}}
     /** 建立花园固定层；高亭道路与低位起点各自登记高度，地面仅作遮挡和花园。 */
     function buildScene(){const Rn=renderer,Pc=PALETTE;Rn.static=[];goalFrames=[];Rn.createGeometry('garden-l',extrudeOutline(L_OUTLINE));Rn.createGeometry('garden-top',makeRoadUnion(TOP_RECTS,H+L));Rn.createGeometry('garden-joined',new Float32Array());topShell=Rn.add('garden-top',0,0,0,1,1,1,Pc.stone);topShell.walkShell=true;
-      Rn.add('box',-.35,-.20,-.15,7.8,.4,6.4,Pc.ground);
-      Rn.add('box',-.35,-.43,-.15,7.95,.08,6.55,0x8ba765);
-      addWalkBox('start',0,H,-2.55,ROAD_WIDTH,1.1,[[START,S]]);
-      addWalkBox('left-landing',-2.25,H,0,.5,ROAD_WIDTH,[[P,LT]]);
-      addWalkBox('first-pad',-2.94,H-1,0,.88,.85,[[LB,FIRST]]);
-      Rn.add('box',-2.94,(H-1-ROAD_THICKNESS)/2,0,.72,H-1-ROAD_THICKNESS,.70,Pc.column);
-      addWalkBox('top-right',L,H+L,-1,ROAD_WIDTH,2,[[R,RC],[RC,GOAL]],Rn.static,null,false);
-      addWalkBox('top-back',1,H+L,-L,2,ROAD_WIDTH,[[GOAL,LEFT]],Rn.static,null,false);
-      for(const [x,z,id,edges]of[[0,-L,'top-left',[[GOAL,LEFT]]],[L,0,'top-pavilion',[[R,RC]]],[L,-L,'goal',[[RC,GOAL],[GOAL,LEFT]]]])addWalkBox(id,x,H+L,z,.94,.94,edges,Rn.static,null,false);
-      // 细承重柱把低位Q的通道留开；面向相机的一角不放实心高塔。
-      for(const [x,z]of[[.40,-2.35],[2.35,-.40],[2.35,.40],[1.65,-2.35],[2.35,-2.35]]){Rn.add('box',x,(H+L-ROAD_THICKNESS)/2,z,.16,H+L-ROAD_THICKNESS,.16,Pc.column);Rn.add('box',x,.12,z,.27,.24,.27,0xa8b88b);}
-      for(const x of[-.22,.22])Rn.add('box',x,(H-ROAD_THICKNESS)/2,-2.90,.13,H-ROAD_THICKNESS,.13,Pc.column);
+      createGardenDecorGeometry(Rn);Rn.add('garden_island',0,0,0,1,1,1,0xc5ce79).occludes=false;
+      addWalkBox('start',(START_RUN+.30-ROAD_HALF)/2,H,-L,START_RUN+.30+ROAD_HALF,ROAD_WIDTH,[[START,S]]);
+      addWalkBox('left-landing',-L+.25,H,0,.5,ROAD_WIDTH,[[P,LT]]);
+      addWalkBox('first-pad',-L+.94,H-1,0,.88,.85,[[LB,FIRST]]);
+      Rn.add('box',-L+.94,(H-1-ROAD_THICKNESS)/2,0,.72,H-1-ROAD_THICKNESS,.70,Pc.column);
+      addWalkBox('top-right',L,H+L,-L/2,ROAD_WIDTH,L,[[R,RC],[RC,GOAL]],Rn.static,null,false);
+      addWalkBox('top-back',L/2,H+L,-L,L,ROAD_WIDTH,[[GOAL,LEFT]],Rn.static,null,false);
+      for(const [x,z,id,edges]of[[0,-L,'top-left',[[GOAL,LEFT]]],[L,0,'top-pavilion',[[R,RC]]],[L,-L,'goal',[[RC,GOAL],[GOAL,LEFT]]]])addWalkBox(id,x,H+L,z,.74,.74,edges,Rn.static,null,false);
+      // 左塔下部承托原起点路，上部实墙位于道路侧后方；窄窗凹槽不占用低位通路。
+      Rn.add('box',0,(H-ROAD_THICKNESS)/2,-L,.74,H-ROAD_THICKNESS,.74,Pc.column);
+      Rn.add('box',0,H+(L-ROAD_THICKNESS)/2,-L-.35,.82,L-ROAD_THICKNESS,.24,Pc.column);
+      for(const x of[-.20,.20])Rn.add('box',x,H+L*.52,-L-.222,.08,.49,.006,Pc.dark);
+      // 右塔双拱整墙位于Q路的后侧，桥入口与按钮斜路均留足人物净空；三墩和弧顶承托亭台。
+      for(const x of[L-.36,L,L+.36])Rn.add('box',x,(H+L-ROAD_THICKNESS)/2,-.37,.11,H+L-ROAD_THICKNESS,.20,Pc.column);
+      Rn.add('box',L,.24,-.37,.82,.48,.20,Pc.column);
+      Rn.add('box',L,H+L-.46,-.37,.82,.42,.20,Pc.column);
+      for(const x of[L-.18,L+.18])Rn.add('garden_arch',x,H+L-.87,-.37,1,1,1,Pc.column,QUARTER);
       // 梯子在上板外侧；先爬到略高于板面的顶踏棍，再抓扶跨入，手脚不穿上沿薄板。
-      for(const z of[-.19,.19])Rn.add('cyl',-2.52,H-.41,z,.045,1.18,.045,0x749c88);
-      for(let i=0;i<10;i++)Rn.add('cyl',-2.52,H-1+i/9*1.1,0,.037,.41,.037,0xe4d6a4,0,Rn.static,null,Math.PI/2);
+      for(const z of[-.19,.19])Rn.add('cyl',-L+.52,H-.41,z,.045,1.18,.045,0x749c88);
+      for(let i=0;i<10;i++)Rn.add('cyl',-L+.52,H-1+i/9*1.1,0,.037,.41,.037,0xe4d6a4,0,Rn.static,null,Math.PI/2);
       // 终点白纹位于亭子地面上，无额外点击热点或文本。
       for(let layer=0;layer<3;layer++){const width=.51-layer*.12;for(let side=0;side<4;side++){const angle=side*QUARTER,object=Rn.add('box',GOAL_POINT[0]+Math.sin(angle)*width/2,H+L+.008,GOAL_POINT[2]+Math.cos(angle)*width/2,width,.014,.023,Pc.cream,angle);object.occludes=false;goalFrames.push({layer:layer+1,side,width,object,light:0});}}
-      createGardenDecorGeometry(Rn);addGardenDecor(Rn,{groundY:0,extent:[-4.1,3.5,-3.6,2.9],pavilions:[{x:0,y:H+L,z:-L},{x:L,y:H+L,z:0},{x:L,y:H+L,z:-L}],avoidRects:[[-3.6,-2.1,-.65,.65],[-.55,.55,-3.2,-1.6],[1.35,2.7,-.6,.6]]});
+      // 原岛内植物与白花保留固定有界分布；后亭悬空连接两条上层路，不另添全高柱架。
+      addGardenDecor(Rn,{groundY:0,extent:[-3.6,3.6,-3.2,1.9],pavilions:[{x:0,y:H+L,z:-L},{x:L,y:H+L,z:0},{x:L,y:H+L,z:-L}],avoidRects:[[-L-.3,-L+1.4,-.65,.65],[-.55,START_RUN+.5,-L-.55,-L+.55],[L-.6,L+1.15,-.6,.9]]});
+      // 中央矮方房固定在地面，升桥只伸出上方圆筒；窄长窗为凹色面，不产生可走目标。
+      Rn.add('box',0,.44,0,1.20,.88,1.14,Pc.column);Rn.add('box',0,.89,0,1.24,.10,1.18,0x9cac72);
+      for(const x of[-.39,-.13,.13,.39])Rn.add('box',x,.47,.576,.095,.51,.012,Pc.dark);
+      for(const z of[-.36,-.12,.12,.36])Rn.add('box',-.606,.47,z,.012,.51,.095,Pc.dark);
     }
     /** 鞋底高度只从当前层对应支撑采样；爬梯时由竖边承托，不能吸到上层地板。 */
     function groundAt(x,z){if(state.surfaceId==='ladder')return state.player[1];const object=surfaceAt([x,state.player[1],z],state.surfaceId);return object?surfaceBasis(object).origin[1]:state.player[1];}
-    /** 红帽人物爬梯时手脚前伸到梯面，交替收抬而不播放平地整步。 */
-    function drawClimber(){drawTraveller(renderer,state.player,Math.PI/2,state.gait,reducedMotion.matches?0:state.motionBlend,groundAt,true);}
+    /** 内侧梯面朝负X，人物手脚依梯面朝向前伸，交替收抬而不播放平地整步。 */
+    function drawClimber(){drawTraveller(renderer,state.player,LADDER_HEADING,state.gait,reducedMotion.matches?0:state.motionBlend,groundAt,true);}
     /** 绘制水平机关、升起支撑与踏板；每帧替换动态列表，不积累GPU资源。 */
     function drawDynamic(){const Rn=renderer,Pc=PALETTE;Rn.dynamic=[];const rotor=rotorMatrix(),right=rightMatrix();
-      Rn.add('cyl',0,(H+L*state.bridgeRise-ROAD_THICKNESS)/2,0,.72,H+L*state.bridgeRise-ROAD_THICKNESS,.72,Pc.column,0,Rn.dynamic);
+      // 随真实桥高伸出的圆筒由固定矮房承托，顶端圆沿始终接在横梁底面之下。
+      const stemTop=H+L*state.bridgeRise-.28,stemBottom=.94,stemHeight=Math.max(.01,stemTop-stemBottom);
+      Rn.add('cyl',0,stemBottom+stemHeight/2,0,1.04,stemHeight,1.04,Pc.column,0,Rn.dynamic);
+      Rn.add('cyl',0,stemTop-.04,0,1.16,.10,1.16,0xb0be86,0,Rn.dynamic);
+      for(const a of[-QUARTER,-.35,.45]){const x=Math.cos(a)*.50,z=Math.sin(a)*.50;
+        Rn.add('box',x,stemTop-.29,z,.065,.37,.013,Pc.dark,a,Rn.dynamic);
+      }
+      // 旋钮由桥上三根细柱承托，中央和两个轴向道路留出人物完整身体的通行净空。
+      for(const [x,z]of[[-.25,-.22],[.25,-.22],[.25,.22]])Rn.add('box',x,H+L*state.bridgeRise+.65,z,.055,1.24,.055,Pc.column,0,Rn.dynamic);
+      Rn.add('box',0,H+L*state.bridgeRise+1.27,0,.55,.07,.53,Pc.column,0,Rn.dynamic);
       const shell=Rn.add('garden-l',0,0,0,1,1,1,Pc.stone,0,Rn.dynamic,rotor);shell.occludes=true;shell.walkShell=true;
       addWalkBox('bridge-x',L/2,0,0,L,ROAD_WIDTH,[[A,AH],[AH,C]],Rn.dynamic,rotor,false);
       addWalkBox('bridge-z',0,0,L/2,ROAD_WIDTH,L,[[C,BH],[BH,B]],Rn.dynamic,rotor,false);
@@ -662,22 +702,24 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
       const cardinal=Math.abs(state.angle/QUARTER-Math.round(state.angle/QUARTER))<.000001,height=H+L*state.bridgeRise;
       for(const object of Rn.static)if(object.walk&&['start','left-landing'].includes(object.walk.id)){object.visible=true;object.occludes=true;}topShell.visible=true;topShell.occludes=true;
       if(cardinal){const rectangles=[];for(const rect of[[-ROAD_HALF,L,-ROAD_HALF,ROAD_HALF],[-ROAD_HALF,ROAD_HALF,ROAD_HALF,L]]){const corners=[[rect[0],0,rect[2]],[rect[0],0,rect[3]],[rect[1],0,rect[2]],[rect[1],0,rect[3]]].map(p=>M.point(rotor,p));rectangles.push([Math.min(...corners.map(p=>p[0])),Math.max(...corners.map(p=>p[0])),Math.min(...corners.map(p=>p[2])),Math.max(...corners.map(p=>p[2]))]);}
-        if(state.bridgeRise===0){rectangles.push([-ROAD_HALF,ROAD_HALF,-3.1,-L],[-2.5,-L,-ROAD_HALF,ROAD_HALF]);for(const object of Rn.static)if(object.walk&&['start','left-landing'].includes(object.walk.id)){object.visible=false;object.occludes=false;}}
+        if(state.bridgeRise===0){rectangles.push([-ROAD_HALF,START_RUN+.30,-L-ROAD_HALF,-L+ROAD_HALF],[-L,-L+.5,-ROAD_HALF,ROAD_HALF]);for(const object of Rn.static)if(object.walk&&['start','left-landing'].includes(object.walk.id)){object.visible=false;object.occludes=false;}}
         if(state.bridgeRise===1){rectangles.push(...TOP_RECTS);topShell.visible=false;topShell.occludes=false;}
         if(Math.abs(right[13]-height)<.00001){rectangles.push([right[12]-.02,right[12]+1.03,right[14]-.32,right[14]+.85]);pad.visible=false;pad.occludes=false;}
         const key=`${state.angle}|${state.rightRise}|${state.bridgeRise}`;if(key!==roadShellKey){Rn.updateGeometry('garden-joined',makeRoadUnion(rectangles,height));roadShellKey=key;}shell.visible=false;shell.occludes=false;const joined=Rn.add('garden-joined',0,0,0,1,1,1,Pc.stone,0,Rn.dynamic);joined.occludes=true;joined.walkShell=true;
       }
-      Rn.add('box',.81,-(H+ROAD_THICKNESS)/2,.55,.24,H-ROAD_THICKNESS,.24,Pc.column,0,Rn.dynamic,right).gardenPart='right';
+      // 薄岛不再遮住地下柱段；右台只画地面至当前台底的实柱，父矩阵仍与按钮/踏面共用。
+      const rightColumnHeight=Math.max(0,H*state.rightRise-ROAD_THICKNESS);
+      if(rightColumnHeight>.001)Rn.add('box',.81,-H*state.rightRise+rightColumnHeight/2,.55,.24,rightColumnHeight,.24,Pc.column,0,Rn.dynamic,right).gardenPart='right';
       const p1=nodePoint(FIRST),p2=nodePoint(SECOND),pressed1=state.firstPressed,pressed2=state.secondPressed;
       for(const [p,pressed,show,part]of[[p1,pressed1,true,'first-plate'],[p2,pressed2,state.rightRise>.001,'right']])if(show){const plate=Rn.add('cyl',p[0],p[1]+(pressed?.006:.027),p[2],.25,pressed?.013:.05,.25,pressed?0x81ac84:0xf0b45d,0,Rn.dynamic);plate.occludes=false;plate.gardenPart=part;const border=Rn.add('cyl',p[0],p[1]+.004,p[2],.34,.006,.34,0xc5c5a0,0,Rn.dynamic);border.occludes=false;border.gardenPart=part;}
-      // 平放四臂旋钮与水平桥同轴绕Y，中心在桥下方，避免人物踩到操作图形。
-      const kp=knobPoint(),wheel=M.trs(...kp,1,1,1,state.angle);Rn.add('cyl',0,0,0,.09,.91,.09,Pc.knob,0,Rn.dynamic,wheel,Math.PI/2);Rn.add('cyl',0,0,0,.09,.91,.09,Pc.knob,Math.PI/2,Rn.dynamic,wheel,Math.PI/2);for(const p of[[.47,0,0],[-.47,0,0],[0,0,.47],[0,0,-.47]])Rn.add('sphere',...p,.15,.15,.15,Pc.knob,0,Rn.dynamic,wheel);Rn.add('cyl',0,.01,0,.28,.15,.28,Pc.knob,0,Rn.dynamic,wheel);Rn.add('cyl',0,.09,0,.12,.012,.12,Pc.dark,0,Rn.dynamic,wheel);
+      // 四臂旋钮由桥上细柱承托并同轴绕Y，人物从柱间通行，不踩入操作图形。
+      const kp=knobPoint(),wheel=M.trs(...kp,1,1,1,state.angle);Rn.add('cyl',0,0,0,.09,.91,.09,0xd1b665,0,Rn.dynamic,wheel,Math.PI/2);Rn.add('cyl',0,0,0,.09,.91,.09,0xd1b665,Math.PI/2,Rn.dynamic,wheel,Math.PI/2);for(const p of[[.47,0,0],[-.47,0,0],[0,0,.47],[0,0,-.47]])Rn.add('cyl',...p,.13,.14,.13,Pc.knob,0,Rn.dynamic,wheel,Math.PI/2);Rn.add('cyl',0,.01,0,.28,.15,.28,0xd1b665,0,Rn.dynamic,wheel);Rn.add('cyl',0,.09,0,.12,.012,.12,Pc.dark,0,Rn.dynamic,wheel);
       if(state.surfaceId==='ladder')drawClimber();else drawTraveller(Rn,state.player,state.heading,state.gait,reducedMotion.matches?0:state.motionBlend,groundAt);
       if(state.pulse){const scale=.12+state.pulse.elapsed*.3;Rn.add('cyl',state.pulse.point[0],state.pulse.point[1]+.028,state.pulse.point[2],scale,.01,scale,state.pulse.valid?0xfbf8d6:0xb37a55,0,Rn.dynamic).occludes=false;}
       drawCompletionGlow();
     }
-    /** 旋钮固定在桥座面向相机的侧方，随桥座升起且具有真实XZ输入面。 */
-    function knobPoint(){return[-.69,H+L*state.bridgeRise-.52,.69];}
+    /** 旋钮固定在桥上细柱顶部，随桥升起且沿用真实XZ输入面。 */
+    function knobPoint(){return[0,H+L*state.bridgeRise+1.4,0];}
     /** 接收连续行走结果；梯子只使用明确竖边，普通点按当前层真实支撑登记。 */
     function placePlayer(point,edge,endLocation=null){state.player=[...point];if(isClimb(edge)&&!endLocation){state.surfaceId='ladder';state.location=locatePoint(point,[edge]);return;}const object=surfaceAt(point,'');if(object)state.surfaceId=object.walk.id;else if(isClimb(edge))state.surfaceId='ladder';if(endLocation)state.location=endLocation;else{const location=edge?locatePoint(point,[edge]):object?locatePoint(point,object.walk.edges):null;if(location)state.location=location;}}
     /** 两次升起完成后按真实终点台面启动归中；抵达标记中心才停止并通关。 */
@@ -693,7 +735,7 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
     /** 逐帧消费有限距离，松键即停；升起期间暂停路线并保持固定台局部点。 */
     function update(dt){const oldGait=state.gait,wasMoving=state.moving,wasWon=state.won;const gap=state.targetAngle-state.angle;state.angle=Math.abs(gap)<.002?state.targetAngle:state.angle+gap*(1-Math.exp(-dt*22));state.moving=false;
       // 归中复用正常逐帧距离预算；先清理旧点击段，再判定登台，避免覆盖刚创建的归中段。
-      if(state.lift)updateLift(dt);else if(!pointer&&state.angle===state.targetAngle){let remaining=dt*1.14;for(let transitions=0;transitions<fixedNodes.length+2&&!state.won;transitions++){let step=null;if(state.input==='keyboard'&&heldKeys.size)step=keyboardDestination();else if(state.input==='click'||state.input==='goal'){if(!state.segment&&state.route.length)state.segment=state.route.shift();step=state.segment;}if(!step)break;const length=distance(state.player,step.point);if(length<.000001){placePlayer(step.point,step.edge,step.location);if(state.input==='click'){state.segment=null;if(!state.route.length)state.input=null;}checkPlates();if(state.lift)break;checkGoal();continue;}if(remaining<=.0000001)break;const budget=Math.min(remaining,length),old=[...state.player],point=mix(old,step.point,budget/length),reached=budget>=length-.0000001;state.targetHeading=isClimb(step.edge)?Math.PI/2:Math.atan2(point[0]-old[0],point[2]-old[2]);state.gait+=budget;remaining-=budget;state.moving=true;placePlayer(point,step.edge,reached?step.location:null);if(state.input==='click'&&reached){state.segment=null;if(!state.route.length)state.input=null;}checkPlates();if(state.lift)break;checkGoal();if(!reached)break;}}
+      if(state.lift)updateLift(dt);else if(!pointer&&state.angle===state.targetAngle){let remaining=dt*1.14;for(let transitions=0;transitions<fixedNodes.length+2&&!state.won;transitions++){let step=null;if(state.input==='keyboard'&&heldKeys.size)step=keyboardDestination();else if(state.input==='click'||state.input==='goal'){if(!state.segment&&state.route.length)state.segment=state.route.shift();step=state.segment;}if(!step)break;const length=distance(state.player,step.point);if(length<.000001){placePlayer(step.point,step.edge,step.location);if(state.input==='click'){state.segment=null;if(!state.route.length)state.input=null;}checkPlates();if(state.lift)break;checkGoal();continue;}if(remaining<=.0000001)break;const budget=Math.min(remaining,length),old=[...state.player],point=mix(old,step.point,budget/length),reached=budget>=length-.0000001;state.targetHeading=isClimb(step.edge)?LADDER_HEADING:Math.atan2(point[0]-old[0],point[2]-old[2]);state.gait+=budget;remaining-=budget;state.moving=true;placePlayer(point,step.edge,reached?step.location:null);if(state.input==='click'&&reached){state.segment=null;if(!state.route.length)state.input=null;}checkPlates();if(state.lift)break;checkGoal();if(!reached)break;}}
       checkGoal();
       if(Math.floor(state.gait/.25)>Math.floor(oldGait/.25))audio.footstep();else if((state.justStopped||wasMoving&&!state.moving)&&state.gait>0&&!state.won)audio.footstep();state.justStopped=false;
       if(!pointer&&!state.lift&&state.angle===state.targetAngle&&state.targetAngle!==lastSettledAngle){lastSettledAngle=state.targetAngle;audio.snap();}if(!wasWon&&state.won){beginCompletion();audio.complete();}updateCompletion(dt);const turn=Math.atan2(Math.sin(state.targetHeading-state.heading),Math.cos(state.targetHeading-state.heading));state.heading+=turn*(1-Math.exp(-dt*14));state.motionBlend+=(Number(state.moving)-state.motionBlend)*(1-Math.exp(-dt*20));if(!state.moving&&state.motionBlend<.001)state.motionBlend=0;if(state.pulse){state.pulse.elapsed+=dt;if(state.pulse.elapsed>.55)state.pulse=null;}}
@@ -722,7 +764,8 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
 
 
     /** 更新旋钮和无障碍道路按钮；归中、动画和被角色占用时明确禁用。 */
-    function positionControls(){const p=renderer.project(knobPoint());knob.style.left=`${p.x}px`;knob.style.top=`${p.y}px`;const size=Math.max(56,Math.min(90,renderer.width/7));knob.style.width=`${size}px`;knob.style.height=`${size}px`;knob.style.margin=`${-size/2}px 0 0 ${-size/2}px`;knob.disabled=!pointer&&(failed||state.won||state.input==='goal'||!!state.lift||rotorOccupied());knob.setAttribute('aria-disabled',String(!canRotate()));for(const [index,button]of roadButtons.entries()){const p=renderer.project(nodePoint(index));button.style.left=`${p.x}px`;button.style.top=`${p.y}px`;button.disabled=failed||state.won||state.input==='goal'||!!state.lift||!!pointer||state.angle!==state.targetAngle||!nodeTarget(index);}}
+    // 点击区随旋钮的实际投影缩放，避免桌面透明热点覆盖终点，并保留至少44px触控范围。
+    function positionControls(){const point=knobPoint(),p=renderer.project(point),axis=renderer.project([point[0]+1,point[1],point[2]]);knob.style.left=`${p.x}px`;knob.style.top=`${p.y}px`;const size=Math.max(44,Math.min(90,Math.abs(axis.x-p.x)*1.6+12));knob.style.width=`${size}px`;knob.style.height=`${size}px`;knob.style.margin=`${-size/2}px 0 0 ${-size/2}px`;knob.disabled=!pointer&&(failed||state.won||state.input==='goal'||!!state.lift||rotorOccupied());knob.setAttribute('aria-disabled',String(!canRotate()));for(const [index,button]of roadButtons.entries()){const p=renderer.project(nodePoint(index));button.style.left=`${p.x}px`;button.style.top=`${p.y}px`;button.disabled=failed||state.won||state.input==='goal'||!!state.lift||!!pointer||state.angle!==state.targetAngle||!nodeTarget(index);}}
     /** 返回二维三角形重心；只在用户点选时运行最近真实三角拾取。 */
     function triangleWeights(x,y,a,b,c){const det=(b.y-c.y)*(a.x-c.x)+(c.x-b.x)*(a.y-c.y);if(Math.abs(det)<.000001)return null;const u=((b.y-c.y)*(x-c.x)+(c.x-b.x)*(y-c.y))/det,v=((c.y-a.y)*(x-c.x)+(a.x-c.x)*(y-c.y))/det,w=1-u-v;return u>=-.000001&&v>=-.000001&&w>=-.000001?[u,v,w]:null;}
     /** 外壳命中必须对应同高真实支撑；未升出的台面及其上方装饰不形成可走目标。 */

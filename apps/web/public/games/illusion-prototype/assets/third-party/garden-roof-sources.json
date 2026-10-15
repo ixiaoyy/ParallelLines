@@ -1,0 +1,72 @@
+{
+  "model": "GARDEN_ROOF_MODEL",
+  "repository": "https://github.com/MixAndJam/MonumentValley-LevelDesign",
+  "commit": "265bd4d6100dfddd7cdf6ff403339b3bc37f8dba",
+  "authors": [
+    "Mix and Jam",
+    "Max Turnbull"
+  ],
+  "maxTurnbullAttributionBasis": "原仓库 Assets/MaxTurnbull 资产目录署名",
+  "license": "MIT",
+  "copyright": "Copyright (c) 2019 Mix and Jam",
+  "licenseBasis": "原仓库根 LICENSE；已检查的根 LICENSE 与 README 没有模型排除条款。",
+  "retainedLicense": "mix-and-jam-LICENSE.txt",
+  "notOfficialUstwoAssets": true,
+  "sources": [
+    {
+      "path": "Assets/MaxTurnbull/MonumentValleyFiles/Props/TowerTopper.fbx",
+      "sha256": "efc8084be1f3a20a435a486abb79a257144f51cbb20bd3817d898bbc21564835",
+      "bytes": 35052,
+      "url": "https://github.com/MixAndJam/MonumentValley-LevelDesign/blob/265bd4d6100dfddd7cdf6ff403339b3bc37f8dba/Assets/MaxTurnbull/MonumentValleyFiles/Props/TowerTopper.fbx"
+    },
+    {
+      "path": "Assets/MaxTurnbull/MonumentValleyFiles/Textures/ColourAtlas.png",
+      "sha256": "37f27d2d3ffded1fabc99ea8c29b95a92334142951a45cb9fb3700ba40b709a3",
+      "bytes": 3385,
+      "url": "https://github.com/MixAndJam/MonumentValley-LevelDesign/blob/265bd4d6100dfddd7cdf6ff403339b3bc37f8dba/Assets/MaxTurnbull/MonumentValleyFiles/Textures/ColourAtlas.png"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "045ba8b2e8bf091b118b77a01b9cd12a059609048590175aaccfb6f7d4e4000f",
+      "bytes": 1089,
+      "url": "https://github.com/MixAndJam/MonumentValley-LevelDesign/blob/265bd4d6100dfddd7cdf6ff403339b3bc37f8dba/LICENSE"
+    }
+  ],
+  "derivedInput": {
+    "name": "TowerTopper.json",
+    "sha256": "18f596dc8a61fe694d93902f327c267a95001ef69d64393da347781368b4bbf2"
+  },
+  "normalization": "应用源 FBX 旋转、缩放和位移后，XZ 居中、最低 Y=0、三轴除以同一水平宽度；最大 X/Z 宽度为 1。",
+  "selection": {
+    "rule": "保留每个三角形最高 Y<=1.02 的完整独立屋顶组件",
+    "inputTriangles": 316,
+    "outputTriangles": 124,
+    "removedComponents": [
+      "20 三角形菱形",
+      "172 三角形顶球及附属部件"
+    ],
+    "trianglesCut": false,
+    "verticesOrNormalsChanged": false
+  },
+  "materials": "按原 ColourAtlas.png 的 #c9c9c9 与 #ffffff 两种灰度分组，未预乘 Unity 材质 tint；金色与场景尺寸由第二关调用方指定。",
+  "bounds": {
+    "min": [
+      -0.5,
+      0.0,
+      -0.5
+    ],
+    "max": [
+      0.5,
+      1.0160594,
+      0.5
+    ]
+  },
+  "height": 1.0160594,
+  "triangleCount": 124,
+  "runtime": "静态交错位置/法线数组，不含运行时 FBX/OBJ 解析器、Unity 代码、插件或新增依赖。",
+  "output": {
+    "path": "../garden-roof-model.js",
+    "sha256": "c62c0f82be88958a9151bfebfeb59ac52cca2ed73e1fd182e058ca54f28aa4b3",
+    "bytes": 20720
+  }
+}
