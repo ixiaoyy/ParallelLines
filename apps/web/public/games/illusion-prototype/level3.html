@@ -2,14 +2,14 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <title>回廊彼岸 · 第三关：隐寺</title>
   <style>
-    :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#695b58;background:#dce6aa}
+    :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#695b58;background:#f1efb9}
     *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:clip}button{font:inherit}
-    .prototype{position:relative;width:100%;height:100%;min-height:280px;isolation:isolate;background:radial-gradient(ellipse at 45% 15%,#edf4b6 0%,#dce7a9 54%,#b7cf9a 100%)}
-    .prototype::before{content:"";position:absolute;z-index:1;inset:auto 0 0;height:min(172px,41%);background:linear-gradient(transparent,#dce6aa 42%);pointer-events:none}
+    .prototype{position:relative;width:100%;height:100%;min-height:280px;isolation:isolate;background:radial-gradient(ellipse at 45% 15%,#ffffcf 0%,#f3f0bc 54%,#d6dcaf 100%)}
+    .prototype::before{content:"";position:absolute;z-index:1;inset:auto 0 0;height:min(72px,18%);background:linear-gradient(transparent,#f1efb9 42%);pointer-events:none}
     .previous-level{position:absolute;z-index:3;top:max(12px,env(safe-area-inset-top));right:20px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid #92a17766;border-radius:4px;background:#f5e6df;color:#695b58;font-size:12px;text-decoration:none}.previous-level:hover{background:#ebd7cd}.previous-level:focus-visible{outline:3px solid #4f6954;outline-offset:4px}
     .level-name{position:absolute;z-index:2;top:max(20px,env(safe-area-inset-top));left:24px;margin:0;font-size:14px;letter-spacing:.2em;color:#77615d;pointer-events:none}.is-ending .level-name{opacity:0}
     canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
@@ -39,6 +39,8 @@
     .prototype.is-inside{background:#020506}.is-inside::before{background:linear-gradient(transparent,#020506 42%)}.is-inside .level-name{color:#bacfce}
     .talk{border:1px solid #86dce4;color:#b3eff1;background:#356e7b44;font-size:22px}.dialogue{position:absolute;z-index:5;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000b;color:#c5e4e4;gap:36px}.dialogue[hidden]{display:none}.dialogue p{white-space:pre-line;font-size:clamp(22px,4vw,29px);line-height:1.7;text-align:center;letter-spacing:.15em;margin:0}.dialogue button{min-width:44px;min-height:44px;border:2px solid #b3d7d7;background:transparent;border-radius:50%;color:#b3d7d7;font-size:24px}.curtain{position:absolute;z-index:4;inset:0;pointer-events:none;background:#020506;opacity:0}.scene-control[hidden]{display:none}
 
+    /* 整页触控由关卡处理，避免双击或双指手势触发浏览器缩放。 */
+    html,body{touch-action:none}
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     .prototype{height:100vh;height:100dvh}
     .restart,.sound,.previous-level,.next-level{touch-action:manipulation}
@@ -145,7 +147,7 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
         if(!fit){
           const rect=this.canvas.getBoundingClientRect(),controls=document.querySelector('.controls').getBoundingClientRect();
           const left=Math.max(24,controls.left-rect.left+8),right=this.width-Math.max(24,rect.right-controls.right+8);
-          const top=Math.max(76,...[...document.querySelectorAll('.previous-level,.level-name')].map(e=>e.getBoundingClientRect().bottom-rect.top+12)),bottom=state.won?this.height-32:Math.max(top+48,controls.top-rect.top-16);
+          const top=Math.max(68,...[...document.querySelectorAll('.previous-level,.level-name')].map(e=>e.getBoundingClientRect().bottom-rect.top+12)),bottom=state.won?this.height-32:Math.max(top+48,controls.top-rect.top-16);
           let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
           this.viewportBounds??=new WeakMap();
           for(const [list,dynamic]of[[this.static,false],[this.dynamic,true]])for(const o of list){
@@ -449,32 +451,41 @@ class GameAudio{
 
 /** 注册第三章专用屋顶、旗帜和刻纹网格；renderer须为已初始化Tiny3D，仅在初始化时调用一次。 */
 function installChapter3Decor(renderer){
-  const roof=[];
+  const roofFaces=[[],[],[],[]];
   /** 按三点追加一个平面三角形；退化顶面不生成顶点，data为位置/法线交错数组。 */
   const triangle=(data,a,b,c)=>{const u=b.map((v,i)=>v-a[i]),v=c.map((n,i)=>n-a[i]),n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],length=Math.hypot(...n);if(length<1e-9)return;const normal=n.map(x=>x/length);data.push(...a,...normal,...b,...normal,...c,...normal);};
   /** 追加四边形的两个三角形；点序决定外侧法线，返回值为空。 */
   const quad=(data,a,b,c,d)=>{triangle(data,a,b,c);triangle(data,a,c,d);};
   const rings=[[.50,0],[.50,.035],[.46,.065],[.26,.22],[.26,.25],[.075,.38],[0,.43]],corners=[[-1,-1],[-1,1],[1,1],[1,-1]];
   // 两级四坡粉顶与下沿分开，保持原图外沿、折面和尖顶轮廓。
-  for(let row=0;row<rings.length-1;row++)for(let side=0;side<4;side++){const[a,ya]=rings[row],[b,yb]=rings[row+1],p=corners[side],q=corners[(side+1)%4];quad(roof,[p[0]*a,ya,p[1]*a],[q[0]*a,ya,q[1]*a],[q[0]*b,yb,q[1]*b],[p[0]*b,yb,p[1]*b]);}
-  renderer.createGeometry('iii-roof',new Float32Array(roof));
+  for(let row=0;row<rings.length-1;row++)for(let side=0;side<4;side++){const[a,ya]=rings[row],[b,yb]=rings[row+1],p=corners[side],q=corners[(side+1)%4];quad(roofFaces[side],[p[0]*a,ya,p[1]*a],[q[0]*a,ya,q[1]*a],[q[0]*b,yb,q[1]*b],[p[0]*b,yb,p[1]*b]);}
+  for(let side=0;side<4;side++)renderer.createGeometry(side===0?'iii-roof':'iii-roof-'+side,new Float32Array(roofFaces[side]));
   const diamond=[],bottom=[0,-.5,0],top=[0,.5,0],rim=[[.5,0,0],[0,0,.5],[-.5,0,0],[0,0,-.5]];
   for(let i=0;i<4;i++){triangle(diamond,top,rim[(i+1)%4],rim[i]);triangle(diamond,bottom,rim[i],rim[(i+1)%4]);}
   renderer.createGeometry('iii-diamond',new Float32Array(diamond));
-  const maze=[],seal=[];
+  const seal=[];
   /** 在XY刻纹面画一条正交细线；线宽为归一化尺寸，不建立支撑或交互面。 */
   const stroke=(data,a,b,width=.015)=>{const dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);if(!length)return;const nx=-dy/length*width/2,ny=dx/length*width/2;quad(data,[a[0]+nx,a[1]+ny,0],[a[0]-nx,a[1]-ny,0],[b[0]-nx,b[1]-ny,0],[b[0]+nx,b[1]+ny,0]);};
   /** 按相邻点连接迷宫纹；path位于归一化面内，返回值为空。 */
   const polyline=(data,path,width)=>{for(let i=1;i<path.length;i++)stroke(data,path[i-1],path[i],width);};
-  polyline(maze,[[-.47,-.47],[-.47,.47],[.47,.47],[.47,-.47],[-.47,-.47]],.018);
-  // 固定正交回纹对应高墙竖向迷宫语汇，不用随机噪点冒充原作刻纹。
-  const paths=[
-    [[-.39,-.40],[-.39,.39],[.39,.39],[.39,-.39],[-.30,-.39],[-.30,.30],[.30,.30],[.30,-.30],[-.21,-.30],[-.21,.21],[.21,.21],[.21,-.21],[-.12,-.21],[-.12,.12],[.12,.12],[.12,-.12],[-.03,-.12],[-.03,.025]],
-    [[-.44,-.43],[-.35,-.43],[-.35,-.14],[-.26,-.14],[-.26,.15]],
-    [[.44,.43],[.35,.43],[.35,.14],[.26,.14],[.26,-.15]]
-  ];
-  for(const path of paths)polyline(maze,path,.015);
-  renderer.createGeometry('iii-maze',new Float32Array(maze));
+  // 高墙和窄柱使用不同密度的固定正交纹，保留原图逐层转折与小回纹，避免整面变成一条放大的方形螺旋。
+  for(const[name,columns,rows]of[['iii-maze',8,16],['iii-maze-side',6,16],['iii-maze-narrow',2,12],['iii-maze-wide',8,8]]){
+    const maze=[],cellX=.88/columns,cellY=.88/rows,line=Math.min(cellX,cellY)*.11;
+    polyline(maze,[[-.47,-.47],[-.47,.47],[.47,.47],[.47,-.47],[-.47,-.47]],line);
+    polyline(maze,[[-.445,-.445],[-.445,.445],[.445,.445],[.445,-.445],[-.445,-.445]],line*.75);
+    for(let row=0;row<rows;row+=2)for(let column=0;column<columns;column+=2){
+      const x=-.44+column*cellX,y=-.44+row*cellY,mirror=((row/2+column/2)%2)===1;
+      const motifs=[
+        [[.15,.12],[.15,1.85],[1.85,1.85],[1.85,.15],[.58,.15],[.58,1.42],[1.42,1.42],[1.42,.58],[1.00,.58],[1.00,1.0]],
+        [[.15,.12],[.15,1.85],[1.12,1.85],[1.12,1.10],[1.85,1.10],[1.85,.15],[.60,.15],[.60,.70],[1.25,.70],[1.25,.40]],
+        [[.15,1.85],[1.85,1.85],[1.85,.15],[.15,.15],[.15,1.10],[.68,1.10],[.68,.58],[1.30,.58],[1.30,1.35],[.15,1.35]],
+        [[.15,.15],[1.85,.15],[1.85,1.85],[.15,1.85],[.15,.60],[.70,.60],[.70,1.30],[1.28,1.30],[1.28,.70],[1.60,.70]]
+      ],points=motifs[(row/2+column)%motifs.length];
+      polyline(maze,points.map(([u,v])=>[x+(mirror?2-u:u)*cellX,y+v*cellY]),line);
+      polyline(maze,[[.10,1.05],[.42,1.05],[.42,.42]].map(([u,v])=>[x+(mirror?2-u:u)*cellX,y+v*cellY]),line*.8);
+    }
+    renderer.createGeometry(name,new Float32Array(maze));
+  }
   // 外塔圆环与短横线按参考图分层放置，与室内整面回纹使用不同网格。
   const outer=.18,inner=.135,cy=.245;
   for(let i=0;i<32;i++){const a=i/32*Math.PI*2,b=(i+1)/32*Math.PI*2;quad(seal,[Math.cos(a)*outer,cy+Math.sin(a)*outer,0],[Math.cos(b)*outer,cy+Math.sin(b)*outer,0],[Math.cos(b)*inner,cy+Math.sin(b)*inner,0],[Math.cos(a)*inner,cy+Math.sin(a)*inner,0]);}
@@ -505,8 +516,11 @@ function addChapter3Roof(renderer,{x,y,z,width,depth=width,flag=false,washed=fal
   const objects=[],unit=Math.min(width,depth);
   /** 在同一父姿态中添加屋顶部件；远景不参与拾取遮挡，返回新实例。 */
   const add=(kind,dx,dy,dz,sx,sy,sz,color,ry=0)=>{const object=renderer.add(kind,x+dx,y+dy,z+dz,sx,sy,sz,color,ry,list,parent);object.occludes=!washed;objects.push(object);return object;};
-  const pink=washed?0xf1b7ad:0xd84891,edge=washed?0xeeb8ac:0xa63576;
-  add('box',0,-unit*.018,0,width,unit*.045,depth,edge);add('iii-roof',0,0,0,width,unit,depth,pink);
+  const edge=washed?0xeeb8ac:0xa63576;
+  add('box',0,-unit*.018,0,width,unit*.045,depth,edge);
+  // 四面粉顶各自保留折面法线和温差，近塔有明确亮暗面，雾亭仍使用淡色。
+  const roofColors=washed?[0xf1b7ad,0xedafa8,0xf5c0af,0xf1b9ad]:[0xce3f86,0xbd397c,0xe25998,0xd84891];
+  for(let side=0;side<4;side++)add(side===0?'iii-roof':'iii-roof-'+side,0,0,0,width,unit,depth,roofColors[side]);
   add('iii-diamond',0,unit*.48,0,unit*.070,unit*.17,unit*.070,washed?0xf1c9b1:0xc83d87);
   if(flag){
     // 彩旗三色分网格共用一根旗杆，波形更新不改变旗根或机关姿态。
@@ -518,9 +532,10 @@ function addChapter3Roof(renderer,{x,y,z,width,depth=width,flag=false,washed=fal
 
 /** 添加刻纹面；center由x/y/z给出，ry=0朝+Z、-π/2朝-X，kind为maze或seal，返回装饰实例。 */
 function addChapter3Glyph(renderer,{x,y,z,width,height,ry=0,color=0x527d85,kind='maze'},list=renderer.static,parent=null){
-  const object=renderer.add(kind==='seal'?'iii-seal':'iii-maze',x,y,z,width,height,1,color,ry,list,parent);
+  const ratio=height/width,mesh=kind==='seal'?'iii-seal':ratio>3.6?'iii-maze-narrow':ratio>2.4?'iii-maze-side':ratio<1.7?'iii-maze-wide':'iii-maze';
+  const object=renderer.add(mesh,x,y,z,width,height,1,color,ry,list,parent);
   // 刻纹只是同实体上的表面细节，由后面的墙体负责遮挡和净空判断。
-  object.occludes=false;return object;
+  object.occludes=false;if(kind!=='seal')object.color[3]=2;return object;
 }
 
 /** 添加雾中四柱亭；x/y/z为地板局部中心，height到檐口，washed仅调远景色，返回实例数组。 */
@@ -719,7 +734,10 @@ function addChapter3Pavilion(renderer,{x,y,z,width,height,washed=true},list=rend
     /** 绘制实际阶梯踏面，支撑容差只取该段半级，不开放未出现阶段。 */
     function drawStairs(s){const active=s.when();if(!active&&s.owner!=='final')return;const dx=s.end[0]-s.start[0],dz=s.end[2]-s.start[2],alongX=Math.abs(dx)>Math.abs(dz),run=Math.hypot(dx,dz)/s.count,rise=(s.end[1]-s.start[1])/s.count;for(let i=0;i<s.count;i++){const p=mix(s.start,s.end,(i+.5)/s.count),top=s.start[1]+rise*(i+.5),r={id:s.name+'-'+i,owner:s.owner,x:p[0],y:top,z:p[2],width:alongX?run:s.width,depth:alongX?s.width:run,edges:[[s.nodes[i],s.nodes[i+1]]],when:s.when},o=drawRoad(r);o.walk.kind='stair';o.walk.stepRise=Math.abs(rise);o.walk.runAxis=alongX?0:1;}}
     /** 只在真实洞口留空的塔前墙，门内黑面负责遮挡出口映射。 */
-    function tower(name,x,z,width,depth,height,doors){const front=z+depth/2,xs=[x-width/2,x+width/2,...doors.flatMap(d=>[d.x-.28,d.x+.28])].sort((a,b)=>a-b),ys=[0,height,...doors.flatMap(d=>[d.y,d.y+.9])].sort((a,b)=>a-b);solid(name+'-back','out',x,height/2,z-.30,width,height,depth-.60,P.blue);for(let i=0;i<xs.length-1;i++)for(let j=0;j<ys.length-1;j++){const cx=(xs[i]+xs[i+1])/2,cy=(ys[j]+ys[j+1])/2;if(cx<x-width/2||cx>x+width/2||doors.some(d=>cx>d.x-.28&&cx<d.x+.28&&cy>d.y&&cy<d.y+.9))continue;solid(name+'-front','out',cx,cy,front-.30,xs[i+1]-xs[i],ys[j+1]-ys[j],.60,P.blue);}for(const d of doors)solid(name+'-dark-door','out',d.x,d.y+.45,front-.48,.55,.90,.02,P.dark,false);for(const y of[1.9,3.0,5.9,height-1.1]){if(!doors.some(d=>y>d.y-.05&&y<d.y+.95))solid(name+'-belt','out',x,y,z,width+.045,.08,depth+.045,P.blueLight);if(!doors.some(d=>y>d.y&&y<d.y+.9))for(let k=0;k<4;k++)solid(name+'-slot','out',x-width*.36+k*width*.24,y+.30,front+.008,.045,.35,.018,P.dark,false);}addChapter3Roof(renderer,{x,y:height,z,width:width+.22,depth:depth+.22,flag:true});for(const y of[height-1.0,2.0]){addChapter3Glyph(renderer,{x,y:y-.1,z:front+.008,width:width*.72,height:.85,ry:0,color:P.blueLight,kind:'seal'});}}
+    function tower(name,x,z,width,depth,height,doors){const front=z+depth/2,xs=[x-width/2,x+width/2,...doors.flatMap(d=>[d.x-.28,d.x+.28])].sort((a,b)=>a-b),ys=[0,height,...doors.flatMap(d=>[d.y,d.y+.9])].sort((a,b)=>a-b);solid(name+'-back','out',x,height/2,z-.30,width,height,depth-.60,P.blue);for(let i=0;i<xs.length-1;i++)for(let j=0;j<ys.length-1;j++){const cx=(xs[i]+xs[i+1])/2,cy=(ys[j]+ys[j+1])/2;if(cx<x-width/2||cx>x+width/2||doors.some(d=>cx>d.x-.28&&cx<d.x+.28&&cy>d.y&&cy<d.y+.9))continue;solid(name+'-front','out',cx,cy,front-.30,xs[i+1]-xs[i],ys[j+1]-ys[j],.60,P.blue);}for(const d of doors)solid(name+'-dark-door','out',d.x,d.y+.45,front-.48,.55,.90,.02,P.dark,false);for(const y of[1.9,3.0,5.9,height-1.1]){if(!doors.some(d=>y>d.y-.05&&y<d.y+.95))solid(name+'-belt','out',x,y,z,width+.045,.08,depth+.045,P.blueLight);if(!doors.some(d=>y>d.y&&y<d.y+.9))for(let k=0;k<4;k++)solid(name+'-slot','out',x-width*.36+k*width*.24,y+.30,front+.008,.045,.35,.018,P.dark,false);}
+      // 石塔分缝贴在既有实体两面；门洞所在层不加横缝，避免占用门前真实通路。
+      for(let row=0;row<7;row++){const y=.80+row*1.12;if(y>height-.7||doors.some(d=>y>d.y-.10&&y<d.y+.95))continue;solid(name+'-front-course-'+row,'out',x+(row%2?-.10:.12)*width,y,front+.012,width*.55,.016,.012,P.blueLight,false);solid(name+'-side-course-'+row,'out',x-width/2-.008,y,z,.012,.016,depth*.62,P.blueLight,false);solid(name+'-side-joint-'+row,'out',x-width/2-.008,y-.12,z+(row%2?.15:-.15)*depth,.012,.24,.018,P.blueLight,false);}
+      addChapter3Roof(renderer,{x,y:height,z,width:width+.22,depth:depth+.22,flag:true});for(const y of[height-1.0,2.0]){addChapter3Glyph(renderer,{x,y:y-.1,z:front+.014,width:width*.72,height:.85,ry:0,color:P.blueLight,kind:'seal'});addChapter3Glyph(renderer,{x:x-width/2-.012,y:y-.1,z,width:depth*.72,height:.85,ry:-QUARTER,color:P.blueLight,kind:'seal'});}}
     /** 所有移动成员实体、顶路、刻纹与圆点共同采用成员父姿态。 */
     function drawMember(id){const m=MEMBERS[id],group=GROUPS[m.group];if(group.area!==state.area||state.area==='inside'&&state.buildingRise===0)return;const nodes=areaDef().nodes.map((n,i)=>n.owner===id?i:-1).filter(i=>i>=0),edges=areaDef().edges.filter(e=>nodes.includes(e.a)&&nodes.includes(e.b)).map(e=>[e.a,e.b]),enabled=state.area==='outside'||state.buildingRise===1&&state.collapse===1;const o=solid(id+'-body',id,0,-(m.height+THICK)/2,0,m.size[0],m.height-THICK,Math.min(m.size[1],.50),state.area==='outside'?P.blue:P.inside);o.memberId=id;const cap=drawRoad({id:id+'-top',owner:id,x:0,y:0,z:0,width:m.size[0],depth:m.size[1],edges,when:()=>enabled});cap.memberId=id;
       // C的前顶板保留原接人路面，后柱不占B左端；P/Q候站侧柱体后收，原载人顶面与端口不变。
@@ -730,13 +748,31 @@ function addChapter3Pavilion(renderer,{x,y,z,width,height,washed=true},list=rend
     /** 外景采用原图双蓝塔、粉顶旗帜与雾亭，不绘制原简版寺门岛。 */
     function drawOutside(){tower('left',0,1.4,1.4,1.6,9.5,[{x:-.45,y:3.5},{x:-.45,y:4.7}]);tower('right',4.7,1.4,1.6,1.6,8.2,[{x:4.5,y:6.9}]);solid('right-foot','out',4.45,.8,3.55,1.1,1.6,.90,P.blue);solid('right-gallery','out',4.45,2.65,2.55,1.1,1.5,.70,P.blue);solid('entry-plinth','out',-1.05,.25,ENTRY_Z+.20,.62,1.3,.62,P.blue);addChapter3Roof(renderer,{x:-1.05,y:2.0,z:2.35,width:.65,depth:.65,flag:false});for(const[x,z,h,w]of[[-2.2,2.1,.2,.9],[1.4,-1.3,.3,.9],[5.7,2.8,.1,.8],[2.5,5.1,.3,1.1],[-1,5.5,.0,.65],[5.8,-1.4,.2,.65],[2.5,-2.0,.2,.8]])addChapter3Pavilion(renderer,{x,y:h,z,width:w,height:.8,washed:true});}
     /** 黑场主体有两面高墙、台阶柱和原图迷宫刻纹，升出动画整体共用structure父姿态。 */
-    function drawInterior(){const rise=state.buildingRise;if(rise>0){solid('back-wall','structure',-1.45,8.4,-.65,5.5,8.8,.45,P.inside);solid('left-wall','structure',-4.4,8.4,1.0,.45,8.8,3.8,P.inside);for(let i=0;i<5;i++){solid('left-steps','structure',-4.4,3.3+i*.9,2.6-i*.55,.55,1.8+i*.5,.55,P.inside);solid('right-steps','structure',.65,3.3+i*.9,2.55-i*.55,.55,1.8+i*.5,.55,P.inside);}solid('crown','structure',0,13.04,-.55,.85,.42,.85,P.insideTop);addChapter3Glyph(renderer,{x:-.8,y:8.7,z:-.415,width:3.2,height:7.0,ry:0,color:0x64878b,kind:'maze'},renderer.static,frameMatrix('structure'));addChapter3Glyph(renderer,{x:-4.165,y:8.7,z:.9,width:3.0,height:7.0,ry:QUARTER,color:0x64878b,kind:'maze'},renderer.static,frameMatrix('structure'));
+    function drawInterior(){const rise=state.buildingRise;if(rise>0){
+        // 两面高墙共用升出姿态；最高顶冠集中在原终点下方，侧墙逐段退低，原道路和梯口保持净空。
+        solid('back-wall','structure',-1.45,7.85,-.65,5.5,7.7,.45,P.inside);
+        solid('back-wall-shoulder','structure',-1.0,12.08,-.65,1.75,.86,.45,P.inside);
+        solid('back-wall-crown','structure',0,12.265,-.55,.85,1.13,.85,P.inside);
+        solid('left-wall','structure',-4.4,7.75,1.0,.45,7.5,3.8,P.inside);
+        solid('left-wall-back-step','structure',-4.4,11.8,-.30,.45,.60,1.2,P.inside);
+        // 墙根和侧墩留在主体原有墙面投影内，随整座建筑升出；旧入场基座仍按原状态独立坠落。
+        solid('back-wall-base','structure',-1.45,1.8,-.65,5.5,4.4,.45,P.inside);
+        solid('left-wall-base','structure',-4.4,1.8,1.0,.45,4.4,3.8,P.inside);
+        for(const[x,z]of[[-4.4,2.6],[.65,2.55]])solid('buttress-base','structure',x,.95,z,.55,2.90,.55,P.inside);
+        for(let i=0;i<5;i++){solid('left-steps','structure',-4.4,3.3+i*.9,2.6-i*.55,.55,1.8+i*.5,.55,P.inside);solid('right-steps','structure',.65,3.3+i*.9,2.55-i*.55,.55,1.8+i*.5,.55,P.inside);}
+        solid('crown','structure',0,13.04,-.55,.85,.42,.85,P.insideTop);
+        addChapter3Glyph(renderer,{x:-1.02,y:7.90,z:-.415,width:3.15,height:7.1,ry:0,color:0x6d8d91,kind:'maze'},renderer.static,frameMatrix('structure'));
+        addChapter3Glyph(renderer,{x:-4.165,y:7.75,z:1.0,width:3.05,height:7.0,ry:QUARTER,color:0x6d8d91,kind:'maze'},renderer.static,frameMatrix('structure'));
         // 上层桥分块坍塌，玩家保留在左侧固定安全面；P是独立承载柱，不假定同一刚体。
         if(state.collapse<1)for(let i=0;i<6;i++){const t=Math.max(0,Math.min(1,state.collapse*1.6-i*.10)),o=solid('G1-'+i,'structure',-2.60+i*.82,4.04-8*t*t,1.95,.82,.22,.55,P.insideTop);o.bridgePiece=true;o.walk={id:'G1-'+i,owner:'structure',edges:[[ids.inside['try-bridge'],ids.inside['bridge-far']]],enabled:state.collapse===0,kind:'road'};fadeFalling(o,t);}
         // 三架梯分别贴在台阶柱前侧，梯后柱体不跨入人物净空；上层廊沿不覆盖下层梯路。
         for(const l of defs.inside.ladders.filter(l=>l.name.startsWith('new')))solid('new-ladder-shaft-'+l.name,'structure',l.x,(l.top-THICK)/2,l.z-.50,.60,l.top-THICK,.50,P.inside);}
       // 入场基座顶部与人物脚点同高，梯身立柱在梯后；不能用整根立柱包住初始人物。
-      const drop=state.foundationFall;if(drop<1){solid('intro-pillar','out',0,-1.4,INTRO_Z+.25,.8,2.8,.8,P.inside);solid('intro-shaft','out',0,1.1,INTRO_Z-.525,.55,2.2,.55,P.inside);for(let i=0;i<4;i++)solid('intro-block-'+i,'out',-.225-i*.45,1.925,4.85,.45,.55,.55,P.inside);}
+      const drop=state.foundationFall;if(drop<1){solid('intro-pillar','out',0,-1.4,INTRO_Z+.25,.8,2.8,.8,P.inside);solid('intro-shaft','out',0,1.1,INTRO_Z-.525,.55,2.2,.55,P.inside);for(let i=0;i<4;i++)solid('intro-block-'+i,'out',-.225-i*.45,1.925,4.85,.45,.55,.55,P.inside);
+        // 初态短桥保留逐块端面和塔侧横槽；细节均低于踏面并随旧基座一起下落。
+        for(let i=0;i<3;i++)solid('intro-bridge-seam-'+i,'out',-.45-i*.45,1.925,5.132,.012,.515,.012,0x29434b,false);
+        for(let i=0;i<12;i++)solid('intro-shaft-slot-'+i,'out',.283,.25+i*.145,INTRO_Z-.525,.012,.035,.42,0x29434b,false);
+        const mark=addChapter3Glyph(renderer,{x:-1.57,y:1.905,z:5.133,width:.34,height:.43,ry:0,color:0x6d8d91,kind:'seal'});mark.objectId='intro-bridge-seal';mark.owner='out';}
       if(state.NPCVisible){const point=[STORY_X,4.1,STORY_Z-.30],R=renderer,f=M.trs(...point,1,1,1);const add=(kind,x,y,z,sx,sy,sz,hex)=>{const o=R.add(kind,x,y,z,sx,sy,sz,hex,0,R.dynamic,f);o.color[3]=2;o.occludes=false;};add('traveller_robe',0,0,0,.75,.9,.75,P.glow);add('sphere',0,.49,0,.17,.24,.17,P.glow);add('cyl',-.037,.09,0,.025,.18,.025,P.glow);add('cyl',.037,.09,0,.025,.18,.025,P.glow);add('sphere',0,.68,0,.06,.07,.06,P.glow);for(const radius of[.44,.30,.20]){const o=R.add('sphere',0,.44,0,radius,radius,radius,P.glow,0,R.dynamic,f);o.color[3]=.025;o.occludes=false;}}
     }
     /** 重新绘制当前实际区域；注册网格只在初始化进行，不随场景反复分配GPU资源。 */
