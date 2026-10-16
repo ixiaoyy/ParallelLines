@@ -19,6 +19,8 @@
     .prototype::after{content:"";position:absolute;z-index:2;inset:0;background:#2d315f9c;opacity:0;pointer-events:none;transition:opacity .3s ease}.prototype.is-complete::after{opacity:1}.prototype.is-complete .result{top:calc(50% - 65px);font-size:clamp(24px,4vw,31px);letter-spacing:.18em;color:#f2f5e9}.prototype.is-complete .controls{inset:0;display:block;pointer-events:none}.prototype.is-complete .control-actions{position:absolute;inset:0;display:block;pointer-events:none}.prototype.is-complete .restart{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);min-width:144px;pointer-events:auto}.prototype.is-complete .sound{position:absolute;right:20px;bottom:max(24px,env(safe-area-inset-bottom));pointer-events:auto}
     @media(max-width:480px){.controls{inset-inline:12px;gap:12px;bottom:max(18px,env(safe-area-inset-bottom))}.restart{padding-inline:20px}.level-name{left:16px}.previous-level{right:12px}}
     @media(prefers-reduced-motion:reduce){.prototype::after{transition:none}}
+    .finish-actions{display:flex;align-items:center;justify-content:center;gap:12px}.next-level{display:inline-flex;align-items:center;justify-content:center;pointer-events:auto;min-height:44px;min-width:116px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;text-decoration:none}.next-level[hidden]{display:none}.next-level:hover{background:#66b1ff}.next-level:active{background:#3a8ee6}.next-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
+    .prototype.is-complete .finish-actions{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:calc(100% - 32px);max-width:360px;pointer-events:auto}.prototype.is-complete .restart{position:static;transform:none;min-width:132px}
     .prototype.scene-A{background:radial-gradient(ellipse at 40% 25%,#d4dec1,#1eaaa5 72%,#168e94)}
     .prototype.scene-B{background:radial-gradient(ellipse at 45% 65%,#ffd172,#ff9a13 80%)}
     .prototype.scene-C{background:radial-gradient(ellipse at 45% 25%,#777c80,#484d5a 80%)}
@@ -43,7 +45,7 @@
     <p class="level-name">第七关 · 乌鸦巢</p><a class="previous-level" href="./level6.html">上一关</a>
     <canvas id="scene" aria-label="建筑、道路和角色"></canvas><div id="curtain" aria-hidden="true"></div>
     <p id="result" class="result" role="status" hidden>到达终点</p>
-    <div class="controls"><div class="control-actions"><button id="restart" class="restart" type="button">重新开始</button><button id="sound" class="sound" type="button" aria-label="声音：开" aria-pressed="true">声音：开</button></div></div>
+    <div class="controls"><div class="control-actions"><div class="finish-actions"><button id="restart" class="restart" type="button">重新开始</button><a id="next-level" class="next-level" href="./level8.html" hidden>下一关</a></div><button id="sound" class="sound" type="button" aria-label="声音：开" aria-pressed="true">声音：开</button></div></div>
     <section id="dialogue" class="dialogue" role="dialog" aria-modal="true" aria-label="对话" hidden><p id="dialogue-text"></p><button id="dialogue-next" type="button">继续</button></section>
     <p id="failure" class="failure" role="alert" hidden>当前浏览器未启用 WebGL 2。</p>
   </main>
@@ -1003,7 +1005,7 @@ function updateGoal(dt){
 }
 /** 本帧按机关、角色、接触、门户、归中顺序推进，接触检测读取更新后的真实实体。 */
 function update(dt){
- elapsed+=dt;state.player.moving=false;if(state.transition){updateDoor(dt);return;}if(state.won){state.endingElapsed+=dt;if(state.endingElapsed>=2){result.hidden=false;prototype.classList.add('is-complete');}return;}if(state.dialogue.active)return;
+ elapsed+=dt;state.player.moving=false;if(state.transition){updateDoor(dt);return;}if(state.won){state.endingElapsed+=dt;if(state.endingElapsed>=2){result.hidden=false;prototype.classList.add('is-complete');/* 通关演出完成后才开放第八关入口。 */document.getElementById('next-level').hidden=false;}return;}if(state.dialogue.active)return;
  updateMechanisms(dt);drawWorld();updateCrows(dt);
  if(walkingReady()){if(state.input==='keyboard'){state.player.segment=keyboardStep();if(state.player.segment)follow(state.player,[],dt,SPEED);state.player.segment=null;}else follow(state.player,state.route,dt,SPEED);}
  updatePlates();
@@ -1036,7 +1038,9 @@ function reset(e){
  for(const[id,g]of Object.entries(groups))state.groups[id]={q:g.initial,target:g.initial};
  Object.assign(state,{area:'A',flags:{},auto:{reveal:0,revealTarget:0,left:2,leftTarget:2,right:2,rightTarget:2,bView:0,bViewTarget:0,gate:0,gateTarget:0,red:0,redTarget:0,lift:0,liftTarget:0},transition:null,goalCentering:false,won:false,endingElapsed:0,dialogue:{active:false,index:0,done:false},pulse:null});
  state.crows={};for(const[area,name]of Object.entries({A:'a-crow-start',B:'bs-middle',C:'c-crow-home'})){state.area=area;state.crows[area]=[makeActor(name,'crow')];}state.crows.D=[];state.crows.E=[];state.area='A';state.player=makeActor('a-spawn','player');
- for(const d of Object.values(defs))for(const p of d.plates)p.inside=false;elapsed=0;prototype.className='prototype scene-A';curtain.style.opacity='0';dialogue.hidden=true;result.hidden=true;render();
+ for(const d of Object.values(defs))for(const p of d.plates)p.inside=false;elapsed=0;prototype.className='prototype scene-A';curtain.style.opacity='0';dialogue.hidden=true;result.hidden=true;
+ // 重开收起下一关入口，同时释放隐藏链接上的键盘焦点。
+ const next=document.getElementById('next-level');if(document.activeElement===next)restart.focus({preventScroll:true});next.hidden=true;render();
 }
 /** 正式运行故障使用既有失败提示并停止循环，不伪装通关。 */
 function fatal(error){failed=true;finishPointer();clearIntent();cancelAnimationFrame(animation);audio.stop();failure.hidden=false;console.error('Illusion runtime failure:',error);}
