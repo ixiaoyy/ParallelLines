@@ -116,6 +116,19 @@ async def home_page(request: Request, session: SessionDep) -> Response:
     return await html_page_response(document)
 
 
+@public_seo_router.get("/forum", response_class=HTMLResponse, include_in_schema=False)
+async def forum_page(request: Request, session: SessionDep) -> Response:
+    """返回论坛首页的公开语义文档，不写计数或改变目录首页。
+
+    ``request`` 提供规范域名的本地回退，``session`` 只读公开版块与主题；
+    响应沿用编译后的 SPA 外壳，并从 OpenAPI 中排除。
+    """
+
+    # 论坛仅通过独立地址恢复，根路径继续生成游戏目录文档。
+    document = await SeoService(session).forum_page(base_url(request))
+    return await html_page_response(document)
+
+
 @public_seo_router.get("/boards", response_class=HTMLResponse, include_in_schema=False)
 async def boards_page(request: Request, session: SessionDep) -> Response:
     """Return the canonical semantic public-board directory in the SPA shell.

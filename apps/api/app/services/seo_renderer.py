@@ -4,6 +4,7 @@ import asyncio
 import html
 import json
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 from app.core.exceptions import AppError
@@ -189,11 +190,19 @@ def render_semantic_fallback(document: SeoPageDocument) -> str:
     documents therefore contain no entity data. The function has no side effects.
     """
 
+    # 论坛文档的站点导航回论坛首页，含受限或不存在的论坛页；目录仍回根路径。
+    canonical_path = urlsplit(document.meta.canonical_url).path
+    home_path = (
+        "/forum"
+        if canonical_path in {"/forum", "/boards"}
+        or canonical_path.startswith(("/b/", "/topics/", "/members/"))
+        else "/"
+    )
     sections = [
         '<main class="seo-fallback" '
         f'data-seo-page-kind="{html.escape(document.kind, quote=True)}">',
         '  <nav aria-label="站点导航">',
-        f'    <a href="/">{html.escape(document.site.title)}</a>',
+        f'    <a href="{home_path}">{html.escape(document.site.title)}</a>',
         "  </nav>",
         f"  <h1>{html.escape(document.heading)}</h1>",
     ]

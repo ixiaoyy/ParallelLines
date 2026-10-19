@@ -35,7 +35,7 @@ const deniedCopy = computed(() => {
       <h1 id="access-denied-title">{{ deniedCopy.title }}</h1>
       <p>{{ deniedCopy.description }}</p>
       <div class="access-denied-card__actions">
-        <RouterLink :to="{ name: 'home' }">
+        <RouterLink :to="{ name: 'forum-home' }">
           <UiButton tone="primary">返回首页</UiButton>
         </RouterLink>
         <RouterLink v-if="requiredAccess === 'moderation'" :to="{ name: 'my-reviewables' }">

@@ -552,7 +552,7 @@ function setToolbarStatus(content: string) {
       title="无法加载这个主题"
       description="这个主题暂时无法访问，可能已被删除或链接已变更。请稍后重试。"
     >
-      <RouterLink class="empty-link" to="/">返回首页</RouterLink>
+      <RouterLink class="empty-link" to="/forum">返回首页</RouterLink>
     </UiEmptyState>
 
     <template v-else-if="topic">
@@ -710,7 +710,7 @@ function setToolbarStatus(content: string) {
     </template>
 
     <UiEmptyState v-else title="没有找到这个主题" description="主题可能已被移动、隐藏或不存在，回到首页继续浏览。">
-      <RouterLink class="empty-link" to="/">返回首页</RouterLink>
+      <RouterLink class="empty-link" to="/forum">返回首页</RouterLink>
     </UiEmptyState>
   </div>
 </template>

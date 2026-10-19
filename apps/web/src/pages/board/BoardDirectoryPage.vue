@@ -392,7 +392,7 @@ function boardPurpose(board: BoardSummary) {
         </div>
       </section>
 
-      <RouterLink v-if="!hasSearch" class="latest-topic-link" :to="{ name: 'home' }">
+      <RouterLink v-if="!hasSearch" class="latest-topic-link" :to="{ name: 'forum-home' }">
         <CompassOutlined aria-hidden="true" />
         <span>
           <strong>不知道去哪？</strong>

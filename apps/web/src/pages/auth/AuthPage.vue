@@ -59,8 +59,12 @@ const OAUTH_PROVIDER_OPTIONS: Record<string, OAuthProviderOption> = {
 };
 const route = useRoute();
 const router = useRouter();
-// 登录页仅供 /admin 认证使用，旧注册入口不再从公开目录开放。
-const adminLoginOnly = computed(() => route.query.redirect === "/admin");
+// 目录及论坛后台继续使用专用登录，普通论坛访问允许既有注册流程。
+const adminLoginOnly = computed(() => {
+  const redirect = route.query.redirect;
+  return typeof redirect === "string" && (redirect === "/admin" || redirect.startsWith("/admin/"));
+});
+const authHomeTarget = computed(() => adminLoginOnly.value ? "/" : "/forum");
 const loginMutation = useLogin();
 const oauthProvidersQuery = useOAuthProviders();
 const verifyTwoFactorMutation = useVerifyTwoFactorLogin();
@@ -119,12 +123,15 @@ const availableOAuthProviders = computed(() =>
 
 const redirectTarget = computed(() => {
   const redirect = route.query.redirect;
-  return typeof redirect === "string" && redirect.startsWith("/") ? redirect : "/";
+  // 普通认证默认回论坛，显式回跳地址沿用既有站内路径判断。
+  return typeof redirect === "string" && redirect.startsWith("/")
+    ? redirect
+    : "/forum";
 });
 
 watch(
-  () => route.query.mode,
-  (mode) => {
+  () => [route.query.mode, adminLoginOnly.value] as const,
+  ([mode]) => {
     activeTab.value = adminLoginOnly.value && mode === "register" ? "login" : readAuthTab(mode);
     formError.value = "";
     formNotice.value = "";
@@ -461,7 +468,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 <template>
   <div class="auth-page" :class="[`auth-page--${activeTab}`, { 'auth-page--admin-login': adminLoginOnly }]" :style="authPageStyle">
     <nav class="auth-topbar" aria-label="认证页导航">
-      <RouterLink class="auth-topbar__brand" to="/" aria-label="返回首页">
+      <RouterLink class="auth-topbar__brand" :to="authHomeTarget" aria-label="返回首页">
         <img :src="authMarkUrl" alt="" class="auth-logo-mark" />
         <span>ParallelLines</span>
       </RouterLink>
@@ -471,7 +478,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
           <span>简体中文</span>
           <DownOutlined aria-hidden="true" />
         </button>
-        <RouterLink class="auth-official-link" to="/">访问官网</RouterLink>
+        <RouterLink class="auth-official-link" :to="authHomeTarget">访问官网</RouterLink>
       </div>
     </nav>
 
@@ -830,10 +837,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
     <footer v-if="!adminLoginOnly" class="auth-footer" aria-label="认证页页脚">
       <span>© 2024 ParallelLines. All rights reserved.</span>
-      <RouterLink to="/">用户协议</RouterLink>
-      <RouterLink to="/">隐私政策</RouterLink>
+      <RouterLink to="/forum">用户协议</RouterLink>
+      <RouterLink to="/forum">隐私政策</RouterLink>
       <RouterLink to="/boards">社区规范</RouterLink>
-      <RouterLink to="/">帮助中心</RouterLink>
+      <RouterLink to="/forum">帮助中心</RouterLink>
     </footer>
   </div>
 </template>

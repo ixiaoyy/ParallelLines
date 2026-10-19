@@ -152,6 +152,15 @@ class SeoService:
                 ),
                 description=site_description(identity),
             )
+        # 独立论坛首页复用旧论坛描述，不能改变游戏目录的元信息。
+        if normalized == "/forum":
+            return self._site_meta(
+                identity,
+                base_url,
+                "/forum",
+                title=site_brand_name(identity.title),
+                description=forum_description(identity),
+            )
         if normalized == "/boards":
             return self._site_meta(
                 identity,
@@ -293,6 +302,40 @@ class SeoService:
             site_structured_data=self._site_structured_data(identity, base_url),
         )
 
+    async def forum_page(self, base_url: str) -> SeoPageDocument:
+        """生成论坛首页的公开语义文档，规范地址固定为 ``/forum``。
+
+        ``base_url`` 是规范域名；返回有数量上限的公开版块和主题链接，
+        沿用原论坛首页文案，不写数据库、不增加 sitemap 入口。
+        """
+
+        identity = await self._site_identity()
+        # 只恢复原论坛首页的公开读取，目录首页仍使用原来的目录数据源。
+        boards = await self._public_boards(MAX_HOME_LINKS_PER_TYPE)
+        topics = await self._public_topics(MAX_HOME_LINKS_PER_TYPE)
+        links = tuple(self._board_link(board) for board in boards) + tuple(
+            self._topic_link(topic) for topic in topics
+        )
+        description = forum_description(identity)
+        return SeoPageDocument(
+            kind="home",
+            status_code=200,
+            site=identity,
+            meta=self._site_meta(
+                identity,
+                base_url,
+                "/forum",
+                title=site_brand_name(identity.title),
+                description=description,
+            ),
+            heading=identity.title,
+            intro=description,
+            links=links,
+            site_structured_data=self._site_structured_data(
+                identity, base_url, description=description
+            ),
+        )
+
     async def boards_page(self, base_url: str) -> SeoPageDocument:
         """Build the anonymous board-directory document with bounded public links.
 
@@ -317,7 +360,9 @@ class SeoService:
             heading="全部版块",
             intro=description,
             links=tuple(self._board_link(board) for board in boards),
-            site_structured_data=self._site_structured_data(identity, base_url),
+            site_structured_data=self._site_structured_data(
+                identity, base_url, description=forum_description(identity)
+            ),
         )
 
     async def board_page(self, slug: str, base_url: str) -> SeoPageDocument:
@@ -352,7 +397,9 @@ class SeoService:
             heading=board.name,
             intro=description,
             links=tuple(self._topic_link(topic) for topic in topics),
-            site_structured_data=self._site_structured_data(identity, base_url),
+            site_structured_data=self._site_structured_data(
+                identity, base_url, description=forum_description(identity)
+            ),
         )
 
     async def topic_page(
@@ -433,7 +480,9 @@ class SeoService:
                 ),
             ),
             posts=page_posts,
-            site_structured_data=self._site_structured_data(identity, base_url),
+            site_structured_data=self._site_structured_data(
+                identity, base_url, description=forum_description(identity)
+            ),
             page_structured_data=(
                 self._topic_structured_data(topic, page_posts, base_url)
                 if first_post is not None
@@ -481,7 +530,9 @@ class SeoService:
             intro=description,
             identity_notice=f"{operator.label}：{operator.description}" if operator else None,
             links=tuple(self._topic_link(topic) for topic in topics),
-            site_structured_data=self._site_structured_data(identity, base_url),
+            site_structured_data=self._site_structured_data(
+                identity, base_url, description=forum_description(identity)
+            ),
             page_structured_data=self._profile_structured_data(
                 user,
                 topic_count=topic_count,
@@ -1076,12 +1127,19 @@ class SeoService:
             intro="请求的页面不存在或已被移除。",
         )
 
-    def _site_structured_data(self, identity: SeoSiteIdentity, base_url: str) -> JsonObject:
+    def _site_structured_data(
+        self,
+        identity: SeoSiteIdentity,
+        base_url: str,
+        *,
+        description: str | None = None,
+    ) -> JsonObject:
         """Build stable WebSite/Organization JSON-LD for a public document.
 
         ``identity`` contains public branding and ``base_url`` the canonical
-        origin. The returned graph references the existing protected logo and has
-        no side effects.
+        origin. ``description`` overrides the catalog copy for forum documents
+        so their initial graph matches Vue. The returned graph references the
+        existing protected logo and has no side effects.
         """
 
         website_id = absolute_url(base_url, "/#website")
@@ -1091,6 +1149,8 @@ class SeoService:
         )
         name = site_brand_name(identity.title)
         alternate_names = site_alternate_names(identity.title, base_url)
+        # 论坛页面显式沿用旧论坛描述，目录和既有默认调用继续使用目录描述。
+        public_description = description if description is not None else site_description(identity)
         return {
             "@context": "https://schema.org",
             "@graph": [
@@ -1100,7 +1160,7 @@ class SeoService:
                     "url": absolute_url(base_url, "/"),
                     "name": name,
                     "alternateName": alternate_names,
-                    "description": site_description(identity),
+                    "description": public_description,
                     "inLanguage": "zh-CN",
                     "publisher": {"@id": organization_id},
                 },
@@ -1379,6 +1439,12 @@ def setting_text(value: object, fallback: str) -> str:
     if isinstance(value, str) and value.strip():
         return value.strip()
     return fallback
+
+
+def forum_description(identity: SeoSiteIdentity) -> str:
+    """根据公开站点资料返回原论坛描述，供论坛首屏和元信息共同使用。"""
+
+    return f"{site_brand_name(identity.title)}：{identity.tagline}。浏览公开版块与可追溯讨论。"
 
 
 def site_description(identity: SeoSiteIdentity) -> str:

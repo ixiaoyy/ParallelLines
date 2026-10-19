@@ -94,6 +94,10 @@ const userStatusUpdating = ref(false);
 const hasToken = computed(() => hasAccessToken());
 const canUpdateUserStatus = computed(() => isAdmin(currentUserQuery.data.value));
 const currentUserId = computed(() => currentUserQuery.data.value?.id);
+// 管理员可返回论坛后台；版主没有总览权限，返回公开论坛以避免进入无权页面。
+const moderationReturnPath = computed(() =>
+  isAdmin(currentUserQuery.data.value) ? "/admin/forum" : "/forum",
+);
 
 const flags = computed(() => queueQuery.data.value ?? []);
 const reviewables = computed(() => reviewablesQuery.data.value ?? []);
@@ -973,7 +977,7 @@ function mutationErrorMessage(error: unknown) {
 
     <template v-else>
       <div class="reviewable-mobile-appbar" aria-label="内容审核移动端工具栏">
-        <RouterLink class="reviewable-mobile-appbar__icon" to="/admin" aria-label="返回后台">
+        <RouterLink class="reviewable-mobile-appbar__icon" :to="moderationReturnPath" aria-label="返回后台">
           <LeftOutlined />
         </RouterLink>
         <strong>发布审核</strong>

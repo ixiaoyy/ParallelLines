@@ -3,7 +3,6 @@ import {
   AppstoreOutlined,
   BarChartOutlined,
   CloseOutlined,
-  KeyOutlined,
   ExportOutlined,
   MenuOutlined,
   SafetyCertificateOutlined,
@@ -27,7 +26,7 @@ const NotificationBell = defineAsyncComponent(() =>
 );
 
 interface AdminNavigationItem {
-  id: "dashboard" | "analytics" | "users" | "fablespace" | "moderation" | "system";
+  id: "dashboard" | "analytics" | "users" | "moderation" | "system";
   label: string;
   mobileLabel: string;
   path: string;
@@ -58,7 +57,7 @@ const navigationItems = computed<AdminNavigationItem[]>(() => [
     id: "dashboard",
     label: t("admin.nav.dashboard", "工作台"),
     mobileLabel: t("admin.nav.dashboard_short", "工作台"),
-    path: "/admin",
+    path: "/admin/forum",
     icon: AppstoreOutlined,
     adminOnly: true,
   },
@@ -76,14 +75,6 @@ const navigationItems = computed<AdminNavigationItem[]>(() => [
     mobileLabel: t("admin.nav.users_short", "用户"),
     path: "/admin/users",
     icon: UserOutlined,
-    adminOnly: true,
-  },
-  {
-    id: "fablespace",
-    label: t("admin.nav.fablespace", "AI 产品能力"),
-    mobileLabel: t("admin.nav.fablespace_short", "AI 能力"),
-    path: "/admin/fablespace-access",
-    icon: KeyOutlined,
     adminOnly: true,
   },
   {
@@ -193,7 +184,7 @@ watch(
       :inert="isCompactViewport && !isDrawerOpen"
       @keydown="trapDrawerFocus"
     >
-      <RouterLink class="admin-console-shell__brand" to="/" :aria-label="`返回${siteTitle}首页`">
+      <RouterLink class="admin-console-shell__brand" to="/forum" :aria-label="`返回${siteTitle}首页`">
         <img :src="brandLogoUrl" alt="" />
         <strong>{{ backendBrandLabel }}</strong>
       </RouterLink>
@@ -224,7 +215,7 @@ watch(
       </nav>
 
       <div class="admin-console-shell__sidebar-footer">
-        <RouterLink class="admin-console-shell__return" to="/">
+        <RouterLink class="admin-console-shell__return" to="/forum">
           <ExportOutlined aria-hidden="true" />
           <span>返回站点</span>
         </RouterLink>

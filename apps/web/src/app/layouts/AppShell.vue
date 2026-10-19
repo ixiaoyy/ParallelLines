@@ -6,10 +6,9 @@ import {
   MenuOutlined,
   PlusOutlined,
   SearchOutlined,
-  ToolOutlined,
   UserOutlined,
 } from "@ant-design/icons-vue";
-import { computed, defineAsyncComponent, onUnmounted, ref, watch, watchEffect } from "vue";
+import { computed, defineAsyncComponent, onBeforeUnmount, onUnmounted, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { RouteLocationRaw } from "vue-router";
 
@@ -35,7 +34,7 @@ import {
 } from "@/shared/seo/structuredData";
 import UiButton from "@/shared/ui/Button.vue";
 import { applySiteBranding } from "@/shared/theme/siteBranding";
-import { setInterfaceTheme } from "@/shared/theme/interfaceTheme";
+import { applyStoredInterfaceTheme, setInterfaceTheme } from "@/shared/theme/interfaceTheme";
 
 // Defers the notification widget so logged-in mobile first paint is not blocked by notification CSS/API setup.
 // Key parameters: none. Return value is the NotificationBell component; side effect is idle-time chunk loading.
@@ -49,10 +48,6 @@ const AdminConsoleShell = defineAsyncComponent(() =>
   import("@/features/admin/components/AdminConsoleShell.vue"),
 );
 
-// Loads optional plugin navigation only when the visible desktop bar needs it.
-// Key parameters: none. Return value is the PluginSlot component; side effect is deferred chunk loading.
-const PluginSlot = defineAsyncComponent(() => import("@/features/plugins/components/PluginSlot.vue"));
-
 // Loads the desktop-style forum rail only after compact navigation is opened.
 // Key parameters: none. Return value is the reusable forum navigation rail; side effect is deferred chunk loading.
 const ForumLeftRail = defineAsyncComponent(() =>
@@ -61,6 +56,12 @@ const ForumLeftRail = defineAsyncComponent(() =>
 
 const router = useRouter();
 const route = useRoute();
+// 论坛运行时样式和偏好仅在外壳存续期间生效，离开时还原目录原有文档状态。
+const documentRoot = document.documentElement;
+const previousRootStyle = documentRoot.getAttribute("style");
+const previousInterfaceTheme = documentRoot.getAttribute("data-interface-theme");
+const previousFavicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.getAttribute("href") ?? "/favicon.svg";
+applyStoredInterfaceTheme();
 const globalSearch = ref("");
 const isNavOpen = ref(false);
 const isDesktopViewport = useMediaQuery("(min-width: 621px)", true);
@@ -122,12 +123,12 @@ const siteTagline = computed(() =>
 );
 const siteSeoName = computed(() => buildSeoSiteName(siteTitle.value));
 const routeSeoMeta = computed(() =>
-  resolveRouteSeoMeta(route.meta.seo, {
+  route.meta.forumShell ? resolveRouteSeoMeta(route.meta.seo, {
     routePath: route.path,
     siteTitle: siteTitle.value,
     siteName: siteSeoName.value,
     siteTagline: siteTagline.value,
-  }),
+  }) : undefined,
 );
 const brandLogoUrl = computed(() => {
   const configuredLogo = publicSettingString(
@@ -138,6 +139,10 @@ const brandLogoUrl = computed(() => {
   return LEGACY_BRAND_LOGO_URLS.has(configuredLogo) ? DEFAULT_BRAND_LOGO_URL : configuredLogo;
 });
 const siteStructuredData = computed(() => {
+  // 切回目录时立即移除论坛站点图谱，不让旧外壳短暂保留论坛语义。
+  if (!route.meta.forumShell) {
+    return null;
+  }
   const origin = browserSeoOrigin();
   if (!origin || !siteSettingsQuery.data.value) {
     return undefined;
@@ -152,7 +157,7 @@ const siteStructuredData = computed(() => {
 });
 const brandHomeLabel = computed(() => t("brand.home_aria", "返回首页"));
 const adminLinkTarget = computed<RouteLocationRaw>(() =>
-  isAdmin(currentUser.value) ? { name: "admin-dashboard" } : { name: "admin-moderation" },
+  isAdmin(currentUser.value) ? { name: "forum-admin-dashboard" } : { name: "admin-moderation" },
 );
 // publishLinkTarget 用途：顶部发布入口在版块页携带当前版块 slug；无参数，返回 Vue Router 目标对象且无副作用。
 const publishLinkTarget = computed<RouteLocationRaw>(() => {
@@ -163,7 +168,7 @@ const adminLinkLabel = computed(() =>
   isAdmin(currentUser.value) ? t("nav.admin", "后台") : t("nav.moderation", "审核"),
 );
 const ADMIN_ROUTE_NAMES = new Set([
-  "admin-dashboard",
+  "forum-admin-dashboard",
   "admin-analytics",
   "admin-users",
 ]);
@@ -205,7 +210,9 @@ const removeRouteEndGuard = router.afterEach(() => finishRouteNavigation());
 const removeRouteErrorHandler = router.onError(() => finishRouteNavigation());
 
 watchEffect(() => {
-  applySiteBranding(siteSettingsQuery.data.value?.settings);
+  if (route.meta.forumShell) {
+    applySiteBranding(siteSettingsQuery.data.value?.settings);
+  }
 });
 useSeoMeta(routeSeoMeta);
 useStructuredData(SEO_SITE_STRUCTURED_DATA_ID, siteStructuredData);
@@ -240,6 +247,21 @@ watch(
 
 schedulePublicRoutePrefetch();
 
+onBeforeUnmount(() => {
+  // 不覆盖持久化的论坛偏好，只撤销本次外壳向目录文档注入的样式和图标。
+  if (previousRootStyle === null) {
+    documentRoot.removeAttribute("style");
+  } else {
+    documentRoot.setAttribute("style", previousRootStyle);
+  }
+  if (previousInterfaceTheme === null) {
+    documentRoot.removeAttribute("data-interface-theme");
+  } else {
+    documentRoot.setAttribute("data-interface-theme", previousInterfaceTheme);
+  }
+  document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.setAttribute("href", previousFavicon);
+});
+
 onUnmounted(() => {
   removeRouteStartGuard();
   removeRouteEndGuard();
@@ -260,7 +282,7 @@ async function handleLogout() {
 function handleBrandClick() {
   closeNavigation();
   closeAccountMenu();
-  if (route.name === "home") {
+  if (route.name === "forum-home") {
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
   }
 }
@@ -302,8 +324,6 @@ function schedulePublicRoutePrefetch() {
   scheduleIdleTask(() => {
     void import("@/pages/home/HomePage.vue");
     void import("@/pages/board/BoardDirectoryPage.vue");
-    void import("@/pages/play/PlayHubPage.vue");
-    void import("@/pages/tools/ToolsPage.vue");
     void import("@/pages/user/UserDirectoryPage.vue");
     void import("@/pages/events/EventsPage.vue");
     void import("@/pages/search/SearchPage.vue");
@@ -371,7 +391,7 @@ function t(key: string, fallback: string) {
     }"
   >
     <header v-if="!isAuthRoute && !isPlayGameRoute" ref="topbarRef" class="topbar" @keydown.esc="closeNavigation">
-      <RouterLink class="brand" to="/" :aria-label="brandHomeLabel" :title="brandHomeLabel" @click="handleBrandClick">
+      <RouterLink class="brand" :to="{ name: 'forum-home' }" :aria-label="brandHomeLabel" :title="brandHomeLabel" @click="handleBrandClick">
         <span class="brand-mark">
           <img class="brand-logo" :src="brandLogoUrl" alt="" aria-hidden="true" />
         </span>
@@ -419,18 +439,6 @@ function t(key: string, fallback: string) {
       </button>
 
       <div class="topbar-actions" :class="{ 'topbar-actions--guest': !currentUser }">
-        <RouterLink
-          v-if="isDesktopViewport"
-          class="auth-link"
-          :class="{ 'is-active': route.path.startsWith('/tools') }"
-          :to="{ name: 'tools' }"
-        >
-          <ToolOutlined aria-hidden="true" />
-          工具
-        </RouterLink>
-
-        <PluginSlot v-if="isDesktopViewport" class="desktop-plugin-slot" slot-name="app.nav" />
-
         <NotificationBell v-if="currentUser" class="topbar-notification" />
 
         <template v-if="!currentUser">
@@ -479,14 +487,6 @@ function t(key: string, fallback: string) {
                 @click="closeAccountMenu"
               >
                 {{ t("nav.moderation", "审核") }}
-              </RouterLink>
-              <RouterLink
-                class="account-menu__item"
-                :to="{ name: 'tools' }"
-                :class="{ 'is-active': route.path.startsWith('/tools') }"
-                @click="closeAccountMenu"
-              >
-                社区工具
               </RouterLink>
               <RouterLink
                 class="account-menu__item"

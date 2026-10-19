@@ -12,7 +12,6 @@ import {
   NotificationOutlined,
   QuestionCircleOutlined,
   ReadOutlined,
-  RocketOutlined,
   TagsOutlined,
   TeamOutlined,
   TrophyOutlined,
@@ -189,18 +188,6 @@ function tagAccentStyle(tagName: string): Record<string, string> {
             </span>
           </RouterLink>
         </template>
-        <RouterLink
-          class="rail-board rail-board--play"
-          :to="{ name: 'play-hub' }"
-          aria-label="游乐场，3 个项目可玩"
-          @click="emit('navigate')"
-        >
-          <RocketOutlined class="rail-board-mark" aria-hidden="true" />
-          <span class="rail-board-copy">
-            <strong>游乐场</strong>
-          </span>
-          <span class="rail-board-play-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-        </RouterLink>
       </section>
 
       <section class="rail-section rail-section--tags" aria-labelledby="rail-tags-title">

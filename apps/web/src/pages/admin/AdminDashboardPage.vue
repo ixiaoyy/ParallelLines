@@ -21,7 +21,7 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
   <AdminAccessState
     v-else-if="!currentUserQuery.data.value"
     kind="login"
-    :action-to="{ path: '/auth', query: { redirect: '/admin' } }"
+    :action-to="{ path: '/auth', query: { redirect: '/admin/forum' } }"
     action-label="前往登录"
   />
   <AdminAccessState

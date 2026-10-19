@@ -207,7 +207,7 @@ function setTagFilter(value: string) {
 
 function clearTopicFilters() {
   void router.replace({
-    name: "home",
+    name: "forum-home",
     query: omitEmptyQuery({
       ...route.query,
       title: undefined,
@@ -243,7 +243,7 @@ function submitHeroSearch() {
 
 function updateFilterQuery(key: "title" | "board" | "tag", value: string) {
   void router.replace({
-    name: "home",
+    name: "forum-home",
     query: omitEmptyQuery({
       ...route.query,
       [key]: value.trim() || undefined,

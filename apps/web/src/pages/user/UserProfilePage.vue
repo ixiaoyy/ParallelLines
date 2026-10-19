@@ -473,7 +473,7 @@ function handleMobileBack() {
     return;
   }
 
-  void router.push({ name: "home" });
+  void router.push({ name: "forum-home" });
 }
 
 // openAvatarPicker 用途：打开头像上传文件选择器；无参数，副作用是触发隐藏 input 的点击。
@@ -1274,7 +1274,7 @@ function socialErrorMessage(error: unknown): string {
       </RouterLink>
 
       <nav class="profile-mobile-bottom-nav" aria-label="移动端主导航">
-        <RouterLink :to="{ name: 'home' }">
+        <RouterLink :to="{ name: 'forum-home' }">
           <HomeOutlined aria-hidden="true" />
           <span>首页</span>
         </RouterLink>

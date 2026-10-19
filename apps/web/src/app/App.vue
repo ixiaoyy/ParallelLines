@@ -1,16 +1,29 @@
 <script setup lang="ts">
 import { ConfigProvider } from "ant-design-vue";
 import zhCN from "ant-design-vue/es/locale/zh_CN";
-import { computed } from "vue";
+import { computed, defineAsyncComponent } from "vue";
 import { useRoute } from "vue-router";
 
 import { resolveRouteSeoMeta, useSeoMeta } from "@/shared/seo/meta";
 
 const route = useRoute();
-// 新站公开页面使用固定目录文案，保留管理员路由的 noindex 元信息。
+// 论坛外壳按需加载；目录首页及原目录后台不增加论坛导航或初始化请求。
+const AppShell = defineAsyncComponent(() => import("@/app/layouts/AppShell.vue"));
+const usesForumShell = computed(() => {
+  const redirect = route.query.redirect;
+  const isAdminLogin = route.name === "auth" && typeof redirect === "string" &&
+    (redirect === "/admin" || redirect.startsWith("/admin/"));
+  return route.meta.forumShell === true && !isAdminLogin;
+});
+// 论坛的动态品牌和页面 SEO 由旧外壳接管；其他页面继续使用目录文案。
 useSeoMeta(
-  computed(() =>
-    resolveRouteSeoMeta(route.meta.seo, {
+  computed(() => usesForumShell.value ? undefined :
+    resolveRouteSeoMeta(route.name === "auth" ? {
+      title: "后台登录 · {siteTitle}",
+      description: "登录平行线后台管理项目目录与访问统计。",
+      canonicalPath: "/auth",
+      robots: "noindex,nofollow",
+    } : route.meta.seo, {
       routePath: route.path,
       siteTitle: "平行线",
       siteName: "平行线 ParallelLines",
@@ -59,6 +72,11 @@ const theme = {
 
 <template>
   <ConfigProvider :locale="zhCN" :theme="theme">
-    <RouterView />
+    <RouterView v-slot="{ Component }">
+      <AppShell v-if="usesForumShell">
+        <component :is="Component" />
+      </AppShell>
+      <component :is="Component" v-else />
+    </RouterView>
   </ConfigProvider>
 </template>

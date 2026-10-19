@@ -235,5 +235,5 @@ function buildNotificationUrl(notification: NotificationResponse): string {
     return `/b/${boardSlug}`;
   }
 
-  return "/";
+  return "/forum";
 }
