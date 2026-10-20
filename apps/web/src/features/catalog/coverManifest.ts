@@ -202,6 +202,8 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "yaochao-dujie": "/catalog/2026-10-14-v1/covers/yaochao-dujie.webp",
   // 反向贪吃蛇使用实机画面整理的正式封面，与静态资源发布清单保持一致。
   "reverse-snake-3d": "/catalog/2026-10-14-v2/covers/reverse-snake-3d.webp",
+  // 空王座正式封面与目录收录同批交付，路径与静态资源发布清单保持一致。
+  "empty-throne": "/catalog/2026-10-19-v1/covers/empty-throne.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {
