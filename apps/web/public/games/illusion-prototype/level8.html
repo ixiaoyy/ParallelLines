@@ -6,19 +6,21 @@
   <meta name="color-scheme" content="light">
   <title>回廊彼岸 · 第八关：箱子</title>
   <style>
-    :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f2eee6;background:#c3d3b7}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:clip;touch-action:none}html{-webkit-text-size-adjust:100%;text-size-adjust:100%}button{font:inherit}
+    /* 固定界面与画布共用浏览器安全区，横竖屏都保留原有最小边距。 */
+    :root{--safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-right,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f2eee6;background:#c3d3b7}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:clip;touch-action:none}html{-webkit-text-size-adjust:100%;text-size-adjust:100%}button{font:inherit}
     .prototype{position:relative;width:100%;height:100vh;height:100dvh;min-height:280px;isolation:isolate;background:radial-gradient(ellipse at 48% 38%,#e3e7c9,#c3d3b7 77%)}
-    .level-name{position:absolute;z-index:2;top:max(20px,env(safe-area-inset-top));left:max(24px,env(safe-area-inset-left));margin:0;font-size:14px;letter-spacing:.2em;color:#627363;pointer-events:none}.is-ending .level-name{opacity:0}
-    .previous-level{position:absolute;z-index:3;top:max(12px,env(safe-area-inset-top));right:max(20px,env(safe-area-inset-right));display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid #92a17766;border-radius:4px;background:#f5e6df;color:#695b58;font-size:12px;text-decoration:none}.previous-level:hover,.sound:hover{background:#ebd7cd}.previous-level:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:4px}
-    canvas{position:relative;z-index:1;display:block;width:100%;height:100%;touch-action:none;outline:none}.controls{position:absolute;z-index:3;inset:auto max(20px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}.control-actions{display:flex;justify-content:center;align-items:center;gap:12px;pointer-events:auto}
+    .level-name{position:absolute;z-index:2;top:max(20px,var(--safe-top));left:max(24px,var(--safe-left));margin:0;font-size:14px;letter-spacing:.2em;color:#627363;pointer-events:none}.is-ending .level-name{opacity:0}
+    .previous-level{position:absolute;z-index:3;top:max(12px,var(--safe-top));right:max(20px,var(--safe-right));display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid #92a17766;border-radius:4px;background:#f5e6df;color:#695b58;font-size:12px;text-decoration:none}.previous-level:hover,.sound:hover{background:#ebd7cd}.previous-level:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:4px}
+    canvas{position:relative;z-index:1;display:block;width:100%;height:100%;touch-action:none;outline:none}.controls{position:absolute;z-index:3;inset:auto max(20px,var(--safe-right)) max(24px,var(--safe-bottom)) max(20px,var(--safe-left));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}.control-actions{display:flex;justify-content:center;align-items:center;gap:12px;pointer-events:auto}
     .restart{pointer-events:auto;min-height:44px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;cursor:pointer}.restart:hover{background:#66b1ff}.restart:active{background:#3a8ee6}.sound{min-height:44px;padding:10px 14px;border:1px solid #89a7af66;border-radius:4px;background:#f5e6df;color:#695b58;font-size:12px;cursor:pointer}.sound:disabled{opacity:.65;cursor:default}.restart,.sound,.previous-level,.next-level{touch-action:manipulation}
     /* 通关后复用已有双按钮布局，窄屏允许换行并保留完整触控区域。 */
     .finish-actions{display:flex;align-items:center;justify-content:center;gap:12px}.next-level{display:inline-flex;align-items:center;justify-content:center;pointer-events:auto;min-height:44px;min-width:116px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;text-decoration:none}.next-level[hidden]{display:none}.next-level:hover{background:#66b1ff}.next-level:active{background:#3a8ee6}.next-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
     .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:grab;touch-action:none}.scene-control:active{cursor:grabbing}.scene-control:focus-visible{outline:2px solid #fff;outline-offset:3px;background:#fff3}.scene-control[aria-disabled="true"]{cursor:default}.scene-control[hidden]{display:none}
-    #curtain{position:absolute;z-index:5;inset:0;background:#172534;opacity:0;pointer-events:none}.result{position:absolute;z-index:3;top:30px;left:16px;right:16px;margin:0;text-align:center;font-weight:400;font-size:21px;letter-spacing:.3em;color:#eef5e5;pointer-events:none}.failure{position:absolute;z-index:4;inset:0;display:grid;place-items:center;padding:24px;background:#172534;text-align:center;font-size:16px}.failure[hidden],.result[hidden]{display:none}
-    .prototype::after{content:"";position:absolute;z-index:2;inset:0;background:#2d315f9c;opacity:0;pointer-events:none;transition:opacity .3s ease}.prototype.is-complete::after{opacity:1}.prototype.is-complete .result{top:calc(50% - 65px);font-size:clamp(24px,4vw,31px);letter-spacing:.18em;color:#f2f5e9}.prototype.is-complete .controls{inset:0;display:block;pointer-events:none}.prototype.is-complete .control-actions{position:absolute;inset:0;display:block;pointer-events:none}.prototype.is-complete .finish-actions{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:calc(100% - 32px);max-width:360px;pointer-events:auto}.prototype.is-complete .restart{min-width:132px}.prototype.is-complete .sound{position:absolute;right:20px;bottom:max(24px,env(safe-area-inset-bottom));pointer-events:auto}
-    @media(max-width:480px){.controls{left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));gap:12px;bottom:max(18px,env(safe-area-inset-bottom))}.restart{padding-inline:20px}.level-name{left:max(16px,env(safe-area-inset-left))}.previous-level{right:max(12px,env(safe-area-inset-right))}}
-    @media(max-height:480px){.level-name{top:max(12px,env(safe-area-inset-top))}.controls{bottom:max(8px,env(safe-area-inset-bottom));gap:4px}.control-actions{gap:8px}.restart,.sound{padding-block:7px}.previous-level{top:max(8px,env(safe-area-inset-top));padding-block:7px}}
+    #curtain{position:absolute;z-index:5;inset:0;background:#172534;opacity:0;pointer-events:none}.result{position:absolute;z-index:3;top:30px;left:max(16px,var(--safe-left));right:max(16px,var(--safe-right));margin:0;text-align:center;font-weight:400;font-size:21px;letter-spacing:.3em;color:#eef5e5;pointer-events:none}.failure{position:absolute;z-index:4;inset:0;display:grid;place-items:center;padding:24px;background:#172534;text-align:center;font-size:16px}.failure[hidden],.result[hidden]{display:none}
+    /* 完成操作与标题按两侧安全区居中，保留零安全区原布局。 */
+    .prototype::after{content:"";position:absolute;z-index:2;inset:0;background:#2d315f9c;opacity:0;pointer-events:none;transition:opacity .3s ease}.prototype.is-complete::after{opacity:1}.prototype.is-complete .result{top:calc(50% - 65px);font-size:clamp(24px,4vw,31px);letter-spacing:.18em;color:#f2f5e9}.prototype.is-complete .controls{inset:0;display:block;pointer-events:none}.prototype.is-complete .control-actions{position:absolute;inset:0;display:block;pointer-events:none}.prototype.is-complete .finish-actions{position:absolute;top:calc(50% + 2px);left:calc(50% + (max(16px,var(--safe-left)) - max(16px,var(--safe-right)))/2);transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:calc(100% - max(16px,var(--safe-left)) - max(16px,var(--safe-right)));max-width:360px;pointer-events:auto}.prototype.is-complete .restart{min-width:132px}.prototype.is-complete .sound{position:absolute;right:max(20px,var(--safe-right));bottom:max(24px,var(--safe-bottom));pointer-events:auto}
+    @media(max-width:480px){.controls{left:max(12px,var(--safe-left));right:max(12px,var(--safe-right));gap:12px;bottom:max(18px,var(--safe-bottom))}.restart{padding-inline:20px}.level-name{left:max(16px,var(--safe-left))}.previous-level{right:max(12px,var(--safe-right))}}
+    @media(max-height:480px){.level-name{top:max(12px,var(--safe-top))}.controls{bottom:max(8px,var(--safe-bottom));gap:4px}.control-actions{gap:8px}.restart,.sound{padding-block:7px}.previous-level{top:max(8px,var(--safe-top));padding-block:7px}}
     @media(prefers-reduced-motion:reduce){.prototype::after{transition:none}}
   </style>
 </head>
@@ -101,13 +103,17 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
       }
       /** 根据同一建筑全部可见实体取景，拖动期间冻结边界，避免机关逃离手指。 */
       fitViewport(){
-        const rect=this.canvas.getBoundingClientRect(),control=document.querySelector('.controls').getBoundingClientRect();
-        const top=Math.max(76,...[...document.querySelectorAll('.previous-level,.level-name')].map(e=>e.getBoundingClientRect().bottom-rect.top+12)),bottom=Math.max(top+60,control.top-rect.top-18),left=Math.max(25,parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-left'))||0),right=this.width-25;
+        // 完成浮层会铺满画布，取景只读取实际声音按钮，避免把可用高度误算成60像素。
+        const rect=this.canvas.getBoundingClientRect(),control=soundButton.getBoundingClientRect(),safe=getComputedStyle(document.documentElement);
+        const compactSelection=closedFaces()&&this.height<480;
+        // 短横屏闭盒时不行走，只按顶栏实际边界留白，保留四个44像素选面入口的投影间距。
+        const top=Math.max(compactSelection?56:76,...[...document.querySelectorAll('.previous-level,.level-name')].map(e=>e.getBoundingClientRect().bottom-rect.top+(compactSelection?4:12))),bottom=Math.max(top+60,control.top-rect.top-18),left=Math.max(25,(parseFloat(safe.getPropertyValue('--safe-left'))||0)+22),right=this.width-Math.max(25,(parseFloat(safe.getPropertyValue('--safe-right'))||0)+22);
         let bounds=pointer?.bounds;
         if(!bounds){let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;this.meshBounds??=new Map();for(const o of [...this.static,...this.dynamic]){if(o.visible===false||o.decorative||o.color[3]<.3)continue;let bb=this.meshBounds.get(o.kind);if(!bb){const vertices=this.geometries[o.kind]?.vertices;if(!vertices)continue;const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(let i=0;i<vertices.length;i+=6)for(let j=0;j<3;j++){lo[j]=Math.min(lo[j],vertices[i+j]);hi[j]=Math.max(hi[j],vertices[i+j]);}bb={lo,hi};this.meshBounds.set(o.kind,bb);}for(const x of[bb.lo[0],bb.hi[0]])for(const y of[bb.lo[1],bb.hi[1]])for(const z of[bb.lo[2],bb.hi[2]]){const p=M.point(this.view,M.point(o.matrix,[x,y,z]));x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);}}bounds={x0,x1,y0,y1};if(pointer)pointer.bounds=bounds;}
         if(!Number.isFinite(bounds.x0))return;const pad=.4,scale=Math.min(79,(right-left)/(bounds.x1-bounds.x0+pad*2),(bottom-top)/(bounds.y1-bounds.y0+pad*2)),span=this.height/scale,aspect=this.width/this.height;
-        const cx=(bounds.x0+bounds.x1)/2,cy=(bounds.y0+bounds.y1)/2,screenY=(top+bottom)/2,shift=span*(.5-screenY/this.height);
-        this.pixels=scale;this.vp=M.mul(M.ortho(cx-span*aspect/2,cx+span*aspect/2,cy-span/2-shift,cy+span/2-shift,.1,160),this.view);
+        // 左右安全区可能不对称，投影中心跟随实际可用区域，不改变观察方向或世界坐标。
+        const cx=(bounds.x0+bounds.x1)/2,cy=(bounds.y0+bounds.y1)/2,screenX=(left+right)/2,horizontalShift=span*aspect*(screenX/this.width-.5),screenY=(top+bottom)/2,shift=span*(.5-screenY/this.height);
+        this.pixels=scale;this.vp=M.mul(M.ortho(cx-span*aspect/2-horizontalShift,cx+span*aspect/2-horizontalShift,cy-span/2-shift,cy+span/2-shift,.1,160),this.view);
       }
       /** 将世界坐标 point 投影到 CSS 像素，返回屏幕位置和深度。 */
       project(point){const p=M.point(this.vp,point);return{x:(p[0]+1)*this.width/2,y:(1-p[1])*this.height/2,depth:p[2]};}
@@ -405,14 +411,15 @@ let renderer=null,pointer=null,tap=null,elapsed=0,lastTime=0,animation=0,failed=
 const roomMode=id=>()=>state.phase==='rooms'&&state.room===id;
 const lateMode=()=>state.phase==='explore';
 const finalMode=()=>['closing','final'].includes(state.phase);
+// 完整闭盒只保留四个选面圆点；打开后恢复原握柄，避免重复入口与选面触区互抢。
 const controls={
- lid:{label:'打开盒盖',kind:'toggle',when:()=>state.phase==='rooms'&&['cyan','yellow'].includes(state.room)},
- lift:{label:'升起盒体',kind:'toggle',when:()=>state.phase==='rooms'&&['green','purple'].includes(state.room)},
+ lid:{label:'打开盒盖',kind:'toggle',when:()=>state.phase==='rooms'&&['cyan','yellow'].includes(state.room)&&!closedFaces()},
+ lift:{label:'升起盒体',kind:'toggle',when:()=>state.phase==='rooms'&&['green','purple'].includes(state.room)&&!closedFaces()},
  'face-cyan':{label:'打开青色盒盖',kind:'face',room:'cyan',when:()=>closedFaces()},
  'face-yellow':{label:'打开黄色盒盖',kind:'face',room:'yellow',when:()=>closedFaces()},
  'face-green':{label:'升起绿色盒体',kind:'face',room:'green',when:()=>closedFaces()},
  'face-purple':{label:'升起紫色盒体',kind:'face',room:'purple',when:()=>closedFaces()},
- slider:{label:'升降滑块',kind:'slider',when:()=>state.phase==='rooms'&&state.room==='purple'},
+ slider:{label:'升降滑块',kind:'slider',when:()=>state.phase==='rooms'&&state.room==='purple'&&!closedFaces()},
  'wheel-left':{label:'左侧轮轴',kind:'wheel',when:()=>state.phase==='unfold'},
  'unfold-slide':{label:'右侧升降滑块',kind:'slider',when:()=>state.phase==='unfold'&&settledControl('wheel-left')&&state.controls['wheel-left'].q===1},
  'wheel-middle':{label:'后侧轮轴',kind:'wheel',when:()=>state.phase==='unfold'&&settledControl('unfold-slide')&&state.controls['unfold-slide'].q===1},
@@ -468,7 +475,7 @@ function port(a,b,when=()=>true){defs.ports.push({a,b,when,id:a+'--'+b});}
 function plate(name,actor,action,when){defs.plates.push({name,actor,action,when,inside:false});}
 /** 登记门节点、目标内腔与入口；进门只改变人物位置，盒面仍由玩家手动开合。 */
 function door(name,to,entry,when){defs.doors.push({name,to,entry,when});}
-/** 只有盒体完整关闭时显示换面操作柄，保持当前开面的铰链/提盒柄独立可用。 */
+/** 完整闭盒只显示四个换面圆点，开口运动及打开后保留原铰链/提盒柄。 */
 function closedFaces(){return state.phase==='rooms'&&state.controls.lid.q===0&&state.controls.lift.q===0&&settledControl('lid')&&settledControl('lift');}
 /** 按机关id判断实际位置是否到达目标停位；拖动未释放时仍视为运动中。 */
 function settledControl(id){const c=state.controls[id];return pointer?.group!==id&&Math.abs(c.q-c.target)<1e-6;}
@@ -743,7 +750,8 @@ function drawCrow(a){const f=M.mul(frameMatrix(a.owner),M.trs(...a.local,1,1,1,a
 function handlePoint(id){
  if(id==='lid')return M.point(frameMatrix('lid'),[2.53,.12,3.4]);
  if(id==='lift')return M.point(frameMatrix('upper'),[-.8,3.8,2.92]);
- if(id.startsWith('face-')){const locations={'face-cyan':[-1,3.9,2.84],'face-yellow':[1,3.9,2.84],'face-green':[-1,2.1,2.84],'face-purple':[1,2.1,2.84]};return M.point(frameMatrix('root'),locations[id]);}
+ // 四个圆点仍位于原盒壁并与透明按钮共点，只拉开间距，不改变盒体或道路。
+ if(id.startsWith('face-')){const locations={'face-cyan':[-2.3,4.9,2.84],'face-yellow':[2.3,4.9,2.84],'face-green':[-2.3,.7,2.84],'face-purple':[2.3,.7,2.84]};return M.point(frameMatrix('root'),locations[id]);}
  if(id==='slider')return M.point(frameMatrix('root'),[-2.8,1.1+state.controls.slider.q*1.4,.3]);
  if(id==='wheel-left')return M.point(frameMatrix('left-panel'),[.7,-.36,2.05]);
  if(id==='unfold-slide')return M.point(frameMatrix('right-panel'),[-2.65,.3,3.55+state.controls['unfold-slide'].q*1.1]);
@@ -914,7 +922,9 @@ window.addEventListener('keydown',e=>{if(!(e.key in keys)||e.target instanceof H
 window.addEventListener('keyup',e=>{if(!(e.key in keys))return;heldKeys.delete(e.key);if(!heldKeys.size){state.player.route=[];state.player.segment=null;}});
 window.addEventListener('blur',()=>{finishPointer();clearIntent();audio.stop();});
 document.addEventListener('visibilitychange',()=>{finishPointer();clearIntent();if(document.hidden){cancelAnimationFrame(animation);audio.suspendOnHidden();}else resume();});
-window.addEventListener('pagehide',()=>{finishPointer();clearIntent();cancelAnimationFrame(animation);audio.stop();});window.addEventListener('pageshow',resume);window.addEventListener('resize',()=>{if(!failed&&renderer)render();});
+window.addEventListener('pagehide',()=>{finishPointer();clearIntent();cancelAnimationFrame(animation);audio.stop();});window.addEventListener('pageshow',resume);
+// 视口变化先释放旧指针与移动意图，再按新尺寸重画，避免旋屏后沿用旧拖动坐标。
+const onViewportResize=()=>{finishPointer();clearIntent();if(!failed&&renderer)render();};window.addEventListener('resize',onViewportResize);window.visualViewport?.addEventListener('resize',onViewportResize);
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();fatal(new Error('WebGL2 context lost'));});
 restart.addEventListener('click',reset);soundButton.addEventListener('click',e=>{audio.unlockGesture(e);audio.toggle();try{sessionStorage.setItem(SOUND_PREFERENCE_KEY,audio.enabled?'1':'0');}catch(error){console.warn('Sound preference storage unavailable',{operation:'write',reason:error?.name||'StorageError'});}});
 try{renderer=new Tiny3D(canvas);for(const [name,mesh]of Object.entries(makeTravellerMeshes()))renderer.createGeometry(name,mesh);installBoxMeshes();reset();resume();}catch(error){fatal(error);}

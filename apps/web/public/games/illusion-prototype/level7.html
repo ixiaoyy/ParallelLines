@@ -6,21 +6,24 @@
   <meta name="color-scheme" content="light">
   <title>回廊彼岸 · 第七关：乌鸦巢</title>
   <style>
-    :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f2eee6;background:#092126}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:clip}button{font:inherit}
+    /* 安全区与画布取景共用实际 inset，窄屏和短横屏均保留避让。 */
+    :root{--safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-right,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f2eee6;background:#092126}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:clip}button{font:inherit}
     .prototype{position:relative;width:100%;height:100%;min-height:280px;isolation:isolate;background:radial-gradient(ellipse at 50% 30%,#183c3b,#061c21 80%)}
     .scene-B,.scene-C,.scene-D{background:radial-gradient(ellipse at 50% 20%,#d9e1b5,#8ac8b5 75%)}.scene-E{background:linear-gradient(#bde6dc,#76bcb8 76%)}
     .prototype::before{content:"";position:absolute;z-index:1;inset:auto 0 0;height:min(160px,32%);background:linear-gradient(transparent,#081e22 80%);pointer-events:none}.scene-B::before,.scene-C::before,.scene-D::before{background:linear-gradient(transparent,#8dc7b4 80%)}.scene-E::before{background:linear-gradient(transparent,#315e67b8 85%)}
-    .level-name{position:absolute;z-index:2;top:max(20px,env(safe-area-inset-top));left:24px;margin:0;font-size:14px;letter-spacing:.2em;color:#b0c6bc;pointer-events:none}.scene-B .level-name,.scene-C .level-name,.scene-D .level-name,.scene-E .level-name{color:#487c70}.is-ending .level-name{opacity:0}
-    .previous-level{position:absolute;z-index:3;top:max(12px,env(safe-area-inset-top));right:20px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid #92a17766;border-radius:4px;background:#f5e6df;color:#695b58;font-size:12px;text-decoration:none}.previous-level:hover{background:#ebd7cd}.previous-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
-    canvas{position:relative;z-index:1;display:block;width:100%;height:100%;touch-action:none;outline:none}.controls{position:absolute;z-index:3;inset:auto 20px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}
+    .level-name{position:absolute;z-index:2;top:max(20px,var(--safe-top));left:max(24px,var(--safe-left));margin:0;font-size:14px;letter-spacing:.2em;color:#b0c6bc;pointer-events:none}.scene-B .level-name,.scene-C .level-name,.scene-D .level-name,.scene-E .level-name{color:#487c70}.is-ending .level-name{opacity:0}
+    .previous-level{position:absolute;z-index:3;top:max(12px,var(--safe-top));right:max(20px,var(--safe-right));display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid #92a17766;border-radius:4px;background:#f5e6df;color:#695b58;font-size:12px;text-decoration:none}.previous-level:hover{background:#ebd7cd}.previous-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
+    canvas{position:relative;z-index:1;display:block;width:100%;height:100%;touch-action:none;outline:none}.controls{position:absolute;z-index:3;inset:auto max(20px,var(--safe-right)) max(24px,var(--safe-bottom)) max(20px,var(--safe-left));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}
     .restart{pointer-events:auto;min-height:44px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;cursor:pointer}.restart:hover{background:#66b1ff}.restart:active{background:#3a8ee6}.control-actions{display:flex;justify-content:center;align-items:center;gap:12px;pointer-events:auto}.sound{min-height:44px;padding:10px 14px;border:1px solid #89a7af66;border-radius:4px;background:#f5e6df;color:#695b58;font-size:12px;cursor:pointer}.sound:hover{background:#ebd7cd}.sound:disabled{opacity:.65;cursor:default}button:focus-visible{outline:3px solid #fff;outline-offset:4px}
     .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:grab;touch-action:none}.scene-control:active{cursor:grabbing}.scene-control:focus-visible{outline:2px solid #fff;outline-offset:3px;background:#fff3}.scene-control[aria-disabled="true"]{cursor:default}.scene-control[hidden]{display:none}
-    #curtain{position:absolute;z-index:5;inset:0;background:#172534;opacity:0;pointer-events:none}.result{position:absolute;z-index:3;top:30px;left:16px;right:16px;margin:0;text-align:center;font-weight:400;font-size:21px;letter-spacing:.3em;color:#eef5e5;pointer-events:none}.failure{position:absolute;z-index:4;inset:0;display:grid;place-items:center;padding:24px;background:#172534;text-align:center;font-size:16px}.failure[hidden],.result[hidden]{display:none}
-    .prototype::after{content:"";position:absolute;z-index:2;inset:0;background:#2d315f9c;opacity:0;pointer-events:none;transition:opacity .3s ease}.prototype.is-complete::after{opacity:1}.prototype.is-complete .result{top:calc(50% - 65px);font-size:clamp(24px,4vw,31px);letter-spacing:.18em;color:#f2f5e9}.prototype.is-complete .controls{inset:0;display:block;pointer-events:none}.prototype.is-complete .control-actions{position:absolute;inset:0;display:block;pointer-events:none}.prototype.is-complete .restart{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);min-width:144px;pointer-events:auto}.prototype.is-complete .sound{position:absolute;right:20px;bottom:max(24px,env(safe-area-inset-bottom));pointer-events:auto}
-    @media(max-width:480px){.controls{inset-inline:12px;gap:12px;bottom:max(18px,env(safe-area-inset-bottom))}.restart{padding-inline:20px}.level-name{left:16px}.previous-level{right:12px}}
+    #curtain{position:absolute;z-index:5;inset:0;background:#172534;opacity:0;pointer-events:none}/* 结果文字沿用左右安全区，非对称刘海下仍在可用区域内居中。 */
+    .result{position:absolute;z-index:3;top:30px;left:max(16px,var(--safe-left));right:max(16px,var(--safe-right));margin:0;text-align:center;font-weight:400;font-size:21px;letter-spacing:.3em;color:#eef5e5;pointer-events:none}.failure{position:absolute;z-index:4;inset:0;display:grid;place-items:center;padding:24px;background:#172534;text-align:center;font-size:16px}.failure[hidden],.result[hidden]{display:none}
+    .prototype::after{content:"";position:absolute;z-index:2;inset:0;background:#2d315f9c;opacity:0;pointer-events:none;transition:opacity .3s ease}.prototype.is-complete::after{opacity:1}.prototype.is-complete .result{top:calc(50% - 65px);font-size:clamp(24px,4vw,31px);letter-spacing:.18em;color:#f2f5e9}.prototype.is-complete .controls{inset:0;display:block;pointer-events:none}.prototype.is-complete .control-actions{position:absolute;inset:0;display:block;pointer-events:none}.prototype.is-complete .restart{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);min-width:144px;pointer-events:auto}.prototype.is-complete .sound{position:absolute;right:max(20px,var(--safe-right));bottom:max(24px,var(--safe-bottom));pointer-events:auto}
+    @media(max-width:480px){.controls{left:max(12px,var(--safe-left));right:max(12px,var(--safe-right));gap:12px;bottom:max(18px,var(--safe-bottom))}.restart{padding-inline:20px}.level-name{left:max(16px,var(--safe-left))}.previous-level{right:max(12px,var(--safe-right))}}
     @media(prefers-reduced-motion:reduce){.prototype::after{transition:none}}
     .finish-actions{display:flex;align-items:center;justify-content:center;gap:12px}.next-level{display:inline-flex;align-items:center;justify-content:center;pointer-events:auto;min-height:44px;min-width:116px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;text-decoration:none}.next-level[hidden]{display:none}.next-level:hover{background:#66b1ff}.next-level:active{background:#3a8ee6}.next-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
-    .prototype.is-complete .finish-actions{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:calc(100% - 32px);max-width:360px;pointer-events:auto}.prototype.is-complete .restart{position:static;transform:none;min-width:132px}
+    /* 完成操作组在左右安全边界内居中，零 inset 时保持原有排布。 */
+    .prototype.is-complete .finish-actions{position:absolute;top:calc(50% + 2px);left:calc(50% + (max(16px,var(--safe-left)) - max(16px,var(--safe-right)))/2);transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:calc(100% - max(16px,var(--safe-left)) - max(16px,var(--safe-right)));max-width:360px;pointer-events:auto}.prototype.is-complete .restart{position:static;transform:none;min-width:132px}
     .prototype.scene-A{background:radial-gradient(ellipse at 40% 25%,#d4dec1,#1eaaa5 72%,#168e94)}
     .prototype.scene-B{background:radial-gradient(ellipse at 45% 65%,#ffd172,#ff9a13 80%)}
     .prototype.scene-C{background:radial-gradient(ellipse at 45% 25%,#777c80,#484d5a 80%)}
@@ -28,7 +31,7 @@
     .prototype.scene-E{background:radial-gradient(ellipse at 50% 35%,#71439c,#402268 78%)}
     .prototype::before{background:none}.scene-A .level-name,.scene-B .level-name{color:#315e65}.scene-C .level-name,.scene-D .level-name,.scene-E .level-name{color:#e4dedb;text-shadow:none}
     .dialogue{position:absolute;z-index:6;left:50%;top:22%;transform:translateX(-50%);box-sizing:border-box;width:min(390px,calc(100% - 32px));padding:24px;background:#f2f0e8f2;border:1px solid #b1d2d1;color:#36535e;text-align:center;border-radius:4px;box-shadow:0 10px 35px #05141c44}.dialogue[hidden]{display:none}.dialogue p{white-space:pre-line;margin:0 0 20px;font-size:16px;line-height:1.8}.dialogue button{border:0;border-radius:4px;min-width:80px;min-height:44px;background:#409EFF;color:white;cursor:pointer}
-    @media(max-height:480px){.level-name{top:12px}.controls{bottom:8px;gap:4px}.control-actions{gap:8px}.restart,.sound{min-height:44px;padding-block:7px}.previous-level{top:8px;min-height:44px;padding-block:7px}.dialogue{top:10%;padding:16px}.dialogue p{margin-bottom:10px}}
+    @media(max-height:480px){.level-name{top:max(12px,var(--safe-top))}.controls{bottom:max(8px,var(--safe-bottom));gap:4px}.control-actions{gap:8px}.restart,.sound{min-height:44px;padding-block:7px}.previous-level{top:max(8px,var(--safe-top));min-height:44px;padding-block:7px}.dialogue{top:10%;padding:16px}.dialogue p{margin-bottom:10px}}
 
 
 
@@ -37,7 +40,7 @@
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     .prototype{height:100vh;height:100dvh}
     .restart,.sound,.previous-level,.next-level{touch-action:manipulation}
-    @media(max-width:600px),(max-height:500px){.controls{left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right))}.prototype::before{height:84px}}
+    @media(max-width:600px),(max-height:500px){.controls{left:max(12px,var(--safe-left));right:max(12px,var(--safe-right))}.prototype::before{height:84px}}
   </style>
 </head>
 <body>
@@ -132,9 +135,11 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
         const fixed=pointer?(pointer.viewportFit||this.viewportFit):((state.won||state.goalCentering||state.input==='goal')?this.viewportFit:null);
         let fit=fixed&&fixed.width===this.width&&fixed.height===this.height?fixed:null;
         if(!fit){
-          const rect=this.canvas.getBoundingClientRect(),controls=document.querySelector('.controls').getBoundingClientRect();
-          const left=Math.max(24,controls.left-rect.left+8),right=this.width-Math.max(24,rect.right-controls.right+8);
-          const top=Math.max(76,...[...document.querySelectorAll('.previous-level,.level-name')].map(e=>e.getBoundingClientRect().bottom-rect.top+12)),bottom=state.won?this.height-32:Math.max(top+48,controls.top-rect.top-16);
+          // 完成浮层可能占满画布；安全区独立避让，并为场景按钮保留半个触控宽度。
+          const rect=this.canvas.getBoundingClientRect(),controls=document.querySelector('.controls').getBoundingClientRect(),safe=getComputedStyle(document.documentElement);
+          const safeLeft=parseFloat(safe.getPropertyValue('--safe-left'))||0,safeRight=parseFloat(safe.getPropertyValue('--safe-right'))||0,safeBottom=parseFloat(safe.getPropertyValue('--safe-bottom'))||0;
+          const left=Math.max(24,safeLeft+22,controls.left-rect.left+8),right=this.width-Math.max(24,safeRight+22,rect.right-controls.right+8);
+          const top=Math.max(76,...[...document.querySelectorAll('.previous-level,.level-name')].map(e=>e.getBoundingClientRect().bottom-rect.top+12)),bottom=state.won?this.height-Math.max(32,safeBottom+8):Math.max(top+48,controls.top-rect.top-16);
           let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
           this.viewportBounds??=new WeakMap();
           for(const [list,dynamic]of[[this.static,false],[this.dynamic,true]])for(const o of list){
