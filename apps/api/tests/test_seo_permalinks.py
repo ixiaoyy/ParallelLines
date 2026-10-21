@@ -90,7 +90,7 @@ async def test_sitemap_excludes_retired_forum_paths_and_keeps_legacy_api_redirec
         private_topic_data = private_topic.json()["data"]
         member_id = member["user"]["id"]
         assert public_topic_data["board_visibility"] == "public"
-        assert "<loc>http://test/</loc>" in body
+        assert "<loc>http://test/games</loc>" in body
         assert "/play/generals-soldiers" not in body
         assert "/b/seo-public" not in body
         assert f"/topics/{public_topic_data['id']}/{public_topic_data['slug']}" not in body
@@ -175,7 +175,7 @@ async def test_sitemap_excludes_retired_forum_paths_and_keeps_legacy_api_redirec
         assert canonical_sitemap.status_code == 200
         assert canonical_sitemap.headers["x-parallellines-cache"] == "miss"
         assert "<loc>http://" not in canonical_sitemap.text
-        assert "<loc>https://pingxingxian.space/</loc>" in canonical_sitemap.text
+        assert "<loc>https://pingxingxian.space/games</loc>" in canonical_sitemap.text
         assert "/play/generals-soldiers" not in canonical_sitemap.text
 
         topic_path = f"/topics/{topic_data['id']}/{topic_data['slug']}"
