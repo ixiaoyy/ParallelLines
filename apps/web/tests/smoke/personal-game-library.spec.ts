@@ -351,7 +351,7 @@ for (const width of [320, 390, 940, 1280]) {
   });
 }
 
-test("开发预览保留开发进度入口，原生打开仍记录最近访问", async ({ page, context }) => {
+test("我的星露谷使用开始游戏入口，原生打开仍记录最近访问", async ({ page, context }) => {
   const requests = await mockCatalog(context);
   const fixture = catalogFixture();
   const category = fixture.categories[0]!;
@@ -364,9 +364,9 @@ test("开发预览保留开发进度入口，原生打开仍记录最近访问",
     json: { data: fixture }, headers: { "access-control-allow-origin": "*" },
   }));
   await page.goto("/");
-  const preview = card(page, "朝花夕拾");
+  const preview = card(page, "我的星露谷");
   const open = preview.locator(".catalog-card__open");
-  await expect(open).toHaveText("开发进度");
+  await expect(open).toHaveText("开始游戏");
   await expect(open).toHaveAttribute("href", "https://library-game.invalid/play/904");
   await expect(open).toHaveAttribute("target", "_blank");
   await openGame(page, open, "keyboard");

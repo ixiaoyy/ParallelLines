@@ -46,7 +46,7 @@ const FEATURED_CARD_TONES = new Map<string, CardTone>([
 const originalCoverSlugs = new Set([
   "clock-out", "merge-watermelon", "qin-imperial-factory", "super-mario",
   "csgo-desert", "infinite-garden", "fruit-ninja", "qq-racing",
-  "cf-transport", "pelican-bike", "fablespace", "generals-soldiers",
+  "cf-transport", "pelican-bike", "generals-soldiers",
 ]);
 const newCoverSlugs = new Set([
   "yu-gi-oh-destiny-duel", "secondhand-3c-store", "voxel-tides", "sneaky-thief",
@@ -278,18 +278,18 @@ function clearAuthorGames(): void {
   selectedAuthorKey.value = null;
 }
 
-// 朝花夕拾仍是开发预览，打开入口继续展示开发进度。
+// 按原游戏标识识别我的星露谷。
 function isPreviewProject(project: CatalogProject): boolean {
   return project.slug === "fablespace";
 }
 
-// 站内游戏与朝花夕拾统一展示原创署名，不用网址或后台空值推断具体作者。
+// 站内游戏与我的星露谷统一展示原创署名，不用网址或后台空值推断具体作者。
 function isOriginalProject(project: CatalogProject): boolean {
   return project.kind === "internal" || project.slug === "fablespace";
 }
 
 function displayName(project: CatalogProject): string {
-  return isPreviewProject(project) ? "朝花夕拾" : project.name;
+  return isPreviewProject(project) ? "我的星露谷" : project.name;
 }
 
 // 后台封面优先；首批专属图和后续原创卡面均使用各自的版本化 CDN 地址。
@@ -448,7 +448,7 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
                 <!-- 封面延伸到屏幕底部，信息和操作叠在画面内，保留各自独立的原生入口。 -->
                 <div class="catalog-card__screen">
                   <div class="catalog-card__media">
-                    <a class="catalog-card__media-link" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="isPreviewProject(project) ? `查看${displayName(project)}的开发进度` : `打开${displayName(project)}`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">
+                    <a class="catalog-card__media-link" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="`打开${displayName(project)}`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">
                       <img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" :loading="index < 3 ? 'eager' : 'lazy'" decoding="async" />
                       <span v-else class="catalog-card__cover-fallback" :class="`catalog-card__cover-fallback--${fallbackCoverTone(project.slug)}`" aria-hidden="true"><span>{{ categoryName(project.categorySlug) }}</span><strong>{{ displayName(project) }}</strong></span>
                     </a>
@@ -463,7 +463,7 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
                     </div>
                     <div class="catalog-card__footer">
                       <button type="button" class="catalog-card__wanted" :class="{ 'is-active': wantedIds.has(project.id) }" :aria-pressed="wantedIds.has(project.id)" :aria-label="wantedIds.has(project.id) ? '移出想玩' : '加入想玩'" :title="wantedIds.has(project.id) ? '移出想玩' : '加入想玩'" @click="toggleWanted(project)"><StarFilled v-if="wantedIds.has(project.id)" aria-hidden="true" /><StarOutlined v-else aria-hidden="true" /></button>
-                      <a class="catalog-card__open" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="isPreviewProject(project) ? `查看${displayName(project)}的开发进度` : `打开${displayName(project)}`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)"><CaretRightFilled aria-hidden="true" /><span>{{ isPreviewProject(project) ? '开发进度' : '开始游戏' }}</span></a>
+                      <a class="catalog-card__open" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="`打开${displayName(project)}`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)"><CaretRightFilled aria-hidden="true" /><span>开始游戏</span></a>
                     </div>
                   </div>
                 </div>

@@ -116,6 +116,8 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-10-14-v2/covers/reverse-snake-3d.webp",
     # 空王座正式封面与目录映射同批交付，支持按独立版本发布。
     "catalog/2026-10-19-v1/covers/empty-throne.webp",
+    # 我的星露谷换图与目录映射同批交付，保留旧版本以便回滚。
+    "catalog/2026-10-21-v1/covers/fablespace.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 STATIC_ASSETS = (

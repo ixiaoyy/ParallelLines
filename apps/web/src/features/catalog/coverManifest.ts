@@ -204,6 +204,8 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "reverse-snake-3d": "/catalog/2026-10-14-v2/covers/reverse-snake-3d.webp",
   // 空王座正式封面与目录收录同批交付，路径与静态资源发布清单保持一致。
   "empty-throne": "/catalog/2026-10-19-v1/covers/empty-throne.webp",
+  // 我的星露谷保留原游戏标识，使用星露谷官方商店封面的独立版本。
+  fablespace: "/catalog/2026-10-21-v1/covers/fablespace.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {
