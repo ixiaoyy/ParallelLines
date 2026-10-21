@@ -234,11 +234,32 @@ test("默认进入游戏目录，圈子禁用，工具为空状态且不加载�
   await expect(nav.getByRole("link", { name: "游戏", exact: true })).toHaveAttribute("href", "/");
   await expect(nav.getByRole("button", { name: "圈子，暂未开放", exact: true })).toBeDisabled();
   await expect(nav.locator('a[href="/forum"]')).toHaveCount(0);
-  for (const width of [1280, 390, 320]) {
+  for (const width of [2028, 1280, 1024, 800, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await expect(nav).toHaveCSS("position", "static");
     await nav.scrollIntoViewIfNeeded();
+    const footerLayout = await page.locator(".catalog-footer__inner").evaluate(bar => {
+      const navigation = bar.querySelector("nav")!.getBoundingClientRect();
+      const motto = bar.querySelector(".catalog-footer__motto")!.getBoundingClientRect();
+      const brand = bar.querySelector(".catalog-footer__brand")!.getBoundingClientRect();
+      const row = bar.getBoundingClientRect();
+      const hint = bar.parentElement!.querySelector(".catalog-library__hint")!.getBoundingClientRect();
+      return {
+        gap: navigation.left - motto.right,
+        centerDifference: Math.abs(navigation.y + navigation.height / 2 - motto.y - motto.height / 2),
+        brandCenterDifference: Math.abs(navigation.y + navigation.height / 2 - brand.y - brand.height / 2),
+        barHeight: row.height,
+        hintGap: hint.top - row.bottom,
+      };
+    });
+    expect(footerLayout.gap).toBeGreaterThanOrEqual(8);
+    expect(footerLayout.centerDifference).toBeLessThanOrEqual(1);
+    expect(footerLayout.hintGap).toBeGreaterThanOrEqual(0);
+    if (width >= 600) {
+      expect(footerLayout.brandCenterDifference).toBeLessThanOrEqual(1);
+      expect(footerLayout.barHeight).toBe(64);
+    }
     const beforeScroll = await page.evaluate(() => window.scrollY);
     const beforeBox = await nav.boundingBox();
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -254,6 +275,7 @@ test("默认进入游戏目录，圈子禁用，工具为空状态且不加载�
       expect(clearance).toBeGreaterThanOrEqual(8);
     }
     await page.screenshot({ path: testInfo.outputPath(`games-entry-${width}.png`), fullPage: true });
+    await page.locator(".catalog-footer").screenshot({ path: testInfo.outputPath(`games-footer-${width}.png`) });
   }
   await nav.getByRole("link", { name: "工具", exact: true }).click();
   await expect(page).toHaveURL(/\/tools$/);

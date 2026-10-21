@@ -198,8 +198,8 @@
  .catalog-controls { flex-wrap: wrap; gap: 10px; padding-block: 12px; } .catalog-results { flex: 1; } .catalog-categories label, .catalog-sort label { font-size: 15px; }
  .catalog-categories select, .catalog-sort select { width: 116px; font-size: 15px; } .catalog-footer__brand > span { display: none; }
  // 中等宽度给页脚猫预留独立空间，装饰短句不与猫或品牌重叠。
- .catalog-footer__inner { grid-template-columns: max-content minmax(0, 1fr); padding-right: 188px; }
- .catalog-footer__motto { justify-self: center; gap: 12px; font-size: 12px; } .catalog-footer__navigation { grid-column: 1 / -1; justify-self: center; margin-right: 0; }
+ .catalog-footer__inner { grid-template-columns: max-content minmax(0, 1fr) max-content; padding-right: 188px; }
+ .catalog-footer__motto { justify-self: center; gap: 12px; font-size: 12px; } .catalog-footer__navigation { justify-self: end; margin-right: 0; }
 }
 @media (max-width: 800px) {
  .catalog-page { --catalog-edge-width: 12px; }
@@ -215,8 +215,8 @@
  .catalog-categories label, .catalog-sort label { color: #cde9ff; font-size: 13px; line-height: 18px; }
  .catalog-categories select, .catalog-sort select { width: 100%; min-width: 0; }
  .catalog-results { position: absolute; width: 1px; height: 1px; overflow: hidden; border: 0; clip-path: inset(50%); } .catalog-layout-toggle { margin-left: auto; }
- .catalog-footer__inner { display: flex; flex-wrap: wrap; justify-content: center; padding: 12px; } .catalog-footer__motto { flex-wrap: wrap; justify-content: center; margin: 0; font-size: 12px; }
- .catalog-footer__navigation { width: 100%; justify-content: center; }
+ .catalog-footer__inner { grid-template-columns: max-content minmax(0, 1fr) max-content; padding: 8px 12px; gap: 12px 20px; } .catalog-footer__motto { flex-wrap: wrap; justify-content: center; margin: 0; font-size: 12px; }
+ .catalog-footer__navigation { justify-self: end; }
  .catalog-footer::after { right: 8px; bottom: calc(100% - 32px); width: 90px; height: 90px; }
  .catalog-grid--list .catalog-card__screen { grid-template-columns: 190px minmax(0, 1fr); }
 }
@@ -236,7 +236,8 @@
  .catalog-controls { column-gap: 8px; } .catalog-categories select, .catalog-sort select { width: 100%; }
  .catalog-layout-toggle { margin-left: 0; } .catalog-card { padding: 18px 11.5% 12px; }
  .catalog-card__open { width: 112px; flex-basis: 112px; font-size: 15px; } .catalog-grid--list .catalog-card { padding: 10px; } .catalog-grid--list .catalog-card__screen { display: flex; align-items: stretch; gap: 0; } .catalog-grid--list .catalog-card__media { aspect-ratio: 2.12; } .catalog-grid--list .catalog-card__info { padding-left: 0; }
- .catalog-footer__brand strong { font-size: 24px; } .catalog-footer__motto { gap: 12px; }
+ .catalog-footer__inner { grid-template-columns: minmax(0, 1fr) max-content; column-gap: 12px; } .catalog-footer__brand { grid-column: 1 / -1; justify-self: center; }
+ .catalog-footer__brand strong { font-size: 24px; } .catalog-footer__motto { min-width: 0; gap: 4px; }
 }
 // 触屏仍给名称与作者链接完整 44px 命中高度，单行省略规则与卡片统一高度保持一致。
 @media (pointer: coarse) { .catalog-card__title-link, .catalog-card__author a, .catalog-card__author button { min-height: 44px; line-height: 44px; } .catalog-card__author { min-height: 44px; } .catalog-card__body { min-height: 139px; } .catalog-card__body::before { height: 112px; } }
