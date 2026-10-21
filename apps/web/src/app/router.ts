@@ -43,17 +43,14 @@ export const router = createRouter({
   routes: [
     {
       path: "/",
-      redirect: (to) => ({ name: "home", query: to.query, hash: to.hash }),
-    },
-    {
-      path: "/games",
+      alias: "/games",
       name: "home",
       component: () => import("@/pages/catalog/CatalogHomePage.vue"),
       meta: {
         seo: {
           title: "AI 游戏 · GPT / Claude Code / Kimi · 点开即玩 | {siteName}",
           description: "{siteName} 收录 AI 网页游戏，探索 GPT、Claude Code、Kimi 等工具带来的游戏创意。涵盖策略、卡牌、解谜、角色扮演与休闲玩法，按分类和热度发现游戏，点开即玩。",
-          canonicalPath: "/games",
+          canonicalPath: "/",
         },
       },
     },

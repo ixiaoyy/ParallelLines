@@ -112,7 +112,7 @@ class SeoService:
         """仅列出游戏目录的规范地址，保留现有论坛索引范围。"""
 
         return [
-            SitemapUrl(loc=absolute_url(base_url, "/games")),
+            SitemapUrl(loc=absolute_url(base_url, "/")),
         ]
 
     async def robots_txt(self, base_url: str) -> str:
@@ -148,7 +148,7 @@ class SeoService:
             return self._site_meta(
                 identity,
                 base_url,
-                "/games",
+                "/",
                 title=(
                     "AI 游戏 · GPT / Claude Code / Kimi · 点开即玩 | "
                     f"{site_brand_name(identity.title)}"
@@ -283,7 +283,7 @@ class SeoService:
         return LegacyTopicRedirect(status_code=301, location=absolute_url(base_url, canonical_path))
 
     async def home_page(self, base_url: str) -> SeoPageDocument:
-        """生成 /games 目录首屏语义 HTML，与公开 API 使用同一项目数据源。"""
+        """生成根路径目录首屏语义 HTML，与公开 API 使用同一项目数据源。"""
 
         identity = await self._site_identity()
         catalog = await CatalogService(self.session, get_settings()).public_catalog()
@@ -300,7 +300,7 @@ class SeoService:
             meta=self._site_meta(
                 identity,
                 base_url,
-                "/games",
+                "/",
                 title=(
                     "AI 游戏 · GPT / Claude Code / Kimi · 点开即玩 | "
                     f"{site_brand_name(identity.title)}"

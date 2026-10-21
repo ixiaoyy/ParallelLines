@@ -9,7 +9,9 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
+from starlette.responses import HTMLResponse
 
+import app.api.seo as seo_api
 from app.api.seo import public_seo_router
 from app.services.seo import SeoPageDocument, SeoService, SeoSiteIdentity
 from app.services.seo_renderer import render_semantic_fallback
@@ -116,7 +118,7 @@ def test_all_public_forum_graphs_match_forum_shell_copy(forum_home, monkeypatch,
 def test_forum_home_does_not_expand_sitemap_or_openapi(forum_home):
     service, _, calls = forum_home
     urls = asyncio.run(service.sitemap_urls("https://pingxingxian.space"))
-    assert [item.loc for item in urls] == ["https://pingxingxian.space/games"]
+    assert [item.loc for item in urls] == ["https://pingxingxian.space/"]
     assert calls == []
     route = next(route for route in public_seo_router.routes if route.path == "/forum")
     assert route.include_in_schema is False
@@ -125,9 +127,9 @@ def test_forum_home_does_not_expand_sitemap_or_openapi(forum_home):
 @pytest.mark.parametrize(
     ("path", "kind", "home_path"),
     [
-        ("/", "home", "/games"),
-        ("/games", "home", "/games"),
-        ("/tools", "tools", "/games"),
+        ("/", "home", "/"),
+        ("/games", "home", "/"),
+        ("/tools", "tools", "/"),
         ("/forum", "home", "/forum"),
         ("/boards", "boards", "/forum"),
         ("/b/public", "board", "/forum"),
@@ -150,34 +152,46 @@ def test_semantic_navigation_uses_actual_canonical_path(forum_home, path, kind, 
     assert isinstance(document, SeoPageDocument)
     rendered = render_semantic_fallback(document)
     assert f'<a href="{home_path}">平行线</a>' in rendered
-    if home_path == "/games":
+    if home_path == "/":
         assert 'href="/forum"' not in rendered
         assert "圈子" not in rendered
 
 
+@pytest.mark.parametrize("path", ["/", "/games"])
 @pytest.mark.parametrize(
     "query",
     [b"", b"utm_source=post", b"next=a%2Fb%3Fc%3D1", b"tag=one&tag=two", b"empty="],
 )
-def test_root_redirect_preserves_query_without_a_database_dependency(query):
-    route = next(route for route in public_seo_router.routes if route.path == "/")
+def test_game_entries_render_html_without_redirect(monkeypatch, path, query):
+    route = next(route for route in public_seo_router.routes if route.path == path)
     request = Request(
         {
             "type": "http",
             "method": "GET",
             "scheme": "https",
-            "path": "/",
-            "raw_path": b"/",
+            "path": path,
+            "raw_path": path.encode("ascii"),
             "query_string": query,
             "server": ("pingxingxian.space", 443),
             "headers": [],
         }
     )
-    response = asyncio.run(route.endpoint(request))
+    session = object()
+    document = object()
+    read_home = AsyncMock(return_value=document)
+    render = AsyncMock(return_value=HTMLResponse("<main>游戏目录</main>"))
+    monkeypatch.setattr(seo_api, "SeoService", lambda actual: (
+        SimpleNamespace(home_page=read_home) if actual is session else None
+    ))
+    monkeypatch.setattr(seo_api, "base_url", lambda actual: "https://pingxingxian.space")
+    monkeypatch.setattr(seo_api, "html_page_response", render)
 
-    assert route.dependant.dependencies == []
+    response = asyncio.run(route.endpoint(request, session))
+
     assert route.include_in_schema is False
-    assert response.status_code == 301
-    assert response.headers["location"] == "/games" + (
-        f"?{query.decode('ascii')}" if query else ""
-    )
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "location" not in response.headers
+    assert response.body == "<main>游戏目录</main>".encode()
+    read_home.assert_awaited_once_with("https://pingxingxian.space")
+    render.assert_awaited_once_with(document)

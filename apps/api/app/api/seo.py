@@ -104,22 +104,21 @@ async def seo_meta(
     return ApiResponse(data=meta)
 
 
-@public_seo_router.get("/", response_class=RedirectResponse, include_in_schema=False)
-async def home_page(request: Request) -> RedirectResponse:
-    """Redirect the exact root to the game directory without a database dependency.
+@public_seo_router.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def home_page(request: Request, session: SessionDep) -> Response:
+    """Return the game directory at the root without a redirect.
 
-    ``request`` supplies the original query string. The permanent redirect
-    preserves campaign parameters and performs no content reads or writes.
+    ``request`` resolves the canonical origin and ``session`` reads the public
+    catalog. The response does not record views or change game links.
     """
 
-    query = request.url.query
-    location = f"/games?{query}" if query else "/games"
-    return RedirectResponse(url=location, status_code=301)
+    document = await SeoService(session).home_page(base_url(request))
+    return await html_page_response(document)
 
 
 @public_seo_router.get("/games", response_class=HTMLResponse, include_in_schema=False)
 async def games_page(request: Request, session: SessionDep) -> Response:
-    """Return the existing public game directory at its canonical games URL.
+    """Return the game directory at the compatible games URL without redirecting.
 
     ``request`` resolves the canonical origin and ``session`` reads the same
     public catalog. The response does not record views or change game links.
@@ -149,7 +148,7 @@ async def forum_page(request: Request, session: SessionDep) -> Response:
     响应沿用编译后的 SPA 外壳，并从 OpenAPI 中排除。
     """
 
-    # 论坛保留独立地址，游戏目录由 /games 提供。
+    # 论坛保留独立地址，游戏目录由根路径直接提供。
     document = await SeoService(session).forum_page(base_url(request))
     return await html_page_response(document)
 

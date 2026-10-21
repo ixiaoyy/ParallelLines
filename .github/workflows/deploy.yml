@@ -459,7 +459,7 @@ jobs:
               echo "[deploy] nginx is not running; falling back to full bootstrap"
               $COMPOSE $COMPOSE_FILES up -d --build
             else
-              $COMPOSE $COMPOSE_FILES up -d --no-deps --build nginx
+              $COMPOSE $COMPOSE_FILES up -d --no-deps --build --force-recreate nginx
             fi
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] nginx deploy took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"

@@ -196,7 +196,7 @@ def render_semantic_fallback(document: SeoPageDocument) -> str:
         "/forum"
         if canonical_path in {"/forum", "/boards"}
         or canonical_path.startswith(("/b/", "/topics/", "/members/"))
-        else "/games"
+        else "/"
     )
     sections = [
         '<main class="seo-fallback" '

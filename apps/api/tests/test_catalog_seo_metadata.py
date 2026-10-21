@@ -91,7 +91,7 @@ def test_home_metadata_and_social_schema_share_confirmed_copy(catalog_home, titl
     assert meta.description == site_description(identity) == expected_description
     assert meta.og_title == expected_title
     assert meta.og_description == expected_description
-    assert meta.canonical_url == meta.og_url == "https://pingxingxian.space/games"
+    assert meta.canonical_url == meta.og_url == "https://pingxingxian.space/"
     assert meta.robots == "index,follow"
     assert document.heading == identity.title
     assert document.intro == ""
@@ -158,14 +158,14 @@ def test_nonempty_intro_keeps_existing_escaped_rendering(catalog_home):
 def test_games_metadata_uses_canonical_directory_without_reading_catalog(catalog_home, path):
     service, _, calls, _ = catalog_home("平行线")
     meta = asyncio.run(service.meta_for_path(path, "https://pingxingxian.space"))
-    assert meta.canonical_url == meta.og_url == "https://pingxingxian.space/games"
+    assert meta.canonical_url == meta.og_url == "https://pingxingxian.space/"
     assert calls == []
 
 
-def test_catalog_sitemap_uses_canonical_games_entry(catalog_home):
+def test_catalog_sitemap_uses_canonical_root_entry(catalog_home):
     service, _, calls, _ = catalog_home("平行线")
     urls = asyncio.run(service.sitemap_urls("https://pingxingxian.space"))
-    assert [item.loc for item in urls] == ["https://pingxingxian.space/games"]
+    assert [item.loc for item in urls] == ["https://pingxingxian.space/"]
     assert calls == []
 
 
@@ -188,7 +188,7 @@ def test_tools_page_exposes_only_current_empty_state(catalog_home):
     assert document.page_structured_data is None
 
     rendered = render_semantic_fallback(document)
-    assert '<a href="/games">平行线</a>' in rendered
+    assert '<a href="/">平行线</a>' in rendered
     assert f"<p>{expected_copy}</p>" in rendered
     assert "相关公开内容" not in rendered
     assert 'href="/forum"' not in rendered
