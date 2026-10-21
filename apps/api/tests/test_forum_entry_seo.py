@@ -105,7 +105,9 @@ def test_all_public_forum_graphs_match_forum_shell_copy(forum_home, monkeypatch,
     }
     document = asyncio.run(operations[page]())
     website, organization = document.site_structured_data["@graph"]
-    assert website["description"] == "平行线 ParallelLines：让答案可追溯。浏览公开版块与可追溯讨论。"
+    assert website["description"] == (
+        "平行线 ParallelLines：让答案可追溯。浏览公开版块与可追溯讨论。"
+    )
     assert website["@id"] == f"{origin}/#website"
     assert organization["@id"] == f"{origin}/#organization"
     assert website["url"] == organization["url"] == f"{origin}/"
