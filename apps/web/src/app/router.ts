@@ -43,13 +43,17 @@ export const router = createRouter({
   routes: [
     {
       path: "/",
+      redirect: (to) => ({ name: "home", query: to.query, hash: to.hash }),
+    },
+    {
+      path: "/games",
       name: "home",
       component: () => import("@/pages/catalog/CatalogHomePage.vue"),
       meta: {
         seo: {
           title: "AI 游戏 · GPT / Claude Code / Kimi · 点开即玩 | {siteName}",
           description: "{siteName} 收录 AI 网页游戏，探索 GPT、Claude Code、Kimi 等工具带来的游戏创意。涵盖策略、卡牌、解谜、角色扮演与休闲玩法，按分类和热度发现游戏，点开即玩。",
-          canonicalPath: "/",
+          canonicalPath: "/games",
         },
       },
     },
@@ -90,7 +94,19 @@ export const router = createRouter({
         },
       },
     },
-    // 论坛沿用旧页面地址，只有论坛首页独立于游戏目录。
+    {
+      path: "/tools",
+      name: "tools",
+      component: () => import("@/pages/tools/ToolsPage.vue"),
+      meta: {
+        seo: {
+          title: "工具 · {siteTitle}",
+          description: "暂无可用工具，工具开放后会显示在这里。",
+          canonicalPath: "/tools",
+        },
+      },
+    },
+    // 旧论坛地址继续保留；主导航中的圈子暂未开放。
     {
       path: "/forum",
       name: "forum-home",

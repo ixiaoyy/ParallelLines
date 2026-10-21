@@ -189,7 +189,7 @@ test("普通注册与后台专用登录分别保留，普通成员不能进入�
   await page.getByRole("textbox", { name: "用户名 / 邮箱 / 手机号", exact: true }).fill(USER.username);
   await page.getByPlaceholder("请输入密码").fill("fixture-password");
   await page.getByRole("button", { name: /^登\s*录$/ }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/games$/);
   await expect(page.locator(".catalog-page")).toBeVisible();
   await page.goto("/admin/forum");
   await expect(page).toHaveURL(/\/forbidden\?required=admin/);
@@ -219,6 +219,66 @@ test("论坛品牌与主题不残留到原目录后台，原后台保持独立�
   await page.goto("/admin");
   await expect(page.locator(".admin-console-shell")).toHaveCount(0);
   await expect(page).toHaveTitle(/目录管理与访问统计/);
+  expect(state.errors).toEqual([]);
+  expect(state.unexpected).toEqual([]);
+});
+
+test("默认进入游戏目录，圈子禁用，工具为空状态且不加载具体工具", async ({ page }, testInfo) => {
+  const state = await fixture(page);
+  await page.goto("/?source=qa#entry");
+  await expect(page).toHaveURL(/\/games\?source=qa#entry$/);
+  const nav = page.getByRole("navigation", { name: "页脚导航", exact: true });
+  await expect(page.locator(".catalog-footer__inner").getByRole("navigation", { name: "页脚导航" })).toHaveCount(1);
+  await expect(nav).toHaveText(/游戏\s*\|\s*圈子\s*\|\s*工具/);
+  await expect(nav.getByRole("link")).toHaveText(["游戏", "工具"]);
+  await expect(nav.getByRole("link", { name: "游戏", exact: true })).toHaveAttribute("href", "/games");
+  await expect(nav.getByRole("button", { name: "圈子，暂未开放", exact: true })).toBeDisabled();
+  await expect(nav.locator('a[href="/forum"]')).toHaveCount(0);
+  for (const width of [1280, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await expect(nav).toHaveCSS("position", "static");
+    await nav.scrollIntoViewIfNeeded();
+    const beforeScroll = await page.evaluate(() => window.scrollY);
+    const beforeBox = await nav.boundingBox();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const afterBox = await nav.boundingBox();
+    expect(afterBox!.y - beforeBox!.y).toBeCloseTo(beforeScroll, 0);
+    if (width > 800) {
+      const clearance = await page.locator(".catalog-footer").evaluate(footer => {
+        const nav = footer.querySelector("nav")!.getBoundingClientRect();
+        const cat = getComputedStyle(footer, "::after");
+        const catLeft = footer.getBoundingClientRect().right - parseFloat(cat.right) - parseFloat(cat.width);
+        return catLeft - nav.right;
+      });
+      expect(clearance).toBeGreaterThanOrEqual(8);
+    }
+    await page.screenshot({ path: testInfo.outputPath(`games-entry-${width}.png`), fullPage: true });
+  }
+  await nav.getByRole("link", { name: "工具", exact: true }).click();
+  await expect(page).toHaveURL(/\/tools$/);
+  await expect(page.getByRole("heading", { name: "暂无可用工具", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /个人日报助手|PDF 英文化/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "圈子，暂未开放", exact: true })).toBeDisabled();
+  for (const width of [1280, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await expect(nav).toHaveCSS("position", "static");
+    await nav.scrollIntoViewIfNeeded();
+    const beforeScroll = await page.evaluate(() => window.scrollY);
+    const beforeBox = await nav.boundingBox();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const afterBox = await nav.boundingBox();
+    expect(afterBox!.y - beforeBox!.y).toBeCloseTo(beforeScroll, 0);
+    await page.screenshot({ path: testInfo.outputPath(`tools-entry-${width}.png`), fullPage: true });
+  }
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "暂无可用工具", exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "去看看游戏", exact: true }).click();
+  await expect(page).toHaveURL(/\/games$/);
+  await page.goto("/play");
+  await expect(page).toHaveURL(/\/games$/);
+  expect(state.requested.some(path => /daily-reports|pdf-translations/.test(path))).toBe(false);
   expect(state.errors).toEqual([]);
   expect(state.unexpected).toEqual([]);
 });

@@ -9,6 +9,7 @@ import { useCatalog, useRecordCatalogProjectView } from "@/features/catalog/quer
 import { readPersonalLibrary, recordRecentProject, savePersonalLibrary, toggleWantedProject } from "@/features/catalog/personalLibrary";
 import type { PersonalLibrary } from "@/features/catalog/personalLibrary";
 import { staticAssetUrl } from "@/shared/assets/staticAssets";
+import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
 
 import CatalogSubmissionDialog from "./CatalogSubmissionDialog.vue";
 import CatalogLeaderboard from "./CatalogLeaderboard.vue";
@@ -384,7 +385,7 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
   <main ref="catalogPage" class="catalog-page" :class="`catalog-page--${catalogView}`" aria-labelledby="catalog-title">
     <header class="catalog-header">
       <div class="catalog-page__wrap catalog-header__inner">
-        <RouterLink class="catalog-brand" to="/" aria-label="平行线首页">
+        <RouterLink class="catalog-brand" :to="{ name: 'home' }" aria-label="平行线首页">
           <img src="/logo-lines-mark.png" alt="" width="92" height="82" />
           <span>平行线</span>
         </RouterLink>
@@ -482,7 +483,7 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
       <div class="catalog-page__wrap catalog-footer__inner">
         <div class="catalog-footer__brand"><strong>平行线</strong><span>让好玩的小游戏被更多人发现</span></div>
         <p class="catalog-footer__motto" aria-hidden="true"><HeartFilled /><span>SMALL GAMES</span><HeartFilled /><span>BIG HAPPINESS</span><HeartFilled /></p>
-        <span class="catalog-footer__play" aria-hidden="true"><CaretRightFilled /><CaretRightFilled /><CaretRightFilled /><span>PLAY MORE</span></span>
+        <SiteNavigation class="catalog-footer__navigation" tone="catalog" />
       </div>
       <p v-if="catalogView === 'games'" class="catalog-library__hint">记录保存在当前浏览器，清理浏览器数据后会丢失。</p>
     </footer>

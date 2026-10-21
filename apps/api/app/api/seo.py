@@ -104,15 +104,40 @@ async def seo_meta(
     return ApiResponse(data=meta)
 
 
-@public_seo_router.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def home_page(request: Request, session: SessionDep) -> Response:
-    """Return the canonical semantic home document inside the compiled SPA shell.
+@public_seo_router.get("/", response_class=RedirectResponse, include_in_schema=False)
+async def home_page(request: Request) -> RedirectResponse:
+    """Redirect the exact root to the game directory without a database dependency.
 
-    ``request`` provides a local/test fallback origin and ``session`` reads public
-    content. The response never records views and is excluded from OpenAPI.
+    ``request`` supplies the original query string. The permanent redirect
+    preserves campaign parameters and performs no content reads or writes.
+    """
+
+    query = request.url.query
+    location = f"/games?{query}" if query else "/games"
+    return RedirectResponse(url=location, status_code=301)
+
+
+@public_seo_router.get("/games", response_class=HTMLResponse, include_in_schema=False)
+async def games_page(request: Request, session: SessionDep) -> Response:
+    """Return the existing public game directory at its canonical games URL.
+
+    ``request`` resolves the canonical origin and ``session`` reads the same
+    public catalog. The response does not record views or change game links.
     """
 
     document = await SeoService(session).home_page(base_url(request))
+    return await html_page_response(document)
+
+
+@public_seo_router.get("/tools", response_class=HTMLResponse, include_in_schema=False)
+async def tools_page(request: Request, session: SessionDep) -> Response:
+    """Return the tools landing page with its current empty state.
+
+    ``request`` resolves the canonical origin and ``session`` reads site
+    branding. No tool capabilities, permissions, or content are created.
+    """
+
+    document = await SeoService(session).tools_page(base_url(request))
     return await html_page_response(document)
 
 
@@ -124,7 +149,7 @@ async def forum_page(request: Request, session: SessionDep) -> Response:
     响应沿用编译后的 SPA 外壳，并从 OpenAPI 中排除。
     """
 
-    # 论坛仅通过独立地址恢复，根路径继续生成游戏目录文档。
+    # 论坛保留独立地址，游戏目录由 /games 提供。
     document = await SeoService(session).forum_page(base_url(request))
     return await html_page_response(document)
 

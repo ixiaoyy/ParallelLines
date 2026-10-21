@@ -1,39 +1,31 @@
 <script setup lang="ts">
-import {
-  ArrowRightOutlined,
-  FilePdfOutlined,
-  FileTextOutlined,
-  ToolOutlined,
-} from "@ant-design/icons-vue";
+import { ToolOutlined } from "@ant-design/icons-vue";
+
+import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
 </script>
 
 <template>
-  <section class="tools-page" aria-labelledby="tools-page-title">
-    <header class="tools-page__header">
-      <span><ToolOutlined aria-hidden="true" /> 社区工具箱</span>
-      <h1 id="tools-page-title">把重复的小事，做得更省心</h1>
-      <p>工具直接服务于社区成员，个人数据默认关联账号并按权限隔离。</p>
+  <div class="tools-shell">
+    <header class="tools-site-header">
+      <RouterLink class="tools-site-brand" :to="{ name: 'home' }" aria-label="平行线首页">
+        <img src="/logo-lines-mark.png" alt="" width="48" height="42" />
+        <strong>平行线</strong>
+      </RouterLink>
     </header>
-
-    <div class="tools-page__grid">
-      <RouterLink class="tool-card" :to="{ name: 'daily-report' }">
-        <span class="tool-card__icon"><FileTextOutlined aria-hidden="true" /></span>
-        <span class="tool-card__content">
-          <strong>个人日报助手</strong>
-          <small>多轮调整、专属 Prompt、历史表达去重</small>
-        </span>
-        <em>登录后使用 <ArrowRightOutlined aria-hidden="true" /></em>
-      </RouterLink>
-      <RouterLink class="tool-card" :to="{ name: 'pdf-translation' }">
-        <span class="tool-card__icon"><FilePdfOutlined aria-hidden="true" /></span>
-        <span class="tool-card__content">
-          <strong>PDF 英文化</strong>
-          <small>中文正文、表格与水印全量英译，输出经 OCR 复核的纯英文 PDF</small>
-        </span>
-        <em>登录后使用 <ArrowRightOutlined aria-hidden="true" /></em>
-      </RouterLink>
-    </div>
-  </section>
+    <main class="tools-page" aria-labelledby="tools-page-title">
+      <header class="tools-page__header">
+        <span><ToolOutlined aria-hidden="true" /> 工具</span>
+        <h1 id="tools-page-title">工具</h1>
+      </header>
+      <section class="tools-page__empty" aria-labelledby="tools-empty-title">
+        <ToolOutlined aria-hidden="true" />
+        <h2 id="tools-empty-title">暂无可用工具</h2>
+        <p>工具开放后会显示在这里。</p>
+        <RouterLink :to="{ name: 'home' }">去看看游戏</RouterLink>
+      </section>
+    </main>
+    <footer class="tools-site-footer"><SiteNavigation /></footer>
+  </div>
 </template>
 
 <style scoped lang="scss" src="./ToolsPage.scss"></style>

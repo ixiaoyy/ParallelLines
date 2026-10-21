@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.requests import Request
 
 from app.api.seo import public_seo_router
 from app.services.seo import SeoPageDocument, SeoService, SeoSiteIdentity
@@ -113,7 +114,7 @@ def test_all_public_forum_graphs_match_forum_shell_copy(forum_home, monkeypatch,
 def test_forum_home_does_not_expand_sitemap_or_openapi(forum_home):
     service, _, calls = forum_home
     urls = asyncio.run(service.sitemap_urls("https://pingxingxian.space"))
-    assert [item.loc for item in urls] == ["https://pingxingxian.space/"]
+    assert [item.loc for item in urls] == ["https://pingxingxian.space/games"]
     assert calls == []
     route = next(route for route in public_seo_router.routes if route.path == "/forum")
     assert route.include_in_schema is False
@@ -122,7 +123,9 @@ def test_forum_home_does_not_expand_sitemap_or_openapi(forum_home):
 @pytest.mark.parametrize(
     ("path", "kind", "home_path"),
     [
-        ("/", "home", "/"),
+        ("/", "home", "/games"),
+        ("/games", "home", "/games"),
+        ("/tools", "tools", "/games"),
         ("/forum", "home", "/forum"),
         ("/boards", "boards", "/forum"),
         ("/b/public", "board", "/forum"),
@@ -145,3 +148,34 @@ def test_semantic_navigation_uses_actual_canonical_path(forum_home, path, kind, 
     assert isinstance(document, SeoPageDocument)
     rendered = render_semantic_fallback(document)
     assert f'<a href="{home_path}">平行线</a>' in rendered
+    if home_path == "/games":
+        assert 'href="/forum"' not in rendered
+        assert "圈子" not in rendered
+
+
+@pytest.mark.parametrize(
+    "query",
+    [b"", b"utm_source=post", b"next=a%2Fb%3Fc%3D1", b"tag=one&tag=two", b"empty="],
+)
+def test_root_redirect_preserves_query_without_a_database_dependency(query):
+    route = next(route for route in public_seo_router.routes if route.path == "/")
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "scheme": "https",
+            "path": "/",
+            "raw_path": b"/",
+            "query_string": query,
+            "server": ("pingxingxian.space", 443),
+            "headers": [],
+        }
+    )
+    response = asyncio.run(route.endpoint(request))
+
+    assert route.dependant.dependencies == []
+    assert route.include_in_schema is False
+    assert response.status_code == 301
+    assert response.headers["location"] == "/games" + (
+        f"?{query.decode('ascii')}" if query else ""
+    )

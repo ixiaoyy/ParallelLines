@@ -163,7 +163,7 @@
 .catalog-footer__brand { display: flex; align-items: center; gap: 28px; } .catalog-footer__brand strong { color: #fff; font-family: var(--catalog-heading-font); font-synthesis: none; font-size: 30px; }
 .catalog-footer__brand > span { color: #40d7ff; font-size: 14px; }
 .catalog-footer__motto { display: flex; align-items: center; gap: 24px; margin: 0; color: #3adeff; font-size: 14px; white-space: nowrap; } .catalog-footer__motto .anticon { color: var(--catalog-red); font-size: 20px; }
-.catalog-footer__play { display: flex; align-items: center; gap: 3px; margin-right: 180px; color: var(--catalog-red); font-size: 18px; white-space: nowrap; } .catalog-footer__play > span:not(.anticon) { margin-left: 8px; color: var(--catalog-cyan); font-size: 14px; }
+.catalog-footer__navigation { justify-self: start; margin-right: 180px; }
 .catalog-library__hint { margin: 0; padding: 2px 12px 0; color: #82afcd; font-size: 10px; line-height: 14px; text-align: center; }
 .catalog-author-count { color: #cde9ff; font-size: 15px; } .catalog-author-search { display: flex; width: min(360px, 100%); min-height: 44px; align-items: center; gap: 10px; border: 1px solid #1884ba; padding: 8px 12px; color: #102750; background: #fffdf5; }
 // 榜单沿用浅色面板和深色辅助文字；空结果位于夜景底上，单独保留可读的浅色提示。
@@ -190,7 +190,7 @@
  .catalog-controls { gap: 14px; padding-inline: 8px; } .catalog-library-filters button { min-width: 134px; padding-inline: 12px; font-size: 16px; } .catalog-library-filters button:first-child { min-width: 150px; }
  .catalog-categories, .catalog-sort { gap: 8px; } .catalog-categories select, .catalog-sort select { width: 128px; } .catalog-layout-toggle { gap: 8px; } .catalog-layout-toggle button { width: 44px; }
  .catalog-card__open { width: 104px; flex-basis: 104px; font-size: 15px; }
- .catalog-footer__inner { grid-template-columns: max-content minmax(0, 1fr) max-content; padding-inline: 24px; gap: 20px; } .catalog-footer__brand { gap: 16px; } .catalog-footer__motto { gap: 16px; } .catalog-footer__play { margin-right: 110px; }
+ .catalog-footer__inner { grid-template-columns: max-content minmax(0, 1fr) max-content; padding-inline: 24px; gap: 20px; } .catalog-footer__brand { gap: 16px; } .catalog-footer__motto { gap: 16px; } .catalog-footer__navigation { margin-right: 160px; }
 }
 @media (max-width: 1100px) {
  .catalog-header__inner { width: calc(100% - 32px); } .catalog-brand { gap: 8px; } .catalog-brand img { width: 52px; height: 44px; } .catalog-brand > span { font-size: 26px; }
@@ -199,7 +199,7 @@
  .catalog-categories select, .catalog-sort select { width: 116px; font-size: 15px; } .catalog-footer__brand > span { display: none; }
  // 中等宽度给页脚猫预留独立空间，装饰短句不与猫或品牌重叠。
  .catalog-footer__inner { grid-template-columns: max-content minmax(0, 1fr); padding-right: 188px; }
- .catalog-footer__motto { justify-self: center; gap: 12px; font-size: 12px; } .catalog-footer__play { display: none; }
+ .catalog-footer__motto { justify-self: center; gap: 12px; font-size: 12px; } .catalog-footer__navigation { grid-column: 1 / -1; justify-self: center; margin-right: 0; }
 }
 @media (max-width: 800px) {
  .catalog-page { --catalog-edge-width: 12px; }
@@ -216,6 +216,7 @@
  .catalog-categories select, .catalog-sort select { width: 100%; min-width: 0; }
  .catalog-results { position: absolute; width: 1px; height: 1px; overflow: hidden; border: 0; clip-path: inset(50%); } .catalog-layout-toggle { margin-left: auto; }
  .catalog-footer__inner { display: flex; flex-wrap: wrap; justify-content: center; padding: 12px; } .catalog-footer__motto { flex-wrap: wrap; justify-content: center; margin: 0; font-size: 12px; }
+ .catalog-footer__navigation { width: 100%; justify-content: center; }
  .catalog-footer::after { right: 8px; bottom: calc(100% - 32px); width: 90px; height: 90px; }
  .catalog-grid--list .catalog-card__screen { grid-template-columns: 190px minmax(0, 1fr); }
 }

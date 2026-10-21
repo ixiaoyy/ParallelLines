@@ -31,6 +31,7 @@ SITE_TITLE_FALLBACK = "平行线"
 SITE_BRAND_NAME = "ParallelLines"
 SITE_TAGLINE_FALLBACK = "让答案可追溯"
 SITE_DESCRIPTION_FALLBACK = "发现游戏与互动项目的分类目录。"
+TOOLS_DESCRIPTION = "暂无可用工具。工具开放后会显示在这里。"
 SITE_LOGO_FALLBACK = "/logo-lines-mark.png"
 LEGACY_SITE_LOGO_URLS = {
     "/logo-lines.png",
@@ -41,7 +42,9 @@ LEGACY_SITE_LOGO_URLS = {
 PUBLIC_SITE_SETTING_KEYS = {"site_title", "site_tagline", "brand_logo_url"}
 
 JsonObject = dict[str, object]
-SeoPageKind = Literal["home", "boards", "board", "topic", "profile", "restricted", "missing"]
+SeoPageKind = Literal[
+    "home", "tools", "boards", "board", "topic", "profile", "restricted", "missing"
+]
 
 
 @dataclass(frozen=True)
@@ -106,10 +109,10 @@ class SeoService:
         self.session = session
 
     async def sitemap_urls(self, base_url: str) -> list[SitemapUrl]:
-        """仅列出新目录首页与保留的站内游戏，旧论坛页面不再供索引。"""
+        """仅列出游戏目录的规范地址，保留现有论坛索引范围。"""
 
         return [
-            SitemapUrl(loc=absolute_url(base_url, "/")),
+            SitemapUrl(loc=absolute_url(base_url, "/games")),
         ]
 
     async def robots_txt(self, base_url: str) -> str:
@@ -141,16 +144,24 @@ class SeoService:
 
         identity = await self._site_identity()
         normalized = normalize_path(path)
-        if normalized in {"", "/"}:
+        if normalized in {"", "/", "/games"}:
             return self._site_meta(
                 identity,
                 base_url,
-                "/",
+                "/games",
                 title=(
                     "AI 游戏 · GPT / Claude Code / Kimi · 点开即玩 | "
                     f"{site_brand_name(identity.title)}"
                 ),
                 description=site_description(identity),
+            )
+        if normalized == "/tools":
+            return self._site_meta(
+                identity,
+                base_url,
+                "/tools",
+                title=f"工具 · {site_brand_name(identity.title)}",
+                description=TOOLS_DESCRIPTION,
             )
         # 独立论坛首页复用旧论坛描述，不能改变游戏目录的元信息。
         if normalized == "/forum":
@@ -272,7 +283,7 @@ class SeoService:
         return LegacyTopicRedirect(status_code=301, location=absolute_url(base_url, canonical_path))
 
     async def home_page(self, base_url: str) -> SeoPageDocument:
-        """生成新目录首屏语义 HTML，项目链接与公开 API 使用同一数据源。"""
+        """生成 /games 目录首屏语义 HTML，与公开 API 使用同一项目数据源。"""
 
         identity = await self._site_identity()
         catalog = await CatalogService(self.session, get_settings()).public_catalog()
@@ -289,7 +300,7 @@ class SeoService:
             meta=self._site_meta(
                 identity,
                 base_url,
-                "/",
+                "/games",
                 title=(
                     "AI 游戏 · GPT / Claude Code / Kimi · 点开即玩 | "
                     f"{site_brand_name(identity.title)}"
@@ -300,6 +311,31 @@ class SeoService:
             intro="",
             links=links,
             site_structured_data=self._site_structured_data(identity, base_url),
+        )
+
+    async def tools_page(self, base_url: str) -> SeoPageDocument:
+        """生成工具入口的真实空状态，不创建工具、权限或内容。
+
+        ``base_url`` 用于规范地址；仅读取站点品牌，页面不包含可用工具链接。
+        """
+
+        identity = await self._site_identity()
+        return SeoPageDocument(
+            kind="tools",
+            status_code=200,
+            site=identity,
+            meta=self._site_meta(
+                identity,
+                base_url,
+                "/tools",
+                title=f"工具 · {site_brand_name(identity.title)}",
+                description=TOOLS_DESCRIPTION,
+            ),
+            heading="工具",
+            intro=TOOLS_DESCRIPTION,
+            site_structured_data=self._site_structured_data(
+                identity, base_url, description=TOOLS_DESCRIPTION
+            ),
         )
 
     async def forum_page(self, base_url: str) -> SeoPageDocument:
