@@ -542,3 +542,60 @@ test("同秒跨分类新增记录按 ID 倒序默认选中最新项，保留种�
   expect(requests.opens).toEqual([]);
   expect(requests.unexpected).toEqual([]);
 });
+
+
+test("方向键沿用 WASD 行列和边界，仅消费实际移动且不拦截文本编辑", async ({ page, context }) => {
+  const requests = await mockArcade(context);
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.goto("/");
+  await expectSelected(page, "1001");
+  await page.evaluate(() => {
+    document.addEventListener("keydown", event => {
+      requestAnimationFrame(() => document.body.setAttribute("data-arrow-prevented", String(event.defaultPrevented)));
+    });
+  });
+  const pressArrow = async (key: string, id: string, consumed: boolean) => {
+    await page.locator("body").evaluate(body => body.setAttribute("data-arrow-prevented", "pending"));
+    await page.keyboard.press(key);
+    await expectSelected(page, id);
+    await expect(page.locator("body")).toHaveAttribute("data-arrow-prevented", String(consumed));
+  };
+  await pressArrow("ArrowUp", "1001", false);
+  await pressArrow("ArrowRight", "1002", true);
+  await pressArrow("ArrowDown", "1006", true);
+  await pressArrow("ArrowDown", "1009", true);
+  await pressArrow("ArrowDown", "1009", false);
+  await pressArrow("ArrowLeft", "1009", false);
+  await pressArrow("ArrowUp", "1005", true);
+  await pressArrow("ArrowRight", "1006", true);
+  await pressArrow("ArrowLeft", "1005", true);
+  await page.setViewportSize({ width: 960, height: 1000 });
+  await pressArrow("ArrowUp", "1002", true);
+  await pressArrow("ArrowRight", "1003", true);
+  await pressArrow("ArrowRight", "1003", false);
+  await page.getByRole("button", { name: "列表显示" }).click();
+  await pressArrow("ArrowDown", "1004", true);
+  await pressArrow("ArrowRight", "1004", false);
+  await pressArrow("ArrowUp", "1003", true);
+  const search = page.getByRole("searchbox", { name: "搜索游戏名称" });
+  await search.fill("text");
+  await pressArrow("ArrowLeft", "1003", false);
+  await pressArrow("ArrowDown", "1003", false);
+  await page.locator(".catalog-page").evaluate(container => {
+    for (const tag of ["input", "textarea", "div"]) {
+      const field = document.createElement(tag);
+      field.setAttribute("data-testid", "arrow-edit-" + tag);
+      if (tag === "div") field.contentEditable = "true";
+      container.append(field);
+    }
+  });
+  for (const tag of ["input", "textarea", "div"]) {
+    await page.getByTestId("arrow-edit-" + tag).fill("editable text");
+    for (const key of ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]) {
+      await pressArrow(key, "1003", false);
+    }
+  }
+  expect(requests.opens).toEqual([]);
+  expect(requests.ratings).toEqual([]);
+  expect(requests.unexpected).toEqual([]);
+});

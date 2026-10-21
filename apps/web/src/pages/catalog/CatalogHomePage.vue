@@ -221,11 +221,11 @@ watch(normalizedAuthorSearch, () => { authorVisibleLimit.value = AUTHOR_PAGE_SIZ
 onMounted(() => window.addEventListener("keydown", handleArcadeKeydown));
 onUnmounted(() => window.removeEventListener("keydown", handleArcadeKeydown));
 
-/** 在首页非编辑区域或页面初始焦点下用 WASD 移动选框；Enter 保留当前原生控件的操作。 */
+/** 在首页非编辑区域或页面初始焦点下用 WASD 或方向键移动选框；Enter 保留当前原生控件的操作。 */
 function handleArcadeKeydown(event: KeyboardEvent): void {
   if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey
     || catalogView.value !== "games" || submissionOpen.value || selectedAuthor.value !== null) return;
-  const key = event.key.toLowerCase();
+  const key = ({ ArrowUp: "w", ArrowLeft: "a", ArrowDown: "s", ArrowRight: "d" } as Record<string, string>)[event.key] ?? event.key.toLowerCase();
   if (!["w", "a", "s", "d", "enter"].includes(key)) return;
   const grid = catalogGrid.value;
   const target = event.target;
@@ -240,9 +240,9 @@ function handleArcadeKeydown(event: KeyboardEvent): void {
   const index = cards.findIndex((card) => card.dataset.projectId === selectedProjectId.value);
   const current = cards[index];
   if (!current) return;
-  event.preventDefault();
   // Enter 在当前真实按键事件内同步点击原链接，保留新标签、最近打开与累计浏览量的既有链路。
   if (key === "enter") {
+    event.preventDefault();
     if (!event.repeat) current.querySelector<HTMLAnchorElement>(".catalog-card__open")?.click();
     return;
   }
@@ -255,7 +255,8 @@ function handleArcadeKeydown(event: KeyboardEvent): void {
       : key === "a" && column > 0 ? index - 1
         : key === "d" && column < columns - 1 ? Math.min(cards.length - 1, index + 1) : index;
   const next = cards[nextIndex];
-  if (!next) return;
+  if (!next || nextIndex === index) return;
+  event.preventDefault();
   selectedProjectId.value = next.dataset.projectId ?? null;
   next.focus({ preventScroll: true });
   next.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
