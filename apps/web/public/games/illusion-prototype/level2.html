@@ -544,12 +544,14 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
 }
 
     const PALETTE={stone:0xe7dfb7,dark:0x465854,cream:0xfff8dc,knob:0x729f94,column:0x91a282,ground:0xb6c66c};
-    // 花园低路降低、水平跨度加长，顶层仍为4.4；起点侧路位于整圈旋转扫掠之外。
-    const H=1.6,L=2.8,START_RUN=1,LADDER_HEADING=-QUARTER,ROAD_WIDTH=.54,ROAD_HALF=ROAD_WIDTH/2,ROAD_THICKNESS=.25,FOOT_RADIUS=.09;
+    // 起点外端留足整圈旋转的等候净空；桥口仍保留真实扫掠限制。
+    const H=1.6,L=2.8,START_RUN=1.5,LADDER_HEADING=Math.PI,ROAD_WIDTH=.54,ROAD_HALF=ROAD_WIDTH/2,ROAD_THICKNESS=.25,FOOT_RADIUS=.09;
+    // 梯子与低台位于左落脚台的正Z外侧，人物手脚与桥侧面之间保留净空。
+    const LADDER_X=-L+.25,LADDER_FACE_Z=.30,LADDER_PLAYER_Z=.43;
     const START=0,S=1,A=2,AH=3,C=4,BH=5,B=6,P=7,LT=8,LB=9,FIRST=10,Q=11,SECOND=12,R=13,RC=14,GOAL=15,LEFT=16,LADDER_CREST=17;
     const GOAL_POINT=[L,H+L,-L],INITIAL_ANGLE=3*QUARTER;
     const ROTOR_NODES=[A,AH,C,BH,B],ROTOR_LOCAL=[[L,0,0],[L/2,0,0],[0,0,0],[0,0,L/2],[0,0,L]];
-    const fixedNodes=[[START_RUN,H,-L],[0,H,-L],null,null,null,null,null,[-L,H,0],[-L+.5,H,0],[-L+.65,H-1,0],[-L+1.05,H-1,0],null,null,[L,H+L,0],[L,H+L,-L/2],GOAL_POINT,[0,H+L,-L],[-L+.65,H+.10,0]];
+    const fixedNodes=[[START_RUN,H,-L],[0,H,-L],null,null,null,null,null,[-L,H,0],[LADDER_X,H,.17],[LADDER_X,H-1,LADDER_PLAYER_Z],[LADDER_X,H-1,LADDER_PLAYER_Z+.40],null,null,[L,H+L,0],[L,H+L,-L/2],GOAL_POINT,[0,H+L,-L],[LADDER_X,H+.10,LADDER_PLAYER_Z]];
     const PERMANENT_EDGES=[[START,S],[P,LT],[LT,LADDER_CREST],[LADDER_CREST,LB],[LB,FIRST],[Q,SECOND],[R,RC],[RC,GOAL],[GOAL,LEFT]];
     const MOVEMENT_KEYS={KeyW:[0,-1],KeyS:[0,1],KeyA:[-1,0],KeyD:[1,0]},heldKeys=new Set(),roadButtons=[];
     let renderer=null,animation=0,lastTime=0,failed=false,pointer=null,tap=null,goalFrames=[],topShell=null,roadShellKey='';
@@ -634,8 +636,11 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
     /** 清空持续移动按键并立即取消键盘意图，人物实际点保持原位。 */
     function releaseMovement(){heldKeys.clear();if(state.input==='keyboard'){state.input=null;state.moving=false;}}
 
-    /** 旋转占用检查覆盖两臂与角块的真实脚幅；固定台上离开旋转扫掠再允许转动。 */
-    function rotorOccupied(){if(state.surfaceId==='ladder')return false;if(Math.abs(state.player[1]-(H+L*state.bridgeRise))>.04)return false;const sweep=Math.hypot(L,ROAD_HALF)+FOOT_RADIUS;return Math.hypot(state.player[0],state.player[2])<=sweep+.003;}
+    /** 旋转占用检查覆盖桥面与爬梯中的身体；低台上身体完全低于桥底时允许转动。 */
+    function rotorOccupied(){const height=H+L*state.bridgeRise;
+      // 梯子不再无条件放行；帽顶进入板厚范围后，必须阻止桥臂扫过人物。
+      if(state.player[1]>height+.04||state.player[1]+.67<height-ROAD_THICKNESS)return false;
+      const sweep=Math.hypot(L,ROAD_HALF)+FOOT_RADIUS;return Math.hypot(state.player[0],state.player[2])<=sweep+.003;}
     // 自动归中已经接管人物，旋钮不得再改变机关状态。
     function canRotate(){return!failed&&!state.won&&state.input!=='goal'&&!pointer&&!state.lift&&state.angle===state.targetAngle&&!rotorOccupied();}
     /** 固定台上先移除旧外接边登记，保持实际位置；旋转期间不遗留失效边意图。 */
@@ -650,8 +655,10 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
       createGardenDecorGeometry(Rn);Rn.add('garden_island',0,0,0,1,1,1,0xc5ce79).occludes=false;
       addWalkBox('start',(START_RUN+.30-ROAD_HALF)/2,H,-L,START_RUN+.30+ROAD_HALF,ROAD_WIDTH,[[START,S]]);
       addWalkBox('left-landing',-L+.25,H,0,.5,ROAD_WIDTH,[[P,LT]]);
-      addWalkBox('first-pad',-L+.94,H-1,0,.88,.85,[[LB,FIRST]]);
-      Rn.add('box',-L+.94,(H-1-ROAD_THICKNESS)/2,0,.72,H-1-ROAD_THICKNESS,.70,Pc.column);
+      // 低台沿侧梯向正Z展开，梯底、踏板及实柱共同离开上方桥臂投影。
+      addWalkBox('first-pad',LADDER_X,H-1,.72,.85,.88,[[LB,FIRST]]);
+      // 支撑柱向岛内收，避免移台后柱脚越过岛的斜边而悬空。
+      Rn.add('box',LADDER_X,(H-1-ROAD_THICKNESS)/2,.60,.60,H-1-ROAD_THICKNESS,.60,Pc.column);
       addWalkBox('top-right',L,H+L,-L/2,ROAD_WIDTH,L,[[R,RC],[RC,GOAL]],Rn.static,null,false);
       addWalkBox('top-back',L/2,H+L,-L,L,ROAD_WIDTH,[[GOAL,LEFT]],Rn.static,null,false);
       for(const [x,z,id,edges]of[[0,-L,'top-left',[[GOAL,LEFT]]],[L,0,'top-pavilion',[[R,RC]]],[L,-L,'goal',[[RC,GOAL],[GOAL,LEFT]]]])addWalkBox(id,x,H+L,z,.74,.74,edges,Rn.static,null,false);
@@ -664,13 +671,13 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
       Rn.add('box',L,.24,-.37,.82,.48,.20,Pc.column);
       Rn.add('box',L,H+L-.46,-.37,.82,.42,.20,Pc.column);
       for(const x of[L-.18,L+.18])Rn.add('garden_arch',x,H+L-.87,-.37,1,1,1,Pc.column,QUARTER);
-      // 梯子在上板外侧；先爬到略高于板面的顶踏棍，再抓扶跨入，手脚不穿上沿薄板。
-      for(const z of[-.19,.19])Rn.add('cyl',-L+.52,H-.41,z,.045,1.18,.045,0x749c88);
-      for(let i=0;i<10;i++)Rn.add('cyl',-L+.52,H-1+i/9*1.1,0,.037,.41,.037,0xe4d6a4,0,Rn.static,null,Math.PI/2);
+      // 侧梯先爬过台面再跨入固定台；扶杆与横档均在桥侧面之外，不穿过旋转桥板。
+      for(const x of[-.19,.19])Rn.add('cyl',LADDER_X+x,H-.41,LADDER_FACE_Z,.045,1.18,.045,0x749c88);
+      for(let i=0;i<10;i++)Rn.add('cyl',LADDER_X,H-1+i/9*1.1,LADDER_FACE_Z,.037,.41,.037,0xe4d6a4,0,Rn.static,null,0,Math.PI/2);
       // 终点白纹位于亭子地面上，无额外点击热点或文本。
       for(let layer=0;layer<3;layer++){const width=.51-layer*.12;for(let side=0;side<4;side++){const angle=side*QUARTER,object=Rn.add('box',GOAL_POINT[0]+Math.sin(angle)*width/2,H+L+.008,GOAL_POINT[2]+Math.cos(angle)*width/2,width,.014,.023,Pc.cream,angle);object.occludes=false;goalFrames.push({layer:layer+1,side,width,object,light:0});}}
       // 原岛内植物与白花保留固定有界分布；后亭悬空连接两条上层路，不另添全高柱架。
-      addGardenDecor(Rn,{groundY:0,extent:[-3.6,3.6,-3.2,1.9],pavilions:[{x:0,y:H+L,z:-L},{x:L,y:H+L,z:0},{x:L,y:H+L,z:-L}],avoidRects:[[-L-.3,-L+1.4,-.65,.65],[-.55,START_RUN+.5,-L-.55,-L+.55],[L-.6,L+1.15,-.6,.9]]});
+      addGardenDecor(Rn,{groundY:0,extent:[-3.6,3.6,-3.2,1.9],pavilions:[{x:0,y:H+L,z:-L},{x:L,y:H+L,z:0},{x:L,y:H+L,z:-L}],avoidRects:[[LADDER_X-.6,LADDER_X+.6,-.55,1.3],[-.55,START_RUN+.5,-L-.55,-L+.55],[L-.6,L+1.15,-.6,.9]]});
       // 中央矮方房固定在地面，升桥只伸出上方圆筒；窄长窗为凹色面，不产生可走目标。
       Rn.add('box',0,.44,0,1.20,.88,1.14,Pc.column);Rn.add('box',0,.89,0,1.24,.10,1.18,0x9cac72);
       for(const x of[-.39,-.13,.13,.39])Rn.add('box',x,.47,.576,.095,.51,.012,Pc.dark);
@@ -678,7 +685,7 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
     }
     /** 鞋底高度只从当前层对应支撑采样；爬梯时由竖边承托，不能吸到上层地板。 */
     function groundAt(x,z){if(state.surfaceId==='ladder')return state.player[1];const object=surfaceAt([x,state.player[1],z],state.surfaceId);return object?surfaceBasis(object).origin[1]:state.player[1];}
-    /** 内侧梯面朝负X，人物手脚依梯面朝向前伸，交替收抬而不播放平地整步。 */
+    /** 侧梯朝负Z，人物手脚依梯面朝向前伸，交替收抬而不播放平地整步。 */
     function drawClimber(){drawTraveller(renderer,state.player,LADDER_HEADING,state.gait,reducedMotion.matches?0:state.motionBlend,groundAt,true);}
     /** 绘制水平机关、升起支撑与踏板；每帧替换动态列表，不积累GPU资源。 */
     function drawDynamic(){const Rn=renderer,Pc=PALETTE;Rn.dynamic=[];const rotor=rotorMatrix(),right=rightMatrix();
