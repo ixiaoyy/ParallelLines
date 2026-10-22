@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <title>像素盆栽示例</title>
+  <desc>为拼豆图纸工具手工绘制的八色像素盆栽，画布背景透明。</desc>
+  <g fill="#249e6b">
+    <path d="M15 9h2v13h-2zM13 15h2v3h-2zM17 17h2v3h-2z"/>
+    <path d="M4 12h6v2h3v2h2v3H9v-2H6v-2H4zM20 14h6v3h-2v3h-5v-2h-2v-2h3z"/>
+  </g>
+  <g fill="#26d07c">
+    <path d="M5 12h5v2h3v2H9v-1H7v-1H5zM21 14h5v2h-3v2h-4v-2h2z"/>
+  </g>
+  <g fill="#ff8200">
+    <path d="M12 3h7v2h3v3h-2v4h-3v2h-4v-2h-3V9H8V6h4z"/>
+  </g>
+  <g fill="#fdda24">
+    <path d="M13 2h5v4h4v3h-4v4h-5V9H9V6h4z"/>
+  </g>
+  <g fill="#fff8db">
+    <path d="M13 3h2v2h-2zM10 6h2v2h-2z"/>
+  </g>
+  <g fill="#b33d26">
+    <path d="M7 21h18v3h-2v4h-2v2H11v-2H9v-4H7z"/>
+  </g>
+  <g fill="#ff6a39">
+    <path d="M8 21h16v2H8zM10 24h12v3h-2v2h-8v-2h-2z"/>
+  </g>
+  <g fill="#183028">
+    <path d="M14 6h3v3h-3z"/>
+  </g>
+</svg>

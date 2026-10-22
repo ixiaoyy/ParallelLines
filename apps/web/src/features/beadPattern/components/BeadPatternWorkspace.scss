@@ -1,0 +1,126 @@
+.bead-shell { min-height: 100vh; background: var(--bg-app); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+.bead-header, .bead-page, .bead-footer { width: min(1400px, calc(100% - 48px)); margin-inline: auto; }
+.bead-header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+.bead-brand { display: inline-flex; gap: 10px; align-items: center; color: var(--title); font-size: 21px; text-decoration: none; }
+.bead-brand img { object-fit: contain; }
+.bead-back { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; color: var(--text); }
+.bead-page { padding-block: 30px 56px; }
+.bead-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 26px; }
+.bead-kicker { color: var(--text); font-size: 12px; }
+.bead-intro h1 { margin: 6px 0 8px; font-size: clamp(26px, 3vw, 34px); line-height: 1.3; color: var(--title); letter-spacing: -0.02em; }
+.bead-intro p { margin: 0; font-size: 15px; line-height: 1.7; }
+.bead-local { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; padding-bottom: 4px; font-size: 12px; }
+.bead-local::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #338355; }
+.bead-workspace { display: grid; grid-template-columns: 310px minmax(0, 1fr); align-items: start; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; }
+.bead-settings { min-width: 0; border-right: 1px solid var(--border); padding: 24px; }
+.bead-section + .bead-section { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--border); }
+.bead-section h2 { margin: 0 0 16px; display: flex; align-items: center; gap: 9px; font-size: 16px; color: var(--title); }
+.bead-section h2 > span { display: grid; place-items: center; width: 24px; height: 24px; background: var(--bg-app); border: 1px solid var(--border); border-radius: 50%; font-size: 12px; }
+.bead-upload { border: 1px dashed #b1bcc9; border-radius: 8px; text-align: center; padding: 18px 10px; }
+.bead-upload :deep(.ui-button) { min-height: 44px; }
+.bead-upload p { margin: 9px 0 3px; font-size: 12px; }
+.bead-upload small { font-size: 11px; color: var(--text); }
+.bead-file { display: none; }
+.bead-examples { display: flex; gap: 8px; margin-top: 12px; }
+.bead-examples button { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 5px 7px; font-size: 11px; }
+.bead-examples img { width: 30px; height: 30px; object-fit: cover; border-radius: 3px; }
+.bead-examples button:first-child img { image-rendering: pixelated; background: #f2f5f3; }
+.bead-source { margin-top: 20px; }
+.bead-source__name { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.bead-source__name > span { margin-left: auto; font-size: 11px; flex: 0 0 auto; }
+.bead-crop-panel { font-size: 12px; }
+.bead-crop-panel > summary { margin-bottom: 8px; }
+.bead-help { margin: 8px 0 0; font-size: 12px; line-height: 1.65; color: var(--text); }
+.bead-field-label { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 18px 0 9px; font-size: 13px; font-weight: 600; }
+.bead-field-label > span { font-size: 11px; font-weight: 400; }
+.bead-presets { display: flex; gap: 6px; }
+.bead-presets button { flex: 1; padding: 8px 5px; white-space: nowrap; }
+.bead-presets input { width: 62px; min-width: 0; padding: 6px; }
+.bead-section > select { width: 100%; }
+.bead-palette-note { margin-block: 20px; font-size: 12px; }
+.bead-palette-note strong { display: block; margin-bottom: 4px; color: var(--title); font-size: 12px; }
+.bead-palette-note p { margin: 0; line-height: 1.65; }
+.bead-generate { width: 100%; min-height: 44px; }
+.bead-target { margin: 9px 0 0; text-align: center; font-size: 11px; }
+.bead-result { padding: 26px; min-width: 0; }
+.bead-result__top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 24px; }
+.bead-result__top > div:first-child { min-width: 0; }
+.bead-result__top h2 { max-width: 340px; margin: 6px 0 0; color: var(--title); font-size: 20px; overflow-wrap: anywhere; }
+.bead-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; }
+.bead-stats strong { font-size: 15px; color: var(--title); font-variant-numeric: tabular-nums; }
+.bead-alert, .bead-stale { margin: 0 0 15px; padding: 12px 14px; border-radius: 5px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.bead-alert { color: #9e2433; background: #fff0f1; border: 1px solid #f1c6cc; }
+.bead-stale { color: #765013; background: #fff8e9; border: 1px solid #e8d7b0; }
+.bead-viewbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.bead-tabs, .bead-toolbuttons { display: flex; gap: 4px; flex-wrap: wrap; }
+.bead-tabs button { border-color: transparent; background: transparent; }
+.bead-tabs button[aria-pressed="true"] { border-color: var(--border); background: var(--bg-app); font-weight: 600; color: var(--title); }
+.bead-zoom { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.bead-zoom select { padding-inline: 7px; }
+.bead-stage { display: flex; align-items: flex-start; justify-content: flex-start; position: relative; max-height: 620px; min-height: 380px; overflow: auto; padding: 24px; border: 1px solid var(--border); border-radius: 6px; background-color: #f4f6f8; background-image: linear-gradient(45deg, #e8edf0 25%, transparent 25%), linear-gradient(-45deg, #e8edf0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e8edf0 75%), linear-gradient(-45deg, transparent 75%, #e8edf0 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0; overscroll-behavior: contain; }
+.bead-stage canvas { display: block; flex: none; margin: auto; image-rendering: pixelated; cursor: crosshair; touch-action: pan-x pan-y; }
+.bead-stage.is-editing canvas { touch-action: none; }
+.bead-original { display: block; max-width: 100%; max-height: 540px; margin: auto; object-fit: contain; }
+.bead-empty { display: flex; align-items: center; justify-content: center; flex-direction: column; width: 100%; min-height: 330px; gap: 10px; font-size: 14px; }
+.bead-empty .anticon { font-size: 36px; }
+.bead-busy { position: absolute; inset: 0; display: grid; place-items: center; min-height: 100%; background: rgb(255 255 255 / 88%); color: var(--title); font-size: 14px; }
+.bead-editor { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.bead-toolbuttons button { display: inline-flex; align-items: center; gap: 6px; }
+.bead-cursor { font-size: 11px; }
+.bead-brush { display: flex; align-items: center; gap: 8px; }
+.bead-brush > span { width: 20px; height: 20px; border: 1px solid #a8b3be; border-radius: 3px; }
+.bead-brush select { width: 95px; }
+.bead-canvas-help span { display: block; margin-top: 2px; }
+.bead-swatches { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; max-height: 170px; overflow: auto; }
+.bead-swatches button { display: flex; align-items: center; gap: 6px; padding: 5px 8px; font-size: 11px; }
+.bead-swatches button > span { width: 18px; height: 18px; border: 1px solid rgb(0 0 0 / 15%); border-radius: 3px; }
+.bead-swatches .bead-clear-highlight { border-color: transparent; }
+.bead-downloads { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-block: 22px; margin-top: 20px; border-top: 1px solid var(--border); }
+.bead-downloads :deep(.ui-button) { min-height: 44px; }
+.bead-materials { border-top: 1px solid var(--border); padding-top: 14px; }
+.bead-materials summary { color: var(--title); font-size: 14px; font-weight: 600; }
+.bead-materials summary > span { margin-left: 10px; font-size: 12px; font-weight: 400; color: var(--text); }
+.bead-materials__scroll { overflow-x: auto; margin-top: 12px; }
+.bead-materials table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+.bead-materials th, .bead-materials td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+.bead-materials th { font-weight: 600; }
+.bead-materials td:last-child, .bead-materials th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.bead-table-color { display: inline-block; width: 22px; height: 22px; border: 1px solid #a8b3be; border-radius: 3px; vertical-align: middle; }
+.bead-guide { margin-top: 40px; }
+.bead-guide h2 { margin: 0 0 18px; font-size: 20px; color: var(--title); }
+.bead-guide > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.bead-guide p { margin: 0; font-size: 13px; line-height: 1.8; }
+.bead-guide strong { display: block; margin-bottom: 8px; font-size: 14px; color: var(--title); }
+.bead-about { margin-top: 28px; border-top: 1px solid var(--border); padding-top: 18px; font-size: 12px; line-height: 1.8; }
+.bead-about a { text-decoration: underline; text-underline-offset: 3px; }
+.bead-about p { max-width: 90ch; }
+.bead-footer { padding-bottom: 24px; }
+.bead-shell button:not(.ui-button), .bead-shell input, .bead-shell select { font: inherit; font-size: 13px; color: var(--text); border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); min-height: 44px; }
+.bead-shell button:not(.ui-button) { padding: 8px 11px; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease; }
+.bead-shell select { padding: 8px 10px; }
+.bead-shell input { padding: 8px; }
+.bead-shell button:not(.ui-button):hover:not(:disabled) { border-color: #8191a4; background: var(--bg-app); }
+.bead-shell button:not(.ui-button)[aria-pressed="true"] { border-color: var(--primary); background: var(--bg-selected); color: var(--title); }
+.bead-shell button:disabled { opacity: 0.5; cursor: not-allowed; }
+.bead-shell :is(button, a, input, select, canvas, summary):focus-visible { outline: 2px solid var(--focus-ring, #409eff); outline-offset: 3px; }
+.bead-shell summary { cursor: pointer; min-height: 36px; padding-block: 5px; }
+.bead-settings :deep(.bead-crop__frame) { display: table; position: relative; overflow: hidden; margin-inline: auto; cursor: crosshair; touch-action: none; background: #e8edf0; }
+.bead-settings :deep(.bead-crop__frame img) { display: block; width: auto; max-width: 100%; height: auto; max-height: 230px; user-select: none; }
+.bead-settings :deep(.bead-crop__selection) { position: absolute; pointer-events: none; border: 2px solid white; outline: 1px solid #17202b; box-shadow: 0 0 0 800px rgb(0 0 0 / 40%); }
+.bead-settings :deep(.bead-crop__selection span) { position: absolute; width: 8px; height: 8px; right: -4px; bottom: -4px; background: white; border: 1px solid #17202b; }
+.bead-settings :deep(.bead-crop__actions) { display: flex; gap: 6px; margin-top: 8px; }
+.bead-settings :deep(.bead-crop__actions button) { flex: 1; font-size: 12px; }
+.bead-settings :deep(.bead-crop__precise) { margin-top: 10px; font-size: 12px; }
+.bead-settings :deep(.bead-crop__precise > div) { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+.bead-settings :deep(.bead-crop__precise label) { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bead-settings :deep(.bead-crop__precise input) { width: 100%; min-width: 0; }
+.bead-settings :deep(.bead-crop__frame.is-disabled) { pointer-events: none; }
+.bead-settings :deep(.bead-help) { margin: 8px 0 0; font-size: 12px; line-height: 1.65; }
+.bead-settings :deep(.bead-crop button), .bead-settings :deep(.bead-crop input) { min-height: 44px; padding: 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-surface); color: var(--text); font: inherit; font-size: 12px; }
+.bead-settings :deep(.bead-crop button) { cursor: pointer; }
+.bead-settings :deep(.bead-crop button:disabled) { opacity: 0.5; cursor: not-allowed; }
+.bead-settings :deep(.bead-crop :is(button, input, summary):focus-visible) { outline: 2px solid var(--focus-ring, #409eff); outline-offset: 3px; }
+@media (max-width: 1040px) { .bead-workspace { grid-template-columns: 285px minmax(0, 1fr); } .bead-settings { padding: 20px; } .bead-result { padding: 20px; } .bead-intro { align-items: flex-start; } .bead-local { margin-top: 15px; } .bead-viewbar { flex-wrap: wrap; } .bead-stats { gap: 6px 12px; } }
+@media (max-width: 760px) { .bead-header, .bead-page, .bead-footer { width: calc(100% - 24px); } .bead-header { min-height: 64px; } .bead-page { padding-top: 22px; } .bead-intro { display: block; margin-bottom: 22px; } .bead-local { margin-top: 12px; } .bead-workspace { display: flex; flex-direction: column; } .bead-settings { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; width: 100%; border-right: 0; border-bottom: 1px solid var(--border); padding: 20px; } .bead-section + .bead-section { margin: 0; padding: 0; border: 0; } .bead-result { width: 100%; padding: 20px; } .bead-result__top { margin-bottom: 18px; } .bead-stage { min-height: 300px; max-height: 480px; padding: 16px; } .bead-guide > div { grid-template-columns: 1fr; gap: 20px; } .bead-guide { margin-top: 30px; } .bead-help { font-size: 12px; } }
+@media (max-width: 480px) { .bead-settings { display: block; padding: 18px; } .bead-section + .bead-section { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--border); } .bead-source { margin-top: 15px; } .bead-settings :deep(.bead-crop__frame img) { max-height: 180px; } .bead-examples button { justify-content: center; } .bead-result { padding: 18px 12px; } .bead-result__top { padding-inline: 4px; } .bead-viewbar { gap: 8px; } .bead-tabs { gap: 0; } .bead-tabs button { padding: 7px 10px; } .bead-zoom { margin-left: auto; } .bead-editor { gap: 10px; } .bead-stage { min-height: 260px; max-height: 420px; padding: 12px; } .bead-downloads { gap: 8px; } .bead-downloads :deep(.ui-button) { flex: 1 1 calc(50% - 8px); padding-inline: 8px; font-size: 12px; } .bead-materials summary > span { display: block; margin-left: 16px; margin-top: 3px; } .bead-swatches { max-height: 140px; } }
+@media (prefers-reduced-motion: reduce) { .bead-shell button { transition: none !important; } }

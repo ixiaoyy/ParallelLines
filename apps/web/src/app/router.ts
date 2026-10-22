@@ -128,6 +128,19 @@ export const router = createRouter({
         },
       },
     },
+    // 拼豆工具独立加载，图片生成与编辑在浏览器本地完成。
+    {
+      path: "/tools/bead-pattern",
+      name: "tool-bead-pattern",
+      component: () => import("@/pages/tools/BeadPatternPage.vue"),
+      meta: {
+        seo: {
+          title: "拼豆图纸生成器 · {siteTitle}",
+          description: "将图片转换为拼豆图纸，查看色号和用量。",
+          canonicalPath: "/tools/bead-pattern",
+        },
+      },
+    },
     // 旧论坛地址继续保留；主导航中的圈子暂未开放。
     {
       path: "/forum",

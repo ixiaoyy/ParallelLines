@@ -40,6 +40,16 @@ import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
           </RouterLink>
         </div>
       </article>
+      <article class="tools-tool tools-tool--bead" aria-labelledby="bead-tool-title">
+        <div class="tools-tool__preview tools-bead-preview" aria-hidden="true"><img src="/tools/bead-pattern/pixel-example.svg" alt="" width="256" height="256" /><span>一格，一颗豆</span></div>
+        <div class="tools-tool__content">
+          <span class="tools-tool__label">创作工具 · 本地图片处理</span>
+          <h2 id="bead-tool-title">拼豆图纸生成器</h2>
+          <p>将图片转换为拼豆图纸，查看色号和用量。</p>
+          <ul class="tools-tool__topics" aria-label="工具功能"><li>图片转换</li><li>手动改格</li><li>用量统计</li><li>图纸导出</li></ul>
+          <RouterLink class="tools-tool__launch" :to="{ name: 'tool-bead-pattern' }">打开工具 <ArrowRightOutlined aria-hidden="true" /></RouterLink>
+        </div>
+      </article>
     </main>
     <footer class="tools-site-footer"><SiteNavigation /></footer>
   </div>
