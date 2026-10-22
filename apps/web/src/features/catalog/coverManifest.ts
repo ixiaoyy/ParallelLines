@@ -206,6 +206,11 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "empty-throne": "/catalog/2026-10-19-v1/covers/empty-throne.webp",
   // 我的星露谷保留原游戏标识，使用星露谷官方商店封面的独立版本。
   fablespace: "/catalog/2026-10-21-v1/covers/fablespace.webp",
+  // 本批外部游戏使用已核对的正式游戏画面，路径与静态资源发布清单保持一致。
+  moxriding: "/catalog/2026-10-22-v1/covers/moxriding.webp",
+  within: "/catalog/2026-10-22-v1/covers/within.webp",
+  "miami-flap": "/catalog/2026-10-22-v1/covers/miami-flap.webp",
+  "dont-speak-chinese": "/catalog/2026-10-22-v1/covers/dont-speak-chinese.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {

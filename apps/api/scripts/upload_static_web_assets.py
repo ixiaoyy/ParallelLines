@@ -118,6 +118,11 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-10-19-v1/covers/empty-throne.webp",
     # 我的星露谷换图与目录映射同批交付，保留旧版本以便回滚。
     "catalog/2026-10-21-v1/covers/fablespace.webp",
+    # 本批正式封面与目录映射同批交付，可定向发布，保留旧版本素材。
+    "catalog/2026-10-22-v1/covers/moxriding.webp",
+    "catalog/2026-10-22-v1/covers/within.webp",
+    "catalog/2026-10-22-v1/covers/miami-flap.webp",
+    "catalog/2026-10-22-v1/covers/dont-speak-chinese.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 STATIC_ASSETS = (
