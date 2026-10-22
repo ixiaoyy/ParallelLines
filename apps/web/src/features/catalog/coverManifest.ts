@@ -211,6 +211,8 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   within: "/catalog/2026-10-22-v1/covers/within.webp",
   "miami-flap": "/catalog/2026-10-22-v1/covers/miami-flap.webp",
   "dont-speak-chinese": "/catalog/2026-10-22-v1/covers/dont-speak-chinese.webp",
+  // PokéBonk 使用原站公开分享封面的独立版本。
+  pokebonk: "/catalog/2026-10-22-v2/covers/pokebonk.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {

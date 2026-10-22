@@ -123,6 +123,8 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-10-22-v1/covers/within.webp",
     "catalog/2026-10-22-v1/covers/miami-flap.webp",
     "catalog/2026-10-22-v1/covers/dont-speak-chinese.webp",
+    # PokéBonk 正式封面可按独立版本单图发布。
+    "catalog/2026-10-22-v2/covers/pokebonk.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 STATIC_ASSETS = (
