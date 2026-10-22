@@ -1,0 +1,423 @@
+{
+  "office": {
+    "name": "办公数据",
+    "description": "虚构办公明细，共 6 条记录。日期列在 Excel 中保存为真实日期，目标数 H6 故意留空，用来练习检查漏填。",
+    "columns": [
+      "工号",
+      "姓名",
+      "部门",
+      "金额",
+      "日期",
+      "状态",
+      "完成数",
+      "目标数"
+    ],
+    "dateColumns": [
+      4
+    ],
+    "rows": [
+      [
+        "U001",
+        "张三",
+        "行政",
+        120,
+        "2026-01-05",
+        "已完成",
+        8,
+        10
+      ],
+      [
+        "U002",
+        "李四",
+        "财务",
+        200,
+        "2026-01-08",
+        "已完成",
+        4,
+        4
+      ],
+      [
+        "U001",
+        "张三",
+        "行政",
+        80,
+        "2026-01-15",
+        "未完成",
+        3,
+        10
+      ],
+      [
+        "U003",
+        "王五",
+        "行政",
+        300,
+        "2026-02-02",
+        "已完成",
+        10,
+        8
+      ],
+      [
+        "U004",
+        "赵六",
+        "人事",
+        150,
+        "2026-02-10",
+        "已完成",
+        0,
+        ""
+      ],
+      [
+        "U002",
+        "李四",
+        "财务",
+        50,
+        "2026-02-15",
+        "未完成",
+        2,
+        4
+      ]
+    ]
+  },
+  "exercises": [
+    {
+      "id": "average-amount",
+      "title": "算出平均每笔金额",
+      "input": "",
+      "expectedValue": 150,
+      "sheetName": "练习",
+      "targetCell": "C12"
+    },
+    {
+      "id": "maximum-amount",
+      "title": "找出最大的一笔金额",
+      "input": "",
+      "expectedValue": 300,
+      "sheetName": "练习",
+      "targetCell": "C13"
+    },
+    {
+      "id": "minimum-amount",
+      "title": "找出最小的一笔金额",
+      "input": "",
+      "expectedValue": 50,
+      "sheetName": "练习",
+      "targetCell": "C14"
+    },
+    {
+      "id": "count-numbers",
+      "title": "数一列里有多少个数字",
+      "input": "",
+      "expectedValue": 6,
+      "sheetName": "练习",
+      "targetCell": "C15"
+    },
+    {
+      "id": "count-nonempty",
+      "title": "数一列有多少个非空单元格",
+      "input": "",
+      "expectedValue": 6,
+      "sheetName": "练习",
+      "targetCell": "C16"
+    },
+    {
+      "id": "count-blanks",
+      "title": "检查有多少个目标数没有填写",
+      "input": "",
+      "expectedValue": 1,
+      "sheetName": "练习",
+      "targetCell": "C17"
+    },
+    {
+      "id": "average-by-department",
+      "title": "只计算某个部门的平均金额",
+      "input": "财务",
+      "expectedValue": 125,
+      "sheetName": "练习",
+      "targetCell": "C18"
+    },
+    {
+      "id": "subtotal-visible",
+      "title": "只合计筛选后看得见的金额",
+      "input": "",
+      "expectedValue": 900,
+      "sheetName": "练习",
+      "targetCell": "C19"
+    },
+    {
+      "id": "percent-of-total",
+      "title": "计算一笔金额占总金额的比例",
+      "input": "",
+      "expectedValue": 0.13333333333333333,
+      "sheetName": "练习",
+      "targetCell": "C20",
+      "numberFormat": "0.00%"
+    },
+    {
+      "id": "and-conditions",
+      "title": "两个条件都满足才显示符合",
+      "input": "",
+      "expectedValue": "符合",
+      "sheetName": "练习",
+      "targetCell": "C21"
+    },
+    {
+      "id": "or-conditions",
+      "title": "满足任意一个条件就需要通知",
+      "input": "",
+      "expectedValue": "需通知",
+      "sheetName": "练习",
+      "targetCell": "C22"
+    },
+    {
+      "id": "not-status",
+      "title": "把尚未完成的记录标成待跟进",
+      "input": "",
+      "expectedValue": "已完成",
+      "sheetName": "练习",
+      "targetCell": "C23"
+    },
+    {
+      "id": "blank-check",
+      "title": "没有填写时显示待填写",
+      "input": "",
+      "expectedValue": "待填写",
+      "sheetName": "练习",
+      "targetCell": "C24"
+    },
+    {
+      "id": "missing-lookup",
+      "title": "查不到工号时显示未找到",
+      "input": "U999",
+      "expectedValue": "未找到",
+      "sheetName": "练习",
+      "targetCell": "C25"
+    },
+    {
+      "id": "safe-division",
+      "title": "计算出错时给出检查提示",
+      "input": 0,
+      "expectedValue": "检查原始数据",
+      "sheetName": "练习",
+      "targetCell": "C26"
+    },
+    {
+      "id": "index-match",
+      "title": "按姓名向左查出工号",
+      "input": "李四",
+      "expectedValue": "U002",
+      "sheetName": "练习",
+      "targetCell": "C27"
+    },
+    {
+      "id": "xlookup-department",
+      "title": "用新版公式按工号查部门",
+      "input": "U003",
+      "expectedValue": "行政",
+      "sheetName": "练习",
+      "targetCell": "C28"
+    },
+    {
+      "id": "left-code",
+      "title": "提取编号开头的两个字母",
+      "input": "XS-2026-008",
+      "expectedValue": "XS",
+      "sheetName": "练习",
+      "targetCell": "C29"
+    },
+    {
+      "id": "right-phone",
+      "title": "提取手机号的后四位",
+      "input": "13800138000",
+      "expectedValue": "8000",
+      "sheetName": "练习",
+      "targetCell": "C30"
+    },
+    {
+      "id": "mid-code",
+      "title": "提取编号中间的年份",
+      "input": "XS-2026-008",
+      "expectedValue": "2026",
+      "sheetName": "练习",
+      "targetCell": "C31"
+    },
+    {
+      "id": "text-length",
+      "title": "检查一段文字有多少个字符",
+      "input": "合同2026",
+      "expectedValue": 6,
+      "sheetName": "练习",
+      "targetCell": "C32"
+    },
+    {
+      "id": "find-separator",
+      "title": "找出编号中第一个横线的位置",
+      "input": "XS-2026-008",
+      "expectedValue": 3,
+      "sheetName": "练习",
+      "targetCell": "C33"
+    },
+    {
+      "id": "replace-label",
+      "title": "把文字中的旧部门替换成新部门",
+      "input": "旧部门-张三",
+      "expectedValue": "行政部-张三",
+      "sheetName": "练习",
+      "targetCell": "C34"
+    },
+    {
+      "id": "combine-fields",
+      "title": "把姓名和部门合并到一个格子",
+      "input": "",
+      "expectedValue": "张三 / 行政",
+      "sheetName": "练习",
+      "targetCell": "C35"
+    },
+    {
+      "id": "join-roster",
+      "title": "把多个人名合并成一行",
+      "input": "",
+      "expectedValue": "张三、李四、王五",
+      "sheetName": "练习",
+      "targetCell": "C36"
+    },
+    {
+      "id": "format-month",
+      "title": "把日期显示成年月文字",
+      "input": "",
+      "expectedValue": "2026-01",
+      "sheetName": "练习",
+      "targetCell": "C37"
+    },
+    {
+      "id": "date-interval",
+      "title": "计算两个日期之间相差几天",
+      "input": "",
+      "expectedValue": 3,
+      "sheetName": "练习",
+      "targetCell": "C38"
+    },
+    {
+      "id": "extract-dateparts",
+      "title": "从日期提取年月日",
+      "input": "",
+      "expectedValue": "2026年1月5日",
+      "sheetName": "练习",
+      "targetCell": "C39"
+    },
+    {
+      "id": "next-month",
+      "title": "计算一个月之后的日期",
+      "input": "",
+      "expectedValue": "2026-02-05",
+      "sheetName": "练习",
+      "targetCell": "C40",
+      "numberFormat": "yyyy-mm-dd",
+      "expectedType": "date"
+    },
+    {
+      "id": "workdays",
+      "title": "计算两个日期间的工作日",
+      "input": "",
+      "expectedValue": 5,
+      "sheetName": "练习",
+      "targetCell": "C41"
+    },
+    {
+      "id": "overdue",
+      "title": "按指定核对日判断是否到期",
+      "input": "",
+      "expectedValue": "已到期",
+      "sheetName": "练习",
+      "targetCell": "C42"
+    },
+    {
+      "id": "month-total",
+      "title": "只汇总某个月的金额",
+      "input": "",
+      "expectedValue": 400,
+      "sheetName": "练习",
+      "targetCell": "C43"
+    },
+    {
+      "id": "round-up",
+      "title": "有小数时向上取到整数",
+      "input": 12.1,
+      "expectedValue": 13,
+      "sheetName": "练习",
+      "targetCell": "C44"
+    },
+    {
+      "id": "round-down",
+      "title": "直接去掉小数部分",
+      "input": 12.9,
+      "expectedValue": 12,
+      "sheetName": "练习",
+      "targetCell": "C45"
+    },
+    {
+      "id": "integer-round",
+      "title": "理解负数向下取整的结果",
+      "input": -12.1,
+      "expectedValue": -13,
+      "sheetName": "练习",
+      "targetCell": "C46"
+    },
+    {
+      "id": "rank-amount",
+      "title": "给一笔金额排个名次",
+      "input": "",
+      "expectedValue": 4,
+      "sheetName": "练习",
+      "targetCell": "C47"
+    },
+    {
+      "id": "top-amount",
+      "title": "找出第二大的金额",
+      "input": 2,
+      "expectedValue": 200,
+      "sheetName": "练习",
+      "targetCell": "C48"
+    },
+    {
+      "id": "filter-completed",
+      "title": "自动列出已完成记录中的姓名",
+      "input": "",
+      "expectedValue": [
+        "张三",
+        "李四",
+        "王五",
+        "赵六"
+      ],
+      "sheetName": "筛选练习",
+      "targetCell": "A2"
+    },
+    {
+      "id": "unique-employees",
+      "title": "生成不重复的工号名单",
+      "input": "",
+      "expectedValue": [
+        "U001",
+        "U002",
+        "U003",
+        "U004"
+      ],
+      "sheetName": "去重练习",
+      "targetCell": "A2"
+    },
+    {
+      "id": "sort-amounts",
+      "title": "把金额自动从大到小排列",
+      "input": "",
+      "expectedValue": [
+        300,
+        200,
+        150,
+        120,
+        80,
+        50
+      ],
+      "sheetName": "排序练习",
+      "targetCell": "A2"
+    }
+  ]
+}

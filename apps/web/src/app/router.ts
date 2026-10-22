@@ -29,6 +29,18 @@ export const router = createRouter({
     if (savedPosition) {
       return savedPosition;
     }
+    // 切换公式教程时由页面定位正文，保留该工具的目录选择和阅读位置。
+    if (to.name === "tool-excel-formulas" && from.name === "tool-excel-formulas") {
+      return false;
+    }
+    // 分享或刷新具体教程时等待正文出现再定位；无课题参数的工具入口仍从顶部开始。
+    if (to.name === "tool-excel-formulas" && typeof to.query.lesson === "string" && to.query.lesson) {
+      return waitForHashTarget("#lesson-title").then((found) => {
+        // 等待期间已经离开该教程时，不再改变后来页面的阅读位置。
+        if (router.currentRoute.value.fullPath !== to.fullPath) return false;
+        return found ? { el: "#lesson-title", top: 24, left: 0 } : { top: 0, left: 0 };
+      });
+    }
     // 版块目录只切换筛选时保持位置，通知楼层链接等待异步内容出现后定位。
     if (to.name === "board-directory" && from.name === "board-directory") {
       return false;
@@ -98,8 +110,21 @@ export const router = createRouter({
       meta: {
         seo: {
           title: "工具 · {siteTitle}",
-          description: "暂无可用工具，工具开放后会显示在这里。",
+          description: "文职常用公式，按步骤照着做。",
           canonicalPath: "/tools",
+        },
+      },
+    },
+    // Excel 教程独立加载，便于从工具列表打开完整内容。
+    {
+      path: "/tools/excel-formulas",
+      name: "tool-excel-formulas",
+      component: () => import("@/pages/tools/ExcelFormulaPage.vue"),
+      meta: {
+        seo: {
+          title: "Excel 公式速查 · {siteTitle}",
+          description: "文职常用公式，按步骤照着做。",
+          canonicalPath: "/tools/excel-formulas",
         },
       },
     },
@@ -541,7 +566,7 @@ function accessDeniedRedirect(to: RouteLocationNormalized, requiredAccess: Requi
   };
 }
 
-// 等待论坛通知和主题短链的异步楼层；hash 为目标片段，最多等待两秒，返回目标元素是否已出现。
+// 等待路由对应的异步内容；hash 为目标片段，最多等待两秒，返回目标元素是否已出现。
 function waitForHashTarget(hash: string): Promise<boolean> {
   if (typeof document === "undefined") {
     return Promise.resolve(false);

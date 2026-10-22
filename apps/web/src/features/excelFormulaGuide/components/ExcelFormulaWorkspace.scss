@@ -1,0 +1,194 @@
+.formula-guide-shell { min-height: 100vh; background: var(--bg-app); color: var(--text); }
+.formula-site-header, .formula-guide, .formula-site-footer { width: min(1240px, calc(100% - 48px)); margin-inline: auto; }
+.formula-site-header { display: flex; min-height: 84px; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--border); }
+.formula-site-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--title); font-size: 22px; text-decoration: none; white-space: nowrap; }
+.formula-site-brand img { display: block; width: 48px; height: 42px; object-fit: contain; }
+.formula-back-link { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; color: var(--text); font-size: 14px; text-decoration: none; }
+.formula-back-link:hover { text-decoration: underline; }
+.formula-guide { padding: 44px 0 64px; }
+.formula-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; padding-bottom: 36px; }
+.formula-intro__label { margin: 0 0 12px; color: var(--text); font-size: 13px; }
+.formula-intro h1 { margin: 0; color: var(--title); font-size: clamp(30px, 4vw, 42px); font-weight: 750; letter-spacing: -0.035em; line-height: 1.25; }
+.formula-intro__description { margin: 16px 0 0; font-size: 16px; line-height: 1.85; }
+.formula-intro__practice { flex-shrink: 0; padding-bottom: 3px; }
+.formula-intro__practice p { margin: 12px 0 0; font-size: 12px; line-height: 1.8; }
+.formula-download { min-height: 44px; padding-inline: 20px; }
+.formula-task-picker { margin-bottom: 32px; border-block: 1px solid var(--border); padding-block: 26px; }
+.formula-task-picker > h2 { margin: 0 0 20px; color: var(--title); font-size: 21px; line-height: 1.6; scroll-margin-top: 20px; }
+.formula-tasks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.formula-tasks > button { display: flex; min-width: 0; min-height: 104px; flex-direction: column; gap: 8px; border: 1px solid var(--border-strong); border-radius: 8px; padding: 16px 18px; background: var(--bg-surface); color: var(--text); text-align: left; font: inherit; cursor: pointer; }
+.formula-tasks > button:hover { background: var(--bg-hover); }
+.formula-tasks > button[aria-pressed="true"] { border-color: var(--primary); background: var(--bg-selected); }
+.formula-tasks strong { color: var(--title); font-size: 15px; line-height: 1.6; }
+.formula-tasks > button > span { font-size: 12px; line-height: 1.8; }
+.formula-task-results { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
+.formula-task-results__heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.formula-task-results__heading h3 { margin: 0; color: var(--title); font-size: 18px; line-height: 1.6; scroll-margin-top: 24px; }
+.formula-task-results__heading > span { font-size: 12px; }
+.formula-task-results ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; list-style: none; margin: 16px 0 0; padding: 0; }
+.formula-task-results li { min-width: 0; }
+.formula-task-results li > button { display: flex; width: 100%; min-height: 92px; flex-direction: column; gap: 8px; border: 0; border-bottom: 1px solid var(--border-strong); padding: 12px 4px; background: transparent; color: var(--text); text-align: left; font: inherit; cursor: pointer; }
+.formula-task-results li > button:hover { background: var(--bg-hover); }
+.formula-task-results li strong { display: flex; justify-content: space-between; gap: 12px; color: var(--title); font-size: 14px; line-height: 1.7; }
+.formula-task-results li > button > span { font-size: 13px; line-height: 1.8; }
+.formula-task-results small { font-size: 12px; line-height: 1.6; }
+.formula-workspace { display: grid; grid-template-columns: 278px minmax(0, 1fr); gap: 24px; align-items: start; }
+.formula-directory { position: sticky; top: 20px; min-width: 0; max-height: calc(100vh - 40px); overflow-y: auto; overscroll-behavior-y: contain; padding: 24px 0 0; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-surface); }
+.formula-directory__top { padding: 0 18px; }
+.formula-directory h2 { margin: 0 0 20px; color: var(--title); font-size: 17px; line-height: 1.5; }
+.formula-search-label { display: block; margin-bottom: 8px; font-size: 12px; }
+.formula-search { position: relative; }
+.formula-search > .anticon { position: absolute; top: 50%; left: 12px; z-index: 1; transform: translateY(-50%); color: var(--text); pointer-events: none; }
+.formula-search input { display: block; width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; border: 1px solid var(--input-border); border-radius: 7px; padding: 10px 10px 10px 34px; background: var(--bg-app); color: var(--text); font: inherit; font-size: 12px; }
+.formula-search input::placeholder { color: var(--text); }
+.formula-categories { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 12px; }
+.formula-categories button { min-height: 44px; border: 1px solid transparent; border-radius: 6px; padding: 6px 10px; background: transparent; color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
+.formula-categories button:hover { background: var(--bg-hover); }
+.formula-categories button[aria-pressed="true"] { border-color: var(--border-strong); background: var(--bg-selected); color: var(--title); font-weight: 700; }
+.formula-directory__count { margin: 8px 0 12px; font-size: 12px; }
+.formula-lessons { list-style: none; margin: 0; padding: 0 8px 12px; }
+.formula-lessons li + li { margin-top: 3px; }
+.formula-lesson-link { display: flex; width: 100%; min-height: 70px; flex-direction: column; gap: 8px; border: 1px solid transparent; border-radius: 7px; padding: 13px 10px; background: transparent; color: var(--text); text-align: left; font: inherit; cursor: pointer; }
+.formula-lesson-link:hover { background: var(--bg-hover); }
+.formula-lesson-link.is-selected { border-color: var(--border-strong); background: var(--bg-selected); color: var(--title); }
+.formula-lesson-link__title { font-size: 13px; font-weight: 600; line-height: 1.6; }
+.formula-lesson-link__summary { font-size: 12px; line-height: 1.7; }
+.formula-lesson-link__functions { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; line-height: 1.4; }
+.formula-search-empty { padding: 8px 18px 24px; font-size: 13px; line-height: 1.8; }
+.formula-search-empty button { min-height: 44px; border: 0; padding: 4px 0; background: transparent; color: var(--title); font: inherit; text-decoration: underline; cursor: pointer; }
+.formula-article { min-width: 0; border: 1px solid var(--border); border-radius: 12px; padding: 32px 40px; background: var(--bg-surface); }
+.formula-article__header { padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.formula-article__meta { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 12px; }
+.formula-article__meta span { border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; }
+.formula-article__meta a { display: inline-flex; min-height: 44px; align-items: center; color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.formula-article h2 { margin: 16px 0 12px; color: var(--title); font-size: clamp(23px, 2.8vw, 30px); letter-spacing: -0.025em; line-height: 1.5; scroll-margin-top: 24px; }
+.formula-article__summary { margin: 0; font-size: 16px; line-height: 1.85; }
+.formula-version { margin: 12px 0 0; font-size: 12px; line-height: 1.8; }
+.formula-version > a { display: inline-flex; min-height: 44px; align-items: center; color: var(--title); text-decoration: underline; text-underline-offset: 3px; }
+.formula-selection-tip { margin-top: 18px; border-radius: 6px; padding: 14px 16px; background: var(--bg-subtle); }
+.formula-selection-tip p { margin: 0; color: var(--title); font-size: 14px; line-height: 1.8; }
+.formula-selection-tip button { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; border: 0; padding: 8px 0 0; background: transparent; color: var(--title); font: inherit; font-size: 13px; line-height: 1.7; text-align: left; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.formula-section { margin-top: 36px; }
+.formula-section h3 { margin: 0 0 14px; color: var(--title); font-size: 19px; line-height: 1.5; }
+.formula-section p { max-width: 72ch; margin: 0; font-size: 14px; line-height: 1.9; overflow-wrap: anywhere; }
+.formula-section__heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.formula-section__heading h3 { margin: 0; }
+.formula-section__heading > span { flex-shrink: 0; font-size: 12px; }
+.formula-first-steps { margin-top: 24px; border-block: 1px solid var(--border); padding: 2px 0; }
+.formula-first-steps summary { display: list-item; min-height: 48px; align-content: center; padding: 12px 0; color: var(--title); font-size: 13px; font-weight: 600; cursor: pointer; }
+.formula-first-steps ol { margin: 4px 0 18px; padding-left: 22px; font-size: 13px; line-height: 1.9; }
+.formula-first-steps li + li { margin-top: 10px; }
+.formula-first-steps kbd { border: 1px solid var(--border-strong); border-radius: 3px; padding: 1px 4px; background: var(--bg-subtle); font-family: inherit; font-size: 11px; }
+.formula-sheet-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.formula-sheet-tabs button { min-height: 44px; border: 1px solid var(--border); border-radius: 6px; padding: 8px 18px; background: var(--bg-surface); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+.formula-sheet-tabs button[aria-pressed="true"] { border-color: var(--border-strong); background: var(--bg-subtle); color: var(--title); font-weight: 700; }
+.formula-sheet-description { margin-bottom: 12px !important; font-size: 12px !important; }
+.formula-sheet-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--border-strong); border-radius: 4px; }
+.formula-sheet { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 12px; line-height: 1.6; }
+.formula-sheet th, .formula-sheet td { height: 34px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 7px 11px; text-align: left; white-space: pre; }
+.formula-sheet tr:last-child td, .formula-sheet tr:last-child > .formula-sheet__row-number { border-bottom: 0; }
+.formula-sheet tr > :last-child { border-right: 0; }
+.formula-sheet thead th { background: var(--bg-subtle); color: var(--title); font-weight: 600; }
+.formula-sheet .formula-sheet__letters th { height: 26px; padding: 3px 10px; text-align: center; font-size: 11px; font-weight: 400; }
+.formula-sheet .formula-sheet__row-number { position: sticky; left: 0; z-index: 1; width: 32px; padding-inline: 8px; background: var(--bg-subtle); text-align: center; font-size: 11px; font-weight: 400; }
+.formula-sheet__letters th:first-child { position: sticky; left: 0; z-index: 1; }
+.formula-sheet td.is-number { text-align: right; font-variant-numeric: tabular-nums; }
+.formula-sheet td.is-target { outline: 2px solid var(--primary); outline-offset: -2px; background: var(--bg-selected); color: var(--title); }
+.formula-sheet__placeholder { font-size: 11px; }
+.formula-preview-note { margin-top: 10px !important; font-size: 12px !important; }
+.formula-steps { list-style: none; margin: 0; padding: 0; counter-reset: tutorial-step; }
+.formula-steps li { position: relative; padding: 0 0 24px 42px; counter-increment: tutorial-step; }
+.formula-steps li:last-child { padding-bottom: 0; }
+.formula-steps li::before { position: absolute; top: 1px; left: 0; display: grid; width: 26px; height: 26px; place-items: center; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--bg-subtle); color: var(--title); content: counter(tutorial-step); font-size: 12px; font-weight: 700; }
+.formula-steps h4 { margin: 0 0 7px; color: var(--title); font-size: 15px; line-height: 1.8; }
+.formula-steps p { font-size: 14px; }
+.formula-recipe { padding-block: 24px; border-block: 1px solid var(--border); }
+.formula-code { max-width: 100%; box-sizing: border-box; overflow-x: auto; margin: 0; border-radius: 6px; padding: 20px; background: var(--code-bg); color: var(--code-text); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; line-height: 1.8; white-space: pre; user-select: text; }
+.formula-copy-row { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+.formula-copy-row > .ui-button { min-height: 44px; flex-shrink: 0; padding-inline: 18px; }
+.formula-copy-status { min-height: 22px; margin: 0 !important; font-size: 12px !important; }
+.formula-expected { margin-top: 24px; }
+.formula-expected > span { display: block; margin-bottom: 5px; font-size: 12px; }
+.formula-expected strong { display: block; color: var(--title); font-size: 28px; font-variant-numeric: tabular-nums; line-height: 1.5; overflow-wrap: anywhere; }
+.formula-expected p { margin-top: 5px; font-size: 12px; }
+.formula-parts { margin: 0; }
+.formula-parts > div { display: grid; grid-template-columns: minmax(100px, 0.7fr) minmax(0, 1.3fr); gap: 16px; padding-block: 14px; border-top: 1px solid var(--border); }
+.formula-parts dt { margin: 0; color: var(--title); font-size: 12px; line-height: 1.9; overflow-wrap: anywhere; }
+.formula-parts dd { margin: 0; font-size: 13px; line-height: 1.9; overflow-wrap: anywhere; }
+.formula-checks { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.9; }
+.formula-checks li + li { margin-top: 8px; }
+.formula-pitfalls > div + div { margin-top: 22px; }
+.formula-pitfalls h4 { margin: 0 0 6px; color: var(--title); font-size: 14px; line-height: 1.8; }
+.formula-pitfalls p { font-size: 13px; }
+.formula-article__footer { margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--border); }
+.formula-article__footer > p { margin: 0 0 8px; font-size: 12px; }
+.formula-article__footer ul { display: flex; flex-wrap: wrap; gap: 4px 18px; list-style: none; margin: 0; padding: 0; }
+.formula-article__footer li a { display: inline-flex; min-height: 44px; align-items: center; gap: 5px; color: var(--title); font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
+.formula-return-directory { display: inline-flex; min-height: 44px; align-items: center; margin-top: 24px; color: var(--title); font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+.formula-site-footer { padding-bottom: 32px; }
+.formula-guide-shell :where(a, button, input, summary, pre, [tabindex]):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.formula-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (max-width: 1060px) {
+  .formula-workspace { grid-template-columns: 240px minmax(0, 1fr); gap: 18px; }
+  .formula-article { padding: 28px; }
+}
+
+@media (max-width: 800px) {
+  .formula-site-header, .formula-guide, .formula-site-footer { width: calc(100% - 32px); }
+  .formula-guide { padding-top: 30px; }
+  .formula-intro { align-items: flex-start; gap: 24px; }
+  .formula-intro__description { font-size: 14px; }
+  .formula-intro__practice { padding-top: 7px; }
+  .formula-tasks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .formula-task-results ul { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .formula-task-results li > button { min-height: 76px; }
+  .formula-workspace { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .formula-directory { position: static; max-height: none; overflow-y: visible; overscroll-behavior-y: auto; padding-top: 20px; }
+  .formula-directory__top { padding-inline: 20px; }
+  .formula-directory h2 { margin-bottom: 16px; }
+  .formula-search input { font-size: 14px; }
+  .formula-lessons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: min(55vh, 480px); overflow-y: auto; gap: 4px; padding: 0 10px 12px; }
+  .formula-lessons li + li { margin-top: 0; }
+  .formula-lesson-link { height: 100%; min-height: 78px; }
+  .formula-directory__count { margin-top: 8px; }
+  .formula-article { padding: 28px; }
+  .formula-article h2 { scroll-margin-top: 16px; }
+}
+
+@media (max-width: 480px) {
+  .formula-site-header, .formula-guide, .formula-site-footer { width: calc(100% - 24px); }
+  .formula-site-header { min-height: 74px; gap: 10px; }
+  .formula-site-brand { gap: 8px; font-size: 19px; }
+  .formula-site-brand img { width: 40px; height: 35px; }
+  .formula-back-link { gap: 5px; font-size: 12px; }
+  .formula-intro { flex-direction: column; gap: 22px; padding-bottom: 26px; }
+  .formula-intro__practice { display: flex; width: 100%; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 0; }
+  .formula-intro__practice p { margin: 0; font-size: 11px; }
+  .formula-task-picker { margin-bottom: 24px; padding-block: 20px; }
+  .formula-task-picker > h2 { margin-bottom: 16px; font-size: 18px; }
+  .formula-tasks { gap: 8px; }
+  .formula-tasks > button { min-height: 64px; justify-content: center; padding: 12px; }
+  .formula-tasks strong { font-size: 14px; }
+  .formula-tasks > button > span { display: none; }
+  .formula-task-results { margin-top: 20px; }
+  .formula-directory__top { padding-inline: 14px; }
+  .formula-lessons { padding-inline: 6px; }
+  .formula-lesson-link { padding: 11px 8px; }
+  .formula-lesson-link__title { font-size: 12px; }
+  .formula-lesson-link__functions { font-size: 10px; }
+  .formula-article { padding: 22px 16px; }
+  .formula-article__summary { font-size: 14px; }
+  .formula-section { margin-top: 28px; }
+  .formula-section h3 { font-size: 17px; }
+  .formula-section__heading { flex-wrap: wrap; gap: 6px; }
+  .formula-code { padding: 16px; font-size: 12px; }
+  .formula-copy-row { flex-wrap: wrap; gap: 8px; }
+  .formula-copy-status { flex-basis: 100%; }
+  .formula-parts > div { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .formula-steps li { padding-left: 36px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .formula-guide-shell *, .formula-guide-shell *::before, .formula-guide-shell *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}
