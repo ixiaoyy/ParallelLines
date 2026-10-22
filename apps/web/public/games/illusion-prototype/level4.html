@@ -58,9 +58,11 @@
     <div class="controls"><div class="control-actions"><div class="finish-actions"><button id="restart" class="restart" type="button">重新开始</button><a id="next-level" class="next-level" href="./level5.html" hidden>下一关</a></div><button id="sound" class="sound" type="button" aria-label="声音：开" aria-pressed="true">声音：开</button></div></div>
     <p id="failure" class="failure" role="alert" hidden>当前浏览器未启用 WebGL 2。</p>
   </main>
+  <script src="./assets/scene-input.js"></script>
   <script>
   (() => {
     'use strict';
+    const sceneInput = IllusionSceneInput;
 
     // 本地原型沿用现有游戏的矩阵与实例绘制方式，仅保留本关所需几何体。
     const M = {
@@ -136,8 +138,9 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
       fitViewport(){
         if(this.width>600&&this.height>=500){this.viewportFit=null;return;}
         // 拖动、归中和完成演出共用进入时的投影修正，避免操作中的手柄或终点漂移。
-        const fixed=pointer?(pointer.viewportFit||this.viewportFit):((state.won||state.goalCentering||state.input==='goal')?this.viewportFit:null);
-        let fit=fixed&&fixed.width===this.width&&fixed.height===this.height?fixed:null;
+        const moving=!!state.activeMotion;
+        const fixed=pointer?(pointer.viewportFit||this.viewportFit):((moving||state.won||state.goalCentering||state.input==='goal')?this.viewportFit:null);
+        let fit=fixed&&fixed.width===this.width&&fixed.height===this.height&&fixed.scene===(state.area+':'+state.zone)?fixed:null;
         if(!fit){
           const rect=this.canvas.getBoundingClientRect(),controls=document.querySelector('.controls').getBoundingClientRect();
           const left=Math.max(24,controls.left-rect.left+8),right=this.width-Math.max(24,rect.right-controls.right+8);
@@ -156,7 +159,7 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
           if(!Number.isFinite(x0)||x1-x0<1||y1-y0<1)return;
           const scale=Math.min(1,(right-left)/(x1-x0),(bottom-top)/(y1-y0));
           const dx=(left+right)/2-scale*(x0+x1)/2,dy=(top+bottom)/2-scale*(y0+y1)/2;
-          fit={scale,tx:scale-1+2*dx/this.width,ty:1-scale-2*dy/this.height,width:this.width,height:this.height};
+          fit={scale,tx:scale-1+2*dx/this.width,ty:1-scale-2*dy/this.height,width:this.width,height:this.height,scene:state.area+':'+state.zone};
         }
         this.viewportFit=fit;if(pointer&&!pointer.viewportFit)pointer.viewportFit=fit;
         // 基础 pixels 保留给现有手势冻结逻辑，不能把已修正比例再次当作基础比例相乘。
@@ -971,7 +974,7 @@ function drawBControl() {
     /** 返回真实旋钮/圆点中心，外观与DOM热区共用此点。 */
     function handlePoint(id,q=state.groups[id].q){if(id==='stairs')return[-1.98,.74,1.7];if(id==='A')return[-1.2,1.83,.48];if(id==='pull')return M.point(pullFrame(q),[.33,-.25,.05]);if(id==='B')return handleBPoint(q);if(id==='C')return M.point(pinkFrame(q),[2.2,1.55,-1.05]);return M.point(M.trs(CX+2.3,8.7,-.4,1,1,1,0,q*QUARTER),[.32,.35,.55]);}
     /** 指针拖动时只更新目标，旋钮各有自身有界行程；反向保持同一个localFoot。 */
-    function dragGroup(e){if(!pointer||e.pointerId!==pointer.id)return;const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;if(Math.hypot(dx,dy)>6)pointer.dragged=true;if(!pointer.dragged)return;const g=GROUPS[pointer.groupId],extent=g.stops.at(-1);state.groups[pointer.groupId].target=Math.max(0,Math.min(extent,pointer.q+(dx-dy)/Math.max(40,renderer.width*.16)));}
+    function dragGroup(e){if(!pointer||e.pointerId!==pointer.id)return;const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;if(Math.hypot(dx,dy)>6)pointer.dragged=true;if(!pointer.dragged)return;const g=GROUPS[pointer.groupId],extent=g.stops.at(-1);state.groups[pointer.groupId].target=Math.max(0,Math.min(extent,pointer.q+(pointer.track?sceneInput.projectedDelta(dx,dy,pointer.track.x,pointer.track.y):sceneInput.rotationDelta(pointer,dx,dy,Math.max(40,renderer.width*.16)))));}
     /** 松手吸附最近真实停位；取消不追加轻点。 */
     function finishDrag(snap=true,activate=false){if(!pointer)return;const p=pointer;pointer=null;const g=state.groups[p.groupId],stops=GROUPS[p.groupId].stops;if(snap)g.target=activate&&!p.dragged?(stops.find(n=>n>p.q+1e-6)??stops[0]):stops.reduce((best,n)=>Math.abs(n-g.target)<Math.abs(best-g.target)?n:best);const b=groupButtons[p.groupId];if(b.hasPointerCapture(p.id))b.releasePointerCapture(p.id);}
     /** 道路轻触统一鼠标和触控，拖动距离超过阈值不误走路。 */
@@ -1207,7 +1210,7 @@ function drawBControl() {
     // 终台归中交给步行循环后，WASD不能覆盖自动路线；重开仍使用原按钮入口。
     window.addEventListener('keydown',e=>{const text=e.target instanceof Element&&(e.target.matches('input,textarea,select')||e.target.isContentEditable);if(e.ctrlKey||e.metaKey||e.altKey||text){releaseMovement();return;}if(!Object.hasOwn(MOVEMENT_KEYS,e.code))return;e.preventDefault();if(e.repeat||heldKeys.has(e.code)||failed||state.won||state.input==='goal'||!walkingReady())return;state.route=[];state.segment=null;state.input='keyboard';heldKeys.add(e.code);tap=null;});window.addEventListener('keyup',e=>{if(!Object.hasOwn(MOVEMENT_KEYS,e.code))return;heldKeys.delete(e.code);if(!heldKeys.size&&state.input==='keyboard'){state.input=null;state.moving=false;}});
     // 归中期间操作物和画布都不接收道路点击；普通阶段仍让热区覆盖的真实路面优先行走。
-    for(const[id,g]of Object.entries(GROUPS)){const b=document.createElement('button');b.type='button';b.id=`handle-${id}`;b.className='scene-control carrier-handle';b.setAttribute('aria-label',g.label);prototype.append(b);groupButtons[id]=b;b.addEventListener('pointerdown',e=>{if(e.button!==0||pointer||failed||state.won||state.input==='goal')return;const rect=canvas.getBoundingClientRect(),road=pickRoad(e.clientX-rect.left,e.clientY-rect.top);if(road){tap={id:e.pointerId,x:e.clientX,y:e.clientY};return;}if(!takeGroupControl(id))return;e.preventDefault();tap=null;pointer={id:e.pointerId,groupId:id,x:e.clientX,y:e.clientY,q:state.groups[id].q,dragged:false};state.groups[id].target=state.groups[id].q;b.setPointerCapture(e.pointerId);});b.addEventListener('pointermove',e=>{if(pointer?.id===e.pointerId){e.preventDefault();dragGroup(e);}});b.addEventListener('pointerup',e=>{if(pointer?.id===e.pointerId){dragGroup(e);finishDrag(true,true);}else finishRoadTap(e);});for(const name of['pointercancel','lostpointercapture'])b.addEventListener(name,e=>{if(pointer?.id===e.pointerId)finishDrag();tap=null;});b.addEventListener('click',e=>{if(e.detail!==0||pointer||!takeGroupControl(id))return;const q=state.groups[id].q;state.groups[id].target=g.stops.find(n=>n>q+1e-6)??g.stops[0];});b.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();if(pointer||!takeGroupControl(id))return;const q=state.groups[id].q,up=e.key==='ArrowUp'||e.key==='ArrowRight';state.groups[id].target=up?(g.stops.find(n=>n>q+1e-6)??g.stops.at(-1)):([...g.stops].reverse().find(n=>n<q-1e-6)??0);});}
+    for(const[id,g]of Object.entries(GROUPS)){const b=document.createElement('button');b.type='button';b.id=`handle-${id}`;b.className='scene-control carrier-handle';b.setAttribute('aria-label',g.label);prototype.append(b);groupButtons[id]=b;b.addEventListener('pointerdown',e=>{if(e.button!==0||pointer||failed||state.won||state.input==='goal')return;const rect=canvas.getBoundingClientRect(),road=pickRoad(e.clientX-rect.left,e.clientY-rect.top);if(road){tap={id:e.pointerId,x:e.clientX,y:e.clientY};return;}if(!takeGroupControl(id))return;e.preventDefault();tap=null;pointer={id:e.pointerId,groupId:id,x:e.clientX,y:e.clientY,q:state.groups[id].q,dragged:false};if(id==='pull'){const a=renderer.project(handlePoint(id,0)),z=renderer.project(handlePoint(id,1));pointer.track={x:z.x-a.x,y:z.y-a.y};}state.groups[id].target=state.groups[id].q;b.setPointerCapture(e.pointerId);});b.addEventListener('pointermove',e=>{if(pointer?.id===e.pointerId){e.preventDefault();dragGroup(e);}});b.addEventListener('pointerup',e=>{if(pointer?.id===e.pointerId){dragGroup(e);finishDrag(true,true);}else finishRoadTap(e);});for(const name of['pointercancel','lostpointercapture'])b.addEventListener(name,e=>{if(pointer?.id===e.pointerId)finishDrag();tap=null;});b.addEventListener('click',e=>{if(e.detail!==0||pointer||!takeGroupControl(id))return;const q=state.groups[id].q;state.groups[id].target=g.stops.find(n=>n>q+1e-6)??g.stops[0];});b.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();if(pointer||!takeGroupControl(id))return;const q=state.groups[id].q,up=e.key==='ArrowUp'||e.key==='ArrowRight';state.groups[id].target=up?(g.stops.find(n=>n>q+1e-6)??g.stops.at(-1)):([...g.stops].reverse().find(n=>n<q-1e-6)??0);});}
     canvas.addEventListener('pointerdown',e=>{if(e.button===0&&walkingReady()&&!state.won&&state.input!=='goal')tap={id:e.pointerId,x:e.clientX,y:e.clientY};});canvas.addEventListener('pointerup',finishRoadTap);canvas.addEventListener('pointercancel',()=>{tap=null;});
     window.addEventListener('blur',()=>{finishDrag();releaseMovement();audio.stop();tap=null;});const onViewportResize=()=>{finishDrag();releaseMovement();tap=null;render();};window.addEventListener('resize',onViewportResize);window.visualViewport?.addEventListener('resize',onViewportResize);document.addEventListener('visibilitychange',()=>{finishDrag();releaseMovement();tap=null;if(document.hidden){audio.suspendOnHidden();cancelAnimationFrame(animation);lastTime=0;}else resume();});window.addEventListener('pagehide',()=>{finishDrag();clearIntent();audio.stop();cancelAnimationFrame(animation);lastTime=0;});window.addEventListener('pageshow',resume);canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();fatal(new Error('WebGL2 context lost'));});
     try{renderer=new Tiny3D(canvas);for(const[name,mesh]of Object.entries(makeTravellerMeshes()))renderer.createGeometry(name,mesh);installDecor();reset();resume();}catch(error){fatal(error);}

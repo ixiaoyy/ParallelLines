@@ -25,9 +25,11 @@ canvas{position:relative;z-index:1;display:block;width:100%;height:100%;touch-ac
 <p id="failure" class="failure" role="alert" hidden>当前浏览器未启用 WebGL 2。</p>
 </main>
 
-<script>
+<script src="./assets/scene-input.js"></script>
+  <script>
 (()=>{
 'use strict';
+    const sceneInput = IllusionSceneInput;
     const M = {
       id: () => new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),
       mul(a,b){const out=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++)out[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];return out;},
@@ -98,8 +100,13 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
         // 左右安全区各保留半个场景按钮的宽度，避免圆点可见但触控边缘进入刘海。
         const rect=this.canvas.getBoundingClientRect(),control=soundButton.getBoundingClientRect(),safe=getComputedStyle(document.documentElement);
         const top=Math.max(76,...[...document.querySelectorAll('.previous-level,.level-name')].map(e=>e.getBoundingClientRect().bottom-rect.top+12)),bottom=Math.max(top+60,control.top-rect.top-18),left=Math.max(25,(parseFloat(safe.getPropertyValue('--safe-left'))||0)+22),right=this.width-Math.max(25,(parseFloat(safe.getPropertyValue('--safe-right'))||0)+22);
-        let bounds=pointer?.bounds||(state.ending?endingViewportBounds():null);
-        if(!bounds){let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;this.meshBounds??=new Map();for(const o of [...this.static,...this.dynamic]){if(o.visible===false||o.decorative||o.focus===false||o.color[3]<.3)continue;let bb=this.meshBounds.get(o.kind);if(!bb){const vertices=this.geometries[o.kind]?.vertices;if(!vertices)continue;const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(let i=0;i<vertices.length;i+=6)for(let j=0;j<3;j++){lo[j]=Math.min(lo[j],vertices[i+j]);hi[j]=Math.max(hi[j],vertices[i+j]);}bb={lo,hi};this.meshBounds.set(o.kind,bb);}for(const x of[bb.lo[0],bb.hi[0]])for(const y of[bb.lo[1],bb.hi[1]])for(const z of[bb.lo[2],bb.hi[2]]){const p=M.point(this.view,M.point(o.matrix,[x,y,z]));x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);}}bounds={x0,x1,y0,y1};if(pointer)pointer.bounds=bounds;}
+        const scene=state.area,pending=this.gestureFitCache;
+        // Retain only the released rotary drag and its own pending stop; automatic building motion fits live.
+        if(pending){const q=state.controls[pending.group],b=pending.bounds;if(!q||!ROTARY_FIT_GROUPS.has(pending.group)||state.activeMotion?.group!==pending.group||state.transition||state.ending||b.width!==this.width||b.height!==this.height||b.scene!==scene||Math.abs(q.target-pending.target)>=1e-8||Math.abs(q.q-q.target)<1e-8)this.gestureFitCache=null;}
+        const cached=pointer?.bounds||this.gestureFitCache?.bounds;
+        let bounds=cached&&cached.width===this.width&&cached.height===this.height&&cached.scene===scene?cached:null;
+        if(!bounds&&state.ending)bounds=endingViewportBounds();
+        if(!bounds){let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;this.meshBounds??=new Map();for(const o of [...this.static,...this.dynamic]){if(o.visible===false||o.decorative||o.focus===false||o.color[3]<.3)continue;let bb=this.meshBounds.get(o.kind);if(!bb){const vertices=this.geometries[o.kind]?.vertices;if(!vertices)continue;const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(let i=0;i<vertices.length;i+=6)for(let j=0;j<3;j++){lo[j]=Math.min(lo[j],vertices[i+j]);hi[j]=Math.max(hi[j],vertices[i+j]);}bb={lo,hi};this.meshBounds.set(o.kind,bb);}for(const x of[bb.lo[0],bb.hi[0]])for(const y of[bb.lo[1],bb.hi[1]])for(const z of[bb.lo[2],bb.hi[2]]){const p=M.point(this.view,M.point(o.matrix,[x,y,z]));x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);}}bounds={x0,x1,y0,y1,width:this.width,height:this.height,scene};if(pointer)pointer.bounds=bounds;}
         if(!Number.isFinite(bounds.x0))return;this.lastBounds={...bounds};const pad=.4,scale=Math.min(79,(right-left)/(bounds.x1-bounds.x0+pad*2),(bottom-top)/(bounds.y1-bounds.y0+pad*2)),span=this.height/scale,aspect=this.width/this.height;
         // 单侧刘海通过平移屏幕取景中心避让，不改变观察方向、世界实体或投影接路。
         const cx=(bounds.x0+bounds.x1)/2,cy=(bounds.y0+bounds.y1)/2,screenX=(left+right)/2,screenY=(top+bottom)/2,horizontalShift=span*aspect*(screenX/this.width-.5),shift=span*(.5-screenY/this.height);
@@ -398,6 +405,8 @@ class GameAudio{
 const CAMERA_DIRECTION=[-18,18,18],ROAD=.62,THICK=.18,SPEED=1.13,BODY=.16;
 const state={area:'H',controls:{},player:null,crows:{H:[],W:[],O:[],P:[]},done:{W:false,O:false,P:false},flags:{},activeMotion:null,transition:null,hubForm:0,hubTarget:0,goalCentering:false,won:false,ending:null,pulse:null};
 const defs=Object.fromEntries(['H','W','O','P'].map(id=>[id,{nodes:[],edges:[],ports:[],curves:[],plates:[],doors:[],crowDefs:[]}])),nodes=new Map(),frames=new Map(),controls={};
+// These existing drives are rotary; future translation controls do not retain a released rotary frame by default.
+const ROTARY_FIT_GROUPS=new Set(['Hview','Hlink','Wlink','Ospin','Pview']);
 let renderer=null,animation=0,lastTime=0,elapsed=0,failed=false,pointer=null,tap=null;
 const heldKeys=new Set(),buttons={},curtain=document.getElementById('curtain'),keys={w:[0,-1],ArrowUp:[0,-1],s:[0,1],ArrowDown:[0,1],a:[-1,0],ArrowLeft:[-1,0],d:[1,0],ArrowRight:[1,0]};
 const audio=new GameAudio(({enabled,available})=>{soundButton.disabled=!available;soundButton.textContent=enabled?'声音：开':'声音：关';soundButton.setAttribute('aria-label',soundButton.textContent);soundButton.setAttribute('aria-pressed',String(enabled));});
@@ -1162,15 +1171,15 @@ function startRoadTap(e){if(e.button!==0||pointer||tap||!walkingReady())return;e
 /** 保留普通路点精度；拖动、取消和失焦都不追加旧点按。 */
 function finishRoadTap(e){if(tap?.id!==e.pointerId)return;const p=tap;tap=null;if(Math.hypot(e.clientX-p.x,e.clientY-p.y)>10)return;const r=canvas.getBoundingClientRect();walkTo(pickRoad(e.clientX-r.left,e.clientY-r.top));}
 /** 起动先捕获真实局部乘客，拖动期间冻结完整视口边界。 */
-function startPointer(e,id){if(e.button!==0||pointer||!controlReady(id)||!takeControl(id))return;e.preventDefault();audio.unlockGesture(e);const q=state.controls[id];q.target=q.q;pointer={id:e.pointerId,group:id,x:e.clientX,y:e.clientY,q:q.q,dragged:false,bounds:renderer.lastBounds?{...renderer.lastBounds}:null};buttons[id].setPointerCapture(e.pointerId);}
+function startPointer(e,id){if(e.button!==0||pointer||!controlReady(id)||!takeControl(id))return;e.preventDefault();audio.unlockGesture(e);renderer.gestureFitCache=null;const q=state.controls[id];q.target=q.q;pointer={id:e.pointerId,group:id,x:e.clientX,y:e.clientY,q:q.q,dragged:false,bounds:renderer.lastBounds?{...renderer.lastBounds}:null};buttons[id].setPointerCapture(e.pointerId);}
 /** 一次手势有界转动，允许途中反向，周期组最多前后各一周。 */
-function dragPointer(e){if(!pointer||pointer.id!==e.pointerId)return;const p=pointer,c=controls[p.group],dx=e.clientX-p.x,dy=e.clientY-p.y;if(Math.hypot(dx,dy)>6)p.dragged=true;if(!p.dragged)return;const q=p.q+(dx-dy)/100;state.controls[p.group].target=c.cyclic?Math.max(p.q-4,Math.min(p.q+4,q)):Math.max(c.stops[0],Math.min(c.stops.at(-1),q));}
+function dragPointer(e){if(!pointer||pointer.id!==e.pointerId)return;const p=pointer,c=controls[p.group],dx=e.clientX-p.x,dy=e.clientY-p.y;if(Math.hypot(dx,dy)>6)p.dragged=true;if(!p.dragged)return;const q=p.q+sceneInput.rotationDelta(p,dx,dy,100);state.controls[p.group].target=c.cyclic?Math.max(p.q-4,Math.min(p.q+4,q)):Math.max(c.stops[0],Math.min(c.stops.at(-1),q));}
 /** 正常释放只到合法停位；取消按当前实际角度收束，不追加点按转动。 */
-function finishPointer(activate=false){if(!pointer)return;const p=pointer,c=controls[p.group],q=state.controls[p.group];pointer=null;let target=activate&&!p.dragged?(c.cyclic?Math.round(q.q)+1:c.stops.find(n=>n>q.q+.00001)??c.stops[0]):Math.round(activate?q.target:q.q);if(!c.cyclic)target=c.stops.reduce((a,b)=>Math.abs(a-target)<Math.abs(b-target)?a:b);q.target=target;const b=buttons[p.group];if(b?.hasPointerCapture(p.id))b.releasePointerCapture(p.id);}
+function finishPointer(activate=false){if(!pointer)return;const p=pointer,c=controls[p.group],q=state.controls[p.group];pointer=null;let target=activate&&!p.dragged?(c.cyclic?Math.round(q.q)+1:c.stops.find(n=>n>q.q+.00001)??c.stops[0]):Math.round(activate?q.target:q.q);if(!c.cyclic)target=c.stops.reduce((a,b)=>Math.abs(a-target)<Math.abs(b-target)?a:b);q.target=target;renderer.gestureFitCache=activate&&p.dragged&&ROTARY_FIT_GROUPS.has(p.group)&&p.bounds&&Math.abs(q.q-q.target)>=1e-8?{group:p.group,target:q.target,bounds:{...p.bounds}}:null;const b=buttons[p.group];if(b?.hasPointerCapture(p.id))b.releasePointerCapture(p.id);}
 /** 只对实际可见的握点放置按钮；局部不可用保留路面点按，全局接管才禁用原生按钮。 */
 function positionControls(){for(const[id,b]of Object.entries(buttons)){const c=controls[id],active=c.when()&&!state.won&&!state.transition;let visible=false;if(active){if(pointer?.group===id)visible=true;else{for(let i=0;i<c.grips.length;i++){const g=c.grips[i],p=renderer.project(M.point(frameMatrix(g.owner),typeof g.point==='function'?g.point():g.point)),hit=pickSceneHit(p.x,p.y);if(hit?.object.handle===id&&hit.object.grip===i){c.grip=i;visible=true;break;}}}}const p=renderer.project(handlePoint(id));b.hidden=!active||!visible;b.style.left=p.x+'px';b.style.top=p.y+'px';b.disabled=failed||state.won||state.goalCentering||!!state.transition;b.setAttribute('aria-disabled',String(!controlReady(id)));}}
 /** 重开恢复全部区域、机关、门内进度和终幕；声音选择继续沿用会话设置。 */
-function reset(){finishPointer();clearIntent();resetEnding();audio.stop();audio.setCompletionMix(false);state.area='H';state.done={W:false,O:false,P:false};state.flags={};state.activeMotion=null;state.transition=null;state.hubForm=state.hubTarget=0;state.goalCentering=false;state.won=false;state.ending=null;state.pulse=null;for(const[id,c]of Object.entries(controls)){state.controls[id]={q:c.initial,target:c.initial};c.grip=0;}for(const d of Object.values(defs))for(const p of d.plates)p.inside=false;state.player=makeActor('h-start');for(const[id,d]of Object.entries(defs))state.crows[id]=d.crowDefs.map(c=>makeActor(c.start,'crow',c));elapsed=0;lastTime=0;curtain.style.opacity='0';result.hidden=true;prototype.className='prototype scene-H';drawWorld();render();canvas.focus({preventScroll:true});}
+function reset(){finishPointer();if(renderer){renderer.gestureFitCache=null;renderer.lastBounds=null;}clearIntent();resetEnding();audio.stop();audio.setCompletionMix(false);state.area='H';state.done={W:false,O:false,P:false};state.flags={};state.activeMotion=null;state.transition=null;state.hubForm=state.hubTarget=0;state.goalCentering=false;state.won=false;state.ending=null;state.pulse=null;for(const[id,c]of Object.entries(controls)){state.controls[id]={q:c.initial,target:c.initial};c.grip=0;}for(const d of Object.values(defs))for(const p of d.plates)p.inside=false;state.player=makeActor('h-start');for(const[id,d]of Object.entries(defs))state.crows[id]=d.crowDefs.map(c=>makeActor(c.start,'crow',c));elapsed=0;lastTime=0;curtain.style.opacity='0';result.hidden=true;prototype.className='prototype scene-H';drawWorld();render();canvas.focus({preventScroll:true});}
 /** 致命渲染或支撑错误使用既有错误入口，终止循环并释放输入，不伪装成功。 */
 function fatal(error){failed=true;finishPointer();clearIntent();cancelAnimationFrame(animation);audio.stop();failure.hidden=false;for(const b of Object.values(buttons))b.disabled=true;console.error(error);}
 /** 按正常时间推进机关、门、真实路点及终幕；后台不补算丢失的时间。 */

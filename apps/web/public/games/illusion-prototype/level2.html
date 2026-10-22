@@ -56,9 +56,11 @@
     <p id="failure" class="failure" role="alert" hidden>当前浏览器未启用 WebGL 2。</p>
   </main>
   <script src="./assets/garden-roof-model.js"></script>
+  <script src="./assets/scene-input.js"></script>
   <script>
   (() => {
     'use strict';
+    const sceneInput = IllusionSceneInput;
 
     // 本地原型沿用现有游戏的矩阵与实例绘制方式，仅保留本关所需几何体。
     const M = {
@@ -546,8 +548,11 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
     const PALETTE={stone:0xe7dfb7,dark:0x465854,cream:0xfff8dc,knob:0x729f94,column:0x91a282,ground:0xb6c66c};
     // 起点外端留足整圈旋转的等候净空；桥口仍保留真实扫掠限制。
     const H=1.6,L=2.8,START_RUN=1.5,LADDER_HEADING=Math.PI,ROAD_WIDTH=.54,ROAD_HALF=ROAD_WIDTH/2,ROAD_THICKNESS=.25,FOOT_RADIUS=.09;
-    // 梯子与低台位于左落脚台的正Z外侧，人物手脚与桥侧面之间保留净空。
-    const LADDER_X=-L+.25,LADDER_FACE_Z=.30,LADDER_PLAYER_Z=.43;
+    // 侧梯整体位于桥臂整圈扫掠之外；P/Q端口不变，落脚台向岛外延伸。
+    const LADDER_X=-L-.23,LADDER_FACE_Z=.30,LADDER_PLAYER_Z=.43;
+    const LEFT_LANDING_RECT=[LADDER_X-ROAD_HALF,-L+.5,-ROAD_HALF,ROAD_HALF];
+    // 低台只向侧梯扩展；靠岸右边与原支柱保留，柱脚不随梯子移出岛边。
+    const FIRST_PAD_RECT=[LADDER_X-.425,-L+.675,.28,1.16];
     const START=0,S=1,A=2,AH=3,C=4,BH=5,B=6,P=7,LT=8,LB=9,FIRST=10,Q=11,SECOND=12,R=13,RC=14,GOAL=15,LEFT=16,LADDER_CREST=17;
     const GOAL_POINT=[L,H+L,-L],INITIAL_ANGLE=3*QUARTER;
     const ROTOR_NODES=[A,AH,C,BH,B],ROTOR_LOCAL=[[L,0,0],[L/2,0,0],[0,0,0],[0,0,L/2],[0,0,L]];
@@ -586,6 +591,8 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
         if(!cells.has(`${i-1},${j}`))quad([x0,y1,z1],[x0,y1,z0],[x0,y0,z0],[x0,y0,z1],[-1,0,0]);if(!cells.has(`${i+1},${j}`))quad([x1,y1,z0],[x1,y1,z1],[x1,y0,z1],[x1,y0,z0],[1,0,0]);if(!cells.has(`${i},${j-1}`))quad([x0,y1,z0],[x1,y1,z0],[x1,y0,z0],[x0,y0,z0],[0,0,-1]);if(!cells.has(`${i},${j+1}`))quad([x1,y1,z1],[x0,y1,z1],[x0,y0,z1],[x1,y0,z1],[0,0,1]);}return new Float32Array(data);}
     /** 登记实际矩形顶面；隐藏的导航矩形只对应可见连续外壳，不参与遮挡。 */
     function addWalkBox(id,x,y,z,sx,sz,edges,list=renderer.static,parent=null,visible=true){const object=renderer.add('box',x,y-ROAD_THICKNESS/2,z,sx,ROAD_THICKNESS,sz,PALETTE.stone,0,list,parent);object.walk={id,edges,rotor:id.startsWith('bridge-')};object.visible=visible;object.occludes=visible;return object;}
+    /** 固定落脚台以边界矩形建模，外壳合并和行走支撑共用同一尺寸。 */
+    function addWalkRect(id,rect,y,edges){const[x0,x1,z0,z1]=rect;return addWalkBox(id,(x0+x1)/2,y,(z0+z1)/2,x1-x0,z1-z0,edges);}
     /** 返回当前停稳且开放的支撑；动画输入关闭，但保留真实支撑供随父运动校验。 */
     function walkObjects(){return[...renderer.static,...renderer.dynamic].filter(object=>object.walk&&(!object.walk.right||state.rightRise===1));}
     function surfaceBasis(object){const origin=M.point(object.matrix,[-.5,.5,-.5]),x=M.point(object.matrix,[.5,.5,-.5]).map((n,i)=>n-origin[i]),z=M.point(object.matrix,[-.5,.5,.5]).map((n,i)=>n-origin[i]);return{origin,x,z,width:Math.hypot(...x),depth:Math.hypot(...z)};}
@@ -654,11 +661,11 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
     function buildScene(){const Rn=renderer,Pc=PALETTE;Rn.static=[];goalFrames=[];Rn.createGeometry('garden-l',extrudeOutline(L_OUTLINE));Rn.createGeometry('garden-top',makeRoadUnion(TOP_RECTS,H+L));Rn.createGeometry('garden-joined',new Float32Array());topShell=Rn.add('garden-top',0,0,0,1,1,1,Pc.stone);topShell.walkShell=true;
       createGardenDecorGeometry(Rn);Rn.add('garden_island',0,0,0,1,1,1,0xc5ce79).occludes=false;
       addWalkBox('start',(START_RUN+.30-ROAD_HALF)/2,H,-L,START_RUN+.30+ROAD_HALF,ROAD_WIDTH,[[START,S]]);
-      addWalkBox('left-landing',-L+.25,H,0,.5,ROAD_WIDTH,[[P,LT]]);
+      addWalkRect('left-landing',LEFT_LANDING_RECT,H,[[P,LT]]);
       // 低台沿侧梯向正Z展开，梯底、踏板及实柱共同离开上方桥臂投影。
-      addWalkBox('first-pad',LADDER_X,H-1,.72,.85,.88,[[LB,FIRST]]);
+      addWalkRect('first-pad',FIRST_PAD_RECT,H-1,[[LB,FIRST]]);
       // 支撑柱向岛内收，避免移台后柱脚越过岛的斜边而悬空。
-      Rn.add('box',LADDER_X,(H-1-ROAD_THICKNESS)/2,.60,.60,H-1-ROAD_THICKNESS,.60,Pc.column);
+      Rn.add('box',-L+.25,(H-1-ROAD_THICKNESS)/2,.60,.60,H-1-ROAD_THICKNESS,.60,Pc.column);
       addWalkBox('top-right',L,H+L,-L/2,ROAD_WIDTH,L,[[R,RC],[RC,GOAL]],Rn.static,null,false);
       addWalkBox('top-back',L/2,H+L,-L,L,ROAD_WIDTH,[[GOAL,LEFT]],Rn.static,null,false);
       for(const [x,z,id,edges]of[[0,-L,'top-left',[[GOAL,LEFT]]],[L,0,'top-pavilion',[[R,RC]]],[L,-L,'goal',[[RC,GOAL],[GOAL,LEFT]]]])addWalkBox(id,x,H+L,z,.74,.74,edges,Rn.static,null,false);
@@ -667,7 +674,13 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
       Rn.add('box',0,H+(L-ROAD_THICKNESS)/2,-L-.35,.82,L-ROAD_THICKNESS,.24,Pc.column);
       for(const x of[-.20,.20])Rn.add('box',x,H+L*.52,-L-.222,.08,.49,.006,Pc.dark);
       // 右塔双拱整墙位于Q路的后侧，桥入口与按钮斜路均留足人物净空；三墩和弧顶承托亭台。
-      for(const x of[L-.36,L,L+.36])Rn.add('box',x,(H+L-ROAD_THICKNESS)/2,-.37,.11,H+L-ROAD_THICKNESS,.20,Pc.column);
+      // 外柱完整落地；洞顶高于低位人物帽顶，后置挑梁承托内/中上柱。
+      const rightPillarTop=H+L-ROAD_THICKNESS,rightOpeningTop=H+.72;
+      for(const [index,x]of[L-.36,L,L+.36].entries()){
+        if(index===2)Rn.add('box',x,rightPillarTop/2,-.37,.11,rightPillarTop,.20,Pc.column);
+        else Rn.add('box',x,(rightOpeningTop+rightPillarTop)/2,-.37,.11,rightPillarTop-rightOpeningTop,.20,Pc.column);
+      }
+      Rn.add('box',L,rightOpeningTop+.08,-.39,.83,.16,.20,0xa4b293);
       Rn.add('box',L,.24,-.37,.82,.48,.20,Pc.column);
       Rn.add('box',L,H+L-.46,-.37,.82,.42,.20,Pc.column);
       for(const x of[L-.18,L+.18])Rn.add('garden_arch',x,H+L-.87,-.37,1,1,1,Pc.column,QUARTER);
@@ -677,7 +690,7 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
       // 终点白纹位于亭子地面上，无额外点击热点或文本。
       for(let layer=0;layer<3;layer++){const width=.51-layer*.12;for(let side=0;side<4;side++){const angle=side*QUARTER,object=Rn.add('box',GOAL_POINT[0]+Math.sin(angle)*width/2,H+L+.008,GOAL_POINT[2]+Math.cos(angle)*width/2,width,.014,.023,Pc.cream,angle);object.occludes=false;goalFrames.push({layer:layer+1,side,width,object,light:0});}}
       // 原岛内植物与白花保留固定有界分布；后亭悬空连接两条上层路，不另添全高柱架。
-      addGardenDecor(Rn,{groundY:0,extent:[-3.6,3.6,-3.2,1.9],pavilions:[{x:0,y:H+L,z:-L},{x:L,y:H+L,z:0},{x:L,y:H+L,z:-L}],avoidRects:[[LADDER_X-.6,LADDER_X+.6,-.55,1.3],[-.55,START_RUN+.5,-L-.55,-L+.55],[L-.6,L+1.15,-.6,.9]]});
+      addGardenDecor(Rn,{groundY:0,extent:[-3.6,3.6,-3.2,1.9],pavilions:[{x:0,y:H+L,z:-L},{x:L,y:H+L,z:0},{x:L,y:H+L,z:-L}],avoidRects:[[LADDER_X-.6,-L+.85,-.55,1.3],[-.55,START_RUN+.5,-L-.55,-L+.55],[L-.6,L+1.15,-.6,.9]]});
       // 中央矮方房固定在地面，升桥只伸出上方圆筒；窄长窗为凹色面，不产生可走目标。
       Rn.add('box',0,.44,0,1.20,.88,1.14,Pc.column);Rn.add('box',0,.89,0,1.24,.10,1.18,0x9cac72);
       for(const x of[-.39,-.13,.13,.39])Rn.add('box',x,.47,.576,.095,.51,.012,Pc.dark);
@@ -709,7 +722,7 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
       const cardinal=Math.abs(state.angle/QUARTER-Math.round(state.angle/QUARTER))<.000001,height=H+L*state.bridgeRise;
       for(const object of Rn.static)if(object.walk&&['start','left-landing'].includes(object.walk.id)){object.visible=true;object.occludes=true;}topShell.visible=true;topShell.occludes=true;
       if(cardinal){const rectangles=[];for(const rect of[[-ROAD_HALF,L,-ROAD_HALF,ROAD_HALF],[-ROAD_HALF,ROAD_HALF,ROAD_HALF,L]]){const corners=[[rect[0],0,rect[2]],[rect[0],0,rect[3]],[rect[1],0,rect[2]],[rect[1],0,rect[3]]].map(p=>M.point(rotor,p));rectangles.push([Math.min(...corners.map(p=>p[0])),Math.max(...corners.map(p=>p[0])),Math.min(...corners.map(p=>p[2])),Math.max(...corners.map(p=>p[2]))]);}
-        if(state.bridgeRise===0){rectangles.push([-ROAD_HALF,START_RUN+.30,-L-ROAD_HALF,-L+ROAD_HALF],[-L,-L+.5,-ROAD_HALF,ROAD_HALF]);for(const object of Rn.static)if(object.walk&&['start','left-landing'].includes(object.walk.id)){object.visible=false;object.occludes=false;}}
+        if(state.bridgeRise===0){rectangles.push([-ROAD_HALF,START_RUN+.30,-L-ROAD_HALF,-L+ROAD_HALF],LEFT_LANDING_RECT);for(const object of Rn.static)if(object.walk&&['start','left-landing'].includes(object.walk.id)){object.visible=false;object.occludes=false;}}
         if(state.bridgeRise===1){rectangles.push(...TOP_RECTS);topShell.visible=false;topShell.occludes=false;}
         if(Math.abs(right[13]-height)<.00001){rectangles.push([right[12]-.02,right[12]+1.03,right[14]-.32,right[14]+.85]);pad.visible=false;pad.occludes=false;}
         const key=`${state.angle}|${state.rightRise}|${state.bridgeRise}`;if(key!==roadShellKey){Rn.updateGeometry('garden-joined',makeRoadUnion(rectangles,height));roadShellKey=key;}shell.visible=false;shell.occludes=false;const joined=Rn.add('garden-joined',0,0,0,1,1,1,Pc.stone,0,Rn.dynamic);joined.occludes=true;joined.walkShell=true;
@@ -777,9 +790,7 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
     function triangleWeights(x,y,a,b,c){const det=(b.y-c.y)*(a.x-c.x)+(c.x-b.x)*(a.y-c.y);if(Math.abs(det)<.000001)return null;const u=((b.y-c.y)*(x-c.x)+(c.x-b.x)*(y-c.y))/det,v=((c.y-a.y)*(x-c.x)+(a.x-c.x)*(y-c.y))/det,w=1-u-v;return u>=-.000001&&v>=-.000001&&w>=-.000001?[u,v,w]:null;}
     /** 外壳命中必须对应同高真实支撑；未升出的台面及其上方装饰不形成可走目标。 */
     function pickRoad(x,y){if(state.lift||pointer||state.angle!==state.targetAngle)return null;let nearest=null;for(const object of[...renderer.static,...renderer.dynamic]){if(!object.occludes||object.visible===false)continue;const vertices=renderer.geometries[object.kind].vertices;for(let i=0;i<vertices.length;i+=18){const world=[];for(let j=0;j<3;j++)world.push(M.point(object.matrix,Array.from(vertices.slice(i+j*6,i+j*6+3))));const projected=world.map(p=>renderer.project(p)),weights=triangleWeights(x,y,...projected);if(!weights)continue;const depth=projected.reduce((sum,p,j)=>sum+p.depth*weights[j],0);if(nearest&&depth>=nearest.depth-.0000001)continue;nearest={object,point:world[0].map((_,axis)=>world.reduce((sum,p,j)=>sum+p[axis]*weights[j],0)),depth,top:vertices[i+4]>.999};}}if(!nearest?.top)return null;const support=nearest.object.walkShell?surfaceAt(nearest.point,''):nearest.object;if(!support?.walk||support.walk.right&&state.phase===0)return null;return surfaceTarget(nearest.point,support);}
-    /** XZ实际旋钮平面逆解极角；中心跳变被忽略，正反整圈累积不归一化。 */
-    function knobPolar(x,y,drag){const dx=x-drag.center.x,dy=y-drag.center.y;if(Math.hypot(dx,dy)<7)return null;const[a,b,c,d]=drag.inverse;return Math.atan2(-(c*dx+d*dy),a*dx+b*dy);}
-    function dragKnob(event){if(!pointer||event.pointerId!==pointer.id)return;if(Math.hypot(event.clientX-pointer.x,event.clientY-pointer.y)>8)pointer.dragged=true;const polar=knobPolar(event.clientX,event.clientY,pointer);if(polar===null){pointer.lastPolar=null;return;}if(pointer.lastPolar!==null){const delta=polar-pointer.lastPolar;pointer.turn+=Math.atan2(Math.sin(delta),Math.cos(delta));}pointer.lastPolar=polar;if(pointer.dragged)state.targetAngle=pointer.angle+pointer.turn;}
+    function dragKnob(event){if(!pointer||event.pointerId!==pointer.id)return;const dx=event.clientX-pointer.x,dy=event.clientY-pointer.y;if(Math.hypot(dx,dy)>8)pointer.dragged=true;if(pointer.dragged)state.targetAngle=pointer.angle+QUARTER*sceneInput.rotationDelta(pointer,dx,dy,100,8);}
     function finishDrag(snap=true,activate=false){if(!pointer)return;const drag=pointer;pointer=null;if(snap)state.targetAngle=activate&&!drag.dragged?drag.angle-QUARTER:Math.round(state.targetAngle/QUARTER)*QUARTER;if(knob.hasPointerCapture(drag.id))knob.releasePointerCapture(drag.id);}
     /** 重开完整撤销两踏板和升起父变换；真实手势才能恢复音乐。 */
     function reset(event){
@@ -803,9 +814,7 @@ function addGardenDecor(renderer,{groundY=0,extent=[-4.1,3.5,-3.6,2.9],pavilions
     window.addEventListener('keyup',event=>{if(!Object.hasOwn(MOVEMENT_KEYS,event.code))return;heldKeys.delete(event.code);if(!heldKeys.size&&state.input==='keyboard'){state.justStopped=state.moving;state.input=null;state.moving=false;}});
     // 旋钮仅捕获稳定、空闲时开始的单个指针；捕获期间保持按钮启用以连续接收拖动。
     knob.addEventListener('pointerdown',event=>{if(event.button!==0||!takeRotationControl())return;event.preventDefault();tap=null;
-      // 逆解固定投影的XZ基向量，圆周手势按四臂真实椭圆跟随，避免屏幕角度非线性或反向。
-      const kp=knobPoint(),center=renderer.project(kp),y=renderer.project([kp[0]+1,kp[1],kp[2]]),z=renderer.project([kp[0],kp[1],kp[2]+1]),yx=y.x-center.x,yy=y.y-center.y,zx=z.x-center.x,zy=z.y-center.y,det=yx*zy-zx*yy,rect=canvas.getBoundingClientRect();
-      pointer={id:event.pointerId,x:event.clientX,y:event.clientY,angle:state.targetAngle,dragged:false,center:{x:center.x+rect.left,y:center.y+rect.top},inverse:[zy/det,-zx/det,-yy/det,yx/det],lastPolar:null,turn:0};pointer.lastPolar=knobPolar(event.clientX,event.clientY,pointer);knob.setPointerCapture(event.pointerId);
+      pointer={id:event.pointerId,x:event.clientX,y:event.clientY,angle:state.targetAngle,dragged:false};knob.setPointerCapture(event.pointerId);
     });
     knob.addEventListener('pointermove',event=>{if(!pointer||event.pointerId!==pointer.id)return;event.preventDefault();dragKnob(event);});
     // 真实轻点仅由抬起处理；取消、失去捕获或离页只吸附，原生鼠标click不再叠加转动。

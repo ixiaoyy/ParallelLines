@@ -52,9 +52,11 @@
     <section id="dialogue" class="dialogue" role="dialog" aria-modal="true" aria-label="对话" hidden><p id="dialogue-text"></p><button id="dialogue-next" type="button">继续</button></section>
     <p id="failure" class="failure" role="alert" hidden>当前浏览器未启用 WebGL 2。</p>
   </main>
+  <script src="./assets/scene-input.js"></script>
   <script>
   (() => {
   'use strict';
+    const sceneInput = IllusionSceneInput;
     // 本地原型沿用现有游戏的矩阵与实例绘制方式，仅保留本关所需几何体。
     const M = {
       id: () => new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),
@@ -132,8 +134,9 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
       fitViewport(){
         if(this.width>600&&this.height>=500){this.viewportFit=null;return;}
         // 拖动、归中和完成演出共用进入时的投影修正，避免操作中的手柄或终点漂移。
-        const fixed=pointer?(pointer.viewportFit||this.viewportFit):((state.won||state.goalCentering||state.input==='goal')?this.viewportFit:null);
-        let fit=fixed&&fixed.width===this.width&&fixed.height===this.height?fixed:null;
+        const moving=movingMechanism()||!settled('Cwall');
+        const fixed=pointer?(pointer.viewportFit||this.viewportFit):((moving||state.won||state.goalCentering||state.input==='goal')?this.viewportFit:null);
+        let fit=fixed&&fixed.width===this.width&&fixed.height===this.height&&fixed.scene===(state.area)?fixed:null;
         if(!fit){
           // 完成浮层可能占满画布；安全区独立避让，并为场景按钮保留半个触控宽度。
           const rect=this.canvas.getBoundingClientRect(),controls=document.querySelector('.controls').getBoundingClientRect(),safe=getComputedStyle(document.documentElement);
@@ -153,7 +156,7 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
           if(!Number.isFinite(x0)||x1-x0<1||y1-y0<1)return;
           const scale=Math.min(1,(right-left)/(x1-x0),(bottom-top)/(y1-y0));
           const dx=(left+right)/2-scale*(x0+x1)/2,dy=(top+bottom)/2-scale*(y0+y1)/2;
-          fit={scale,tx:scale-1+2*dx/this.width,ty:1-scale-2*dy/this.height,width:this.width,height:this.height};
+          fit={scale,tx:scale-1+2*dx/this.width,ty:1-scale-2*dy/this.height,width:this.width,height:this.height,scene:state.area};
         }
         this.viewportFit=fit;if(pointer&&!pointer.viewportFit)pointer.viewportFit=fit;
         // 基础 pixels 保留给现有手势冻结逻辑，不能把已修正比例再次当作基础比例相乘。
@@ -1026,9 +1029,9 @@ function controlReady(id){const g=groups[id];if(failed||g.area!==state.area||sta
  if(id==='Ar'&&state.area==='A'&&[state.player,...state.crows.A].some(a=>!(a.kind==='player'&&!state.flags.revealed)&&(a.owner==='world'&&a.location.edge?.id==='A-a-white-low-a-white-top'&&a.location.t>1e-7&&a.location.t<1-1e-7||a.owner==='Ar'&&(['ar-low','ar-foot','ar-back'].includes(a.location.node)||['A-ar-low-ar-foot','A-ar-foot-ar-back'].includes(a.location.edge?.id)))))return false;
  return true;}
 /** 开始手势保留所有乘客局部脚点；清掉旧步行，不把实体重置到停位。 */
-function startPointer(e,id){if(e.button!==0||pointer||!controlReady(id))return;e.preventDefault();audio.unlockGesture(e);clearIntent();pointer={id:e.pointerId,group:id,x:e.clientX,y:e.clientY,q:state.groups[id].q,dragged:false};buttons[id].setPointerCapture(e.pointerId);}
+function startPointer(e,id){if(e.button!==0||pointer||!controlReady(id))return;e.preventDefault();audio.unlockGesture(e);clearIntent();pointer={id:e.pointerId,group:id,x:e.clientX,y:e.clientY,q:state.groups[id].q,dragged:false};if(id==='Bs'){const f=frameMatrix('Broot'),a=renderer.project(M.point(f,[0,0,0])),z=renderer.project(M.point(f,[1.2,0,0]));pointer.track={x:z.x-a.x,y:z.y-a.y};}buttons[id].setPointerCapture(e.pointerId);}
 /** 每次拖动最多一整周；直线机关使用本关有限行程。 */
-function dragPointer(e){if(!pointer||pointer.id!==e.pointerId)return;const p=pointer,g=groups[p.group],dx=e.clientX-p.x,dy=e.clientY-p.y;if(Math.hypot(dx,dy)>6)p.dragged=true;if(!p.dragged)return;const amount=g.spring?dy/90:(dx-dy)/Math.max(45,renderer.width*.14);state.groups[p.group].target=g.cyclic?Math.max(p.q-4,Math.min(p.q+4,p.q+amount)):Math.max(g.stops[0],Math.min(g.stops.at(-1),p.q+amount));}
+function dragPointer(e){if(!pointer||pointer.id!==e.pointerId)return;const p=pointer,g=groups[p.group],dx=e.clientX-p.x,dy=e.clientY-p.y;if(Math.hypot(dx,dy)>6)p.dragged=true;if(!p.dragged)return;const amount=g.spring?dy/90:p.track?sceneInput.projectedDelta(dx,dy,p.track.x,p.track.y):sceneInput.rotationDelta(p,dx,dy,Math.max(45,renderer.width*.14));state.groups[p.group].target=g.cyclic?Math.max(p.q-4,Math.min(p.q+4,p.q+amount)):Math.max(g.stops[0],Math.min(g.stops.at(-1),p.q+amount));}
 /** 松手仅吸附真实停位；回落机关从当前位置开始回落，不额外点按抬墙。 */
 function finishPointer(activate=false){if(!pointer)return;const p=pointer;pointer=null;const g=groups[p.group],s=state.groups[p.group];if(!g.spring)s.target=activate&&!p.dragged?(g.cyclic?Math.round(p.q)+1:g.stops.find(n=>n>p.q+.01)??g.stops[0]):g.cyclic?Math.round(s.target):g.stops.reduce((a,b)=>Math.abs(a-s.target)<Math.abs(b-s.target)?a:b);if(buttons[p.group].hasPointerCapture(p.id))buttons[p.group].releasePointerCapture(p.id);audio.snap();}
 /** 三角形内插值用于真实网格拾取，不能隔着建筑点中背后的道路。 */

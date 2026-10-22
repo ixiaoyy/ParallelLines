@@ -36,9 +36,11 @@
     <p id="failure" class="failure" role="alert" hidden>当前浏览器未启用 WebGL 2。</p>
     <div id="speech" class="speech" role="dialog" aria-modal="true" aria-labelledby="speech-text" hidden><p id="speech-text"></p><button id="continue" type="button" aria-label="继续对白">○</button></div>
   </main>
+  <script src="./assets/scene-input.js"></script>
   <script>
   (() => {
   'use strict';
+    const sceneInput = IllusionSceneInput;
     // 本地原型沿用现有游戏的矩阵与实例绘制方式，仅保留本关所需几何体。
     const M = {
       id: () => new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),
@@ -110,8 +112,13 @@ void main(){vec3 inMirror=vWorld+vec3(${CAMERA_DIRECTION.map(n=>n.toFixed(1)).jo
         // 左右安全区各保留半个场景按钮的宽度，避免圆点可见但触控边缘进入刘海。
         const rect=this.canvas.getBoundingClientRect(),control=soundButton.getBoundingClientRect(),safe=getComputedStyle(document.documentElement);
         const top=Math.max(76,...[...document.querySelectorAll('.previous-level,.level-name')].map(e=>e.getBoundingClientRect().bottom-rect.top+12)),bottom=Math.max(top+60,control.top-rect.top-18),left=Math.max(25,(parseFloat(safe.getPropertyValue('--safe-left'))||0)+22),right=this.width-Math.max(25,(parseFloat(safe.getPropertyValue('--safe-right'))||0)+22);
-        let bounds=pointer?.bounds;
-        if(!bounds){let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;this.meshBounds??=new Map();for(const o of [...this.static,...this.dynamic]){if(o.visible===false||o.decorative||o.focus===false||o.color[3]<.3)continue;let bb=this.meshBounds.get(o.kind);if(!bb){const vertices=this.geometries[o.kind]?.vertices;if(!vertices)continue;const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(let i=0;i<vertices.length;i+=6)for(let j=0;j<3;j++){lo[j]=Math.min(lo[j],vertices[i+j]);hi[j]=Math.max(hi[j],vertices[i+j]);}bb={lo,hi};this.meshBounds.set(o.kind,bb);}for(const x of[bb.lo[0],bb.hi[0]])for(const y of[bb.lo[1],bb.hi[1]])for(const z of[bb.lo[2],bb.hi[2]]){const p=M.point(this.view,M.point(o.matrix,[x,y,z]));x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);}}bounds={x0,x1,y0,y1};if(pointer)pointer.bounds=bounds;}
+        const scene=state.area,pending=this.gestureFitCache;
+        // Only a released rotary drag retains its own frame until that wheel reaches its chosen stop.
+        // Sea reveal, automatic lifts and descending carriers must fit their current visible geometry.
+        if(pending){const q=state.controls[pending.group],c=controls[pending.group],b=pending.bounds;if(!q||c?.kind!=='wheel'||!c.when()||b.width!==this.width||b.height!==this.height||b.scene!==scene||Math.abs(q.target-pending.target)>=1e-6||Math.abs(q.q-q.target)<1e-6)this.gestureFitCache=null;}
+        const cached=pointer?.bounds||this.gestureFitCache?.bounds;
+        let bounds=cached&&cached.width===this.width&&cached.height===this.height&&cached.scene===scene?cached:null;
+        if(!bounds){let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;this.meshBounds??=new Map();for(const o of [...this.static,...this.dynamic]){if(o.visible===false||o.decorative||o.focus===false||o.color[3]<.3)continue;let bb=this.meshBounds.get(o.kind);if(!bb){const vertices=this.geometries[o.kind]?.vertices;if(!vertices)continue;const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(let i=0;i<vertices.length;i+=6)for(let j=0;j<3;j++){lo[j]=Math.min(lo[j],vertices[i+j]);hi[j]=Math.max(hi[j],vertices[i+j]);}bb={lo,hi};this.meshBounds.set(o.kind,bb);}for(const x of[bb.lo[0],bb.hi[0]])for(const y of[bb.lo[1],bb.hi[1]])for(const z of[bb.lo[2],bb.hi[2]]){const p=M.point(this.view,M.point(o.matrix,[x,y,z]));x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);}}bounds={x0,x1,y0,y1,width:this.width,height:this.height,scene};if(pointer)pointer.bounds=bounds;}
         if(!Number.isFinite(bounds.x0))return;this.lastBounds={...bounds};const pad=.4,scale=Math.min(79,(right-left)/(bounds.x1-bounds.x0+pad*2),(bottom-top)/(bounds.y1-bounds.y0+pad*2)),span=this.height/scale,aspect=this.width/this.height;
         // 单侧刘海通过平移屏幕取景中心避让，不改变观察方向、世界实体或投影接路。
         const cx=(bounds.x0+bounds.x1)/2,cy=(bounds.y0+bounds.y1)/2,screenX=(left+right)/2,screenY=(top+bottom)/2,horizontalShift=span*aspect*(screenX/this.width-.5),shift=span*(.5-screenY/this.height);
@@ -419,10 +426,10 @@ const controls={
  Ashaft:{label:'海岛轮轴',kind:'wheel',max:2,initial:2,when:()=>state.area==='A'&&state.reveal===2},
  Atotem:{label:'移动图腾',kind:'slider',axis:[1.8,0,0],max:1,initial:0,when:()=>state.area==='A'&&state.flags.aButton&&state.reveal===2&&state.controls.Ashaft.q===0},
  Bpull:{label:'抽拉平台',kind:'pull',axis:[0,0,1.2],max:1,initial:0,when:()=>state.area==='B'},
- Bwall:{label:'升降滑墙',kind:'slider',max:1,initial:0,when:()=>state.area==='B'},
+ Bwall:{label:'升降滑墙',kind:'slider',axis:[0,1.4,0],max:1,initial:0,when:()=>state.area==='B'},
  Bshaft:{label:'遗迹轮轴',kind:'wheel',max:4,initial:2,when:()=>state.area==='B'&&state.flags.bEntry},
  Cshaft:{label:'深层轮轴',kind:'wheel',max:2,initial:0,when:()=>state.area==='C'&&state.flags.cFourth},
- Mslide:{label:'镜面滑柱',kind:'slider',max:1,initial:0,when:()=>state.area==='M'}
+ Mslide:{label:'镜面滑柱',kind:'slider',axis:[0,1.6,0],max:1,initial:0,when:()=>state.area==='M'}
 };
 for(const [id,c]of Object.entries(controls))state.controls[id]={q:c.initial,target:c.initial};
 /** 把世界点转换为仅含旋转和位移的构件局部脚点。 */
@@ -858,12 +865,12 @@ function startRoadTap(e){if(e.button!==0||pointer||tap||!walkingReady())return;e
 function finishRoadTap(e){if(tap?.id!==e.pointerId)return;const start=tap;tap=null;if(Math.hypot(e.clientX-start.x,e.clientY-start.y)>10)return;const r=canvas.getBoundingClientRect();walkTo(pickRoad(e.clientX-r.left,e.clientY-r.top));}
 
 /** 开始一个真实主指针手势，并清理点路与键盘意图以免和机关互相抢占。 */
-function startPointer(e,id){if(e.button!==0||pointer||!controlReady(id))return;e.preventDefault();audio.unlockGesture(e);clearIntent();state.controls[id].target=state.controls[id].q;pointer={id:e.pointerId,group:id,x:e.clientX,y:e.clientY,q:state.controls[id].q,dragged:false,bounds:renderer.lastBounds?{...renderer.lastBounds}:null};if(controls[id].axis){const p=handlePoint(id),a=renderer.project(p),b=renderer.project(p.map((v,i)=>v+controls[id].axis[i]));pointer.track={x:b.x-a.x,y:b.y-a.y};}buttons[id].setPointerCapture(e.pointerId);}
+function startPointer(e,id){if(e.button!==0||pointer||!controlReady(id))return;e.preventDefault();audio.unlockGesture(e);renderer.gestureFitCache=null;clearIntent();state.controls[id].target=state.controls[id].q;pointer={id:e.pointerId,group:id,x:e.clientX,y:e.clientY,q:state.controls[id].q,dragged:false,bounds:renderer.lastBounds?{...renderer.lastBounds}:null};if(controls[id].axis){const p=handlePoint(id),a=renderer.project(p),b=renderer.project(p.map((v,i)=>v+controls[id].axis[i]));pointer.track={x:b.x-a.x,y:b.y-a.y};}buttons[id].setPointerCapture(e.pointerId);}
 /** 指针位移映射到有限停位；轮轴可连续转动，升降墙与图腾保留实际连续承载。 */
-function dragPointer(e){if(!pointer||pointer.id!==e.pointerId)return;const p=pointer,c=controls[p.group],dx=e.clientX-p.x,dy=e.clientY-p.y;if(Math.hypot(dx,dy)>6)p.dragged=true;if(!p.dragged)return;// 图腾与抽屉按各自真实平移轴的投影拖动；竖滑墙保持原来的竖直手势。
- const amount=p.track?(dx*p.track.x+dy*p.track.y)/(p.track.x*p.track.x+p.track.y*p.track.y):c.kind==='slider'?-dy/120:(dx-dy)/100;state.controls[p.group].target=Math.max(0,Math.min(c.max,p.q+amount));}
+function dragPointer(e){if(!pointer||pointer.id!==e.pointerId)return;const p=pointer,c=controls[p.group],dx=e.clientX-p.x,dy=e.clientY-p.y;if(Math.hypot(dx,dy)>6)p.dragged=true;if(!p.dragged)return;// 平移沿真实握柄轨道投影；轮轴用锁定屏幕主轴的直线手势。
+ const amount=p.track?sceneInput.projectedDelta(dx,dy,p.track.x,p.track.y):sceneInput.rotationDelta(p,dx,dy,100);state.controls[p.group].target=Math.max(0,Math.min(c.max,p.q+amount));}
 /** 正常抬手吸到目标停位；取消时吸到当前实际附近停位，不额外执行点按动作。 */
-function finishPointer(activate=false){if(!pointer)return;const p=pointer,c=controls[p.group],q=state.controls[p.group];pointer=null;q.target=activate&&!p.dragged?(c.kind==='wheel'?(Math.round(q.q)+1)%(c.max+1):q.q<.5?1:0):Math.round(activate?q.target:q.q);const b=buttons[p.group];if(b?.hasPointerCapture(p.id))b.releasePointerCapture(p.id);audio.snap();}
+function finishPointer(activate=false){if(!pointer)return;const p=pointer,c=controls[p.group],q=state.controls[p.group];pointer=null;q.target=activate&&!p.dragged?(c.kind==='wheel'?(Math.round(q.q)+1)%(c.max+1):q.q<.5?1:0):Math.round(activate?q.target:q.q);renderer.gestureFitCache=activate&&p.dragged&&c.kind==='wheel'&&p.bounds&&Math.abs(q.q-q.target)>=1e-6?{group:p.group,target:q.target,bounds:{...p.bounds}}:null;const b=buttons[p.group];if(b?.hasPointerCapture(p.id))b.releasePointerCapture(p.id);audio.snap();}
 /** 44像素按钮跟随真实手柄与红花花头，输入锁和场景可见性同步。 */
 function positionControls(){for(const[id,b]of Object.entries(buttons)){const c=controls[id],p=renderer.project(handlePoint(id));b.hidden=!c.when()||state.won||state.transition||state.dialogPage>=0;b.style.left=p.x+'px';b.style.top=p.y+'px';// 局部机关不可用用aria表示，透明外圈仍能接收真实路面；全局锁才禁用原生按钮。
  b.disabled=failed||state.won||state.goalCentering||!!state.transition||state.dialogPage>=0;b.setAttribute('aria-disabled',String(!controlReady(id)));}
@@ -877,7 +884,7 @@ function update(dt){
  if(state.area==='G')updateGoal(dt);state.player.blend+=(Number(state.player.moving)-state.player.blend)*Math.min(1,dt*12);if(state.player.moving&&state.player.gait-state.player.lastFoot>.23){state.player.lastFoot=state.player.gait;audio.footstep();}
 }
 /** 重开清空整章状态、全部载人机关与对白，声音开关保持原会话设置。 */
-function reset(e){finishPointer();clearIntent();audio.stop();audio.setCompletionMix(false);Object.assign(state,{area:'A',flags:{},transition:null,automatic:null,sea:9.2,seaTarget:9.2,reveal:0,aTurn:0,aTurnTarget:0,weather:0,weatherTarget:0,sinks:[0,0,0],sinkTargets:[0,0,0],totemX:0,totemTarget:0,cSink:0,cSinkTarget:0,cLift:0,cLiftTarget:0,bFill:0,bFillTarget:0,dialogPage:-1,dialogDone:false,goalCentering:false,won:false,endingElapsed:0,pulse:null});for(const[id,c]of Object.entries(controls))state.controls[id]={q:c.initial,target:c.initial};for(const p of defs.plates)p.inside=false;state.player=makeActor('a-start');elapsed=0;result.hidden=true;/* 重开收起下一关，并把隐藏链接上的焦点交还重开。 */if(document.activeElement===nextLevel)restart.focus({preventScroll:true});nextLevel.hidden=true;speech.hidden=true;prototype.className='prototype scene-A';curtain.style.opacity='0';if(e)audio.unlockGesture(e);if(renderer)render();}
+function reset(e){finishPointer();if(renderer){renderer.gestureFitCache=null;renderer.lastBounds=null;}clearIntent();audio.stop();audio.setCompletionMix(false);Object.assign(state,{area:'A',flags:{},transition:null,automatic:null,sea:9.2,seaTarget:9.2,reveal:0,aTurn:0,aTurnTarget:0,weather:0,weatherTarget:0,sinks:[0,0,0],sinkTargets:[0,0,0],totemX:0,totemTarget:0,cSink:0,cSinkTarget:0,cLift:0,cLiftTarget:0,bFill:0,bFillTarget:0,dialogPage:-1,dialogDone:false,goalCentering:false,won:false,endingElapsed:0,pulse:null});for(const[id,c]of Object.entries(controls))state.controls[id]={q:c.initial,target:c.initial};for(const p of defs.plates)p.inside=false;state.player=makeActor('a-start');elapsed=0;result.hidden=true;/* 重开收起下一关，并把隐藏链接上的焦点交还重开。 */if(document.activeElement===nextLevel)restart.focus({preventScroll:true});nextLevel.hidden=true;speech.hidden=true;prototype.className='prototype scene-A';curtain.style.opacity='0';if(e)audio.unlockGesture(e);if(renderer)render();}
 /** 按当前状态绘制并更新固定相机取景，不推进时间或业务状态。 */
 function render(){renderer.resize();drawWorld();renderer.fitViewport();positionControls();renderer.render();}
 /** 运行错误明确停住，不继续推进剧情或伪装通关。 */

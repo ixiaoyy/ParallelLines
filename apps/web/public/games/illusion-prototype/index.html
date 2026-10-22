@@ -51,9 +51,11 @@
     <div class="controls"><div class="control-actions"><div class="finish-actions"><button id="restart" class="restart" type="button">重新开始</button><a id="next-level" class="next-level" href="./level2.html" hidden>下一关</a></div><button id="sound" class="sound" type="button" aria-label="声音：开" aria-pressed="true">声音：开</button></div></div>
     <p id="failure" class="failure" role="alert" hidden>当前浏览器未启用 WebGL 2。</p>
   </main>
+  <script src="./assets/scene-input.js"></script>
   <script>
   (() => {
     'use strict';
+    const sceneInput = IllusionSceneInput;
 
     // 本地原型沿用现有游戏的矩阵与实例绘制方式，仅保留本关所需几何体。
     const M = {
@@ -828,10 +830,8 @@ class GameAudio{
       return surfaceTarget(nearest.point,support);
     }
 
-    /** 返回指针在旋钮真实YZ平面的极角；中心区返回null，防止穿心时发生180°跳变。 */
-    function knobPolar(clientX,clientY,drag){const dx=clientX-drag.center.x,dy=clientY-drag.center.y;if(Math.hypot(dx,dy)<8)return null;const [a,b,c,d]=drag.inverse;return Math.atan2(c*dx+d*dy,a*dx+b*dy);}
-    /** 累计相邻圆周样本的最短角差；总角度不归一化，中心和边缘起拖共用同一算法。 */
-    function dragKnob(event){if(!pointer||event.pointerId!==pointer.id)return;const dx=event.clientX-pointer.x,dy=event.clientY-pointer.y;if(Math.hypot(dx,dy)>8)pointer.dragged=true;const polar=knobPolar(event.clientX,event.clientY,pointer);if(polar===null){pointer.lastPolar=null;return;}if(pointer.lastPolar!==null){const delta=polar-pointer.lastPolar;pointer.turn+=Math.atan2(Math.sin(delta),Math.cos(delta));}pointer.lastPolar=polar;if(pointer.dragged)state.targetAngle=pointer.angle+pointer.turn;}
+    /** 水平或竖直起拖后锁定主轴；实体仍沿本关原轴转动。 */
+    function dragKnob(event){if(!pointer||event.pointerId!==pointer.id)return;const dx=event.clientX-pointer.x,dy=event.clientY-pointer.y;if(Math.hypot(dx,dy)>8)pointer.dragged=true;if(pointer.dragged)state.targetAngle=pointer.angle+QUARTER*sceneInput.rotationDelta(pointer,dx,dy,100,8);}
     /** 清理指针；snap 决定吸附，activate 仅供真实抬起时将轻点转为逆时针90°。 */
     function finishDrag(snap=true,activate=false){if(!pointer)return;const drag=pointer;pointer=null;if(snap)state.targetAngle=activate&&!drag.dragged?drag.angle-QUARTER:Math.round(state.targetAngle/QUARTER)*QUARTER;if(knob.hasPointerCapture(drag.id))knob.releasePointerCapture(drag.id);}
     /** 完整重开：中断路径、指针和吸附，恢复角色与横梁初态。 */
@@ -865,9 +865,7 @@ class GameAudio{
     window.addEventListener('keyup',event=>{if(!Object.hasOwn(MOVEMENT_KEYS,event.code))return;heldKeys.delete(event.code);if(!heldKeys.size&&state.input==='keyboard'){state.justStopped=state.moving;state.input=null;state.moving=false;}});
     // 旋钮仅捕获稳定、空闲时开始的单个指针；捕获期间保持按钮启用以连续接收拖动。
     knob.addEventListener('pointerdown',event=>{if(event.button!==0||!takeRotationControl())return;event.preventDefault();tap=null;
-      // 逆解固定投影的YZ基向量，圆周手势按四臂真实椭圆跟随，避免屏幕角度非线性或反向。
-      const center=renderer.project(KNOB_POINT),y=renderer.project([KNOB_POINT[0],KNOB_POINT[1]+1,KNOB_POINT[2]]),z=renderer.project([KNOB_POINT[0],KNOB_POINT[1],KNOB_POINT[2]+1]),yx=y.x-center.x,yy=y.y-center.y,zx=z.x-center.x,zy=z.y-center.y,det=yx*zy-zx*yy,rect=canvas.getBoundingClientRect();
-      pointer={id:event.pointerId,x:event.clientX,y:event.clientY,angle:state.targetAngle,dragged:false,center:{x:center.x+rect.left,y:center.y+rect.top},inverse:[zy/det,-zx/det,-yy/det,yx/det],lastPolar:null,turn:0};pointer.lastPolar=knobPolar(event.clientX,event.clientY,pointer);knob.setPointerCapture(event.pointerId);
+      pointer={id:event.pointerId,x:event.clientX,y:event.clientY,angle:state.targetAngle,dragged:false};knob.setPointerCapture(event.pointerId);
     });
     knob.addEventListener('pointermove',event=>{if(!pointer||event.pointerId!==pointer.id)return;event.preventDefault();dragKnob(event);});
     // 真实轻点仅由抬起处理；取消、失去捕获或离页只吸附，原生鼠标click不再叠加转动。
