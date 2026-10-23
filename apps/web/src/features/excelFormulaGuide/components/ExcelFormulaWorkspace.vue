@@ -6,8 +6,19 @@ import { ArrowLeftOutlined, CheckOutlined, CopyOutlined, DownloadOutlined, Searc
 import { formulaLessons, formulaTaskGroups, practiceSheets } from "@/features/excelFormulaGuide/content";
 import { PRACTICE_WORKBOOK_URL } from "@/features/excelFormulaGuide/model";
 import { matchesLessonSearch } from "@/features/excelFormulaGuide/search";
+import type { OperationOptions } from "@/features/excelFormulaGuide/localProcessingModel";
 import UiButton from "@/shared/ui/Button.vue";
 import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
+import ExcelLocalProcessor from "./ExcelLocalProcessor.vue";
+
+const localOpen = ref(false);
+const localOperation = ref<OperationOptions["kind"]>("clean");
+const lessonOperations: Partial<Record<string, OperationOptions["kind"]>> = {
+  "trim-name": "clean",
+  "unique-employees": "dedupe",
+  "person-total": "sum",
+  "condition-count": "count",
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -27,6 +38,18 @@ const selectedLesson = computed(() => {
   const requested = typeof route.query.lesson === "string" ? route.query.lesson : "";
   return formulaLessons.find((lesson) => lesson.id === requested) ?? formulaLessons[0];
 });
+const relatedLocalOperation = computed(() => lessonOperations[selectedLesson.value?.id ?? ""]);
+watch(relatedLocalOperation, (kind) => { if (kind) localOperation.value = kind; }, { immediate: true });
+
+/** 打开本地处理区并将键盘焦点移到该区，教程和已导入数据继续保留。 */
+async function openLocalProcessor(): Promise<void> {
+  localOpen.value = true;
+  await nextTick();
+  const panel = document.getElementById("excel-local-processor");
+  panel?.focus({ preventScroll: true });
+  panel?.scrollIntoView({ block: "start", behavior: "auto" });
+}
+
 const categories = computed(() => [...new Set(formulaLessons.map((lesson) => lesson.category))]);
 // 任务分组只筛选已有教程；推荐项沿用完整场景说明，避免要求用户先知道函数名。
 const selectedTask = computed(() => formulaTaskGroups.find((task) => task.id === taskId.value));
@@ -181,10 +204,13 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
           <p class="formula-intro__description">先选你要解决的问题，再跟着步骤操作。<br />从点哪个格开始，直到算出正确结果。</p>
         </div>
         <div class="formula-intro__practice">
+          <div class="formula-intro__actions">
+          <UiButton tone="ghost" aria-controls="excel-local-processor" :aria-expanded="localOpen" @click="openLocalProcessor">处理我的表格</UiButton>
           <UiButton :href="PRACTICE_WORKBOOK_URL" download="excel-formula-practice.xlsx" class="formula-download">
             <template #icon><DownloadOutlined aria-hidden="true" /></template>
             下载练习表
           </UiButton>
+          </div>
           <p>{{ formulaLessons.length }} 篇教程共用一份 Excel<br />示例数据已填好，公式留给你练习。</p>
         </div>
       </header>
@@ -262,7 +288,10 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
           <section class="formula-section" aria-labelledby="lesson-scenario-title">
             <h3 id="lesson-scenario-title">什么时候用</h3>
             <p>{{ selectedLesson.scenario }}</p>
+            <UiButton v-if="relatedLocalOperation && !localOpen" tone="ghost" class="formula-local-entry" @click="openLocalProcessor">跟着教程处理自己的表格</UiButton>
           </section>
+
+          <ExcelLocalProcessor v-if="localOpen" :suggested-operation="localOperation" />
 
           <details class="formula-first-steps">
             <summary>第一次用 Excel？先看这几步</summary>
@@ -358,3 +387,4 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
 </template>
 
 <style scoped lang="scss" src="./ExcelFormulaWorkspace.scss"></style>
+

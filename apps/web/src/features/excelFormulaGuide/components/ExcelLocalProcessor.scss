@@ -1,0 +1,62 @@
+.excel-local { min-width: 0; max-width: 100%; margin-block: 28px; border-block: 1px solid var(--border); padding-block: 24px; color: var(--text); font-size: 13px; line-height: 1.8; scroll-margin-top: 24px; }
+.excel-local *, .excel-local *::before, .excel-local *::after { box-sizing: border-box; }
+.excel-local :where(h3, h4, p, ul, dl) { margin: 0; }
+.excel-local h3 { color: var(--title); font-size: 21px; line-height: 1.6; }
+.excel-local h4, .excel-local legend { color: var(--title); font-size: 16px; font-weight: 700; line-height: 1.7; }
+.excel-local__heading, .excel-local__subheading { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.excel-local__heading > div { min-width: 0; }
+.excel-local__heading p { margin-top: 7px; }
+.excel-local .ui-button { flex-shrink: 0; min-height: 44px; height: auto; padding: 9px 16px; white-space: normal; }
+.excel-local__privacy { margin-top: 14px !important; font-size: 12px; }
+.excel-local__source { margin-top: 22px; }
+.excel-local__subheading { align-items: center; margin-bottom: 12px; }
+.excel-local__label, .excel-local label:not(.excel-local__check) { display: block; min-width: 0; color: var(--title); font-size: 13px; font-weight: 600; }
+.excel-local__label span { color: var(--text); font-size: 12px; font-weight: 400; }
+.excel-local input:not([type="checkbox"]), .excel-local select { display: block; width: 100%; min-width: 0; max-width: 100%; min-height: 44px; margin-top: 7px; border: 1px solid var(--input-border); border-radius: 7px; padding: 10px 12px; background: var(--bg-app); color: var(--text); font: inherit; font-weight: 400; }
+.excel-local input[type="file"] { padding: 0; overflow: hidden; font-size: 12px; }
+.excel-local input[type="file"]::file-selector-button { min-height: 44px; margin-right: 8px; border: 0; border-right: 1px solid var(--border); padding-inline: 12px; background: var(--bg-subtle); color: var(--title); font: inherit; cursor: pointer; }
+.excel-local :where(button, input, select, summary, [tabindex]):focus-visible, .excel-local:focus-visible { outline: 2px solid var(--focus-ring, var(--primary)); outline-offset: 3px; }
+.excel-local :disabled { cursor: not-allowed; }
+.excel-local__source-name { margin-top: 10px !important; overflow-wrap: anywhere; }
+.excel-local__limits { margin-top: 14px; font-size: 12px; }
+.excel-local__limits summary { min-height: 44px; align-content: center; cursor: pointer; color: var(--title); text-decoration: underline; text-underline-offset: 4px; }
+.excel-local__limits ul, .excel-local__blocked, .excel-local__warnings, .excel-local__error ul { padding-left: 20px; }
+.excel-local__limits li + li, .excel-local__blocked li + li { margin-top: 5px; }
+.excel-local__blocked { margin-top: 12px !important; overflow-wrap: anywhere; }
+.excel-local__settings { min-width: 0; margin: 24px 0 0; border: 0; border-top: 1px solid var(--border); padding: 20px 0 0; }
+.excel-local__settings > legend { padding: 0 8px 0 0; }
+.excel-local__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.excel-local__settings > .excel-local__fields { margin-top: 6px; }
+.excel-local__help { margin-top: 8px !important; font-size: 12px; font-weight: 400; overflow-wrap: anywhere; }
+.excel-local__warnings { margin-top: 10px !important; font-size: 12px; }
+.excel-local__operation { margin-top: 18px; margin-bottom: 16px; }
+.excel-local__check { display: flex; min-width: 0; min-height: 44px; align-items: center; gap: 10px; color: var(--text); font-weight: 400; cursor: pointer; }
+.excel-local__check input { flex-shrink: 0; width: 18px; height: 18px; margin: 0; accent-color: var(--primary); }
+.excel-local__check span { min-width: 0; overflow-wrap: anywhere; }
+.excel-local__columns { min-width: 0; margin: 0; border: 0; padding: 0; }
+.excel-local__columns legend { font-size: 13px; font-weight: 600; }
+.excel-local__checks { display: grid; max-height: 220px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; overflow-y: auto; margin-top: 8px; border-block: 1px solid var(--border); padding: 4px 2px; }
+.excel-local__actions { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 18px; }
+.excel-local__actions > span { flex: 1 1 240px; font-size: 12px; overflow-wrap: anywhere; }
+.excel-local__previews { display: grid; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 28px; }
+.excel-local__preview { min-width: 0; }
+.excel-local__preview > .excel-local__help { min-height: 44px; }
+.excel-local__table-scroll { max-width: 100%; max-height: 380px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; margin-top: 10px; }
+.excel-local table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+.excel-local caption { padding: 8px 10px; color: var(--text); font-size: 11px; text-align: left; caption-side: top; }
+.excel-local th, .excel-local td { min-width: 70px; max-width: 240px; border-top: 1px solid var(--border); border-right: 1px solid var(--border); padding: 8px 10px; vertical-align: top; overflow-wrap: anywhere; white-space: pre-wrap; }
+.excel-local th:last-child, .excel-local td:last-child { border-right: 0; }
+.excel-local th { background: var(--bg-subtle); color: var(--title); font-weight: 600; }
+.excel-local th[scope="row"] { min-width: 52px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.excel-local__empty { margin-top: 12px !important; border-block: 1px solid var(--border); padding-block: 18px; color: var(--text); font-size: 12px; }
+.excel-local__result { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
+.excel-local__counts { display: flex; flex-wrap: wrap; gap: 14px 24px; margin-top: 14px !important; }
+.excel-local__counts dt { font-size: 12px; }
+.excel-local__counts dd { margin: 3px 0 0; color: var(--title); font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.excel-local__aggregate { margin-top: 18px !important; color: var(--title); overflow-wrap: anywhere; }
+.excel-local__aggregate strong { font-size: 27px; font-variant-numeric: tabular-nums; }
+.excel-local__error { margin-top: 12px !important; border-left: 3px solid var(--danger-border, var(--danger)); padding: 10px 12px; background: var(--danger-bg); color: var(--danger); font-size: 12px; overflow-wrap: anywhere; }
+.excel-local__error ul { margin-top: 8px; }
+.excel-local__download { border-top: 1px solid var(--border); padding-top: 18px; }
+@media (max-width: 1100px) { .excel-local__previews { grid-template-columns: minmax(0, 1fr); } .excel-local__preview > .excel-local__help { min-height: 0; } }
+@media (max-width: 640px) { .excel-local__fields, .excel-local__checks { grid-template-columns: minmax(0, 1fr); } .excel-local h3 { font-size: 19px; } .excel-local__heading { gap: 6px; } .excel-local__heading .ui-button { padding-inline: 10px; } .excel-local__previews { gap: 22px; } .excel-local__actions .ui-button { max-width: 100%; } .excel-local__actions > span { flex-basis: 100%; } }

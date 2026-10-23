@@ -192,3 +192,7 @@
 @media (prefers-reduced-motion: reduce) {
   .formula-guide-shell *, .formula-guide-shell *::before, .formula-guide-shell *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
 }
+
+.formula-intro__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.formula-intro__actions > .ui-button { min-height: 44px; }
+.formula-local-entry { margin-top: 14px; }
