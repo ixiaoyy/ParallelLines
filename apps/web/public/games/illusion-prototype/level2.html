@@ -9,14 +9,14 @@
     :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#52674d;background:#f6e8bb}
     *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:clip}button{font:inherit}
     .prototype{position:relative;width:100%;height:100%;min-height:280px;isolation:isolate;background:radial-gradient(ellipse at 50% 43%,#f9e99f 0%,#f8e89e 62%,#e6d68e 100%)}
-    .previous-level{position:absolute;z-index:3;top:max(12px,env(safe-area-inset-top));right:20px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid #92a17766;border-radius:4px;background:#edf1d1;color:#52674d;font-size:12px;text-decoration:none}.previous-level:hover{background:#e0e8b8}.previous-level:focus-visible{outline:3px solid #4f6954;outline-offset:4px}
+    .previous-level{position:absolute;z-index:3;top:max(12px,env(safe-area-inset-top));right:20px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid #92a17766;border-radius:4px;background:#edf1d1d9;color:#52674d;font-size:12px;text-decoration:none}.previous-level:hover{background:#e0e8b8}.previous-level:focus-visible{outline:3px solid #4f6954;outline-offset:4px}
     .level-name{position:absolute;z-index:2;top:max(20px,env(safe-area-inset-top));left:24px;margin:0;font-size:14px;letter-spacing:.2em;color:#6b7954;pointer-events:none}.is-ending .level-name{opacity:0}
     canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
     .controls{position:absolute;z-index:3;inset:auto 20px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}
 
     .restart{pointer-events:auto;min-height:44px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;cursor:pointer}
     .finish-actions{display:flex;align-items:center;justify-content:center;gap:12px}.next-level{display:inline-flex;align-items:center;justify-content:center;pointer-events:auto;min-height:44px;min-width:116px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;text-decoration:none}.next-level[hidden]{display:none}.next-level:hover{background:#66b1ff}.next-level:active{background:#3a8ee6}.next-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
-    .control-actions{display:flex;justify-content:center;align-items:center;gap:12px;pointer-events:auto}.sound{min-height:44px;padding:10px 14px;border:1px solid #89a7af66;border-radius:4px;background:#edf1d1;color:#52674d;font-size:12px;cursor:pointer}.sound:hover{background:#e0e8b8}.sound:disabled{opacity:.65;cursor:default}
+    .control-actions{display:flex;justify-content:center;align-items:center;gap:12px;pointer-events:auto}.sound{min-height:44px;padding:10px 14px;border:1px solid #89a7af66;border-radius:4px;background:#edf1d1d9;color:#52674d;font-size:12px;cursor:pointer}.sound:hover{background:#e0e8b8}.sound:disabled{opacity:.65;cursor:default}
     .restart:hover{background:#66b1ff}.restart:active{background:#3a8ee6}button:focus-visible{outline:3px solid #fff;outline-offset:4px}
     .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:pointer;touch-action:none}
     .scene-control:focus-visible{outline:2px solid #f8fcf5;outline-offset:3px;background:#fff3}.scene-control:disabled{cursor:default}
@@ -42,6 +42,13 @@
     .prototype{height:100vh;height:100dvh}
     .restart,.sound,.previous-level,.next-level{touch-action:manipulation}
     @media(max-width:600px),(max-height:500px){.controls{left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right))}}
+    /* 统一十关顶底栏玻璃拟态、圆角层级与微交互过渡，保持既有几何尺寸与主按钮#409EFF色值不变。 */
+    @keyframes hudFadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .level-name{font-weight:500;letter-spacing:.22em;text-shadow:0 1px 8px #0000001f;transition:opacity .35s ease,color .35s ease,transform .35s ease}.is-ending .level-name{transform:translateY(-4px)}
+    .restart,.next-level{border-radius:8px;font-weight:500;box-shadow:0 4px 14px #0b254033,inset 0 1px 0 #ffffff38;transition:background-color .2s ease,box-shadow .2s ease,transform .15s ease}.restart:hover,.next-level:hover{box-shadow:0 6px 18px #0b254045,inset 0 1px 0 #ffffff47}.restart:active,.next-level:active{transform:translateY(1px)}
+    .previous-level,.sound{border-radius:8px;letter-spacing:.06em;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 14px #0000001c,inset 0 1px 0 #ffffff66;transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease,transform .15s ease}.previous-level:hover,.sound:hover:not(:disabled){box-shadow:0 6px 18px #00000029,inset 0 1px 0 #ffffff80}.previous-level:active,.sound:active:not(:disabled){transform:translateY(1px)}
+    .prototype::after{backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:opacity .4s ease}.result{text-shadow:0 2px 18px #0000004d}.prototype.is-complete .result,.is-complete .result{animation:hudFadeUp .4s ease both}
+    @media(prefers-reduced-motion:reduce){.level-name,.restart,.next-level,.previous-level,.sound,.prototype::after{transition:none}.prototype.is-complete .result,.is-complete .result{animation:none}}
   </style>
 </head>
 <body>
@@ -256,25 +263,26 @@ function buildGameSound(context,destination,noise,kind,when,variation=0,onEnd=()
   // 短声只含有限声源，每个源结束后释放连接；停止时先做极短衰减，避免截断爆音。
   const register=(source,start,duration,offset=0)=>{sources.push(source);nodes.push(source);remaining++;endsAt=Math.max(endsAt,start+duration);source.onended=()=>{if(--remaining===0)clean();};if(source.buffer)source.start(start,offset,duration);else{source.start(start);source.stop(start+duration);}};
   const envelope=(gain,start,attack,decay,level)=>{gain.gain.setValueAtTime(.00001,start);gain.gain.exponentialRampToValueAtTime(level,start+attack);gain.gain.exponentialRampToValueAtTime(.00001,start+decay);};
-  const noiseHit=(start,duration,level,frequency,q,offset)=>{
-    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();source.buffer=noise;filter.type='bandpass';filter.frequency.value=frequency;filter.Q.value=q;nodes.push(filter,gain);source.connect(filter);filter.connect(gain);gain.connect(output);envelope(gain,start,.002,duration,level);register(source,start,duration,offset);
+  const connectBus=pan=>{if(!pan||!context.createStereoPanner)return output;const panner=context.createStereoPanner();panner.pan.value=pan;nodes.push(panner);panner.connect(output);return panner;};
+  const noiseHit=(start,duration,level,frequency,q,offset,pan=0)=>{
+    const source=context.createBufferSource(),filter=context.createBiquadFilter(),warm=context.createBiquadFilter(),gain=context.createGain(),bus=connectBus(pan);source.buffer=noise;filter.type='bandpass';filter.frequency.value=frequency;filter.Q.value=q;warm.type='lowpass';warm.frequency.value=Math.max(1800,frequency*1.65);nodes.push(filter,warm,gain);source.connect(filter);filter.connect(warm);warm.connect(gain);gain.connect(bus);envelope(gain,start,.0025,duration,level);register(source,start,duration,offset);
   };
-  const tone=(start,duration,level,frequency,type,attack=.003,endFrequency=frequency)=>{
-    const source=context.createOscillator(),gain=context.createGain();source.type=type;source.frequency.setValueAtTime(frequency,start);if(endFrequency!==frequency)source.frequency.exponentialRampToValueAtTime(endFrequency,start+duration*.68);nodes.push(gain);source.connect(gain);gain.connect(output);envelope(gain,start,attack,duration,level);register(source,start,duration);
+  const tone=(start,duration,level,frequency,type,attack=.003,endFrequency=frequency,pan=0,harmonics=null,cutoff=0)=>{
+    const source=context.createOscillator(),gain=context.createGain(),bus=connectBus(pan);if(harmonics&&context.createPeriodicWave){const real=new Float32Array(harmonics.length),imag=Float32Array.from(harmonics);source.setPeriodicWave(context.createPeriodicWave(real,imag));}else source.type=type;source.frequency.setValueAtTime(frequency,start);if(endFrequency!==frequency)source.frequency.exponentialRampToValueAtTime(endFrequency,start+duration*.68);nodes.push(gain);if(cutoff>0){const filter=context.createBiquadFilter();filter.type='lowpass';filter.frequency.setValueAtTime(cutoff,start);filter.frequency.exponentialRampToValueAtTime(Math.max(240,cutoff*.38),start+duration*.88);nodes.push(filter);source.connect(filter);filter.connect(gain);}else source.connect(gain);gain.connect(bus);envelope(gain,start,attack,duration,level);register(source,start,duration);
   };
   if(kind==='footstep'){
-    // 石面脚步由低频轻拍和滤过的鞋底接触噪声组成，交替微调音高与噪声片段。
-    const alternate=variation%2,offset=(variation%5)*.075;
-    tone(when,.078,.21,114+alternate*9,'sine',.002,68+alternate*5);
-    noiseHit(when,.063,.20,1450+alternate*140,.62,offset);
+    // 石面脚步由温润低频石阶共鸣与细腻鞋底接触组成，带轻微左右声像与六步微调。
+    const alternate=variation%2,stepVariant=variation%6,offset=(variation%5)*.075,pan=alternate?.07:-.07;
+    tone(when,.086,.22,126+alternate*8+stepVariant*1.5,'triangle',.0025,72+alternate*4,pan,[0,1,.28,.06],460);
+    noiseHit(when+.001,.068,.165,1180+alternate*115+stepVariant*28,1.12,offset,pan);
   }else if(kind==='snap'){
     // 机关停稳只响一次：短促咔声加低频实体碰触，不用持续电子提示音。
     noiseHit(when,.075,.23,2350,.75,.35);
     tone(when,.11,.13,276,'triangle',.002,184);
     tone(when+.006,.12,.028,1098,'sine',.002,940);
   }else if(kind==='complete'){
-    // 三个柔和音依次落入A大调和弦；延长尾音衔接通关演出，仍只创建三个声源。
-    for(const [i,frequency] of [440,554.365,659.255].entries())tone(when+i*.095,1.08,.105,frequency,'sine',.025);
+    // 三个空灵泛音音色依次落入A大调和弦并舒展余韵；衔接两秒通关演出，仍只创建三个声源。
+    for(const [i,frequency] of [440,554.365,659.255].entries())tone(when+i*.105,1.82,.115,frequency,'sine',.028,frequency,(i-1)*.20,[0,1,.34,.12,.045],3400);
   }else{clean();throw new Error('Unknown game sound');}
   return{kind,sources,nodes,endsAt,stop(){if(finished||stopping)return;stopping=true;const now=context.currentTime;try{output.gain.cancelScheduledValues(now);output.gain.setTargetAtTime(.00001,now,.003);}catch{}for(const source of sources)try{source.stop(now+.018);}catch{}},dispose:clean};
 }
