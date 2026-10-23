@@ -127,6 +127,8 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-10-22-v2/covers/pokebonk.webp",
     # 群英逐鹿正式封面与目录映射同批交付，可按本版本定向发布。
     "catalog/2026-10-23-v1/covers/qunying-zhulu.webp",
+    # 遗迹：破巢正式封面与目录映射同批交付，可按独立版本定向发布。
+    "catalog/2026-10-24-v1/covers/yiji-pochao.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 STATIC_ASSETS = (

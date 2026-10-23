@@ -215,6 +215,8 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   pokebonk: "/catalog/2026-10-22-v2/covers/pokebonk.webp",
   // 群英逐鹿使用与三国像素战场内容一致的正式封面，随目录收录同批交付。
   "qunying-zhulu": "/catalog/2026-10-23-v1/covers/qunying-zhulu.webp",
+  // 遗迹：破巢使用依据实机内容制作的正式封面，路径与静态资源发布清单保持一致。
+  "yiji-pochao": "/catalog/2026-10-24-v1/covers/yiji-pochao.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {
