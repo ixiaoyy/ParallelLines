@@ -51,6 +51,11 @@
     .restart,.next-level{border-radius:8px;font-weight:500;box-shadow:0 4px 14px #0b254033,inset 0 1px 0 #ffffff38;transition:background-color .2s ease,box-shadow .2s ease,transform .15s ease}.restart:hover,.next-level:hover{box-shadow:0 6px 18px #0b254045,inset 0 1px 0 #ffffff47}.restart:active,.next-level:active{transform:translateY(1px)}
     .previous-level,.sound{border-radius:8px;letter-spacing:.06em;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 14px #0000001c,inset 0 1px 0 #ffffff66;transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease,transform .15s ease}.previous-level:hover,.sound:hover:not(:disabled){box-shadow:0 6px 18px #00000029,inset 0 1px 0 #ffffff80}.previous-level:active,.sound:active:not(:disabled){transform:translateY(1px)}
     .prototype::after{backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:opacity .4s ease}.result{text-shadow:0 2px 18px #0000004d}.prototype.is-complete .result,.is-complete .result{animation:hudFadeUp .4s ease both}
+    /* 第三关：外景暖砂与内殿幽夜自适应配色 */
+    .level-name{color:#6b504b;text-shadow:0 1px 6px #ffffff80}.is-inside .level-name{color:#bce6e8;text-shadow:0 1px 10px #00000099}
+    .previous-level,.sound{border-color:#9e7b7247;background:#faf0e6cc;color:#5e4642}.previous-level:hover,.sound:hover:not(:disabled){background:#f3e3d5eb;border-color:#8c685f73}
+    .is-inside .previous-level,.is-inside .sound{border-color:#76cbd447;background:#0f242acc;color:#cdeff0;box-shadow:0 4px 16px #00000066,inset 0 1px 0 #ffffff24}.is-inside .previous-level:hover,.is-inside .sound:hover:not(:disabled){background:#17353ee6;border-color:#93e0e873;box-shadow:0 6px 18px #00000080,inset 0 1px 0 #ffffff33}
+    .talk{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 4px 14px #0000004d}.dialogue{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
     @media(prefers-reduced-motion:reduce){.level-name,.restart,.next-level,.previous-level,.sound,.prototype::after{transition:none}.prototype.is-complete .result,.is-complete .result{animation:none}}
   </style>
 </head>

@@ -49,6 +49,11 @@
     .restart,.next-level{border-radius:8px;font-weight:500;box-shadow:0 4px 14px #0b254033,inset 0 1px 0 #ffffff38;transition:background-color .2s ease,box-shadow .2s ease,transform .15s ease}.restart:hover,.next-level:hover{box-shadow:0 6px 18px #0b254045,inset 0 1px 0 #ffffff47}.restart:active,.next-level:active{transform:translateY(1px)}
     .previous-level,.sound{border-radius:8px;letter-spacing:.06em;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 14px #0000001c,inset 0 1px 0 #ffffff66;transition:background-color .2s ease,border-color .2s ease,box-shadow .2s ease,transform .15s ease}.previous-level:hover,.sound:hover:not(:disabled){box-shadow:0 6px 18px #00000029,inset 0 1px 0 #ffffff80}.previous-level:active,.sound:active:not(:disabled){transform:translateY(1px)}
     .prototype::after{backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:opacity .4s ease}.result{text-shadow:0 2px 18px #0000004d}.prototype.is-complete .result,.is-complete .result{animation:hudFadeUp .4s ease both}
+    /* 第四关：碧水晴空与水下幽谷自适应配色 */
+    .level-name{color:#0b3d38;text-shadow:0 1px 8px #7ef5ea66}.is-inside .level-name{color:#c8e6e8;text-shadow:0 1px 10px #00000080}
+    .previous-level,.sound{border-color:#17736b42;background:#ebfaf8cc;color:#144a45}.previous-level:hover,.sound:hover:not(:disabled){background:#daf4f0eb;border-color:#14665f6b}
+    .is-inside .previous-level,.is-inside .sound{border-color:#7cc4cc47;background:#132832cc;color:#d4eef0;box-shadow:0 4px 16px #00000059,inset 0 1px 0 #ffffff24}.is-inside .previous-level:hover,.is-inside .sound:hover:not(:disabled){background:#1b3845e6;border-color:#98dce373;box-shadow:0 6px 18px #00000073,inset 0 1px 0 #ffffff33}
+    .prototype::after{background:#0d262db3}
     @media(prefers-reduced-motion:reduce){.level-name,.restart,.next-level,.previous-level,.sound,.prototype::after{transition:none}.prototype.is-complete .result,.is-complete .result{animation:none}}
   </style>
 </head>
