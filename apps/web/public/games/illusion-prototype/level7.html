@@ -15,7 +15,7 @@
     .previous-level{position:absolute;z-index:3;top:max(12px,var(--safe-top));right:max(20px,var(--safe-right));display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid #92a17766;border-radius:4px;background:#f5e6dfd9;color:#695b58;font-size:12px;text-decoration:none}.previous-level:hover{background:#ebd7cd}.previous-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
     canvas{position:relative;z-index:1;display:block;width:100%;height:100%;touch-action:none;outline:none}.controls{position:absolute;z-index:3;inset:auto max(20px,var(--safe-right)) max(24px,var(--safe-bottom)) max(20px,var(--safe-left));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}
     .restart{pointer-events:auto;min-height:44px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;cursor:pointer}.restart:hover{background:#66b1ff}.restart:active{background:#3a8ee6}.control-actions{display:flex;justify-content:center;align-items:center;gap:12px;pointer-events:auto}.sound{min-height:44px;padding:10px 14px;border:1px solid #89a7af66;border-radius:4px;background:#f5e6dfd9;color:#695b58;font-size:12px;cursor:pointer}.sound:hover{background:#ebd7cd}.sound:disabled{opacity:.65;cursor:default}button:focus-visible{outline:3px solid #fff;outline-offset:4px}
-    .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:grab;touch-action:none}.scene-control:active{cursor:grabbing}.scene-control:focus-visible{outline:2px solid #fff;outline-offset:3px;background:#fff3}.scene-control[aria-disabled="true"]{cursor:default}.scene-control[hidden]{display:none}
+    .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:grab;touch-action:none}.scene-control:active{cursor:grabbing}.scene-control:focus,.scene-control:focus-visible{outline:none;background:transparent}.scene-control[aria-disabled="true"]{cursor:default}.scene-control[hidden]{display:none}
     #curtain{position:absolute;z-index:5;inset:0;background:#172534;opacity:0;pointer-events:none}/* 结果文字沿用左右安全区，非对称刘海下仍在可用区域内居中。 */
     .result{position:absolute;z-index:3;top:30px;left:max(16px,var(--safe-left));right:max(16px,var(--safe-right));margin:0;text-align:center;font-weight:400;font-size:21px;letter-spacing:.3em;color:#eef5e5;pointer-events:none}.failure{position:absolute;z-index:4;inset:0;display:grid;place-items:center;padding:24px;background:#172534;text-align:center;font-size:16px}.failure[hidden],.result[hidden]{display:none}
     .prototype::after{content:"";position:absolute;z-index:2;inset:0;background:#2d315f9c;opacity:0;pointer-events:none;transition:opacity .3s ease}.prototype.is-complete::after{opacity:1}.prototype.is-complete .result{top:calc(50% - 65px);font-size:clamp(24px,4vw,31px);letter-spacing:.18em;color:#f2f5e9}.prototype.is-complete .controls{inset:0;display:block;pointer-events:none}.prototype.is-complete .control-actions{position:absolute;inset:0;display:block;pointer-events:none}.prototype.is-complete .restart{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);min-width:144px;pointer-events:auto}.prototype.is-complete .sound{position:absolute;right:max(20px,var(--safe-right));bottom:max(24px,var(--safe-bottom));pointer-events:auto}
@@ -690,8 +690,8 @@ function drawRoad(e){
  if(horizontal<1e-7)return;
  const yaw=Math.atan2(d[0],d[2]),stairs=Math.abs(d[1])>.01,count=stairs?Math.max(2,Math.round(Math.abs(d[1])/.10)):1;
  for(let i=0;i<count;i++){
-  const t=(i+.5)/count,p=mix(a,b,t),top=stairs?a[1]+d[1]*(d[1]>0?(i+1)/count:i/count):a[1],height=stairs?Math.max(.18,Math.abs(d[1])*.55+.08):THICK;
-  const o=solid(e.owner,e.id,'box',p[0],top-height/2,p[2],e.width,height,horizontal/count+.003,tone,yaw);
+  const t=(i+.5)/count,p=mix(a,b,t),top=stairs?a[1]+d[1]*(d[1]>0?(i+1)/count:i/count):a[1],height=stairs?Math.max(.18,Math.abs(d[1])*.54+.07):THICK;
+  const o=solid(e.owner,e.id,'box',p[0],top-height/2,p[2],stairs?e.width-.004:e.width,height,horizontal/count+(stairs?-.002:.003),tone,yaw);
   o.walk={edge:e,owner:e.owner,top,range:[i/count,(i+1)/count]};
   // 细刻线区别白石块与灰色转路，不用高亮外框代替真实台面。
   if(!stairs){const tiles=Math.max(1,Math.round(horizontal/.55));for(let j=1;j<tiles;j++){const v=mix(a,b,j/tiles);const mark=solid(e.owner,'tile-line','box',v[0],top+.001,v[2],e.width,.002,.009,0xd1d1be,yaw);mark.occludes=false;}}
@@ -700,7 +700,7 @@ function drawRoad(e){
   const p=N(name).p;let x0=-e.width/2,x1=e.width/2,z0=-e.width/2,z1=e.width/2;
   // 阶梯和梯子接入侧不伸出整块平台，避免盖住最后几级踏面或让人物穿过平台攀上来。
   for(const stair of areaDef().edges){if(stair.owner!==e.owner||![stair.a,stair.b].includes(name)||!stair.ladder&&Math.abs(N(stair.a).p[1]-N(stair.b).p[1])<.01)continue;const other=N(stair.a===name?stair.b:stair.a).p,dx=other[0]-p[0],dz=other[2]-p[2];if(Math.abs(dx)>Math.abs(dz)){if(dx>0)x1=Math.min(x1,.015);else x0=Math.max(x0,-.015);}else if(Math.abs(dz)>.001){if(dz>0)z1=Math.min(z1,.015);else z0=Math.max(z0,-.015);}}
-  const o=solid(e.owner,e.id+'-end','box',p[0]+(x0+x1)/2,p[1]-THICK/2,p[2]+(z0+z1)/2,x1-x0,THICK,z1-z0,tone);o.walk={edge:e,owner:e.owner,node:name,top:p[1]};
+  const inset=name==='a-white-low'?.004:0,o=solid(e.owner,e.id+'-end','box',p[0]+(x0+x1)/2,p[1]-THICK/2,p[2]+(z0+z1)/2,x1-x0-inset*2,THICK-inset*2,z1-z0-inset*2,tone);o.walk={edge:e,owner:e.owner,node:name,top:p[1]};
  }
 }
 /** 按钮的发光只反映真实占用或已经完成的一次性动作，不替代触发检查。 */
@@ -751,7 +751,7 @@ function architectureA(){
  solid('Ar','A-spindle','box',0,-.65,0,.14,1.3,.14,0x899895);
  // 原侧墙边界不变，鸟列只在向外相连的局部墙帽上站立，避免整墙增厚侵入转路的携带扫掠面。
  // 第三只守鸟原位进入灰上桥整圈扫掠，仅将该鸟向外移至真实网格净空界外；低墙帽实接原阶墙，脚高和其余鸟不变。
- for(let i=0;i<11;i++){const t=i/10,p=[-1.98,4*t,1.6-t*6];solid('world','A-stair-wall','box',p[0],p[1]-.65,p[2],.18,1.3,.48,d.stone);if(i%2===0){if(i===4)solid('world','A-bird-perch','box',-2.435,p[1]-.03,p[2],.91,.10,.30,d.stone);else solid('world','A-bird-perch','box',-2.10,p[1]-.03,p[2],.28,.10,.30,d.stone);idleBird('world',[i===4?-2.75:-2.10,p[1]+.02,p[2]],-QUARTER);}}
+ for(let i=0;i<11;i++){const t=i/10,p=[-2.015,4*t,1.6-t*6];solid('world','A-stair-wall','box',p[0],p[1]-.65,p[2],.18,1.3,.48,d.stone);if(i%2===0){if(i===4)solid('world','A-bird-perch','box',-2.435,p[1]-.03,p[2],.91,.10,.30,d.stone);else solid('world','A-bird-perch','box',-2.10,p[1]-.03,p[2],.28,.10,.30,d.stone);idleBird('world',[i===4?-2.75:-2.10,p[1]+.02,p[2]],-QUARTER);}}
  // 连续外墙保留低转路完整身体经过的真实横向空腔，不能只按脚点或整数停位避让。
  for(const[a,b]of[[N('a-white-low').p,N('a-white-top').p],[N('a-exit-port').p,N('a-exit-stair').p]])for(let i=0;i<16;i++){const t=(i+.5)/16,p=mix(a,b,t),length=Math.abs(b[2]-a[2])/16,bottom=p[1]-1.32,top=p[1]-.20;for(const[lo,hi]of[[bottom,Math.min(top,0)],[Math.max(bottom,.66),top]])if(hi>lo)solid('world','A-continuous-stair-wall','box',-2.12,(lo+hi)/2,p[2],.09,hi-lo,length+.012,d.stone);}
  rookeryFlagTower('world','A-exit',N('a-door').p,0,0xe791a0);flag('world',-1.6,6.6,-5,0xea7b85);
@@ -767,7 +767,7 @@ function architectureB(){
    rookeryWindowWall('Broot','B-left-fixed-stem',x,(pivot-1.48)/2,z,.62,pivot+1.12,.62,[[0,.15,.07,.45],[0,1.45,.64,1.10]],d.stone);
    solid('Broot','B-left-rear-buttress','box',x,(pivot-1.48)/2,z-.34,.62,pivot+1.12,.12,d.stone);
   }
-  solid('Broot','B-fixed-upper-tower','box',x,(head+5.8)/2,z,.55,5.8-head,.55,d.stone);
+  solid('Broot','B-fixed-upper-tower','box',x,(head+5.62)/2,z,.55,5.62-head,.55,d.stone);
   const dx=end[0]-x,dz=end[2]-z;solid('Broot','B-top-cantilever','box',(x+end[0])/2,5.62,(z+end[2])/2,.52,.18,Math.hypot(dx,dz)+.12,d.stone,Math.atan2(dx,dz));
   if(owner==='Br'){
    // 右柱前侧留出左转路乘客的全身通道；后侧薄脊仍连接上下段，原窄窗、轴与道路不变。

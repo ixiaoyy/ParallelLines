@@ -15,7 +15,7 @@
     .restart{pointer-events:auto;min-height:44px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;cursor:pointer}.restart:hover{background:#66b1ff}.restart:active{background:#3a8ee6}.sound{min-height:44px;padding:10px 14px;border:1px solid #89a7af66;border-radius:4px;background:#f5e6dfd9;color:#695b58;font-size:12px;cursor:pointer}.sound:disabled{opacity:.65;cursor:default}.restart,.sound,.previous-level,.next-level{touch-action:manipulation}
     /* 通关后复用已有双按钮布局，窄屏允许换行并保留完整触控区域。 */
     .finish-actions{display:flex;align-items:center;justify-content:center;gap:12px}.next-level{display:inline-flex;align-items:center;justify-content:center;pointer-events:auto;min-height:44px;min-width:116px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;text-decoration:none}.next-level[hidden]{display:none}.next-level:hover{background:#66b1ff}.next-level:active{background:#3a8ee6}.next-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
-    .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:grab;touch-action:none}.scene-control:active{cursor:grabbing}.scene-control:focus-visible{outline:2px solid #fff;outline-offset:3px;background:#fff3}.scene-control[aria-disabled="true"]{cursor:default}.scene-control[hidden]{display:none}
+    .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:grab;touch-action:none}.scene-control:active{cursor:grabbing}.scene-control:focus,.scene-control:focus-visible{outline:none;background:transparent}.scene-control[aria-disabled="true"]{cursor:default}.scene-control[hidden]{display:none}
     #curtain{position:absolute;z-index:5;inset:0;background:#172534;opacity:0;pointer-events:none}.result{position:absolute;z-index:3;top:30px;left:max(16px,var(--safe-left));right:max(16px,var(--safe-right));margin:0;text-align:center;font-weight:400;font-size:21px;letter-spacing:.3em;color:#eef5e5;pointer-events:none}.failure{position:absolute;z-index:4;inset:0;display:grid;place-items:center;padding:24px;background:#172534;text-align:center;font-size:16px}.failure[hidden],.result[hidden]{display:none}
     /* 完成操作与标题按两侧安全区居中，保留零安全区原布局。 */
     .prototype::after{content:"";position:absolute;z-index:2;inset:0;background:#2d315f9c;opacity:0;pointer-events:none;transition:opacity .3s ease}.prototype.is-complete::after{opacity:1}.prototype.is-complete .result{top:calc(50% - 65px);font-size:clamp(24px,4vw,31px);letter-spacing:.18em;color:#f2f5e9}.prototype.is-complete .controls{inset:0;display:block;pointer-events:none}.prototype.is-complete .control-actions{position:absolute;inset:0;display:block;pointer-events:none}.prototype.is-complete .finish-actions{position:absolute;top:calc(50% + 2px);left:calc(50% + (max(16px,var(--safe-left)) - max(16px,var(--safe-right)))/2);transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:calc(100% - max(16px,var(--safe-left)) - max(16px,var(--safe-right)));max-width:360px;pointer-events:auto}.prototype.is-complete .restart{min-width:132px}.prototype.is-complete .sound{position:absolute;right:max(20px,var(--safe-right));bottom:max(24px,var(--safe-bottom));pointer-events:auto}
@@ -599,11 +599,11 @@ function inlay(owner,x,y,z,w,d,tone=PALETTE.inlay,count=5){
 }
 /** 沿盒壁的局部平面绘制外框与回纹，墙板展开时纹样随同一个矩阵移动。 */
 function shellPanel(owner){
- solid(owner,owner,'box',0,-.13,2.5,5,.26,5,PALETTE.dark);solid(owner,'panel-surface','box',0,.008,2.5,4.82,.035,4.82,PALETTE.stone);
- for(const side of[-1,1]){solid(owner,'panel-border','box',side*2.35,.05,2.5,.28,.12,5,PALETTE.edge);solid(owner,'panel-border','box',0,.05,2.5+side*2.35,4.6,.12,.28,PALETTE.edge);for(let i=0;i<8;i++)solid(owner,'border-square','box',side*2.35,.118,.35+i*.61,.105,.015,.105,PALETTE.dark,Math.PI/4,0,0,true);}
+ solid(owner,owner,'box',0,-.13,2.5,5,.26,5,PALETTE.dark);solid(owner,'panel-surface','box',0,.012,2.38,4.52,.020,4.52,PALETTE.stone);
+ for(const side of[-1,1]){solid(owner,'panel-border','box',side*2.35,.06,2.5,.28,.10,5,PALETTE.edge);solid(owner,'panel-border','box',0,.06,2.5+side*2.35,4.6,.10,.28,PALETTE.edge);for(let i=0;i<8;i++)solid(owner,'border-square','box',side*2.35,.118,.35+i*.61,.105,.015,.105,PALETTE.dark,Math.PI/4,0,0,true);}
  inlay(owner,0,.035,2.5,4.15,4.15,PALETTE.inlay,6);
  // 闭盒看到的是板的外面，内外两面都保留同一回纹与完整镶边。
- inlay(owner,0,-.272,2.5,4.15,4.15,PALETTE.inlay,6);for(const side of[-1,1]){solid(owner,'outer-border','box',side*2.35,-.265,2.5,.28,.07,5,PALETTE.edge);solid(owner,'outer-border','box',0,-.265,2.5+side*2.35,4.6,.07,.28,PALETTE.edge);}
+ inlay(owner,0,-.272,2.5,4.15,4.15,PALETTE.inlay,6);for(const side of[-1,1]){solid(owner,'outer-border','box',side*2.10,-.268,2.5,.24,.016,4.44,PALETTE.edge);solid(owner,'outer-border','box',0,-.268,2.5+side*2.10,3.96,.016,.24,PALETTE.edge);}
 }
 /** 带双向彩色眼窗的四角灯塔；亮灯只取独立灯状态，开合不会重置进度。 */
 function lantern(owner,x,y,z,id){
@@ -723,7 +723,7 @@ function roadVisible(e){
 function drawWorld(){
  renderer.static=[];renderer.dynamic=[];solid('root','box-foundation','box',0,.02,0,5.22,.22,5.22,PALETTE.edge);
  for(const owner of['front-panel','left-panel','right-panel','back-panel'])shellPanel(owner);
- if(state.phase!=='rooms'||['cyan','yellow'].includes(state.room)){solid('lid','lid-base','box',0,-.12,2.5,5,.24,5,PALETTE.dark);solid('lid','lid-inset','box',0,.015,2.5,4.7,.045,4.7,PALETTE.stone);inlay('lid',0,.042,2.5,4.55,4.55,PALETTE.inlay,6);inlay('lid',0,-.25,2.5,4.55,4.55,PALETTE.inlay,6);}
+ if(state.phase!=='rooms'||['cyan','yellow'].includes(state.room)){solid('lid','lid-base','box',0,-.12,2.5,5,.24,5,PALETTE.dark);solid('lid','lid-inset','box',0,.01,2.5,4.7,.03,4.7,PALETTE.stone);inlay('lid',0,.042,2.5,4.55,4.55,PALETTE.inlay,6);inlay('lid',0,-.25,2.5,4.55,4.55,PALETTE.inlay,6);}
  // 盒体顶板与四角灯塔属于同一个上壳；底部内腔打开时整个上壳真实上提。
  if(state.phase==='rooms'){
   solid('cap','cap-base','box',0,-.17,0,5,.34,5,PALETTE.dark);inlay('cap',0,.008,0,4.65,4.65,PALETTE.inlay,6);
@@ -746,7 +746,7 @@ function drawWorld(){
  if(state.phase!=='rooms'){
   // 终点方台与道路处于同一脚高；绘制、拾取、支撑和登台判定读取同一个实体。
   const goal=N('goal'),edge=defs.edges.find(e=>e.owner==='cap'&&e.b==='goal');
-  const platform=solid('cap','goal-platform','box',goal.p[0],goal.p[1]-.08,goal.p[2],1.36,.16,1.36,PALETTE.stone);
+  const platform=solid('cap','goal-platform','box',goal.p[0],goal.p[1]-.08,goal.p[2],1.36,.16,1.36,PALETTE.edge);
   platform.walk={edge,top:goal.p[1],from:0,to:1,terminal:true};
   for(const size of[.76,.58,.36])for(const side of[-1,1]){
    solid('cap','goal-mark','box',goal.p[0]+side*size/2,goal.p[1]+.013,goal.p[2],.026,.014,size,0xddedd9,Math.PI/4,0,0,true);
