@@ -66,12 +66,13 @@
 .catalog-icon--star { --catalog-icon: url("/catalog/pixel-arcade/icons/star.svg"); }
 .catalog-icon--clock { --catalog-icon: url("/catalog/pixel-arcade/icons/clock.svg"); }
 .catalog-icon--arrow { --catalog-icon: url("/catalog/pixel-arcade/icons/arrow-right.svg"); }
-.catalog-controls { display: flex; min-height: 68px; align-items: center; gap: 20px; padding: 8px 24px; }
+// 新增原创入口后，工具栏按实际空间换行，不挤压分类、排序和显示方式。
+.catalog-controls { display: flex; flex-wrap: wrap; min-height: 68px; align-items: center; gap: 20px; padding: 8px 24px; }
 .catalog-library-filters { display: flex; flex: 0 0 auto; gap: 12px; }
 .catalog-library-filters button { min-width: 156px; border-color: #bbcfe3; padding-inline: 18px; color: var(--catalog-ink); background: var(--catalog-paper); }
 .catalog-library-filters button:first-child { min-width: 180px; }
 .catalog-library-filters .anticon, .catalog-library-filters .catalog-icon { width: 26px; height: 26px; font-size: 24px; }
-.catalog-library-filters button:nth-child(2) .anticon { color: var(--catalog-red); }
+.catalog-library-filter--wanted .anticon { color: var(--catalog-red); }
 .catalog-library-filters button.is-active .anticon { color: #fff; }
 .catalog-library-filters button:hover:not(.is-active) { background: #dcefff; }
 // 状态节点仍保留目录数量；视觉上使用确认稿的细分隔线，不新增计数面板。
@@ -192,6 +193,10 @@
  .catalog-card__open { width: 104px; flex-basis: 104px; font-size: 15px; }
  .catalog-footer__inner { grid-template-columns: max-content minmax(0, 1fr) max-content; padding-inline: 24px; gap: 20px; } .catalog-footer__brand { gap: 16px; } .catalog-footer__motto { gap: 16px; } .catalog-footer__navigation { margin-right: 160px; }
 }
+@media (min-width: 801px) and (max-width: 1200px) {
+ // 中等宽度让范围入口独占首行，分类、排序和显示方式在第二行保持完整一组。
+ .catalog-library-filters { flex-basis: 100%; }
+}
 @media (max-width: 1100px) {
  .catalog-header__inner { width: calc(100% - 32px); } .catalog-brand { gap: 8px; } .catalog-brand img { width: 52px; height: 44px; } .catalog-brand > span { font-size: 26px; }
  .catalog-view-tabs button { min-width: 110px; padding-inline: 10px; font-size: 16px; } .catalog-header__submit { min-width: 134px; font-size: 16px; }
@@ -231,7 +236,8 @@
  .catalog-page--authors .catalog-author-count { font-size: 18px; } .catalog-page--authors .catalog-author-search { width: 100%; }
  .catalog-hero__subtitle { max-width: 100%; margin-top: 12px; padding-inline: 8px; font-size: 11px; } .catalog-search { width: min(420px, 100%); } .catalog-search button { width: 78px; font-size: 20px; } .catalog-hero__motto { gap: 7px; font-size: 10px; }
  .catalog-library-filters { gap: 6px; } .catalog-library-filters button, .catalog-library-filters button:first-child { padding-inline: 4px; gap: 5px; font-size: 13px; }
- .catalog-library-filters .anticon, .catalog-library-filters .catalog-icon { width: 20px; height: 20px; font-size: 20px; }
+ // 窄屏保留四个完整文字入口和 44px 点击高度，省去装饰图标以维持原两行工具栏。
+ .catalog-library-filters .anticon, .catalog-library-filters .catalog-icon { display: none; }
  .catalog-categories, .catalog-sort { gap: 4px; } .catalog-categories label, .catalog-sort label { font-size: 13px; } .catalog-categories select, .catalog-sort select { width: 98px; padding-left: 8px; padding-right: 28px; font-size: 14px; }
  .catalog-controls { column-gap: 8px; } .catalog-categories select, .catalog-sort select { width: 100%; }
  .catalog-layout-toggle { margin-left: 0; } .catalog-card { padding: 18px 11.5% 12px; }

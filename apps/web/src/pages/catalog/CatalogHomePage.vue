@@ -266,6 +266,13 @@ function loadMoreProjects(): void {
   visibleLimit.value += PAGE_SIZE;
 }
 
+/** 切换全部或个人清单范围；scope 沿用现有范围值，不改收藏和最近记录。 */
+function selectLibraryScope(scope: LibraryScope): void {
+  libraryScope.value = scope;
+  // 原创作为独立快捷入口；切换范围时退出原创，其他作者的组合筛选仍保留。
+  if (selectedAuthorKey.value === "original") selectedAuthorKey.value = null;
+}
+
 function showAuthorGames(key: string): void {
   selectedAuthorKey.value = key;
   selectedCategory.value = "all";
@@ -422,12 +429,13 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
         <div v-else-if="catalogQuery.isError.value" class="catalog-state" role="alert"><span>项目目录暂时不可用，请稍后重试。</span><button type="button" @click="catalogQuery.refetch()">重新加载</button></div>
         <template v-else>
           <template v-if="catalogView === 'games'">
-            <!-- 清单、分类和排序各自保留原状态；数量置于工具栏，避免挤占卡片行。 -->
+            <!-- 原创复用作者榜分组，范围入口互斥；分类、排序和个人记录沿用原规则。 -->
             <div class="catalog-controls">
-              <div class="catalog-library-filters" role="group" aria-label="全部游戏、想玩清单、最近打开">
-                <button type="button" :class="{ 'is-active': libraryScope === 'all' }" :aria-pressed="libraryScope === 'all'" @click="libraryScope = 'all'"><span class="catalog-icon catalog-icon--gamepad" aria-hidden="true"></span><span>全部游戏</span></button>
-                <button type="button" :class="{ 'is-active': libraryScope === 'wanted' }" :aria-pressed="libraryScope === 'wanted'" @click="libraryScope = 'wanted'"><HeartFilled aria-hidden="true" /><span>想玩清单</span></button>
-                <button type="button" :class="{ 'is-active': libraryScope === 'recent' }" :aria-pressed="libraryScope === 'recent'" @click="libraryScope = 'recent'"><span class="catalog-icon catalog-icon--clock" aria-hidden="true"></span><span>最近打开</span></button>
+              <div class="catalog-library-filters" role="group" aria-label="游戏范围">
+                <button type="button" :class="{ 'is-active': libraryScope === 'all' && selectedAuthorKey !== 'original' }" :aria-pressed="libraryScope === 'all' && selectedAuthorKey !== 'original'" @click="selectLibraryScope('all')"><span class="catalog-icon catalog-icon--gamepad" aria-hidden="true"></span><span>全部游戏</span></button>
+                <button type="button" :class="{ 'is-active': selectedAuthorKey === 'original' }" :aria-pressed="selectedAuthorKey === 'original'" @click="showAuthorGames('original')"><CrownFilled aria-hidden="true" /><span>原创</span></button>
+                <button type="button" class="catalog-library-filter--wanted" :class="{ 'is-active': libraryScope === 'wanted' }" :aria-pressed="libraryScope === 'wanted'" @click="selectLibraryScope('wanted')"><HeartFilled aria-hidden="true" /><span>想玩清单</span></button>
+                <button type="button" :class="{ 'is-active': libraryScope === 'recent' }" :aria-pressed="libraryScope === 'recent'" @click="selectLibraryScope('recent')"><span class="catalog-icon catalog-icon--clock" aria-hidden="true"></span><span>最近打开</span></button>
               </div>
               <span class="catalog-results" role="status">{{ visibleProjects.length }} 个游戏</span>
               <div class="catalog-categories"><label for="catalog-category">分类：</label><select id="catalog-category" v-model="selectedCategory" aria-label="游戏分类"><option value="all">全部</option><option v-for="category in categories" :key="category.id" :value="category.slug">{{ category.name }}</option></select></div>
@@ -442,7 +450,7 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
             <p class="catalog-arcade-hint"><kbd>W/A/S/D</kbd> 选择 · <kbd>Enter</kbd> 开始游戏</p>
             <p v-if="!libraryCanPersist" class="catalog-library__notice" role="alert">本地存储不可用，当前清单只在本次页面访问期间保留。</p>
             <p v-if="wantedLimitReached" class="catalog-library__notice" role="alert">想玩清单最多保存 500 款游戏，请先移出部分游戏。</p>
-            <div v-if="selectedAuthorKey" class="catalog-author-selection"><span>正在查看 <strong>{{ selectedAuthorName || '该作者' }}</strong> 的作品</span><button type="button" @click="clearAuthorGames">清除作者筛选</button></div>
+            <div v-if="selectedAuthorKey && selectedAuthorKey !== 'original'" class="catalog-author-selection"><span>正在查看 <strong>{{ selectedAuthorName || '该作者' }}</strong> 的作品</span><button type="button" @click="clearAuthorGames">清除作者筛选</button></div>
             <div v-if="visibleProjects.length === 0" class="catalog-state" role="status"><span>{{ emptyLibraryText }}</span><button v-if="search || selectedCategory !== 'all' || selectedAuthorKey" type="button" @click="search = ''; searchInput = ''; selectedCategory = 'all'; selectedAuthorKey = null">清除筛选</button></div>
             <div v-else ref="catalogGrid" class="catalog-grid" :class="{ 'catalog-grid--list': layoutMode === 'list' }">
               <article v-for="(project, index) in displayedProjects" :key="project.id" class="catalog-card" :class="[`catalog-card--${cardTone(project.slug)}`, { 'catalog-card--preview': isPreviewProject(project), 'is-selected': selectedProjectId === project.id }]" :data-project-id="project.id" :aria-current="selectedProjectId === project.id ? 'true' : undefined" tabindex="-1" @pointerdown="selectedProjectId = project.id" @focusin="selectedProjectId = project.id">
