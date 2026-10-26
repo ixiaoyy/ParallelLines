@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <title>回廊彼岸 · 第一关</title>
   <style>
@@ -10,14 +10,14 @@
     *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:clip}button{font:inherit}
     .prototype{position:relative;width:100%;height:100%;min-height:280px;isolation:isolate;background:radial-gradient(ellipse 130px 62px at 49% 75%,#6f8b8c20,transparent 100%),linear-gradient(#01191f 0%,#0c1c24 42%,#191f28 100%)}
     .level-name{position:absolute;z-index:2;top:max(20px,env(safe-area-inset-top));left:24px;margin:0;font-size:14px;letter-spacing:.2em;color:#a8c8c6;pointer-events:none}.is-ending .level-name{opacity:0}
-    canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
+    canvas{display:block;width:100%;height:100%;touch-action:pinch-zoom;outline:none}
     .controls{position:absolute;z-index:3;inset:auto 20px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}
 
     .restart{pointer-events:auto;min-height:44px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;cursor:pointer}
     .finish-actions{display:flex;align-items:center;justify-content:center;gap:12px}.next-level{display:inline-flex;align-items:center;justify-content:center;pointer-events:auto;min-height:44px;min-width:116px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;text-decoration:none}.next-level[hidden]{display:none}.next-level:hover{background:#66b1ff}.next-level:active{background:#3a8ee6}.next-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
     .control-actions{display:flex;justify-content:center;align-items:center;gap:12px;pointer-events:auto}.sound{min-height:44px;padding:10px 14px;border:1px solid #9dc2cc47;border-radius:4px;background:#17313ad9;color:#d6ebe8;font-size:12px;cursor:pointer}.sound:hover{background:#25434de6}.sound:disabled{opacity:.65;cursor:default}
     .restart:hover{background:#66b1ff}.restart:active{background:#3a8ee6}button:focus-visible{outline:3px solid #fff;outline-offset:4px}
-    .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:pointer;touch-action:none}
+    .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:pointer;touch-action:pinch-zoom}
     .scene-control:focus-visible{outline:2px solid #f8fcf5;outline-offset:3px;background:#fff3}.knob:focus,.knob:focus-visible{outline:none;background:transparent}.scene-control:disabled{cursor:default}
     .knob{width:56px;height:56px;margin:-28px 0 0 -28px;cursor:grab}.knob[aria-disabled="true"]{cursor:default}.knob:active{cursor:grabbing}
     .result{position:absolute;z-index:3;top:max(30px,env(safe-area-inset-top));left:16px;right:16px;margin:0;text-align:center;font-weight:400;font-size:21px;letter-spacing:.3em;color:#deefed;pointer-events:none}
@@ -35,8 +35,8 @@
     @media(max-width:480px){.controls{inset-inline:12px;gap:12px;bottom:max(18px,env(safe-area-inset-bottom))}.level-name{left:16px}.restart{padding-inline:20px}.result{font-size:18px}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}.prototype::after{transition:none}}
 
-    /* 整页触控由关卡处理，避免双击或双指手势触发浏览器缩放。 */
-    html,body{touch-action:none}
+    /* 单指由关卡处理，双指保留浏览器原生缩放。 */
+    html,body{touch-action:pinch-zoom}
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     .prototype{height:100vh;height:100dvh}
     .restart,.sound,.previous-level,.next-level{touch-action:manipulation}

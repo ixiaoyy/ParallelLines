@@ -48,10 +48,60 @@
     return length2 > 1e-8 ? (dx * axisX + dy * axisY) / length2 : 0;
   }
 
+  /** Keep two-finger gestures native; cancel game input until every touch stream ends. */
+  function installPinchGuard(surface) {
+    const doc = surface.ownerDocument, view = doc.defaultView, touches = new Map();
+    let multi = false, cancelling = false, suppressClick = false;
+    const cancelGameTouches = () => {
+      cancelling = true;
+      try {
+        for (const [pointerId, touch] of touches) touch.target.dispatchEvent(new view.PointerEvent('pointercancel', {
+          bubbles: true, pointerId: pointerId, pointerType: 'touch', clientX: touch.x, clientY: touch.y
+        }));
+      } finally { cancelling = false; }
+    };
+    const clear = () => { if (touches.size) suppressClick = true; cancelGameTouches(); touches.clear(); multi = false; };
+    const track = event => {
+      if (cancelling) return;
+      if (multi && event.pointerType !== 'touch') { event.stopImmediatePropagation(); return; }
+      if (event.type === 'pointerdown') {
+        if (event.pointerType !== 'touch') { if (!touches.size) suppressClick = false; return; }
+        if (!surface.contains(event.target) && !touches.size) return;
+        if (!touches.size) suppressClick = false;
+        touches.set(event.pointerId, { target: event.target, x: event.clientX, y: event.clientY });
+        if (touches.size > 1 && !multi) { multi = true; suppressClick = true; cancelGameTouches(); }
+      }
+      if (!touches.has(event.pointerId)) {
+        if (event.pointerType === 'touch' && surface.contains(event.target) && ['pointerup', 'pointercancel', 'lostpointercapture'].includes(event.type)) event.stopImmediatePropagation();
+        return;
+      }
+      if (multi) event.stopImmediatePropagation();
+      if (event.type === 'pointerup' || event.type === 'pointercancel') {
+        touches.delete(event.pointerId);
+        if (!touches.size) multi = false;
+      }
+    };
+    for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture']) {
+      view.addEventListener(type, track, { capture: true, passive: true });
+    }
+    // Suppress a compatibility click from the cancelled gesture, never its native pinch default.
+    view.addEventListener('click', event => {
+      if (suppressClick && surface.contains(event.target) && (event.detail !== 0 || event.pointerType === 'touch' || event.sourceCapabilities?.firesTouchEvents)) {
+        event.preventDefault(); event.stopImmediatePropagation();
+      }
+    }, { capture: true });
+    view.addEventListener('blur', clear);
+    view.addEventListener('pagehide', clear);
+    doc.addEventListener('visibilitychange', () => { if (doc.hidden) clear(); });
+  }
+
   root.IllusionSceneInput = Object.freeze({
     cssPoint: cssPoint,
     dominantDelta: dominantDelta,
     rotationDelta: rotationDelta,
-    projectedDelta: projectedDelta
+    projectedDelta: projectedDelta,
+    installPinchGuard: installPinchGuard
   });
+  const surface = root.document?.querySelector('.prototype');
+  if (surface) installPinchGuard(surface);
 })(typeof globalThis !== 'undefined' ? globalThis : window);

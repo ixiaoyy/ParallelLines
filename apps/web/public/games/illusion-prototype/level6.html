@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <title>回廊彼岸 · 第六关：迷宫</title>
   <style>
@@ -12,9 +12,9 @@
     .prototype::before{content:"";position:absolute;z-index:1;inset:auto 0 0;height:min(160px,32%);background:linear-gradient(transparent,#081e22 80%);pointer-events:none}.scene-B::before,.scene-C::before,.scene-D::before{background:linear-gradient(transparent,#8dc7b4 80%)}.scene-E::before{background:linear-gradient(transparent,#315e67b8 85%)}
     .level-name{position:absolute;z-index:2;top:max(20px,env(safe-area-inset-top));left:24px;margin:0;font-size:14px;letter-spacing:.2em;color:#b0c6bc;pointer-events:none}.scene-B .level-name,.scene-C .level-name,.scene-D .level-name,.scene-E .level-name{color:#487c70}.is-ending .level-name{opacity:0}
     .previous-level{position:absolute;z-index:3;top:max(12px,env(safe-area-inset-top));right:20px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid #92a17766;border-radius:4px;background:#f5e6dfd9;color:#695b58;font-size:12px;text-decoration:none}.previous-level:hover{background:#ebd7cd}.previous-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
-    canvas{position:relative;z-index:1;display:block;width:100%;height:100%;touch-action:none;outline:none}.controls{position:absolute;z-index:3;inset:auto 20px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}
+    canvas{position:relative;z-index:1;display:block;width:100%;height:100%;touch-action:pinch-zoom;outline:none}.controls{position:absolute;z-index:3;inset:auto 20px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:15px;pointer-events:none}
     .restart{pointer-events:auto;min-height:44px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;cursor:pointer}.restart:hover{background:#66b1ff}.restart:active{background:#3a8ee6}.control-actions{display:flex;justify-content:center;align-items:center;gap:12px;pointer-events:auto}.sound{min-height:44px;padding:10px 14px;border:1px solid #89a7af66;border-radius:4px;background:#f5e6dfd9;color:#695b58;font-size:12px;cursor:pointer}.sound:hover{background:#ebd7cd}.sound:disabled{opacity:.65;cursor:default}button:focus-visible{outline:3px solid #fff;outline-offset:4px}
-    .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:grab;touch-action:none}.scene-control:active{cursor:grabbing}.scene-control:focus,.scene-control:focus-visible{outline:none;background:transparent}.scene-control[aria-disabled="true"]{cursor:default}.scene-control[hidden]{display:none}
+    .scene-control{position:absolute;z-index:2;width:44px;height:44px;margin:-22px 0 0 -22px;background:transparent;border:0;border-radius:50%;padding:0;cursor:grab;touch-action:pinch-zoom}.scene-control:active{cursor:grabbing}.scene-control:focus,.scene-control:focus-visible{outline:none;background:transparent}.scene-control[aria-disabled="true"]{cursor:default}.scene-control[hidden]{display:none}
     #curtain{position:absolute;z-index:5;inset:0;background:#172534;opacity:0;pointer-events:none}.result{position:absolute;z-index:3;top:30px;left:16px;right:16px;margin:0;text-align:center;font-weight:400;font-size:21px;letter-spacing:.3em;color:#eef5e5;pointer-events:none}.failure{position:absolute;z-index:4;inset:0;display:grid;place-items:center;padding:24px;background:#172534;text-align:center;font-size:16px}.failure[hidden],.result[hidden]{display:none}
     .prototype::after{content:"";position:absolute;z-index:2;inset:0;background:#2d315f9c;opacity:0;pointer-events:none;transition:opacity .3s ease}.prototype.is-complete::after{opacity:1}.prototype.is-complete .result{top:calc(50% - 65px);font-size:clamp(24px,4vw,31px);letter-spacing:.18em;color:#f2f5e9}.prototype.is-complete .controls{inset:0;display:block;pointer-events:none}.prototype.is-complete .control-actions{position:absolute;inset:0;display:block;pointer-events:none}.prototype.is-complete .restart{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);min-width:144px;pointer-events:auto}.prototype.is-complete .sound{position:absolute;right:20px;bottom:max(24px,env(safe-area-inset-bottom));pointer-events:auto}
     @media(max-width:480px){.controls{inset-inline:12px;gap:12px;bottom:max(18px,env(safe-area-inset-bottom))}.restart{padding-inline:20px}.level-name{left:16px}.previous-level{right:12px}}
@@ -22,8 +22,8 @@
     .finish-actions{display:flex;align-items:center;justify-content:center;gap:12px}.next-level{display:inline-flex;align-items:center;justify-content:center;pointer-events:auto;min-height:44px;min-width:116px;padding:10px 23px;border:0;border-radius:4px;background:#409EFF;color:#fff;font-size:13px;letter-spacing:.1em;text-decoration:none}.next-level[hidden]{display:none}.next-level:hover{background:#66b1ff}.next-level:active{background:#3a8ee6}.next-level:focus-visible{outline:3px solid #fff;outline-offset:4px}
     .prototype.is-complete .finish-actions{position:absolute;top:calc(50% + 2px);left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:calc(100% - 32px);max-width:360px;pointer-events:auto}.prototype.is-complete .restart{position:static;transform:none;min-width:132px}
 
-    /* 整页触控由关卡处理，避免双击或双指手势触发浏览器缩放。 */
-    html,body{touch-action:none}
+    /* 单指由关卡处理，双指保留浏览器原生缩放。 */
+    html,body{touch-action:pinch-zoom}
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
     .prototype{height:100vh;height:100dvh}
     .restart,.sound,.previous-level,.next-level{touch-action:manipulation}
