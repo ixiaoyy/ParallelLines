@@ -110,7 +110,7 @@ export const router = createRouter({
       meta: {
         seo: {
           title: "工具 · {siteTitle}",
-          description: "文职常用公式，按步骤照着做。",
+          description: "Excel 公式速查与拼豆图纸生成器，支持公式学习、图片转换、色号用量统计与图纸导出。",
           canonicalPath: "/tools",
         },
       },

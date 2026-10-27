@@ -130,13 +130,45 @@ async def games_page(request: Request, session: SessionDep) -> Response:
 
 @public_seo_router.get("/tools", response_class=HTMLResponse, include_in_schema=False)
 async def tools_page(request: Request, session: SessionDep) -> Response:
-    """Return the tools landing page with its current empty state.
+    """返回已有工具的真实列表首屏，不执行工具处理。
 
-    ``request`` resolves the canonical origin and ``session`` reads site
-    branding. No tool capabilities, permissions, or content are created.
+    ``request`` 提供规范域名，``session`` 仅读取站点品牌；返回沿用应用壳的 HTML。
     """
 
     document = await SeoService(session).tools_page(base_url(request))
+    return await html_page_response(document)
+
+
+# 工具原有末尾斜杠地址继续直接访问；游戏末尾斜杠仍由 Nginx 保持 301。
+@public_seo_router.get(
+    "/tools/excel-formulas", response_class=HTMLResponse, include_in_schema=False
+)
+@public_seo_router.get(
+    "/tools/excel-formulas/", response_class=HTMLResponse, include_in_schema=False
+)
+@public_seo_router.get(
+    "/tools/bead-pattern", response_class=HTMLResponse, include_in_schema=False
+)
+@public_seo_router.get(
+    "/tools/bead-pattern/", response_class=HTMLResponse, include_in_schema=False
+)
+@public_seo_router.get(
+    "/play/generals-soldiers", response_class=HTMLResponse, include_in_schema=False
+)
+@public_seo_router.get(
+    "/play/snake-escape", response_class=HTMLResponse, include_in_schema=False
+)
+@public_seo_router.get(
+    "/play/flappy-dunk", response_class=HTMLResponse, include_in_schema=False
+)
+async def interactive_page(request: Request, session: SessionDep) -> Response:
+    """返回已登记工具或游戏的首屏元信息和简介，不改变原互动流程。
+
+    ``request`` 选择明确登记的路径和规范域名，``session`` 仅读取站点品牌；
+    HTML 复用原应用资源、壳加载失败边界及无缓存响应约定。
+    """
+
+    document = await SeoService(session).interactive_page(request.url.path, base_url(request))
     return await html_page_response(document)
 
 

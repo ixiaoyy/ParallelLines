@@ -4,6 +4,9 @@ import type { MaybeRefOrGetter } from "vue";
 export const SEO_SITE_STRUCTURED_DATA_ID = "seo-site-structured-data";
 export const SEO_PAGE_STRUCTURED_DATA_ID = "seo-page-structured-data";
 export const SEO_BRAND_NAME = "ParallelLines";
+// Vue 挂载会先清空首屏正文；模块加载时保存服务端原站名，避免从双语图谱名称反向猜测配置。
+export const SEO_INITIAL_SITE_TITLE = typeof document === "undefined" ? undefined
+  : document.querySelector(".seo-fallback > nav > a")?.textContent?.trim() || undefined;
 
 const SEO_DEFAULT_PUBLIC_TITLE = "平行线";
 
@@ -56,6 +59,32 @@ export interface ProfileStructuredDataInput {
   createdAt: string;
   topicCount: number;
   postCount: number;
+}
+
+/**
+ * 读取首屏已有的站点图谱，供 Vue 接管时保留服务端的品牌、别名和规范地址。
+ *
+ * 无参数；返回通过 JSON 类型校验的图谱，缺失或格式无效时返回 undefined，不改写 DOM。
+ */
+export function readSiteStructuredData(): JsonLdObject | undefined {
+  if (typeof document === "undefined") return undefined;
+  const script = document.getElementById(SEO_SITE_STRUCTURED_DATA_ID);
+  if (!(script instanceof HTMLScriptElement) || script.type !== "application/ld+json") return undefined;
+  try {
+    const value: unknown = JSON.parse(script.textContent ?? "");
+    return isJsonLdValue(value) && value !== null && typeof value === "object" && !Array.isArray(value)
+      ? value : undefined;
+  } catch {
+    // 无效首屏图谱不能充当品牌来源，客户端继续使用既有默认值或论坛公开设置。
+    return undefined;
+  }
+}
+
+/** 校验解析后的未知 JSON 值，返回是否符合 JSON-LD 可序列化类型；不改写输入。 */
+function isJsonLdValue(value: unknown): value is JsonLdValue {
+  if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.every(isJsonLdValue);
+  return typeof value === "object" && Object.values(value).every(isJsonLdValue);
 }
 
 /**

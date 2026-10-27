@@ -91,7 +91,16 @@ async def test_sitemap_excludes_retired_forum_paths_and_keeps_legacy_api_redirec
         member_id = member["user"]["id"]
         assert public_topic_data["board_visibility"] == "public"
         assert "<loc>http://test/</loc>" in body
-        assert "/play/generals-soldiers" not in body
+        assert body.count("<loc>") == 7
+        for path in (
+            "/tools",
+            "/tools/excel-formulas",
+            "/tools/bead-pattern",
+            "/play/generals-soldiers",
+            "/play/snake-escape",
+            "/play/flappy-dunk",
+        ):
+            assert f"<loc>http://test{path}</loc>" in body
         assert "/b/seo-public" not in body
         assert f"/topics/{public_topic_data['id']}/{public_topic_data['slug']}" not in body
         assert f"/members/{member_id}" not in body

@@ -9,9 +9,14 @@ from types import SimpleNamespace
 from typing import cast
 
 import pytest
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import app.api.seo as seo_api
 import app.services.seo as seo_module
+from app.core.exceptions import NotFoundError
+from app.db.session import get_session
 from app.services.seo import SeoService, SeoSiteIdentity, site_description
 from app.services.seo_renderer import (
     SEO_BODY_MARKER,
@@ -165,14 +170,25 @@ def test_games_metadata_uses_canonical_directory_without_reading_catalog(catalog
 def test_catalog_sitemap_uses_canonical_root_entry(catalog_home):
     service, _, calls, _ = catalog_home("平行线")
     urls = asyncio.run(service.sitemap_urls("https://pingxingxian.space"))
-    assert [item.loc for item in urls] == ["https://pingxingxian.space/"]
+    assert [item.loc for item in urls] == [
+        "https://pingxingxian.space/",
+        "https://pingxingxian.space/tools",
+        "https://pingxingxian.space/tools/excel-formulas",
+        "https://pingxingxian.space/tools/bead-pattern",
+        "https://pingxingxian.space/play/generals-soldiers",
+        "https://pingxingxian.space/play/snake-escape",
+        "https://pingxingxian.space/play/flappy-dunk",
+    ]
+    assert all(item.lastmod is None for item in urls)
     assert calls == []
 
 
-def test_tools_page_exposes_only_current_empty_state(catalog_home):
+def test_tools_page_exposes_registered_tools_without_forum_content(catalog_home):
     service, _, calls, _ = catalog_home("平行线")
     origin = "https://pingxingxian.space"
-    expected_copy = "暂无可用工具。工具开放后会显示在这里。"
+    expected_copy = (
+        "Excel 公式速查与拼豆图纸生成器，支持公式学习、图片转换、色号用量统计与图纸导出。"
+    )
     meta = asyncio.run(service.meta_for_path("/tools?source=navigation", origin))
     document = asyncio.run(service.tools_page(origin))
     assert calls == []
@@ -180,16 +196,141 @@ def test_tools_page_exposes_only_current_empty_state(catalog_home):
     assert document.heading == "工具"
     assert document.intro == expected_copy
     assert document.meta == meta
-    assert meta.title == "工具 · 平行线 ParallelLines"
+    assert meta.title == "工具 · 平行线"
     assert meta.description == expected_copy
     assert meta.canonical_url == meta.og_url == f"{origin}/tools"
-    assert document.links == ()
+    assert [(link.path, link.label, link.description) for link in document.links] == [
+        ("/tools/excel-formulas", "Excel 公式速查", "文职常用公式，按步骤照着做。"),
+        ("/tools/bead-pattern", "拼豆图纸生成器", "将图片转换为拼豆图纸，查看色号和用量。"),
+    ]
     assert document.posts == ()
     assert document.page_structured_data is None
+    assert (
+        document.site_structured_data["@graph"][0]["description"] == site_description(document.site)
+    )
 
     rendered = render_semantic_fallback(document)
     assert '<a href="/">平行线</a>' in rendered
     assert f"<p>{expected_copy}</p>" in rendered
-    assert "相关公开内容" not in rendered
+    assert '<a href="/tools/excel-formulas">Excel 公式速查</a>' in rendered
+    assert '<a href="/tools/bead-pattern">拼豆图纸生成器</a>' in rendered
+    assert "暂无可用工具" not in rendered
+    assert 'href="/play/' not in rendered
     assert 'href="/forum"' not in rendered
     assert "圈子" not in rendered
+
+
+@pytest.mark.parametrize(
+    ("path", "heading", "description", "return_path", "return_label"),
+    [
+        (
+            "/tools/excel-formulas", "Excel 公式速查", "文职常用公式，按步骤照着做。",
+            "/tools", "返回工具列表",
+        ),
+        (
+            "/tools/bead-pattern", "拼豆图纸生成器", "将图片转换为拼豆图纸，查看色号和用量。",
+            "/tools", "返回工具列表",
+        ),
+        (
+            "/play/generals-soldiers", "将军战小兵", "在平行线与电脑进行将军战小兵对弈。",
+            "/", "返回游戏目录",
+        ),
+        (
+            "/play/snake-escape", "蛇蛇出洞",
+            "按顺序放走彩色小蛇，避开阻挡，在倒计时结束前清空棋盘。",
+            "/", "返回游戏目录",
+        ),
+        (
+            "/play/flappy-dunk", "飞翼灌篮",
+            "点按让带翅膀的篮球跳跃，从上方穿过篮圈，挑战连续进球和最高分。",
+            "/", "返回游戏目录",
+        ),
+    ],
+)
+def test_interactive_details_match_existing_copy_and_keep_canonical(
+    catalog_home, path, heading, description, return_path, return_label
+):
+    service, _, calls, _ = catalog_home("平行线")
+    origin = "https://pingxingxian.space"
+    requested_path = f"{path}/?lesson=person-total&utm_source=test#preview"
+    meta = asyncio.run(service.meta_for_path(requested_path, origin))
+    document = asyncio.run(service.interactive_page(requested_path, origin))
+    assert calls == []
+    assert document.meta == meta
+    assert document.status_code == 200
+    assert document.kind == ("tools" if path.startswith("/tools/") else "game")
+    assert document.heading == heading
+    assert document.intro == meta.description == meta.og_description == description
+    assert meta.title == meta.og_title == f"{heading} · 平行线"
+    assert meta.canonical_url == meta.og_url == f"{origin}{path}"
+    assert meta.robots == "index,follow"
+    assert [(link.path, link.label) for link in document.links] == [(return_path, return_label)]
+    assert document.posts == ()
+    assert document.page_structured_data is None
+    assert (
+        document.site_structured_data["@graph"][0]["description"] == site_description(document.site)
+    )
+    rendered = render_semantic_fallback(document)
+    assert f"<h1>{heading}</h1>" in rendered
+    assert f'<a href="{return_path}">{return_label}</a>' in rendered
+    assert 'href="/forum"' not in rendered
+
+
+@pytest.mark.parametrize("path", ["/tools/unregistered", "/play/unregistered"])
+def test_unregistered_interactive_details_are_not_reused(catalog_home, path):
+    service, _, calls, _ = catalog_home("平行线")
+    with pytest.raises(NotFoundError):
+        asyncio.run(service.interactive_page(path, "https://pingxingxian.space"))
+    with pytest.raises(NotFoundError):
+        asyncio.run(service.meta_for_path(path, "https://pingxingxian.space"))
+    assert calls == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/tools/excel-formulas", "/tools/excel-formulas/",
+        "/tools/bead-pattern", "/tools/bead-pattern/",
+        "/play/generals-soldiers", "/play/snake-escape", "/play/flappy-dunk",
+    ],
+)
+async def test_registered_detail_http_routes_render_without_redirect(
+    catalog_home, monkeypatch, path
+):
+    service, _, calls, _ = catalog_home("平行线")
+    app = FastAPI()
+    app.include_router(seo_api.public_seo_router)
+    app.dependency_overrides[get_session] = lambda: service.session
+    monkeypatch.setattr(seo_api, "SeoService", lambda session: service)
+    monkeypatch.setattr(seo_api, "get_settings", lambda: SimpleNamespace(
+        public_site_url="https://pingxingxian.space",
+        web_app_shell_url="http://web/index.html",
+        baidu_site_verification=None,
+    ))
+
+    async def load_shell(_url):
+        return (
+            f"<html><head>{SEO_HEAD_START_MARKER}<title>old</title>{SEO_HEAD_END_MARKER}"
+            '<link rel="stylesheet" href="/assets/app.hash.css"></head><body><div id="app">'
+            f'{SEO_BODY_MARKER}</div><script src="/assets/app.hash.js"></script></body></html>'
+        )
+
+    monkeypatch.setattr(seo_api, "load_app_shell", load_shell)
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="https://forged.example"
+    ) as client:
+        response = await client.get(f"{path}?lesson=person-total&utm_source=test")
+
+    canonical_path = path.rstrip("/")
+    assert response.status_code == 200
+    assert "location" not in response.headers
+    assert response.headers["cache-control"] == "no-cache"
+    assert response.text.count('rel="canonical"') == 1
+    assert f'href="https://pingxingxian.space{canonical_path}"' in response.text
+    assert "/assets/app.hash.css" in response.text
+    assert "/assets/app.hash.js" in response.text
+    assert "暂无可用工具" not in response.text
+    assert calls == []
+    route = next(route for route in seo_api.public_seo_router.routes if route.path == path)
+    assert route.include_in_schema is False

@@ -118,7 +118,15 @@ def test_all_public_forum_graphs_match_forum_shell_copy(forum_home, monkeypatch,
 def test_forum_home_does_not_expand_sitemap_or_openapi(forum_home):
     service, _, calls = forum_home
     urls = asyncio.run(service.sitemap_urls("https://pingxingxian.space"))
-    assert [item.loc for item in urls] == ["https://pingxingxian.space/"]
+    assert [item.loc for item in urls] == [
+        "https://pingxingxian.space/",
+        "https://pingxingxian.space/tools",
+        "https://pingxingxian.space/tools/excel-formulas",
+        "https://pingxingxian.space/tools/bead-pattern",
+        "https://pingxingxian.space/play/generals-soldiers",
+        "https://pingxingxian.space/play/snake-escape",
+        "https://pingxingxian.space/play/flappy-dunk",
+    ]
     assert calls == []
     route = next(route for route in public_seo_router.routes if route.path == "/forum")
     assert route.include_in_schema is False

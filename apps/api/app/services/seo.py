@@ -31,7 +31,23 @@ SITE_TITLE_FALLBACK = "平行线"
 SITE_BRAND_NAME = "ParallelLines"
 SITE_TAGLINE_FALLBACK = "让答案可追溯"
 SITE_DESCRIPTION_FALLBACK = "发现游戏与互动项目的分类目录。"
-TOOLS_DESCRIPTION = "暂无可用工具。工具开放后会显示在这里。"
+TOOLS_DESCRIPTION = (
+    "Excel 公式速查与拼豆图纸生成器，支持公式学习、图片转换、色号用量统计与图纸导出。"
+)
+# 只登记当前真实开放的工具与游戏，统一首屏、元信息和 sitemap 的公开范围。
+INTERACTIVE_PAGE_COPY = {
+    "/tools/excel-formulas": ("Excel 公式速查", "文职常用公式，按步骤照着做。"),
+    "/tools/bead-pattern": ("拼豆图纸生成器", "将图片转换为拼豆图纸，查看色号和用量。"),
+    "/play/generals-soldiers": ("将军战小兵", "在平行线与电脑进行将军战小兵对弈。"),
+    "/play/snake-escape": (
+        "蛇蛇出洞",
+        "按顺序放走彩色小蛇，避开阻挡，在倒计时结束前清空棋盘。",
+    ),
+    "/play/flappy-dunk": (
+        "飞翼灌篮",
+        "点按让带翅膀的篮球跳跃，从上方穿过篮圈，挑战连续进球和最高分。",
+    ),
+}
 SITE_LOGO_FALLBACK = "/logo-lines-mark.png"
 LEGACY_SITE_LOGO_URLS = {
     "/logo-lines.png",
@@ -43,7 +59,7 @@ PUBLIC_SITE_SETTING_KEYS = {"site_title", "site_tagline", "brand_logo_url"}
 
 JsonObject = dict[str, object]
 SeoPageKind = Literal[
-    "home", "tools", "boards", "board", "topic", "profile", "restricted", "missing"
+    "home", "tools", "game", "boards", "board", "topic", "profile", "restricted", "missing"
 ]
 
 
@@ -109,10 +125,13 @@ class SeoService:
         self.session = session
 
     async def sitemap_urls(self, base_url: str) -> list[SitemapUrl]:
-        """仅列出游戏目录的规范地址，保留现有论坛索引范围。"""
+        """列出目录和已开放的工具、游戏规范地址，不扩大论坛索引范围。"""
 
+        # 工具与游戏仅列真实登记的无参数地址，不为互动状态或旧论坛生成入口。
         return [
             SitemapUrl(loc=absolute_url(base_url, "/")),
+            SitemapUrl(loc=absolute_url(base_url, "/tools")),
+            *(SitemapUrl(loc=absolute_url(base_url, path)) for path in INTERACTIVE_PAGE_COPY),
         ]
 
     async def robots_txt(self, base_url: str) -> str:
@@ -160,8 +179,18 @@ class SeoService:
                 identity,
                 base_url,
                 "/tools",
-                title=f"工具 · {site_brand_name(identity.title)}",
+                title=f"工具 · {identity.title}",
                 description=TOOLS_DESCRIPTION,
+            )
+        # 已开放详情使用固定简介与无参数规范地址；教程选择和游戏状态仍由前端处理。
+        if normalized in INTERACTIVE_PAGE_COPY:
+            heading, description = INTERACTIVE_PAGE_COPY[normalized]
+            return self._site_meta(
+                identity,
+                base_url,
+                normalized,
+                title=f"{heading} · {identity.title}",
+                description=description,
             )
         # 独立论坛首页复用旧论坛描述，不能改变游戏目录的元信息。
         if normalized == "/forum":
@@ -314,9 +343,9 @@ class SeoService:
         )
 
     async def tools_page(self, base_url: str) -> SeoPageDocument:
-        """生成工具入口的真实空状态，不创建工具、权限或内容。
+        """生成工具列表首屏，公开真实工具及其现有详情入口。
 
-        ``base_url`` 用于规范地址；仅读取站点品牌，页面不包含可用工具链接。
+        ``base_url`` 用于规范地址；仅读取站点品牌，不改变工具数据和交互。
         """
 
         identity = await self._site_identity()
@@ -328,14 +357,55 @@ class SeoService:
                 identity,
                 base_url,
                 "/tools",
-                title=f"工具 · {site_brand_name(identity.title)}",
+                title=f"工具 · {identity.title}",
                 description=TOOLS_DESCRIPTION,
             ),
             heading="工具",
             intro=TOOLS_DESCRIPTION,
-            site_structured_data=self._site_structured_data(
-                identity, base_url, description=TOOLS_DESCRIPTION
+            # 列表只公开已登记工具，保留游戏和旧论坛各自的入口边界。
+            links=tuple(
+                SeoPageLink(path=path, label=heading, description=description)
+                for path, (heading, description) in INTERACTIVE_PAGE_COPY.items()
+                if path.startswith("/tools/")
             ),
+            site_structured_data=self._site_structured_data(identity, base_url),
+        )
+
+    async def interactive_page(self, path: str, base_url: str) -> SeoPageDocument:
+        """生成已开放工具或游戏的简介首屏，复用原应用完成实际交互。
+
+        ``path`` 只接受登记的详情路径，参数和末尾斜杠不产生新规范地址；
+        ``base_url`` 用于可信规范域名。返回只读文档，不启动游戏、不处理文件或写入计数。
+        """
+
+        canonical_path = normalize_path(path)
+        # 只为真实开放路径输出内容，未知工具和游戏不冒用现有详情。
+        if canonical_path not in INTERACTIVE_PAGE_COPY:
+            raise NotFoundError("seo_meta_not_found", "SEO metadata target not found")
+        heading, description = INTERACTIVE_PAGE_COPY[canonical_path]
+        identity = await self._site_identity()
+        is_tool = canonical_path.startswith("/tools/")
+        return SeoPageDocument(
+            kind="tools" if is_tool else "game",
+            status_code=200,
+            site=identity,
+            meta=self._site_meta(
+                identity,
+                base_url,
+                canonical_path,
+                title=f"{heading} · {identity.title}",
+                description=description,
+            ),
+            heading=heading,
+            intro=description,
+            # 无脚本首屏提供原有返回入口，工具处理和游戏运行继续由 Vue 接管。
+            links=(
+                SeoPageLink(
+                    path="/tools" if is_tool else "/",
+                    label="返回工具列表" if is_tool else "返回游戏目录",
+                ),
+            ),
+            site_structured_data=self._site_structured_data(identity, base_url),
         )
 
     async def forum_page(self, base_url: str) -> SeoPageDocument:

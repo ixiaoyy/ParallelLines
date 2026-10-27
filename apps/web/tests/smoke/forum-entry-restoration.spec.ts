@@ -215,7 +215,10 @@ test("论坛品牌与主题不残留到原目录后台，原后台保持独立�
   await expect(page.locator(".admin-console-shell")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue("--primary"))).toBe("");
   expect(await page.evaluate(() => document.documentElement.getAttribute("data-interface-theme"))).toBeNull();
-  await expect(page.locator("#seo-site-structured-data")).toHaveCount(0);
+  await expect(page.locator("#seo-site-structured-data")).toHaveCount(1);
+  // script 不提供可见文本，直接核对 JSON 文本，防止负向断言在空文本上误通过。
+  await expect.poll(() => page.locator("#seo-site-structured-data").textContent()).toContain("收录 AI 网页游戏");
+  await expect.poll(() => page.locator("#seo-site-structured-data").textContent()).not.toContain("固定数据验证");
   await page.goto("/admin");
   await expect(page.locator(".admin-console-shell")).toHaveCount(0);
   await expect(page).toHaveTitle(/目录管理与访问统计/);
@@ -223,7 +226,7 @@ test("论坛品牌与主题不残留到原目录后台，原后台保持独立�
   expect(state.unexpected).toEqual([]);
 });
 
-test("默认进入游戏目录，圈子禁用，工具为空状态且不加载具体工具", async ({ page }, testInfo) => {
+test("默认进入游戏目录，圈子禁用，工具列表展示两项工具且不加载工作区", async ({ page }, testInfo) => {
   const state = await fixture(page);
   await page.goto("/?source=qa#entry");
   await expect(page).toHaveURL(/\/\?source=qa#entry$/);
@@ -279,7 +282,9 @@ test("默认进入游戏目录，圈子禁用，工具为空状态且不加载�
   }
   await nav.getByRole("link", { name: "工具", exact: true }).click();
   await expect(page).toHaveURL(/\/tools$/);
-  await expect(page.getByRole("heading", { name: "暂无可用工具", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Excel 公式速查", exact: true })).toHaveAttribute("href", "/tools/excel-formulas");
+  await expect(page.getByRole("link", { name: "拼豆图纸生成器", exact: true })).toHaveAttribute("href", "/tools/bead-pattern");
+  await expect(page.locator(".formula-guide, .bead-workspace")).toHaveCount(0);
   await expect(page.getByRole("link", { name: /个人日报助手|PDF 英文化/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "圈子，暂未开放", exact: true })).toBeDisabled();
   for (const width of [1280, 390, 320]) {
@@ -295,8 +300,9 @@ test("默认进入游戏目录，圈子禁用，工具为空状态且不加载�
     await page.screenshot({ path: testInfo.outputPath(`tools-entry-${width}.png`), fullPage: true });
   }
   await page.reload();
-  await expect(page.getByRole("heading", { name: "暂无可用工具", exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "去看看游戏", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Excel 公式速查", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "拼豆图纸生成器", exact: true })).toBeVisible();
+  await page.getByRole("navigation", { name: "页脚导航", exact: true }).getByRole("link", { name: "游戏", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/games?source=compat#entry");
   await expect(page).toHaveURL(/\/games\?source=compat#entry$/);

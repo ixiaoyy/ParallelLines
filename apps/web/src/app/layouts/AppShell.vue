@@ -29,9 +29,8 @@ import {
   browserSeoOrigin,
   buildSeoSiteName,
   buildSiteStructuredData,
-  SEO_SITE_STRUCTURED_DATA_ID,
-  useStructuredData,
 } from "@/shared/seo/structuredData";
+import type { JsonLdObject } from "@/shared/seo/structuredData";
 import UiButton from "@/shared/ui/Button.vue";
 import { applySiteBranding } from "@/shared/theme/siteBranding";
 import { applyStoredInterfaceTheme, setInterfaceTheme } from "@/shared/theme/interfaceTheme";
@@ -56,6 +55,8 @@ const ForumLeftRail = defineAsyncComponent(() =>
 
 const router = useRouter();
 const route = useRoute();
+const props = defineProps<{ siteOrigin?: string }>();
+const emit = defineEmits<{ "site-structured-data": [value: JsonLdObject, siteTitle: string] }>();
 // 论坛运行时样式和偏好仅在外壳存续期间生效，离开时还原目录原有文档状态。
 const documentRoot = document.documentElement;
 const previousRootStyle = documentRoot.getAttribute("style");
@@ -122,14 +123,19 @@ const siteTagline = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_tagline", "让答案可追溯"),
 );
 const siteSeoName = computed(() => buildSeoSiteName(siteTitle.value));
-const routeSeoMeta = computed(() =>
-  route.meta.forumShell ? resolveRouteSeoMeta(route.meta.seo, {
+// 首屏规范域名由 App 验证后传入，论坛更新品牌时继续沿用；没有首屏证明时才使用浏览器地址。
+const siteOrigin = computed(() => props.siteOrigin ?? browserSeoOrigin());
+const routeSeoMeta = computed(() => {
+  if (!route.meta.forumShell) return undefined;
+  const meta = resolveRouteSeoMeta(route.meta.seo, {
     routePath: route.path,
     siteTitle: siteTitle.value,
     siteName: siteSeoName.value,
     siteTagline: siteTagline.value,
-  }) : undefined,
-);
+  });
+  if (siteOrigin.value) meta.canonicalPath = new URL(meta.canonicalPath, siteOrigin.value).toString();
+  return meta;
+});
 const brandLogoUrl = computed(() => {
   const configuredLogo = publicSettingString(
     siteSettingsQuery.data.value,
@@ -139,11 +145,11 @@ const brandLogoUrl = computed(() => {
   return LEGACY_BRAND_LOGO_URLS.has(configuredLogo) ? DEFAULT_BRAND_LOGO_URL : configuredLogo;
 });
 const siteStructuredData = computed(() => {
-  // 切回目录时立即移除论坛站点图谱，不让旧外壳短暂保留论坛语义。
+  // 离开论坛后停止上报；站点槽由 App 保持，外壳卸载不会删除新页面的图谱。
   if (!route.meta.forumShell) {
-    return null;
+    return undefined;
   }
-  const origin = browserSeoOrigin();
+  const origin = siteOrigin.value;
   if (!origin || !siteSettingsQuery.data.value) {
     return undefined;
   }
@@ -215,7 +221,10 @@ watchEffect(() => {
   }
 });
 useSeoMeta(routeSeoMeta);
-useStructuredData(SEO_SITE_STRUCTURED_DATA_ID, siteStructuredData);
+// 沿用论坛既有公开设置查询向 App 交接最新品牌，只读页面内容和身份相关 schema 仍由原页面负责。
+watchEffect(() => {
+  if (siteStructuredData.value) emit("site-structured-data", siteStructuredData.value, siteTitle.value);
+});
 
 watch(
   currentUser,
