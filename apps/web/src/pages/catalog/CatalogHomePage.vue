@@ -6,6 +6,7 @@ import { useCurrentUser } from "@/features/auth/queries";
 
 import type { CatalogProject } from "@/features/catalog/model";
 import { catalogAuthorKey, rankCatalogAuthors } from "@/features/catalog/authorRanking";
+import { categoryVisualFor } from "@/features/catalog/categoryVisuals";
 import { getCatalogCoverPath } from "@/features/catalog/coverManifest";
 import { useCatalog, useRecordCatalogProjectView } from "@/features/catalog/queries";
 import { readPersonalLibrary, recordRecentProject, savePersonalLibrary, toggleWantedProject } from "@/features/catalog/personalLibrary";
@@ -16,6 +17,7 @@ import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
 
 import CatalogSubmissionDialog from "./CatalogSubmissionDialog.vue";
 import CatalogLeaderboard from "./CatalogLeaderboard.vue";
+import CatalogCategoryOrnament from "./CatalogCategoryOrnament.vue";
 
 type SortMode = "latest" | "hot";
 type CatalogView = "games" | "authors" | "contributors";
@@ -205,7 +207,7 @@ const displayedProjects = computed(() => visibleProjects.value.slice(0, visibleL
 const isDiscovery = computed(() => layoutMode.value === "grid" && libraryScope.value === "all"
   && selectedCategory.value === "all" && !normalizedSearch.value && !selectedAuthorKey.value);
 const presentationGroups = computed(() => {
-  if (!isDiscovery.value) return [{ key: "results", name: "", featured: false,
+  if (!isDiscovery.value) return [{ key: "results", name: "", featured: false, visual: undefined,
     total: visibleProjects.value.length, projects: displayedProjects.value }];
   const byCategory = new Map<string, CatalogEntry[]>();
   for (const project of visibleProjects.value) {
@@ -214,11 +216,11 @@ const presentationGroups = computed(() => {
     byCategory.set(project.categorySlug, projects);
   }
   return [
-    { key: "featured", name: "精选推荐", featured: true,
+    { key: "featured", name: "精选推荐", featured: true, visual: undefined,
       total: visibleProjects.value.length, projects: visibleProjects.value.slice(0, 6) },
     ...categories.value.map((category) => {
       const projects = byCategory.get(category.slug) ?? [];
-      return { key: category.slug, name: category.name, featured: false,
+      return { key: category.slug, name: category.name, featured: false, visual: categoryVisualFor(category),
         total: projects.length, projects: projects.slice(0, categoryPreviewLimit.value) };
     }).filter((group) => group.projects.length),
   ].filter((group) => group.projects.length);
@@ -496,8 +498,8 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
             <div v-if="selectedAuthorKey && selectedAuthorKey !== 'original'" class="catalog-author-selection"><span>正在查看 <strong>{{ selectedAuthorName || '该作者' }}</strong> 的作品</span><button type="button" @click="clearAuthorGames">清除作者筛选</button></div>
             <div v-if="visibleProjects.length === 0" class="catalog-state" role="status"><span>{{ emptyLibraryText }}</span><button v-if="search || selectedCategory !== 'all' || selectedAuthorKey" type="button" @click="search = ''; searchInput = ''; selectedCategory = 'all'; selectedAuthorKey = null">清除筛选</button></div>
             <div v-else ref="catalogGrid" class="catalog-groups" :class="{ 'catalog-groups--list': layoutMode === 'list' }">
-              <section v-for="group in presentationGroups" :key="group.key" class="catalog-group" :class="{ 'catalog-group--featured': group.featured }" :aria-label="group.name || '游戏列表'">
-                <header v-if="group.name" class="catalog-group__heading"><div><img v-if="group.key === 'puzzle'" class="catalog-group__ornament" src="/catalog/jade-library-v1/puzzle-vignette.webp" alt="" aria-hidden="true" /><span v-else class="catalog-group__mark" aria-hidden="true"><FireFilled v-if="group.featured" /><span v-else class="catalog-icon catalog-icon--gamepad"></span></span><h2>{{ group.name }}</h2><span class="catalog-group__count">{{ group.featured ? (sortMode === 'hot' ? '人气之选' : '新鲜上架') : `共 ${group.total} 款 · 展示 ${group.projects.length} 款` }}</span></div><button v-if="!group.featured" type="button" :aria-label="`查看全部${group.name}游戏`" @click="browseCategory(group.key)">查看全部 <span aria-hidden="true">↗</span></button></header>
+              <section v-for="group in presentationGroups" :key="group.key" class="catalog-group" :class="{ 'catalog-group--featured': group.featured, 'catalog-group--illustrated': group.visual?.artwork }" :style="group.visual ? { '--category-art-wash': group.visual.wash, '--category-art-ink': group.visual.ink } : undefined" :aria-label="group.name || '游戏列表'">
+                <header v-if="group.name" class="catalog-group__heading"><div><CatalogCategoryOrnament v-if="group.visual?.artwork" :visual="group.visual" /><span v-else-if="group.featured" class="catalog-group__mark" aria-hidden="true"><FireFilled /></span><h2>{{ group.name }}</h2><span class="catalog-group__count">{{ group.featured ? (sortMode === 'hot' ? '人气之选' : '新鲜上架') : `共 ${group.total} 款 · 展示 ${group.projects.length} 款` }}</span></div><button v-if="!group.featured" type="button" :aria-label="`查看全部${group.name}游戏`" @click="browseCategory(group.key)">查看全部 <span aria-hidden="true">↗</span></button></header>
                 <div class="catalog-grid" :class="{ 'catalog-grid--featured': group.featured && group.projects.length === 6, 'catalog-grid--list': layoutMode === 'list' }">
               <article v-for="(project, index) in group.projects" :key="project.id" class="catalog-card" :class="[{ 'catalog-card--preview': isPreviewProject(project), 'is-selected': selectedCardKey === projectCardKey(group.key, project.id) }]" :data-project-id="project.id" :data-card-key="projectCardKey(group.key, project.id)" :aria-current="selectedCardKey === projectCardKey(group.key, project.id) ? 'true' : undefined" tabindex="-1" @pointerdown="selectProjectCard(group.key, project.id)" @focusin="selectProjectCard(group.key, project.id)">
                 <span v-if="selectedProjectId === project.id" class="catalog-card__selection-frame" aria-hidden="true"></span>
