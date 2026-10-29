@@ -470,7 +470,11 @@ export const router = createRouter({
       component: () => import("@/pages/auth/ChatSsoPage.vue"),
       meta: {
         forumShell: false,
-        seo: { title: "进入聊天 · {siteTitle}", robots: "noindex,nofollow" },
+        seo: {
+          title: "进入聊天 · {siteTitle}",
+          description: "验证平行线登录并安全进入聊天。",
+          robots: "noindex,nofollow",
+        },
       },
     },
     {
