@@ -1,8 +1,8 @@
 # The disabled deployment cannot activate even if the owner has since edited .env.
+# Model candidates are retained; the server Key remains forcibly empty.
 # Enabling models is a separate, manual owner action using compose.production.yaml.
 services:
   librechat:
     environment:
       APP_TITLE: 家庭聊天（GPT 尚未启用）
       OPENAI_API_KEY: ""
-      OPENAI_CHAT_MODELS: ""

@@ -6,6 +6,8 @@ test('missing key exposes no GPT models and a clear disabled message', () => {
   const r = buildConfig({ OPENAI_CHAT_MODELS: 'gpt-6-luna' });
   assert.equal(r.enabled, false);
   assert.equal(r.runtimeKey, '');
+  assert.deepEqual(r.selectedModels, ['gpt-6-luna']);
+  assert.deepEqual(r.approvedProfile.endpoints.openAI.models, []);
   assert.deepEqual(r.config.endpoints.openAI.models, []);
   assert.deepEqual(r.config.modelSpecs.list, []);
   assert.equal(r.config.interface.modelSelect, false);
@@ -30,6 +32,7 @@ test('explicit GPT list uses native OpenAI and Responses without serializing the
   const r = buildConfig({ OPENAI_API_KEY: key, OPENAI_CHAT_MODELS: 'gpt-6-luna,gpt-6.1-sol,gpt-6-luna' });
   assert.equal(r.enabled, true);
   assert.deepEqual(r.models, ['gpt-6-luna', 'gpt-6.1-sol']);
+  assert.deepEqual(r.selectedModels, ['gpt-6-luna', 'gpt-6.1-sol']);
   assert.deepEqual(Object.keys(r.config.endpoints), ['openAI']);
   assert.equal(r.config.modelSpecs.enforce, true);
   assert.deepEqual(r.config.endpoints.openAI.models, []);

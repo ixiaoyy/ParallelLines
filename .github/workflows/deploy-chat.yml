@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Read-only server preflight or deploy the disabled chat service
+        description: Inspect, deploy disabled chat, or configure only the model candidates
         type: choice
-        options: [preflight, deploy]
+        options: [preflight, deploy, models]
         default: preflight
       initialize_application_secrets:
         description: Generate five server-local app secrets only after explicit owner approval
@@ -24,6 +24,31 @@ jobs:
   chat:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        if: inputs.mode == 'models'
+      - name: Validate the model-only file update with synthetic Linux settings
+        if: inputs.mode == 'models'
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const os = require('node:os');
+          const path = require('node:path');
+          const cp = require('node:child_process');
+          const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chat-model-fixture-'));
+          fs.copyFileSync('deploy/librechat/configure-models.cjs', path.join(dir, 'configure-models.cjs'));
+          const before = Buffer.from('OPENAI_CHAT_MODELS=\nOPENAI_API_KEY=synthetic-fixture-only\nJWT_SECRET=synthetic-fixture-only\n');
+          fs.writeFileSync(path.join(dir, '.env'), before, { mode: 0o600 });
+          const oldStat = fs.statSync(path.join(dir, '.env'));
+          const result = cp.spawnSync(process.execPath, [path.join(dir, 'configure-models.cjs')], { encoding: 'utf8' });
+          if (result.status !== 0) throw new Error('Synthetic Linux model update failed');
+          const expected = Buffer.from('OPENAI_CHAT_MODELS=gpt-6-luna,gpt-6.1-sol\nOPENAI_API_KEY=synthetic-fixture-only\nJWT_SECRET=synthetic-fixture-only\n');
+          const stat = fs.statSync(path.join(dir, '.env'));
+          if (!fs.readFileSync(path.join(dir, '.env')).equals(expected) || (stat.mode & 0o777) !== 0o600 || stat.uid !== oldStat.uid || stat.gid !== oldStat.gid) {
+            throw new Error('Synthetic Linux byte/ownership preservation failed');
+          }
+          fs.rmSync(dir, { recursive: true });
+          console.log(JSON.stringify({ linuxAtomicUpdate: true, otherBytesPreserved: true, mode: '0600', ownerAndGroupPreserved: true }));
+          NODE
       - name: Inspect or deploy using the existing production SSH connection
         uses: appleboy/ssh-action@v1.0.3
         with:

@@ -17,6 +17,12 @@ const configPath = path.join(directory, 'librechat.yaml');
 fs.writeFileSync(configPath, JSON.stringify(generated.config, null, 2), { mode: 0o600 });
 // Operator imports this secret-free override only into an explicitly selected USER profile.
 fs.writeFileSync(path.join(directory, 'approved-user-profile.yaml'), JSON.stringify(generated.approvedProfile, null, 2), { mode: 0o600 });
+// Candidates are preserved without a Key; this file grants no account access.
+const labels = { 'gpt-6-luna': 'GPT-6 Luna', 'gpt-6.1-sol': 'GPT-6.1 Sol' };
+fs.writeFileSync(path.join(directory, 'selected-models.json'), JSON.stringify({
+  models: generated.selectedModels.map(id => ({ id, label: labels[id] || id })),
+  defaultAccountAccess: false
+}, null, 2), { mode: 0o600 });
 const env = {
   ...process.env,
   OPENAI_API_KEY: generated.runtimeKey,

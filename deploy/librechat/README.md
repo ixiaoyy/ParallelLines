@@ -21,7 +21,7 @@
 
 也可使用仓库 Actions 的 `Deploy family chat`：`mode=preflight` 只检查真实资源、Docker 网络、服务状态及 `.env` 是否存在；`mode=deploy` 启动服务。只有在所有者明确同意生成上述五项密钥后，才勾选 `initialize_application_secrets`。这一步不会创建 LibreChat 管理员账号。
 
-此 Actions 发布总会叠加 `compose.disabled.yaml`，把容器的 OpenAI Key/模型设为空，即使服务器 `.env` 已有填写也保持停用。下文用户手动启用使用基础 `compose.production.yaml`，不叠加停用覆盖文件。主站与聊天发布共用串行队列，后续发布不会取消正在执行的远端操作。
+此 Actions 发布总会叠加 `compose.disabled.yaml`，把容器的 OpenAI Key 设为空，即使服务器 `.env` 已有填写也保持停用；候选模型列表单独保留。下文用户手动启用使用基础 `compose.production.yaml`，不叠加停用覆盖文件。主站与聊天发布共用串行队列，后续发布不会取消正在执行的远端操作。
 
 ```sh
 cd /opt/parallellines/deploy/librechat
@@ -89,15 +89,14 @@ nano /opt/parallellines/deploy/librechat/.env
 
 模型不是 ChatGPT 界面显示名。不要把 Key 填到前端、源码、YAML、聊天消息、Git 或命令行参数。家庭用户只登录账号，模型 Key 由服务器统一持有。后台容器也不接收 OpenAI Key。
 
-截至 2026-10-29 从 [OpenAI 模型目录](https://developers.openai.com/api/docs/models) 核验的可选 ID 包括：
+2026-10-29 按用户授权配置的服务器候选列表为 `gpt-6-luna,gpt-6.1-sol`，从 [OpenAI 模型目录](https://developers.openai.com/api/docs/models) 及对应模型页重新核验：
 
 | 可选模型 | 用途提示 | 官方文档 |
 |---|---|---|
 | `gpt-6-luna` | 成本敏感的日常聊天；固定 LibreChat 源码已有该系列识别 | [模型说明](https://developers.openai.com/api/docs/models/gpt-6-luna) |
 | `gpt-6.1-sol` | 更复杂的文字与图片任务 | [模型说明](https://developers.openai.com/api/docs/models/gpt-6.1-sol) |
-| `gpt-6-astra` | 更高能力、相应更高成本 | [模型说明](https://developers.openai.com/api/docs/models/gpt-6-astra) |
 
-这些是当前文档中的选项，不是替用户选定的生产默认。模板故意留空。模型存在于文档不代表当前账户已获得访问权限；填写前查看账户可用模型与 [当前价格](https://developers.openai.com/api/docs/pricing)。`gpt-6.1-terra` 虽在官方目录中，但此固定 LibreChat 版本缺少该系列的专门适配，暂不作为已验证候选。旧 mock 的 `gpt-4o-mini` 不会成为生产默认。
+这两个正式型号均支持文字/图片输入、文字输出及 Responses；此固定 LibreChat 版本已有两者系列识别。未进行真实收费请求，文档与源码核验不代表当前账户已获访问权限。初始化模板仍留空；当前实例通过 `Deploy family chat` 的 `mode=models` 只替换 `.env` 的 `OPENAI_CHAT_MODELS` 行，其他字节和文件权限保留，只重建 LibreChat API，不创建或修改任何用户/管理员/profile。候选以无密钥的 `/app/data/family-config/selected-models.json` 留档；缺 Key 时实际可调用目录及授权导入模板继续为空。填写 Key、单独给目标 USER profile 授权后，聊天页才会显示模型。查看 [当前价格](https://developers.openai.com/api/docs/pricing)；不为 Sol 配置 `reasoning.effort=none`，该型号不支持此值。旧 mock 的 `gpt-4o-mini` 不会成为生产默认。
 
 例如，用户决定选择日常模型后可填写 `OPENAI_CHAT_MODELS=gpt-6-luna`。修改后需要**重建容器以重读 env**：
 

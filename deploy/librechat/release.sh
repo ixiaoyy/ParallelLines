@@ -5,7 +5,7 @@ mode=${1:-preflight}
 revision=${2:?Release commit is required}
 initialize=${3:-false}
 cd /opt/parallellines
-test "$mode" = preflight || test "$mode" = deploy
+test "$mode" = preflight || test "$mode" = deploy || test "$mode" = models
 test "$(git rev-parse origin/main)" = "$revision"
 
 # Report capacity and state without reading application environments or credentials.
@@ -31,6 +31,40 @@ git merge-base --is-ancestor HEAD "$revision"
 # Fast-forward merge refuses conflicting tracked/untracked files; never hard-reset local work.
 git merge --ff-only "$revision"
 cd deploy/librechat
+if test "$mode" = models; then
+  # This mode never initializes credentials, reads their values, or grants profiles.
+  test -f .env
+  active_files=$(sudo docker inspect parallellines-chat-librechat-1 --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}')
+  if test "$active_files" != "$PWD/compose.production.yaml,$PWD/compose.disabled.yaml"; then
+    echo '[chat] stopped before editing: existing deployment mode changed; no Key or model settings changed'
+    exit 3
+  fi
+  sudo docker run --rm --network none --user "$(id -u):$(id -g)" \
+    -v "$PWD:/integration" --entrypoint node \
+    registry.librechat.ai/librechat-ai/librechat-api@sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5 \
+    /integration/configure-models.cjs
+  model_compose=(sudo docker compose --env-file .env -f compose.production.yaml -f compose.disabled.yaml)
+  "${model_compose[@]}" config --quiet
+  "${model_compose[@]}" up -d --wait --wait-timeout 240 --no-deps --force-recreate librechat
+  "${model_compose[@]}" exec -T librechat node -e '
+    const fs = require("node:fs");
+    const dir = "/app/data/family-config/";
+    const selected = JSON.parse(fs.readFileSync(dir + "selected-models.json", "utf8"));
+    const base = JSON.parse(fs.readFileSync(dir + "librechat.yaml", "utf8"));
+    const profile = JSON.parse(fs.readFileSync(dir + "approved-user-profile.yaml", "utf8"));
+    const ids = selected.models.map(m => m.id);
+    const baseEmpty = base.endpoints.openAI.models.length === 0 && base.modelSpecs.list.length === 0;
+    const templateEmpty = profile.endpoints.openAI.models.length === 0;
+    const ok = JSON.stringify(ids) === JSON.stringify(["gpt-6-luna", "gpt-6.1-sol"]) &&
+      process.env.OPENAI_CHAT_MODELS === ids.join(",") && baseEmpty && templateEmpty;
+    console.log(JSON.stringify({ selectedModels: selected.models, runtimeModelSetting: process.env.OPENAI_CHAT_MODELS,
+      defaultAccountAccess: false, baseModelsEmpty: baseEmpty, grantTemplateModelsEmpty: templateEmpty, verified: ok }));
+    if (!ok) process.exit(1);
+  '
+  "${model_compose[@]}" ps librechat
+  echo '[chat] model candidates configured; API Key and account/profile records not changed'
+  exit 0
+fi
 if ! test -e .env; then
   if test "$initialize" != true; then
     echo '[chat] stopped before startup: application-secret initialization not authorized'

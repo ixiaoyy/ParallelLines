@@ -8,8 +8,9 @@ function buildConfig(env) {
   const keyConfigured = Boolean(rawKey) && !/^(user_provided|replace.*|change.*|your[_ -].*|<.*>)$/i.test(rawKey);
   const requestedModels = [...new Set((env.OPENAI_CHAT_MODELS || '').split(',').map(s => s.trim()).filter(Boolean))];
   const invalidModel = requestedModels.some(id => !/^gpt-[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/.test(id) || /^gpt-(image|audio|realtime|transcribe|live|oss)(-|$)/i.test(id));
-  const enabled = keyConfigured && requestedModels.length > 0 && !invalidModel;
-  const models = enabled ? requestedModels : [];
+  const selectedModels = invalidModel ? [] : requestedModels;
+  const enabled = keyConfigured && selectedModels.length > 0;
+  const models = enabled ? selectedModels : [];
   const config = structuredClone(base);
   const grantedModels = {
     enforce: true,
@@ -32,7 +33,7 @@ function buildConfig(env) {
     modelSpecs: grantedModels
   };
   return {
-    config, approvedProfile, enabled, models,
+    config, approvedProfile, enabled, models, selectedModels,
     reason: enabled ? null : !keyConfigured ? 'missing_server_key' : invalidModel ? 'invalid_gpt_model_id' : 'missing_model_selection',
     // A placeholder, personal-key sentinel or absent model must never authorize a model request.
     runtimeKey: enabled ? rawKey : '',
