@@ -49,6 +49,10 @@ test('theme reuses exact forum palette with valid opaque RGB triples', () => {
   assert.equal(light['rgb-text-primary'], '51 65 85');
   assert.equal(light['rgb-text-secondary'], '71 85 105');
   for (const mode of Object.values(theme.modes)) {
+    assert.equal(mode.colors['rgb-surface-inverted'], '64 158 255');
+    assert.equal(mode.colors['rgb-surface-inverted-hover'], '102 177 255');
+    assert.equal(mode.colors['rgb-surface-inverted-pressed'], '58 142 230');
+    assert.equal(mode.colors['rgb-text-inverted'], '255 255 255');
     for (const value of Object.values(mode.colors)) {
       assert.match(value, /^\d{1,3} \d{1,3} \d{1,3}$/);
       assert.ok(value.split(' ').every(channel => Number(channel) <= 255));

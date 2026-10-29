@@ -53,7 +53,10 @@
         "rgb-border-menu": "226 232 240",
         "rgb-border-control": "203 213 225",
         "rgb-field-fill": "255 255 255",
-        "rgb-field-text": "71 85 105"
+        "rgb-field-text": "71 85 105",
+        "rgb-surface-inverted": "64 158 255",
+        "rgb-surface-inverted-hover": "102 177 255",
+        "rgb-surface-inverted-pressed": "58 142 230"
       }
     },
     "dark": {
@@ -72,7 +75,10 @@
         "rgb-surface-submit": "64 158 255",
         "rgb-surface-submit-hover": "102 177 255",
         "rgb-text-inverted": "255 255 255",
-        "rgb-text-on-status": "255 255 255"
+        "rgb-text-on-status": "255 255 255",
+        "rgb-surface-inverted": "64 158 255",
+        "rgb-surface-inverted-hover": "102 177 255",
+        "rgb-surface-inverted-pressed": "58 142 230"
       }
     }
   }
