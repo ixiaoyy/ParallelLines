@@ -25,8 +25,8 @@
 
 ```sh
 cd /opt/parallellines/deploy/librechat
-docker pull registry.librechat.ai/librechat-ai/librechat-api@sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5
-docker run --rm --network none --user "$(id -u):$(id -g)" \
+sudo docker pull registry.librechat.ai/librechat-ai/librechat-api@sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5
+sudo docker run --rm --network none --user "$(id -u):$(id -g)" \
   -v "$PWD:/integration" --entrypoint node \
   registry.librechat.ai/librechat-ai/librechat-api@sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5 \
   /integration/init.cjs
@@ -52,9 +52,9 @@ chmod 600 .env
 检查已有平行线 nginx 所在网络，按实际结果在 `.env` 设置 `PARALLELLINES_NETWORK`（通常是 `parallellines_default`）：
 
 ```sh
-docker network ls --format '{{.Name}}'
-docker compose --env-file .env -f compose.production.yaml config --quiet
-docker compose --env-file .env -f compose.production.yaml up -d
+sudo docker network ls --format '{{.Name}}'
+sudo docker compose --env-file .env -f compose.production.yaml config --quiet
+sudo docker compose --env-file .env -f compose.production.yaml up -d
 ```
 
 如有多个网络，在原项目目录只读确认 nginx 的实际网络，再选平行线自己的 default 网络：
@@ -64,12 +64,12 @@ cd /opt/parallellines
 docker inspect "$(docker compose ps -q nginx)" --format '{{range $name,$value := .NetworkSettings.Networks}}{{println $name}}{{end}}'
 ```
 
-主 nginx 已有 Docker DNS resolver；新增代理用变量延迟解析 LibreChat 服务。聊天服务暂未启动时，不会阻止游戏站 nginx 启动。应用 `/chat` 补丁后执行原项目的 `nginx -t`，成功后 reload；不要因聊天配置重启游戏业务服务。
+主 nginx 已有 Docker DNS resolver；新增代理用变量延迟解析 LibreChat 服务。聊天服务暂未启动时，不会阻止游戏站 nginx 启动。路由通过正常 Nginx 发布流程生效；手动更新时只重建边缘 Nginx，不重启游戏 Web/API。配置文件是文件 bind mount，Git 替换文件后仅 reload 可能仍读到旧 inode。
 
 ```sh
 cd /opt/parallellines
-docker compose exec -T nginx nginx -t
-docker compose exec -T nginx nginx -s reload
+sudo docker compose -f docker-compose.yml -f deploy/docker-compose.migration.yml up -d --wait --wait-timeout 90 --no-deps --build --force-recreate nginx
+sudo docker compose -f docker-compose.yml -f deploy/docker-compose.migration.yml exec -T nginx nginx -t
 ```
 
 Actions 停用发布的浏览器标签标题为“家庭聊天（GPT 尚未启用）”；原版登录表单内标题仍为“欢迎”。登录后显示“GPT 尚未启用，请联系管理员在服务器完成密钥和模型配置。”，原生 OpenAI 模型目录为空、没有个人 Key 输入分支。强行调用模型也会被原版模型目录/密钥校验拒绝，不产生模拟回复。登录后提示由固定版接口按认证状态返回；未创建生产账号时，只验匿名标题配置和服务器生成的空模型配置。
@@ -103,7 +103,7 @@ nano /opt/parallellines/deploy/librechat/.env
 
 ```sh
 cd /opt/parallellines/deploy/librechat
-docker compose --env-file .env -f compose.production.yaml up -d --force-recreate librechat
+sudo docker compose --env-file .env -f compose.production.yaml up -d --force-recreate librechat
 ```
 
 `restart` 不会重新载入 Compose 的 env 文件。模型目录与 preset 在每次启动时生成，不把密钥序列化进生成的 YAML。采用原生 OpenAI 及 `useResponsesApi: true`；[官方图片输入说明](https://developers.openai.com/api/docs/guides/images-vision) 区分了 Responses 的 `input_text`/`input_image` 与旧 Chat Completions 的结构。
@@ -115,7 +115,7 @@ docker compose --env-file .env -f compose.production.yaml up -d --force-recreate
 对确认符合当前 OpenAI 适用地区等条件的用户，管理员在原版后台选择该用户的 USER profile，再导入启动时生成的无密钥覆盖配置：
 
 ```sh
-docker compose --env-file .env -f compose.production.yaml exec -T librechat \
+sudo docker compose --env-file .env -f compose.production.yaml exec -T librechat \
   cat /app/data/family-config/approved-user-profile.yaml > /tmp/approved-user-profile.yaml
 ```
 
@@ -128,8 +128,8 @@ docker compose --env-file .env -f compose.production.yaml exec -T librechat \
 先做不调用模型的检查：
 
 ```sh
-docker compose --env-file .env -f compose.production.yaml ps
-docker compose --env-file .env -f compose.production.yaml exec -T librechat node -e \
+sudo docker compose --env-file .env -f compose.production.yaml ps
+sudo docker compose --env-file .env -f compose.production.yaml exec -T librechat node -e \
 "const fs=require('fs');const c=JSON.parse(fs.readFileSync('/app/data/family-config/librechat.yaml','utf8'));const p=JSON.parse(fs.readFileSync('/app/data/family-config/approved-user-profile.yaml','utf8'));console.log(JSON.stringify({serverGptConfigured:p.modelSpecs.list.length>0,defaultAccountAccess:false,configuredModels:p.endpoints.openAI.models,baseModels:c.endpoints.openAI.models,welcome:c.interface.customWelcome}));"
 curl -fsS https://pingxingxian.space/chat/readyz
 ```
@@ -143,10 +143,12 @@ curl -fsS https://pingxingxian.space/chat/readyz
 公开注册与社交注册关闭。在新数据库中先由服务器所有者交互创建管理员，再创建家人：
 
 ```sh
-docker compose --env-file .env -f compose.production.yaml exec -w /app librechat npm run create-user
+sudo docker compose --env-file .env -f compose.production.yaml exec -w /app librechat npm run create-user
 ```
 
 密码在终端交互输入；不作为命令行参数。当前平行线 JWT 和 FableSpace 票据不能直接复用为通用 OIDC，所以本版使用 LibreChat 独立家庭账号。
+
+创建时自行输入密码，不留空让 CLI 生成并显示密码。`Email verified?` 选择 `Y`，不触发验证邮件；当前未配置邮件服务且禁止未验证邮箱登录。首个账号成为管理员，仅后续账号作为家人创建。本次发布没有替用户创建任何账号。
 
 后台仅绑定服务器 `127.0.0.1:3091`。在自己的电脑建立授权 SSH 隧道后访问，不另开放公网后台：
 
@@ -157,8 +159,8 @@ ssh -L 3091:127.0.0.1:3091 <你的服务器登录目标>
 在浏览器打开 `http://127.0.0.1:3091`，用 LibreChat 管理员登录。路径：Configuration → 家人 user profile → System → Balance & credits，设置每人数量和周期。`refillMode` 在这个后台版本只读，由 `base-config.json` 中的 `reset` 控制；手动增减当前余额使用官方交互命令：
 
 ```sh
-docker compose --env-file .env -f compose.production.yaml exec -w /app librechat npm run add-balance
-docker compose --env-file .env -f compose.production.yaml exec -w /app librechat npm run set-balance
+sudo docker compose --env-file .env -f compose.production.yaml exec -w /app librechat npm run add-balance
+sudo docker compose --env-file .env -f compose.production.yaml exec -w /app librechat npm run set-balance
 ```
 
 默认 10000 credits 只是初始配置，管理员按家庭用量调整。`startBalance` 只初始化新余额，不给已有账号加额。额度预留不能保证末次已接纳输出绝不超额。固定版本对新模型、缓存和长上下文的价格识别可能滞后，例如 6.1 Sol 会匹配旧 Sol 缓存费率；**credits 不应当作精确当前美元账单或供应商硬预算**。当前 preset 使用 128K 应用上下文和 4096 输出上限，真实费用仍需后续获准调用核验。
@@ -167,11 +169,22 @@ docker compose --env-file .env -f compose.production.yaml exec -w /app librechat
 
 仅停用模型、保留账号和历史：在服务器 `.env` 把 `OPENAI_API_KEY` 与 `OPENAI_CHAT_MODELS` 留空，然后执行上面的 `up -d --force-recreate librechat`。界面恢复未启用状态，不会转成 mock。
 
-需要撤回整个聊天入口时：先在项目根目录对 `main-chat-proxy.patch` 执行 `git apply -R --check`，确认仅涉及该代理后反向应用；执行原 nginx 的 `nginx -t` 并 reload。保留部署目录，不反向删除整个集成包。然后只停止聊天栈：
+需要撤回整个聊天入口时，从本次路由提交提取仅含 Nginx 的补丁，检查后反向应用，保留其他提交和部署目录：
+
+```sh
+cd /opt/parallellines
+git show 758dbc621a20857a30476d940a776aa51267c5c2 -- deploy/nginx/default.conf > /tmp/family-chat-route.patch
+git apply -R --check /tmp/family-chat-route.patch
+git apply -R /tmp/family-chat-route.patch
+sudo docker compose -f docker-compose.yml -f deploy/docker-compose.migration.yml up -d --wait --wait-timeout 90 --no-deps --build --force-recreate nginx
+sudo docker compose -f docker-compose.yml -f deploy/docker-compose.migration.yml exec -T nginx nginx -t
+```
+
+若检查冲突，停止反向应用并核对后续 Nginx 改动，不用整文件回退覆盖。路由回滚需要纳入后续仓库发布，避免下次发布重新带回入口。然后只停止聊天栈：
 
 ```sh
 cd /opt/parallellines/deploy/librechat
-docker compose --env-file .env -f compose.production.yaml stop
+sudo docker compose --env-file .env -f compose.production.yaml stop
 ```
 
 保留 `.env` 和所有命名卷。不要 `down -v`、清空 MongoDB、轮换 JWT/加密值或用整文件 checkout 覆盖同期游戏发布。当前回滚说明针对这次首次接入；未来升级数据库/镜像时，先备份数据并核验迁移兼容性。
