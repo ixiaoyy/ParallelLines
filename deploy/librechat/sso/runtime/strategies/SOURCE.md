@@ -11,7 +11,7 @@ Both source strategy files had no working-tree diff against that commit before c
 | Original `api/strategies/openidStrategy.js` | `71c9f03c4f4bb60a140657a76eb383c073d8645b7883498c60eaf418a1009812` |
 | Original `api/strategies/openIdJwtStrategy.js` | `fd8e255fb1462b5a6ad1e55a48ac7e9dccc1474b40688c6748f6cf3533372e11` |
 | `strict-subject.patch` | `cecc66256213455bedf6a31a3f50073cef066c1e300e60f3d0b5d9f48d24440c` |
-| Candidate `openidStrategy.js` (including local discovery and SSO Basic auth) | `c13e7da8210f46932bb8dc03747557dc840091a111dde0f157ef78ed181cc19f` |
+| Candidate `openidStrategy.js` (including local discovery, SSO Basic auth and internal placeholder email) | `573cedb8cd11b212b3e03c6b7950821b11e7b7ed868a1a3834fdbbd73591744d` |
 | Candidate `openIdJwtStrategy.js` | `99679ea310b1ebb9debc7be5bf808f0f8c9f5dad46eee32c86c3d20b33698027` |
 
 Read-only mount targets, preserving the pinned runtime dependencies:
@@ -55,3 +55,8 @@ For a single request, the native controller sets `req._resumableStreamId` only a
 The native user index includes all that user's sessions, and native jobs do not already carry an SSO binding ID. Revoking one login must cancel only jobs bound to that login; it must not indiscriminately cancel the user's other valid sessions. Store the binding on each admitted job or retain the exact job/lease association. User-wide enumeration is appropriate only for a confirmed account-wide disable or equivalent global policy transition. Never call global `destroy()` or iterate all manager jobs for a single-user/session revocation.
 
 The mount/restart, real native strategy loading, central middleware wiring, detached-job lease and abort/settlement integration remain for the parent-controlled local container test. No API or provider request was made while preparing these files.
+
+
+## Required internal email metadata
+
+Strict SSO does not receive or authorize by a real email claim. To satisfy the pinned required native email schema, it stores lowercase SHA256 of exact normalized issuer, a NUL separator and the verified subject, followed by @chat.invalid. emailVerified is explicitly false. This internal placeholder is not a verified or deliverable address. Lookup email/oid remain undefined, username selection is unchanged, and duplicate native email conflicts fail closed rather than merge accounts. Only the focused placeholder source/synthetic-hash checks ran (2/2 passed) plus callback syntax check; no real account or production request was made.

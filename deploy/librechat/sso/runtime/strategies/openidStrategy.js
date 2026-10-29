@@ -2,6 +2,7 @@ const undici = require('undici');
 const { get } = require('lodash');
 const passport = require('passport');
 const client = require('openid-client');
+const { createHash } = require('node:crypto');
 const jwtDecode = require('jsonwebtoken/decode');
 const { hashToken, logger, tenantStorage } = require('@librechat/data-schemas');
 const { Strategy: OpenIDStrategy } = require('openid-client/passport');
@@ -639,6 +640,10 @@ function applyOpenIdClaimsRole(user, username, { role, adminRoleGranted, demoted
   user.role = role;
 }
 
+function strictSubjectEmail(issuer, subject) {
+  return createHash('sha256').update(issuer + '\0' + subject, 'utf8').digest('hex') + '@chat.invalid';
+}
+
 function strictSubjectFindUser(findUser, subject, issuer) {
   if (typeof subject !== 'string' || !subject || typeof issuer !== 'string' || !issuer) {
     throw new Error('SSO subject and issuer are required');
@@ -676,8 +681,8 @@ async function processOpenIDAuth(tokenset, existingUsersOnly = false) {
     Object.assign(userinfo, providerUserinfo);
   }
 
-  const email = getOpenIdEmail(userinfo);
   const openidIssuer = getOpenIdIssuer(claims, openidConfig);
+  const email = strictSubject ? strictSubjectEmail(openidIssuer, claims.sub) : getOpenIdEmail(userinfo);
 
   const baseConfig = await resolvePreAuthAppConfig(getAppConfig);
   if (!isEmailDomainAllowed(email, baseConfig?.registration?.allowedDomains)) {
@@ -790,7 +795,7 @@ async function processOpenIDAuth(tokenset, existingUsersOnly = false) {
     username,
     name: fullName,
     email,
-    emailVerified: userinfo.email_verified || false,
+    emailVerified: strictSubject ? false : userinfo.email_verified || false,
     idOnTheSource: userinfo.oid,
   };
 
