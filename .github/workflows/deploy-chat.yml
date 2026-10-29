@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Inspect, deploy disabled chat, configure model candidates, or activate main-site SSO
+        description: Inspect, deploy chat, configure models, activate SSO, or release a verified native session client
         type: choice
-        options: [preflight, deploy, models, sso, oidc]
+        options: [preflight, deploy, models, sso, oidc, session]
         default: preflight
       initialize_application_secrets:
         description: Generate five server-local app secrets only after explicit owner approval
@@ -21,11 +21,174 @@ permissions:
   contents: read
 
 jobs:
+  build_session:
+    if: inputs.mode == 'session'
+    runs-on: ubuntu-latest
+    outputs:
+      bundle_sha256: ${{ steps.session_bundle.outputs.bundle_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        if: inputs.mode == 'models' || inputs.mode == 'session'
+        with:
+          persist-credentials: false
+      - name: Check out the pinned native LibreChat source
+        if: inputs.mode == 'session'
+        uses: actions/checkout@v4
+        with:
+          repository: danny-avila/LibreChat
+          ref: 8d3da9bbb220a0a96be9330a2e1cbd385fb786d5
+          path: .native-session-source
+          persist-credentials: false
+      - name: Set up native client build runtime
+        if: inputs.mode == 'session'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: .native-session-source/package-lock.json
+      - name: Apply reviewed session patch and build the original native client
+        if: inputs.mode == 'session'
+        working-directory: .native-session-source
+        env:
+          HUSKY: '0'
+          MONGOMS_DISABLE_POSTINSTALL: 'true'
+          SCARF_ANALYTICS: 'false'
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 8d3da9bbb220a0a96be9330a2e1cbd385fb786d5
+          git apply --check "$GITHUB_WORKSPACE/deploy/librechat/patches/native-session.patch"
+          git apply "$GITHUB_WORKSPACE/deploy/librechat/patches/native-session.patch"
+          npm ci --no-audit --no-fund
+          npm run frontend
+          npm run typecheck --workspace client
+      - name: Package only verified regular native client files
+        id: session_bundle
+        if: inputs.mode == 'session'
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import hashlib, io, json, os, pathlib, re, stat, tarfile
+
+          workspace = pathlib.Path(os.environ['GITHUB_WORKSPACE'])
+          revision = os.environ['GITHUB_SHA']
+          if not re.fullmatch(r'[a-f0-9]{40}', revision):
+              raise RuntimeError('Invalid release revision')
+          dist = workspace / '.native-session-source/client/dist'
+          patch = workspace / 'deploy/librechat/patches/native-session.patch'
+          files = {}
+          entries = []
+          total = 0
+          for item in sorted(dist.rglob('*')):
+              info = item.lstat()
+              if stat.S_ISLNK(info.st_mode):
+                  raise RuntimeError('Native dist contains a symlink')
+              if stat.S_ISDIR(info.st_mode):
+                  continue
+              if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+                  raise RuntimeError('Native dist contains a nonregular or hardlinked file')
+              relative = item.relative_to(dist).as_posix()
+              parts = relative.split('/')
+              if len(relative) > 2048 or any(part in ('', '.', '..') or not re.fullmatch(r'[A-Za-z0-9._~-]+', part) for part in parts):
+                  raise RuntimeError('Native dist contains an unsafe filename')
+              if info.st_size > 128 * 1024 * 1024:
+                  raise RuntimeError('Native dist file exceeds the size limit')
+              total += info.st_size
+              if total > 512 * 1024 * 1024 or len(entries) >= 10000:
+                  raise RuntimeError('Native dist exceeds the bundle limit')
+              files[relative] = hashlib.sha256(item.read_bytes()).hexdigest()
+              entries.append((relative, item))
+          if 'index.html' not in files:
+              raise RuntimeError('Native client index is missing')
+          manifest = {
+              'schemaVersion': 1,
+              'sourceCommit': '8d3da9bbb220a0a96be9330a2e1cbd385fb786d5',
+              'patchSha256': hashlib.sha256(patch.read_bytes()).hexdigest(),
+              'files': files,
+          }
+          manifest_bytes = (json.dumps(manifest, sort_keys=True, separators=(',', ':')) + '\n').encode('utf-8')
+          output = workspace / '.runtime'
+          output.mkdir(exist_ok=True)
+          archive = output / ('native-session-' + revision + '.tar')
+          with tarfile.open(archive, 'w', format=tarfile.USTAR_FORMAT) as bundle:
+              info = tarfile.TarInfo('native-client-manifest.json')
+              info.size = len(manifest_bytes)
+              info.mode = 0o444
+              bundle.addfile(info, io.BytesIO(manifest_bytes))
+              for relative, item in entries:
+                  info = tarfile.TarInfo('native-client/' + relative)
+                  info.size = item.stat().st_size
+                  info.mode = 0o444
+                  with item.open('rb') as content:
+                      bundle.addfile(info, content)
+          digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as result:
+              result.write('bundle_sha256=' + digest + '\n')
+          print(json.dumps({'nativeClientFiles': len(files), 'bundleSha256': digest}))
+          PY
+      - name: Publish the native client bundle for the isolated deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-session-${{ github.sha }}
+          path: .runtime/native-session-${{ github.sha }}.tar
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
   chat:
+    needs: [build_session]
+    if: ${{ always() && (inputs.mode != 'session' || needs.build_session.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         if: inputs.mode == 'models'
+        with:
+          persist-credentials: false
+      - name: Download the native client bundle from the successful isolated build
+        if: inputs.mode == 'session'
+        uses: actions/download-artifact@v4
+        with:
+          name: native-session-${{ github.sha }}
+          path: .runtime
+      - name: Verify the transferred bundle against the trusted build job digest
+        if: inputs.mode == 'session'
+        env:
+          EXPECTED_BUNDLE_SHA256: ${{ needs.build_session.outputs.bundle_sha256 }}
+        run: |
+          set -euo pipefail
+          test "${#EXPECTED_BUNDLE_SHA256}" -eq 64
+          case "$EXPECTED_BUNDLE_SHA256" in *[!a-f0-9]*) exit 1 ;; esac
+          printf '%s  %s\n' "$EXPECTED_BUNDLE_SHA256" ".runtime/native-session-${GITHUB_SHA}.tar" | sha256sum --check --status
+      - name: Prepare the fixed incoming artifact directory using existing SSH
+        if: inputs.mode == 'session'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
+          port: ${{ secrets.DEPLOY_PORT }}
+          command_timeout: 5m
+          script: |
+            set -eu
+            cd /opt/parallellines
+            git fetch origin main
+            test "$(git rev-parse origin/main)" = "${{ github.sha }}"
+            test ! -L deploy/librechat/.runtime
+            mkdir -p deploy/librechat/.runtime
+            test ! -L deploy/librechat/.runtime/incoming
+            mkdir -p deploy/librechat/.runtime/incoming
+      - name: Upload the native client archive using the existing SSH identity
+        if: inputs.mode == 'session'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
+          port: ${{ secrets.DEPLOY_PORT }}
+          source: .runtime/native-session-${{ github.sha }}.tar
+          target: /opt/parallellines/deploy/librechat/.runtime/incoming/
+          strip_components: 1
+          overwrite: true
       - name: Validate the model-only file update with synthetic Linux settings
         if: inputs.mode == 'models'
         run: |
@@ -63,7 +226,9 @@ jobs:
             cd /opt/parallellines
             git fetch origin main
             test "$(git rev-parse origin/main)" = "${{ github.sha }}"
-            if test '${{ inputs.mode }}' = oidc; then
+            if test '${{ inputs.mode }}' = session; then
+              git show '${{ github.sha }}:deploy/librechat/release-session.sh' | bash -s -- '${{ github.sha }}' '${{ needs.build_session.outputs.bundle_sha256 }}'
+            elif test '${{ inputs.mode }}' = oidc; then
               git show '${{ github.sha }}:deploy/librechat/release-oidc.sh' | bash -s -- '${{ github.sha }}'
             elif test '${{ inputs.mode }}' = sso; then
               git show '${{ github.sha }}:deploy/librechat/release-sso.sh' | bash -s -- '${{ github.sha }}'

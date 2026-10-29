@@ -2,6 +2,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { buildConfig, modelLabels } = require('./config.cjs');
+const { verifyNativeClient } = require('./verify-native-client.cjs');
+
+verifyNativeClient({
+  clientRoot: '/app/client/dist',
+  manifestPath: path.join(__dirname, '.runtime/native-client-manifest.json'),
+  patchPath: path.join(__dirname, 'patches/native-session.patch'),
+});
 
 // This runs inside the user's server container; never print credentials or write them into generated YAML.
 for (const key of ['JWT_SECRET', 'JWT_REFRESH_SECRET']) {

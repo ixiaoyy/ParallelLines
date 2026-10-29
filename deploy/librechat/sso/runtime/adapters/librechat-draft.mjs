@@ -4,6 +4,8 @@
  * No environment reads, token decoding, credentials, or logging live here.
  */
 
+import errorPolicy from '../errors.cjs';
+
 function requireFunction(value, name) {
   if (typeof value !== 'function') throw new TypeError(`${name} is required`);
 }
@@ -41,15 +43,7 @@ function expectedUserOf(user) {
   });
 }
 
-function deny(res) {
-  if (res.destroyed || res.writableEnded) return;
-  if (res.headersSent) {
-    // Closing an SSE/socket response does not itself cancel a provider generation.
-    res.destroy?.();
-    return;
-  }
-  res.status(401).json({ error: 'unauthorized' });
-}
+function deny(res, error) { return errorPolicy.sendFailure(res, error, { unauthorized: 'unauthorized' }); }
 
 function requestLifetime(req, res) {
   const controller = new AbortController();
@@ -99,8 +93,13 @@ async function attachLiveSession({ guard, req, res, idToken, expectedUser, lifet
     } else {
       context = await guard.authorize(input);
     }
-    if (context?.subject !== expectedUser.openidId || context?.issuer !== expectedUser.openidIssuer ||
-        lifetime.signal.aborted || lease?.signal.aborted) throw new Error('unauthorized');
+    if (context?.subject !== expectedUser.openidId || context?.issuer !== expectedUser.openidIssuer) {
+      throw new Error('unauthorized');
+    }
+    if (lifetime.signal.aborted) throw errorPolicy.isUnavailable(lifetime.signal.reason)
+      ? lifetime.signal.reason : new Error('unauthorized');
+    if (lease?.signal.aborted) throw errorPolicy.isUnavailable(lease.signal.reason)
+      ? lease.signal.reason : new Error('unauthorized');
 
     const signal = lease?.signal ?? lifetime.signal;
     const onRevoked = () => {
@@ -110,7 +109,7 @@ async function attachLiveSession({ guard, req, res, idToken, expectedUser, lifet
           Promise.resolve(onCancel({ req, context, signal, code: 'sso_session_closed' })).catch(() => {});
         } catch { /* Return no sensitive error details. */ }
       }
-      deny(res);
+      deny(res, signal.reason);
     };
     if (lease) {
       signal.addEventListener('abort', onRevoked, { once: true });
@@ -120,8 +119,9 @@ async function attachLiveSession({ guard, req, res, idToken, expectedUser, lifet
       });
     }
     req.ssoLiveSession = Object.freeze({ context, signal });
-  } catch {
+  } catch (error) {
     stopLease(lease, 'authorization_failed');
+    if (errorPolicy.isUnavailable(error)) throw error;
     throw new Error('unauthorized');
   }
 }
@@ -140,9 +140,9 @@ export function createLibreChatBearerSessionMiddleware({ guard, watch = true, on
       if (!match) throw new Error('unauthorized');
       // Never substitute req.user.federatedTokens or a server-stored bearer token.
       await attachLiveSession({ guard, req, res, idToken: match[1], expectedUser, lifetime, watch, onCancel });
-    } catch {
+    } catch (error) {
       lifetime.dispose('authorization_failed');
-      deny(res);
+      deny(res, error);
       return;
     }
     next();
@@ -185,10 +185,10 @@ export function createLibreChatPrivateImageSessionMiddleware({
       }
       const credential = await getValidOpenIDReuseCredential(cookies, jwtRefreshSecret, refreshToken);
       if (!nonemptyString(credential?.userId)) throw new Error('unauthorized');
-      const [durableSession, user] = await Promise.all([
+      const [durableSession, user] = await errorPolicy.database(() => Promise.all([
         findSession({ userId: credential.userId, refreshToken }),
         getUserById(credential.userId),
-      ]);
+      ]));
       if (!durableSession || userIdOf({ _id: durableSession.user }) !== credential.userId) {
         throw new Error('unauthorized');
       }
@@ -207,9 +207,9 @@ export function createLibreChatPrivateImageSessionMiddleware({
         throw new Error('unauthorized');
       }
       await attachLiveSession({ guard, req, res, idToken: tokens.idToken, expectedUser, lifetime, watch, onCancel });
-    } catch {
+    } catch (error) {
       lifetime.dispose('authorization_failed');
-      deny(res);
+      deny(res, error);
       return;
     }
     next();

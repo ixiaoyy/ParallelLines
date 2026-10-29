@@ -1,0 +1,428 @@
+diff --git a/client/src/data-provider/Auth/mutations.ts b/client/src/data-provider/Auth/mutations.ts
+--- a/client/src/data-provider/Auth/mutations.ts
++++ b/client/src/data-provider/Auth/mutations.ts
+@@ -59,14 +59,48 @@
+ 
+ export const useRefreshTokenMutation = (
+   options?: t.MutationOptions<t.TRefreshTokenResponse | undefined, undefined, unknown, unknown>,
++  currentIdentity?: { current: { authenticated: boolean; userId?: string } },
+ ): UseMutationResult<t.TRefreshTokenResponse | undefined, unknown, undefined, unknown> => {
+   const queryClient = useQueryClient();
+-  return useMutation([MutationKeys.refreshToken], {
++  const clearStates = useClearStates();
++  const resetDefaultPreset = useResetRecoilState(store.defaultPreset);
++  // UI cache ownership only; this value never authorizes the refresh or a private request.
++  const verifiedUserId = () => {
++    const identity = currentIdentity?.current;
++    return identity?.authenticated === true && typeof identity.userId === 'string' && identity.userId
++      ? identity.userId
++      : undefined;
++  };
++  const clearIdentityState = async () => {
++    if (currentIdentity) {
++      currentIdentity.current = { authenticated: false };
++    }
++    resetDefaultPreset();
++    queryClient.removeQueries();
++    await clearStates();
++  };
++  return useMutation<t.TRefreshTokenResponse | undefined, unknown, undefined, unknown>([MutationKeys.refreshToken], {
+     mutationFn: () => request.refreshToken(),
+     ...(options || {}),
+     onMutate: (vars) => {
+-      queryClient.removeQueries();
++      if (!verifiedUserId()) {
++        queryClient.removeQueries();
++      }
+       options?.onMutate?.(vars);
++    },
++    onSuccess: async (data, variables, context) => {
++      const previousUserId = verifiedUserId();
++      if (!previousUserId || data?.user?.id !== previousUserId || !data?.token) {
++        // Finish native Recoil/draft/cache cleanup before publishing another or unknown identity.
++        await clearIdentityState();
++      }
++      return options?.onSuccess?.(data, variables, context);
++    },
++    onError: async (error, variables, context) => {
++      if (!request.isTransientAuthError(error)) {
++        await clearIdentityState();
++      }
++      return options?.onError?.(error, variables, context);
+     },
+   });
+ };
+diff --git a/client/src/hooks/AuthContext.tsx b/client/src/hooks/AuthContext.tsx
+--- a/client/src/hooks/AuthContext.tsx
++++ b/client/src/hooks/AuthContext.tsx
+@@ -10,9 +10,11 @@
+ import { debounce } from 'lodash';
+ import { getDefaultStore } from 'jotai';
+ import { useNavigate } from 'react-router-dom';
++import { Button } from '@librechat/client';
+ import { useRecoilState, useSetRecoilState } from 'recoil';
+ import {
+   apiBaseUrl,
++  request,
+   ErrorTypes,
+   SystemRoles,
+   setTokenHeader,
+@@ -49,6 +51,7 @@
+ import { TAuthConfig, TUserContext, TAuthContext, TResError } from '~/common';
+ import { resetFacetsAtom } from '~/components/Conversations/facets';
+ import useTimeout from './useTimeout';
++import useLocalize from './useLocalize';
+ import store from '~/store';
+ 
+ const AuthContext = (import.meta.hot?.data?.__AuthContext ??
+@@ -91,6 +94,7 @@
+   authConfig?: TAuthConfig;
+   children: ReactNode;
+ }) => {
++  const localize = useLocalize();
+   const isExternalRedirectRef = useRef(false);
+   const prerenderRefreshDeferredRef = useRef(false);
+   const [user, setUser] = useRecoilState(store.user);
+@@ -99,6 +103,13 @@
+   const [error, setError] = useState<string | undefined>(undefined);
+   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+   const [isAuthReady, setIsAuthReady] = useState<boolean>(authConfig?.test === true);
++  const [refreshUnavailable, setRefreshUnavailable] = useState(false);
++  const currentIdentityRef = useRef<{ authenticated: boolean; userId?: string }>({
++    authenticated: false,
++  });
++  useEffect(() => {
++    currentIdentityRef.current = { authenticated: isAuthenticated, userId: user?.id };
++  }, [isAuthenticated, user?.id]);
+   const setQueriesEnabled = useSetRecoilState<boolean>(store.queriesEnabled);
+ 
+   const userRoleName = user?.role ?? '';
+@@ -120,6 +131,7 @@
+     () =>
+       debounce((userContext: TUserContext) => {
+         const { token, isAuthenticated, user, redirect } = userContext;
++        currentIdentityRef.current = { authenticated: isAuthenticated, userId: user?.id };
+         setUser(user);
+         setToken(token);
+         setTokenHeader(token);
+@@ -215,6 +227,7 @@
+   });
+   const { mutate: logoutMutate } = useLogoutUserMutation({
+     onSuccess: (data) => {
++      currentIdentityRef.current = { authenticated: false };
+       if (data.redirect) {
+         /** data.redirect is the IdP's end_session_endpoint URL: an absolute URL generated
+          * server-side from trusted IdP metadata (not user input), so isSafeRedirect is bypassed.
+@@ -235,6 +248,7 @@
+       });
+     },
+     onError: (error) => {
++      currentIdentityRef.current = { authenticated: false };
+       endSessionClientState();
+       doSetError((error as Error).message);
+       setUserContext({
+@@ -245,7 +259,7 @@
+       });
+     },
+   });
+-  const refreshToken = useRefreshTokenMutation();
++  const refreshToken = useRefreshTokenMutation(undefined, currentIdentityRef);
+ 
+   const logout = useCallback(
+     (redirect?: string) => {
+@@ -265,6 +279,7 @@
+         getPostLoginRedirect(new URLSearchParams(window.location.search)) ?? '/c/new';
+       /** The enrollment credential has done its job; do not leave it live in the tab. */
+       clearTwoFactorSetupToken();
++      currentIdentityRef.current = { authenticated: true, userId: authenticatedUser.id };
+       setUser(authenticatedUser);
+       setToken(authenticatedToken);
+       setTokenHeader(authenticatedToken);
+@@ -288,13 +303,19 @@
+    * leave the setup token alone, since the in-memory mirror is then its only copy.
+    */
+   const clearAuthenticationForRedirect = useCallback(() => {
++    currentIdentityRef.current = { authenticated: false };
+     endSessionClientState();
+     setUser(undefined);
+     setToken(undefined);
+     setIsAuthenticated(false);
+   }, [setUser]);
+ 
+-  const userQuery = useGetUserQuery({ enabled: !!(token ?? '') });
++  const userQuery = useGetUserQuery({
++    enabled: !!(token ?? ''),
++    retry: request.shouldRetryTransientAuth,
++    retryDelay: request.authTransientRetryDelay,
++    refetchOnReconnect: true,
++  });
+ 
+   const login = useCallback(
+     (data: t.TLoginUser) => {
+@@ -324,6 +345,7 @@
+         if (isExternalRedirectRef.current) {
+           return;
+         }
++        setRefreshUnavailable(false);
+         const { user, token = '', twoFASetupRequired, tempToken } = data ?? {};
+         if (twoFASetupRequired && tempToken) {
+           persistTwoFactorSetupToken(tempToken);
+@@ -346,7 +368,9 @@
+           navigate('/login/2fa/setup', { replace: true });
+           return;
+         }
+-        if (token) {
++        if (
++          typeof token === 'string' && token.length > 0 && typeof user?.id === 'string' && user.id
++        ) {
+           const baseUrl = apiBaseUrl();
+           const rawPath = window.location.pathname;
+           const strippedPath =
+@@ -357,7 +381,17 @@
+           const fallbackRedirect = isSafeRedirect(currentUrl) ? currentUrl : '/c/new';
+           const redirect =
+             getPostLoginRedirect(new URLSearchParams(window.location.search)) ?? fallbackRedirect;
+-          setUserContext({ user, token, isAuthenticated: true, redirect });
++          const previousUserId = currentIdentityRef.current.userId;
++          const sameVerifiedUser =
++            currentIdentityRef.current.authenticated &&
++            typeof previousUserId === 'string' && previousUserId.length > 0 && previousUserId === user.id;
++          setUserContext({
++            user,
++            token,
++            isAuthenticated: true,
++            // A valid same-user refresh must not rebuild the current composer route.
++            ...(sameVerifiedUser ? {} : { redirect }),
++          });
+           return;
+         }
+         console.log('Token is not present. User is not authenticated.');
+@@ -377,6 +411,13 @@
+         if (isExternalRedirectRef.current) {
+           return;
+         }
++        if (request.isTransientAuthError(error)) {
++          setRefreshUnavailable(true);
++          // Keep existing native draft/model/auth UI state. A cold start remains unverified.
++          // The request helper already used its bounded retry budget; no protected result was returned.
++          return;
++        }
++        setRefreshUnavailable(false);
+         console.log('refreshToken mutation error:', error);
+         endSessionClientState();
+         setIsAuthReady(true);
+@@ -400,7 +441,7 @@
+     }
+     if (userQuery.data) {
+       setUser(userQuery.data);
+-    } else if (userQuery.isError) {
++    } else if (userQuery.isError && !request.isTransientAuthError(userQuery.error)) {
+       endSessionClientState();
+       doSetError((userQuery.error as Error).message);
+       setIsAuthReady(true);
+@@ -498,7 +539,23 @@
+     ],
+   );
+ 
+-  return <AuthContext.Provider value={memoedValue}>{children}</AuthContext.Provider>;
++  return (
++    <AuthContext.Provider value={memoedValue}>
++      {refreshUnavailable && !isAuthenticated && !isAuthReady ? (
++        <div
++          role="alert"
++          className="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface-primary p-6 text-text-primary"
++        >
++          <p className="text-center text-sm">{localize('com_agents_error_network_title')}</p>
++          <Button type="button" onClick={silentRefresh} disabled={refreshToken.isLoading}>
++            {localize(refreshToken.isLoading ? 'com_ui_loading' : 'com_ui_retry')}
++          </Button>
++        </div>
++      ) : (
++        children
++      )}
++    </AuthContext.Provider>
++  );
+ };
+ 
+ const useAuthContext = () => {
+diff --git a/client/src/hooks/Input/useTextarea.ts b/client/src/hooks/Input/useTextarea.ts
+--- a/client/src/hooks/Input/useTextarea.ts
++++ b/client/src/hooks/Input/useTextarea.ts
+@@ -4,7 +4,6 @@
+ import { useToastContext } from '@librechat/client';
+ import { useRecoilValue, useRecoilState } from 'recoil';
+ import { Constants, EToolResources, isAssistantsEndpoint } from 'librechat-data-provider';
+-import type { TEndpointOption } from 'librechat-data-provider';
+ import type { KeyboardEvent } from 'react';
+ import type { UploadLifecycleCallbacks } from '~/hooks/Files/useFileHandling';
+ import {
+@@ -32,7 +31,6 @@
+ import useFileUploadRouter from '~/hooks/Files/useFileUploadRouter';
+ import { useAgentsMapContext } from '~/Providers/AgentsMapContext';
+ import { useChatSettings } from '~/Providers/ChatSettingsContext';
+-import useGetSender from '~/hooks/Conversations/useGetSender';
+ import useUploadOptions from '~/hooks/Files/useUploadOptions';
+ import { useInteractionHealthCheck } from '~/data-provider';
+ import { resolveComposerKeyDown } from '~/utils/shortcuts';
+@@ -70,7 +68,6 @@
+   enterToSend: boolean;
+ }) {
+   const localize = useLocalize();
+-  const getSender = useGetSender();
+   const { setValue } = useChatFormContext();
+   const isComposing = useRef(false);
+   const agentsMap = useAgentsMapContext();
+@@ -205,7 +202,7 @@
+       const sender =
+         isAssistant || isAgent
+           ? getEntityName({ name: entityName, isAgent, localize })
+-          : getSender(conversation as TEndpointOption);
++          : localize('com_endpoint_ai');
+ 
+       return `${localize('com_endpoint_message_new', {
+         0: sender ? sender : localize('com_endpoint_ai'),
+@@ -235,7 +232,6 @@
+     isAgent,
+     localize,
+     disabled,
+-    getSender,
+     agentsMap,
+     entityName,
+     textAreaRef,
+diff --git a/packages/data-provider/src/request.ts b/packages/data-provider/src/request.ts
+--- a/packages/data-provider/src/request.ts
++++ b/packages/data-provider/src/request.ts
+@@ -74,6 +74,59 @@
+ const AUTH_REDIRECT_DEDUPE_MS = 15_000;
+ const TOKEN_REFRESH_BUFFER_MS = 2 * 60 * 1000;
+ 
++// A temporary transport failure is not evidence that the existing session ended.
++// This classification never authorizes a request or changes its server response.
++const isTransientAuthError = (error: unknown): boolean => {
++  if (typeof error !== 'object' || error === null) {
++    return false;
++  }
++  const candidate = error as {
++    response?: { status?: unknown };
++    status?: unknown;
++    code?: unknown;
++    name?: unknown;
++  };
++  const status = candidate.response?.status ?? candidate.status;
++  if (status != null) {
++    return (
++      typeof status === 'number' && Number.isInteger(status) && status >= 500 && status <= 599
++    );
++  }
++  return (
++    (typeof candidate.code === 'string' &&
++      [
++        'ERR_NETWORK',
++        'ECONNABORTED',
++        'ETIMEDOUT',
++        'ECONNRESET',
++        'ENOTFOUND',
++        'EAI_AGAIN',
++      ].includes(candidate.code)) ||
++    candidate.name === 'TimeoutError' ||
++    candidate.name === 'NetworkError'
++  );
++};
++
++const shouldRetryTransientAuth = (failureCount: number, error: unknown): boolean =>
++  failureCount < 2 && isTransientAuthError(error);
++
++const authTransientRetryDelay = (attemptIndex: number): number =>
++  attemptIndex === 0 ? 250 : 750;
++
++// At most three attempts. No success is synthesized, and 401/403 are never retried here.
++const withTransientAuthRetry = async <T>(operation: () => Promise<T>): Promise<T> => {
++  for (let failureCount = 0; ; failureCount++) {
++    try {
++      return await operation();
++    } catch (error) {
++      if (!shouldRetryTransientAuth(failureCount, error)) {
++        throw error;
++      }
++      await new Promise<void>((resolve) => setTimeout(resolve, authTransientRetryDelay(failureCount)));
++    }
++  }
++};
++
+ type RetryableAxiosRequestConfig = AxiosRequestConfig & { _retry?: boolean };
+ 
+ type AuthRecoveryState = {
+@@ -86,7 +139,7 @@
+ };
+ 
+ const refreshToken = (retry?: boolean): Promise<t.TRefreshTokenResponse | undefined> =>
+-  _post(endpoints.refreshToken(retry));
++  withTransientAuthRetry(() => _post(endpoints.refreshToken(retry)));
+ 
+ const SHARE_PAGE_PATH_REGEX = /^\/share\/[^/]+\/?$/;
+ const SHARED_MESSAGES_PATH_REGEX = /^\/api\/share\/[^/]+$/;
+@@ -450,7 +503,11 @@
+   let refreshedToken: string | null;
+   try {
+     refreshedToken = await startAuthRecovery(false);
+-  } catch {
++  } catch (refreshError) {
++    if (isTransientAuthError(refreshError)) {
++      // Preserve the unavailable result; do not turn it back into the original 401.
++      throw refreshError;
++    }
+     redirectToLoginOnce();
+     return response;
+   }
+@@ -528,26 +585,33 @@
+         }
+         originalRequest._retry = true;
+ 
++        let token: string | null;
+         try {
+-          const token = await startAuthRecovery(
++          token = await startAuthRecovery(
+             // Handle edge case where we get a blank screen if the initial 401 error is from a refresh token request
+             isRefreshRequest,
+           );
+ 
+-          if (token) {
+-            setRequestAuthorizationHeader(originalRequest, token);
+-            return await axios(originalRequest);
++        } catch (refreshError) {
++          if (isTransientAuthError(refreshError)) {
++            // The server still denied this request. Let callers retry without ending the session.
++            return Promise.reject(refreshError);
+           }
+-
+-          redirectToLoginOnce();
+-          return Promise.reject(error);
+-        } catch {
+           /** A rejected refresh (stale/invalid session → 401/403) must route to
+            *  login just like an empty-token refresh, otherwise the original 401
+            *  surfaces to the caller (e.g. the share fork button) with no redirect. */
+           redirectToLoginOnce();
+           return Promise.reject(error);
+         }
++
++        if (!token) {
++          redirectToLoginOnce();
++          return Promise.reject(error);
++        }
++
++        setRequestAuthorizationHeader(originalRequest, token);
++        // A business retry failure must retain its own error and caller handling.
++        return await axios(originalRequest);
+       }
+ 
+       return Promise.reject(error);
+@@ -567,6 +631,9 @@
+   patch: _patch,
+   authenticatedFetch: _authenticatedFetch,
+   refreshToken,
++  isTransientAuthError,
++  shouldRetryTransientAuth,
++  authTransientRetryDelay,
+   dispatchTokenUpdatedEvent,
+   redirectIfTwoFactorSetupPayload,
+ };

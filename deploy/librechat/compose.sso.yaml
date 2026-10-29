@@ -43,6 +43,7 @@ services:
       start_period: 10s
       retries: 20
   librechat:
+    image: registry.librechat.ai/librechat-ai/librechat-api:v0.8.9-rc1@sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5
     environment:
       APP_TITLE: 平行线 · AI 聊天
       ALLOW_EMAIL_LOGIN: "false"
@@ -75,6 +76,7 @@ services:
       - ./sso/runtime/strategies/openidStrategy.js:/app/api/strategies/openidStrategy.js:ro
       - ./sso/runtime/strategies/openIdJwtStrategy.js:/app/api/strategies/openIdJwtStrategy.js:ro
       - ./sso/runtime/LogoutController.cjs:/app/api/server/controllers/auth/LogoutController.js:ro
+      - ./sso/runtime/AuthController.cjs:/app/api/server/controllers/AuthController.js:ro
     depends_on:
       chat-oidc:
         condition: service_healthy

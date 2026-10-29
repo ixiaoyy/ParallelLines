@@ -19,15 +19,21 @@
     },
     {
       "path": "index.js",
-      "sha256": "3a5b551276290750c0e4018b5d32bf3195e9f30b4c3d36abd0725063e9cdb212"
+      "sha256": "3f238d0d687686490e6b8845648c2a0b3c0f928e8a81d5764b0e72f854c1de34"
     },
     {
       "path": "core/live-session.mjs",
-      "sha256": "c1f7552686551178c0f4765eab51be86af16a10d1627aa55decf526fd8e4e00c"
+      "sha256": "e2e18716263207f8d43839abf8666a52a72c2e7e71a48a7c8f30d7c5dc275b2e"
     },
     {
       "path": "adapters/librechat-draft.mjs",
-      "sha256": "fe16c21b151fb2bb4f0405fced22042e7ab8d8fd611054e180f471a732271740"
+      "sha256": "d101cacfc48a5298fcc4fc78ca4b144ee80dd4206f9b93c0c414ff07251b8b13"
+    },
+    {
+      "path": "AuthController.cjs",
+      "sha256": "1fd475227b258791e2ed53f57ea57d3ca6aa42972bae0a2907aaf23aaca18b53",
+      "upstreamPath": "api/server/controllers/AuthController.js",
+      "upstreamSha256": "7282b9fb9b0ba21b5457c2bbf1f950be9d978266dc0636fb668207b13890ff48"
     }
   ]
 }

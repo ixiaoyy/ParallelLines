@@ -42,6 +42,11 @@ services:
       ASSISTANTS_API_KEY: ""
       AZURE_ASSISTANTS_API_KEY: ""
     volumes:
+      - type: bind
+        source: ./.runtime/native-client/${CHAT_SESSION_RELEASE:?Run release-session.sh first}
+        target: /app/client/dist
+        read_only: true
+        bind: {create_host_path: false}
       - ./:/integration:ro
       - ./patches/validateImageRequest.js:/app/api/server/middleware/validateImageRequest.js:ro
       - images:/app/client/public/images

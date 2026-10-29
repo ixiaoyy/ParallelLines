@@ -1,6 +1,8 @@
 /** Local integration core. A verifier must perform real JOSE verification before returning claims.
  * No JWT decoding, credentials, user headers, positive-result cache, or permission writes live here.
  */
+import errorPolicy from '../errors.cjs';
+
 export class LiveSessionError extends Error {
   constructor(code, status = 401) {
     super(code);
@@ -31,7 +33,7 @@ async function bounded(operation, { signal, timeoutMs, failureCode }) {
     };
     signal?.addEventListener('abort', onAbort, { once: true });
     timer = setTimeout(() => {
-      const error = fail(failureCode, failureCode === 'TOKEN_VERIFICATION_FAILED' ? 401 : 503);
+      const error = fail(failureCode === 'TOKEN_VERIFICATION_FAILED' ? 'TOKEN_VERIFICATION_UNAVAILABLE' : failureCode, 503);
       controller.abort(error);
       reject(error);
     }, timeoutMs);
@@ -44,6 +46,7 @@ async function bounded(operation, { signal, timeoutMs, failureCode }) {
   } catch (error) {
     if (signal?.aborted) throw abortReason();
     if (error instanceof LiveSessionError) throw error;
+    if (errorPolicy.verifierUnavailable(error)) throw fail(failureCode, 503);
     throw fail(failureCode, failureCode === 'TOKEN_VERIFICATION_FAILED' ? 401 : 503);
   } finally {
     clearTimeout(timer);
@@ -188,10 +191,12 @@ export function createLiveSessionGuard({
       requestSignal => getSessionState({ binding_id: claims.pl_binding, client_id: clientId }, { signal: requestSignal }),
       { signal, timeoutMs: authorityTimeoutMs, failureCode: 'AUTHORITY_UNAVAILABLE' },
     );
-    if (!object(state) || state.active !== true) throw fail('SESSION_INACTIVE');
+    if (!object(state) || (state.active !== true && state.active !== false)) throw fail('INVALID_AUTHORITY_RESPONSE', 503);
+    if (state.active === false) throw fail('SESSION_INACTIVE');
+    if (!identifier(state.sub) || !identifier(state.binding_id)) throw fail('INVALID_AUTHORITY_RESPONSE', 503);
     if (state.sub !== claims.sub || state.binding_id !== claims.pl_binding) throw fail('AUTHORITY_BINDING_MISMATCH');
     const now = clock() / 1000;
-    if (!Number.isFinite(now) || !numericDate(state.auth_expires_at)) throw fail('INVALID_AUTHORITY_EXPIRY');
+    if (!Number.isFinite(now) || !numericDate(state.auth_expires_at)) throw fail('INVALID_AUTHORITY_EXPIRY', 503);
     const expiresAt = Math.min(claims.exp, state.auth_expires_at, claims.pl_auth_exp ?? Infinity);
     if (expiresAt <= now) throw fail('SESSION_EXPIRED');
     return Object.freeze({

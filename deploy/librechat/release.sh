@@ -31,6 +31,11 @@ git merge-base --is-ancestor HEAD "$revision"
 # Fast-forward merge refuses conflicting tracked/untracked files; never hard-reset local work.
 git merge --ff-only "$revision"
 cd deploy/librechat
+# Non-secret immutable client revision retained for later chat operations.
+session_env=()
+if test -f .runtime/session-release.env; then
+  session_env=(--env-file .runtime/session-release.env)
+fi
 if test "$mode" = models; then
   # This mode never initializes credentials, reads their values, or grants profiles.
   test -f .env
@@ -45,14 +50,14 @@ if test "$mode" = models; then
     -v "$PWD:/integration" --entrypoint node \
     registry.librechat.ai/librechat-ai/librechat-api@sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5 \
     /integration/configure-models.cjs
-  model_compose=(sudo docker compose --env-file .env -f compose.production.yaml -f compose.disabled.yaml)
+  model_compose=(sudo docker compose --env-file .env "${session_env[@]}" -f compose.production.yaml -f compose.disabled.yaml)
   if test "$active_files" = "$PWD/compose.production.yaml,$PWD/compose.disabled.yaml,$PWD/compose.sso.yaml"; then
     export CHAT_SSO_RELEASE="$revision"
-    model_compose=(sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml)
+    model_compose=(sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env "${session_env[@]}" -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml)
   fi
   if test "$active_files" = "$PWD/compose.production.yaml,$PWD/compose.sso.yaml"; then
     export CHAT_SSO_RELEASE="$revision"
-    model_compose=(sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.sso.yaml)
+    model_compose=(sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env "${session_env[@]}" -f compose.production.yaml -f compose.sso.yaml)
   fi
   "${model_compose[@]}" config --quiet
   "${model_compose[@]}" up -d --wait --wait-timeout 240 --no-deps --force-recreate librechat
@@ -87,7 +92,7 @@ if ! test -e .env; then
     -v "$PWD:/integration" --entrypoint node "$api_image" /integration/init.cjs
   chmod 600 .env
 fi
-chat_compose=(sudo docker compose --env-file .env -f compose.production.yaml -f compose.disabled.yaml)
+chat_compose=(sudo docker compose --env-file .env "${session_env[@]}" -f compose.production.yaml -f compose.disabled.yaml)
 "${chat_compose[@]}" config --quiet
 "${chat_compose[@]}" pull
 "${chat_compose[@]}" up -d --wait --wait-timeout 240

@@ -10,11 +10,16 @@ git merge --ff-only "$revision"
 
 # Existing trust materials stay in place. Only the OIDC provider is recreated.
 cd deploy/librechat
+# Non-secret immutable client revision retained for later chat operations.
+session_env=()
+if test -f .runtime/session-release.env; then
+  session_env=(--env-file .runtime/session-release.env)
+fi
 test -s .env
 test -s ../chat-sso/.env
 test -s ../chat-sso/secrets/signing.jwks.json
 export CHAT_SSO_RELEASE="$revision"
-chat=(sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.sso.yaml)
+chat=(sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env "${session_env[@]}" -f compose.production.yaml -f compose.sso.yaml)
 "${chat[@]}" config --quiet
 "${chat[@]}" up -d --build --wait --wait-timeout 180 --no-deps chat-oidc
 "${chat[@]}" exec -T chat-oidc node --input-type=module -e '

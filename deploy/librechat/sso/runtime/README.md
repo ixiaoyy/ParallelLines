@@ -2,14 +2,16 @@
 
 Targets API image/source commit `8d3da9bbb220a0a96be9330a2e1cbd385fb786d5` only. This directory
 is a runnable mount layer, not an upstream build or a production operation. It uses the API
-image's original dependencies and its existing `GenerationJobManager` singleton. No bundled
-frontend or shared TypeScript package is rebuilt. No secret value is included or printed.
+image's original backend dependencies and its existing `GenerationJobManager` singleton.
+The session release builds the native frontend with `patches/native-session.patch` from that
+same pin, then mounts a verified immutable client tree read-only. No secret value is included or printed.
 
 ## Mount before process startup
 
-`mounts.yaml` lists eight read-only mounts: this whole folder at
+`compose.sso.yaml` includes nine read-only runtime mounts: this whole folder at
 `/app/api/server/sso-runtime`, patched `index.js`, the three middleware wrappers, and the two
-strict OpenID strategies and the logout-result wrapper. Keep the whole folder mount: wrappers load differently named native
+strict OpenID strategies, the logout-result wrapper and the patched native `AuthController`.
+Keep the whole folder mount: wrappers load differently named native
 copies from it, not their own overwritten module paths. The small index change runs
 `await chatSsoRuntime.initialize(); app.use(chatSsoRuntime.ingress);` immediately after
 `capabilityContextMiddleware`, before `/oauth` and **all** `/api` routes. This must be in place
@@ -18,7 +20,9 @@ before the first request; middleware exports are loaded/destructured at process 
 `scripts/prepare-librechat-runtime.mjs` recreates pinned public middleware/index copies and
 copies the reviewed core/adapters into this folder. It does not rewrite the strategy copies,
 whose strict-subject and loopback-test discovery changes are documented in `strategies/SOURCE.md`.
-`SOURCE.json` records generated-file hashes. No script applies this to a running container.
+`SOURCE.json` records generated-file hashes. The native controller retains the upstream
+license in `UPSTREAM-LICENSE.txt`. Use the `session` mode of the chat deployment workflow for
+the current server/client release; the legacy preparation script above is not a session release.
 
 ## Required runtime settings (values supplied by the owner)
 

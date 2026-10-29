@@ -13,7 +13,9 @@ test('hide native balance UI without mutating server balance configuration or mo
   assert.equal(server.balance.enabled, true);
   assert.equal(client.modelSpecs, server.modelSpecs);
   assert.equal(client.interface, server.interface);
-  const base = JSON.parse(fs.readFileSync(path.join(__dirname, '../../../base-config.json'), 'utf8'));
+  // The combined directory is an overlay, so its read-only baseline may be supplied
+  // explicitly instead of copying unrelated deploy configuration into the candidate.
+  const base = JSON.parse(fs.readFileSync(process.env.SSO_TEST_BASE_CONFIG || path.join(__dirname, '../../../base-config.json'), 'utf8'));
   assert.equal(base.balance.enabled, true);
 });
 

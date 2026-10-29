@@ -5,6 +5,10 @@ import { createLibreChatBearerSessionMiddleware, createLibreChatPrivateImageSess
 import { createJobTracker } from './job-tracker.mjs';
 import documentEntry from './document-entry.cjs';
 import modelAccess from './model-access.cjs';
+import errorPolicy from './errors.cjs';
+import jwksFetch from './jwks-fetch.cjs';
+import { createNativeRotationGate } from './native-deps.mjs';
+import refreshDelivery from './refresh-delivery-runtime.cjs';
 
 const enabled = value => value === 'true' || value === '1';
 const nonempty = value => typeof value === 'string' && value.length > 0;
@@ -22,11 +26,7 @@ function canonicalPath(req) {
   if (/%(?:2f|5c|00)/i.test(value) || value.includes('\\') || value.includes('//')) throw safeError();
   return value.toLowerCase().replace(/\/$/, '') || '/';
 }
-function reject(res) {
-  if (res.destroyed || res.writableEnded) return;
-  if (res.headersSent) return res.destroy();
-  return res.status(401).json({ error: 'sso_session_required' });
-}
+function reject(res, error) { return errorPolicy.sendFailure(res, error); }
 function validJwksUrl(value) {
   const url = new URL(value);
   const local = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname);
@@ -54,7 +54,9 @@ export async function createRuntime({ env = process.env, dependencies = {} } = {
     const config = (dependencies.getOpenIdConfig ?? nativeRequire('~/strategies').getOpenIdConfig)();
     const metadata = config.serverMetadata();
     if (metadata.issuer !== env.OPENID_ISSUER) throw safeError();
-    jwks = jose.createRemoteJWKSet(validJwksUrl(metadata.jwks_uri), { timeoutDuration: 500 });
+    const jwksUrl = validJwksUrl(metadata.jwks_uri);
+    jwks = jose.createRemoteJWKSet(jwksUrl, { timeoutDuration: 500,
+      [jose.customFetch]: jwksFetch.createJwksFetch({ url: jwksUrl, fetchImpl: dependencies.fetchJwks ?? globalThis.fetch }) });
   }
   const verifyIdToken = dependencies.verifyIdToken ?? ((token, { issuer, audience }) =>
     jose.jwtVerify(token, jwks, { issuer, audience, algorithms: [algorithm] }));
@@ -77,9 +79,9 @@ export async function createRuntime({ env = process.env, dependencies = {} } = {
     req.ssoVerifiedContext = context;
   }
   async function exactUser(subject, issuer) {
-    const user = await runAsSystem(() => models.findUser({
+    const user = await errorPolicy.database(() => runAsSystem(() => models.findUser({
       provider: 'openid', openidId: subject, openidIssuer: issuer, tenantId: { $exists: false },
-    }, '-password -__v -totpSecret -backupCodes'));
+    }, '-password -__v -totpSecret -backupCodes')));
     if (!user || user.provider !== 'openid' || user.openidId !== subject ||
         user.openidIssuer !== issuer || user.tenantId || !userId(user)) throw safeError();
     return user;
@@ -114,10 +116,10 @@ export async function createRuntime({ env = process.env, dependencies = {} } = {
     if (cookies.token_provider !== 'openid' || !nonempty(cookies.refreshToken)) throw safeError();
     const signed = api.getValidOpenIDReuseCredential(cookies, env.JWT_REFRESH_SECRET, cookies.refreshToken);
     if (!signed?.userId) throw safeError();
-    const [session, user] = await Promise.all([
+    const [session, user] = await errorPolicy.database(() => Promise.all([
       runAsSystem(() => models.findSession({ userId: signed.userId, refreshToken: cookies.refreshToken })),
       runAsSystem(() => models.getUserById(signed.userId, '-password -__v -totpSecret -backupCodes')),
-    ]);
+    ]));
     const tokens = req.session?.openidTokens;
     const expiration = new Date(session?.expiration).getTime();
     if (!session || String(session.user) !== signed.userId || !Number.isFinite(expiration) || expiration <= Date.now() ||
@@ -132,19 +134,31 @@ export async function createRuntime({ env = process.env, dependencies = {} } = {
     const verified = await jose.compactVerify(token, jwks, { algorithms: [algorithm] });
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(verified.payload));
   });
+  // Request-local refresh proof only; private API, image, document and logout guards stay strict.
+  const rotationGate = dependencies.rotationGate ?? createNativeRotationGate({
+    nativeRequire, env, verifyIdToken, verifyRefreshIdToken, getSessionState,
+  });
+  const installRefreshResponseStage = dependencies.installRefreshResponseStage ?? refreshDelivery.installRefreshResponseStage;
   async function authorizeRefresh(req) {
     const { user, tokens } = await cookieProof(req);
-    const claims = await verifyRefreshIdToken(tokens.idToken);
+    let claims;
+    try { claims = await verifyRefreshIdToken(tokens.idToken); }
+    catch (error) { throw errorPolicy.verifierUnavailable(error) ? errorPolicy.unavailable() : safeError(); }
     const now = Date.now() / 1000;
     if (claims.iss !== env.OPENID_ISSUER || claims.sub !== user.openidId || user.openidIssuer !== claims.iss ||
         !audienceMatches(claims.aud, env.OPENID_CLIENT_ID) || !nonempty(claims.pl_binding) ||
         !Number.isFinite(claims.exp) || claims.exp <= 0 ||
         (claims.nbf !== undefined && (!Number.isFinite(claims.nbf) || claims.nbf > now)) ||
         (claims.pl_auth_exp !== undefined && (!Number.isFinite(claims.pl_auth_exp) || claims.pl_auth_exp <= now))) throw safeError();
-    const state = await getSessionState({ binding_id: claims.pl_binding, client_id: env.OPENID_CLIENT_ID }, { signal: AbortSignal.timeout(500) });
+    const state = await errorPolicy.authority(signal => getSessionState(
+      { binding_id: claims.pl_binding, client_id: env.OPENID_CLIENT_ID }, { signal }));
     const deliveredAt = Date.now() / 1000;
+    if (!state || typeof state !== 'object' || Array.isArray(state) ||
+        (state.active !== true && state.active !== false)) throw errorPolicy.unavailable();
+    if (state.active === true && (!nonempty(state.sub) || !nonempty(state.binding_id) ||
+        !Number.isFinite(state.auth_expires_at) || state.auth_expires_at <= 0)) throw errorPolicy.unavailable();
     if (state.active !== true || state.sub !== claims.sub || state.binding_id !== claims.pl_binding ||
-        !Number.isFinite(state.auth_expires_at) || state.auth_expires_at <= deliveredAt ||
+        state.auth_expires_at <= deliveredAt ||
         (claims.pl_auth_exp !== undefined && claims.pl_auth_exp <= deliveredAt)) throw safeError();
     trust(req, user, { subject: claims.sub, issuer: claims.iss, bindingId: claims.pl_binding });
   }
@@ -154,7 +168,9 @@ export async function createRuntime({ env = process.env, dependencies = {} } = {
   });
   async function revokeSession(req) {
     const { user, tokens } = await cookieProof(req);
-    const claims = await verifyRefreshIdToken(tokens.idToken);
+    let claims;
+    try { claims = await verifyRefreshIdToken(tokens.idToken); }
+    catch (error) { throw errorPolicy.verifierUnavailable(error) ? errorPolicy.unavailable() : safeError(); }
     if (claims.iss !== env.OPENID_ISSUER || claims.sub !== user.openidId || user.openidIssuer !== claims.iss ||
         !audienceMatches(claims.aud, env.OPENID_CLIENT_ID) || !nonempty(claims.pl_binding) ||
         claims.pl_binding.length > 1024 || !Number.isFinite(claims.exp) || claims.exp <= 0) throw safeError();
@@ -205,8 +221,11 @@ export async function createRuntime({ env = process.env, dependencies = {} } = {
       if (req.method === 'POST' && ['/api/agents/chat', '/api/agents/chat/resume'].includes(pathname)) return reject(res);
       if ((req.method === 'GET' || req.method === 'HEAD') && pathname === '/api/config' && req.headers?.authorization === undefined) return next();
       if (req.method === 'POST' && pathname === '/api/auth/refresh') {
-        await authorizeRefresh(req);
-        return next();
+        const stage = installRefreshResponseStage(req, res, rotationGate);
+        try {
+          await rotationGate.authorize(req);
+          return next();
+        } catch (error) { return stage.fail(error); }
       }
       if (req.method === 'POST' && pathname === '/api/auth/logout') {
         const { user } = await cookieProof(req);
@@ -217,7 +236,7 @@ export async function createRuntime({ env = process.env, dependencies = {} } = {
       const context = await preverify(req);
       await tracker.authorizeAttachment(req, { context, expectedUser: req.ssoVerifiedUser, res });
       next();
-    } catch { reject(res); }
+    } catch (error) { reject(res, error); }
   }
   function allowCleanup(req) {
     return req.ssoCleanupOnly === true && req.authStrategy === 'openidJwt' && req.user?.provider === 'openid' &&

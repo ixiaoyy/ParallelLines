@@ -1,4 +1,5 @@
 'use strict';
+const { isUnavailable } = require('./errors.cjs');
 
 const lifetimeMs = 10 * 60 * 1000;
 const reserved = /^(?:api|oauth|images|assets|fonts|auth|login|register|chat|health|livez|readyz|metrics|index\.html)$/i;
@@ -25,6 +26,7 @@ function documentTarget(req, base) {
 function neutralPage(res, retry, status = 503) {
   res.set('Cache-Control', 'private, no-store');
   res.set('Referrer-Policy', 'no-referrer');
+  if (status === 503) res.set('Retry-After', '1');
   return res.status(status).type('html').send('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>平行线 · AI 聊天</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"></head><body style="margin:0;min-height:100vh;display:grid;place-content:center;background:#f8fafc;color:#475569;font:16px system-ui;text-align:center"><main><p>暂时无法完成登录验证</p><a style="color:#409eff" href="' + retry + '">重新验证</a></main></body></html>');
 }
 
@@ -66,7 +68,8 @@ function createDocumentEntry({ domainClient, authenticateDocument, clock = Date.
       }
       req.ssoDocumentTarget = target;
       return sendIndexHtml(req, res);
-    } catch {
+    } catch (error) {
+      if (isUnavailable(error)) return neutralPage(res, target, 503);
       try {
         req.session.plChatPendingReturn = { target, createdAt: clock() };
         await saveSession(req);
@@ -128,4 +131,6 @@ function injectDocumentLoadingShell(html, req) {
     .replace(/<body(?:\s[^>]*)?>/i, match => match + '<div id="pl-sso-loading" role="status" aria-live="polite">正在进入聊天…</div>');
 }
 
-module.exports = { safeChatReturn, createDocumentEntry, injectDocumentLoadingShell };
+function unavailablePage(req, res) { return neutralPage(res, documentTarget(req, '/chat'), 503); }
+
+module.exports = { safeChatReturn, createDocumentEntry, injectDocumentLoadingShell, unavailablePage };

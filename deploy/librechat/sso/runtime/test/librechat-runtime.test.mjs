@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { createRuntime } from '../init.mjs';
+import { createRotationGate } from '../rotation-gate.mjs';
 
 // Synthetic opaque handles only. Injected verifiers stand for the JOSE verification
 // boundary; these tests exercise ingress/session binding, not native crypto or network.
@@ -18,8 +19,13 @@ function request(path = '/api/convos', extra = {}) {
 function response() {
   return Object.assign(new EventEmitter(), {
     statusCode: 200, headersSent: false, writableEnded: false, destroyed: false,
+    headers: new Map(),
+    setHeader(name, value) { this.headers.set(name.toLowerCase(), value); return this; },
+    getHeader(name) { return this.headers.get(name.toLowerCase()); },
+    removeHeader(name) { this.headers.delete(name.toLowerCase()); return this; },
     status(code) { this.statusCode = code; return this; },
-    json(body) { this.body = body; this.writableEnded = true; this.emit('finish'); return this; },
+    send(body) { this.body = body; this.writableEnded = true; this.emit('finish'); return this; },
+    json(body) { return this.send(body); },
     destroy() { this.destroyed = true; this.emit('close'); },
   });
 }
@@ -58,9 +64,9 @@ async function fixture(t, options = {}) {
       },
     },
     models: {
-      async findUser(query, projection) { calls.find.push({ query, projection }); return control.lookupUser; },
-      async getUserById(id, projection) { calls.getUser.push({ id, projection }); return control.cookieUser; },
-      async findSession(query) { calls.session.push(query); return control.durable; },
+      async findUser(query, projection) { calls.find.push({ query, projection }); if (control.lookupError) throw new Error('fixture lookup unavailable'); return control.lookupUser; },
+      async getUserById(id, projection) { calls.getUser.push({ id, projection }); if (control.userStoreError) throw new Error('fixture user store unavailable'); return control.cookieUser; },
+      async findSession(query) { calls.session.push(query); if (control.durableError) throw new Error('fixture session store unavailable'); return control.durable; },
     },
     async runAsSystem(callback) { calls.system++; return callback(); },
     cookie: {
@@ -99,6 +105,27 @@ async function fixture(t, options = {}) {
       return { active: false, sub: body.binding_id === 'binding-a' ? userA.openidId : 'unexpected', binding_id: body.binding_id };
     },
   };
+  // This fixture executes the real refresh proof gate. Native flight storage remains
+  // synthetic and reports no completed recovery, never a fabricated signed successor.
+  dependencies.rotationGate = createRotationGate({ issuer, clientId,
+    parseCookies: dependencies.cookie.parse,
+    verifyCookie: (cookies, token) => dependencies.api.getValidOpenIDReuseCredential(cookies, env.JWT_REFRESH_SECRET, token),
+    getUser: dependencies.models.getUserById,
+    findDurable: dependencies.models.findSession,
+    verifyIdToken: (token, { allowExpired, ...expected }) => allowExpired
+      ? dependencies.verifyRefreshIdToken(token).then(payload => ({ payload }))
+      : dependencies.verifyIdToken(token, expected),
+    mainState: dependencies.getSessionState,
+    native: {
+      createOpenIDRefreshFlightKey: () => 'fixture-normal-flight',
+      createRefreshTokenBridgeFlightKey: () => 'fixture-bridge-flight',
+      getRefreshTokenBridge: async () => null,
+      waitForOpenIDRefreshFlight: async () => null,
+      findOpenIDRefreshFlight: async () => null,
+      assertOpenIDRefreshFlightAvailable: async () => { throw new Error('unexpected generation assertion'); },
+      assertOpenIDRefreshSessionGenerationAvailable: async () => { throw new Error('unexpected generation assertion'); },
+    },
+  });
   const runtime = await createRuntime({ env, dependencies });
   t.after(() => {
     runtime.close();
@@ -114,10 +141,11 @@ async function ingress(f, req) {
   return { req, res, nextCalls };
 }
 
-function denied(result) {
+function denied(result, status = 401) {
   assert.equal(result.nextCalls, 0);
-  assert.equal(result.res.statusCode, 401);
-  assert.deepEqual(result.res.body, { error: 'sso_session_required' });
+  assert.equal(result.res.statusCode, status);
+  assert.deepEqual(result.res.body, { error: status === 503 ? 'sso_temporarily_unavailable' : 'sso_session_required' });
+  if (status === 503) assert.equal(result.res.getHeader('retry-after'), '1');
   assert.equal(result.req.ssoVerifiedUser, undefined);
 }
 
@@ -222,14 +250,14 @@ test('same-email native account, local provider, tenant override and different a
 });
 
 test('inactive, absent, unavailable, expired or mismatched main state denies private ingress', async t => {
-  for (const change of [
-    f => { f.control.state.active = false; }, f => { f.control.state = null; },
-    f => { f.control.authorityError = true; }, f => { f.control.state.auth_expires_at = 1; },
-    f => { f.control.state.binding_id = 'binding-b'; },
+  for (const [status, change] of [
+    [401, f => { f.control.state.active = false; }], [503, f => { f.control.state = null; }],
+    [503, f => { f.control.authorityError = true; }], [401, f => { f.control.state.auth_expires_at = 1; }],
+    [401, f => { f.control.state.binding_id = 'binding-b'; }],
   ]) {
     const f = await fixture(t);
     change(f);
-    denied(await ingress(f, request('/api/convos', { headers: { authorization: 'Bearer fixture-id-a' } })));
+    denied(await ingress(f, request('/api/convos', { headers: { authorization: 'Bearer fixture-id-a' } })), status);
     assert.equal(f.calls.find.length, 0);
   }
 });
@@ -254,7 +282,7 @@ test('refresh requires signed OpenID cookie proof, matching Express ID token and
   const req = refreshRequest();
   const result = await ingress(f, req);
   assert.equal(result.nextCalls, 1);
-  assert.equal(req.ssoVerifiedUser.id, userA._id);
+  assert.equal(req.ssoVerifiedUser, undefined, 'refresh admission grants only request-local delivery proof, not private API identity');
   assert.equal(req.ssoCleanupOnly, undefined);
   assert.deepEqual(f.calls.marker, [{ provider: 'openid', marker: 'fixture-signed-marker-a', refreshToken: 'fixture-refresh-a' }]);
   assert.deepEqual(f.calls.session, [{ userId: userA._id, refreshToken: 'fixture-refresh-a' }]);
@@ -263,15 +291,12 @@ test('refresh requires signed OpenID cookie proof, matching Express ID token and
   assert.equal(f.calls.verify.length, 0, 'expired signed ID is accepted only by refresh verifier');
 });
 
-test('refresh refuses local/legacy cookies, absent Express state, rotated refresh or cross-user state', async t => {
+test('refresh refuses local/legacy cookies, absent Express state and cross-user state', async t => {
   for (const change of [
     (f, req) => { req.headers.cookie = ''; },
     (f, req) => { req.headers.cookie = goodCookies.replace('token_provider=openid', 'token_provider=local'); },
     f => { f.control.markerAccepted = false; },
-    f => { f.control.durable = null; },
-    f => { f.control.durable.expiration = new Date(1); },
     (f, req) => { delete req.session; },
-    (f, req) => { req.session.openidTokens.refreshToken = 'fixture-rotated-refresh'; },
     (f, req) => { req.session.openidTokens.appUserId = userB._id; },
     (f, req) => { req.session.openidTokens.openidSubject = userB.openidId; },
     f => { f.control.cookieUser = { ...userB }; },
@@ -285,20 +310,47 @@ test('refresh refuses local/legacy cookies, absent Express state, rotated refres
   }
 });
 
-test('refresh does not extend missing/expired main sessions or accept wrong ID-token claims/key', async t => {
+test('unproven rotation or expired/missing durable state stays unavailable without admitting refresh', async t => {
   for (const change of [
-    f => { f.control.state = null; }, f => { f.control.state.active = false; },
-    f => { f.control.state.auth_expires_at = 1; }, f => { f.control.authorityError = true; },
-    f => { f.control.state.sub = userB.openidId; },
-    f => { f.control.refreshClaims.iss = 'https://wrong-issuer.fixture.test'; },
-    f => { f.control.refreshClaims.aud = 'other-client'; },
-    f => { f.control.refreshClaims.pl_auth_exp = 1; },
-    f => { f.control.refreshClaims.nbf = Date.now() / 1000 + 6000; },
-    f => { f.control.refreshKeyAccepted = false; },
+    f => { f.control.durable = null; },
+    f => { f.control.durable.expiration = new Date(1); },
+    (f, req) => { req.session.openidTokens.refreshToken = 'fixture-rotated-refresh'; },
+  ]) {
+    const f = await fixture(t);
+    const req = refreshRequest();
+    change(f, req);
+    denied(await ingress(f, req), 503);
+    assert.equal(f.calls.state.length, 1, 'the original signed binding must be live before native recovery is considered');
+  }
+});
+
+test('database outages are 503 while missing or mismatched user/session owners remain 401', async t => {
+  const lookup = await fixture(t, { control: { lookupError: true } });
+  denied(await ingress(lookup, request('/api/convos', { headers: { authorization: 'Bearer fixture-id-a' } })), 503);
+  for (const control of [{ userStoreError: true }, { durableError: true }]) {
+    const f = await fixture(t, { control });
+    denied(await ingress(f, refreshRequest()), 503);
+  }
+  for (const control of [{ cookieUser: null }, { durable: { user: userB._id, expiration: new Date(Date.now() + 60000) } }]) {
+    const f = await fixture(t, { control });
+    denied(await ingress(f, refreshRequest()));
+  }
+});
+
+test('refresh does not extend missing/expired main sessions or accept wrong ID-token claims/key', async t => {
+  for (const [status, change] of [
+    [503, f => { f.control.state = null; }], [401, f => { f.control.state.active = false; }],
+    [401, f => { f.control.state.auth_expires_at = 1; }], [503, f => { f.control.authorityError = true; }],
+    [401, f => { f.control.state.sub = userB.openidId; }],
+    [401, f => { f.control.refreshClaims.iss = 'https://wrong-issuer.fixture.test'; }],
+    [401, f => { f.control.refreshClaims.aud = 'other-client'; }],
+    [401, f => { f.control.refreshClaims.pl_auth_exp = 1; }],
+    [401, f => { f.control.refreshClaims.nbf = Date.now() / 1000 + 6000; }],
+    [401, f => { f.control.refreshKeyAccepted = false; }],
   ]) {
     const f = await fixture(t);
     change(f);
-    denied(await ingress(f, refreshRequest()));
+    denied(await ingress(f, refreshRequest()), status);
   }
 });
 
