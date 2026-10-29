@@ -1,0 +1,100 @@
+name: parallellines-chat
+services:
+  librechat:
+    image: registry.librechat.ai/librechat-ai/librechat-api:v0.8.9-rc1@sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5
+    restart: unless-stopped
+    env_file: .env
+    entrypoint: [node, /integration/start.cjs]
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3080
+      DOMAIN_CLIENT: ${CHAT_PUBLIC_URL:-https://pingxingxian.space/chat}
+      DOMAIN_SERVER: ${CHAT_PUBLIC_URL:-https://pingxingxian.space/chat}
+      ADMIN_PANEL_URL: http://127.0.0.1:${CHAT_ADMIN_PORT:-3091}
+      MONGO_URI: mongodb://librechat-mongodb:27017/LibreChatFamily
+      ENDPOINTS: openAI
+      SEARCH: "false"
+      ALLOW_EMAIL_LOGIN: "true"
+      ALLOW_REGISTRATION: "false"
+      ALLOW_SOCIAL_LOGIN: "false"
+      ALLOW_SOCIAL_REGISTRATION: "false"
+      ALLOW_UNVERIFIED_EMAIL_LOGIN: "false"
+      ALLOW_PASSWORD_RESET: "false"
+      ALLOW_SHARED_LINKS: "false"
+      ALLOW_SHARED_LINKS_PUBLIC: "false"
+      DEBUG_LOGGING: "false"
+      DEBUG_CONSOLE: "false"
+      DEBUG_OPENAI: "false"
+      SCARF_ANALYTICS: "false"
+      TRUST_PROXY: 1
+      SCHEDULES_SINGLE_PROCESS: "true"
+      OPENAI_REVERSE_PROXY: ""
+      PROXY: ""
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      ANTHROPIC_API_KEY: ""
+      GOOGLE_KEY: ""
+      AZURE_OPENAI_API_KEY: ""
+      AZURE_API_KEY: ""
+      ASSISTANTS_API_KEY: ""
+      AZURE_ASSISTANTS_API_KEY: ""
+    volumes:
+      - ./:/integration:ro
+      - ./patches/validateImageRequest.js:/app/api/server/middleware/validateImageRequest.js:ro
+      - images:/app/client/public/images
+      - uploads:/app/uploads
+      - logs:/app/logs
+      - data:/app/data
+    networks:
+      parallellines:
+        aliases: [librechat]
+      private: {}
+    depends_on:
+      librechat-mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3080/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+      retries: 20
+  librechat-mongodb:
+    image: mongo:8.0.20@sha256:098862b1339f031900ca66cf8fef799e616d6324fa41b9a263f2ec899552c1ef
+    restart: unless-stopped
+    command: [mongod, --noauth, --bind_ip_all]
+    volumes: [mongo:/data/db]
+    networks: [private]
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  librechat-admin:
+    image: registry.librechat.ai/librechat-ai/librechat-admin-panel:f2601cbf3216a62c12e5f9d21810eb9ada95fa63@sha256:90b21c56f9494577304f9cf3dde9f770e3dba35b0ce319fbb868aa1a6745248a
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      SESSION_SECRET: ${ADMIN_PANEL_SESSION_SECRET:?Run the server-local init.cjs once}
+      API_SERVER_URL: http://librechat:3080
+      VITE_API_BASE_URL: ${CHAT_PUBLIC_URL:-https://pingxingxian.space/chat}
+      SESSION_COOKIE_SECURE: "false"
+      ADMIN_SSO_ENABLED: "false"
+    ports: ["127.0.0.1:${CHAT_ADMIN_PORT:-3091}:3000"]
+    networks: [private, admin-loopback]
+    depends_on:
+      librechat:
+        condition: service_healthy
+networks:
+  parallellines:
+    external: true
+    name: ${PARALLELLINES_NETWORK:-parallellines_default}
+  private:
+    internal: true
+  admin-loopback: {}
+volumes:
+  mongo:
+  images:
+  uploads:
+  logs:
+  data:

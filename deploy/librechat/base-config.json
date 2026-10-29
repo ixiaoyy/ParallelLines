@@ -1,0 +1,45 @@
+{
+  "version": "1.3.18",
+  "cache": true,
+  "secureImageLinks": true,
+  "fileStrategy": "local",
+  "memory": { "disabled": true },
+  "interface": {
+    "endpointsMenu": false,
+    "modelSelect": true,
+    "webSearch": false,
+    "codeInterpreter": false,
+    "fileSearch": false,
+    "agents": { "use": false, "create": false, "share": false, "public": false },
+    "remoteAgents": { "use": false, "create": false, "share": false, "public": false },
+    "skills": { "use": false, "create": false, "share": false, "public": false },
+    "sharedLinks": { "create": false, "share": false, "public": false }
+  },
+  "balance": {
+    "enabled": true,
+    "startBalance": 10000,
+    "autoRefillEnabled": true,
+    "refillIntervalValue": 1,
+    "refillIntervalUnit": "months",
+    "refillAmount": 10000,
+    "refillMode": "reset",
+    "display": "credits"
+  },
+  "transactions": { "enabled": true },
+  "fileConfig": {
+    "serverFileSizeLimit": 20,
+    "avatarSizeLimit": 2,
+    "endpoints": {
+      "default": { "fileLimit": 4, "fileSizeLimit": 5, "totalSizeLimit": 20, "supportedMimeTypes": ["^image/(jpeg|png|webp)$"] },
+      "openAI": { "fileLimit": 4, "fileSizeLimit": 5, "totalSizeLimit": 20, "supportedMimeTypes": ["^image/(jpeg|png|webp)$"] },
+      "custom": { "disabled": true },
+      "agents": { "disabled": true },
+      "assistants": { "disabled": true },
+      "azureAssistants": { "disabled": true },
+      "azureOpenAI": { "disabled": true },
+      "anthropic": { "disabled": true },
+      "google": { "disabled": true },
+      "bedrock": { "disabled": true }
+    }
+  }
+}
