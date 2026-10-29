@@ -57,8 +57,8 @@ chmod 600 .env
 cd /opt/parallellines/deploy/librechat
 export CHAT_SSO_RELEASE=REVISION
 sudo docker network ls --format '{{.Name}}'
-sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml config --quiet
-sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml up -d
+sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.sso.yaml config --quiet
+sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.sso.yaml up -d
 ```
 
 如有多个网络，在原项目目录只读确认 nginx 的实际网络，再选平行线自己的 default 网络：
@@ -107,7 +107,7 @@ nano /opt/parallellines/deploy/librechat/.env
 
 ```sh
 cd /opt/parallellines/deploy/librechat
-sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml up -d --force-recreate librechat
+sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.sso.yaml up -d --force-recreate librechat
 ```
 
 `restart` 不会重新载入 Compose 的 env 文件。模型目录与 preset 在每次启动时生成，不把密钥序列化进生成的 YAML。采用原生 OpenAI 及 `useResponsesApi: true`；[官方图片输入说明](https://developers.openai.com/api/docs/guides/images-vision) 区分了 Responses 的 `input_text`/`input_image` 与旧 Chat Completions 的结构。
@@ -123,8 +123,8 @@ sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file .
 先进入 `/opt/parallellines/deploy/librechat`，按第 1 节设置当前 `CHAT_SSO_RELEASE`，再做不调用模型的检查：
 
 ```sh
-sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml ps
-sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml exec -T librechat node -e \
+sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.sso.yaml ps
+sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.sso.yaml exec -T librechat node -e \
 "const fs=require('fs');const c=JSON.parse(fs.readFileSync('/app/data/family-config/librechat.yaml','utf8'));const p=JSON.parse(fs.readFileSync('/app/data/family-config/approved-user-profile.yaml','utf8'));console.log(JSON.stringify({serverGptConfigured:p.modelSpecs.list.length>0,defaultAccountAccess:false,configuredModels:p.endpoints.openAI.models,baseModels:c.endpoints.openAI.models,welcome:c.interface.customWelcome}));"
 curl -fsS https://pingxingxian.space/chat/readyz
 ```
@@ -162,7 +162,7 @@ sudo docker compose -f docker-compose.yml -f deploy/docker-compose.migration.yml
 
 ```sh
 cd /opt/parallellines/deploy/librechat
-sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml stop
+sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.sso.yaml stop
 ```
 
 保留 `.env` 和所有命名卷。不要 `down -v`、清空 MongoDB、轮换 JWT/加密值或用整文件 checkout 覆盖同期游戏发布。当前回滚说明针对这次首次接入；未来升级数据库/镜像时，先备份数据并核验迁移兼容性。

@@ -36,7 +36,8 @@ if test "$mode" = models; then
   test -f .env
   active_files=$(sudo docker inspect parallellines-chat-librechat-1 --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}')
   if test "$active_files" != "$PWD/compose.production.yaml,$PWD/compose.disabled.yaml" && \
-     test "$active_files" != "$PWD/compose.production.yaml,$PWD/compose.disabled.yaml,$PWD/compose.sso.yaml"; then
+     test "$active_files" != "$PWD/compose.production.yaml,$PWD/compose.disabled.yaml,$PWD/compose.sso.yaml" && \
+     test "$active_files" != "$PWD/compose.production.yaml,$PWD/compose.sso.yaml"; then
     echo '[chat] stopped before editing: existing deployment mode changed; no Key or model settings changed'
     exit 3
   fi
@@ -49,6 +50,10 @@ if test "$mode" = models; then
     export CHAT_SSO_RELEASE="$revision"
     model_compose=(sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml)
   fi
+  if test "$active_files" = "$PWD/compose.production.yaml,$PWD/compose.sso.yaml"; then
+    export CHAT_SSO_RELEASE="$revision"
+    model_compose=(sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.sso.yaml)
+  fi
   "${model_compose[@]}" config --quiet
   "${model_compose[@]}" up -d --wait --wait-timeout 240 --no-deps --force-recreate librechat
   "${model_compose[@]}" exec -T librechat node -e '
@@ -60,11 +65,11 @@ if test "$mode" = models; then
     const ids = selected.models.map(m => m.id);
     const baseEmpty = base.endpoints.openAI.models.length === 0;
     const menuMatches = JSON.stringify(base.modelSpecs.list.map(spec => spec.preset.model)) === JSON.stringify(ids);
-    const templateEmpty = profile.endpoints.openAI.models.length === 0;
+    const templateMatches = JSON.stringify(profile.endpoints.openAI.models) === JSON.stringify(process.env.OPENAI_API_KEY ? ids : []);
     const ok = JSON.stringify(ids) === JSON.stringify(["gpt-6-luna", "gpt-6.1-terra", "gpt-6.1-sol"]) &&
-      process.env.OPENAI_CHAT_MODELS === ids.join(",") && baseEmpty && templateEmpty && menuMatches;
+      process.env.OPENAI_CHAT_MODELS === ids.join(",") && baseEmpty && templateMatches && menuMatches;
     console.log(JSON.stringify({ selectedModels: selected.models, runtimeModelSetting: process.env.OPENAI_CHAT_MODELS,
-      defaultAccountAccess: false, baseModelsEmpty: baseEmpty, grantTemplateModelsEmpty: templateEmpty, verified: ok }));
+      defaultAccountAccess: false, baseModelsEmpty: baseEmpty, grantTemplateMatchesRuntime: templateMatches, verified: ok }));
     if (!ok) process.exit(1);
   ' < /dev/null
   "${model_compose[@]}" ps librechat

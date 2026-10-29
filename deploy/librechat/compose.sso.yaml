@@ -1,4 +1,4 @@
-# Use with compose.production.yaml + compose.disabled.yaml and both .env files.
+# Use with compose.production.yaml and both .env files. Do not add the disabled overlay when loading the owner-configured Key.
 # Runtime source is supplied separately by the reviewed pinned LibreChat mount layer.
 services:
   chat-oidc:

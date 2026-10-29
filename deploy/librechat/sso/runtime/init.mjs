@@ -95,7 +95,7 @@ export async function createRuntime({ env = process.env, dependencies = {} } = {
   }
   const bearerMiddleware = createLibreChatBearerSessionMiddleware({ guard });
   const authorizeModel = modelAccess.createModelAccess({ env, getConfig: dependencies.getConfig ?? (user =>
-    nativeRequire('~/server/services/Config').getAppConfig(api.getAppConfigOptionsFromUser(user))) });
+    nativeRequire('~/server/services/Config').getAppConfig({ ...api.getAppConfigOptionsFromUser(user), failClosed: true })) });
   async function bearer(req, res, next) {
     let authenticated = false;
     await bearerMiddleware(req, res, () => { authenticated = true; });

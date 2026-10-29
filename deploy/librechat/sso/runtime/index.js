@@ -4,6 +4,7 @@ const telemetry = require('./telemetry');
 const fs = require('fs');
 const path = require('path');
 const { applyShellBranding, installBrandLogoRoute } = require('/integration/sso/branding/shell-branding.cjs');
+const { hideBalancePresentation } = require('./sso-runtime/client-config.cjs');
 require('module-alias')({ base: path.resolve(__dirname, '..') });
 const cors = require('cors');
 const axios = require('axios');
@@ -439,6 +440,7 @@ const startServer = async () => {
   const chatSsoRuntime = require('./sso-runtime/runtime.cjs');
   await chatSsoRuntime.initialize();
   app.use(chatSsoRuntime.ingress);
+  app.use(hideBalancePresentation);
   app.get('/index.html', chatSsoRuntime.document(sendIndexHtml));
 
   /* Pre-auth tenant context for unauthenticated routes that need tenant scoping.

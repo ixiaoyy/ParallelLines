@@ -25,24 +25,22 @@ sudo docker run --rm --network none --user 0:0 \
 
 export CHAT_SSO_RELEASE="$revision"
 cd deploy/librechat
-chat=(sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml)
+chat=(sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.sso.yaml)
 "${chat[@]}" config --quiet
 "${chat[@]}" up -d --build --wait --wait-timeout 180 --no-deps chat-oidc
 
-# The main API source/image was deployed by the scoped normal pipeline. Reload only its env.
-cd /opt/parallellines
-sudo docker compose -f docker-compose.yml -f deploy/docker-compose.migration.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 180 api
-cd deploy/librechat
+# Main SSO API is already enabled; this chat-only update does not restart the main API.
 "${chat[@]}" up -d --no-deps --force-recreate --wait --wait-timeout 240 librechat
 "${chat[@]}" exec -T librechat node -e '
   const fs = require("node:fs");
   const base = JSON.parse(fs.readFileSync("/app/data/family-config/librechat.yaml", "utf8"));
   const approved = JSON.parse(fs.readFileSync("/app/data/family-config/approved-user-profile.yaml", "utf8"));
-  const empty = base.endpoints.openAI.models.length === 0 && approved.endpoints.openAI.models.length === 0;
+  const empty = base.endpoints.openAI.models.length === 0;
   const candidates = base.modelSpecs.list.map(spec => spec.preset.model);
   const menu = JSON.stringify(candidates) === JSON.stringify(["gpt-6-luna", "gpt-6.1-terra", "gpt-6.1-sol"]);
-  const ok = empty && menu && base.modelSpecs.list[0].default === true && process.env.OPENAI_API_KEY === "" && process.env.SSO_REQUIRED === "true" && process.env.ALLOW_REGISTRATION === "false" && process.env.ALLOW_EMAIL_LOGIN === "false";
-  console.log(JSON.stringify({ ssoRequired: true, emailLogin: false, registration: false, defaultModelGrants: false, gptDisabled: empty, candidates, defaultModel: candidates[0], runtimeKeyLoaded: Boolean(process.env.OPENAI_API_KEY), verified: ok }));
+  const keyLoaded = Boolean((process.env.OPENAI_API_KEY || "").trim());
+  const ok = empty && menu && keyLoaded && base.balance.enabled === true && base.modelSpecs.list[0].default === true && process.env.SSO_REQUIRED === "true" && process.env.ALLOW_REGISTRATION === "false" && process.env.ALLOW_EMAIL_LOGIN === "false";
+  console.log(JSON.stringify({ ssoRequired: true, emailLogin: false, registration: false, defaultModelGrants: false, candidates, defaultModel: candidates[0], runtimeKeyLoaded: keyLoaded, grantTemplateReady: approved.endpoints.openAI.models.length > 0, serverBalanceChecks: base.balance.enabled === true, verified: ok }));
   if (!ok) process.exit(1);
 ' < /dev/null
 "${chat[@]}" exec -T librechat node /integration/sso/verify-public.cjs < /dev/null
