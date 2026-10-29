@@ -21,6 +21,8 @@
 
 也可使用仓库 Actions 的 `Deploy family chat`：`mode=preflight` 只检查真实资源、Docker 网络、服务状态及 `.env` 是否存在；`mode=deploy` 启动服务。只有在所有者明确同意生成上述五项密钥后，才勾选 `initialize_application_secrets`。这一步不会创建 LibreChat 管理员账号。
 
+此 Actions 发布总会叠加 `compose.disabled.yaml`，把容器的 OpenAI Key/模型设为空，即使服务器 `.env` 已有填写也保持停用。下文用户手动启用使用基础 `compose.production.yaml`，不叠加停用覆盖文件。主站与聊天发布共用串行队列，后续发布不会取消正在执行的远端操作。
+
 ```sh
 cd /opt/parallellines/deploy/librechat
 docker pull registry.librechat.ai/librechat-ai/librechat-api@sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5

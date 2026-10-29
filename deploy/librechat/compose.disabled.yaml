@@ -1,0 +1,7 @@
+# The disabled deployment cannot activate even if the owner has since edited .env.
+# Enabling models is a separate, manual owner action using compose.production.yaml.
+services:
+  librechat:
+    environment:
+      OPENAI_API_KEY: ""
+      OPENAI_CHAT_MODELS: ""

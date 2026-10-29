@@ -40,12 +40,13 @@ if ! test -e .env; then
     -v "$PWD:/integration" --entrypoint node "$api_image" /integration/init.cjs
   chmod 600 .env
 fi
-sudo docker compose --env-file .env -f compose.production.yaml config --quiet
-sudo docker compose --env-file .env -f compose.production.yaml pull
-sudo docker compose --env-file .env -f compose.production.yaml up -d --wait --wait-timeout 240
+chat_compose=(sudo docker compose --env-file .env -f compose.production.yaml -f compose.disabled.yaml)
+"${chat_compose[@]}" config --quiet
+"${chat_compose[@]}" pull
+"${chat_compose[@]}" up -d --wait --wait-timeout 240
 
 # Only generated secret-free config is inspected. This release must remain disabled.
-sudo docker compose --env-file .env -f compose.production.yaml exec -T librechat node -e '
+"${chat_compose[@]}" exec -T librechat node -e '
   const fs = require("node:fs");
   const c = JSON.parse(fs.readFileSync("/app/data/family-config/librechat.yaml", "utf8"));
   const p = JSON.parse(fs.readFileSync("/app/data/family-config/approved-user-profile.yaml", "utf8"));
@@ -55,5 +56,5 @@ sudo docker compose --env-file .env -f compose.production.yaml exec -T librechat
   console.log(JSON.stringify({ disabled, defaultAccountAccess: false, baseModels: base, configuredModels: selected, welcome: c.interface?.customWelcome }));
   if (!disabled) process.exit(1);
 '
-sudo docker compose --env-file .env -f compose.production.yaml ps
+"${chat_compose[@]}" ps
 echo '[chat] healthy disabled service started; public proxy is activated separately after health verification'
