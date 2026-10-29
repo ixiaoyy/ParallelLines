@@ -93,13 +93,16 @@ function createDocumentEntry({ domainClient, authenticateDocument, clock = Date.
       delete req.session.plChatPendingReturn;
       // Native Passport generates state/PKCE/nonce. Associate the target with exactly
       // that outgoing state; never replace state, fixed callback URL or token parameters.
-      res.redirect = function rememberNativeState(...args) {
-        const address = args.at(-1);
-        const destination = new URL(address, client.origin);
-        const states = destination.searchParams.getAll('state');
-        if (states.length !== 1 || !/^[A-Za-z0-9_-]{8,512}$/.test(states[0])) throw new Error('Native OIDC state unavailable');
-        req.session.plChatReturns = [...entries(req), { state: states[0], target, createdAt: clock() }];
-        return Reflect.apply(original, this, args);
+      const originalSetHeader = res.setHeader;
+      res.setHeader = function rememberNativeState(name, value) {
+        if (typeof name === 'string' && name.toLowerCase() === 'location') {
+          if (typeof value !== 'string') throw new Error('Native OIDC state unavailable');
+          const destination = new URL(value, client.origin);
+          const states = destination.searchParams.getAll('state');
+          if (states.length !== 1 || !/^[A-Za-z0-9_-]{8,512}$/.test(states[0])) throw new Error('Native OIDC state unavailable');
+          req.session.plChatReturns = [...entries(req), { state: states[0], target, createdAt: clock() }];
+        }
+        return Reflect.apply(originalSetHeader, this, arguments);
       };
       return;
     }

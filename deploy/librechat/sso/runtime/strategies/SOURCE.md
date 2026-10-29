@@ -1,5 +1,20 @@
 # Native strategy candidate provenance
 
+## OAuth entry compatibility correction
+
+The SSO GET authorization entry now presents a query-free `currentUrl` only at the
+exact `/chat/oauth/openid` start pathname. `openid-client` 6.5.0 otherwise treats
+`returnTo` as an authorization response; callback queries, state/PKCE/nonce checks
+and fixed callback configuration remain intact. The document entry consumes the
+strict chat return path and captures Passport's actual `Location` header to bind
+that path to the generated state before Express saves the session.
+
+This correction passed real Passport/Express-session tests for new and existing
+state, successful PKCE/nonce/signed-ID-token callback, and invalid state/session
+denials. The corrected strategy SHA256 is
+`68d71e16b2bd51206ec6110eec98a47057c84d0a922ce44a3c42b149b4cc2cf7`.
+The following sections retain the earlier preparation history.
+
 Local candidate files only; no upstream/main checkout changes and no production execution.
 
 Base: LibreChat `v0.8.9-rc1`, commit `8d3da9bbb220a0a96be9330a2e1cbd385fb786d5`, API image index `sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5`.

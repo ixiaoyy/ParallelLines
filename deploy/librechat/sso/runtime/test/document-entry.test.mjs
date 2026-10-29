@@ -10,6 +10,7 @@ const request = (url, extra = {}) => ({ method: 'GET', originalUrl: url, headers
 const response = () => ({
   statusCode: 200, headers: {},
   set(name, value) { this.headers[name] = value; return this; },
+  setHeader(name, value) { this.headers[name] = value; return this; },
   status(value) { this.statusCode = value; return this; },
   type(value) { this.contentType = value; return this; },
   send(value) { this.body = value; return this; },
@@ -68,8 +69,8 @@ test('native outgoing state binds the return path and successful callback consum
   const req = request('/oauth/openid?returnTo=%2Fchat%2Fc%2Fconversation-id'); const res = response();
   navigation.prepareOAuth(req, res, '/oauth/openid');
   const original = 'https://fixture.test/auth/oidc/auth?state=fixture_state_123&code_challenge=fixture-pkce&nonce=fixture-nonce&redirect_uri=https%3A%2F%2Ffixture.test%2Fchat%2Foauth%2Fopenid%2Fcallback';
-  res.redirect(original);
-  assert.deepEqual(res.redirectArgs, [original], 'state/PKCE/nonce/fixed callback are untouched');
+  res.setHeader('Location', original);
+  assert.equal(res.headers.Location, original, 'state/PKCE/nonce/fixed callback are untouched');
   assert.equal(req.session.plChatReturns[0].target, '/chat/c/conversation-id');
   req.session.openidTokens = { appUserId: 'user-a', openidSubject: 'sub-a', openidIssuer: 'https://fixture.test/auth/oidc' };
   const callback = request('/oauth/openid/callback?state=fixture_state_123&code=fixture-code', { session: req.session,
@@ -84,7 +85,7 @@ test('wrong state, expired target, unsafe target and native failure cannot redir
   const navigation = entry.createDocumentEntry({ domainClient, clock: () => now, authenticateDocument: async () => {} });
   for (const target of ['%2F%2Fevil.test', '%2Fchat%2Fapi%2Fuser', '%2Fchat%2Fc%2Fx%3Ftoken%3Dx']) {
     const req = request('/oauth/openid?returnTo=' + target); const res = response();
-    navigation.prepareOAuth(req, res, '/oauth/openid'); res.redirect('https://fixture.test/auth/oidc/auth?state=fixture_state_123');
+    navigation.prepareOAuth(req, res, '/oauth/openid'); res.setHeader('Location', 'https://fixture.test/auth/oidc/auth?state=fixture_state_123');
     assert.equal(req.session.plChatReturns[0].target, '/chat/');
   }
   const session = makeSession();

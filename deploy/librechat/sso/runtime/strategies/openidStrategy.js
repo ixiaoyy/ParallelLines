@@ -132,7 +132,14 @@ const getOpenIdAuthorizationAudience = () =>
 class CustomOpenIDStrategy extends OpenIDStrategy {
   currentUrl(req) {
     const hostAndProtocol = process.env.DOMAIN_SERVER;
-    return new URL(`${hostAndProtocol}${req.originalUrl ?? req.url}`);
+    const current = new URL(`${hostAndProtocol}${req.originalUrl ?? req.url}`);
+    const authorizationPath = new URL(hostAndProtocol).pathname.replace(/\/$/, '') + '/oauth/openid';
+    if (isEnabled(process.env.SSO_REQUIRED) && req.method === 'GET' && current.pathname === authorizationPath) {
+      // The return target was consumed by the SSO entry middleware. This SDK
+      // treats other start-query parameters as an authorization response.
+      current.search = '';
+    }
+    return current;
   }
 
   authorizationRequestParams(req, options) {

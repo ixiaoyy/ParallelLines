@@ -6,7 +6,7 @@ on:
       mode:
         description: Inspect, deploy chat, configure models, activate SSO, or release a verified native session client
         type: choice
-        options: [preflight, deploy, models, sso, oidc, session]
+        options: [preflight, deploy, models, sso, oidc, session, runtime]
         default: preflight
       initialize_application_secrets:
         description: Generate five server-local app secrets only after explicit owner approval
@@ -226,7 +226,9 @@ jobs:
             cd /opt/parallellines
             git fetch origin main
             test "$(git rev-parse origin/main)" = "${{ github.sha }}"
-            if test '${{ inputs.mode }}' = session; then
+            if test '${{ inputs.mode }}' = runtime; then
+              git show '${{ github.sha }}:deploy/librechat/release-runtime.sh' | bash -s -- '${{ github.sha }}'
+            elif test '${{ inputs.mode }}' = session; then
               git show '${{ github.sha }}:deploy/librechat/release-session.sh' | bash -s -- '${{ github.sha }}' '${{ needs.build_session.outputs.bundle_sha256 }}'
             elif test '${{ inputs.mode }}' = oidc; then
               git show '${{ github.sha }}:deploy/librechat/release-oidc.sh' | bash -s -- '${{ github.sha }}'
