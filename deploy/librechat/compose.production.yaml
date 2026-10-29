@@ -8,6 +8,7 @@ services:
     entrypoint: [node, /integration/start.cjs]
     environment:
       NODE_ENV: production
+      APP_TITLE: 平行线家庭聊天
       HOST: 0.0.0.0
       PORT: 3080
       DOMAIN_CLIENT: ${CHAT_PUBLIC_URL:-https://pingxingxian.space/chat}

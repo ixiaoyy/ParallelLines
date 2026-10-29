@@ -3,5 +3,6 @@
 services:
   librechat:
     environment:
+      APP_TITLE: 家庭聊天（GPT 尚未启用）
       OPENAI_API_KEY: ""
       OPENAI_CHAT_MODELS: ""
