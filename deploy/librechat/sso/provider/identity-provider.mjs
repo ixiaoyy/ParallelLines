@@ -15,6 +15,23 @@ function reply(res, status, code) {
   res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });
   res.end(JSON.stringify({ error: code }));
 }
+const recoveryDocument = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>平行线 · 重新进入聊天</title></head><body><main><h1>聊天登录未完成</h1><p>登录链接可能已失效，请重新进入聊天。</p><a href="/chat/">重新进入聊天</a></main></body></html>';
+function replyFinishFailure(req, res, code) {
+  const form = (req.headers['content-type'] || '').split(';')[0].trim() === 'application/x-www-form-urlencoded';
+  const html = String(req.headers.accept || '').split(',').some(part => {
+    const [mime, ...params] = part.trim().toLowerCase().split(';').map(value => value.trim());
+    const q = params.find(value => value.startsWith('q='));
+    const quality = q === undefined ? 1 : Number(q.slice(2));
+    return mime === 'text/html' && Number.isFinite(quality) && quality > 0 && quality <= 1;
+  });
+  if (!form || !html) return reply(res, 403, code);
+  res.writeHead(403, {
+    'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
+    'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  });
+  res.end(recoveryDocument);
+}
 async function finishBody(req) {
   const mime = (req.headers['content-type'] || '').split(';')[0].trim();
   if (!['application/json', 'application/x-www-form-urlencoded'].includes(mime)) throw new Error('invalid_finish_body');
@@ -136,7 +153,7 @@ export function createIdentityProvider({ config, store, fetchImpl }) {
       try {
         const input = await finishBody(req);
         const details = await provider.interactionDetails(req, res);
-        if (details.uid !== input.interaction_id || details.params.client_id !== CLIENT_ID || details.params.redirect_uri !== config.callbackUri) return reply(res, 403, 'interaction_mismatch');
+        if (details.uid !== input.interaction_id || details.params.client_id !== CLIENT_ID || details.params.redirect_uri !== config.callbackUri) return replyFinishFailure(req, res, 'interaction_mismatch');
         const identity = await bridge.exchange({ interactionId: details.uid, approvalCode: input.approval_code });
         const grant = new provider.Grant({ accountId: identity.sub, clientId: CLIENT_ID });
         const requestedScopes = String(details.params.scope || '').split(' ').filter(scope => ['openid', 'profile', 'offline_access'].includes(scope));
@@ -148,7 +165,7 @@ export function createIdentityProvider({ config, store, fetchImpl }) {
         }, { mergeWithLastSubmission: false });
       } catch {
         if (grantId) store.revokeGrant(grantId);
-        if (!res.headersSent) return reply(res, 403, 'approval_rejected');
+        if (!res.headersSent) return replyFinishFailure(req, res, 'approval_rejected');
         res.destroy();
       }
       return;
