@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, JsonValue, field_validator
 
 CatalogDestinationKind = Literal["external", "internal"]
 CatalogSubmissionStatus = Literal["pending", "approved", "rejected"]
@@ -195,6 +195,31 @@ class CatalogViewStateResponse(BaseModel):
     view_count: int
 
 
+class CatalogAiDimensionResponse(BaseModel):
+    key: str
+    label: str
+    score: float | None = Field(ge=0, le=10)
+    weight: float = Field(ge=0, le=1)
+
+
+class CatalogAiRatingResponse(BaseModel):
+    """Public display projection; internal identity and evidence stay private."""
+
+    score: float | None = Field(ge=0, le=10)
+    label: Literal["AI评分"]
+    assessment_id: str
+    rule_version: str
+    weight_version: str
+    source_kind: Literal["independent_ai", "user_accepted_external_ai"]
+    evaluated_at: datetime | None
+    reported_review_date: date | None
+    reported_timezone: str | None
+    game_version: str | None
+    dimensions: list[CatalogAiDimensionResponse]
+    play_scope: dict[str, JsonValue]
+    limitations: list[str]
+
+
 class CatalogProjectResponse(BaseModel):
     id: str
     slug: str
@@ -211,6 +236,7 @@ class CatalogProjectResponse(BaseModel):
     rating_score_sum: int
     my_score: int | None
     view_count: int = 0
+    ai_rating: CatalogAiRatingResponse | None = None
 
 
 class CatalogCategoryResponse(BaseModel):

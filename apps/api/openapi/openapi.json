@@ -250,6 +250,16 @@
       },
       "AdminCatalogProjectResponse": {
         "properties": {
+          "ai_rating": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CatalogAiRatingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "author_name": {
             "anyOf": [
               {
@@ -3512,6 +3522,172 @@
         "title": "Body_upload_file_api_v1_uploads_post",
         "type": "object"
       },
+      "CatalogAiDimensionResponse": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "weight": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "score",
+          "weight"
+        ],
+        "title": "CatalogAiDimensionResponse",
+        "type": "object"
+      },
+      "CatalogAiRatingResponse": {
+        "description": "Public display projection; internal identity and evidence stay private.",
+        "properties": {
+          "assessment_id": {
+            "title": "Assessment Id",
+            "type": "string"
+          },
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogAiDimensionResponse"
+            },
+            "title": "Dimensions",
+            "type": "array"
+          },
+          "evaluated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluated At"
+          },
+          "game_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Version"
+          },
+          "label": {
+            "const": "AI评分",
+            "title": "Label",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "play_scope": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Play Scope",
+            "type": "object"
+          },
+          "reported_review_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Review Date"
+          },
+          "reported_timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Timezone"
+          },
+          "rule_version": {
+            "title": "Rule Version",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "source_kind": {
+            "enum": [
+              "independent_ai",
+              "user_accepted_external_ai"
+            ],
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "weight_version": {
+            "title": "Weight Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "score",
+          "label",
+          "assessment_id",
+          "rule_version",
+          "weight_version",
+          "source_kind",
+          "evaluated_at",
+          "reported_review_date",
+          "reported_timezone",
+          "game_version",
+          "dimensions",
+          "play_scope",
+          "limitations"
+        ],
+        "title": "CatalogAiRatingResponse",
+        "type": "object"
+      },
       "CatalogCategoryCreateRequest": {
         "properties": {
           "icon_upload_id": {
@@ -3768,6 +3944,16 @@
       },
       "CatalogProjectResponse": {
         "properties": {
+          "ai_rating": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CatalogAiRatingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "author_name": {
             "anyOf": [
               {
@@ -7534,6 +7720,7 @@
         "title": "InteractionStateResponse",
         "type": "object"
       },
+      "JsonValue": {},
       "LoginRequest": {
         "properties": {
           "account": {

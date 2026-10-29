@@ -22,6 +22,14 @@ from app.core.exceptions import AppError, NotFoundError
 from app.db.base import Base
 from app.db.session import get_session
 from app.models.catalog import CatalogCategory, CatalogProject, CatalogRating
+from app.models.catalog_ai_rating import (
+    AiAssessmentDimension,
+    AiAssessmentHumanReview,
+    AiGameAssessment,
+    AiRatingBatch,
+    AiRatingRule,
+    AiRatingWeightScheme,
+)
 from app.schemas.catalog import CatalogProjectCreateRequest, CatalogProjectUpdateRequest
 from app.services.catalog import SAVE_FAILED_MESSAGE, CatalogService
 
@@ -36,6 +44,9 @@ class SQLiteSession:
     def __init__(self, session: Session) -> None:
         self.session = session
         self.rollback_count = 0
+
+    async def get(self, entity, key):
+        return self.session.get(entity, key)
 
     async def execute(self, statement):
         return self.session.execute(statement)
@@ -59,7 +70,12 @@ def catalog_store():
     engine = sa.create_engine("sqlite://")
     Base.metadata.create_all(
         engine,
-        tables=[CatalogCategory.__table__, CatalogProject.__table__, CatalogRating.__table__],
+        tables=[
+            CatalogCategory.__table__, CatalogProject.__table__, CatalogRating.__table__,
+            AiRatingRule.__table__, AiRatingWeightScheme.__table__, AiRatingBatch.__table__,
+            AiGameAssessment.__table__, AiAssessmentDimension.__table__,
+            AiAssessmentHumanReview.__table__,
+        ],
     )
     with Session(engine, expire_on_commit=False) as session:
         session.add_all(
@@ -293,6 +309,7 @@ def test_migration_has_one_head():
     config = Config()
     config.set_main_option("script_location", str(ROOT / "alembic"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["0082_add_fengling_town"]
+    assert len(script.get_heads()) == 1
     assert len(script.get_heads()[0]) <= 32
-    assert script.get_revision("head").down_revision == "0081_catalog_games_and_views"
+    fengling_revision = script.get_revision("0082_add_fengling_town")
+    assert fengling_revision.down_revision == "0081_catalog_games_and_views"

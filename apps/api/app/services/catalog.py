@@ -27,6 +27,7 @@ from app.schemas.catalog import (
     AdminCatalogCategoryResponse,
     AdminCatalogProjectResponse,
     AdminCatalogResponse,
+    CatalogAiRatingResponse,
     CatalogCategoryCreateRequest,
     CatalogCategoryResponse,
     CatalogCategoryUpdateRequest,
@@ -37,6 +38,7 @@ from app.schemas.catalog import (
     CatalogResponse,
     CatalogViewStateResponse,
 )
+from app.services.catalog_ai_ratings import CatalogAiRatingService
 
 logger = logging.getLogger(__name__)
 # 只允许已交付的游戏直达页，后台编辑与隐藏条目也使用同一白名单。
@@ -72,6 +74,9 @@ class CatalogService:
         summaries = await self._rating_summaries([project.id for project in projects])
         digest = self._ip_digest(request, required=False) if request is not None else None
         my_scores = await self._my_scores([project.id for project in projects], digest)
+        ai_summaries = await CatalogAiRatingService(self.session).public_summaries(
+            [project.id for project in projects]
+        )
         return CatalogResponse(
             categories=[
                 CatalogCategoryResponse(
@@ -80,7 +85,7 @@ class CatalogService:
                     name=category.name,
                     icon_url=self._icon_url(category.icon_upload_id),
                     projects=[
-                        self._project_response(project, summaries, my_scores)
+                        self._project_response(project, summaries, my_scores, ai_summaries)
                         for project in self._sorted_projects(category.projects)
                         if project.is_visible
                     ],
@@ -351,6 +356,7 @@ class CatalogService:
         project: CatalogProject,
         summaries: dict[str, tuple[float | None, int, int]],
         my_scores: dict[str, int],
+        ai_summaries: dict[str, CatalogAiRatingResponse] | None = None,
     ) -> CatalogProjectResponse:
         average, count, score_sum = summaries.get(project.id, (None, 0, 0))
         return CatalogProjectResponse(
@@ -365,6 +371,7 @@ class CatalogService:
             icon_url=self._icon_url(project.icon_upload_id),
             created_at=project.created_at,
             view_count=project.view_count,
+            ai_rating=ai_summaries.get(project.id) if ai_summaries else None,
             average_score=average,
             rating_count=count,
             rating_score_sum=score_sum,

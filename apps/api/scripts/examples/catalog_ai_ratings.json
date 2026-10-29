@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "rule": {
+    "version": "catalog-ai-quality-dimensions-v1",
+    "dimensions": [
+      {
+        "key": "visible_system_complexity",
+        "label": "可见制作/系统复杂度",
+        "definition": "已观察到的机制、状态约束及其交互复杂度；不推断源码、工时或制作成本。",
+        "required": true
+      },
+      {
+        "key": "content_depth_scope",
+        "label": "内容深度体量",
+        "definition": "实际验证范围内的内容结构、目标变化、系统纵深与体量，注明未覆盖部分。",
+        "required": true
+      },
+      {
+        "key": "gameplay",
+        "label": "玩法体验",
+        "definition": "实际游玩中决策、挑战、反馈和循环的体验，以证据支持数值评分。",
+        "required": true
+      },
+      {
+        "key": "controls_completion",
+        "label": "操作与完成度",
+        "definition": "已体验的输入、引导、流程衔接、稳定性和恢复能力。",
+        "required": true
+      },
+      {
+        "key": "audiovisual",
+        "label": "视听表现",
+        "definition": "已体验的视觉、声音、信息辨识和一致性；未体验声音时必须注明限制。",
+        "required": true
+      }
+    ]
+  },
+  "weight_scheme": {
+    "version": "catalog-ai-40-30-15-10-5-v1",
+    "rule_version": "catalog-ai-quality-dimensions-v1",
+    "weights": {
+      "visible_system_complexity": "0.40",
+      "content_depth_scope": "0.30",
+      "gameplay": "0.15",
+      "controls_completion": "0.10",
+      "audiovisual": "0.05"
+    }
+  },
+  "batch": {
+    "id": "FORMAT-EXAMPLE-NOT-A-REAL-EVALUATION",
+    "evaluator_kind": "ai",
+    "evaluator_identity": {
+      "provider": "example-only",
+      "model": "unknown",
+      "agent": "example-only",
+      "run_id": "example-not-a-real-evaluation"
+    },
+    "source_kind": "independent_ai",
+    "source_reference": null,
+    "source_metadata": {},
+    "recorded_at": "2026-10-01T00:01:00Z",
+    "assessments": [
+      {
+        "game_id": "1",
+        "rule_version": "catalog-ai-quality-dimensions-v1",
+        "game_version": null,
+        "snapshot_key": "example-observation-not-a-real-snapshot",
+        "evaluated_at": "2026-10-01T00:00:00Z",
+        "environment": {
+          "example_only": true,
+          "platform": "unknown",
+          "browser": "unknown"
+        },
+        "play_scope": {
+          "example_only": true,
+          "scope": "No gameplay performed; format example only"
+        },
+        "evidence": [
+          {
+            "kind": "format-example",
+            "note": "Synthetic format example, never import as a real evaluation",
+            "reference": null
+          }
+        ],
+        "limitations": [
+          "No game was evaluated. Replace all provenance with actual observation facts before any real import."
+        ],
+        "dimensions": [
+          {
+            "dimension_key": "visible_system_complexity",
+            "score": null,
+            "evidence": [
+              {
+                "kind": "missing",
+                "note": "Not evaluated; format example only",
+                "reference": null
+              }
+            ]
+          },
+          {
+            "dimension_key": "content_depth_scope",
+            "score": null,
+            "evidence": [
+              {
+                "kind": "missing",
+                "note": "Not evaluated; format example only",
+                "reference": null
+              }
+            ]
+          },
+          {
+            "dimension_key": "gameplay",
+            "score": null,
+            "evidence": [
+              {
+                "kind": "missing",
+                "note": "Not evaluated; format example only",
+                "reference": null
+              }
+            ]
+          },
+          {
+            "dimension_key": "controls_completion",
+            "score": null,
+            "evidence": [
+              {
+                "kind": "missing",
+                "note": "Not evaluated; format example only",
+                "reference": null
+              }
+            ]
+          },
+          {
+            "dimension_key": "audiovisual",
+            "score": null,
+            "evidence": [
+              {
+                "kind": "missing",
+                "note": "Not evaluated; format example only",
+                "reference": null
+              }
+            ]
+          }
+        ],
+        "supersedes_id": null
+      }
+    ]
+  }
+}

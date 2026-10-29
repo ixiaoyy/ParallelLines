@@ -7,6 +7,14 @@ from app.models.background_job import BackgroundJob, BackgroundJobLog
 from app.models.backup import BackupArtifact
 from app.models.badge import BadgeDefinition, UserBadge, UserTrustLevelEvent
 from app.models.catalog import CatalogCategory, CatalogProject, CatalogRating, CatalogSubmission
+from app.models.catalog_ai_rating import (
+    AiAssessmentDimension,
+    AiAssessmentHumanReview,
+    AiGameAssessment,
+    AiRatingBatch,
+    AiRatingRule,
+    AiRatingWeightScheme,
+)
 from app.models.daily_report import (
     DailyReport,
     DailyReportMessage,
@@ -69,6 +77,12 @@ apply_schema_comments(Base.metadata)
 __all__ = [
     "AuditLog",
     "AiTopicSummary",
+    "AiAssessmentDimension",
+    "AiAssessmentHumanReview",
+    "AiGameAssessment",
+    "AiRatingBatch",
+    "AiRatingRule",
+    "AiRatingWeightScheme",
     "ApiKey",
     "BadgeDefinition",
     "BackupArtifact",

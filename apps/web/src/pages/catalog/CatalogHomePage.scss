@@ -74,9 +74,6 @@
 .catalog-categories, .catalog-sort { display: flex; align-items: center; gap: 4px; }
 .catalog-categories label, .catalog-sort label { font-size: 12px; }
 .catalog-categories select, .catalog-sort select { height: 44px; max-width: 130px; border: 1px solid #cbd7ca; border-radius: 7px; padding: 0 8px; color: #315b49; background: #f7f8f2; font: 13px var(--catalog-font); cursor: pointer; }
-.catalog-layout-toggle { display: flex; gap: 2px; }
-.catalog-layout-toggle button { display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 6px; color: #647c6b; background: transparent; font-size: 19px; cursor: pointer; }
-.catalog-layout-toggle button.is-active { color: #fff; background: #3b7864; }
 .catalog-library__notice { border: 1px solid #dac4a4; border-radius: 7px; padding: 12px; color: #644822; background: #fbf3e3; font-size: 14px; }
 .catalog-author-selection { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 16px; font-size: 14px; }
 .catalog-author-selection button { min-height: 44px; border: 0; padding: 4px 10px; color: #315f4e; background: #dce6da; font: inherit; cursor: pointer; }
@@ -92,61 +89,13 @@
 .catalog-group__heading > button:hover { text-decoration: underline; }
 .catalog-group--illustrated .catalog-group__heading h2 { color: var(--category-art-ink, var(--catalog-ink)); background: linear-gradient(transparent 77%, var(--category-art-wash) 77%, var(--category-art-wash) 94%, transparent 94%); }
 .catalog-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: stretch; gap: 16px; }
-.catalog-card { position: relative; min-width: 0; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 12px; background: #ccd9ce; transition: box-shadow 180ms ease, transform 180ms ease; }
-.catalog-card:hover { box-shadow: 0 8px 18px #183c341a; transform: translateY(-2px); }
-.catalog-card.is-selected { outline: 2px solid #4e8a71; outline-offset: 3px; }
-.catalog-card__selection-frame { display: none; }
-.catalog-card__screen, .catalog-card__media, .catalog-card__media-link { position: absolute; inset: 0; }
-.catalog-card__media-link { display: block; }
-.catalog-card__media-link img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.catalog-card__body { position: absolute; inset: auto 0 0; display: flex; align-items: flex-end; gap: 6px; padding: 33px 10px 8px; color: #fff; background: linear-gradient(transparent, #0b221cb3 60%, #0b221ce0); pointer-events: none; }
-.catalog-card__info { min-width: 0; flex: 1; }
-.catalog-card__info h2 { margin: 0; font: 700 16px / 1.3 var(--catalog-font); }
-.catalog-card__title-link { display: flex; min-height: 28px; align-items: center; overflow: hidden; color: #fff; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; }
-.catalog-card__author { display: flex; min-width: 0; min-height: 24px; align-items: center; margin: 0; color: #e2e9df; font-size: 11px; line-height: 1.4; }
-.catalog-card__author a, .catalog-card__author button, .catalog-card__author > span { display: block; max-width: 100%; min-height: 24px; overflow: hidden; border: 0; padding: 4px 0; color: inherit; background: transparent; font: inherit; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; }
-.catalog-card__author a:hover, .catalog-card__author button:hover { text-decoration: underline; cursor: pointer; }
-.catalog-card__footer { display: flex; flex: 0 0 auto; align-items: center; gap: 1px; pointer-events: auto; }
-.catalog-card__wanted { display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 6px; color: #fff; background: transparent; font-size: 18px; cursor: pointer; }
-.catalog-card__wanted:hover { background: #ffffff1f; }
-.catalog-card__wanted.is-active { color: #ffda7b; }
-.catalog-card__open { display: inline-flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; gap: 5px; border-radius: 6px; padding: 0 10px; color: var(--btn-primary-fg); background: var(--btn-primary-bg); font-size: 12px; text-decoration: none; white-space: nowrap; }
-.catalog-card__open:hover { background: var(--btn-primary-bg-hover); }
-.catalog-card__open > span:not(.anticon) { display: none; }
-.catalog-card__heat { position: absolute; top: 9px; right: 9px; display: inline-flex; align-items: center; gap: 4px; border-radius: 5px; padding: 4px 6px; color: #fff; background: #112e24a6; font-size: 11px; pointer-events: none; }
-.catalog-card__heat .anticon { color: #f0c988; }
-.catalog-card__badges { position: absolute; top: 8px; left: 8px; display: flex; gap: 5px; pointer-events: none; }
-.catalog-card__badge { display: inline-flex; align-items: center; border-radius: 4px; padding: 3px; color: #fff; background: #315f4ecc; }
-.catalog-card__badge .catalog-icon { width: 14px; height: 14px; }
-.catalog-card__badge--hot { padding-inline: 6px; color: #4d250d; background: #f0c988; font-size: 10px; font-weight: 700; }
-.catalog-card__cover-fallback { display: flex; height: 100%; flex-direction: column; justify-content: center; gap: 10px; padding: 18px; color: #315f4e; background: #e2e9de; }
-.catalog-card__cover-fallback > span { font-size: 12px; }
-.catalog-card__cover-fallback strong { font-size: 24px; }
 .catalog-grid--featured { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(2, clamp(144px, 10.4vw, 180px)); grid-auto-flow: dense; gap: 12px; }
 .catalog-grid--featured .catalog-card { aspect-ratio: auto; }
 .catalog-grid--featured .catalog-card:first-child { grid-column: 1 / span 2; grid-row: 1 / span 2; }
 .catalog-grid--featured .catalog-card:last-child { grid-column: 5 / span 2; grid-row: 1 / span 2; }
-.catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__info h2 { font-family: var(--catalog-heading-font); font-size: 27px; }
-.catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__body { padding: 54px 16px 12px; }
-.catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__open > span:not(.anticon) { display: inline; }
-
-.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__body { flex-wrap: wrap; gap: 0; padding: 28px 8px 5px; }
-.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__info { flex-basis: 100%; }
-.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__info h2 { font-size: 14px; }
-.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__footer { width: 100%; justify-content: flex-end; }
 
 
-.catalog-grid--list { grid-template-columns: 1fr; }
-.catalog-grid--list .catalog-card { min-height: 148px; aspect-ratio: auto; background: #f7f8f2; }
-.catalog-grid--list .catalog-card__screen { display: flex; position: relative; min-height: 148px; }
-.catalog-grid--list .catalog-card__media { position: relative; width: 224px; flex: 0 0 224px; }
-.catalog-grid--list .catalog-card__body { position: static; min-width: 0; flex: 1; align-items: center; gap: 16px; padding: 20px; color: var(--catalog-ink); background: transparent; }
-.catalog-grid--list .catalog-card__title-link { min-height: 44px; color: var(--catalog-ink); font-size: 20px; }
-.catalog-grid--list .catalog-card__author { color: #586e5b; }
-.catalog-grid--list .catalog-card__author :is(a, button, span) { min-height: 44px; padding-block: 12px; }
-.catalog-grid--list .catalog-card__wanted { color: #3b7864; }
-.catalog-grid--list .catalog-card__wanted.is-active { color: #9b6a00; }
-.catalog-grid--list .catalog-card__open > span:not(.anticon) { display: inline; }
+
 .catalog-load-more { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 32px 0 0; }
 .catalog-load-more button { min-width: 180px; min-height: 44px; border: 1px solid #b7cab9; border-radius: 7px; padding: 8px 24px; color: #315f4e; background: #e1e9df; font: 700 14px var(--catalog-font); cursor: pointer; }
 .catalog-load-more button:hover { background: #d4e1d2; }
@@ -179,19 +128,16 @@
 
 @media (min-width: 1850px) {
   .catalog-page__wrap { margin-inline: auto; padding-left: 52px; }
-  .catalog-grid:not(.catalog-grid--featured, .catalog-grid--list) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .catalog-grid:not(.catalog-grid--featured) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
 @media (max-width: 1279px) {
   .catalog-header__inner { gap: 12px; padding-inline: 16px; }
   .catalog-brand > span { font-size: 25px; }
   .catalog-top-navigation :deep(a), .catalog-top-navigation :deep(button) { min-width: 54px; padding-inline: 9px; }
-  .catalog-grid:not(.catalog-grid--featured, .catalog-grid--list) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .catalog-grid:not(.catalog-grid--featured) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .catalog-controls { gap: 10px; }
   .catalog-library-filters button { padding-inline: 12px; }
   .catalog-results { flex: 1; text-align: right; }
-  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__body { flex-wrap: wrap; gap: 2px; }
-  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__info { flex-basis: 100%; }
-  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__footer { width: 100%; justify-content: flex-end; }
 }
 @media (max-width: 1000px) {
   .catalog-header__submit { padding-inline: 12px; }
@@ -200,15 +146,12 @@
   .catalog-header__inner { gap: 8px; }
   .catalog-header__actions { gap: 0; }
   .catalog-page__wrap { width: calc(100% - 104px); margin-right: 20px; }
-  .catalog-grid:not(.catalog-grid--featured, .catalog-grid--list) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .catalog-grid:not(.catalog-grid--featured) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .catalog-grid--featured { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, 148px); }
   .catalog-grid--featured .catalog-card:first-child { grid-column: 1 / span 2; }
   .catalog-grid--featured .catalog-card:last-child { grid-column: auto; grid-row: auto; }
   .catalog-grid--featured .catalog-card:last-child { grid-column: 1 / span 4; grid-row: 3; min-height: 200px; }
-  .catalog-grid--featured .catalog-card:last-child .catalog-card__info h2 { font-family: var(--catalog-font); font-size: 14px; }
 
-  .catalog-grid--featured .catalog-card:last-child .catalog-card__body { padding: 28px 8px 5px; }
-  .catalog-grid--featured .catalog-card:last-child .catalog-card__open > span:not(.anticon) { display: none; }
 }
 @media (max-width: 760px) {
   .catalog-header { position: relative; }
@@ -237,46 +180,19 @@
   .catalog-categories label, .catalog-sort label { font-size: 11px; }
   .catalog-categories select { max-width: 105px; }
   .catalog-sort select { max-width: 72px; }
-  .catalog-layout-toggle { margin-left: auto; }
-  .catalog-layout-toggle button { width: 44px; }
-  .catalog-grid:not(.catalog-grid--featured, .catalog-grid--list) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .catalog-grid:not(.catalog-grid--featured) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .catalog-groups { gap: 25px; }
   .catalog-group__heading { gap: 8px; margin-bottom: 10px; }
   .catalog-group__heading h2 { font-size: 23px; }
   .catalog-group__heading > div { gap: 7px; }
   .catalog-group__count { font-size: 10px; }
-  .catalog-card { aspect-ratio: 4 / 3.8; border-radius: 9px; }
-  .catalog-card__body { flex-wrap: wrap; gap: 0; padding: 24px 9px 5px; }
-  .catalog-card__info { flex-basis: 100%; }
-  .catalog-card__info h2 { font-size: 15px; }
-  .catalog-card__title-link { min-height: 44px; }
-  .catalog-card__author { margin-top: -5px; }
-  .catalog-card__author :is(a, button, span) { min-height: 44px; padding-block: 12px; }
-  .catalog-card__footer { position: absolute; right: 5px; bottom: 3px; }
-  .catalog-card__info { padding-bottom: 36px; }
-  .catalog-card__author { padding-right: 0; }
-  .catalog-card__open { padding-inline: 8px; }
   .catalog-grid--featured { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: 168px; gap: 12px; }
   .catalog-grid--featured .catalog-card:first-child { grid-column: 1; grid-row: 1 / span 2; }
   .catalog-grid--featured .catalog-card:last-child { grid-column: auto; grid-row: auto; }
   .catalog-grid--featured .catalog-card:nth-child(5) { display: block; }
-  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__info h2 { font-family: var(--catalog-font); font-size: 18px; }
-  .catalog-grid--featured .catalog-card:first-child .catalog-card__media-link img { object-position: center; }
   .catalog-grid--featured .catalog-card:last-child { grid-column: 1; grid-row: 3 / span 2; }
   .catalog-grid--featured .catalog-card:nth-child(4) { grid-column: 2; grid-row: 3; }
   .catalog-grid--featured .catalog-card:nth-child(5) { grid-column: 2; grid-row: 4; }
-  .catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__info { padding-bottom: 38px; }
-  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__body { padding: 30px 10px 6px; }
-  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__footer { width: auto; }
-  .catalog-grid--featured .catalog-card:first-child .catalog-card__open > span:not(.anticon) { display: none; }
-  .catalog-grid--list .catalog-card { min-height: 160px; }
-  .catalog-grid--list .catalog-card__screen { min-height: 160px; }
-  .catalog-grid--list .catalog-card__media { width: 38%; flex-basis: 38%; }
-  .catalog-grid--list .catalog-card__body { align-content: center; padding: 12px; }
-  .catalog-grid--list .catalog-card__info { padding-bottom: 36px; }
-  .catalog-grid--list .catalog-card__title-link { font-size: 16px; white-space: normal; }
-  .catalog-grid--list .catalog-card__footer { right: 10px; bottom: 8px; }
-  .catalog-grid--list .catalog-card__open > span:not(.anticon) { display: none; }
   .catalog-footer { margin-top: 32px; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .catalog-footer > div { flex-wrap: wrap; gap: 6px 12px; }
   .catalog-footer > div > span { font-size: 11px; }
@@ -294,58 +210,23 @@
   .catalog-library-filters button .anticon, .catalog-library-filters button .catalog-icon { display: none; }
   .catalog-categories label, .catalog-sort label { display: none; }
   .catalog-group__count { display: none; }
-  .catalog-card { aspect-ratio: 4 / 4.5; }
   .catalog-grid--featured { grid-auto-rows: 154px; }
   .catalog-rail { inset-inline: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .catalog-card { transition: none; }
-  .catalog-card:hover { transform: none; }
   .catalog-state__spinner { animation: none; }
 }
-
-// 正式封面上以两行信息提供完整标题、作者和操作，触控与鼠标共用真实入口。
-.catalog-card .catalog-card__body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 4px; padding: 24px 10px 6px; }
-.catalog-card .catalog-card__info { display: contents; }
-.catalog-card .catalog-card__info h2 { min-width: 0; grid-column: 1 / -1; }
-.catalog-card .catalog-card__title-link { display: block; min-height: 44px; overflow: hidden; line-height: 44px; text-overflow: ellipsis; white-space: nowrap; }
-.catalog-card .catalog-card__author { min-width: 0; min-height: 44px; grid-column: 1; grid-row: 2; margin: 0; }
-.catalog-card .catalog-card__author :is(a, button, span) { min-height: 44px; padding-block: 14px; }
-.catalog-card .catalog-card__footer { position: static; width: auto; grid-column: 2; grid-row: 2; }
-.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__body { display: grid; padding: 20px 8px 5px; }
-.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__footer,
-.catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__footer { position: static; width: auto; }
-.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__info h2 { font-size: 14px; }
-.catalog-grid--list .catalog-card .catalog-card__body { min-width: 0; align-content: center; padding: 20px; }
-.catalog-grid--list .catalog-card__title-link { white-space: nowrap; }
-
-@media (max-width: 760px) {
-  .catalog-card .catalog-card__body { padding: 20px 8px 5px; }
-  .catalog-card .catalog-card__info h2 { font-size: 14px; }
-  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__body { padding: 24px 10px 6px; }
-  .catalog-grid--list .catalog-card .catalog-card__body { padding: 12px; }
-}
-
-// 封面主链接的点击区域避开底部独立操作；图片仍铺满完整卡面。
-.catalog-card__media-link { bottom: 88px; }
-.catalog-card__media-link img { height: calc(100% + 88px); max-height: none; }
-.catalog-grid--list .catalog-card__media-link { bottom: 0; }
-.catalog-grid--list .catalog-card__media-link img { height: 100%; }
 
 @media (max-width: 1000px) {
   // 平板与手机用等比例网格容纳六款真实推荐，避免纵长裁切或隐藏游戏。
   .catalog-grid--featured { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: auto; }
   .catalog-grid--featured .catalog-card { aspect-ratio: 4 / 3; }
   .catalog-grid--featured .catalog-card:is(:first-child, :last-child) { min-height: 0; grid-column: auto; grid-row: auto; }
-  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__body { padding: 20px 8px 5px; }
-  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__info h2 { font-family: var(--catalog-font); font-size: 16px; }
-  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__open > span:not(.anticon) { display: none; }
 }
 @media (max-width: 760px) {
   .catalog-grid--featured { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .catalog-grid--featured .catalog-card { aspect-ratio: 4 / 3.8; }
   .catalog-grid--featured .catalog-card:nth-child(n) { min-height: 0; grid-column: auto; grid-row: auto; }
-  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__info h2 { font-size: 14px; }
 }
 
 @media (max-width: 390px) {
@@ -353,7 +234,6 @@
   .catalog-brand { gap: 3px; }
   .catalog-brand > span { font-size: 19px; }
   .catalog-brand img { width: 24px; }
-  .catalog-card { min-height: 144px; }
   .catalog-grid--featured .catalog-card:nth-child(n) { min-height: 144px; }
 }
 
@@ -361,4 +241,51 @@
   // 手机明确区分分类总量与当前一行预览量，长分类名自然换行。
   .catalog-group:not(.catalog-group--featured) .catalog-group__heading > div { flex-wrap: wrap; row-gap: 2px; }
   .catalog-group:not(.catalog-group--featured) .catalog-group__count { display: inline; flex-basis: 100%; }
+}
+
+// 仅修整游戏页的视觉层级；榜单、导航入口、卡片信息和点击规则保持原样。
+.catalog-page--games {
+  .catalog-header { border-bottom-color: #dfe3da; background: var(--catalog-bg); }
+  .catalog-intro h1, .catalog-group__heading h2 { font-weight: 700; }
+  .catalog-controls { padding-bottom: 10px; }
+  .catalog-library-filters button { border-color: #d5ddd5; border-radius: 8px; background: #e3e8e0; }
+  .catalog-library-filters button:hover { background: #d3dfd3; }
+  .catalog-library-filters button.is-active { border-color: var(--catalog-jade); background: var(--catalog-jade); }
+  .catalog-categories select, .catalog-sort select { border-radius: 8px; }
+  .catalog-group--featured .catalog-group__heading { min-height: 28px; margin-bottom: 8px; }
+  .catalog-group--featured .catalog-group__heading h2 { font-size: 18px; font-weight: 600; }
+  .catalog-group--featured .catalog-group__mark { font-size: 18px; }
+  .catalog-groups { gap: 26px; }
+}
+
+@media (min-width: 1001px) {
+  // 桌面收窄搜索并扩大导航文字；保留原有 44px 操作高度和推荐拼图结构。
+  .catalog-page--games {
+    .catalog-header__inner { gap: 20px; }
+    .catalog-brand > span { font-size: 32px; }
+    .catalog-site-navigation { flex: 0 0 auto; }
+    .catalog-site-navigation :deep(a), .catalog-site-navigation :deep(button) { min-width: 72px; padding-inline: 12px; font-family: var(--catalog-heading-font); font-size: 18px; font-weight: 700; }
+    .catalog-search { max-width: 440px; }
+    .catalog-navigation { top: 80px; left: 0; width: 64px; border-radius: 0 12px 12px 0; }
+    .catalog-intro { min-height: 70px; padding: 18px 0 12px; }
+    .catalog-grid--featured { grid-template-rows: repeat(2, clamp(132px, 10.4vw, 180px)); }
+  }
+}
+
+@media (max-width: 760px) {
+  // 窄屏仅压缩组头留白，不缩小触控入口，也不隐藏现有卡片信息。
+  .catalog-page--games {
+    .catalog-group--featured .catalog-group__heading { min-height: 26px; margin-bottom: 8px; }
+    .catalog-group--featured .catalog-group__heading h2 { font-size: 17px; }
+    .catalog-group__heading h2 { font-size: 22px; }
+    .catalog-groups { gap: 24px; }
+    // 极窄屏按网格列宽收拢封面，避免最小高度通过宽高比撑掉列间距。
+    .catalog-grid--featured .catalog-card { width: 100%; }
+  }
+}
+
+// Card content lives in CatalogGameCard; this page retains grid placement only.
+@media (max-width: 760px) {
+  .catalog-grid--featured .catalog-card:nth-child(n) { aspect-ratio: auto; min-height: 0; }
+  .catalog-grid--featured .catalog-card--featured:nth-child(n) { grid-column: 1 / -1; }
 }

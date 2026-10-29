@@ -46,6 +46,7 @@ export interface components {
       updated_at: string;
     };
     AdminCatalogProjectResponse: {
+      ai_rating?: components["schemas"]["CatalogAiRatingResponse"] | null;
       author_name: string | null;
       author_url: string | null;
       average_score: number | null;
@@ -885,6 +886,29 @@ export interface components {
       file: string;
       kind?: "post_attachment" | "avatar" | "catalog_icon";
     };
+    CatalogAiDimensionResponse: {
+      key: string;
+      label: string;
+      score: number | null;
+      weight: number;
+    };
+    CatalogAiRatingResponse: {
+      assessment_id: string;
+      dimensions: Array<components["schemas"]["CatalogAiDimensionResponse"]>;
+      evaluated_at: string | null;
+      game_version: string | null;
+      label: "AI评分";
+      limitations: Array<string>;
+      play_scope: {
+      [key: string]: components["schemas"]["JsonValue"];
+    };
+      reported_review_date: string | null;
+      reported_timezone: string | null;
+      rule_version: string;
+      score: number | null;
+      source_kind: "independent_ai" | "user_accepted_external_ai";
+      weight_version: string;
+    };
     CatalogCategoryCreateRequest: {
       icon_upload_id?: string | null;
       is_visible?: boolean;
@@ -920,6 +944,7 @@ export interface components {
       url: string;
     };
     CatalogProjectResponse: {
+      ai_rating?: components["schemas"]["CatalogAiRatingResponse"] | null;
       author_name: string | null;
       author_url: string | null;
       average_score: number | null;
@@ -1497,6 +1522,7 @@ export interface components {
       target_id: string;
       target_type: "post" | "topic";
     };
+    JsonValue: unknown;
     LoginRequest: {
       account: string;
       password: string;

@@ -36,10 +36,11 @@ const sourceStyle = computed<CSSProperties>(() => {
 
 <style scoped lang="scss">
 .catalog-category-art {
-  --catalog-art-height: 64px;
-  --catalog-art-max-width: 154px;
+  // 固定占位让各分类标题对齐，内部插画仍按原图比例缩放。
+  --catalog-art-height: 56px;
+  --catalog-art-max-width: 140px;
   display: grid;
-  width: min(var(--catalog-art-max-width), calc(var(--catalog-art-height) * var(--catalog-art-aspect)));
+  width: var(--catalog-art-max-width);
   height: var(--catalog-art-height);
   flex: 0 0 auto;
   place-items: center;
@@ -48,7 +49,7 @@ const sourceStyle = computed<CSSProperties>(() => {
 .catalog-category-art__crop {
   position: relative;
   display: block;
-  width: 100%;
+  width: min(100%, calc(var(--catalog-art-height) * var(--catalog-art-aspect)));
   aspect-ratio: var(--catalog-art-aspect);
   overflow: hidden;
 }
@@ -66,8 +67,8 @@ const sourceStyle = computed<CSSProperties>(() => {
 }
 @media (max-width: 760px) {
   .catalog-category-art {
-    --catalog-art-height: 50px;
-    --catalog-art-max-width: 105px;
+    --catalog-art-height: 44px;
+    --catalog-art-max-width: 72px;
   }
 }
 </style>
