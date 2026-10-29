@@ -1,250 +1,365 @@
-@font-face { font-family: "Catalog Arcade Heading"; src: url("/catalog/pixel-arcade/fonts/arcade-heading.woff2") format("woff2"); font-style: normal; font-weight: 700; font-display: swap; }
-// 按已确认夜景稿设置页面局部配色，不覆盖全站品牌和主按钮变量。
-.catalog-page { --catalog-ink: #00123b; --catalog-paper: #fffdf3; --catalog-muted: #57728b; --catalog-bg: #03183d; --catalog-cyan: #20ddff; --catalog-blue: #087fff; --catalog-red: #ff335e; --catalog-yellow: #ffda35; --catalog-edge-width: 24px; --catalog-font: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif; --catalog-heading-font: "Catalog Arcade Heading", var(--catalog-font); position: relative; isolation: isolate; min-height: 100vh; color: #f7fcff; background: var(--catalog-bg); font-family: var(--catalog-font); }
-// 书架与植物只露出目录两侧的空白边缘，不盖住卡片、控件或页面文字。
-.catalog-page::before { position: absolute; inset: 364px 0 0; z-index: -1; background: url("/catalog/night-arcade-v1/side-scene.webp") center top / 100% 1024px repeat-y; mask-image: linear-gradient(to right, #000 var(--catalog-edge-width), transparent var(--catalog-edge-width), transparent calc(100% - var(--catalog-edge-width)), #000 calc(100% - var(--catalog-edge-width))); content: ""; pointer-events: none; }
-.catalog-page__wrap { width: min(1800px, calc(100% - 48px)); margin-inline: auto; }
-.catalog-header { height: 62px; border-bottom: 1px solid #187aca; background: #031333; }
-.catalog-header__inner { display: flex; width: min(1364px, calc(100% - 64px)); height: 100%; align-items: center; gap: 24px; padding-right: 22px; }
-.catalog-brand { display: flex; flex: 0 0 auto; align-items: center; gap: 17px; color: #fff; text-decoration: none; white-space: nowrap; }
-.catalog-brand img { display: block; width: 64px; height: 52px; object-fit: contain; filter: invert(1) hue-rotate(180deg) saturate(6) brightness(3.2); mix-blend-mode: screen; }
-.catalog-brand > span { font-family: var(--catalog-heading-font); font-synthesis: none; font-size: 32px; font-weight: 700; }
-.catalog-header__tagline { flex: 0 1 182px; font-size: 12px; white-space: nowrap; }
-.catalog-view-tabs { display: flex; flex: 1; align-items: center; justify-content: flex-start; gap: 22px; }
-.catalog-view-tabs button, .catalog-header__search, .catalog-header__submit, .catalog-library-filters button, .catalog-layout-toggle button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 10px; border: 1px solid transparent; border-radius: 0; padding: 6px 14px; color: #f7fcff; background: transparent; font: 700 18px / 1.25 var(--catalog-font); white-space: nowrap; cursor: pointer; }
-.catalog-view-tabs button { min-width: 148px; }
-.catalog-view-tabs button.is-active { min-width: 176px; }
-.catalog-view-tabs button + button { border-left-color: #1471b2; }
-.catalog-view-tabs button.is-active, .catalog-header__submit, .catalog-library-filters button.is-active, .catalog-layout-toggle button.is-active { border-color: #78eaff; color: #fff; background: var(--catalog-blue); box-shadow: inset 0 0 0 1px #005dba, 0 0 0 2px #044d92; }
-// 确认稿的控件只削去四角，文字与点击区域仍由原按钮承载。
-.catalog-view-tabs button.is-active, .catalog-header__submit, .catalog-library-filters button, .catalog-layout-toggle button, .catalog-categories select, .catalog-sort select { clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px); }
-.catalog-view-tabs .anticon, .catalog-view-tabs .catalog-icon, .catalog-header__submit .anticon { width: 28px; height: 28px; font-size: 26px; }
-.catalog-header__search { min-width: 44px; margin-left: auto; padding: 4px; font-size: 27px; }
-.catalog-header__submit { min-width: 156px; }
-.catalog-header__mascot { flex: 0 0 44px; }
-.catalog-header__mascot img { display: block; width: 44px; height: 44px; object-fit: contain; }
-.catalog-view-tabs button:not(.is-active):hover, .catalog-header__search:hover { color: var(--catalog-cyan); }
-.catalog-view-tabs button.is-active:hover { color: #fff; background: #2493ff; }
-.catalog-header__submit:hover, .catalog-library-filters button.is-active:hover, .catalog-layout-toggle button.is-active:hover { background: #2493ff; }
-// 正式场景独立于可编辑标题与搜索；人物和设备位于素材底部安全区。
-.catalog-hero { height: 302px; border-bottom: 2px solid #795233; background: #021436 url("/catalog/night-arcade-v1/hero-scene.webp") center bottom / cover no-repeat; }
-.catalog-hero__inner { display: flex; height: 100%; flex-direction: column; align-items: center; padding: 30px 16px 0; }
-.catalog-hero h1 { margin: 0; color: #fff; font-family: var(--catalog-heading-font); font-synthesis: none; font-size: 56px; font-weight: 700; line-height: 74px; text-align: center; white-space: nowrap; }
-.catalog-hero h1 span { color: var(--catalog-red); }
-.catalog-hero__subtitle { position: relative; isolation: isolate; margin: 4px 0 12px; padding: 5px 22px; color: #e8f7ff; background: #0d87b4; font-size: 14px; font-weight: 700; line-height: 20px; letter-spacing: 2px; clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%); }
-.catalog-hero__subtitle::before { position: absolute; inset: 1px; z-index: -1; background: #04204c; content: ""; clip-path: inherit; }
-.catalog-search { display: flex; width: min(480px, 100%); height: 54px; align-items: center; gap: 12px; border: 2px solid #ecf8ff; background: var(--catalog-paper); box-shadow: 0 0 0 2px #103d66; }
-.catalog-search > .anticon { margin-left: 14px; color: var(--catalog-ink); font-size: 26px; }
-.catalog-search input { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--catalog-ink); background: transparent; font: 16px / 1.4 var(--catalog-font); }
-.catalog-search input::placeholder { color: #667c90; opacity: 1; }
-.catalog-search button { width: 110px; min-height: 50px; align-self: stretch; border: 1px solid #ffb3c4; padding: 4px 12px; color: #fff; background: var(--catalog-red); font: 700 24px / 1.2 var(--catalog-font); cursor: pointer; }
-.catalog-search button:hover { background: #ff5678; }
-.catalog-search:focus-within { outline: 2px solid var(--catalog-cyan); outline-offset: 4px; }
+.catalog-page {
+  --catalog-ink: #183c34;
+  --catalog-paper: #f7f7f2;
+  --catalog-muted: #64766d;
+  --catalog-bg: #edede7;
+  --catalog-jade: #3b7864;
+  // 用户明确授权的目录局部例外；全站按钮源和其他路由保持蓝色规则。
+  --btn-primary-fg: #ffffff;
+  --btn-primary-fg-hover: #ffffff;
+  --btn-primary-bg: #315f4e;
+  --btn-primary-bg-hover: #3b7864;
+  --btn-primary-border: #315f4e;
+  --btn-primary-border-hover: #3b7864;
+  --btn-primary-active: #244e3f;
+  --btn-primary-shadow: 0 2px 8px #183c341a;
+  --btn-primary-shadow-hover: 0 4px 12px #183c3426;
+  --catalog-focus: #3b7864;
+  --focus-ring: var(--catalog-focus);
+  --catalog-line: #d5ddd5;
+  --catalog-red: #bc6552;
+  --catalog-font: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  --catalog-heading-font: "STSong", "Songti SC", "Noto Serif CJK SC", serif;
+  min-height: 100vh;
+  color: var(--catalog-ink);
+  background: var(--catalog-bg);
+  font-family: var(--catalog-font);
+}
+
+.catalog-header { position: sticky; top: 0; z-index: 30; border-bottom: 1px solid var(--catalog-line); background: #f1f2ec; }
+.catalog-header__inner { display: flex; min-height: 76px; align-items: center; gap: 22px; padding: 10px 28px 10px 20px; }
+.catalog-brand { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 10px; color: var(--catalog-ink); text-decoration: none; white-space: nowrap; }
+.catalog-brand img { display: block; width: 46px; height: 42px; object-fit: contain; }
+.catalog-brand > span { font-family: var(--catalog-heading-font); font-size: 30px; font-weight: 800; }
+.catalog-top-navigation { gap: 4px; font-size: 16px; }
+.catalog-top-navigation :deep(a), .catalog-top-navigation :deep(button) { min-width: 62px; justify-content: center; border-radius: 8px; padding: 0 12px; }
+.catalog-top-navigation :deep(a.is-active) { color: #fff; background: var(--catalog-jade); }
+.catalog-top-navigation :deep(span) { display: none; }
+.catalog-top-navigation :deep(button:disabled) { color: #77877c; }
+.catalog-search { display: flex; height: 44px; min-width: 120px; max-width: 620px; flex: 1; align-items: center; gap: 10px; margin-left: auto; overflow: hidden; border: 1px solid #cbd5ca; border-radius: 8px; background: #fafbf7; }
+.catalog-search > .anticon { margin-left: 14px; color: #62776b; font-size: 20px; }
+.catalog-search input { width: 100%; min-width: 0; flex: 1; border: 0; outline: 0; color: var(--catalog-ink); background: transparent; font: 14px / 1.4 var(--catalog-font); }
+.catalog-search input::placeholder { color: #68796d; }
+.catalog-search button { height: 44px; flex: 0 0 68px; border: 0; color: #fff; background: #315f4e; font: 700 15px var(--catalog-font); cursor: pointer; }
+.catalog-search button:hover { background: #244e3f; }
+.catalog-search:focus-within { outline: 2px solid var(--catalog-focus); outline-offset: 3px; }
 .catalog-search__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.catalog-hero__motto { display: flex; align-items: center; gap: 12px; margin: 22px 0 0; font-size: 12px; line-height: 16px; }
-.catalog-hero__motto > span:not(.anticon):nth-of-type(n+2) { color: var(--catalog-yellow); }
-.catalog-hero__motto b, .catalog-hero__motto .anticon { color: var(--catalog-red); }
-.catalog-hero__motto .anticon { font-size: 18px; }
-// 榜单采用各自的确认场景；中央文字与图标仍是真实页面元素。
-.catalog-page--authors .catalog-hero { height: clamp(360px, 38.25vw, 480px); background-image: url("/catalog/night-arcade-v1/authors-hero-scene.webp"); }
-.catalog-page--contributors .catalog-hero { height: clamp(402px, 42.75vw, 520px); background-image: url("/catalog/night-arcade-v1/contributors-hero-scene.webp"); }
-.catalog-hero--leaderboard .catalog-hero__inner { padding-top: 36px; }
-.catalog-hero__emblem { display: block; width: 64px; height: 48px; margin-bottom: 8px; object-fit: contain; }
-.catalog-hero--leaderboard h1 { font-size: 76px; line-height: 94px; }
-.catalog-hero__leaderboard-subtitle { max-width: 100%; margin: 6px 0 0; color: #f1f8ff; font-size: 18px; font-weight: 700; line-height: 26px; text-align: center; }
-.catalog-hero--leaderboard .catalog-hero__motto { margin-top: 22px; }
-.catalog-page--authors > .catalog-page__wrap, .catalog-page--contributors > .catalog-page__wrap { max-width: 1320px; }
-.catalog-page--authors .catalog-author-count { font-size: 24px; font-weight: 700; }
-.catalog-page--authors .catalog-author-search { width: min(380px, 55%); min-height: 54px; border: 2px solid #64d8ff; padding-inline: 14px; }
-.catalog-page--authors .catalog-author-search input { font-size: 16px; }
-// 窄桌面下把设备横带上移到页脚文字上方，避免它被页脚底色完全挡住。
-.catalog-page--authors .catalog-footer::before, .catalog-page--contributors .catalog-footer::before { background-position: center calc(100% - 64px); }
-.catalog-icon { display: inline-block; width: 24px; height: 24px; flex: 0 0 auto; background: currentColor; mask: var(--catalog-icon) center / contain no-repeat; }
+.catalog-header__submit { display: inline-flex; min-height: 44px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 9px; border: 0; border-radius: 8px; padding: 0 17px; color: var(--btn-primary-fg); background: var(--btn-primary-bg); font: 700 14px var(--catalog-font); cursor: pointer; }
+.catalog-header__submit:hover { background: var(--btn-primary-bg-hover); }
+.catalog-header__submit .anticon { font-size: 20px; }
+.catalog-header__actions { display: flex; flex: 0 0 auto; align-items: center; gap: 5px; }
+.catalog-icon-button, .catalog-account { display: inline-flex; width: 44px; height: 44px; flex: 0 0 44px; align-items: center; justify-content: center; border: 0; border-radius: 8px; color: var(--catalog-ink); background: transparent; font-size: 22px; text-decoration: none; cursor: pointer; }
+.catalog-account { border-radius: 50%; color: #2b6657; background: #d5e5da; }
+.catalog-icon-button:hover { background: #dce5dc; }
+.catalog-rail { position: fixed; inset: 94px auto auto 10px; z-index: 20; display: flex; width: 54px; flex-direction: column; align-items: center; gap: 7px; border-radius: 12px; padding: 9px 5px; background: #dce5dc; }
+.catalog-rail button { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 0; border-radius: 8px; color: #285441; background: transparent; font-size: 22px; cursor: pointer; }
+.catalog-rail button:hover { background: #c9dace; }
+.catalog-rail button.is-active { color: #fff; background: #3b7864; }
+.catalog-rail__divider { width: 26px; height: 1px; margin: 4px 0; background: #b6c9bb; }
+.catalog-icon { display: inline-block; width: 22px; height: 22px; flex: 0 0 auto; background: currentColor; mask: var(--catalog-icon) center / contain no-repeat; }
 .catalog-icon--gamepad { --catalog-icon: url("/catalog/pixel-arcade/icons/gamepad.svg"); }
-.catalog-icon--search { --catalog-icon: url("/catalog/pixel-arcade/icons/search.svg"); }
-.catalog-icon--heart { --catalog-icon: url("/catalog/pixel-arcade/icons/heart.svg"); }
-.catalog-icon--star { --catalog-icon: url("/catalog/pixel-arcade/icons/star.svg"); }
 .catalog-icon--clock { --catalog-icon: url("/catalog/pixel-arcade/icons/clock.svg"); }
+.catalog-icon--search { --catalog-icon: url("/catalog/pixel-arcade/icons/search.svg"); }
 .catalog-icon--arrow { --catalog-icon: url("/catalog/pixel-arcade/icons/arrow-right.svg"); }
-// 新增原创入口后，工具栏按实际空间换行，不挤压分类、排序和显示方式。
-.catalog-controls { display: flex; flex-wrap: wrap; min-height: 68px; align-items: center; gap: 20px; padding: 8px 24px; }
-.catalog-library-filters { display: flex; flex: 0 0 auto; gap: 12px; }
-.catalog-library-filters button { min-width: 156px; border-color: #bbcfe3; padding-inline: 18px; color: var(--catalog-ink); background: var(--catalog-paper); }
-.catalog-library-filters button:first-child { min-width: 180px; }
-.catalog-library-filters .anticon, .catalog-library-filters .catalog-icon { width: 26px; height: 26px; font-size: 24px; }
-.catalog-library-filter--wanted .anticon { color: var(--catalog-red); }
-.catalog-library-filters button.is-active .anticon { color: #fff; }
-.catalog-library-filters button:hover:not(.is-active) { background: #dcefff; }
-// 状态节点仍保留目录数量；视觉上使用确认稿的细分隔线，不新增计数面板。
-.catalog-results { min-width: 16px; flex: 1; border-top: 1px solid #118ec6; color: transparent; font-size: 0; }
-.catalog-categories, .catalog-sort { display: flex; flex: 0 0 auto; align-items: center; gap: 12px; }
-.catalog-categories label, .catalog-sort label { color: #fff; font-size: 18px; font-weight: 700; white-space: nowrap; }
-.catalog-categories select, .catalog-sort select { width: 152px; min-height: 44px; appearance: none; border: 1px solid #ccddec; border-radius: 0; padding: 7px 36px 7px 14px; color: var(--catalog-ink); background: var(--catalog-paper) url("/catalog/pixel-arcade/icons/chevron-down.svg") right 10px center / 20px no-repeat; font: 700 16px / 1.4 var(--catalog-font); cursor: pointer; }
-.catalog-layout-toggle { display: flex; flex: 0 0 auto; gap: 12px; }
-.catalog-layout-toggle button { width: 52px; padding: 4px; border-color: #1488ca; background: #04234b; font-size: 26px; }
-.catalog-library__notice { margin: 0 0 12px; border: 1px solid #f994a9; padding: 10px 14px; color: #fff4f6; background: #622643; font-size: 14px; line-height: 1.6; }
-.catalog-author-selection { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 12px; color: #d7e9ff; font-size: 15px; }
-.catalog-author-selection button { min-height: 44px; border: 0; padding: 6px 10px; color: #fff; background: transparent; font: inherit; text-decoration: underline; cursor: pointer; }
-// 掌机轮廓与细节均来自正式图片；两个同坐标纹理层保留透明开窗，只用页面色填壳体。
-.catalog-list { position: relative; z-index: 1; }
-.catalog-grid { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: 1fr; align-items: stretch; gap: 12px 16px; }
-.catalog-card { --device-color: #1594ff; position: relative; isolation: isolate; display: flex; min-width: 0; flex-direction: column; padding: 13px 8.5% 8px 12.5%; color: var(--catalog-ink); }
-// 未选卡片降低亮度与饱和度，让当前游戏在彩色掌机列表中保持明显的视觉区分。
-.catalog-card:not(.is-selected) { filter: brightness(.6) saturate(.65); }
-.catalog-card.is-selected { z-index: 4; }
-// 粗黄框与白色四角独立于掌机外壳，不占布局空间，也不遮挡原操作的点击区域。
-.catalog-card__selection-frame { position: absolute; inset: -7px; z-index: 3; border: 6px solid #ffdf00; box-shadow: inset 0 0 0 2px #071c41, 0 0 0 2px #071c41; pointer-events: none; }
-.catalog-card__selection-frame::after {
- position: absolute; inset: -6px; content: ""; pointer-events: none;
- background:
-  linear-gradient(#fff 0 0) left top / 28px 6px no-repeat,
-  linear-gradient(#fff 0 0) left top / 6px 28px no-repeat,
-  linear-gradient(#fff 0 0) right top / 28px 6px no-repeat,
-  linear-gradient(#fff 0 0) right top / 6px 28px no-repeat,
-  linear-gradient(#fff 0 0) left bottom / 28px 6px no-repeat,
-  linear-gradient(#fff 0 0) left bottom / 6px 28px no-repeat,
-  linear-gradient(#fff 0 0) right bottom / 28px 6px no-repeat,
-  linear-gradient(#fff 0 0) right bottom / 6px 28px no-repeat;
-}
-.catalog-card::before, .catalog-card::after { position: absolute; inset: 0; z-index: -1; content: ""; pointer-events: none; }
-.catalog-card::before { background: var(--device-color); mask: url("/catalog/night-arcade-v1/device-shell.webp") center / 103.3% 113.3% no-repeat; }
-.catalog-card::after { background: url("/catalog/night-arcade-v1/device-shell.webp") center / 103.3% 113.3% no-repeat; filter: brightness(1.25); mix-blend-mode: multiply; }
-.catalog-card--red { --device-color: #ff335e; } .catalog-card--blue { --device-color: #1594ff; } .catalog-card--yellow { --device-color: #ffd438; } .catalog-card--green { --device-color: #00d597; } .catalog-card--purple { --device-color: #a43cff; } .catalog-card--teal { --device-color: #00dec3; } .catalog-card--pink { --device-color: #ff4387; } .catalog-card--sky { --device-color: #1bafff; }
-.catalog-card__screen { position: relative; display: flex; min-width: 0; flex: 1; flex-direction: column; container-type: inline-size; background: #06182c; }
-// 保留原封面和两行信息、操作的总高度，仅把图片延伸到同一个屏幕内，避免卡片变高。
-.catalog-card__screen::before { display: block; flex-shrink: 0; aspect-ratio: 2.95; content: ""; pointer-events: none; }
-.catalog-card__media { position: absolute; inset: 0; min-width: 0; }
-.catalog-card__media-link { position: absolute; inset: 0; display: block; }
-.catalog-card__media img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
-.catalog-card__cover-fallback { display: flex; height: 100%; flex-direction: column; justify-content: center; gap: 4px; padding: 8px; color: var(--catalog-ink); background: #d8eaf0; }
-.catalog-card__cover-fallback span { font-size: 12px; } .catalog-card__cover-fallback strong { font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
-.catalog-card__badges { position: absolute; top: 4px; left: 4px; display: flex; gap: 4px; pointer-events: none; }
-.catalog-card__badge { display: grid; min-width: 24px; min-height: 24px; place-items: center; color: #fff; background: #057eb9; font-size: 12px; font-weight: 700; }
-.catalog-card__badge--hot { padding-inline: 7px; background: var(--catalog-red); } .catalog-card__badge .catalog-icon { width: 18px; height: 18px; }
-.catalog-card__heat { position: absolute; top: 4px; right: 4px; display: inline-flex; min-height: 24px; align-items: center; gap: 4px; padding: 3px 6px; color: #fff; background: rgb(3 19 48 / 82%); font-size: 13px; font-weight: 700; line-height: 18px; }
-.catalog-card__heat .anticon { color: #ff8a25; font-size: 17px; }
-// 底部蒙层不接管封面链接；标题、作者和右侧操作各自保留原来的点击与键盘入口。
-.catalog-card__body { position: relative; display: flex; min-width: 0; min-height: 95px; flex: 1; align-items: flex-end; pointer-events: none; }
-.catalog-card__body::before { position: absolute; inset: auto 0 0; height: 76px; background: linear-gradient(to top, rgb(16 20 27 / 78%), rgb(16 20 27 / 38%) 58%, transparent); content: ""; pointer-events: none; }
-.catalog-card__info { position: relative; min-width: 72px; flex: 1; padding: 0 0 5px 6px; pointer-events: auto; }
-.catalog-card h2 { min-width: 0; margin: 0; color: #fff; font-size: clamp(16px, 7cqi, 22px); font-weight: 800; line-height: 24px; }
-// 名称与作者始终占一行，完整内容保留在 DOM 与 title 中，避免长文本撑高任意卡片。
-.catalog-card__title-link { display: block; overflow: hidden; color: inherit; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; } .catalog-card__title-link:hover { text-decoration: underline; text-underline-offset: 2px; }
-.catalog-card__author { display: flex; min-width: 0; min-height: 19px; align-items: center; margin: 0; color: #b6d2ed; font-size: clamp(11px, 4cqi, 13px); line-height: 19px; }
-.catalog-card__author > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.catalog-card__author a, .catalog-card__author button { display: block; max-width: 100%; border: 0; padding: 0; color: inherit; background: transparent; font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
-.catalog-card__author a:hover, .catalog-card__author button:hover { text-decoration: underline; text-underline-offset: 2px; }
-.catalog-card__footer { position: relative; display: flex; min-width: 132px; min-height: 44px; flex: 0 1 auto; align-items: center; pointer-events: auto; }
-.catalog-card__wanted { display: grid; width: 44px; min-height: 44px; flex: 0 0 44px; place-items: center; border: 0; padding: 0; color: #fff; background: transparent; cursor: pointer; }
-.catalog-card__wanted .anticon { color: inherit; font-size: 20px; }
-.catalog-card__wanted.is-active { color: var(--catalog-yellow); } .catalog-card__wanted:hover { color: #fff09a; }
-.catalog-card__open { position: relative; display: inline-flex; width: 136px; min-width: 88px; min-height: 44px; flex: 0 1 136px; align-items: center; justify-content: center; gap: 6px; padding: 4px 8px; color: #08204b; background: var(--catalog-yellow); font-size: 17px; font-weight: 800; line-height: 1.25; text-decoration: none; white-space: nowrap; }
-// 裁去按钮纹理的透明边距，正文和点击盒保持独立，不以截图模拟控件。
-.catalog-card__open::after { position: absolute; inset: 0; background: url("/catalog/night-arcade-v1/yellow-button-frame.webp") center / 100% 135.75% no-repeat; content: ""; pointer-events: none; }
-.catalog-card__open:hover { background: #ffe666; } .catalog-card__open .anticon { font-size: 16px; }
-.catalog-arcade-hint { display: flex; align-items: center; justify-content: flex-end; gap: 5px; margin: 0 0 8px; color: #cbe9ff; font-size: 12px; line-height: 20px; }
-.catalog-arcade-hint kbd { border: 1px solid #1884ba; padding: 0 4px; color: inherit; background: #031b40; font: inherit; }
-.catalog-load-more { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 20px; color: #cbe9ff; font-size: 14px; }
-.catalog-load-more button, .catalog-state button { min-height: 44px; border: 1px solid #52d7ff; padding: 8px 18px; color: #fff; background: #075ba8; font: 700 16px / 1.3 var(--catalog-font); cursor: pointer; }
-.catalog-state { display: flex; min-height: 180px; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 16px; border: 1px solid #1b73b6; padding: 24px; color: #dfeeff; font-size: 16px; text-align: center; }
-.catalog-state__spinner { width: 24px; height: 24px; border: 3px solid #174376; border-top-color: #27ceff; animation: catalog-spin 800ms steps(4) infinite; }
-// 列表仅重排同一批项目和原操作，窄屏保持单列，不新增数据来源或本地存储。
-.catalog-grid--list { grid-template-columns: minmax(0, 1fr) !important; }
-.catalog-grid--list .catalog-card { border: 2px solid var(--device-color); padding: 12px; background: #07284b; }
-.catalog-grid--list .catalog-card::before, .catalog-grid--list .catalog-card::after { display: none; } .catalog-grid--list .catalog-card__media { aspect-ratio: 2.12; }
-.catalog-grid--list .catalog-card__screen { display: grid; grid-template-columns: 260px minmax(0, 1fr); align-items: center; gap: 16px; background: transparent; }
-.catalog-grid--list .catalog-card__screen::before { display: none; }
-.catalog-grid--list .catalog-card__media { position: relative; flex-shrink: 0; }
-.catalog-grid--list .catalog-card__body { min-height: 95px; align-self: stretch; }
-.catalog-grid--list .catalog-card__body::before { display: none; }
-.catalog-grid--list .catalog-card__info { padding-bottom: 5px; }
-.catalog-footer { position: relative; isolation: isolate; min-height: 106px; margin-top: 41px; padding-top: 32px; }
-.catalog-footer::before { position: absolute; inset: -36px 0 0; z-index: -1; background: url("/catalog/night-arcade-v1/footer-scene.webp") center bottom / 100% auto no-repeat; content: ""; pointer-events: none; }
-.catalog-footer__inner { position: relative; z-index: 1; display: grid; grid-template-columns: 440px 480px minmax(0, 1fr); min-height: 64px; align-items: center; gap: 32px; border-top: 1px solid #1772ad; border-bottom: 1px solid #1772ad; padding-inline: 82px; background: #031b40; }
-.catalog-footer__brand { display: flex; align-items: center; gap: 28px; } .catalog-footer__brand strong { color: #fff; font-family: var(--catalog-heading-font); font-synthesis: none; font-size: 30px; }
-.catalog-footer__brand > span { color: #40d7ff; font-size: 14px; }
-.catalog-footer__motto { display: flex; align-items: center; gap: 24px; margin: 0; color: #3adeff; font-size: 14px; white-space: nowrap; } .catalog-footer__motto .anticon { color: var(--catalog-red); font-size: 20px; }
-.catalog-footer__navigation { justify-self: start; margin-right: 180px; }
-.catalog-library__hint { margin: 0; padding: 2px 12px 0; color: #82afcd; font-size: 10px; line-height: 14px; text-align: center; }
-.catalog-author-count { color: #cde9ff; font-size: 15px; } .catalog-author-search { display: flex; width: min(360px, 100%); min-height: 44px; align-items: center; gap: 10px; border: 1px solid #1884ba; padding: 8px 12px; color: #102750; background: #fffdf5; }
-// 榜单沿用浅色面板和深色辅助文字；空结果位于夜景底上，单独保留可读的浅色提示。
-.catalog-page :deep(.catalog-leaderboard__empty) { color: #dcefff; }
-.catalog-author-search input { min-width: 0; width: 100%; border: 0; outline: 0; color: inherit; background: transparent; font: inherit; font-size: 14px; }
-.catalog-author-dialog { width: min(600px, calc(100% - 24px)); max-height: min(80dvh, 640px); overflow-y: auto; border: 2px solid #18baf8; padding: 0; color: #0b244a; background: #fffdf5; }
-.catalog-author-dialog::backdrop { background: #001332b3; } .catalog-author-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #bed9ea; padding: 16px; }
-.catalog-author-dialog__header > div { min-width: 0; } .catalog-author-dialog__header h2 { margin: 0 0 6px; font-size: 24px; overflow-wrap: anywhere; } .catalog-author-dialog__header span { color: #58718d; font-size: 14px; }
-.catalog-author-dialog__close { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 0; padding: 0; color: inherit; background: transparent; font-size: 18px; cursor: pointer; }
-.catalog-author-dialog__games { margin: 0; padding: 0 16px; list-style: none; } .catalog-author-dialog__games li + li { border-top: 1px solid #d6e4ec; }
-.catalog-author-dialog__games a { display: flex; min-height: 72px; align-items: center; gap: 12px; padding: 10px 0; color: #14386a; font-weight: 700; text-decoration: none; }
-.catalog-author-dialog__games img { width: 100px; flex: 0 0 100px; aspect-ratio: 2.12; object-fit: cover; } .catalog-author-dialog__games a > span { min-width: 0; overflow-wrap: anywhere; } .catalog-author-dialog__games .catalog-icon { margin-left: auto; }
-.catalog-page :is(button, a, select):focus-visible { outline: 2px solid #42deff; outline-offset: 3px; } .catalog-card__media-link:focus-visible { outline-offset: -4px; }
+.catalog-page__wrap { width: min(1700px, calc(100% - 120px)); margin: 0 28px 0 auto; }
+.catalog-intro { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 0 16px; }
+.catalog-intro h1 { margin: 0; font-family: var(--catalog-heading-font); font-size: 27px; font-weight: 800; line-height: 1.3; }
+.catalog-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 0 0 18px; }
+.catalog-library-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.catalog-library-filters button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 7px; border: 1px solid #d0dbd0; border-radius: 7px; padding: 8px 17px; color: #365b4c; background: #e0e6dd; font: 700 14px / 1.3 var(--catalog-font); cursor: pointer; }
+.catalog-library-filters button .anticon, .catalog-library-filters button .catalog-icon { width: 17px; height: 17px; font-size: 17px; }
+.catalog-library-filters button:hover { background: #d3dfd3; }
+.catalog-library-filters button.is-active { border-color: #3b7864; color: #fff; background: #3b7864; }
+.catalog-results { margin-left: auto; color: var(--catalog-muted); font-size: 12px; white-space: nowrap; }
+.catalog-categories, .catalog-sort { display: flex; align-items: center; gap: 4px; }
+.catalog-categories label, .catalog-sort label { font-size: 12px; }
+.catalog-categories select, .catalog-sort select { height: 44px; max-width: 130px; border: 1px solid #cbd7ca; border-radius: 7px; padding: 0 8px; color: #315b49; background: #f7f8f2; font: 13px var(--catalog-font); cursor: pointer; }
+.catalog-layout-toggle { display: flex; gap: 2px; }
+.catalog-layout-toggle button { display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 6px; color: #647c6b; background: transparent; font-size: 19px; cursor: pointer; }
+.catalog-layout-toggle button.is-active { color: #fff; background: #3b7864; }
+.catalog-library__notice { border: 1px solid #dac4a4; border-radius: 7px; padding: 12px; color: #644822; background: #fbf3e3; font-size: 14px; }
+.catalog-author-selection { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 16px; font-size: 14px; }
+.catalog-author-selection button { min-height: 44px; border: 0; padding: 4px 10px; color: #315f4e; background: #dce6da; font: inherit; cursor: pointer; }
+.catalog-groups { display: grid; gap: 30px; }
+.catalog-group { min-width: 0; }
+.catalog-group__heading { display: flex; min-height: 46px; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.catalog-group__heading > div { display: flex; min-width: 0; align-items: center; gap: 10px; }
+.catalog-group__heading h2 { margin: 0; font-family: var(--catalog-heading-font); font-size: 27px; font-weight: 800; line-height: 1.3; }
+.catalog-group__mark { display: inline-flex; color: #3e7860; font-size: 22px; }
+.catalog-group--featured .catalog-group__mark { color: #b76f43; }
+.catalog-group__count { color: var(--catalog-muted); font-size: 12px; }
+.catalog-group__heading > button { display: inline-flex; min-height: 44px; flex: 0 0 auto; align-items: center; gap: 9px; border: 0; padding: 0 3px 0 14px; color: #3f6c56; background: transparent; font: 12px var(--catalog-font); cursor: pointer; }
+.catalog-group__heading > button:hover { text-decoration: underline; }
+.catalog-group__ornament { width: 140px; height: 56px; object-fit: contain; }
+.catalog-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: stretch; gap: 16px; }
+.catalog-card { position: relative; min-width: 0; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 12px; background: #ccd9ce; transition: box-shadow 180ms ease, transform 180ms ease; }
+.catalog-card:hover { box-shadow: 0 8px 18px #183c341a; transform: translateY(-2px); }
+.catalog-card.is-selected { outline: 2px solid #4e8a71; outline-offset: 3px; }
+.catalog-card__selection-frame { display: none; }
+.catalog-card__screen, .catalog-card__media, .catalog-card__media-link { position: absolute; inset: 0; }
+.catalog-card__media-link { display: block; }
+.catalog-card__media-link img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.catalog-card__body { position: absolute; inset: auto 0 0; display: flex; align-items: flex-end; gap: 6px; padding: 33px 10px 8px; color: #fff; background: linear-gradient(transparent, #0b221cb3 60%, #0b221ce0); pointer-events: none; }
+.catalog-card__info { min-width: 0; flex: 1; }
+.catalog-card__info h2 { margin: 0; font: 700 16px / 1.3 var(--catalog-font); }
+.catalog-card__title-link { display: flex; min-height: 28px; align-items: center; overflow: hidden; color: #fff; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; }
+.catalog-card__author { display: flex; min-width: 0; min-height: 24px; align-items: center; margin: 0; color: #e2e9df; font-size: 11px; line-height: 1.4; }
+.catalog-card__author a, .catalog-card__author button, .catalog-card__author > span { display: block; max-width: 100%; min-height: 24px; overflow: hidden; border: 0; padding: 4px 0; color: inherit; background: transparent; font: inherit; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; }
+.catalog-card__author a:hover, .catalog-card__author button:hover { text-decoration: underline; cursor: pointer; }
+.catalog-card__footer { display: flex; flex: 0 0 auto; align-items: center; gap: 1px; pointer-events: auto; }
+.catalog-card__wanted { display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 6px; color: #fff; background: transparent; font-size: 18px; cursor: pointer; }
+.catalog-card__wanted:hover { background: #ffffff1f; }
+.catalog-card__wanted.is-active { color: #ffda7b; }
+.catalog-card__open { display: inline-flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; gap: 5px; border-radius: 6px; padding: 0 10px; color: var(--btn-primary-fg); background: var(--btn-primary-bg); font-size: 12px; text-decoration: none; white-space: nowrap; }
+.catalog-card__open:hover { background: var(--btn-primary-bg-hover); }
+.catalog-card__open > span:not(.anticon) { display: none; }
+.catalog-card__heat { position: absolute; top: 9px; right: 9px; display: inline-flex; align-items: center; gap: 4px; border-radius: 5px; padding: 4px 6px; color: #fff; background: #112e24a6; font-size: 11px; pointer-events: none; }
+.catalog-card__heat .anticon { color: #f0c988; }
+.catalog-card__badges { position: absolute; top: 8px; left: 8px; display: flex; gap: 5px; pointer-events: none; }
+.catalog-card__badge { display: inline-flex; align-items: center; border-radius: 4px; padding: 3px; color: #fff; background: #315f4ecc; }
+.catalog-card__badge .catalog-icon { width: 14px; height: 14px; }
+.catalog-card__badge--hot { padding-inline: 6px; color: #4d250d; background: #f0c988; font-size: 10px; font-weight: 700; }
+.catalog-card__cover-fallback { display: flex; height: 100%; flex-direction: column; justify-content: center; gap: 10px; padding: 18px; color: #315f4e; background: #e2e9de; }
+.catalog-card__cover-fallback > span { font-size: 12px; }
+.catalog-card__cover-fallback strong { font-size: 24px; }
+.catalog-grid--featured { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(2, clamp(144px, 10.4vw, 180px)); grid-auto-flow: dense; gap: 12px; }
+.catalog-grid--featured .catalog-card { aspect-ratio: auto; }
+.catalog-grid--featured .catalog-card:first-child { grid-column: 1 / span 2; grid-row: 1 / span 2; }
+.catalog-grid--featured .catalog-card:last-child { grid-column: 5 / span 2; grid-row: 1 / span 2; }
+.catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__info h2 { font-family: var(--catalog-heading-font); font-size: 27px; }
+.catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__body { padding: 54px 16px 12px; }
+.catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__open > span:not(.anticon) { display: inline; }
+
+.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__body { flex-wrap: wrap; gap: 0; padding: 28px 8px 5px; }
+.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__info { flex-basis: 100%; }
+.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__info h2 { font-size: 14px; }
+.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__footer { width: 100%; justify-content: flex-end; }
+
+
+.catalog-grid--list { grid-template-columns: 1fr; }
+.catalog-grid--list .catalog-card { min-height: 148px; aspect-ratio: auto; background: #f7f8f2; }
+.catalog-grid--list .catalog-card__screen { display: flex; position: relative; min-height: 148px; }
+.catalog-grid--list .catalog-card__media { position: relative; width: 224px; flex: 0 0 224px; }
+.catalog-grid--list .catalog-card__body { position: static; min-width: 0; flex: 1; align-items: center; gap: 16px; padding: 20px; color: var(--catalog-ink); background: transparent; }
+.catalog-grid--list .catalog-card__title-link { min-height: 44px; color: var(--catalog-ink); font-size: 20px; }
+.catalog-grid--list .catalog-card__author { color: #586e5b; }
+.catalog-grid--list .catalog-card__author :is(a, button, span) { min-height: 44px; padding-block: 12px; }
+.catalog-grid--list .catalog-card__wanted { color: #3b7864; }
+.catalog-grid--list .catalog-card__wanted.is-active { color: #9b6a00; }
+.catalog-grid--list .catalog-card__open > span:not(.anticon) { display: inline; }
+.catalog-load-more { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 32px 0 0; }
+.catalog-load-more button { min-width: 180px; min-height: 44px; border: 1px solid #b7cab9; border-radius: 7px; padding: 8px 24px; color: #315f4e; background: #e1e9df; font: 700 14px var(--catalog-font); cursor: pointer; }
+.catalog-load-more button:hover { background: #d4e1d2; }
+.catalog-load-more > span { color: var(--catalog-muted); font-size: 12px; }
+.catalog-state { display: flex; min-height: 280px; flex-direction: column; align-items: center; justify-content: center; gap: 18px; color: var(--catalog-muted); font-size: 15px; }
+.catalog-state button { min-height: 44px; border: 1px solid #bfd0c0; border-radius: 7px; padding: 8px 20px; color: #315f4e; background: #e0e8dc; font: inherit; cursor: pointer; }
+.catalog-state__spinner { width: 28px; height: 28px; border: 3px solid #cad8c9; border-top-color: #3b7864; border-radius: 50%; animation: catalog-spin 800ms linear infinite; }
 @keyframes catalog-spin { to { transform: rotate(360deg); } }
-@media (min-width: 600px) { .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (min-width: 960px) { .catalog-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (min-width: 1280px) { .catalog-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-@media (min-width: 1600px) { .catalog-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
-@media (min-width: 1920px) { .catalog-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-.catalog-footer::after { position: absolute; right: 30px; bottom: 8px; z-index: 2; width: 160px; height: 160px; background: url("/catalog/night-arcade-v1/footer-cat.webp") center / contain no-repeat; content: ""; pointer-events: none; }
-@media (min-width: 1600px) { .catalog-card__open { font-size: 15px; gap: 4px; padding-inline: 4px; } .catalog-card__open .anticon { font-size: 14px; } }
-@media (max-width: 1430px) {
- .catalog-header__tagline { display: none; } .catalog-header__inner { gap: 12px; padding-right: 0; } .catalog-view-tabs button, .catalog-view-tabs button.is-active { min-width: 136px; }
- .catalog-controls { gap: 14px; padding-inline: 8px; } .catalog-library-filters button { min-width: 134px; padding-inline: 12px; font-size: 16px; } .catalog-library-filters button:first-child { min-width: 150px; }
- .catalog-categories, .catalog-sort { gap: 8px; } .catalog-categories select, .catalog-sort select { width: 128px; } .catalog-layout-toggle { gap: 8px; } .catalog-layout-toggle button { width: 44px; }
- .catalog-card__open { width: 104px; flex-basis: 104px; font-size: 15px; }
- .catalog-footer__inner { grid-template-columns: max-content minmax(0, 1fr) max-content; padding-inline: 24px; gap: 20px; } .catalog-footer__brand { gap: 16px; } .catalog-footer__motto { gap: 16px; } .catalog-footer__navigation { margin-right: 160px; }
+.catalog-author-count { font-size: 16px; }
+.catalog-author-search { display: flex; width: min(380px, 60%); min-height: 44px; align-items: center; gap: 10px; border: 1px solid #bfd0c0; border-radius: 7px; padding: 0 12px; background: #f7f8f2; }
+.catalog-author-search input { width: 100%; min-width: 0; border: 0; color: var(--catalog-ink); background: transparent; font: 14px var(--catalog-font); }
+.catalog-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-top: 42px; border-top: 1px solid var(--catalog-line); padding: 25px 0 32px; color: var(--catalog-muted); }
+.catalog-footer > div { display: flex; align-items: center; gap: 18px; }
+.catalog-footer strong { color: var(--catalog-ink); font-family: var(--catalog-heading-font); font-size: 22px; }
+.catalog-footer > div > span { font-size: 12px; }
+.catalog-library__hint, .catalog-keyboard-hint { margin: 0; font-size: 11px; line-height: 1.8; }
+.catalog-library__hint { width: 100%; }
+.catalog-keyboard-hint { margin-top: -8px; }
+.catalog-author-dialog { width: min(640px, calc(100% - 32px)); max-height: 85dvh; border: 0; border-radius: 14px; padding: 24px; color: var(--catalog-ink); background: #f7f8f2; box-shadow: 0 20px 70px #183c3440; }
+.catalog-author-dialog::backdrop { background: #183c3473; }
+.catalog-author-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.catalog-author-dialog__header h2 { margin: 0 0 5px; overflow-wrap: anywhere; }
+.catalog-author-dialog__header > div > span { color: var(--catalog-muted); font-size: 13px; }
+.catalog-author-dialog__close { width: 44px; height: 44px; flex: 0 0 44px; border: 0; border-radius: 6px; color: #315f4e; background: #dce6da; cursor: pointer; }
+.catalog-author-dialog__games { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.catalog-author-dialog__games a { display: flex; min-height: 64px; align-items: center; gap: 14px; color: var(--catalog-ink); text-decoration: none; }
+.catalog-author-dialog__games img { width: 84px; height: 60px; border-radius: 6px; object-fit: cover; }
+.catalog-author-dialog__games a > span:not(.catalog-icon) { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.catalog-page :is(a, button, select, input, [tabindex]):focus-visible { outline: 3px solid var(--catalog-focus); outline-offset: 3px; }
+
+@media (min-width: 1850px) {
+  .catalog-page__wrap { margin-inline: auto; padding-left: 52px; }
+  .catalog-grid:not(.catalog-grid--featured, .catalog-grid--list) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
-@media (min-width: 801px) and (max-width: 1200px) {
- // 中等宽度让范围入口独占首行，分类、排序和显示方式在第二行保持完整一组。
- .catalog-library-filters { flex-basis: 100%; }
+@media (max-width: 1279px) {
+  .catalog-header__inner { gap: 12px; padding-inline: 16px; }
+  .catalog-brand > span { font-size: 25px; }
+  .catalog-top-navigation :deep(a), .catalog-top-navigation :deep(button) { min-width: 54px; padding-inline: 9px; }
+  .catalog-grid:not(.catalog-grid--featured, .catalog-grid--list) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .catalog-controls { gap: 10px; }
+  .catalog-library-filters button { padding-inline: 12px; }
+  .catalog-results { flex: 1; text-align: right; }
+  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__body { flex-wrap: wrap; gap: 2px; }
+  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__info { flex-basis: 100%; }
+  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__footer { width: 100%; justify-content: flex-end; }
 }
-@media (max-width: 1100px) {
- .catalog-header__inner { width: calc(100% - 32px); } .catalog-brand { gap: 8px; } .catalog-brand img { width: 52px; height: 44px; } .catalog-brand > span { font-size: 26px; }
- .catalog-view-tabs button { min-width: 110px; padding-inline: 10px; font-size: 16px; } .catalog-header__submit { min-width: 134px; font-size: 16px; }
- .catalog-controls { flex-wrap: wrap; gap: 10px; padding-block: 12px; } .catalog-results { flex: 1; } .catalog-categories label, .catalog-sort label { font-size: 15px; }
- .catalog-categories select, .catalog-sort select { width: 116px; font-size: 15px; } .catalog-footer__brand > span { display: none; }
- // 中等宽度给页脚猫预留独立空间，装饰短句不与猫或品牌重叠。
- .catalog-footer__inner { grid-template-columns: max-content minmax(0, 1fr) max-content; padding-right: 188px; }
- .catalog-footer__motto { justify-self: center; gap: 12px; font-size: 12px; } .catalog-footer__navigation { justify-self: end; margin-right: 0; }
+@media (max-width: 1000px) {
+  .catalog-header__submit { padding-inline: 12px; }
+  .catalog-header__submit > span:not(.anticon) { display: none; }
+  .catalog-brand > span { font-size: 23px; }
+  .catalog-header__inner { gap: 8px; }
+  .catalog-header__actions { gap: 0; }
+  .catalog-page__wrap { width: calc(100% - 104px); margin-right: 20px; }
+  .catalog-grid:not(.catalog-grid--featured, .catalog-grid--list) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .catalog-grid--featured { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, 148px); }
+  .catalog-grid--featured .catalog-card:first-child { grid-column: 1 / span 2; }
+  .catalog-grid--featured .catalog-card:last-child { grid-column: auto; grid-row: auto; }
+  .catalog-grid--featured .catalog-card:last-child { grid-column: 1 / span 4; grid-row: 3; min-height: 200px; }
+  .catalog-grid--featured .catalog-card:last-child .catalog-card__info h2 { font-family: var(--catalog-font); font-size: 14px; }
+
+  .catalog-grid--featured .catalog-card:last-child .catalog-card__body { padding: 28px 8px 5px; }
+  .catalog-grid--featured .catalog-card:last-child .catalog-card__open > span:not(.anticon) { display: none; }
 }
-@media (max-width: 800px) {
- .catalog-page { --catalog-edge-width: 12px; }
- .catalog-page__wrap { width: calc(100% - 24px); } .catalog-header { height: auto; } .catalog-header__inner { flex-wrap: wrap; gap: 8px; padding-block: 6px; }
- .catalog-header__search { margin-left: auto; } .catalog-header__mascot { display: none; } .catalog-view-tabs { order: 5; width: 100%; flex-basis: 100%; gap: 4px; } .catalog-view-tabs button { flex: 1; }
- .catalog-hero h1 { font-size: 48px; } .catalog-hero__subtitle { font-size: 12px; letter-spacing: 0; }
- .catalog-hero--leaderboard h1 { font-size: 64px; line-height: 84px; } .catalog-hero__leaderboard-subtitle { font-size: 16px; }
- .catalog-library-filters { flex: 1 0 100%; } .catalog-library-filters button, .catalog-library-filters button:first-child { min-width: 0; flex: 1; }
- // 手机工具栏固定两行：清单入口占首行，筛选与显示方式在第二行底部对齐。
- .catalog-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: 12px 10px; padding-inline: 0; }
- .catalog-library-filters { grid-column: 1 / -1; }
- .catalog-categories, .catalog-sort { display: grid; min-width: 0; gap: 4px; }
- .catalog-categories label, .catalog-sort label { color: #cde9ff; font-size: 13px; line-height: 18px; }
- .catalog-categories select, .catalog-sort select { width: 100%; min-width: 0; }
- .catalog-results { position: absolute; width: 1px; height: 1px; overflow: hidden; border: 0; clip-path: inset(50%); } .catalog-layout-toggle { margin-left: auto; }
- .catalog-footer__inner { grid-template-columns: max-content minmax(0, 1fr) max-content; padding: 8px 12px; gap: 12px 20px; } .catalog-footer__motto { flex-wrap: wrap; justify-content: center; margin: 0; font-size: 12px; }
- .catalog-footer__navigation { justify-self: end; }
- .catalog-footer::after { right: 8px; bottom: calc(100% - 32px); width: 90px; height: 90px; }
- .catalog-grid--list .catalog-card__screen { grid-template-columns: 190px minmax(0, 1fr); }
+@media (max-width: 760px) {
+  .catalog-header { position: relative; }
+  .catalog-header__inner { flex-wrap: wrap; gap: 8px 12px; min-height: 68px; padding: 10px 16px; }
+  .catalog-brand { gap: 7px; }
+  .catalog-brand img { width: 35px; height: 34px; }
+  .catalog-brand > span { font-size: 25px; }
+  .catalog-top-navigation { margin-left: auto; font-size: 14px; }
+  .catalog-top-navigation :deep(a), .catalog-top-navigation :deep(button) { min-width: 48px; padding-inline: 8px; }
+  .catalog-header__actions { margin-left: auto; }
+  .catalog-header__actions .catalog-icon-button { display: none; }
+  .catalog-search { order: 5; max-width: none; flex-basis: calc(100% - 64px); margin: 0; }
+  .catalog-header__submit { order: 6; width: 44px; padding: 0; }
+  .catalog-rail { inset: auto 10px max(10px, env(safe-area-inset-bottom)); width: auto; flex-direction: row; justify-content: space-around; gap: 0; border: 1px solid #c6d4c5; border-radius: 12px; padding: 4px; box-shadow: 0 5px 20px #183c3429; }
+  .catalog-rail button { width: 44px; }
+  .catalog-rail button:nth-of-type(2), .catalog-rail button:nth-of-type(8), .catalog-rail__divider { display: none; }
+  .catalog-page__wrap { width: calc(100% - 32px); margin-inline: auto; }
+  .catalog-intro { min-height: 68px; padding: 18px 0 14px; }
+  .catalog-intro h1 { font-size: 23px; }
+  .catalog-controls { gap: 10px 8px; padding-bottom: 18px; }
+  .catalog-library-filters { width: 100%; gap: 6px; }
+  .catalog-library-filters button { flex: 1; gap: 5px; padding: 8px 6px; font-size: 12px; }
+  .catalog-library-filters button .catalog-icon, .catalog-library-filters button .anticon { width: 15px; height: 15px; font-size: 15px; }
+  .catalog-results { order: 5; flex: 1; margin: 0; font-size: 11px; }
+  .catalog-categories, .catalog-sort { gap: 2px; }
+  .catalog-categories label, .catalog-sort label { font-size: 11px; }
+  .catalog-categories select { max-width: 105px; }
+  .catalog-sort select { max-width: 72px; }
+  .catalog-layout-toggle { margin-left: auto; }
+  .catalog-layout-toggle button { width: 44px; }
+  .catalog-grid:not(.catalog-grid--featured, .catalog-grid--list) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .catalog-groups { gap: 25px; }
+  .catalog-group__heading { gap: 8px; margin-bottom: 10px; }
+  .catalog-group__heading h2 { font-size: 23px; }
+  .catalog-group__heading > div { gap: 7px; }
+  .catalog-group__count { font-size: 10px; }
+  .catalog-group__ornament { width: 90px; height: 42px; }
+  .catalog-card { aspect-ratio: 4 / 3.8; border-radius: 9px; }
+  .catalog-card__body { flex-wrap: wrap; gap: 0; padding: 24px 9px 5px; }
+  .catalog-card__info { flex-basis: 100%; }
+  .catalog-card__info h2 { font-size: 15px; }
+  .catalog-card__title-link { min-height: 44px; }
+  .catalog-card__author { margin-top: -5px; }
+  .catalog-card__author :is(a, button, span) { min-height: 44px; padding-block: 12px; }
+  .catalog-card__footer { position: absolute; right: 5px; bottom: 3px; }
+  .catalog-card__info { padding-bottom: 36px; }
+  .catalog-card__author { padding-right: 0; }
+  .catalog-card__open { padding-inline: 8px; }
+  .catalog-grid--featured { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: 168px; gap: 12px; }
+  .catalog-grid--featured .catalog-card:first-child { grid-column: 1; grid-row: 1 / span 2; }
+  .catalog-grid--featured .catalog-card:last-child { grid-column: auto; grid-row: auto; }
+  .catalog-grid--featured .catalog-card:nth-child(5) { display: block; }
+  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__info h2 { font-family: var(--catalog-font); font-size: 18px; }
+  .catalog-grid--featured .catalog-card:first-child .catalog-card__media-link img { object-position: center; }
+  .catalog-grid--featured .catalog-card:last-child { grid-column: 1; grid-row: 3 / span 2; }
+  .catalog-grid--featured .catalog-card:nth-child(4) { grid-column: 2; grid-row: 3; }
+  .catalog-grid--featured .catalog-card:nth-child(5) { grid-column: 2; grid-row: 4; }
+  .catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__info { padding-bottom: 38px; }
+  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__body { padding: 30px 10px 6px; }
+  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__footer { width: auto; }
+  .catalog-grid--featured .catalog-card:first-child .catalog-card__open > span:not(.anticon) { display: none; }
+  .catalog-grid--list .catalog-card { min-height: 160px; }
+  .catalog-grid--list .catalog-card__screen { min-height: 160px; }
+  .catalog-grid--list .catalog-card__media { width: 38%; flex-basis: 38%; }
+  .catalog-grid--list .catalog-card__body { align-content: center; padding: 12px; }
+  .catalog-grid--list .catalog-card__info { padding-bottom: 36px; }
+  .catalog-grid--list .catalog-card__title-link { font-size: 16px; white-space: normal; }
+  .catalog-grid--list .catalog-card__footer { right: 10px; bottom: 8px; }
+  .catalog-grid--list .catalog-card__open > span:not(.anticon) { display: none; }
+  .catalog-footer { margin-top: 32px; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .catalog-footer > div { flex-wrap: wrap; gap: 6px 12px; }
+  .catalog-footer > div > span { font-size: 11px; }
+  .catalog-keyboard-hint { display: none; }
 }
-@media (max-width: 599px) {
- .catalog-header__inner { width: calc(100% - 20px); } .catalog-header__submit { min-width: 126px; font-size: 15px; } .catalog-header__submit .anticon { width: 20px; height: 20px; font-size: 20px; }
- .catalog-view-tabs button, .catalog-view-tabs button.is-active { min-width: 0; gap: 6px; font-size: 15px; } .catalog-view-tabs .anticon, .catalog-view-tabs .catalog-icon { width: 22px; height: 22px; font-size: 22px; }
- .catalog-hero { height: 264px; } .catalog-hero__inner { padding: 28px 12px 0; } .catalog-hero h1 { font-size: clamp(26px, 8vw, 40px); line-height: 1.2; }
- .catalog-page--authors .catalog-hero, .catalog-page--contributors .catalog-hero { height: 300px; }
- .catalog-hero--leaderboard .catalog-hero__inner { padding-top: 24px; } .catalog-hero__emblem { width: 52px; height: 40px; margin-bottom: 8px; }
- .catalog-hero--leaderboard h1 { font-size: 52px; line-height: 68px; } .catalog-hero__leaderboard-subtitle { width: min(290px, 100%); font-size: 15px; line-height: 24px; }
- .catalog-hero--leaderboard .catalog-hero__motto { gap: 6px; font-size: 10px; }
- .catalog-page--authors .catalog-author-count { font-size: 18px; } .catalog-page--authors .catalog-author-search { width: 100%; }
- .catalog-hero__subtitle { max-width: 100%; margin-top: 12px; padding-inline: 8px; font-size: 11px; } .catalog-search { width: min(420px, 100%); } .catalog-search button { width: 78px; font-size: 20px; } .catalog-hero__motto { gap: 7px; font-size: 10px; }
- .catalog-library-filters { gap: 6px; } .catalog-library-filters button, .catalog-library-filters button:first-child { padding-inline: 4px; gap: 5px; font-size: 13px; }
- // 窄屏保留四个完整文字入口和 44px 点击高度，省去装饰图标以维持原两行工具栏。
- .catalog-library-filters .anticon, .catalog-library-filters .catalog-icon { display: none; }
- .catalog-categories, .catalog-sort { gap: 4px; } .catalog-categories label, .catalog-sort label { font-size: 13px; } .catalog-categories select, .catalog-sort select { width: 98px; padding-left: 8px; padding-right: 28px; font-size: 14px; }
- .catalog-controls { column-gap: 8px; } .catalog-categories select, .catalog-sort select { width: 100%; }
- .catalog-layout-toggle { margin-left: 0; } .catalog-card { padding: 18px 11.5% 12px; }
- .catalog-card__open { width: 112px; flex-basis: 112px; font-size: 15px; } .catalog-grid--list .catalog-card { padding: 10px; } .catalog-grid--list .catalog-card__screen { display: flex; align-items: stretch; gap: 0; } .catalog-grid--list .catalog-card__media { aspect-ratio: 2.12; } .catalog-grid--list .catalog-card__info { padding-left: 0; }
- .catalog-footer__inner { grid-template-columns: minmax(0, 1fr) max-content; column-gap: 12px; } .catalog-footer__brand { grid-column: 1 / -1; justify-self: center; }
- .catalog-footer__brand strong { font-size: 24px; } .catalog-footer__motto { min-width: 0; gap: 4px; }
+@media (max-width: 390px) {
+  .catalog-header__inner { gap: 7px; padding-inline: 12px; }
+  .catalog-brand { gap: 4px; }
+  .catalog-brand > span { font-size: 21px; }
+  .catalog-brand img { width: 27px; }
+  .catalog-top-navigation :deep(a), .catalog-top-navigation :deep(button) { min-width: 44px; padding-inline: 5px; }
+  .catalog-account { width: 44px; flex-basis: 44px; }
+  .catalog-page__wrap { width: calc(100% - 24px); }
+  .catalog-library-filters button { font-size: 11px; }
+  .catalog-library-filters button .anticon, .catalog-library-filters button .catalog-icon { display: none; }
+  .catalog-categories label, .catalog-sort label { display: none; }
+  .catalog-group__count { display: none; }
+  .catalog-card { aspect-ratio: 4 / 4.5; }
+  .catalog-grid--featured { grid-auto-rows: 154px; }
+  .catalog-rail { inset-inline: 8px; }
 }
-// 触屏仍给名称与作者链接完整 44px 命中高度，单行省略规则与卡片统一高度保持一致。
-@media (pointer: coarse) { .catalog-card__title-link, .catalog-card__author a, .catalog-card__author button { min-height: 44px; line-height: 44px; } .catalog-card__author { min-height: 44px; } .catalog-card__body { min-height: 139px; } .catalog-card__body::before { height: 112px; } }
-@media (prefers-reduced-motion: reduce) { .catalog-state__spinner { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .catalog-card { transition: none; }
+  .catalog-card:hover { transform: none; }
+  .catalog-state__spinner { animation: none; }
+}
+
+// 正式封面上以两行信息提供完整标题、作者和操作，触控与鼠标共用真实入口。
+.catalog-card .catalog-card__body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 4px; padding: 24px 10px 6px; }
+.catalog-card .catalog-card__info { display: contents; }
+.catalog-card .catalog-card__info h2 { min-width: 0; grid-column: 1 / -1; }
+.catalog-card .catalog-card__title-link { display: block; min-height: 44px; overflow: hidden; line-height: 44px; text-overflow: ellipsis; white-space: nowrap; }
+.catalog-card .catalog-card__author { min-width: 0; min-height: 44px; grid-column: 1; grid-row: 2; margin: 0; }
+.catalog-card .catalog-card__author :is(a, button, span) { min-height: 44px; padding-block: 14px; }
+.catalog-card .catalog-card__footer { position: static; width: auto; grid-column: 2; grid-row: 2; }
+.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__body { display: grid; padding: 20px 8px 5px; }
+.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__footer,
+.catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__footer { position: static; width: auto; }
+.catalog-grid--featured .catalog-card:not(:first-child, :last-child) .catalog-card__info h2 { font-size: 14px; }
+.catalog-grid--list .catalog-card .catalog-card__body { min-width: 0; align-content: center; padding: 20px; }
+.catalog-grid--list .catalog-card__title-link { white-space: nowrap; }
+
+@media (max-width: 760px) {
+  .catalog-card .catalog-card__body { padding: 20px 8px 5px; }
+  .catalog-card .catalog-card__info h2 { font-size: 14px; }
+  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__body { padding: 24px 10px 6px; }
+  .catalog-grid--list .catalog-card .catalog-card__body { padding: 12px; }
+}
+
+// 封面主链接的点击区域避开底部独立操作；图片仍铺满完整卡面。
+.catalog-card__media-link { bottom: 88px; }
+.catalog-card__media-link img { height: calc(100% + 88px); max-height: none; }
+.catalog-grid--list .catalog-card__media-link { bottom: 0; }
+.catalog-grid--list .catalog-card__media-link img { height: 100%; }
+
+@media (max-width: 1000px) {
+  // 平板与手机用等比例网格容纳六款真实推荐，避免纵长裁切或隐藏游戏。
+  .catalog-grid--featured { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: auto; }
+  .catalog-grid--featured .catalog-card { aspect-ratio: 4 / 3; }
+  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) { min-height: 0; grid-column: auto; grid-row: auto; }
+  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__body { padding: 20px 8px 5px; }
+  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__info h2 { font-family: var(--catalog-font); font-size: 16px; }
+  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__open > span:not(.anticon) { display: none; }
+}
+@media (max-width: 760px) {
+  .catalog-grid--featured { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .catalog-grid--featured .catalog-card { aspect-ratio: 4 / 3.8; }
+  .catalog-grid--featured .catalog-card:nth-child(n) { min-height: 0; grid-column: auto; grid-row: auto; }
+  .catalog-grid--featured .catalog-card:is(:first-child, :last-child) .catalog-card__info h2 { font-size: 14px; }
+}
+
+@media (max-width: 390px) {
+  .catalog-header__inner { gap: 7px 5px; padding-inline: 10px; }
+  .catalog-brand { gap: 3px; }
+  .catalog-brand > span { font-size: 19px; }
+  .catalog-brand img { width: 24px; }
+  .catalog-card { min-height: 144px; }
+  .catalog-grid--featured .catalog-card:nth-child(n) { min-height: 144px; }
+}
+
+@media (max-width: 760px) {
+  // 手机明确区分分类总量与当前一行预览量，长分类名自然换行。
+  .catalog-group:not(.catalog-group--featured) .catalog-group__heading > div { flex-wrap: wrap; row-gap: 2px; }
+  .catalog-group:not(.catalog-group--featured) .catalog-group__count { display: inline; flex-basis: 100%; }
+}

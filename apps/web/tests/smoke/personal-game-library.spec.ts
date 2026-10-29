@@ -116,7 +116,8 @@ async function savedLibrary(page: Page): Promise<LibrarySnapshot | null> {
 
 /** 按游戏标题定位所属卡片，避免与作者弹窗、榜单混淆。 */
 function card(page: Page, name: string) {
-  return page.locator("article.catalog-card").filter({ has: page.getByRole("heading", { name, exact: true }) });
+  // 推荐与分类允许同一真实项目各出现一次；普通操作只选择首个卡片实例。
+  return page.locator("article.catalog-card").filter({ has: page.getByRole("heading", { name, exact: true }) }).first();
 }
 
 /** 通过原生链接打开模拟目标；按钮种类决定鼠标或键盘入口。 */
@@ -179,11 +180,11 @@ test("排序下拉框沿用最新和热门顺序，网格列表切换保留排�
   await page.goto("/");
   const sort = page.getByRole("combobox", { name: "游戏排序", exact: true });
   await expect(sort).toHaveValue("latest");
-  await expect(page.locator(".catalog-card h2")).toHaveText(["打工摸鱼", "合成大西瓜", "蛇蛇出洞"]);
+  await expect(page.locator(".catalog-group--featured .catalog-card h2")).toHaveText(["打工摸鱼", "合成大西瓜", "蛇蛇出洞"]);
   await expect(card(page, "打工摸鱼").locator(".catalog-card__heat")).toHaveAttribute("aria-label", "热度 32");
   await expect(card(page, "合成大西瓜").locator(".catalog-card__heat")).toHaveAttribute("aria-label", "热度 15");
   await sort.selectOption("hot");
-  await expect(page.locator(".catalog-card h2")).toHaveText(["打工摸鱼", "蛇蛇出洞", "合成大西瓜"]);
+  await expect(page.locator(".catalog-group--featured .catalog-card h2")).toHaveText(["打工摸鱼", "蛇蛇出洞", "合成大西瓜"]);
   await card(page, "蛇蛇出洞").getByRole("button", { name: "加入想玩", exact: true }).click();
   await page.getByRole("button", { name: "列表显示", exact: true }).click();
   await expect(page.locator(".catalog-grid")).toHaveClass(/catalog-grid--list/);
@@ -192,10 +193,10 @@ test("排序下拉框沿用最新和热门顺序，网格列表切换保留排�
   await expect(page.locator(".catalog-card h2")).toHaveText(["打工摸鱼", "蛇蛇出洞", "合成大西瓜"]);
   await expect(card(page, "蛇蛇出洞").getByRole("button", { name: "移出想玩", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "网格显示", exact: true }).click();
-  await expect(page.locator(".catalog-grid")).not.toHaveClass(/catalog-grid--list/);
+  await expect(page.locator(".catalog-grid--list")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "网格显示", exact: true })).toHaveAttribute("aria-pressed", "true");
   await sort.selectOption("latest");
-  await expect(page.locator(".catalog-card h2")).toHaveText(["打工摸鱼", "合成大西瓜", "蛇蛇出洞"]);
+  await expect(page.locator(".catalog-group--featured .catalog-card h2")).toHaveText(["打工摸鱼", "合成大西瓜", "蛇蛇出洞"]);
   expect((await savedLibrary(page))?.wantedIds).toEqual(["903"]);
   expect(requests.ratings).toEqual([]);
   expect(requests.opened).toEqual([]);
@@ -232,6 +233,8 @@ test("个人范围组合分类、搜索和作者条件，并重置分页但不�
   await mockCatalog(context, 30);
   await seedLibrary(context, { version: 1, wantedIds: Array.from({ length: 25 }, (_, index) => String(901 + index)), recent: [] });
   await page.goto("/");
+  // 完整平铺列表沿用24条分页，首页分类预览不再使用全站加载更多。
+  await page.getByRole("button", { name: "列表显示", exact: true }).click();
   await expect(page.locator(".catalog-card")).toHaveCount(24);
   await page.getByRole("button", { name: "加载更多", exact: true }).click();
   await expect(page.locator(".catalog-card")).toHaveCount(30);
@@ -245,7 +248,7 @@ test("个人范围组合分类、搜索和作者条件，并重置分页但不�
   await expect(page.getByText("没有找到匹配的游戏", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "清除筛选", exact: true }).click();
   await expect(page.locator(".catalog-results")).toHaveText("25 个游戏");
-  await page.locator(".catalog-view-tabs").getByRole("button", { name: "作者榜", exact: true }).click();
+  await page.locator(".catalog-rail").getByRole("button", { name: "作者榜", exact: true }).click();
   await expect(page.locator(".catalog-author-count")).toHaveText("3 位作者");
   const author = page.locator(".catalog-podium__place").filter({ hasText: "测试作者甲" });
   await expect(author.locator(".catalog-podium__metric")).toHaveText("28 个作品");
@@ -254,7 +257,7 @@ test("个人范围组合分类、搜索和作者条件，并重置分页但不�
   await page.locator(".catalog-library-filters").getByRole("button", { name: "想玩清单", exact: true }).click();
   await expect(page.locator(".catalog-results")).toHaveText("23 个游戏");
   await expect(page.locator(".catalog-author-selection")).toContainText("测试作者甲");
-  await page.locator(".catalog-view-tabs").getByRole("button", { name: "贡献榜", exact: true }).click();
+  await page.locator(".catalog-rail").getByRole("button", { name: "贡献榜", exact: true }).click();
   await expect(page.locator(".catalog-podium__place").filter({ hasText: "测试作者甲" }).locator(".catalog-podium__metric"))
     .toHaveText("28 个作品");
 });
@@ -335,7 +338,7 @@ for (const width of [320, 390, 940, 1280]) {
     await mockCatalog(context);
     await page.setViewportSize({ width, height: 1000 });
     await page.goto("/");
-    await expect(page.locator(".catalog-card")).toHaveCount(3);
+    await expect(page.locator(".catalog-card")).toHaveCount(6);
     const wanted = card(page, "打工摸鱼").getByRole("button", { name: "加入想玩", exact: true });
     const targets = [...await page.locator(".catalog-library-filters button").all(), wanted];
     for (const target of targets) {
@@ -376,7 +379,7 @@ test("我的星露谷使用开始游戏入口，原生打开仍记录最近访�
   expect(requests.unexpectedRequests).toEqual([]);
 });
 
-test("分类筛选保留原顺序，顶部搜索从榜单返回游戏目录并聚焦输入框", async ({ page, context }) => {
+test("分类筛选保留原顺序，快捷搜索从榜单返回游戏目录并聚焦输入框", async ({ page, context }) => {
   const requests = await mockCatalog(context);
   await page.goto("/");
   const category = page.getByRole("combobox", { name: "游戏分类", exact: true });
@@ -384,16 +387,16 @@ test("分类筛选保留原顺序，顶部搜索从榜单返回游戏目录并�
   await category.selectOption("casual");
   await expect(page.locator(".catalog-card h2")).toHaveText(["合成大西瓜"]);
   await category.selectOption("all");
-  await expect(page.locator(".catalog-card h2")).toHaveText(["打工摸鱼", "合成大西瓜", "蛇蛇出洞"]);
+  await expect(page.locator(".catalog-group--featured .catalog-card h2")).toHaveText(["打工摸鱼", "合成大西瓜", "蛇蛇出洞"]);
 
-  // 榜单与目录共用导航；顶部搜索必须切回目录并把键盘焦点放到真实搜索输入框。
-  await page.locator(".catalog-view-tabs").getByRole("button", { name: "作者榜", exact: true }).click();
+  // 榜单与目录共用快捷导航；搜索入口必须切回目录并把键盘焦点放到真实搜索输入框。
+  await page.locator(".catalog-rail").getByRole("button", { name: "作者榜", exact: true }).click();
   await expect(page.getByRole("heading", { name: "作者榜", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "搜索游戏", exact: true }).click();
   const search = page.getByRole("searchbox", { name: "搜索游戏名称", exact: true });
   await expect(search).toBeFocused();
-  await expect(page.locator(".catalog-view-tabs").getByRole("button", { name: "游戏目录", exact: true }))
-    .toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".catalog-rail").getByRole("button", { name: "全部游戏", exact: true }))
+    .toHaveClass(/is-active/);
 
   // 筛选与导航本身不应打开游戏或写入个人最近记录。
   await search.fill("合成");
@@ -419,10 +422,10 @@ test("作者搜索保留原始名次，榜外结果不会变成领奖台冠军�
     json: { data: fixture }, headers: { "access-control-allow-origin": "*" },
   }));
   await page.goto("/");
-  await page.locator(".catalog-view-tabs").getByRole("button", { name: "作者榜", exact: true }).click();
+  await page.locator(".catalog-rail").getByRole("button", { name: "作者榜", exact: true }).click();
   await expect(page.locator('.catalog-podium__place[data-rank="1"] .catalog-podium__name')).toHaveText("测试作者甲");
   await expect(page.locator('.catalog-podium__place[data-rank="2"] .catalog-podium__name')).toHaveText("测试作者乙");
-  await expect(page.locator('.catalog-podium__place[data-rank="3"] .catalog-podium__name')).toHaveText("原创");
+  await expect(page.locator('.catalog-podium__place[data-rank="3"] .catalog-podium__name')).toHaveText("站内");
   await expect(page.locator('.catalog-leaderboard__row[data-rank="4"] .catalog-leaderboard__identity strong'))
     .toHaveText("榜外测试作者");
 
@@ -455,7 +458,7 @@ test("贡献来源固定第一且只用开源装饰，查看作者作品恢复�
   await page.goto("/");
   await page.locator(".catalog-library-filters").getByRole("button", { name: "想玩清单", exact: true }).click();
   await expect(page.locator(".catalog-card h2")).toHaveText(["合成大西瓜"]);
-  await page.locator(".catalog-view-tabs").getByRole("button", { name: "贡献榜", exact: true }).click();
+  await page.locator(".catalog-rail").getByRole("button", { name: "贡献榜", exact: true }).click();
 
   // 来源项不从个人范围或作者作品中推算排名，也不能把其他作者封面放进来源展示区。
   const source = page.locator('.catalog-podium__place[data-rank="1"]');
@@ -482,5 +485,47 @@ test("贡献来源固定第一且只用开源装饰，查看作者作品恢复�
   expect((await savedLibrary(page))?.wantedIds).toEqual(["902"]);
   expect(requests.ratings).toEqual([]);
   expect(requests.opened).toEqual([]);
+  expect(requests.unexpectedRequests).toEqual([]);
+});
+
+test("站内标签保留内部及第一方游戏成员，第三方作者的原创署名不影响归属", async ({ page, context }) => {
+  const requests = await mockCatalog(context);
+  const fixture = catalogFixture();
+  const category = fixture.categories[0]!;
+  category.projects.push({
+    ...category.projects[0]!, id: "904", slug: "fablespace", name: "朝花夕拾",
+    kind: "external", url: "https://fable.pingxingxian.space", author_name: "第一方实际署名",
+  }, {
+    ...category.projects[0]!, id: "905", slug: "third-party-original-credit", name: "第三方作者名校验",
+    kind: "external", url: "https://library-game.invalid/play/905", author_name: "原创",
+  });
+  await context.route("**/api/v1/catalog", (route) => route.fulfill({
+    json: { data: fixture }, headers: { "access-control-allow-origin": "*" },
+  }));
+  await page.goto("/");
+  const onsiteFilter = page.locator(".catalog-library-filters").getByRole("button", { name: "站内", exact: true });
+  const onsiteNavigation = page.locator(".catalog-rail").getByRole("button", { name: "站内游戏", exact: true });
+  await expect(onsiteFilter).toBeVisible();
+  await expect(onsiteNavigation).toBeVisible();
+  await expect(page.locator(".catalog-library-filters").getByRole("button", { name: "原创", exact: true })).toHaveCount(0);
+  const thirdParty = card(page, "第三方作者名校验");
+  await expect(thirdParty.locator(".catalog-card__author")).toHaveText("原创");
+  await expect(thirdParty.getByRole("button", { name: "查看原创的作品", exact: true })).toBeVisible();
+  await onsiteFilter.click();
+  await expect(onsiteFilter).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".catalog-card")).toHaveCount(2);
+  expect(await page.locator(".catalog-card").evaluateAll((cards) => cards.map((item) => item.getAttribute("data-project-id")).sort()))
+    .toEqual(["903", "904"]);
+  await expect(page.locator('.catalog-card[data-project-id="905"]')).toHaveCount(0);
+  await page.locator(".catalog-library-filters").getByRole("button", { name: "全部游戏", exact: true }).click();
+  await expect(thirdParty.locator(".catalog-card__author")).toHaveText("原创");
+  await onsiteNavigation.click();
+  await expect(onsiteNavigation).toHaveClass(/is-active/);
+  expect(await page.locator(".catalog-card").evaluateAll((cards) => cards.map((item) => item.getAttribute("data-project-id")).sort()))
+    .toEqual(["903", "904"]);
+  expect((await savedLibrary(page))?.wantedIds ?? []).toEqual([]);
+  expect((await savedLibrary(page))?.recent ?? []).toEqual([]);
+  expect(requests.opened).toEqual([]);
+  expect(requests.ratings).toEqual([]);
   expect(requests.unexpectedRequests).toEqual([]);
 });

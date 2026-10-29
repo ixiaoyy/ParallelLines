@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { AppstoreFilled, BarChartOutlined, CaretRightFilled, CloseOutlined, CrownFilled, FireFilled, HeartFilled, MenuOutlined, SearchOutlined, SendOutlined, StarFilled, StarOutlined } from "@ant-design/icons-vue";
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { AppstoreFilled, BarChartOutlined, CaretRightFilled, CloseOutlined, CrownFilled, FireFilled, HeartFilled, HomeOutlined, CompassOutlined, UserOutlined, MenuOutlined, SearchOutlined, SendOutlined, StarFilled, StarOutlined } from "@ant-design/icons-vue";
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+
+import { useCurrentUser } from "@/features/auth/queries";
 
 import type { CatalogProject } from "@/features/catalog/model";
 import { catalogAuthorKey, rankCatalogAuthors } from "@/features/catalog/authorRanking";
@@ -9,6 +11,7 @@ import { useCatalog, useRecordCatalogProjectView } from "@/features/catalog/quer
 import { readPersonalLibrary, recordRecentProject, savePersonalLibrary, toggleWantedProject } from "@/features/catalog/personalLibrary";
 import type { PersonalLibrary } from "@/features/catalog/personalLibrary";
 import { staticAssetUrl } from "@/shared/assets/staticAssets";
+import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
 
 import CatalogSubmissionDialog from "./CatalogSubmissionDialog.vue";
@@ -18,32 +21,13 @@ type SortMode = "latest" | "hot";
 type CatalogView = "games" | "authors" | "contributors";
 type LibraryScope = "all" | "wanted" | "recent";
 type LayoutMode = "grid" | "list";
-type CardTone = "red" | "blue" | "yellow" | "green" | "purple" | "teal" | "pink" | "sky";
 type CatalogEntry = CatalogProject & { categorySlug: string; heat: number };
-// 三个目录视图只切换各自的装饰短句，排名、筛选与数据源保持原状态。
-const HERO_MOTTO: Record<CatalogView, readonly string[]> = {
-  games: ["PLAY", "EXPLORE", "INDIE", "TOGETHER"],
-  authors: ["PLAY", "CREATE", "SHARE", "TOGETHER"],
-  contributors: ["PLAY", "SHARE", "CONTRIBUTE", "TOGETHER"],
-};
 const PAGE_SIZE = 24;
 const AUTHOR_PAGE_SIZE = 20;
 const HEART_HEAT_WEIGHT = 5;
 const SOURCE_CONTRIBUTOR_URL = "https://github.com/MartinDelophy/awesome-gpt-6-astra";
 const catalogAssetPath = "/catalog/2026-09-24-v1";
 const newCatalogAssetPath = "/catalog/2026-09-25-v1";
-const CARD_TONES: CardTone[] = ["red", "blue", "yellow", "green", "purple", "teal", "pink", "sky"];
-// 参考图里的八款游戏固定掌机外壳配色；其余游戏仍由真实标识稳定分配。
-const FEATURED_CARD_TONES = new Map<string, CardTone>([
-  ["soulforge", "red"],
-  ["achroma", "blue"],
-  ["bubble-tank", "yellow"],
-  ["pelican-rider", "green"],
-  ["shousui", "purple"],
-  ["sketch-rts", "teal"],
-  ["snake-escape", "pink"],
-  ["flappy-dunk", "sky"],
-]);
 const originalCoverSlugs = new Set([
   "clock-out", "merge-watermelon", "qin-imperial-factory", "super-mario",
   "csgo-desert", "infinite-garden", "fruit-ninja", "qq-racing",
@@ -62,6 +46,8 @@ const seedOrder = new Map([
 ].map((slug, index) => [slug, index]));
 
 const catalogQuery = useCatalog();
+const currentUserQuery = useCurrentUser();
+const NotificationBell = defineAsyncComponent(() => import("@/features/notifications/components/NotificationBell.vue"));
 const viewMutation = useRecordCatalogProjectView();
 const searchInput = ref("");
 const search = ref("");
@@ -83,6 +69,14 @@ const selectedAuthor = ref<string | null>(null);
 const catalogPage = ref<HTMLElement | null>(null);
 const catalogGrid = ref<HTMLDivElement | null>(null);
 const selectedProjectId = ref<string | null>(null);
+// 推荐与分类可以出现同一游戏，选框使用展示实例键，收藏和打开仍使用真实游戏 ID。
+const selectedCardKey = ref<string | null>(null);
+const sixPreviewColumns = useMediaQuery("(min-width: 1850px)");
+const fivePreviewColumns = useMediaQuery("(min-width: 1280px)");
+const fourPreviewColumns = useMediaQuery("(min-width: 1001px)");
+const threePreviewColumns = useMediaQuery("(min-width: 761px)");
+const categoryPreviewLimit = computed(() => sixPreviewColumns.value ? 6 : fivePreviewColumns.value ? 5
+  : fourPreviewColumns.value ? 4 : threePreviewColumns.value ? 3 : 2);
 // 个人清单仅属于当前浏览器；存储异常后本页继续使用内存状态，不覆盖原记录。
 const initialLibrary = readPersonalLibrary();
 const personalLibrary = ref(initialLibrary.library);
@@ -207,11 +201,56 @@ const visibleProjects = computed(() => {
 
 // 大目录只先渲染首批卡片；筛选变化后重新从首批展示，搜索仍覆盖全部项目。
 const displayedProjects = computed(() => visibleProjects.value.slice(0, visibleLimit.value));
-// 筛选后优先保留仍可见的选中游戏；原游戏消失时从当前结果的第一项重新选择。
-watch(() => displayedProjects.value.map((project) => project.id), (ids) => {
-  if (!selectedProjectId.value || !ids.includes(selectedProjectId.value)) {
-    selectedProjectId.value = ids[0] ?? null;
+// 首页直接复用 API 已按分类聚合的完整公开记录；每类独立取一行，不使用全站分页切片。
+const isDiscovery = computed(() => layoutMode.value === "grid" && libraryScope.value === "all"
+  && selectedCategory.value === "all" && !normalizedSearch.value && !selectedAuthorKey.value);
+const presentationGroups = computed(() => {
+  if (!isDiscovery.value) return [{ key: "results", name: "", featured: false,
+    total: visibleProjects.value.length, projects: displayedProjects.value }];
+  const byCategory = new Map<string, CatalogEntry[]>();
+  for (const project of visibleProjects.value) {
+    const projects = byCategory.get(project.categorySlug) ?? [];
+    projects.push(project);
+    byCategory.set(project.categorySlug, projects);
   }
+  return [
+    { key: "featured", name: "精选推荐", featured: true,
+      total: visibleProjects.value.length, projects: visibleProjects.value.slice(0, 6) },
+    ...categories.value.map((category) => {
+      const projects = byCategory.get(category.slug) ?? [];
+      return { key: category.slug, name: category.name, featured: false,
+        total: projects.length, projects: projects.slice(0, categoryPreviewLimit.value) };
+    }).filter((group) => group.projects.length),
+  ].filter((group) => group.projects.length);
+});
+
+/** 为同一真实游戏在不同推荐/分类组中的卡片生成稳定展示键，不产生业务写入。 */
+function projectCardKey(groupKey: string, projectId: string): string {
+  return `${groupKey}:${projectId}`;
+}
+
+/** 选择当前卡片实例；真实项目 ID 继续用于筛选切换时保留同一游戏。 */
+function selectProjectCard(groupKey: string, projectId: string): void {
+  selectedCardKey.value = projectCardKey(groupKey, projectId);
+  selectedProjectId.value = projectId;
+}
+
+/** 分类组头复用实际分类筛选，进入每批 24 条的完整分类列表。 */
+function browseCategory(slug: string): void {
+  selectedCategory.value = slug;
+  catalogView.value = "games";
+}
+
+const renderedCards = computed(() => presentationGroups.value.flatMap((group) =>
+  group.projects.map((project) => ({ key: projectCardKey(group.key, project.id), project })),
+));
+// 筛选、切换布局或响应式列数变化后，只保留真实存在的一张选中卡片。
+watch(() => renderedCards.value.map((entry) => entry.key), () => {
+  const retained = renderedCards.value.find((entry) => entry.key === selectedCardKey.value)
+    ?? renderedCards.value.find((entry) => entry.project.id === selectedProjectId.value)
+    ?? renderedCards.value[0];
+  selectedCardKey.value = retained?.key ?? null;
+  selectedProjectId.value = retained?.project.id ?? null;
 }, { immediate: true });
 watch([normalizedSearch, selectedCategory, sortMode, selectedAuthorKey, libraryScope], () => {
   visibleLimit.value = PAGE_SIZE;
@@ -236,8 +275,11 @@ function handleArcadeKeydown(event: KeyboardEvent): void {
     || document.querySelector("dialog[open], [role='dialog'][aria-modal='true']")) return;
   // 卡片链接和按钮不阻断 WASD；Enter 仍交给当前控件，避免再次打开选中游戏。
   if (key === "enter" && target.closest("a, button, summary, [role='button'], [role='link']")) return;
-  const cards = [...grid.querySelectorAll<HTMLElement>(".catalog-card")];
-  const index = cards.findIndex((card) => card.dataset.projectId === selectedProjectId.value);
+  const cards = [...grid.querySelectorAll<HTMLElement>(".catalog-card")].filter((card) => {
+    const rect = card.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  });
+  const index = cards.findIndex((card) => card.dataset.cardKey === selectedCardKey.value);
   const current = cards[index];
   if (!current) return;
   // Enter 在当前真实按键事件内同步点击原链接，保留新标签、最近打开与累计浏览量的既有链路。
@@ -246,17 +288,28 @@ function handleArcadeKeydown(event: KeyboardEvent): void {
     if (!event.repeat) current.querySelector<HTMLAnchorElement>(".catalog-card__open")?.click();
     return;
   }
-  const columns = getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length;
-  const column = index % columns;
-  const row = Math.floor(index / columns);
-  // 水平移动不跨行，最后一行不足整列时向下落到该行末项；列表模式自然按一列移动。
-  const nextIndex = key === "w" && row > 0 ? index - columns
-    : key === "s" && row < Math.ceil(cards.length / columns) - 1 ? Math.min(cards.length - 1, index + columns)
-      : key === "a" && column > 0 ? index - 1
-        : key === "d" && column < columns - 1 ? Math.min(cards.length - 1, index + 1) : index;
-  const next = cards[nextIndex];
-  if (!next || nextIndex === index) return;
+  // 推荐拼图和分类网格尺寸不同，按真实卡片中心选择方向上的最近邻。
+  const currentRect = current.getBoundingClientRect();
+  const origin = { x: currentRect.x + currentRect.width / 2, y: currentRect.y + currentRect.height / 2 };
+  const horizontal = key === "a" || key === "d";
+  const forward = key === "d" || key === "s";
+  const candidates = cards.filter((card) => card !== current).map((card) => {
+    const rect = card.getBoundingClientRect();
+    const dx = rect.x + rect.width / 2 - origin.x;
+    const dy = rect.y + rect.height / 2 - origin.y;
+    const primary = horizontal ? dx : dy;
+    const secondary = horizontal ? dy : dx;
+    const crossOverlap = horizontal
+      ? Math.min(rect.bottom, currentRect.bottom) - Math.max(rect.top, currentRect.top)
+      : Math.min(rect.right, currentRect.right) - Math.max(rect.left, currentRect.left);
+    return { card, primary, crossOverlap, score: Math.abs(primary) + Math.abs(secondary) * 3 };
+  }).filter(({ primary, crossOverlap }) => (forward ? primary > 8 : primary < -8)
+    && (!horizontal || crossOverlap > 0));
+  const aligned = candidates.filter(({ crossOverlap }) => crossOverlap > 0);
+  const next = (aligned.length ? aligned : candidates).sort((left, right) => left.score - right.score)[0]?.card;
+  if (!next) return;
   event.preventDefault();
+  selectedCardKey.value = next.dataset.cardKey ?? null;
   selectedProjectId.value = next.dataset.projectId ?? null;
   next.focus({ preventScroll: true });
   next.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" });
@@ -269,7 +322,7 @@ function loadMoreProjects(): void {
 /** 切换全部或个人清单范围；scope 沿用现有范围值，不改收藏和最近记录。 */
 function selectLibraryScope(scope: LibraryScope): void {
   libraryScope.value = scope;
-  // 原创作为独立快捷入口；切换范围时退出原创，其他作者的组合筛选仍保留。
+  // 站内作为独立快捷入口；切换范围时退出站内，其他作者的组合筛选仍保留。
   if (selectedAuthorKey.value === "original") selectedAuthorKey.value = null;
 }
 
@@ -292,8 +345,8 @@ function isPreviewProject(project: CatalogProject): boolean {
   return project.slug === "fablespace";
 }
 
-// 站内游戏与我的星露谷统一展示原创署名，不用网址或后台空值推断具体作者。
-function isOriginalProject(project: CatalogProject): boolean {
+// 站内游戏与我的星露谷统一展示站内标签，不用网址或后台空值推断具体作者。
+function isSiteHostedProject(project: CatalogProject): boolean {
   return project.kind === "internal" || project.slug === "fablespace";
 }
 
@@ -317,16 +370,6 @@ function coverUrl(project: CatalogProject): string | null {
 // 新审核项目尚无专属图时，以项目自己的名称和分类绘制卡面，避免重复旧占位图。
 function fallbackCoverTone(slug: string): number {
   return [...slug].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 6;
-}
-
-/** 根据真实游戏标识返回掌机外壳颜色；指定游戏沿用设计稿，其余标识稳定映射到八色。 */
-function cardTone(slug: string): CardTone {
-  const featuredTone = FEATURED_CARD_TONES.get(slug);
-  if (featuredTone) return featuredTone;
-  // 未指定游戏使用固定哈希，不因分类、排序或本次加载顺序变化而换色。
-  let hash = 0;
-  for (const char of slug) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return CARD_TONES[hash % CARD_TONES.length]!;
 }
 
 function categoryName(slug: string): string {
@@ -389,51 +432,51 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
 
 </script>
 
+<!--
+THESIS: 以真实游戏封面构成可浏览的游乐场，第一屏同时看到多款游戏。
+OWN-WORLD: 温灰纸面、玉青导航、深墨绿文字；少量民俗书卷装饰；目录局部动作与焦点采用墨绿、玉青。
+STORY: 看推荐，按真实分类探索，搜索或收藏，然后原生打开游戏。
+FIRST VIEWPORT: 窄图标侧栏、紧凑顶栏与搜索；双大图夹四小图推荐，下接分类封面组。
+FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 API，无固定游戏列表。
+-->
 <template>
   <main ref="catalogPage" class="catalog-page" :class="`catalog-page--${catalogView}`" aria-labelledby="catalog-title">
     <header class="catalog-header">
-      <div class="catalog-page__wrap catalog-header__inner">
-        <RouterLink class="catalog-brand" :to="{ name: 'home' }" aria-label="平行线首页">
-          <img src="/logo-lines-mark.png" alt="" width="92" height="82" />
-          <span>平行线</span>
-        </RouterLink>
-        <span class="catalog-header__tagline">发现更多好玩的小游戏</span>
-        <nav class="catalog-view-tabs" aria-label="浏览内容">
-          <button type="button" :class="{ 'is-active': catalogView === 'games' }" :aria-pressed="catalogView === 'games'" @click="catalogView = 'games'"><span class="catalog-icon catalog-icon--gamepad" aria-hidden="true"></span><span>游戏目录</span></button>
-          <button type="button" :class="{ 'is-active': catalogView === 'authors' }" :aria-pressed="catalogView === 'authors'" @click="catalogView = 'authors'"><CrownFilled aria-hidden="true" /><span>作者榜</span></button>
-          <button type="button" :class="{ 'is-active': catalogView === 'contributors' }" :aria-pressed="catalogView === 'contributors'" @click="catalogView = 'contributors'"><BarChartOutlined aria-hidden="true" /><span>贡献榜</span></button>
-        </nav>
-        <button type="button" class="catalog-header__search" aria-label="搜索游戏" @click="focusCatalogSearch"><SearchOutlined aria-hidden="true" /></button>
-        <button type="button" class="catalog-header__submit" @click="submissionOpen = true"><SendOutlined aria-hidden="true" /><span>投稿游戏</span></button>
-        <span class="catalog-header__mascot" aria-hidden="true"><img src="/catalog/night-arcade-v1/header-mascot.webp" alt="" width="56" height="56" /></span>
+      <div class="catalog-header__inner">
+        <RouterLink class="catalog-brand" :to="{ name: 'home' }" aria-label="平行线首页"><img src="/logo-lines-mark.png" alt="" width="52" height="44" /><span>平行线</span></RouterLink>
+        <SiteNavigation class="catalog-top-navigation" aria-label="站点导航" />
+        <form class="catalog-search" role="search" @submit.prevent="submitSearch"><SearchOutlined aria-hidden="true" /><label class="catalog-search__label" for="catalog-query">搜索游戏名称</label><input id="catalog-query" ref="catalogSearchInput" v-model="searchInput" type="search" placeholder="搜索游戏名称..." autocomplete="off" @search="submitSearch" /><button type="submit">搜索</button></form>
+        <button type="button" class="catalog-header__submit" aria-label="投稿游戏" @click="submissionOpen = true"><SendOutlined aria-hidden="true" /><span>投稿游戏</span></button>
+        <div class="catalog-header__actions">
+          <NotificationBell v-if="currentUserQuery.data.value" />
+          <button type="button" class="catalog-icon-button" aria-label="想玩清单" title="想玩清单" @click="catalogView = 'games'; selectLibraryScope('wanted')"><StarOutlined aria-hidden="true" /></button>
+          <RouterLink class="catalog-account" :to="currentUserQuery.data.value ? { name: 'account-home' } : { name: 'auth', query: { redirect: '/games' } }" :aria-label="currentUserQuery.data.value ? '个人中心' : '登录/注册'" :title="currentUserQuery.data.value?.display_name || currentUserQuery.data.value?.username || '登录/注册'"><UserOutlined aria-hidden="true" /></RouterLink>
+        </div>
       </div>
     </header>
-    <section class="catalog-hero" :class="{ 'catalog-hero--leaderboard': catalogView !== 'games' }" aria-labelledby="catalog-title">
-      <div class="catalog-hero__inner">
-        <img v-if="catalogView !== 'games'" class="catalog-hero__emblem" :src="catalogView === 'authors' ? '/catalog/night-arcade-v1/gold-crown.webp' : '/catalog/night-arcade-v1/trophy-medal.webp'" alt="" aria-hidden="true" width="64" height="48" />
-        <h1 id="catalog-title"><template v-if="catalogView === 'games'">今天想玩<span>点什么</span>？</template><template v-else>{{ catalogView === 'authors' ? '作者榜' : '贡献榜' }}</template></h1>
-        <p v-if="catalogView === 'games'" class="catalog-hero__subtitle">在 平行线，发现更多好玩的小游戏！</p>
-        <p v-else class="catalog-hero__leaderboard-subtitle">{{ catalogView === 'authors' ? '用小游戏，点亮更多人的快乐' : '每一份贡献，都让这个游乐场更好' }}</p>
-        <form v-if="catalogView === 'games'" class="catalog-search" role="search" @submit.prevent="submitSearch">
-          <SearchOutlined aria-hidden="true" />
-          <label class="catalog-search__label" for="catalog-query">搜索游戏名称</label>
-          <input id="catalog-query" ref="catalogSearchInput" v-model="searchInput" type="search" placeholder="搜索游戏名称..." autocomplete="off" @search="submitSearch" />
-          <button type="submit">搜索</button>
-        </form>
-        <p class="catalog-hero__motto" aria-hidden="true"><template v-for="(word, index) in HERO_MOTTO[catalogView]" :key="word"><b v-if="index > 0">+</b><span>{{ word }}</span></template><b>+</b><HeartFilled /></p>
-      </div>
-    </section>
+    <nav class="catalog-rail" aria-label="目录快捷导航">
+      <button type="button" :class="{ 'is-active': catalogView === 'games' && libraryScope === 'all' && !selectedAuthorKey }" aria-label="全部游戏" title="全部游戏" @click="catalogView = 'games'; selectLibraryScope('all'); selectedAuthorKey = null; selectedCategory = 'all'"><HomeOutlined aria-hidden="true" /></button>
+      <button type="button" :class="{ 'is-active': catalogView === 'games' && selectedAuthorKey === 'original' }" aria-label="站内游戏" title="站内游戏" @click="showAuthorGames('original')"><span class="catalog-icon catalog-icon--gamepad" aria-hidden="true"></span></button>
+      <button type="button" aria-label="热门游戏" title="热门游戏" @click="catalogView = 'games'; selectLibraryScope('all'); sortMode = 'hot'"><FireFilled aria-hidden="true" /></button>
+      <span class="catalog-rail__divider" aria-hidden="true"></span>
+      <button type="button" :class="{ 'is-active': catalogView === 'authors' }" aria-label="作者榜" title="作者榜" @click="catalogView = 'authors'"><CrownFilled aria-hidden="true" /></button>
+      <button type="button" :class="{ 'is-active': catalogView === 'contributors' }" aria-label="贡献榜" title="贡献榜" @click="catalogView = 'contributors'"><BarChartOutlined aria-hidden="true" /></button>
+      <button type="button" :class="{ 'is-active': catalogView === 'games' && libraryScope === 'wanted' }" aria-label="收藏游戏" title="想玩清单" @click="catalogView = 'games'; selectLibraryScope('wanted')"><StarOutlined aria-hidden="true" /></button>
+      <button type="button" :class="{ 'is-active': catalogView === 'games' && libraryScope === 'recent' }" aria-label="最近打开的游戏" title="最近打开" @click="catalogView = 'games'; selectLibraryScope('recent')"><span class="catalog-icon catalog-icon--clock" aria-hidden="true"></span></button>
+      <span class="catalog-rail__divider" aria-hidden="true"></span>
+      <button type="button" aria-label="搜索游戏" title="搜索游戏" @click="focusCatalogSearch"><CompassOutlined aria-hidden="true" /></button>
+    </nav>
     <div class="catalog-page__wrap">
+      <section class="catalog-intro"><h1 id="catalog-title"><template v-if="catalogView === 'games'">挑一款游戏，玩一会儿。</template><template v-else>{{ catalogView === 'authors' ? '作者榜' : '贡献榜' }}</template></h1></section>
       <section class="catalog-list" aria-label="游戏与作者">
         <div v-if="catalogQuery.isLoading.value" class="catalog-state catalog-state--loading" role="status" aria-label="正在加载游戏目录"><span class="catalog-state__spinner" aria-hidden="true"></span><span>正在加载游戏目录…</span></div>
         <div v-else-if="catalogQuery.isError.value" class="catalog-state" role="alert"><span>项目目录暂时不可用，请稍后重试。</span><button type="button" @click="catalogQuery.refetch()">重新加载</button></div>
         <template v-else>
           <template v-if="catalogView === 'games'">
-            <!-- 原创复用作者榜分组，范围入口互斥；分类、排序和个人记录沿用原规则。 -->
             <div class="catalog-controls">
               <div class="catalog-library-filters" role="group" aria-label="游戏范围">
                 <button type="button" :class="{ 'is-active': libraryScope === 'all' && selectedAuthorKey !== 'original' }" :aria-pressed="libraryScope === 'all' && selectedAuthorKey !== 'original'" @click="selectLibraryScope('all')"><span class="catalog-icon catalog-icon--gamepad" aria-hidden="true"></span><span>全部游戏</span></button>
-                <button type="button" :class="{ 'is-active': selectedAuthorKey === 'original' }" :aria-pressed="selectedAuthorKey === 'original'" @click="showAuthorGames('original')"><CrownFilled aria-hidden="true" /><span>原创</span></button>
+                <button type="button" :class="{ 'is-active': selectedAuthorKey === 'original' }" :aria-pressed="selectedAuthorKey === 'original'" @click="showAuthorGames('original')"><CrownFilled aria-hidden="true" /><span>站内</span></button>
                 <button type="button" class="catalog-library-filter--wanted" :class="{ 'is-active': libraryScope === 'wanted' }" :aria-pressed="libraryScope === 'wanted'" @click="selectLibraryScope('wanted')"><HeartFilled aria-hidden="true" /><span>想玩清单</span></button>
                 <button type="button" :class="{ 'is-active': libraryScope === 'recent' }" :aria-pressed="libraryScope === 'recent'" @click="selectLibraryScope('recent')"><span class="catalog-icon catalog-icon--clock" aria-hidden="true"></span><span>最近打开</span></button>
               </div>
@@ -447,15 +490,18 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
                 <button type="button" :class="{ 'is-active': layoutMode === 'list' }" :aria-pressed="layoutMode === 'list'" aria-label="列表显示" @click="layoutMode = 'list'"><MenuOutlined aria-hidden="true" /></button>
               </div>
             </div>
-            <p class="catalog-arcade-hint"><kbd>W/A/S/D</kbd> 选择 · <kbd>Enter</kbd> 开始游戏</p>
+
             <p v-if="!libraryCanPersist" class="catalog-library__notice" role="alert">本地存储不可用，当前清单只在本次页面访问期间保留。</p>
             <p v-if="wantedLimitReached" class="catalog-library__notice" role="alert">想玩清单最多保存 500 款游戏，请先移出部分游戏。</p>
             <div v-if="selectedAuthorKey && selectedAuthorKey !== 'original'" class="catalog-author-selection"><span>正在查看 <strong>{{ selectedAuthorName || '该作者' }}</strong> 的作品</span><button type="button" @click="clearAuthorGames">清除作者筛选</button></div>
             <div v-if="visibleProjects.length === 0" class="catalog-state" role="status"><span>{{ emptyLibraryText }}</span><button v-if="search || selectedCategory !== 'all' || selectedAuthorKey" type="button" @click="search = ''; searchInput = ''; selectedCategory = 'all'; selectedAuthorKey = null">清除筛选</button></div>
-            <div v-else ref="catalogGrid" class="catalog-grid" :class="{ 'catalog-grid--list': layoutMode === 'list' }">
-              <article v-for="(project, index) in displayedProjects" :key="project.id" class="catalog-card" :class="[`catalog-card--${cardTone(project.slug)}`, { 'catalog-card--preview': isPreviewProject(project), 'is-selected': selectedProjectId === project.id }]" :data-project-id="project.id" :aria-current="selectedProjectId === project.id ? 'true' : undefined" tabindex="-1" @pointerdown="selectedProjectId = project.id" @focusin="selectedProjectId = project.id">
+            <div v-else ref="catalogGrid" class="catalog-groups" :class="{ 'catalog-groups--list': layoutMode === 'list' }">
+              <section v-for="group in presentationGroups" :key="group.key" class="catalog-group" :class="{ 'catalog-group--featured': group.featured }" :aria-label="group.name || '游戏列表'">
+                <header v-if="group.name" class="catalog-group__heading"><div><img v-if="group.key === 'puzzle'" class="catalog-group__ornament" src="/catalog/jade-library-v1/puzzle-vignette.webp" alt="" aria-hidden="true" /><span v-else class="catalog-group__mark" aria-hidden="true"><FireFilled v-if="group.featured" /><span v-else class="catalog-icon catalog-icon--gamepad"></span></span><h2>{{ group.name }}</h2><span class="catalog-group__count">{{ group.featured ? (sortMode === 'hot' ? '人气之选' : '新鲜上架') : `共 ${group.total} 款 · 展示 ${group.projects.length} 款` }}</span></div><button v-if="!group.featured" type="button" :aria-label="`查看全部${group.name}游戏`" @click="browseCategory(group.key)">查看全部 <span aria-hidden="true">↗</span></button></header>
+                <div class="catalog-grid" :class="{ 'catalog-grid--featured': group.featured && group.projects.length === 6, 'catalog-grid--list': layoutMode === 'list' }">
+              <article v-for="(project, index) in group.projects" :key="project.id" class="catalog-card" :class="[{ 'catalog-card--preview': isPreviewProject(project), 'is-selected': selectedCardKey === projectCardKey(group.key, project.id) }]" :data-project-id="project.id" :data-card-key="projectCardKey(group.key, project.id)" :aria-current="selectedCardKey === projectCardKey(group.key, project.id) ? 'true' : undefined" tabindex="-1" @pointerdown="selectProjectCard(group.key, project.id)" @focusin="selectProjectCard(group.key, project.id)">
                 <span v-if="selectedProjectId === project.id" class="catalog-card__selection-frame" aria-hidden="true"></span>
-                <!-- 封面延伸到屏幕底部，信息和操作叠在画面内，保留各自独立的原生入口。 -->
+                <!-- 正式游戏封面及原生链接、收藏、统计链路保持不变。 -->
                 <div class="catalog-card__screen">
                   <div class="catalog-card__media">
                     <a class="catalog-card__media-link" :href="project.url" target="_blank" rel="noopener noreferrer" :aria-label="`打开${displayName(project)}`" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">
@@ -469,7 +515,7 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
                   <div class="catalog-card__body">
                     <div class="catalog-card__info">
                       <h2><a class="catalog-card__title-link" :href="project.url" :title="displayName(project)" target="_blank" rel="noopener noreferrer" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)">{{ displayName(project) }}</a></h2>
-                      <p class="catalog-card__author" :title="isOriginalProject(project) ? '原创' : project.authorName || '待补充'"><span v-if="isOriginalProject(project)">原创</span><a v-else-if="project.authorName && project.authorUrl" :href="project.authorUrl" target="_blank" rel="noopener noreferrer" :aria-label="`查看${project.authorName}的作者链接`">{{ project.authorName }}</a><button v-else-if="project.authorName" type="button" :aria-label="`查看${project.authorName}的作品`" @click="openAuthorIntro(project.authorName)">{{ project.authorName }}</button><span v-else>待补充</span></p>
+                      <p class="catalog-card__author" :title="isSiteHostedProject(project) ? '站内' : project.authorName || '待补充'"><span v-if="isSiteHostedProject(project)">站内</span><a v-else-if="project.authorName && project.authorUrl" :href="project.authorUrl" target="_blank" rel="noopener noreferrer" :aria-label="`查看${project.authorName}的作者链接`">{{ project.authorName }}</a><button v-else-if="project.authorName" type="button" :aria-label="`查看${project.authorName}的作品`" @click="openAuthorIntro(project.authorName)">{{ project.authorName }}</button><span v-else>待补充</span></p>
                     </div>
                     <div class="catalog-card__footer">
                       <button type="button" class="catalog-card__wanted" :class="{ 'is-active': wantedIds.has(project.id) }" :aria-pressed="wantedIds.has(project.id)" :aria-label="wantedIds.has(project.id) ? '移出想玩' : '加入想玩'" :title="wantedIds.has(project.id) ? '移出想玩' : '加入想玩'" @click="toggleWanted(project)"><StarFilled v-if="wantedIds.has(project.id)" aria-hidden="true" /><StarOutlined v-else aria-hidden="true" /></button>
@@ -478,24 +524,20 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
                   </div>
                 </div>
               </article>
+                </div>
+              </section>
             </div>
-            <div v-if="displayedProjects.length < visibleProjects.length" class="catalog-load-more"><button type="button" @click="loadMoreProjects">加载更多</button><span>还有 {{ visibleProjects.length - displayedProjects.length }} 个游戏</span></div>
+            <div v-if="!isDiscovery && displayedProjects.length < visibleProjects.length" class="catalog-load-more"><button type="button" @click="loadMoreProjects">加载更多</button><span>还有 {{ visibleProjects.length - displayedProjects.length }} 个游戏</span></div>
           </template>
           <CatalogLeaderboard v-else-if="catalogView === 'authors'" variant="authors" title="作者榜" :entries="authorLeaderboardEntries" :has-more="displayedAuthors.length < matchingAuthors.length" more-label="加载更多作者" @show-games="showAuthorGames" @load-more="authorVisibleLimit += AUTHOR_PAGE_SIZE">
             <template #tools><span class="catalog-author-count" role="status">{{ matchingAuthors.length }} 位作者</span><label class="catalog-author-search" for="catalog-author-query"><span class="catalog-icon catalog-icon--search" aria-hidden="true"></span><span class="catalog-search__label">搜索作者</span><input id="catalog-author-query" v-model="authorSearch" type="search" placeholder="搜索作者名称..." autocomplete="off" /></label></template>
           </CatalogLeaderboard>
           <CatalogLeaderboard v-else variant="contributors" title="贡献榜" :entries="contributorLeaderboardEntries" :has-more="displayedContributors.length < rankedContributors.length" more-label="加载更多贡献者" @show-games="showAuthorGames" @load-more="contributorVisibleLimit += AUTHOR_PAGE_SIZE" />
+
         </template>
       </section>
+      <footer class="catalog-footer"><div><strong>平行线</strong><span>让好玩的小游戏被更多人发现</span></div><SiteNavigation /><p class="catalog-library__hint">记录保存在当前浏览器，清理浏览器数据后会丢失。</p><p class="catalog-keyboard-hint"><kbd>W/A/S/D</kbd> 选择 · <kbd>Enter</kbd> 开始游戏</p></footer>
     </div>
-    <footer class="catalog-footer">
-      <div class="catalog-page__wrap catalog-footer__inner">
-        <div class="catalog-footer__brand"><strong>平行线</strong><span>让好玩的小游戏被更多人发现</span></div>
-        <p class="catalog-footer__motto" aria-hidden="true"><HeartFilled /><span>SMALL GAMES</span><HeartFilled /><span>BIG HAPPINESS</span><HeartFilled /></p>
-        <SiteNavigation class="catalog-footer__navigation" tone="catalog" />
-      </div>
-      <p v-if="catalogView === 'games'" class="catalog-library__hint">记录保存在当前浏览器，清理浏览器数据后会丢失。</p>
-    </footer>
     <CatalogSubmissionDialog v-model:open="submissionOpen" />
     <dialog ref="authorDialog" class="catalog-author-dialog" aria-labelledby="catalog-author-dialog-title" @close="selectedAuthor = null">
       <div class="catalog-author-dialog__header"><div><h2 id="catalog-author-dialog-title">{{ selectedAuthor }}</h2><span>{{ selectedAuthorProjects.length }} 个游戏</span></div><button type="button" class="catalog-author-dialog__close" aria-label="关闭作者窗口" @click="closeAuthorIntro"><CloseOutlined aria-hidden="true" /></button></div>

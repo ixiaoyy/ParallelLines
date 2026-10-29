@@ -46,7 +46,7 @@ function profileUrl(value: string | undefined): string | null {
   }
 }
 
-// 公开目录由调用方提供；站内作品统一归为原创，来源 README 的逐条引用不视为作者主页。
+// 公开目录由调用方提供；站内作品统一归为站内分组，来源 README 的逐条引用不视为作者主页。
 export function catalogAuthorKey(project: CatalogProject): string | null {
   if (project.kind === "internal" || project.slug === "fablespace") return "original";
   const name = project.authorName?.trim();
@@ -64,7 +64,7 @@ export function rankCatalogAuthors(projects: CatalogProject[]): CatalogAuthorRan
   for (const project of projects) {
     const key = catalogAuthorKey(project);
     if (!key) continue;
-    const authorName = key === "original" ? "原创" : project.authorName!.trim();
+    const authorName = key === "original" ? "站内" : project.authorName!.trim();
     const name = displayName(authorName);
     const url = key.startsWith("profile:") ? key.slice("profile:".length) : undefined;
     let group = groups.get(key);

@@ -108,7 +108,8 @@ Exception types: `AppError`, `NotFoundError`, `PermissionDeniedError`, `Validati
 
 See `AGENTS.md` for detailed frontend styling rules:
 - Primary color: `#409EFF` (Element UI classic blue)
-- Main buttons: solid `#409EFF` + white text via CSS variables (`--btn-primary-*`)
+- Main buttons by default: solid `#409EFF` + white text via CSS variables (`--btn-primary-*`); other pages retain this rule.
+- User-authorized game catalog exception: jade + warm grey, local dark-green CTA and jade focus, game-first layout, small folklore ornaments and real dynamic category/game data. Scope and tokens: `apps/web/src/pages/catalog/DESIGN.md` and `AGENTS.md`; do not change the global button source.
 - Board tones via `boardPalette.ts` (1-6 color schemes for different boards)
 - Brand gradient (`--gradient-brand`) is decoration only, NOT for buttons
 
