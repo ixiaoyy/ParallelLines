@@ -9,7 +9,7 @@ git merge-base --is-ancestor HEAD "$revision"
 git merge --ff-only "$revision"
 
 # Do not activate against a previous API image if the normal scoped deploy has failed.
-sudo docker compose -f docker-compose.yml -f deploy/docker-compose.migration.yml exec -T api python -c 'from app.main import create_app; paths = create_app().openapi()["paths"]; assert all("/api/v1/auth/chat-sso/" + name in paths for name in ("approve", "revoke")); print("[chat-sso] main API routes present")'
+sudo docker compose -f docker-compose.yml -f deploy/docker-compose.migration.yml exec -T api python -c 'from app.main import create_app; paths = create_app().openapi()["paths"]; assert all("/api/v1/auth/chat-sso/" + name in paths for name in ("approve", "revoke")); print("[chat-sso] main API routes present")' < /dev/null
 
 # Exactly the approved five OIDC groups. Existing unrelated environment bytes stay opaque.
 test -s deploy/librechat/.env
@@ -38,7 +38,7 @@ cd deploy/librechat
   const ok = empty && process.env.OPENAI_API_KEY === "" && process.env.SSO_REQUIRED === "true" && process.env.ALLOW_REGISTRATION === "false" && process.env.ALLOW_EMAIL_LOGIN === "false";
   console.log(JSON.stringify({ ssoRequired: true, emailLogin: false, registration: false, defaultModelGrants: false, gptDisabled: empty, verified: ok }));
   if (!ok) process.exit(1);
-'
-"${chat[@]}" exec -T librechat node /integration/sso/verify-public.cjs
+' < /dev/null
+"${chat[@]}" exec -T librechat node /integration/sso/verify-public.cjs < /dev/null
 "${chat[@]}" ps librechat chat-oidc
 echo '[chat-sso] public checks passed; no model request or account permission update performed'
