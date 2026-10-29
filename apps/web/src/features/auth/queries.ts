@@ -145,7 +145,8 @@ export function useLogout() {
       try {
         await logout();
       } catch {
-        // Local logout must still clear credentials if the server session already expired.
+        // Keep credentials for an explicit retry; local clearing is not verified global logout.
+        throw new Error("远端未注销，当前会话尚未确认失效。请检查网络后重试。");
       }
     }
 

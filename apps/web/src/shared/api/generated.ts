@@ -320,6 +320,15 @@ export interface components {
     ApiResponse_CatalogViewStateResponse_: {
       [key: string]: unknown;
     };
+    ApiResponse_ChatSsoApproveResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_ChatSsoExchangeResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_ChatSsoStateResponse_: {
+      [key: string]: unknown;
+    };
     ApiResponse_DailyReportProfileResponse_: {
       [key: string]: unknown;
     };
@@ -967,6 +976,36 @@ export interface components {
     ChangePasswordRequest: {
       current_password: string;
       new_password: string;
+    };
+    ChatSsoApproveRequest: {
+      interaction_id: string;
+    };
+    ChatSsoApproveResponse: {
+      approval_code: string;
+      finish_url: string;
+      interaction_id: string;
+    };
+    ChatSsoExchangeRequest: {
+      approval_code: string;
+      client_id: string;
+      interaction_id: string;
+    };
+    ChatSsoExchangeResponse: {
+      active: boolean;
+      auth_expires_at: number | null;
+      binding_id: string;
+      name: string;
+      sub: string | null;
+    };
+    ChatSsoStateRequest: {
+      binding_id: string;
+      client_id: string;
+    };
+    ChatSsoStateResponse: {
+      active: boolean;
+      auth_expires_at: number | null;
+      binding_id: string;
+      sub: string | null;
     };
     DailyReportInput: {
       extra_work?: Array<string>;
@@ -2589,6 +2628,15 @@ export interface paths {
     };
     "/api/v1/auth/2fa/verify-login": {
       post: { response: components["schemas"]["ApiResponse_TokenPair_"]; operationId: "verify_two_factor_login_api_v1_auth_2fa_verify_login_post" };
+    };
+    "/api/v1/auth/chat-sso/approve": {
+      post: { response: components["schemas"]["ApiResponse_ChatSsoApproveResponse_"]; operationId: "approve_api_v1_auth_chat_sso_approve_post" };
+    };
+    "/api/v1/auth/chat-sso/exchange": {
+      post: { response: components["schemas"]["ApiResponse_ChatSsoExchangeResponse_"]; operationId: "exchange_api_v1_auth_chat_sso_exchange_post" };
+    };
+    "/api/v1/auth/chat-sso/session-state": {
+      post: { response: components["schemas"]["ApiResponse_ChatSsoStateResponse_"]; operationId: "session_state_api_v1_auth_chat_sso_session_state_post" };
     };
     "/api/v1/auth/email-change/confirm": {
       post: { response: components["schemas"]["ApiResponse_UserPublic_"]; operationId: "confirm_email_change_api_v1_auth_email_change_confirm_post" };

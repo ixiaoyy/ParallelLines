@@ -7,6 +7,7 @@ from app.api.v1 import (
     analytics,
     api_docs,
     auth,
+    auth_chat_sso,
     boards,
     catalog,
     daily_reports,
@@ -35,6 +36,7 @@ api_router = APIRouter()
 api_router.include_router(health.router)
 api_router.include_router(api_docs.router)
 api_router.include_router(auth.router)
+api_router.include_router(auth_chat_sso.router)
 api_router.include_router(email.router)
 api_router.include_router(events.router)
 api_router.include_router(boards.router)

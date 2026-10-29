@@ -11,6 +11,7 @@ import {
 import { computed, defineAsyncComponent, onBeforeUnmount, onUnmounted, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { RouteLocationRaw } from "vue-router";
+import { message } from "ant-design-vue";
 
 import { publicSettingString, siteText } from "@/features/admin/model";
 import { usePublicSiteSettings } from "@/features/admin/queries";
@@ -274,7 +275,8 @@ useOutsidePointerDown(accountMenuRef, closeAccountMenu, () => Boolean(accountMen
 
 async function handleLogout() {
   closeAccountMenu();
-  await logout();
+  try { await logout(); }
+  catch (failure) { message.error(failure instanceof Error ? failure.message : "远端未注销，请重试。"); }
 }
 
 // Keeps the brand click deterministic: it closes transient menus and scrolls home to the top when already there.

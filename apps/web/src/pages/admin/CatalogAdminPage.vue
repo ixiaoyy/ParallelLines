@@ -2,6 +2,7 @@
 import { useQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed, onUnmounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
+import { message } from "ant-design-vue";
 
 import {
   createCatalogCategory,
@@ -129,8 +130,12 @@ const editorTitle = computed(() => {
 
 // 后台独立于旧论坛外壳，退出时清除凭据并回到公开目录。
 async function leaveAdmin(): Promise<void> {
-  await logout();
-  await router.replace({ name: "home" });
+  try {
+    await logout();
+    await router.replace({ name: "home" });
+  } catch (failure) {
+    message.error(failure instanceof Error ? failure.message : "远端未注销，请重试。");
+  }
 }
 
 // 按浏览器本地日期生成统计区间，避免 UTC 时区造成日期偏移。

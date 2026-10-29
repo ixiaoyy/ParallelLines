@@ -465,6 +465,15 @@ export const router = createRouter({
       redirect: { name: "home" },
     },
     {
+      path: "/auth/chat",
+      name: "chat-sso",
+      component: () => import("@/pages/auth/ChatSsoPage.vue"),
+      meta: {
+        forumShell: true,
+        seo: { title: "进入聊天 · {siteTitle}", robots: "noindex,nofollow" },
+      },
+    },
+    {
       path: "/auth",
       name: "auth",
       component: () => import("@/pages/auth/AuthPage.vue"),

@@ -89,6 +89,15 @@ class Settings(BaseSettings):
     access_token_minutes: int = 360
     refresh_token_days: int = 30
 
+    # Disabled until the owner approves the separate OP/client trust setup.
+    chat_sso_enabled: bool = False
+    chat_sso_client_id: str = "parallellines-chat"
+    chat_sso_login_policy: Literal["disabled", "active_main", "allowlist"] = "disabled"
+    chat_sso_allowed_user_ids: list[str] = Field(default_factory=list)
+    chat_sso_finish_url: str = ""
+    chat_sso_bridge_secret: str = ""
+    chat_sso_approval_ttl_seconds: int = 60
+
     # FableSpace SSO uses a one-time ticket plus a backend-only shared secret.
     fablespace_base_url: str = "http://127.0.0.1:3000"
     fablespace_sso_service_secret: str = ""

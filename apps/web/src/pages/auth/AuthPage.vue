@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, type Component } from "vue";
+import { computed, onBeforeUnmount, ref, watch, type Component } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   AppleFilled,
@@ -21,6 +21,7 @@ import {
 
 import {
   useConfirmPasswordReset,
+  useCurrentUser,
   useLogin,
   useOAuthProviders,
   useRegister,
@@ -30,6 +31,7 @@ import {
   useVerifyEmail,
 } from "@/features/auth/queries";
 import { ApiError } from "@/shared/api/client";
+import { needsFullAuthNavigation, resolveAuthReturn } from "@/shared/router/authReturn";
 import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
 import UiButton from "@/shared/ui/Button.vue";
 
@@ -66,6 +68,7 @@ const adminLoginOnly = computed(() => {
 });
 const authHomeTarget = computed(() => adminLoginOnly.value ? "/" : "/forum");
 const loginMutation = useLogin();
+const currentUserQuery = useCurrentUser();
 const oauthProvidersQuery = useOAuthProviders();
 const verifyTwoFactorMutation = useVerifyTwoFactorLogin();
 const registerMutation = useRegister();
@@ -122,12 +125,39 @@ const availableOAuthProviders = computed(() =>
 );
 
 const redirectTarget = computed(() => {
-  const redirect = route.query.redirect;
-  // 普通认证默认回论坛，显式回跳地址沿用既有站内路径判断。
-  return typeof redirect === "string" && redirect.startsWith("/")
-    ? redirect
-    : "/forum";
+  return resolveAuthReturn(route.query.redirect, window.location.origin, "/forum");
 });
+
+let completingAuth = false;
+let authReturnTimer: number | undefined;
+async function finishAuthReturn(): Promise<void> {
+  if (completingAuth) return;
+  completingAuth = true;
+  const target = redirectTarget.value;
+  try {
+    if (needsFullAuthNavigation(target, window.location.origin)) {
+      authReturnTimer = window.setTimeout(() => {
+        completingAuth = false;
+        formError.value = "登录成功，但跳转未完成，请重试。";
+      }, 10_000);
+      window.location.assign(target);
+      return;
+    }
+    await router.push(target);
+    completingAuth = false;
+  } catch (failure) {
+    window.clearTimeout(authReturnTimer);
+    completingAuth = false;
+    formError.value = toAuthError(failure, "登录成功，但跳转未完成，请重试。");
+  }
+}
+
+// Only an explicit SSO resume auto-continues an already authenticated main account.
+watch(() => [currentUserQuery.data.value, redirectTarget.value] as const, ([user, target]) => {
+  const path = new URL(target, window.location.origin).pathname;
+  if (user && path === "/auth/chat") void finishAuthReturn();
+}, { immediate: true });
+onBeforeUnmount(() => window.clearTimeout(authReturnTimer));
 
 watch(
   () => [route.query.mode, adminLoginOnly.value] as const,
@@ -157,7 +187,7 @@ async function submitLogin() {
       return;
     }
 
-    await router.push(redirectTarget.value);
+    await finishAuthReturn();
   } catch (error) {
     formError.value = toAuthError(error, "登录失败，请检查账号和密码。");
   }
@@ -176,7 +206,7 @@ async function submitTwoFactorLogin() {
       challenge_token: twoFactorChallengeToken.value,
       code,
     });
-    await router.push(redirectTarget.value);
+    await finishAuthReturn();
   } catch (error) {
     formError.value = toAuthError(error, "二次验证失败，请确认后重试。");
   }
@@ -299,7 +329,7 @@ async function submitVerification() {
       email: pendingVerificationEmail.value,
       code,
     });
-    await router.push(redirectTarget.value);
+    await finishAuthReturn();
   } catch (error) {
     formError.value = toAuthError(error, "验证码校验失败，请确认后重试。");
   }
