@@ -1,0 +1,183 @@
+# Build-only rollback verification; no production deployment or credentials.
+# Requires reviewed copies of the rollback assets under ci/ai-rollback/.
+name: Build AI rollback image only
+
+on:
+  workflow_dispatch:
+    inputs:
+      legacy_ref:
+        description: Full commit SHA of the actual API immediately before AI rollout
+        required: true
+        type: string
+      candidate_ref:
+        description: Full reviewed commit SHA containing ci/ai-rollback assets
+        required: true
+        type: string
+      legacy_app_sha256:
+        description: Re-frozen content SHA256 of that legacy apps/api/app tree
+        required: true
+        type: string
+      migration_sha256:
+        description: SHA256 of the reviewed candidate 0101 migration snapshot
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-rollback-build-only-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  build-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+    env:
+      LEGACY_REF: ${{ inputs.legacy_ref }}
+      CANDIDATE_REF: ${{ inputs.candidate_ref }}
+      LEGACY_APP_SHA256: ${{ inputs.legacy_app_sha256 }}
+      MIGRATION_SHA256: ${{ inputs.migration_sha256 }}
+      LEGACY_IMAGE: ai-rollback-legacy:${{ github.run_id }}
+      COMPAT_IMAGE: ai-rollback-compat:${{ github.run_id }}
+
+    steps:
+      - name: Validate immutable reviewed inputs
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re
+          for name in ('LEGACY_REF', 'CANDIDATE_REF'):
+              assert re.fullmatch(r'[0-9a-f]{40}', os.environ[name]), f'{name} must be a full SHA'
+          for name in ('LEGACY_APP_SHA256', 'MIGRATION_SHA256'):
+              assert re.fullmatch(r'[0-9a-f]{64}', os.environ[name]), f'{name} must be SHA256'
+          PY
+
+      - name: Checkout approved rollback assets
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_REF }}
+          path: candidate
+          persist-credentials: false
+          sparse-checkout: ci/ai-rollback
+
+      - name: Checkout frozen pre-AI API source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.LEGACY_REF }}
+          path: legacy
+          persist-credentials: false
+          sparse-checkout: apps/api
+
+      - name: Verify application and migration hashes before building
+        run: |
+          set -euo pipefail
+          test "$(git -C legacy rev-parse HEAD)" = "$LEGACY_REF"
+          test "$(git -C candidate rev-parse HEAD)" = "$CANDIDATE_REF"
+          mkdir -p out
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          app = Path('legacy/apps/api/app')
+          digest = hashlib.sha256()
+          for path in sorted(app.rglob('*'), key=lambda item: item.relative_to(app).as_posix()):
+              if path.is_file():
+                  digest.update(path.relative_to(app).as_posix().encode())
+                  digest.update(b'\0')
+                  digest.update(path.read_bytes())
+                  digest.update(b'\0')
+          app_hash = digest.hexdigest()
+          assert app_hash == os.environ['LEGACY_APP_SHA256'], 'legacy API source changed'
+          assets = Path('candidate/ci/ai-rollback')
+          required = ('Dockerfile.compat-api', '0101_catalog_ai_ratings.py',
+                      'verify_rollback_compatibility.py', 'runtime_healthcheck.py')
+          for name in required:
+              assert (assets / name).is_file(), f'missing approved asset: {name}'
+          migration = assets / '0101_catalog_ai_ratings.py'
+          migration_hash = hashlib.sha256(migration.read_bytes()).hexdigest()
+          assert migration_hash == os.environ['MIGRATION_SHA256'], 'migration snapshot changed'
+          assert 'ck_catalog_ai_assessment_date' not in migration.read_text()
+          api_root = Path('legacy/apps/api')
+          provenance = {
+              'legacy_commit': os.environ['LEGACY_REF'],
+              'candidate_assets_commit': os.environ['CANDIDATE_REF'],
+              'legacy_app_sha256': app_hash,
+              'migration_sha256': migration_hash,
+              'uv_lock_sha256': hashlib.sha256((api_root / 'uv.lock').read_bytes()).hexdigest(),
+              'dockerfile_sha256': hashlib.sha256((api_root / 'Dockerfile').read_bytes()).hexdigest(),
+              'base_strategy': 'rebuild frozen source using its existing Dockerfile and uv.lock',
+              'same_image_digest_as_production_claimed': False,
+              'production_credentials_or_database_used': False,
+              'registry_push_or_ssh_or_deployment': False,
+          }
+          Path('out/source-provenance.json').write_text(json.dumps(provenance, indent=2) + '\n')
+          PY
+
+      - name: Rebuild the frozen legacy source on the disposable runner
+        # Approved egress is required for the existing official Python base,
+        # existing apt sources, uv, and packages selected by the frozen uv.lock.
+        # This produces a new source-equivalent image, not the old production digest.
+        run: |
+          set -euo pipefail
+          test "$(head -n 1 legacy/apps/api/Dockerfile)" = 'FROM python:3.12-slim'
+          docker pull python:3.12-slim
+          docker build --pull=false --iidfile out/legacy-image-id.txt \
+            --tag "$LEGACY_IMAGE" --file legacy/apps/api/Dockerfile legacy/apps/api
+          docker image inspect --format '{{json .RepoDigests}}' python:3.12-slim \
+            > out/official-python-base-repodigests.json
+
+      - name: Add only the reviewed compatibility migration and offline verifier
+        run: |
+          set -euo pipefail
+          assets=candidate/ci/ai-rollback
+          docker image inspect --format '{{.Id}}' "$LEGACY_IMAGE"
+          docker build --pull=false --network=none \
+            --file "$assets/Dockerfile.compat-api" \
+            --build-arg "ROLLBACK_BASE_IMAGE=$LEGACY_IMAGE" \
+            --build-arg "AI_MIGRATION_SHA256=$MIGRATION_SHA256" \
+            --build-arg "LEGACY_APP_SHA256=$LEGACY_APP_SHA256" \
+            --iidfile out/compat-image-id.txt --tag "$COMPAT_IMAGE" "$assets"
+
+      - name: Verify read-only image without a database or external network
+        run: |
+          set -euo pipefail
+          flags=(--rm --pull=never --network none --read-only
+                 --tmpfs /tmp:rw,nosuid,nodev,size=64m --cap-drop ALL
+                 --security-opt no-new-privileges --workdir /tmp
+                 --env PYTHONDONTWRITEBYTECODE=1 --env PYTHONPATH=/app
+                 --entrypoint python)
+          docker run "${flags[@]}" "$COMPAT_IMAGE" \
+            /opt/rollback-verify/verify_rollback_compatibility.py --api-root /app \
+            --expected-migration-sha256 "$MIGRATION_SHA256" \
+            --expected-legacy-app-sha256 "$LEGACY_APP_SHA256" \
+            --report /tmp/migration-verification.json \
+            | tee out/runtime-migration-verification.json
+          docker run "${flags[@]}" -i "$COMPAT_IMAGE" - \
+            < candidate/ci/ai-rollback/runtime_healthcheck.py | tee out/runtime-health.log
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          lines = Path('out/runtime-health.log').read_text().splitlines()
+          prefix = 'ROLLBACK_HEALTH_RESULT='
+          results = [json.loads(line[len(prefix):]) for line in lines if line.startswith(prefix)]
+          assert len(results) == 1 and results[0]['status'] == 'passed'
+          Path('out/runtime-health-verification.json').write_text(json.dumps(results[0], indent=2) + '\n')
+          PY
+
+      - name: Export image archive and checksum only
+        run: |
+          set -euo pipefail
+          docker save "$COMPAT_IMAGE" | gzip -n > out/api-rollback-compat-docker.tar.gz
+          (cd out && sha256sum api-rollback-compat-docker.tar.gz > SHA256SUMS)
+
+      - name: Upload build-only artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-rollback-build-only-${{ github.run_id }}-${{ github.run_attempt }}
+          path: out/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0

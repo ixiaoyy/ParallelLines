@@ -1,0 +1,19 @@
+# Overlay onto the approved pre-AI API image. No dependencies are installed.
+# Supply an immutable, already-local image reference matching the recorded base.
+ARG ROLLBACK_BASE_IMAGE
+FROM ${ROLLBACK_BASE_IMAGE}
+
+ARG AI_MIGRATION_SHA256
+ARG LEGACY_APP_SHA256
+WORKDIR /app
+COPY 0101_catalog_ai_ratings.py /app/alembic/versions/0101_catalog_ai_ratings.py
+COPY verify_rollback_compatibility.py /opt/rollback-verify/verify_rollback_compatibility.py
+RUN python /opt/rollback-verify/verify_rollback_compatibility.py \
+    --api-root /app \
+    --expected-migration-sha256 "${AI_MIGRATION_SHA256}" \
+    --expected-legacy-app-sha256 "${LEGACY_APP_SHA256}" \
+    --report /opt/rollback-verify/verification.json
+
+# Keep the base image's API code, dependency environment and entry point/CMD.
+# The project Compose command may still run alembic upgrade head: with this
+# overlay it recognizes an existing 0101 DB and has an empty migration plan.
