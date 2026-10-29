@@ -19,7 +19,7 @@ const {
   isTokenRetired,
   isTwoFactorEnrollmentRequired,
   getSafeErrorMetadata,
-  sanitizeUserForAuthResponse,
+  sanitizeUserForAuthResponse: nativeSanitizeUserForAuthResponse,
   clearSessionHintCookie,
 } = require('@librechat/api');
 const {
@@ -50,6 +50,8 @@ const {
 const OpenIDRefreshFlight = require('~/server/services/OpenIDRefreshFlight');
 const { wrapCreateOpenIDResponseDelivery } = require('../sso-runtime/refresh-delivery-runtime.cjs');
 const { isRefreshServiceUnavailable, sendRefreshUnavailable } = require('../sso-runtime/refresh-service-errors.cjs');
+const { createAuthUserResponseSanitizer } = require('../sso-runtime/auth-user-response.cjs');
+const sanitizeUserForAuthResponse = createAuthUserResponseSanitizer(nativeSanitizeUserForAuthResponse);
 
 const AUTH_REFRESH_USER_PROJECTION = '-password -__v -totpSecret -backupCodes -federatedTokens';
 /**

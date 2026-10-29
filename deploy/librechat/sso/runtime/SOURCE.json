@@ -31,7 +31,7 @@
     },
     {
       "path": "AuthController.cjs",
-      "sha256": "1fd475227b258791e2ed53f57ea57d3ca6aa42972bae0a2907aaf23aaca18b53",
+      "sha256": "200af1ba6898e4cd313c65258b9f23b83827ded80dc83a5d1ad7d57e1c365f00",
       "upstreamPath": "api/server/controllers/AuthController.js",
       "upstreamSha256": "7282b9fb9b0ba21b5457c2bbf1f950be9d978266dc0636fb668207b13890ff48"
     }
