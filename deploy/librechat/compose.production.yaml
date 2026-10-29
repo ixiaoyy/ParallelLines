@@ -3,6 +3,7 @@ services:
   librechat:
     image: registry.librechat.ai/librechat-ai/librechat-api:v0.8.9-rc1@sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5
     restart: unless-stopped
+    mem_limit: 1g
     env_file: .env
     entrypoint: [node, /integration/start.cjs]
     environment:
@@ -62,7 +63,8 @@ services:
   librechat-mongodb:
     image: mongo:8.0.20@sha256:098862b1339f031900ca66cf8fef799e616d6324fa41b9a263f2ec899552c1ef
     restart: unless-stopped
-    command: [mongod, --noauth, --bind_ip_all]
+    mem_limit: 768m
+    command: [mongod, --noauth, --bind_ip_all, --wiredTigerCacheSizeGB, "0.25"]
     volumes: [mongo:/data/db]
     networks: [private]
     healthcheck:
@@ -73,6 +75,7 @@ services:
   librechat-admin:
     image: registry.librechat.ai/librechat-ai/librechat-admin-panel:f2601cbf3216a62c12e5f9d21810eb9ada95fa63@sha256:90b21c56f9494577304f9cf3dde9f770e3dba35b0ce319fbb868aa1a6745248a
     restart: unless-stopped
+    mem_limit: 384m
     environment:
       PORT: 3000
       SESSION_SECRET: ${ADMIN_PANEL_SESSION_SECRET:?Run the server-local init.cjs once}

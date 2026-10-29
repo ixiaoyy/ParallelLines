@@ -35,6 +35,20 @@ chmod 600 .env
 
 `init.cjs` 从模板创建 `.env`，仅生成本地登录/会话/加密所需随机值；OpenAI Key 和模型选择继续为空。已有 `.env` 会保留，脚本不读取或覆盖它。长期保存这些应用密钥，回滚和容器重建均不重新生成。
 
+初始化的确切范围：
+
+| 变量 | 用途 | 随机字节数 |
+|---|---|---|
+| `JWT_SECRET` | 登录令牌签名 | 32 |
+| `JWT_REFRESH_SECRET` | 刷新令牌签名 | 32 |
+| `CREDS_KEY` | LibreChat 凭据加密密钥 | 32 |
+| `CREDS_IV` | LibreChat 加密初始化参数 | 16 |
+| `ADMIN_PANEL_SESSION_SECRET` | 管理后台会话签名 | 32 |
+
+所有值使用服务器 Node `crypto.randomBytes` 生成并编码为十六进制，仅保存到本目录 `.env`，权限 `0600`，不进入 Git、日志或聊天。修改签名密钥会使已有会话失效，修改加密参数可能使已保存的加密数据无法解密；因此需持续备份保存。初始化不创建任何管理员/家人账号，不授予模型使用权限，不创建远程访问凭据。
+
+2026-10-29 的服务器只读预检显示可用内存约 3783 MiB、根盘剩余 18 GiB，网络为 `parallellines_default`。本地同版本已有图文验收后的占用约为 API 379 MiB、MongoDB 187 MiB、后台 84 MiB。新增容器分别设置 1 GiB、768 MiB、384 MiB 上限，MongoDB 缓存为 0.25 GiB；上线后仍需核对实际健康和资源占用。
+
 检查已有平行线 nginx 所在网络，按实际结果在 `.env` 设置 `PARALLELLINES_NETWORK`（通常是 `parallellines_default`）：
 
 ```sh

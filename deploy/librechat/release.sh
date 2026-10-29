@@ -27,7 +27,9 @@ test "$mode" != preflight || exit 0
 git diff --quiet
 git diff --cached --quiet
 test "$(git rev-parse origin/main)" = "$revision"
-git reset --hard "$revision"
+git merge-base --is-ancestor HEAD "$revision"
+# Fast-forward merge refuses conflicting tracked/untracked files; never hard-reset local work.
+git merge --ff-only "$revision"
 cd deploy/librechat
 if ! test -e .env; then
   if test "$initialize" != true; then
