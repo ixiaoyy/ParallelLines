@@ -1,55 +1,21 @@
-name: Deploy family chat
+name: Diagnose chat session (temporary branch only)
 
 on:
   workflow_dispatch:
-    inputs:
-      mode:
-        description: Inspect, deploy disabled chat, configure model candidates, or activate main-site SSO
-        type: choice
-        options: [preflight, deploy, models, sso]
-        default: preflight
-      initialize_application_secrets:
-        description: Generate five server-local app secrets only after explicit owner approval
-        type: boolean
-        default: false
-
-concurrency:
-  group: deploy-production
-  cancel-in-progress: false
 
 permissions:
   contents: read
 
+concurrency:
+  group: chat-session-readonly-diagnostics
+  cancel-in-progress: false
+
 jobs:
-  chat:
+  diagnostic:
     runs-on: ubuntu-latest
+    timeout-minutes: 4
     steps:
-      - uses: actions/checkout@v4
-        if: inputs.mode == 'models'
-      - name: Validate the model-only file update with synthetic Linux settings
-        if: inputs.mode == 'models'
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const os = require('node:os');
-          const path = require('node:path');
-          const cp = require('node:child_process');
-          const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chat-model-fixture-'));
-          fs.copyFileSync('deploy/librechat/configure-models.cjs', path.join(dir, 'configure-models.cjs'));
-          const before = Buffer.from('OPENAI_CHAT_MODELS=\nOPENAI_API_KEY=synthetic-fixture-only\nJWT_SECRET=synthetic-fixture-only\n');
-          fs.writeFileSync(path.join(dir, '.env'), before, { mode: 0o600 });
-          const oldStat = fs.statSync(path.join(dir, '.env'));
-          const result = cp.spawnSync(process.execPath, [path.join(dir, 'configure-models.cjs')], { encoding: 'utf8' });
-          if (result.status !== 0) throw new Error('Synthetic Linux model update failed');
-          const expected = Buffer.from('OPENAI_CHAT_MODELS=gpt-6-luna,gpt-6.1-terra,gpt-6.1-sol\nOPENAI_API_KEY=synthetic-fixture-only\nJWT_SECRET=synthetic-fixture-only\n');
-          const stat = fs.statSync(path.join(dir, '.env'));
-          if (!fs.readFileSync(path.join(dir, '.env')).equals(expected) || (stat.mode & 0o777) !== 0o600 || stat.uid !== oldStat.uid || stat.gid !== oldStat.gid) {
-            throw new Error('Synthetic Linux byte/ownership preservation failed');
-          }
-          fs.rmSync(dir, { recursive: true });
-          console.log(JSON.stringify({ linuxAtomicUpdate: true, otherBytesPreserved: true, mode: '0600', ownerAndGroupPreserved: true }));
-          NODE
-      - name: Inspect or deploy using the existing production SSH connection
+      - name: Read a fixed historical log window using the existing SSH connection
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -57,14 +23,18 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           port: ${{ secrets.DEPLOY_PORT }}
-          command_timeout: 30m
+          command_timeout: 2m
           script: |
             set -eu
+            umask 077
             cd /opt/parallellines
-            git fetch origin main
-            test "$(git rev-parse origin/main)" = "${{ github.sha }}"
-            if test '${{ inputs.mode }}' = sso; then
-              git show '${{ github.sha }}:deploy/librechat/release-sso.sh' | bash -s -- '${{ github.sha }}'
-            else
-              git show '${{ github.sha }}:deploy/librechat/release.sh' | bash -s -- '${{ inputs.mode }}' '${{ github.sha }}' '${{ inputs.initialize_application_secrets }}'
-            fi
+            revision='${{ github.sha }}'
+            case "$revision" in ''|*[!0-9a-f]*) exit 2 ;; esac
+            test "${#revision}" -eq 40
+            git fetch origin refs/heads/chat-session-diagnostics
+            test "$(git rev-parse FETCH_HEAD)" = "$revision"
+            command -v python3 >/dev/null
+            diagnostic_file=$(mktemp "/tmp/chat-session-diag-${revision}-XXXXXX.py")
+            trap 'rm -f -- "$diagnostic_file"' EXIT
+            git show "${revision}:session-diagnostics/diagnose-session.py" > "$diagnostic_file"
+            sudo python3 "$diagnostic_file" < /dev/null
