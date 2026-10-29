@@ -36,20 +36,19 @@ const sourceStyle = computed<CSSProperties>(() => {
 
 <style scoped lang="scss">
 .catalog-category-art {
-  // 固定占位让各分类标题对齐，内部插画仍按原图比例缩放。
-  --catalog-art-height: 56px;
-  --catalog-art-max-width: 140px;
+  // Follow the real artwork width so portrait figures do not leave a wide gap
+  // before the title. Parent sections may set both dimensions without distortion.
   display: grid;
-  width: var(--catalog-art-max-width);
-  height: var(--catalog-art-height);
+  width: min(var(--catalog-art-max-width, 145px), calc(var(--catalog-art-height, 64px) * var(--catalog-art-aspect)));
+  height: var(--catalog-art-height, 64px);
   flex: 0 0 auto;
-  place-items: center;
+  place-items: end center;
   pointer-events: none;
 }
 .catalog-category-art__crop {
   position: relative;
   display: block;
-  width: min(100%, calc(var(--catalog-art-height) * var(--catalog-art-aspect)));
+  width: min(100%, calc(var(--catalog-art-height, 64px) * var(--catalog-art-aspect)));
   aspect-ratio: var(--catalog-art-aspect);
   overflow: hidden;
 }
@@ -67,8 +66,8 @@ const sourceStyle = computed<CSSProperties>(() => {
 }
 @media (max-width: 760px) {
   .catalog-category-art {
-    --catalog-art-height: 44px;
-    --catalog-art-max-width: 72px;
+    width: min(var(--catalog-art-max-width, 100px), calc(var(--catalog-art-height, 48px) * var(--catalog-art-aspect)));
+    height: var(--catalog-art-height, 48px);
   }
 }
 </style>

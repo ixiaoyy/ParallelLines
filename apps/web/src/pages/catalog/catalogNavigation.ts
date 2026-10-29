@@ -2,6 +2,7 @@ import { computed, watch } from "vue";
 import type { Ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { LocationQuery, LocationQueryRaw } from "vue-router";
+import { isCatalogTopicId, type CatalogTopicId } from "./catalogTopics";
 
 export type CatalogNavId = "home" | "latest" | "hot" | "site" | "wanted" | "recent" | "authors" | "contributors";
 export type CatalogFeed = "discovery" | "latest" | "hot";
@@ -14,6 +15,7 @@ interface CatalogNavigationState {
   sort: "latest" | "hot";
   feed: CatalogFeed;
   search: string;
+  topic: CatalogTopicId;
 }
 
 interface CatalogNavigationRefs {
@@ -25,17 +27,19 @@ interface CatalogNavigationRefs {
   feed: Ref<CatalogFeed>;
   search: Ref<string>;
   searchInput: Ref<string>;
+  selectedTopic: Ref<CatalogTopicId>;
 }
 
 const defaults: CatalogNavigationState = {
   view: "games", scope: "all", category: "all", author: null,
-  sort: "latest", feed: "discovery", search: "",
+  sort: "latest", feed: "discovery", search: "", topic: "all",
 };
 
 /** Parse only known directory query fields; preserve unrelated route parameters on writes. */
 export function parseCatalogNavigation(query: LocationQuery): CatalogNavigationState {
   const text = (key: string): string => typeof query[key] === "string" ? query[key] : "";
   const feed = text("feed");
+  const topic = text("topic");
   return {
     view: text("view") === "authors" ? "authors" : text("view") === "contributors" ? "contributors" : "games",
     scope: text("scope") === "wanted" ? "wanted" : text("scope") === "recent" ? "recent" : "all",
@@ -44,12 +48,13 @@ export function parseCatalogNavigation(query: LocationQuery): CatalogNavigationS
     sort: text("sort") === "hot" || feed === "hot" ? "hot" : "latest",
     feed: feed === "latest" || feed === "hot" ? feed : "discovery",
     search: text("q"),
+    topic: isCatalogTopicId(topic) ? topic : "all",
   };
 }
 
 function stateQuery(state: CatalogNavigationState, existing: LocationQuery): LocationQueryRaw {
   const query: LocationQueryRaw = { ...existing };
-  for (const key of ["view", "scope", "category", "author", "sort", "feed", "layout", "q"]) delete query[key];
+  for (const key of ["view", "scope", "category", "author", "sort", "feed", "layout", "q", "topic"]) delete query[key];
   if (state.view !== "games") query.view = state.view;
   if (state.scope !== "all") query.scope = state.scope;
   if (state.category !== "all") query.category = state.category;
@@ -57,6 +62,7 @@ function stateQuery(state: CatalogNavigationState, existing: LocationQuery): Loc
   if (state.sort !== "latest") query.sort = state.sort;
   if (state.feed !== "discovery") query.feed = state.feed;
   if (state.search) query.q = state.search;
+  if (state.topic !== "all") query.topic = state.topic;
   return query;
 }
 
@@ -69,6 +75,7 @@ export function useCatalogNavigation(refs: CatalogNavigationRefs) {
     category: refs.selectedCategory.value, author: refs.selectedAuthorKey.value,
     sort: refs.sortMode.value, feed: refs.feed.value,
     search: refs.search.value,
+    topic: refs.selectedTopic.value,
   });
   const applyState = (state: CatalogNavigationState): void => {
     refs.catalogView.value = state.view;
@@ -79,6 +86,7 @@ export function useCatalogNavigation(refs: CatalogNavigationRefs) {
     refs.feed.value = state.feed;
     refs.search.value = state.search;
     refs.searchInput.value = state.search;
+    refs.selectedTopic.value = state.topic;
   };
   watch(() => route.query, (query) => applyState(parseCatalogNavigation(query)), { immediate: true, flush: "sync" });
   watch(readState, (state) => {
@@ -115,5 +123,6 @@ export function useCatalogNavigation(refs: CatalogNavigationRefs) {
     },
     category(slug: string): void { openState({ ...defaults, category: slug }); },
     author(key: string): void { openState({ ...defaults, author: key }); },
+    topic(id: CatalogTopicId): void { openState({ ...defaults, topic: id }); },
   };
 }

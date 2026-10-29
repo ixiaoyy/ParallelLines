@@ -50,7 +50,9 @@ async function openIntegratedCatalog(page: Page, context: BrowserContext) {
   await expect(page.locator(".catalog-card").first()).toBeVisible();
   const projects = new Map(payload.data.categories.flatMap((category) => category.projects).map((project) => [project.id, project]));
   for (const project of projects.values()) targets.add(new URL(project.url, baseURL).href);
-  expect(projects.size).toBe(226);
+  expect(projects.size).toBe(225);
+  expect(projects.has("14")).toBe(false);
+  expect(projects.has("37")).toBe(false);
   expect([...projects.values()].filter((project) => project.ai_rating?.score != null)).toHaveLength(22);
   return { views, gameOpens, otherWrites, projects, categories: payload.data.categories };
 }
@@ -133,7 +135,7 @@ test.describe("card/rating/navigation integration: desktop", () => {
 
   test("null AI entries have no badge or invented zero score", async ({ page, context }) => {
     const requests = await openIntegratedCatalog(page, context);
-    for (const id of ["37", "73"]) {
+    for (const id of ["73"]) {
       expect(requests.projects.get(id)?.ai_rating ?? null).toBeNull();
       const card = await cardFor(page, requests, id);
       await card.hover();

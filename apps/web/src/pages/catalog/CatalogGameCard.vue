@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FireFilled, StarFilled, StarOutlined } from "@ant-design/icons-vue";
+import { StarFilled, StarOutlined } from "@ant-design/icons-vue";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
 export interface CatalogCardAiRating {
@@ -11,6 +11,7 @@ const props = withDefaults(defineProps<{
   title: string;
   href: string;
   cover: string | null;
+  categoryName?: string | null;
   authorName?: string | null;
   siteHosted?: boolean;
   heat: number;
@@ -18,7 +19,7 @@ const props = withDefaults(defineProps<{
   featured?: boolean;
   eager?: boolean;
   aiRating?: CatalogCardAiRating | null;
-}>(), { authorName: null, siteHosted: false, featured: false, eager: false, aiRating: null });
+}>(), { categoryName: null, authorName: null, siteHosted: false, featured: false, eager: false, aiRating: null });
 
 const emit = defineEmits<{
   open: [event: MouseEvent];
@@ -111,10 +112,10 @@ onUnmounted(() => {
     <div class="catalog-card__details">
       <h3>{{ title }}</h3>
       <div class="catalog-card__metrics">
+        <span v-if="categoryName" class="catalog-card__category">{{ categoryName }}</span>
         <slot name="rating" :rating="validAiRating"><span v-if="validAiRating" class="catalog-card__ai-rating">AI {{ validAiRating.score }}/{{ validAiRating.maxScore }}</span></slot>
-        <span class="catalog-card__heat" :aria-label="`综合热度 ${heat}`" title="综合热度：累计打开数＋用户评分心数×5"><FireFilled aria-hidden="true" />{{ heat }}</span>
+        <span class="catalog-card__heat" :aria-label="`综合热度 ${heat}`" title="综合热度：累计打开数＋用户评分心数×5">热度 {{ heat }}</span>
       </div>
-      <p v-if="authorName || siteHosted" class="catalog-card__author">{{ siteHosted ? '站内' : authorName }}</p>
     </div>
     <button type="button" class="catalog-card__wanted" :class="{ 'is-active': wanted }" :aria-pressed="wanted" :aria-label="`${wanted ? '移除想玩' : '加入想玩'}：${title}`" :title="wanted ? '移除想玩' : '加入想玩'" @click.stop="emit('toggleWanted')"><StarFilled v-if="wanted" aria-hidden="true" /><StarOutlined v-else aria-hidden="true" /></button>
   </article>

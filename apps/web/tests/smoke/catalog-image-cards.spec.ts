@@ -10,10 +10,11 @@ interface CatalogProjectResponse {
   name: string;
   view_count: number;
   rating_score_sum: number;
+  categoryName?: string;
 }
 
 interface CatalogPayload {
-  categories: Array<{ projects: CatalogProjectResponse[] }>;
+  categories: Array<{ name: string; projects: CatalogProjectResponse[] }>;
 }
 
 interface LibrarySnapshot {
@@ -56,7 +57,7 @@ async function openLocalCatalog(page: Page, context: BrowserContext) {
   await page.goto(`${baseURL}/games`);
   const payload = await (await catalogResponse).json() as { data: CatalogPayload };
   await expect(page.locator(".catalog-card").first()).toBeVisible();
-  const projects = new Map(payload.data.categories.flatMap((category) => category.projects).map((project) => [project.id, project]));
+  const projects = new Map(payload.data.categories.flatMap((category) => category.projects.map((project) => ({ ...project, categoryName: category.name }))).map((project) => [project.id, project]));
   for (const href of await page.locator(".catalog-card__open").evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).href))) targets.add(href);
   return { views, navigations, otherWrites, projects };
 }
@@ -109,16 +110,22 @@ test.describe("image cards: desktop", () => {
     expect(rest.length).toBeGreaterThan(6);
     expect(rest.every((card) => card.details === "0" && card.wanted === "0" && card.names === "none" && card.plays.every((display) => display === "none") && card.links === 1)).toBe(true);
     await expect(page.locator(".catalog-grid--list, .catalog-layout-toggle")).toHaveCount(0);
-    // The live response has no AI score: a card must not turn user ratings into an AI score.
+    // Only the supplied AI slot may display AI data; never synthesize a score from user ratings.
     await expect(page.locator(".catalog-card__ai-rating")).toHaveCount(0);
+    await expect(page.locator(".catalog-card__author")).toHaveCount(0);
     const card = page.locator(".catalog-group:not(.catalog-group--featured) .catalog-card").first();
     const project = requests.projects.get((await card.getAttribute("data-project-id"))!)!;
+    const restingBox = await card.boundingBox();
     await card.hover();
     await expect(card.locator(".catalog-card__details")).toHaveCSS("opacity", "1");
     await expect(card.locator("h3")).toHaveText(project.name);
     await expect(card.locator("h3")).toHaveCSS("white-space", "normal");
-    await expect(card.locator(".catalog-card__heat")).toHaveText(String((project.view_count ?? 0) + (project.rating_score_sum ?? 0) * 5));
+    await expect(card.locator(".catalog-card__category")).toHaveText(project.categoryName!);
+    await expect(card.locator(".catalog-card__heat")).toHaveText(`热度 ${(project.view_count ?? 0) + (project.rating_score_sum ?? 0) * 5}`);
     await expect(card.locator(".catalog-card__heat")).toHaveAttribute("title", /5/);
+    const revealedBox = await card.boundingBox();
+    expect(revealedBox!.height).toBeCloseTo(restingBox!.height, 1);
+    expect((await card.locator(".catalog-card__details").boundingBox())!.height).toBeLessThan(revealedBox!.height * .6);
     await page.mouse.move(0, 0);
     await expect(card.locator(".catalog-card__details")).toHaveCSS("opacity", "0");
     expect(requests.views).toEqual([]);
@@ -157,6 +164,27 @@ test.describe("image cards: desktop", () => {
     expect((await readLibrary(page)).wantedIds).toEqual([]);
     expect(requests.otherWrites).toEqual([]);
   });
+});
+
+test("directory keyboard: root and games ignore obsolete selection shortcuts while Tab reaches the native card link", async ({ page, context }) => {
+  const requests = await openLocalCatalog(page, context);
+  for (const path of ["/", "/games"]) {
+    await page.goto(`${baseURL}${path}`);
+    await expect(page.locator(".catalog-card").first()).toBeVisible();
+    await expect(page.locator(".catalog-keyboard-hint, .catalog-shortcuts, .catalog-card.is-selected")).toHaveCount(0);
+    await expect(page.locator(".catalog-footer")).not.toContainText(/W\s*\/\s*A\s*\/\s*S\s*\/\s*D|Enter\s*开始游戏/);
+    // This is blank intro padding, so Enter must not become an implicit game launch.
+    await page.locator(".catalog-intro").click({ position: { x: 4, y: 4 } });
+    for (const key of ["w", "a", "s", "d", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter"]) await page.keyboard.press(key);
+    await expect(page.locator(".catalog-card.is-selected, .catalog-card[aria-current]")).toHaveCount(0);
+    expect(requests.views).toEqual([]);
+    expect(requests.navigations).toEqual([]);
+    expect(context.pages()).toHaveLength(1);
+    await page.locator(".catalog-recommendation-tabs button").last().focus();
+    await page.keyboard.press("Tab");
+    await expect(page.locator(".catalog-card__open").first()).toBeFocused();
+  }
+  expect(requests.otherWrites).toEqual([]);
 });
 
 for (const width of [390, 320]) {

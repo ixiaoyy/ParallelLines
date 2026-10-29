@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { AppstoreOutlined, BarChartOutlined, CloseOutlined, CrownOutlined, DesktopOutlined, FireOutlined, HistoryOutlined, HomeOutlined, PlusCircleOutlined, StarOutlined } from "@ant-design/icons-vue";
 import { nextTick, onMounted, onUnmounted, ref } from "vue";
-import type { Component } from "vue";
 
+import CatalogIcon from "./CatalogIcon.vue";
+import type { CatalogIconName } from "./catalogIcons";
 import type { CatalogNavId } from "./catalogNavigation";
 
 defineProps<{
@@ -16,15 +16,15 @@ const emit = defineEmits<{
   category: [slug: string];
 }>();
 
-const items: ReadonlyArray<{ id: CatalogNavId; label: string; icon: Component }> = [
-  { id: "home", label: "首页", icon: HomeOutlined },
-  { id: "recent", label: "最近打开", icon: HistoryOutlined },
-  { id: "latest", label: "最新", icon: PlusCircleOutlined },
-  { id: "hot", label: "热门", icon: FireOutlined },
-  { id: "site", label: "站内", icon: DesktopOutlined },
-  { id: "wanted", label: "想玩", icon: StarOutlined },
-  { id: "authors", label: "作者榜", icon: CrownOutlined },
-  { id: "contributors", label: "贡献榜", icon: BarChartOutlined },
+const items: ReadonlyArray<{ id: CatalogNavId; label: string; icon: CatalogIconName }> = [
+  { id: "home", label: "首页", icon: "home" },
+  { id: "recent", label: "最近打开", icon: "recent" },
+  { id: "latest", label: "最新", icon: "latest" },
+  { id: "hot", label: "热门", icon: "hot" },
+  { id: "site", label: "站内", icon: "site" },
+  { id: "wanted", label: "想玩", icon: "wanted" },
+  { id: "authors", label: "作者榜", icon: "authors" },
+  { id: "contributors", label: "贡献榜", icon: "contributors" },
 ];
 
 const navigation = ref<HTMLElement | null>(null);
@@ -61,17 +61,24 @@ function closeCategories(restoreFocus = false): void {
   if (restoreFocus) categoryTrigger.value?.focus();
 }
 
-async function toggleCategories(): Promise<void> {
+async function openCategories(): Promise<void> {
+  if (categoryOpen.value) return;
   hideTooltip();
-  if (categoryOpen.value) {
-    closeCategories(true);
-    return;
-  }
   categoryOpen.value = true;
   await nextTick();
   const selected = categoryPanel.value?.querySelector<HTMLButtonElement>("button[aria-pressed='true']");
   (selected ?? categoryPanel.value?.querySelector<HTMLButtonElement>(".catalog-navigation__category"))?.focus();
 }
+
+async function toggleCategories(): Promise<void> {
+  if (categoryOpen.value) {
+    closeCategories(true);
+    return;
+  }
+  await openCategories();
+}
+
+defineExpose({ openCategories });
 
 function navigate(id: CatalogNavId): void {
   closeCategories();
@@ -121,7 +128,7 @@ onUnmounted(() => {
         @pointerleave="leaveTooltip"
         @focus="showTooltip($event, item.label)"
         @blur="hideTooltip"
-      ><component :is="item.icon" aria-hidden="true" /></button>
+      ><CatalogIcon :name="item.icon" /></button>
       <button
         ref="categoryTrigger"
         type="button"
@@ -135,13 +142,13 @@ onUnmounted(() => {
         @pointerleave="leaveTooltip"
         @focus="showTooltip($event, '分类')"
         @blur="hideTooltip"
-      ><AppstoreOutlined aria-hidden="true" /></button>
+      ><CatalogIcon name="categories" /></button>
     </div>
 
     <section v-if="categoryOpen" id="catalog-navigation-categories" ref="categoryPanel" class="catalog-navigation__panel" aria-labelledby="catalog-navigation-categories-title">
       <header class="catalog-navigation__panel-header">
         <h2 id="catalog-navigation-categories-title">游戏分类</h2>
-        <button type="button" class="catalog-navigation__close" aria-label="关闭分类" @click="closeCategories(true)"><CloseOutlined aria-hidden="true" /></button>
+        <button type="button" class="catalog-navigation__close" aria-label="关闭分类" @click="closeCategories(true)"><CatalogIcon name="close" /></button>
       </header>
       <div class="catalog-navigation__categories" role="group" aria-label="选择游戏分类">
         <button type="button" class="catalog-navigation__category" :aria-pressed="selectedCategory === 'all'" @click="chooseCategory('all')">全部分类</button>
@@ -159,52 +166,54 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .catalog-navigation {
   position: fixed;
-  inset: 94px auto auto 10px;
+  inset: var(--catalog-header-height, 80px) auto 0 0;
   z-index: 35;
-  width: 54px;
-  border-radius: 12px;
-  color: var(--catalog-ink, #183c34);
-  background: #dce5dc;
+  width: 64px;
+  border-radius: 0 14px 0 0;
+  color: var(--catalog-ink, #123d32);
+  background: #dce6df;
   font-family: var(--catalog-font, "Microsoft YaHei", "PingFang SC", sans-serif);
 }
 
 .catalog-navigation__items {
   display: flex;
-  max-height: calc(100dvh - 110px);
+  max-height: 100%;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   box-sizing: border-box;
   overflow: auto;
-  padding: 8px 5px;
+  padding: 12px 10px;
   scrollbar-width: none;
 }
 .catalog-navigation__items::-webkit-scrollbar { display: none; }
 
 .catalog-navigation__button, .catalog-navigation__close {
+  position: relative;
   display: grid;
   width: 44px;
   height: 44px;
   flex: 0 0 44px;
   place-items: center;
   border: 0;
-  border-radius: 8px;
+  border-radius: 9px;
   padding: 0;
-  color: #285441;
+  color: #123d32;
   background: transparent;
-  font-size: 22px;
+  font-size: 25px;
   cursor: pointer;
 }
-.catalog-navigation__button:hover, .catalog-navigation__close:hover { background: #c9dace; }
-.catalog-navigation__button.is-active { color: #fff; background: var(--catalog-jade, #3b7864); }
-.catalog-navigation__button.is-separated { margin-block-start: 8px; }
+.catalog-navigation__button:hover, .catalog-navigation__close:hover { background: #cadcd0; }
+.catalog-navigation__button.is-active { color: #fff; background: var(--catalog-nav-active, #4f8974); }
+.catalog-navigation__button.is-separated { margin-block-start: 13px; }
+.catalog-navigation__button.is-separated::before { position: absolute; inset: -8px 7px auto; height: 1px; background: #719687; content: ""; }
 .catalog-navigation button:focus-visible { outline: 2px solid var(--catalog-focus, #3b7864); outline-offset: 2px; }
 
 .catalog-navigation__panel {
   position: absolute;
-  inset: 0 auto auto 64px;
+  inset: 12px auto auto 72px;
   width: min(280px, calc(100vw - 90px));
-  max-height: calc(100dvh - 110px);
+  max-height: calc(100dvh - var(--catalog-header-height, 80px) - 24px);
   box-sizing: border-box;
   overflow: auto;
   border-radius: 12px;
@@ -214,7 +223,7 @@ onUnmounted(() => {
 }
 .catalog-navigation__panel-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-left: 6px; }
 .catalog-navigation__panel-header h2 { margin: 0; font-size: 15px; line-height: 1.4; }
-.catalog-navigation__close { font-size: 17px; }
+.catalog-navigation__close { font-size: 18px; }
 .catalog-navigation__categories { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
 .catalog-navigation__category {
   min-width: 0;
@@ -250,9 +259,11 @@ onUnmounted(() => {
 .catalog-navigation__tooltip--above { transform: translate(-50%, -100%); }
 
 @media (max-width: 760px) {
-  .catalog-navigation { inset: auto 8px calc(8px + env(safe-area-inset-bottom)) 8px; z-index: 40; width: auto; }
-  .catalog-navigation__items { max-height: none; flex-direction: row; justify-content: flex-start; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 6px; }
-  .catalog-navigation__button.is-separated { margin-block-start: 0; margin-inline-start: 8px; }
+  .catalog-navigation { inset: auto 8px calc(8px + env(safe-area-inset-bottom)) 8px; z-index: 40; width: auto; border-radius: 14px; background: #dce6dff5; box-shadow: 0 3px 18px #183c3418; }
+  .catalog-navigation__items { max-height: none; flex-direction: row; justify-content: flex-start; gap: 4px; overflow-x: auto; overflow-y: hidden; padding: 6px; }
+  .catalog-navigation__button { font-size: 23px; }
+  .catalog-navigation__button.is-separated { margin-block-start: 0; margin-inline-start: 9px; }
+  .catalog-navigation__button.is-separated::before { inset: 10px auto 10px -7px; width: 1px; height: auto; }
   .catalog-navigation__panel { position: fixed; inset: auto 8px calc(74px + env(safe-area-inset-bottom)) 8px; width: auto; max-height: min(60dvh, 440px); }
 }
 </style>
