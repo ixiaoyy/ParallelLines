@@ -1,0 +1,80 @@
+# Use with compose.production.yaml + compose.disabled.yaml and both .env files.
+# Runtime source is supplied separately by the reviewed pinned LibreChat mount layer.
+services:
+  chat-oidc:
+    image: parallellines-chat-oidc:${CHAT_SSO_RELEASE:?Set release commit}
+    build:
+      context: ./sso/provider
+    restart: unless-stopped
+    user: "1000:1000"
+    mem_limit: 256m
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3002
+      PUBLIC_MAIN_ORIGIN: https://pingxingxian.space
+      PUBLIC_ISSUER: https://pingxingxian.space/auth/oidc
+      MAIN_BACKEND_URL: https://pingxingxian.space/api/v1
+      OIDC_DATABASE_PATH: /data/oidc.sqlite
+      CHAT_OIDC_CLIENT_SECRET: ${CHAT_OIDC_CLIENT_SECRET:?Run initialize-sso.cjs}
+      CHAT_OIDC_COOKIE_KEYS: ${CHAT_OIDC_COOKIE_KEYS:?Run initialize-sso.cjs}
+      CHAT_OIDC_SIGNING_JWKS_FILE: /secrets/signing.jwks.json
+      CHAT_SSO_BRIDGE_SECRET: ${CHAT_SSO_BRIDGE_SECRET:?Run initialize-sso.cjs}
+    volumes:
+      - type: bind
+        source: ../chat-sso/data
+        target: /data
+        bind: {create_host_path: false}
+      - type: bind
+        source: ../chat-sso/secrets/signing.jwks.json
+        target: /secrets/signing.jwks.json
+        read_only: true
+        bind: {create_host_path: false}
+    networks:
+      parallellines:
+        aliases: [chat-oidc]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 20
+  librechat:
+    environment:
+      APP_TITLE: 平行线 · AI 聊天
+      ALLOW_EMAIL_LOGIN: "false"
+      ALLOW_REGISTRATION: "false"
+      ALLOW_SOCIAL_LOGIN: "true"
+      ALLOW_SOCIAL_REGISTRATION: "false"
+      OPENID_AUTO_REDIRECT: "true"
+      OPENID_REUSE_TOKENS: "true"
+      OPENID_CLIENT_ID: parallellines-chat
+      OPENID_CLIENT_SECRET: ${CHAT_OIDC_CLIENT_SECRET:?Run initialize-sso.cjs}
+      OPENID_SESSION_SECRET: ${OPENID_SESSION_SECRET:?Run initialize-sso.cjs}
+      OPENID_ISSUER: https://pingxingxian.space/auth/oidc
+      OPENID_CALLBACK_URL: /oauth/openid/callback
+      OPENID_SCOPE: openid profile offline_access
+      OPENID_USE_PKCE: "true"
+      OPENID_GENERATE_NONCE: "true"
+      OPENID_USE_END_SESSION_ENDPOINT: "false"
+      OPENID_BUTTON_LABEL: 平行线账号登录
+      SSO_REQUIRED: "true"
+      LOCAL_SSO_TEST: "false"
+      CHAT_SSO_ID_TOKEN_ALG: RS256
+      CHAT_SSO_SESSION_STATE_URL: https://pingxingxian.space/api/v1/auth/chat-sso/session-state
+      CHAT_SSO_BRIDGE_SECRET: ${CHAT_SSO_BRIDGE_SECRET:?Run initialize-sso.cjs}
+    volumes:
+      - ./sso/runtime:/app/api/server/sso-runtime:ro
+      - ./sso/runtime/index.js:/app/api/server/index.js:ro
+      - ./sso/runtime/requireJwtAuth.cjs:/app/api/server/middleware/requireJwtAuth.js:ro
+      - ./sso/runtime/optionalJwtAuth.cjs:/app/api/server/middleware/optionalJwtAuth.js:ro
+      - ./sso/runtime/validateImageRequest.cjs:/app/api/server/middleware/validateImageRequest.js:ro
+      - ./sso/runtime/strategies/openidStrategy.js:/app/api/strategies/openidStrategy.js:ro
+      - ./sso/runtime/strategies/openIdJwtStrategy.js:/app/api/strategies/openIdJwtStrategy.js:ro
+      - ./sso/runtime/LogoutController.cjs:/app/api/server/controllers/auth/LogoutController.js:ro
+    depends_on:
+      chat-oidc:
+        condition: service_healthy

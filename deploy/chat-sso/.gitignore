@@ -1,0 +1,5 @@
+.env
+data/
+secrets/
+.initialize.lock
+*.tmp

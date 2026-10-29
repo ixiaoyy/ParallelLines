@@ -1,0 +1,33 @@
+{
+  "sourceCommit": "8d3da9bbb220a0a96be9330a2e1cbd385fb786d5",
+  "generatedFiles": [
+    {
+      "path": "native/requireJwtAuth.native.cjs",
+      "sha256": "ef3cc1d35c72a8000a8dbf866d2c095630fc9ec421bbd094fcdfe13f24a9bd24"
+    },
+    {
+      "path": "native/optionalJwtAuth.native.cjs",
+      "sha256": "844e1d672fc47026e0fc594cdfb5bf34dd23d169a6a25101543563be149c7373"
+    },
+    {
+      "path": "native/validateImageRequest.native.cjs",
+      "sha256": "890e251f485807cfccfd94a4d17f0c14cdf1dd50be09f65e243eeabe38df3e06"
+    },
+    {
+      "path": "native/LogoutController.native.cjs",
+      "sha256": "fe7ac20df070c59fd2f8c662252ea87b6e82b4eb0e18a36a739e75fccc5912c3"
+    },
+    {
+      "path": "index.js",
+      "sha256": "3a5b551276290750c0e4018b5d32bf3195e9f30b4c3d36abd0725063e9cdb212"
+    },
+    {
+      "path": "core/live-session.mjs",
+      "sha256": "c1f7552686551178c0f4765eab51be86af16a10d1627aa55decf526fd8e4e00c"
+    },
+    {
+      "path": "adapters/librechat-draft.mjs",
+      "sha256": "fe16c21b151fb2bb4f0405fced22042e7ab8d8fd611054e180f471a732271740"
+    }
+  ]
+}

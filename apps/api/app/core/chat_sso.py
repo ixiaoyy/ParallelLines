@@ -258,6 +258,22 @@ class ChatSsoCore:
             "name": user.name,
         }
 
+    async def revoke(self, *, client_id: str, binding_id: str) -> dict[str, object]:
+        """Revoke only this chat binding; never alter its original main session."""
+        if client_id != CLIENT_ID:
+            raise SsoDenied("invalid_client")
+        if not OPAQUE_ID.fullmatch(binding_id):
+            raise SsoDenied("invalid_binding")
+        record = await self.repo.find_token(
+            token_hash(binding_id), BINDING_PURPOSE, for_update=True
+        )
+        if record is not None:
+            now = self.clock()
+            if record.consumed_at is None and utc(record.expires_at) > now:
+                await self.repo.consume(record, now)
+            await self.repo.commit()
+        return {"active": False, "sub": None, "binding_id": binding_id, "auth_expires_at": None}
+
     async def session_state(self, *, client_id: str, binding_id: str) -> dict[str, object]:
         """Read primary user/sid/expiry state; unavailable authority never grants access."""
         if client_id != CLIENT_ID:

@@ -2661,6 +2661,9 @@ export interface paths {
     "/api/v1/auth/chat-sso/exchange": {
       post: { response: components["schemas"]["ApiResponse_ChatSsoExchangeResponse_"]; operationId: "exchange_api_v1_auth_chat_sso_exchange_post" };
     };
+    "/api/v1/auth/chat-sso/revoke": {
+      post: { response: components["schemas"]["ApiResponse_ChatSsoStateResponse_"]; operationId: "revoke_api_v1_auth_chat_sso_revoke_post" };
+    };
     "/api/v1/auth/chat-sso/session-state": {
       post: { response: components["schemas"]["ApiResponse_ChatSsoStateResponse_"]; operationId: "session_state_api_v1_auth_chat_sso_session_state_post" };
     };

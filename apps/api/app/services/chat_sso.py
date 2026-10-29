@@ -154,6 +154,13 @@ class ChatSsoService:
         except SsoDenied as exc:
             raise AuthenticationError("invalid_chat_sso", "Chat authentication required") from exc
 
+    async def revoke(self, client_id: str, binding_id: str) -> dict[str, object]:
+        """Idempotently revoke one chat binding without revoking a main sid or account."""
+        try:
+            return await self.core.revoke(client_id=client_id, binding_id=binding_id)
+        except SsoDenied as exc:
+            raise AuthenticationError("invalid_chat_sso", "Chat authentication required") from exc
+
     async def session_state(self, client_id: str, binding_id: str) -> dict[str, object]:
         """Read authoritative active user/session state without changing accounts or grants."""
         try:

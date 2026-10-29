@@ -91,3 +91,18 @@ async def session_state(
     service.require_bridge(bridge_authorization)
     result = await service.session_state(payload.client_id, payload.binding_id)
     return ApiResponse(data=ChatSsoStateResponse(**result))
+
+
+@router.post("/revoke", response_model=ApiResponse[ChatSsoStateResponse])
+async def revoke(
+    payload: ChatSsoStateRequest,
+    response: Response,
+    session: SessionDep,
+    settings: SettingsDep,
+    bridge_authorization: BridgeHeader = None,
+) -> ApiResponse[ChatSsoStateResponse]:
+    no_store(response)
+    service = ChatSsoService(session, settings)
+    service.require_bridge(bridge_authorization)
+    result = await service.revoke(payload.client_id, payload.binding_id)
+    return ApiResponse(data=ChatSsoStateResponse(**result))

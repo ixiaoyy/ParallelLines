@@ -1,0 +1,13 @@
+# Overlay example only. Replace the source path with the reviewed directory on the target host.
+# No secrets are in this file. Do not deploy it by itself.
+services:
+  librechat:
+    volumes:
+      - ./librechat-runtime:/app/api/server/sso-runtime:ro
+      - ./librechat-runtime/index.js:/app/api/server/index.js:ro
+      - ./librechat-runtime/requireJwtAuth.cjs:/app/api/server/middleware/requireJwtAuth.js:ro
+      - ./librechat-runtime/optionalJwtAuth.cjs:/app/api/server/middleware/optionalJwtAuth.js:ro
+      - ./librechat-runtime/validateImageRequest.cjs:/app/api/server/middleware/validateImageRequest.js:ro
+      - ./librechat-runtime/LogoutController.cjs:/app/api/server/controllers/auth/LogoutController.js:ro
+      - ./librechat-runtime/strategies/openidStrategy.js:/app/api/strategies/openidStrategy.js:ro
+      - ./librechat-runtime/strategies/openIdJwtStrategy.js:/app/api/strategies/openIdJwtStrategy.js:ro

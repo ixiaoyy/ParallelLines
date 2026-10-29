@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Inspect, deploy disabled chat, or configure only the model candidates
+        description: Inspect, deploy disabled chat, configure model candidates, or activate main-site SSO
         type: choice
-        options: [preflight, deploy, models]
+        options: [preflight, deploy, models, sso]
         default: preflight
       initialize_application_secrets:
         description: Generate five server-local app secrets only after explicit owner approval
@@ -63,5 +63,8 @@ jobs:
             cd /opt/parallellines
             git fetch origin main
             test "$(git rev-parse origin/main)" = "${{ github.sha }}"
-            git cat-file -e '${{ github.sha }}:deploy/librechat/release.sh'
-            git show '${{ github.sha }}:deploy/librechat/release.sh' | bash -s -- '${{ inputs.mode }}' '${{ github.sha }}' '${{ inputs.initialize_application_secrets }}'
+            if test '${{ inputs.mode }}' = sso; then
+              git show '${{ github.sha }}:deploy/librechat/release-sso.sh' | bash -s -- '${{ github.sha }}'
+            else
+              git show '${{ github.sha }}:deploy/librechat/release.sh' | bash -s -- '${{ inputs.mode }}' '${{ github.sha }}' '${{ inputs.initialize_application_secrets }}'
+            fi
