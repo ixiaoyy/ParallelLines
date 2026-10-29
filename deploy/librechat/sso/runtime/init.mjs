@@ -3,6 +3,8 @@ import { pathToFileURL } from 'node:url';
 import { createLiveSessionGuard, createSessionStateClient } from './core/live-session.mjs';
 import { createLibreChatBearerSessionMiddleware, createLibreChatPrivateImageSessionMiddleware } from './adapters/librechat-draft.mjs';
 import { createJobTracker } from './job-tracker.mjs';
+import documentEntry from './document-entry.cjs';
+import modelAccess from './model-access.cjs';
 
 const enabled = value => value === 'true' || value === '1';
 const nonempty = value => typeof value === 'string' && value.length > 0;
@@ -92,11 +94,14 @@ export async function createRuntime({ env = process.env, dependencies = {} } = {
     return context;
   }
   const bearerMiddleware = createLibreChatBearerSessionMiddleware({ guard });
+  const authorizeModel = modelAccess.createModelAccess({ env, getConfig: dependencies.getConfig ?? (user =>
+    nativeRequire('~/server/services/Config').getAppConfig(api.getAppConfigOptionsFromUser(user))) });
   async function bearer(req, res, next) {
-    return bearerMiddleware(req, res, () => {
-      tracker.capture(req, res, { idToken: rawBearer(req), expectedUser: expectedUser(req.user), context: req.ssoLiveSession.context });
-      next();
-    });
+    let authenticated = false;
+    await bearerMiddleware(req, res, () => { authenticated = true; });
+    if (!authenticated || !await authorizeModel(req, res)) return;
+    tracker.capture(req, res, { idToken: rawBearer(req), expectedUser: expectedUser(req.user), context: req.ssoLiveSession.context });
+    return next();
   }
   const image = createLibreChatPrivateImageSessionMiddleware({
     guard, parseCookies: cookie.parse, jwtRefreshSecret: env.JWT_REFRESH_SECRET,
@@ -143,6 +148,10 @@ export async function createRuntime({ env = process.env, dependencies = {} } = {
         (claims.pl_auth_exp !== undefined && claims.pl_auth_exp <= deliveredAt)) throw safeError();
     trust(req, user, { subject: claims.sub, issuer: claims.iss, bindingId: claims.pl_binding });
   }
+  const documentNavigation = documentEntry.createDocumentEntry({
+    domainClient: env.DOMAIN_CLIENT,
+    authenticateDocument: authorizeRefresh,
+  });
   async function revokeSession(req) {
     const { user, tokens } = await cookieProof(req);
     const claims = await verifyRefreshIdToken(tokens.idToken);
@@ -183,7 +192,10 @@ export async function createRuntime({ env = process.env, dependencies = {} } = {
     try {
       const pathname = canonicalPath(req);
       if (pathname.startsWith('/oauth/')) {
-        if (req.method === 'GET' && ['/oauth/openid', '/oauth/openid/callback'].includes(pathname)) return next();
+        if (req.method === 'GET' && ['/oauth/openid', '/oauth/openid/callback'].includes(pathname)) {
+          documentNavigation.prepareOAuth(req, res, pathname);
+          return next();
+        }
         return reject(res);
       }
       if (!/^\/api(?:\/|$)/.test(pathname)) return next();
@@ -212,5 +224,6 @@ export async function createRuntime({ env = process.env, dependencies = {} } = {
       userId(req.user) === req.ssoVerifiedUser?.id && req.user.openidId === req.ssoVerifiedUser.openidId &&
       req.user.openidIssuer === req.ssoVerifiedUser.openidIssuer;
   }
-  return Object.freeze({ ingress, preverify, bearer, image, allowCleanup, revokeSession, close: () => tracker.close() });
+  return Object.freeze({ ingress, preverify, bearer, image, allowCleanup, revokeSession,
+    document: documentNavigation.document, close: () => tracker.close() });
 }

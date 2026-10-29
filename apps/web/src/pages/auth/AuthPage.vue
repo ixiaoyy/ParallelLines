@@ -30,10 +30,11 @@ import {
   useVerifyTwoFactorLogin,
   useVerifyEmail,
 } from "@/features/auth/queries";
-import { ApiError } from "@/shared/api/client";
-import { needsFullAuthNavigation, resolveAuthReturn } from "@/shared/router/authReturn";
+import { ApiError, hasAccessToken } from "@/shared/api/client";
+import { isChatSsoContinuation, needsFullAuthNavigation, resolveAuthReturn } from "@/shared/router/authReturn";
 import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
 import UiButton from "@/shared/ui/Button.vue";
+import ChatEntryLoading from "./ChatEntryLoading.vue";
 
 type AuthTab = "login" | "register" | "forgot";
 
@@ -128,34 +129,44 @@ const redirectTarget = computed(() => {
   return resolveAuthReturn(route.query.redirect, window.location.origin, "/forum");
 });
 
-let completingAuth = false;
+const completingAuth = ref(false);
+const chatContinuation = computed(() => isChatSsoContinuation(route.query.redirect, window.location.origin));
+const requiresChatLogin = computed(() => chatContinuation.value && route.query.reauth === "chat");
+const awaitingCurrentUser = computed(() => chatContinuation.value && hasAccessToken()
+  && !requiresChatLogin.value && currentUserQuery.isFetching.value && !currentUserQuery.error.value);
+const enteringChat = computed(() => chatContinuation.value && !formError.value
+  && (awaitingCurrentUser.value || completingAuth.value));
 let authReturnTimer: number | undefined;
 async function finishAuthReturn(): Promise<void> {
-  if (completingAuth) return;
-  completingAuth = true;
+  if (completingAuth.value) return;
+  completingAuth.value = true;
   const target = redirectTarget.value;
   try {
+    if (chatContinuation.value) {
+      const failure = await router.replace(target);
+      if (failure) throw failure;
+      return;
+    }
     if (needsFullAuthNavigation(target, window.location.origin)) {
       authReturnTimer = window.setTimeout(() => {
-        completingAuth = false;
+        completingAuth.value = false;
         formError.value = "登录成功，但跳转未完成，请重试。";
       }, 10_000);
       window.location.assign(target);
       return;
     }
     await router.push(target);
-    completingAuth = false;
+    completingAuth.value = false;
   } catch (failure) {
     window.clearTimeout(authReturnTimer);
-    completingAuth = false;
+    completingAuth.value = false;
     formError.value = toAuthError(failure, "登录成功，但跳转未完成，请重试。");
   }
 }
 
 // Only an explicit SSO resume auto-continues an already authenticated main account.
-watch(() => [currentUserQuery.data.value, redirectTarget.value] as const, ([user, target]) => {
-  const path = new URL(target, window.location.origin).pathname;
-  if (user && path === "/auth/chat") void finishAuthReturn();
+watch(() => [currentUserQuery.data.value, chatContinuation.value, requiresChatLogin.value] as const, ([user, continuation, requiresLogin]) => {
+  if (user && continuation && !requiresLogin && hasAccessToken()) void finishAuthReturn();
 }, { immediate: true });
 onBeforeUnmount(() => window.clearTimeout(authReturnTimer));
 
@@ -496,7 +507,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 </script>
 
 <template>
-  <div class="auth-page" :class="[`auth-page--${activeTab}`, { 'auth-page--admin-login': adminLoginOnly }]" :style="authPageStyle">
+  <ChatEntryLoading v-if="enteringChat" />
+  <div v-else class="auth-page" :class="[`auth-page--${activeTab}`, { 'auth-page--admin-login': adminLoginOnly }]" :style="authPageStyle">
     <nav class="auth-topbar" aria-label="认证页导航">
       <RouterLink class="auth-topbar__brand" :to="authHomeTarget" aria-label="返回首页">
         <img :src="authMarkUrl" alt="" class="auth-logo-mark" />

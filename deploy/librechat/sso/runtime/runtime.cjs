@@ -49,4 +49,9 @@ function image(nativeOwnerAcl) {
     });
   };
 }
-module.exports = { initialize, ingress, wrapRequired, wrapOptional, image };
+function document(sendIndexHtml) {
+  return function ssoDocument(req, res) {
+    initialize().then(runtime => runtime.document(req, res, sendIndexHtml)).catch(() => deny(res));
+  };
+}
+module.exports = { initialize, ingress, wrapRequired, wrapOptional, image, document };

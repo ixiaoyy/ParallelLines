@@ -469,7 +469,7 @@ export const router = createRouter({
       name: "chat-sso",
       component: () => import("@/pages/auth/ChatSsoPage.vue"),
       meta: {
-        forumShell: true,
+        forumShell: false,
         seo: { title: "进入聊天 · {siteTitle}", robots: "noindex,nofollow" },
       },
     },

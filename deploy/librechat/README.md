@@ -1,6 +1,8 @@
 # 家庭 GPT：服务器接入与回滚
 
-本目录是独立的 LibreChat 部署配置。只连接 OpenAI，保留原版聊天和管理后台；第一版仅文字、JPEG/PNG/WebP 图片及图文混合。没有 New API、自建聊天后台、PDF/RAG 或其他供应商。
+本目录是独立的 LibreChat 部署配置。只连接 OpenAI，保留原版聊天界面；第一版仅文字、JPEG/PNG/WebP 图片及图文混合。没有 New API、自建聊天后台、PDF/RAG 或其他供应商。
+
+**当前使用唯一的平行线主站登录/注册入口。不要运行 `create-user` 再建一套聊天账号。** 主站有效账号通过 OIDC 建立聊天身份，模型调用资格另行控制。本轮未授权具体账号及额度，默认继续拒绝 GPT 请求。现成 Admin Panel 对这些 OIDC 身份的安全适配尚未开放，`/api/admin` 已隔离；当前不能从该后台直接给 `pl-*` 账号授权。当前认证与运维以 [SSO.md](./SSO.md) 为准。
 
 `OPENAI_API_KEY` 与 `OPENAI_CHAT_MODELS` 的模板均为空。原有模拟验收保持独立，生产 Compose 不包含模拟模型，缺 Key 时不会自动切换到 mock。生产发布状态以 GitHub Actions 的 `Deploy family chat` 和线上检查为准。
 
@@ -15,13 +17,13 @@
 
 主程序仍是预发布版、后台仍是 Preview，不能把配置准备当作已验证的生产稳定性。
 
-## 1. 在服务器初始化，不填写真实模型 Key 也可启动
+## 1. 首次初始化说明与当前 SSO 运维
 
-以下初始化会新建五项持久应用安全密钥，须获得所有者明确同意后执行。它不创建管理员账号、OpenAI API Key 或 SSH 访问凭据。已有 `.env` 保留，不读取或覆盖。
+下列应用密钥初始化仅供全新安装参考；当前服务器已经初始化，不要重复执行或重建认证材料。首次初始化会新建五项持久应用安全密钥，须获得所有者明确同意后执行。它不创建管理员账号、OpenAI API Key 或 SSH 访问凭据。已有 `.env` 保留，不读取或覆盖。
 
-也可使用仓库 Actions 的 `Deploy family chat`：`mode=preflight` 只检查真实资源、Docker 网络、服务状态及 `.env` 是否存在；`mode=deploy` 启动服务。只有在所有者明确同意生成上述五项密钥后，才勾选 `initialize_application_secrets`。这一步不会创建 LibreChat 管理员账号。
+当前统一登录使用 Actions 的 `Deploy family chat / mode=sso`。`mode=preflight` 只读检查资源与服务状态；旧 `mode=deploy` 的首次安装路径不包含 SSO，不能用于维护当前实例。初始化新安全材料仍需所有者明确同意；已有材料不得覆盖。
 
-此 Actions 发布总会叠加 `compose.disabled.yaml`，把容器的 OpenAI Key 设为空，即使服务器 `.env` 已有填写也保持停用；候选模型列表单独保留。下文用户手动启用使用基础 `compose.production.yaml`，不叠加停用覆盖文件。主站与聊天发布共用串行队列，后续发布不会取消正在执行的远端操作。
+当前 SSO 发布叠加 `compose.disabled.yaml`，把容器的 OpenAI Key 设为空，即使服务器 `.env` 已填写也保持停用；候选模型列表单独保留。账号资格和额度尚未确定，本说明的维护命令继续保留停用层与 SSO 层，不构成模型开通操作。主站与聊天发布共用串行队列。
 
 ```sh
 cd /opt/parallellines/deploy/librechat
@@ -49,12 +51,14 @@ chmod 600 .env
 
 2026-10-29 的服务器只读预检显示可用内存约 3783 MiB、根盘剩余 18 GiB，网络为 `parallellines_default`。本地同版本已有图文验收后的占用约为 API 379 MiB、MongoDB 187 MiB、后台 84 MiB。新增容器分别设置 1 GiB、768 MiB、384 MiB 上限，MongoDB 缓存为 0.25 GiB；上线后仍需核对实际健康和资源占用。
 
-检查已有平行线 nginx 所在网络，按实际结果在 `.env` 设置 `PARALLELLINES_NETWORK`（通常是 `parallellines_default`）：
+当前已有平行线网络通常是 `parallellines_default`。以下为 SSO 服务检查；`REVISION` 必须替换成当前已部署的完整提交 SHA，并在同一终端保持 `CHAT_SSO_RELEASE`。不要只加载基础 Compose 文件：
 
 ```sh
+cd /opt/parallellines/deploy/librechat
+export CHAT_SSO_RELEASE=REVISION
 sudo docker network ls --format '{{.Name}}'
-sudo docker compose --env-file .env -f compose.production.yaml config --quiet
-sudo docker compose --env-file .env -f compose.production.yaml up -d
+sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml config --quiet
+sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml up -d
 ```
 
 如有多个网络，在原项目目录只读确认 nginx 的实际网络，再选平行线自己的 default 网络：
@@ -72,11 +76,11 @@ sudo docker compose -f docker-compose.yml -f deploy/docker-compose.migration.yml
 sudo docker compose -f docker-compose.yml -f deploy/docker-compose.migration.yml exec -T nginx nginx -t
 ```
 
-Actions 停用发布的浏览器标签标题为“家庭聊天（GPT 尚未启用）”；原版登录表单内标题仍为“欢迎”。登录后显示“GPT 尚未启用，请联系管理员在服务器完成密钥和模型配置。”，原生 OpenAI 模型目录为空、没有个人 Key 输入分支。强行调用模型也会被原版模型目录/密钥校验拒绝，不产生模拟回复。登录后提示由固定版接口按认证状态返回；未创建生产账号时，只验匿名标题配置和服务器生成的空模型配置。
+浏览器标签及欢迎标题为“平行线 · AI 聊天”。原生模型下拉展示候选型号，停用原因在页脚和菜单描述中以小号文字展示；基础 OpenAI 授权目录仍为空，没有个人 Key 输入分支。菜单展示不授予模型权限，未配置服务或未获账号授权时请求被拒绝，不产生模拟回复。统一登录及后台入口的当前约束见 [SSO.md](./SSO.md)。
 
 ## 2. Key 填在哪里，模型怎样选
 
-真实启用前，先确认账户促销额度的适用范围，以及服务器和实际使用者所在地都符合当前官方服务地区要求。境外服务器本身不代表可以绕过实际使用者的地区限制；该资格核验尚未完成时，只保留无 Key/模拟验证。
+真实启用前，先确认账户促销额度的适用范围，以及服务器和实际使用者所在地都符合当前官方服务地区要求。境外服务器本身不代表可以绕过实际使用者的地区限制；该资格核验尚未完成时，保持模型调用关闭；已填写的服务器 Key 保留，不读取或覆盖。
 
 **只在服务器编辑 `/opt/parallellines/deploy/librechat/.env`：**
 
@@ -89,84 +93,59 @@ nano /opt/parallellines/deploy/librechat/.env
 
 模型不是 ChatGPT 界面显示名。不要把 Key 填到前端、源码、YAML、聊天消息、Git 或命令行参数。家庭用户只登录账号，模型 Key 由服务器统一持有。后台容器也不接收 OpenAI Key。
 
-2026-10-29 按用户授权配置的服务器候选列表为 `gpt-6-luna,gpt-6.1-sol`，从 [OpenAI 模型目录](https://developers.openai.com/api/docs/models) 及对应模型页重新核验：
+2026-10-29 按用户最新选择配置的服务器候选列表为 `gpt-6-luna,gpt-6.1-terra,gpt-6.1-sol`，默认 GPT-6 Luna（官方 Luna 当前是 6 系列，界面不会写成 6.1 Luna），从 [OpenAI 模型目录](https://developers.openai.com/api/docs/models) 及对应模型页重新核验：
 
 | 可选模型 | 用途提示 | 官方文档 |
 |---|---|---|
 | `gpt-6-luna` | 成本敏感的日常聊天；固定 LibreChat 源码已有该系列识别 | [模型说明](https://developers.openai.com/api/docs/models/gpt-6-luna) |
+| `gpt-6.1-terra` | 文字与图片任务的质量选项 | [模型说明](https://developers.openai.com/api/docs/models/gpt-6.1-terra) |
 | `gpt-6.1-sol` | 更复杂的文字与图片任务 | [模型说明](https://developers.openai.com/api/docs/models/gpt-6.1-sol) |
 
-这两个正式型号均支持文字/图片输入、文字输出及 Responses；此固定 LibreChat 版本已有两者系列识别。未进行真实收费请求，文档与源码核验不代表当前账户已获访问权限。初始化模板仍留空；当前实例通过 `Deploy family chat` 的 `mode=models` 只替换 `.env` 的 `OPENAI_CHAT_MODELS` 行，其他字节和文件权限保留，只重建 LibreChat API，不创建或修改任何用户/管理员/profile。候选以无密钥的 `/app/data/family-config/selected-models.json` 留档；缺 Key 时实际可调用目录及授权导入模板继续为空。填写 Key、单独给目标 USER profile 授权后，聊天页才会显示模型。查看 [当前价格](https://developers.openai.com/api/docs/pricing)；不为 Sol 配置 `reasoning.effort=none`，该型号不支持此值。旧 mock 的 `gpt-4o-mini` 不会成为生产默认。
+这三个正式型号均支持文字/图片输入、文字输出及 Responses；已核对固定 LibreChat 版本的 Responses 路径。未进行真实收费请求，文档与源码核验不代表当前账户已获访问权限。初始化模板仍留空；候选更新脚本 `configure-models.cjs` 只替换 `.env` 的 `OPENAI_CHAT_MODELS` 行，其他字节和文件权限保留，不创建或修改任何用户/管理员/profile。维护现有实例须保留 SSO overlay；旧 `mode=models` 若不支持当前 Compose 组合会拒绝执行，不能绕过它的模式检查。候选以无密钥的 `/app/data/family-config/selected-models.json` 留档；缺 Key 时实际可调用目录及授权导入模板继续为空。原生模型下拉会展示候选及受限原因，菜单可见不代表已经获准调用。只有有效 Key 和指定目标账号 USER profile 的模型权限均满足后才能发起请求。查看 [当前价格](https://developers.openai.com/api/docs/pricing)；不为 Sol 配置 `reasoning.effort=none`，该型号不支持此值。旧 mock 的 `gpt-4o-mini` 不会成为生产默认。
 
-例如，用户决定选择日常模型后可填写 `OPENAI_CHAT_MODELS=gpt-6-luna`。修改后需要**重建容器以重读 env**：
+模型列表已固定上述三项并默认 Luna；修改后需要**重建容器以重读 env**。下面的维护命令保留当前停用状态，并不会开通真实调用；先按第 1 节设置当前 `CHAT_SSO_RELEASE`：
 
 ```sh
 cd /opt/parallellines/deploy/librechat
-sudo docker compose --env-file .env -f compose.production.yaml up -d --force-recreate librechat
+sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml up -d --force-recreate librechat
 ```
 
 `restart` 不会重新载入 Compose 的 env 文件。模型目录与 preset 在每次启动时生成，不把密钥序列化进生成的 YAML。采用原生 OpenAI 及 `useResponsesApi: true`；[官方图片输入说明](https://developers.openai.com/api/docs/guides/images-vision) 区分了 Responses 的 `input_text`/`input_image` 与旧 Chat Completions 的结构。
 
-模型 ID 的初始选择通过服务器环境完成；原版后台仍可维护模型规格和按人配置。若后台已有模型/用户覆盖，切换模型时一并检查这些覆盖，确保家人看到预期模型。
+模型 ID 的选择通过服务器环境完成。`approved-user-profile.yaml` 是无密钥的候选模板，生成文件不会自动修改任何用户权限。当前 Admin Panel 尚不能管理主站 OIDC 身份；不要把模板导入 Base、整个 USER 角色或全体用户组来绕过这一限制。
 
-**填 Key 和选择模型不等于给全家授权。** 基础配置始终使用空模型目录与空的强制模型规格，新账号默认不能调用 GPT。初始化和容器重建不会自动修改任何用户授权。
+**填 Key 和选择模型不等于给全家授权。** 基础配置始终使用空模型授权目录，模型规格只提供菜单候选，新账号默认不能调用 GPT。初始化和容器重建不会自动修改任何用户授权。
 
-对确认符合当前 OpenAI 适用地区等条件的用户，管理员在原版后台选择该用户的 USER profile，再导入启动时生成的无密钥覆盖配置：
-
-```sh
-sudo docker compose --env-file .env -f compose.production.yaml exec -T librechat \
-  cat /app/data/family-config/approved-user-profile.yaml > /tmp/approved-user-profile.yaml
-```
-
-该文件只含已选择的模型、Responses preset 和界面选项，没有 Key。通过自己的安全管理通道取得此文件，在 Configuration → **目标用户 profile** → Import YAML 导入，核对导入预览的目标明确是 **User: 该用户**、审查清单只影响该用户后保存；向导中的目标保持当前用户，不改成 Base、整个 USER 角色或面向全体的组。也可在同一用户 profile 的 AI providers 与 Model specs 页面逐项配置相同内容。没有经过确认的账号继续保持空目录，不自动接其他厂商。按账号授权不识别实时所在地，获授权用户仍需在实际使用时符合当前地区等条件。
-
-撤销某个用户的 GPT 使用时，在其 USER profile 使用字段的恢复继承/移除覆盖操作，移除 OpenAI Models 覆盖并移除该用户新增的模型规格，继承 Base 空目录；复核该用户的有效模型目录为空，同时检查是否另有组/角色授权。也可明确停用整个 USER profile，但这会同时停用该 profile 中的额度等其他覆盖。**不要把导入空数组 YAML 当作撤权**：此版本导入器可能跳过空列表，模型规格列表也按名称合并。此处利用现有按用户配置，不新增定位、IP绕行或复杂地域系统，也不假定任何人的当前所在地。
+具体账号的模型与额度配置需在用户确认目标账号、额度及适用条件后另行完成；本轮不创建管理员、不映射主站管理员权限、不修改账号记录。现成 Admin Panel 的 OIDC 身份适配未开放，不能将后台配置能力的本地研究结论当作生产可操作入口。
 
 ## 3. 无费用检查与真实效果验证
 
-先做不调用模型的检查：
+先进入 `/opt/parallellines/deploy/librechat`，按第 1 节设置当前 `CHAT_SSO_RELEASE`，再做不调用模型的检查：
 
 ```sh
-sudo docker compose --env-file .env -f compose.production.yaml ps
-sudo docker compose --env-file .env -f compose.production.yaml exec -T librechat node -e \
+sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml ps
+sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml exec -T librechat node -e \
 "const fs=require('fs');const c=JSON.parse(fs.readFileSync('/app/data/family-config/librechat.yaml','utf8'));const p=JSON.parse(fs.readFileSync('/app/data/family-config/approved-user-profile.yaml','utf8'));console.log(JSON.stringify({serverGptConfigured:p.modelSpecs.list.length>0,defaultAccountAccess:false,configuredModels:p.endpoints.openAI.models,baseModels:c.endpoints.openAI.models,welcome:c.interface.customWelcome}));"
 curl -fsS https://pingxingxian.space/chat/readyz
 ```
 
-这些只显示启用状态和模型 ID，不打印 Key，不调用收费模型。`config --quiet` 只验证 Compose；不要用普通 `docker compose config` 的完整输出作截图或发送到聊天，因为它会展开环境值。
+这些检查使用第 1 节的当前 `CHAT_SSO_RELEASE`，只显示启用状态和模型 ID，不打印 Key，不调用收费模型。`config --quiet` 只验证 Compose；不要用普通 `docker compose config` 的完整输出作截图或发送到聊天，因为它会展开环境值。
 
 后续由用户确认适用条件、完成指定账号授权并明确允许费用后，再在该账号聊天页手动发送一次文字和一张不含个人信息的普通图片，检查回答是否对应图片、历史是否保存、余额是否扣减，并与供应商 usage 对照。这一步**可能收费**，目前未执行。现有模拟验收证明接入流程，不能证明真实 GPT 图像识别、Responses 兼容性或真实账单。
 
-## 4. 家人账号、后台及额度
+## 4. 主站账号、后台及额度现状
 
-公开注册与社交注册关闭。在新数据库中先由服务器所有者交互创建管理员，再创建家人：
+所有聊天用户使用平行线主站账号。聊天侧的密码登录、独立公开注册及原生管理员 OAuth 兑换均已关闭；不新建独立家人或管理员账号，不按邮箱自动合并账号。
 
-```sh
-sudo docker compose --env-file .env -f compose.production.yaml exec -w /app librechat npm run create-user
-```
+管理后台容器仍只绑定服务器 `127.0.0.1:3091`，但 OIDC 管理员身份与会话适配尚未开放，`/api/admin` 保持隔离。因此本轮没有可供用户直接操作的按人授权/额度后台入口，也没有通过 CLI 修改任何真实账号余额。不要通过创建旧式密码管理员、全局放开模型或解除该隔离来代替适配。
 
-密码在终端交互输入；不作为命令行参数。当前平行线 JWT 和 FableSpace 票据不能直接复用为通用 OIDC，所以本版使用 LibreChat 独立家庭账号。
+后续最小待办为确认目标主站账号与额度，然后完成管理身份适配或另行授权的最小按人配置流程。当前保持基础模型权限为空。现有 `balance` 配置和生成的 profile 模板只是能力准备，不代表任何账号已开通。
 
-创建时自行输入密码，不留空让 CLI 生成并显示密码。`Email verified?` 选择 `Y`，不触发验证邮件；当前未配置邮件服务且禁止未验证邮箱登录。首个账号成为管理员，仅后续账号作为家人创建。本次发布没有替用户创建任何账号。
-
-后台仅绑定服务器 `127.0.0.1:3091`。在自己的电脑建立授权 SSH 隧道后访问，不另开放公网后台：
-
-```sh
-ssh -L 3091:127.0.0.1:3091 <你的服务器登录目标>
-```
-
-在浏览器打开 `http://127.0.0.1:3091`，用 LibreChat 管理员登录。路径：Configuration → 家人 user profile → System → Balance & credits，设置每人数量和周期。`refillMode` 在这个后台版本只读，由 `base-config.json` 中的 `reset` 控制；手动增减当前余额使用官方交互命令：
-
-```sh
-sudo docker compose --env-file .env -f compose.production.yaml exec -w /app librechat npm run add-balance
-sudo docker compose --env-file .env -f compose.production.yaml exec -w /app librechat npm run set-balance
-```
-
-默认 10000 credits 只是初始配置，管理员按家庭用量调整。`startBalance` 只初始化新余额，不给已有账号加额。额度预留不能保证末次已接纳输出绝不超额。固定版本对新模型、缓存和长上下文的价格识别可能滞后，例如 6.1 Sol 会匹配旧 Sol 缓存费率；**credits 不应当作精确当前美元账单或供应商硬预算**。当前 preset 使用 128K 应用上下文和 4096 输出上限，真实费用仍需后续获准调用核验。
+默认 10000 credits 只是初始模板值，尚不是用户确认的额度。`startBalance` 只初始化新余额，不给已有账号加额。额度预留不能保证末次已接纳输出绝不超额。固定版本对新模型、缓存和长上下文的价格识别可能滞后，**credits 不应当作精确当前美元账单或供应商硬预算**。当前 preset 使用 128K 应用上下文和 4096 输出上限，真实费用仍需后续获准调用核验。
 
 ## 5. 最小回滚
 
-仅停用模型、保留账号和历史：在服务器 `.env` 把 `OPENAI_API_KEY` 与 `OPENAI_CHAT_MODELS` 留空，然后执行上面的 `up -d --force-recreate librechat`。界面恢复未启用状态，不会转成 mock。
+仅保持模型停用、保留账号和历史：保留 `compose.disabled.yaml` 并执行上面的含双 env、SSO overlay 的重建命令。不要为停用覆盖用户已填写的 Key。界面保持未启用状态，不会转成 mock。
 
 需要撤回整个聊天入口时，从本次路由提交提取仅含 Nginx 的补丁，检查后反向应用，保留其他提交和部署目录：
 
@@ -183,7 +162,7 @@ sudo docker compose -f docker-compose.yml -f deploy/docker-compose.migration.yml
 
 ```sh
 cd /opt/parallellines/deploy/librechat
-sudo docker compose --env-file .env -f compose.production.yaml stop
+sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml stop
 ```
 
 保留 `.env` 和所有命名卷。不要 `down -v`、清空 MongoDB、轮换 JWT/加密值或用整文件 checkout 覆盖同期游戏发布。当前回滚说明针对这次首次接入；未来升级数据库/镜像时，先备份数据并核验迁移兼容性。

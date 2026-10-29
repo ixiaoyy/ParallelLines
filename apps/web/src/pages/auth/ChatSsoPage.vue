@@ -2,9 +2,10 @@
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-import { apiPost, hasAccessToken } from "@/shared/api/client";
+import { apiPost, hasAccessToken, isAuthenticationError } from "@/shared/api/client";
 import { trustedChatFinish } from "@/shared/router/authReturn";
 import UiButton from "@/shared/ui/Button.vue";
+import ChatEntryLoading from "./ChatEntryLoading.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -30,7 +31,7 @@ async function connectChat(): Promise<void> {
     return;
   }
   if (!hasAccessToken()) {
-    try { await router.replace({ name: "auth", query: { redirect: route.fullPath } }); }
+    try { await openMainLogin(interactionId); }
     catch { error.value = "无法打开主站登录，请重试。"; }
     return;
   }
@@ -72,15 +73,27 @@ async function connectChat(): Promise<void> {
       submittedForm?.remove();
       submittedForm = null;
     }, 10_000);
-  } catch {
+  } catch (failure) {
     if (disposed) return;
     submittedForm?.remove();
     submittedForm = null;
     pending.value = false;
+    if (isAuthenticationError(failure)) {
+      try { await openMainLogin(interactionId, true); return; }
+      catch { /* Fall through to a recoverable error if main login cannot open. */ }
+    }
     error.value = "聊天登录未完成：会话可能已过期或此账号尚未获聊天授权。请重新登录或联系管理员。";
   } finally {
     window.clearTimeout(requestTimer);
   }
+}
+
+async function openMainLogin(interactionId: string, reauthenticate = false): Promise<void> {
+  const failure = await router.replace({ name: "auth", query: {
+    redirect: `/auth/chat?interaction_id=${encodeURIComponent(interactionId)}`,
+    ...(reauthenticate ? { reauth: "chat" } : {}),
+  } });
+  if (failure) throw failure;
 }
 
 onMounted(() => { void connectChat(); });
@@ -94,7 +107,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main aria-live="polite">
+  <ChatEntryLoading v-if="!error" />
+  <main v-else aria-live="polite">
     <h1>进入聊天</h1>
     <p v-if="error" role="alert">{{ error }}</p>
     <p v-else>正在验证平行线登录，请稍候。</p>

@@ -14,6 +14,10 @@ sudo docker compose -f docker-compose.yml -f deploy/docker-compose.migration.yml
 # Exactly the approved five OIDC groups. Existing unrelated environment bytes stay opaque.
 test -s deploy/librechat/.env
 test -s apps/api/.env
+sudo docker run --rm --network none --user "$(id -u):$(id -g)" \
+  -v "$PWD/deploy/librechat:/integration" --entrypoint node \
+  registry.librechat.ai/librechat-ai/librechat-api@sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5 \
+  /integration/configure-models.cjs
 sudo docker run --rm --network none --user 0:0 \
   -v "$PWD:/workspace" --entrypoint node \
   registry.librechat.ai/librechat-ai/librechat-api@sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5 \
@@ -35,8 +39,10 @@ cd deploy/librechat
   const base = JSON.parse(fs.readFileSync("/app/data/family-config/librechat.yaml", "utf8"));
   const approved = JSON.parse(fs.readFileSync("/app/data/family-config/approved-user-profile.yaml", "utf8"));
   const empty = base.endpoints.openAI.models.length === 0 && approved.endpoints.openAI.models.length === 0;
-  const ok = empty && process.env.OPENAI_API_KEY === "" && process.env.SSO_REQUIRED === "true" && process.env.ALLOW_REGISTRATION === "false" && process.env.ALLOW_EMAIL_LOGIN === "false";
-  console.log(JSON.stringify({ ssoRequired: true, emailLogin: false, registration: false, defaultModelGrants: false, gptDisabled: empty, verified: ok }));
+  const candidates = base.modelSpecs.list.map(spec => spec.preset.model);
+  const menu = JSON.stringify(candidates) === JSON.stringify(["gpt-6-luna", "gpt-6.1-terra", "gpt-6.1-sol"]);
+  const ok = empty && menu && base.modelSpecs.list[0].default === true && process.env.OPENAI_API_KEY === "" && process.env.SSO_REQUIRED === "true" && process.env.ALLOW_REGISTRATION === "false" && process.env.ALLOW_EMAIL_LOGIN === "false";
+  console.log(JSON.stringify({ ssoRequired: true, emailLogin: false, registration: false, defaultModelGrants: false, gptDisabled: empty, candidates, defaultModel: candidates[0], runtimeKeyLoaded: Boolean(process.env.OPENAI_API_KEY), verified: ok }));
   if (!ok) process.exit(1);
 ' < /dev/null
 "${chat[@]}" exec -T librechat node /integration/sso/verify-public.cjs < /dev/null

@@ -4,6 +4,7 @@ import zhCN from "ant-design-vue/es/locale/zh_CN";
 import { computed, defineAsyncComponent } from "vue";
 import { useRoute } from "vue-router";
 
+import { isChatSsoContinuation } from "@/shared/router/authReturn";
 import { resolveRouteSeoMeta, useSeoMeta } from "@/shared/seo/meta";
 
 const route = useRoute();
@@ -13,12 +14,13 @@ const usesForumShell = computed(() => {
   const redirect = route.query.redirect;
   const isAdminLogin = route.name === "auth" && typeof redirect === "string" &&
     (redirect === "/admin" || redirect.startsWith("/admin/"));
-  return route.meta.forumShell === true && !isAdminLogin;
+  const isChatLogin = route.name === "auth" && isChatSsoContinuation(redirect, window.location.origin);
+  return route.meta.forumShell === true && !isAdminLogin && !isChatLogin;
 });
 // 论坛的动态品牌和页面 SEO 由旧外壳接管；其他页面继续使用目录文案。
 useSeoMeta(
   computed(() => usesForumShell.value ? undefined :
-    resolveRouteSeoMeta(route.name === "auth" ? {
+    resolveRouteSeoMeta(route.name === "auth" && !isChatSsoContinuation(route.query.redirect, window.location.origin) ? {
       title: "后台登录 · {siteTitle}",
       description: "登录平行线后台管理项目目录与访问统计。",
       canonicalPath: "/auth",

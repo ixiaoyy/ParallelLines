@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
-const { buildConfig } = require('./config.cjs');
+const { buildConfig, modelLabels } = require('./config.cjs');
 
 // This runs inside the user's server container; never print credentials or write them into generated YAML.
 for (const key of ['JWT_SECRET', 'JWT_REFRESH_SECRET']) {
@@ -18,9 +18,8 @@ fs.writeFileSync(configPath, JSON.stringify(generated.config, null, 2), { mode: 
 // Operator imports this secret-free override only into an explicitly selected USER profile.
 fs.writeFileSync(path.join(directory, 'approved-user-profile.yaml'), JSON.stringify(generated.approvedProfile, null, 2), { mode: 0o600 });
 // Candidates are preserved without a Key; this file grants no account access.
-const labels = { 'gpt-6-luna': 'GPT-6 Luna', 'gpt-6.1-sol': 'GPT-6.1 Sol' };
 fs.writeFileSync(path.join(directory, 'selected-models.json'), JSON.stringify({
-  models: generated.selectedModels.map(id => ({ id, label: labels[id] || id })),
+  models: generated.selectedModels.map(id => ({ id, label: modelLabels[id] || id })),
   defaultAccountAccess: false
 }, null, 2), { mode: 0o600 });
 const env = {

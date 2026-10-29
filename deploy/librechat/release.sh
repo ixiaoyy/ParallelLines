@@ -35,7 +35,8 @@ if test "$mode" = models; then
   # This mode never initializes credentials, reads their values, or grants profiles.
   test -f .env
   active_files=$(sudo docker inspect parallellines-chat-librechat-1 --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}')
-  if test "$active_files" != "$PWD/compose.production.yaml,$PWD/compose.disabled.yaml"; then
+  if test "$active_files" != "$PWD/compose.production.yaml,$PWD/compose.disabled.yaml" && \
+     test "$active_files" != "$PWD/compose.production.yaml,$PWD/compose.disabled.yaml,$PWD/compose.sso.yaml"; then
     echo '[chat] stopped before editing: existing deployment mode changed; no Key or model settings changed'
     exit 3
   fi
@@ -44,6 +45,10 @@ if test "$mode" = models; then
     registry.librechat.ai/librechat-ai/librechat-api@sha256:e95924ac84c0abf6f9e69f1f59e781379201a2cc9495910e22f2687e25f3c2a5 \
     /integration/configure-models.cjs
   model_compose=(sudo docker compose --env-file .env -f compose.production.yaml -f compose.disabled.yaml)
+  if test "$active_files" = "$PWD/compose.production.yaml,$PWD/compose.disabled.yaml,$PWD/compose.sso.yaml"; then
+    export CHAT_SSO_RELEASE="$revision"
+    model_compose=(sudo --preserve-env=CHAT_SSO_RELEASE docker compose --env-file .env --env-file ../chat-sso/.env -f compose.production.yaml -f compose.disabled.yaml -f compose.sso.yaml)
+  fi
   "${model_compose[@]}" config --quiet
   "${model_compose[@]}" up -d --wait --wait-timeout 240 --no-deps --force-recreate librechat
   "${model_compose[@]}" exec -T librechat node -e '
@@ -53,14 +58,15 @@ if test "$mode" = models; then
     const base = JSON.parse(fs.readFileSync(dir + "librechat.yaml", "utf8"));
     const profile = JSON.parse(fs.readFileSync(dir + "approved-user-profile.yaml", "utf8"));
     const ids = selected.models.map(m => m.id);
-    const baseEmpty = base.endpoints.openAI.models.length === 0 && base.modelSpecs.list.length === 0;
+    const baseEmpty = base.endpoints.openAI.models.length === 0;
+    const menuMatches = JSON.stringify(base.modelSpecs.list.map(spec => spec.preset.model)) === JSON.stringify(ids);
     const templateEmpty = profile.endpoints.openAI.models.length === 0;
-    const ok = JSON.stringify(ids) === JSON.stringify(["gpt-6-luna", "gpt-6.1-sol"]) &&
-      process.env.OPENAI_CHAT_MODELS === ids.join(",") && baseEmpty && templateEmpty;
+    const ok = JSON.stringify(ids) === JSON.stringify(["gpt-6-luna", "gpt-6.1-terra", "gpt-6.1-sol"]) &&
+      process.env.OPENAI_CHAT_MODELS === ids.join(",") && baseEmpty && templateEmpty && menuMatches;
     console.log(JSON.stringify({ selectedModels: selected.models, runtimeModelSetting: process.env.OPENAI_CHAT_MODELS,
       defaultAccountAccess: false, baseModelsEmpty: baseEmpty, grantTemplateModelsEmpty: templateEmpty, verified: ok }));
     if (!ok) process.exit(1);
-  '
+  ' < /dev/null
   "${model_compose[@]}" ps librechat
   echo '[chat] model candidates configured; API Key and account/profile records not changed'
   exit 0
@@ -91,6 +97,6 @@ chat_compose=(sudo docker compose --env-file .env -f compose.production.yaml -f 
   const disabled = base.length === 0 && selected.length === 0;
   console.log(JSON.stringify({ disabled, defaultAccountAccess: false, baseModels: base, configuredModels: selected, welcome: c.interface?.customWelcome }));
   if (!disabled) process.exit(1);
-'
+' < /dev/null
 "${chat_compose[@]}" ps
 echo '[chat] healthy disabled service started; public proxy is activated separately after health verification'

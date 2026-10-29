@@ -97,10 +97,9 @@ test('real OIDC: main approval, private claims, refresh binding, restart and fre
       assert.equal(initial.status, 303);
       const mainLogin = new URL(initial.headers.get('location'));
       assert.equal(mainLogin.origin, mainOrigin);
-      assert.equal(mainLogin.pathname, '/auth');
-      const next = new URL(mainLogin.searchParams.get('redirect'), mainOrigin);
-      assert.equal(next.pathname, '/auth/chat');
-      const interaction = next.searchParams.get('interaction_id');
+      assert.equal(mainLogin.pathname, '/auth/chat');
+      assert.equal(mainLogin.searchParams.has('redirect'), false);
+      const interaction = mainLogin.searchParams.get('interaction_id');
       const approvalCode = secret();
       const identity = { active: true, sub, binding_id: secret(), auth_expires_at: Math.floor(Date.now() / 1000) + lifetime, name: 'Synthetic ' + sub };
       states.set(identity.binding_id, identity);

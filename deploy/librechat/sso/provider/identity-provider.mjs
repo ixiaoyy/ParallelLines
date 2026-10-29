@@ -91,7 +91,7 @@ export function createIdentityProvider({ config, store, fetchImpl }) {
     },
     interactions: {
       policy,
-      url: async (_ctx, interaction) => config.mainOrigin + '/auth?redirect=' + encodeURIComponent('/auth/chat?interaction_id=' + interaction.uid),
+      url: async (_ctx, interaction) => config.mainOrigin + '/auth/chat?interaction_id=' + encodeURIComponent(interaction.uid),
     },
     findAccount: async (ctx, sub, token) => {
       let identity;

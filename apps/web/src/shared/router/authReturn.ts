@@ -47,6 +47,15 @@ export function needsFullAuthNavigation(value: string, origin: string): boolean 
   return pathname === "/chat" || pathname.startsWith("/chat/") || pathname === "/auth/chat";
 }
 
+/** A validated OP interaction is the only login continuation that hides the forum shell. */
+export function isChatSsoContinuation(value: unknown, origin: string): boolean {
+  const target = resolveAuthReturn(value, origin, "/forum");
+  const url = new URL(target, origin);
+  const interactions = url.searchParams.getAll("interaction_id");
+  return url.pathname === "/auth/chat" && interactions.length === 1
+    && /^[A-Za-z0-9_-]{8,128}$/.test(interactions[0]);
+}
+
 /** Only the fixed same-origin OP finish path may receive an approval via POST. */
 export function trustedChatFinish(value: unknown, origin: string): string | null {
   if (typeof value !== "string" || /[\\\u0000-\u0020\u007f]/.test(value)) return null;

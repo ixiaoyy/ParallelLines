@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const selectedModels = Object.freeze(['gpt-6-luna', 'gpt-6.1-sol']);
+const selectedModels = Object.freeze(['gpt-6-luna', 'gpt-6.1-terra', 'gpt-6.1-sol']);
 const prefix = Buffer.from('OPENAI_CHAT_MODELS=');
 
 /** Replace exactly the one model-setting line; all unrelated bytes stay opaque. */

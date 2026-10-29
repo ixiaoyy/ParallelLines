@@ -35,9 +35,9 @@ async function main() {
   for (let attempt = 0; attempt < 10; attempt++) {
     const parsed = new URL(url);
     assert.equal(parsed.origin, origin);
-    if (parsed.pathname === '/auth') {
-      const target = parsed.searchParams.get('redirect');
-      assert.ok(/^\/auth\/chat\?interaction_id=[A-Za-z0-9_-]{10,200}$/.test(target || ''));
+    if (parsed.pathname === '/auth/chat') {
+      assert.ok(/^[A-Za-z0-9_-]{10,200}$/.test(parsed.searchParams.get('interaction_id') || ''));
+      assert.equal((await request(parsed.pathname + parsed.search)).status, 200);
       arrived = true;
       break;
     }
@@ -52,13 +52,19 @@ async function main() {
   assert.ok(arrived);
   results.anonymousChatRedirectsToMainAuth = true;
   const chatPage = await request('/chat/');
-  assert.equal(chatPage.status, 200);
-  const html = await chatPage.text();
-  const base = new URL(/<base[^>]+href="([^"]+)"/.exec(html)?.[1] || '/chat/', origin);
-  const assets = [...html.matchAll(/(?:src|href)="((?:\/chat\/)?assets\/[^"?#]+)[^"]*"/g)].map(match => new URL(match[1], base));
-  assert.ok(assets.length > 0);
-  assert.equal(assets[0].origin, origin);
-  assert.equal((await request(assets[0].pathname)).status, 200);
+  assert.equal(chatPage.status, 302);
+  assert.equal(chatPage.headers.get('location'), '/chat/oauth/openid');
+  const previousPage = await request('/chat/c/fixture-return-path');
+  assert.equal(previousPage.status, 302);
+  assert.equal(previousPage.headers.get('location'), '/chat/oauth/openid');
+  const oldLogin = await request('/chat/login');
+  assert.equal(oldLogin.status, 302);
+  assert.equal(oldLogin.headers.get('location'), '/chat/oauth/openid');
+  const logo = await request('/chat/assets/logo.svg');
+  assert.equal(logo.status, 302);
+  assert.equal(logo.headers.get('location'), '/logo-lines-mark.png');
+  assert.equal((await request('/logo-lines-mark.png')).status, 200);
+  assert.equal((await request('/favicon.svg')).status, 200);
   assert.equal((await request('/games')).status, 200);
   assert.equal((await request('/auth/chat?interaction_id=invalid')).status, 200);
   results.chatAssetsAndMainRoutesHealthy = true;

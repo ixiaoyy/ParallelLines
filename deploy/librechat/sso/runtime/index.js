@@ -3,6 +3,7 @@ require('../config/credentials');
 const telemetry = require('./telemetry');
 const fs = require('fs');
 const path = require('path');
+const { applyShellBranding, installBrandLogoRoute } = require('/integration/sso/branding/shell-branding.cjs');
 require('module-alias')({ base: path.resolve(__dirname, '..') });
 const cors = require('cors');
 const axios = require('axios');
@@ -97,6 +98,7 @@ const initializeMCPs = require('./services/initializeMCPs');
 const { configureSubagentTaskRouting } = require('./services/Endpoints/agents/subagentThreadStore');
 const configureSocialLogins = require('./socialLogins');
 const createSpaFallback = require('./utils/fallback');
+const { injectDocumentLoadingShell } = require('./sso-runtime/document-entry.cjs');
 const { getAppConfig, rederiveEndpoints } = require('./services/Config');
 const staticCache = require('./utils/staticCache');
 const noIndex = require('./middleware/noIndex');
@@ -322,6 +324,7 @@ const startServer = async () => {
     landingFooter: appConfig?.interfaceConfig?.landingFooter,
   });
 
+  indexHTML = applyShellBranding(indexHTML);
   indexHTML = injectColorModeHandoff(indexHTML, appConfig.interfaceConfig?.colorModeFromUrl);
   const indexShell = createDeploymentThemeShell(
     indexHTML,
@@ -343,6 +346,7 @@ const startServer = async () => {
       () => `lang="${saneLang}"`,
     );
     updatedIndexHtml = maybeInjectQueryDevtoolsBootstrap(updatedIndexHtml, req);
+    updatedIndexHtml = injectDocumentLoadingShell(updatedIndexHtml, req);
 
     /* Nonce last: every injected script above must be stamped too. */
     if (cspPolicy) {
@@ -398,8 +402,10 @@ const startServer = async () => {
     console.warn('Response compression has been disabled via DISABLE_COMPRESSION.');
   }
 
-  app.get('/index.html', sendIndexHtml);
-  app.use(staticCache(appConfig.paths.dist));
+  installBrandLogoRoute(app);
+  const distStatic = staticCache(appConfig.paths.dist);
+  // index.html is a document and must wait for native OpenID Express-session setup.
+  app.use((req, res, next) => /^\/index\.html$/i.test(req.path) ? next() : distStatic(req, res, next));
   app.use(staticCache(appConfig.paths.fonts));
   app.use(staticCache(appConfig.paths.assets));
 
@@ -433,6 +439,7 @@ const startServer = async () => {
   const chatSsoRuntime = require('./sso-runtime/runtime.cjs');
   await chatSsoRuntime.initialize();
   app.use(chatSsoRuntime.ingress);
+  app.get('/index.html', chatSsoRuntime.document(sendIndexHtml));
 
   /* Pre-auth tenant context for unauthenticated routes that need tenant scoping.
    * The reverse proxy / auth gateway sets `X-Tenant-Id` header for multi-tenant deployments. */
@@ -499,7 +506,7 @@ const startServer = async () => {
   app.use('/api', apiNotFound);
 
   /** SPA fallback - serve index.html for all unmatched routes */
-  app.use(createSpaFallback(sendIndexHtml));
+  app.use(createSpaFallback(chatSsoRuntime.document(sendIndexHtml)));
 
   /** Record trace errors before the final error controller. */
   if (telemetry.enabled) {
