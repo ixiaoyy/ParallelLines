@@ -1,53 +1,66 @@
 import type { CSSProperties } from "vue";
-
 import { CATEGORY_VISUAL_ALIASES, type CategoryVisualKey } from "@/features/catalog/categoryVisuals";
 
+export type CatalogCategoryComposition = "mixed" | "balanced" | "split" | "panorama";
+
 interface CatalogCategorySectionTheme {
-  readonly surface: string;
-  readonly accent: string;
   readonly tail?: CategoryVisualKey;
+  readonly surface: string;
+  readonly ink: string;
+  readonly artWidth: number;
+  readonly artHeight: number;
+  readonly headingHeight: number;
+  readonly left?: string;
+  readonly right?: string;
+  readonly cardWidth?: string;
+  readonly firstCardWidth?: string;
+  readonly singleHeight?: string;
+  readonly composition?: CatalogCategoryComposition;
 }
 
-/** Whole-section paper tones for existing category keys. This registry creates no categories. */
+/** Composition metadata for real category keys; never creates categories or game lists. */
 export const CATALOG_CATEGORY_SECTION_THEMES = {
-  action: { surface: "#eee2d2", accent: "#866247", tail: "action" },
-  shooting: { surface: "#dfe7ec", accent: "#587281", tail: "shooting" },
-  racing: { surface: "#d9e9e0", accent: "#4c7872", tail: "racing" },
-  stages: { surface: "#f0e2dc", accent: "#986d53", tail: "stages" },
-  puzzle: { surface: "#dce9df", accent: "#517663", tail: "puzzle" },
-  rts: { surface: "#e9e3d2", accent: "#766d50", tail: "rts" },
-  "tower-defense": { surface: "#dce4cf", accent: "#71765d", tail: "tower-defense" },
-  cards: { surface: "#eee0d9", accent: "#8c6b50", tail: "cards" },
-  rpg: { surface: "#e1e2ec", accent: "#6c7184", tail: "rpg" },
-  simulation: { surface: "#eee9d5", accent: "#85734d", tail: "simulation" },
-  casual: { surface: "#deebef", accent: "#587a80", tail: "casual" },
-  romance: { surface: "#efdee6", accent: "#956b80", tail: "romance" },
-  horror: { surface: "#e1dfe8", accent: "#786b81", tail: "horror" },
-  exploration: { surface: "#d9e8e3", accent: "#54796c", tail: "exploration" },
-  farming: { surface: "#e6e9cd", accent: "#748052", tail: "farming" },
+  action: { surface: "#fff5e9", ink: "#63371b", artWidth: 235, artHeight: 112, headingHeight: 105, left: "23%" },
+  shooting: { surface: "#f0f5fb", ink: "#264b59", artWidth: 196, artHeight: 126, headingHeight: 112, right: "19%" },
+  racing: { surface: "#edfaf4", ink: "#265c4a", artWidth: 350, artHeight: 105, headingHeight: 96, left: "18%", cardWidth: "34%", firstCardWidth: "44%" },
+  stages: { surface: "#fff1ea", ink: "#9b492b", artWidth: 210, artHeight: 125, headingHeight: 114, right: "12%" },
+  puzzle: { surface: "#f1f8e8", ink: "#3c632d", artWidth: 250, artHeight: 102, headingHeight: 94, left: "105px" },
+  rts: { surface: "#f7f4e8", ink: "#5a542b", artWidth: 220, artHeight: 124, headingHeight: 110, left: "37%" },
+  "tower-defense": { surface: "#f1f4e9", ink: "#47563a", artWidth: 185, artHeight: 134, headingHeight: 120, right: "20%" },
+  cards: { surface: "#fff1ec", ink: "#823f28", artWidth: 270, artHeight: 114, headingHeight: 102, left: "29%" },
+  rpg: { surface: "#f2f1fb", ink: "#4d456e", artWidth: 195, artHeight: 138, headingHeight: 122, right: "20%", cardWidth: "37%", firstCardWidth: "47%" },
+  simulation: { surface: "#fff8e6", ink: "#765220", artWidth: 315, artHeight: 111, headingHeight: 103, left: "28%" },
+  casual: { surface: "#fff9e9", ink: "#48260e", artWidth: 300, artHeight: 90, headingHeight: 86, left: "96px", composition: "mixed", cardWidth: "33%", firstCardWidth: "43%" },
+  romance: { surface: "#fcf0f3", ink: "#894254", artWidth: 340, artHeight: 122, headingHeight: 111, left: "24%" },
+  horror: { surface: "#f5efed", ink: "#be241a", artWidth: 270, artHeight: 118, headingHeight: 90, left: "38%", composition: "balanced" },
+  exploration: { surface: "#edfbf7", ink: "#07523d", artWidth: 490, artHeight: 114, headingHeight: 92, left: "108px", composition: "split", cardWidth: "38%", firstCardWidth: "61%" },
+  farming: { surface: "#fffae8", ink: "#8f5104", artWidth: 300, artHeight: 92, headingHeight: 82, right: "0px", composition: "panorama", singleHeight: "clamp(210px, 24vw, 270px)" },
 } as const satisfies Readonly<Record<CategoryVisualKey, CatalogCategorySectionTheme>>;
 
 const DEFAULT_SECTION_THEME: CatalogCategorySectionTheme = {
-  surface: "#e8eae3",
-  accent: "#64766d",
+  surface: "#f0f8f4", ink: "#204d3d", artWidth: 240, artHeight: 105, headingHeight: 98, left: "30%",
 };
 
 export function categorySectionThemeFor(slug: string): CatalogCategorySectionTheme {
-  const alias = Object.prototype.hasOwnProperty.call(CATEGORY_VISUAL_ALIASES, slug)
-    ? CATEGORY_VISUAL_ALIASES[slug]
-    : undefined;
+  const alias = Object.prototype.hasOwnProperty.call(CATEGORY_VISUAL_ALIASES, slug) ? CATEGORY_VISUAL_ALIASES[slug] : undefined;
   const key = alias ?? slug;
   return Object.prototype.hasOwnProperty.call(CATALOG_CATEGORY_SECTION_THEMES, key)
-    ? CATALOG_CATEGORY_SECTION_THEMES[key as CategoryVisualKey]
-    : DEFAULT_SECTION_THEME;
+    ? CATALOG_CATEGORY_SECTION_THEMES[key as CategoryVisualKey] : DEFAULT_SECTION_THEME;
 }
 
-/** Only visual variables; API names, counts, game order and covers are untouched. */
 export function categorySectionStyleFor(slug: string): CSSProperties {
   const theme = categorySectionThemeFor(slug);
   return {
     "--category-section-bg": theme.surface,
-    "--category-section-accent": theme.accent,
-    "--category-section-ink": "#183c34",
+    "--category-section-ink": theme.ink,
+    "--category-section-accent": theme.ink,
+    "--category-art-left": theme.left ?? "auto",
+    "--category-art-right": theme.right ?? "auto",
+    "--catalog-art-max-width": `${theme.artWidth}px`,
+    "--catalog-art-height": `${theme.artHeight}px`,
+    "--category-heading-height": `${theme.headingHeight}px`,
+    "--category-card-width": theme.cardWidth ?? "calc((100% - 20px) / 3)",
+    "--category-first-card-width": theme.firstCardWidth ?? theme.cardWidth ?? "calc((100% - 20px) / 3)",
+    "--category-single-height": theme.singleHeight ?? "clamp(180px, 24vw, 270px)",
   };
 }

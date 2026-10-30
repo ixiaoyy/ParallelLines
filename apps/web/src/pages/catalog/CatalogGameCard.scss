@@ -1,15 +1,18 @@
 .catalog-card {
+  --catalog-card-radius: 22px;
   position: relative;
+  isolation: isolate;
   min-width: 0;
+  max-width: none;
   aspect-ratio: 4 / 3;
-  border-radius: 12px;
+  border-radius: var(--catalog-card-radius);
   background: #ccd9ce;
-  transition: transform 180ms ease, box-shadow 180ms ease;
+  transition: box-shadow 180ms ease;
 }
 
 .catalog-card__open { display: block; position: absolute; inset: 0; border-radius: inherit; color: inherit; text-decoration: none; }
 .catalog-card__cover { display: block; position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
-.catalog-card__cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.catalog-card__cover img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 220ms ease; }
 .catalog-card__missing { display: grid; height: 100%; place-items: center; padding: 12px; color: var(--catalog-ink); }
 .catalog-card__mobile-name, .catalog-card__play { display: none; }
 .catalog-card__details {
@@ -17,21 +20,21 @@
   inset: auto 0 0;
   max-height: 100%;
   overflow-y: auto;
-  border-radius: 0 0 12px 12px;
-  padding: 18px 12px 10px;
+  border-radius: 0 0 var(--catalog-card-radius) var(--catalog-card-radius);
+  padding: 10px 13px 11px;
   color: #fff;
-  background: linear-gradient(transparent, #14231ee8 25%, #14231ef5);
+  background: #101c1aeb;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transition: opacity 150ms ease;
 }
-.catalog-card__details h3 { margin: 0; font: 700 15px / 1.4 var(--catalog-font); overflow-wrap: anywhere; }
-.catalog-card__metrics { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 5px; color: #e2e9e3; font: 12px / 1.4 var(--catalog-font); }
-.catalog-card__category { color: #c7d8cf; }
-.catalog-card__heat { display: inline-flex; align-items: center; gap: 4px; }
+.catalog-card__details h3 { margin: 0; font: 700 15px / 1.35 var(--catalog-font); overflow-wrap: anywhere; }
+.catalog-card__metrics { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 9px; margin-top: 5px; color: #e2e9e3; font: 11px / 1.4 var(--catalog-font); }
+.catalog-card__category { color: #d4e2dc; }
+.catalog-card__heat { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .catalog-card__ai-rating { font-weight: 700; }
-.catalog-card__wanted { position: absolute; top: 6px; right: 6px; display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 8px; color: #fff; background: #102a22e6; font-size: 19px; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 150ms ease; }
+.catalog-card__wanted { position: absolute; top: 8px; right: 8px; display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 50%; color: #fff; background: #101c1ae6; font-size: 19px; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 150ms ease; }
 .catalog-card__wanted.is-active { color: #ffda7b; }
 .catalog-card__wanted:hover { background: #244e3f; }
 .catalog-card:focus-within { outline: 3px solid var(--catalog-focus, #3b7864); outline-offset: 3px; }
@@ -44,22 +47,25 @@
 .catalog-card__wanted:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
 
 @media (hover: hover) and (pointer: fine) {
-  .catalog-card:hover { transform: translateY(-2px); box-shadow: 0 8px 18px #183c3426; }
+  .catalog-card:hover { box-shadow: 0 7px 20px #183c3426; }
+  .catalog-card:hover .catalog-card__cover img,
+  .catalog-card:has(:focus-visible) .catalog-card__cover img,
+  .catalog-card--keyboard-actions .catalog-card__cover img { transform: scale(1.035); }
   .catalog-card:hover .catalog-card__details { opacity: 1; visibility: visible; }
   .catalog-card:hover .catalog-card__wanted { opacity: 1; pointer-events: auto; }
 }
 
 @media (max-width: 760px) {
-  .catalog-card { aspect-ratio: auto; border-radius: 9px; background: transparent; }
+  .catalog-card { --catalog-card-radius: 16px; aspect-ratio: auto; background: transparent; }
   .catalog-card__open { position: relative; }
   .catalog-card__cover { position: relative; aspect-ratio: 4 / 3; }
   .catalog-card__mobile-name { display: block; overflow: hidden; padding: 7px 1px 2px; color: var(--catalog-ink); font: 700 13px / 1.4 var(--catalog-font); text-overflow: ellipsis; white-space: nowrap; }
-  .catalog-card__details { bottom: 27px; max-height: calc(100% - 27px); padding: 16px 9px 9px; border-radius: 0 0 9px 9px; }
+  .catalog-card__details { bottom: 27px; max-height: calc(100% - 27px); padding: 9px 10px 10px; }
   .catalog-card__details h3 { font-size: 13px; }
-  .catalog-card__wanted { top: 3px; right: 3px; }
+  .catalog-card__wanted { top: 5px; right: 5px; }
   .catalog-card--featured { grid-column: 1 / -1; }
   .catalog-card--featured .catalog-card__cover { aspect-ratio: 16 / 9; }
-  .catalog-card--featured .catalog-card__mobile-name { position: absolute; inset: auto 0 0; padding: 24px 116px 15px 12px; border-radius: 0 0 9px 9px; color: #fff; background: linear-gradient(transparent, #102a22e6); font-size: 18px; }
+  .catalog-card--featured .catalog-card__mobile-name { position: absolute; inset: auto 0 0; padding: 24px 116px 15px 12px; border-radius: 0 0 var(--catalog-card-radius) var(--catalog-card-radius); color: #fff; background: linear-gradient(transparent, #102a22e6); font-size: 18px; }
   .catalog-card--featured .catalog-card__play { position: absolute; right: 10px; bottom: 10px; display: grid; min-height: 44px; place-items: center; border-radius: 8px; padding: 0 12px; color: #fff; background: var(--btn-primary-bg); font: 700 13px var(--catalog-font); }
   .catalog-card--featured .catalog-card__details { bottom: 0; max-height: 100%; }
   .catalog-card--featured:is(:focus-visible, :has(:focus-visible, button:focus, [aria-expanded="true"])) .catalog-card__mobile-name,
@@ -71,6 +77,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .catalog-card, .catalog-card__details, .catalog-card__wanted { transition: none; }
-  .catalog-card:hover { transform: none; }
+  .catalog-card, .catalog-card__cover img, .catalog-card__details, .catalog-card__wanted { transition: none; }
+  .catalog-card:hover .catalog-card__cover img,
+  .catalog-card:has(:focus-visible) .catalog-card__cover img,
+  .catalog-card--keyboard-actions .catalog-card__cover img { transform: none; }
 }

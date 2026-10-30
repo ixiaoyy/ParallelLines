@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CloseOutlined, CrownFilled, HeartFilled, RightOutlined, UserOutlined, SearchOutlined, SendOutlined, StarOutlined } from "@ant-design/icons-vue";
+import { CloseOutlined, CrownFilled, HeartFilled, LeftOutlined, MenuOutlined, RightOutlined, UserOutlined, SearchOutlined, SendOutlined, StarOutlined } from "@ant-design/icons-vue";
 import { computed, defineAsyncComponent, ref, watch } from "vue";
 
 import { useCurrentUser } from "@/features/auth/queries";
@@ -12,7 +12,6 @@ import { useCatalog, useRecordCatalogProjectView } from "@/features/catalog/quer
 import { readPersonalLibrary, recordRecentProject, savePersonalLibrary, toggleWantedProject } from "@/features/catalog/personalLibrary";
 import type { PersonalLibrary } from "@/features/catalog/personalLibrary";
 import { staticAssetUrl } from "@/shared/assets/staticAssets";
-import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
 import CatalogSiteNavigation from "./CatalogSiteNavigation.vue";
 import CatalogNavigation from "./CatalogNavigation.vue";
@@ -25,8 +24,11 @@ import CatalogCategoryOrnament from "./CatalogCategoryOrnament.vue";
 import CatalogGameCard from "./CatalogGameCard.vue";
 import CatalogAiRating from "./CatalogAiRating.vue";
 import CatalogIcon from "./CatalogIcon.vue";
-import CatalogSectionTail from "./CatalogSectionTail.vue";
-import { categorySectionStyleFor } from "./catalogCategoryThemes";
+import CatalogCategoryRail from "./CatalogCategoryRail.vue";
+import CatalogCategoryAccent from "./CatalogCategoryAccent.vue";
+import { arrangeMixedCovers } from "./catalogCoverComposition";
+import { folkloreArtworkFor } from "./catalogFolkloreArtwork";
+import { categorySectionStyleFor, categorySectionThemeFor } from "./catalogCategoryThemes";
 import CatalogBrandMark from "./CatalogBrandMark.vue";
 import { CATALOG_HERO_TABS, selectCatalogRecommendations } from "./catalogTopics";
 
@@ -75,13 +77,8 @@ const contributorVisibleLimit = ref(AUTHOR_PAGE_SIZE);
 const selectedAuthorKey = ref<string | null>(null);
 const catalogSearchInput = ref<HTMLInputElement | null>(null);
 const authorDialog = ref<HTMLDialogElement | null>(null);
+const categoryNavigation = ref<InstanceType<typeof CatalogNavigation> | null>(null);
 const selectedAuthor = ref<string | null>(null);
-const sixPreviewColumns = useMediaQuery("(min-width: 1850px)");
-const fivePreviewColumns = useMediaQuery("(min-width: 1100px)");
-const fourPreviewColumns = useMediaQuery("(min-width: 1001px)");
-const threePreviewColumns = useMediaQuery("(min-width: 761px)");
-const categoryPreviewLimit = computed(() => sixPreviewColumns.value ? 6 : fivePreviewColumns.value ? 5
-  : fourPreviewColumns.value ? 4 : threePreviewColumns.value ? 3 : 2);
 // 个人清单仅属于当前浏览器；存储异常后本页继续使用内存状态，不覆盖原记录。
 const initialLibrary = readPersonalLibrary();
 const personalLibrary = ref(initialLibrary.library);
@@ -111,6 +108,16 @@ const allCategories = computed(() => catalogQuery.data.value ?? []);
 const categories = computed(() => allCategories.value
   .filter((category) => category.projects.length > 0)
   .sort((left, right) => Number(left.slug === "farming") - Number(right.slug === "farming")));
+// User-selected discovery order; labels, membership and records remain API-owned.
+const discoveryCategoryPriority = ["casual", "horror", "exploration"] as const;
+const discoveryCategories = computed(() => [...categories.value].sort((left, right) => {
+  const rank = (slug: string): number => {
+    if (slug === "farming") return Number.MAX_SAFE_INTEGER;
+    const position = discoveryCategoryPriority.findIndex((key) => key === slug);
+    return position < 0 ? discoveryCategoryPriority.length : position;
+  };
+  return rank(left.slug) - rank(right.slug);
+}));
 const allProjects = computed<CatalogEntry[]>(() =>
   allCategories.value.flatMap((category) =>
     category.projects.map((project) => ({
@@ -221,12 +228,23 @@ const visibleProjects = computed(() => {
 
 // 大目录只先渲染首批卡片；筛选变化后重新从首批展示，搜索仍覆盖全部项目。
 const displayedProjects = computed(() => visibleProjects.value.slice(0, visibleLimit.value));
-const heroProjects = computed(() => selectCatalogRecommendations(allProjects.value, heroTopic.value).slice(0, 6));
+const heroRecommendations = computed(() => selectCatalogRecommendations(allProjects.value, heroTopic.value));
+const heroOffset = ref(0);
+const heroProjects = computed(() => heroRecommendations.value.slice(heroOffset.value, heroOffset.value + 6));
+watch(heroTopic, () => { heroOffset.value = 0; });
+watch(() => heroRecommendations.value.length, () => {
+  if (heroOffset.value >= heroRecommendations.value.length) heroOffset.value = 0;
+});
 // Empty, noninteractive cells preserve the six-slot mosaic without inventing games.
 const heroSlots = computed(() => Array.from({ length: 6 }, (_, index) => heroProjects.value[index] ?? null));
-// 首页直接复用 API 已按分类聚合的完整公开记录；每类独立取一行，不使用全站分页切片。
+// Each category rail uses its own complete API records; only the hero follows heroTopic.
 const isDiscovery = computed(() => catalogFeed.value === "discovery" && libraryScope.value === "all"
   && selectedCategory.value === "all" && !normalizedSearch.value && !selectedAuthorKey.value);
+const coverAspects = ref(new Map<string, number>());
+function rememberCoverAspect(cover: string, aspect: number): void {
+  if (!Number.isFinite(aspect) || aspect <= 0 || coverAspects.value.get(cover) === aspect) return;
+  coverAspects.value = new Map(coverAspects.value).set(cover, aspect);
+}
 const presentationGroups = computed(() => {
   if (!isDiscovery.value) return [{ key: "results", name: "", featured: false, visual: undefined,
     total: visibleProjects.value.length, projects: displayedProjects.value }];
@@ -239,10 +257,15 @@ const presentationGroups = computed(() => {
   return [
     { key: "featured", name: "精选推荐", featured: true, visual: undefined,
       total: heroProjects.value.length, projects: heroProjects.value },
-    ...categories.value.map((category) => {
-      const projects = byCategory.get(category.slug) ?? [];
-      return { key: category.slug, name: category.name, featured: false, visual: categoryVisualFor(category),
-        total: projects.length, projects: projects.slice(0, categoryPreviewLimit.value) };
+    ...discoveryCategories.value.map((category) => {
+      const records = byCategory.get(category.slug) ?? [];
+      const projects = categorySectionThemeFor(category.slug).composition === "mixed"
+        ? arrangeMixedCovers(records, (project) => coverAspects.value.get(coverUrl(project) ?? ""), (project) => project.heat)
+        : records;
+      const visual = categoryVisualFor(category);
+      return { key: category.slug, name: category.name, featured: false,
+        visual: visual ? { ...visual, artwork: folkloreArtworkFor(category.slug) ?? visual.artwork } : undefined,
+        total: projects.length, projects };
     }).filter((group) => group.projects.length),
   ];
 });
@@ -363,9 +386,10 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
   <main class="catalog-page" :class="`catalog-page--${catalogView}`" aria-labelledby="catalog-title">
     <header class="catalog-header">
       <div class="catalog-header__inner">
+        <button type="button" class="catalog-menu" aria-label="打开游戏分类" @click="categoryNavigation?.openCategories()"><MenuOutlined aria-hidden="true" /></button>
         <RouterLink class="catalog-brand" :to="{ name: 'home' }" aria-label="平行线首页"><CatalogBrandMark /><span>平行线</span></RouterLink>
         <CatalogSiteNavigation />
-        <form class="catalog-search" role="search" @submit.prevent="submitSearch"><SearchOutlined aria-hidden="true" /><label class="catalog-search__label" for="catalog-query">搜索游戏名称</label><input id="catalog-query" ref="catalogSearchInput" v-model="searchInput" type="search" placeholder="搜索游戏名称..." autocomplete="off" @search="submitSearch" /><button type="submit">搜索</button></form>
+        <form class="catalog-search" role="search" @submit.prevent="submitSearch"><label class="catalog-search__label" for="catalog-query">搜索游戏名称</label><input id="catalog-query" ref="catalogSearchInput" v-model="searchInput" type="search" placeholder="搜索游戏名称..." autocomplete="off" @search="submitSearch" /><button type="submit" aria-label="搜索"><SearchOutlined aria-hidden="true" /></button></form>
         <button type="button" class="catalog-header__submit" aria-label="投稿游戏" @click="submissionOpen = true"><SendOutlined aria-hidden="true" /><span>投稿游戏</span></button>
         <div class="catalog-header__actions">
           <NotificationBell v-if="currentUserQuery.data.value" />
@@ -374,13 +398,13 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
         </div>
       </div>
     </header>
-    <CatalogNavigation :active="catalogNavigation.active.value" :categories="categories" :selected-category="selectedCategory"
+    <CatalogNavigation ref="categoryNavigation" :active="catalogNavigation.active.value" :categories="categories" :selected-category="selectedCategory"
       @navigate="catalogNavigation.navigate" @category="browseCategory" />
     <div class="catalog-page__wrap">
       <section class="catalog-intro" :class="{ 'catalog-intro--discovery': isDiscovery }">
-        <h1 v-if="isDiscovery" id="catalog-title">从经典游戏到<span>短时乐趣</span>，看看这些值得一试的游戏</h1>
+        <h1 v-if="isDiscovery" id="catalog-title">从经典游戏到短时乐趣，<span>看看这些值得一试的游戏</span></h1>
         <h1 v-else id="catalog-title">{{ catalogTitle }}</h1>
-        <img v-if="isDiscovery" class="catalog-intro__landscape" :src="staticAssetUrl('/catalog/2026-10-29-ui/bridge-spring.png')" alt="" width="258" height="96" decoding="async" aria-hidden="true" />
+        <img v-if="isDiscovery" class="catalog-intro__landscape" :src="staticAssetUrl('/catalog/2026-10-30-folklore/garden-pavilion-bridge-transparent.png')" alt="" width="1817" height="866" decoding="async" aria-hidden="true" />
         <nav v-if="isDiscovery" class="catalog-recommendation-tabs" aria-label="发现游戏">
           <button v-for="tab in CATALOG_HERO_TABS" :key="tab.id" type="button" :class="{ 'is-active': heroTopic === tab.id }" :aria-pressed="heroTopic === tab.id" @click="catalogNavigation.topic(tab.id)">{{ tab.name }}</button>
         </nav>
@@ -409,13 +433,14 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
             <div v-if="selectedAuthorKey && selectedAuthorKey !== 'original'" class="catalog-author-selection"><span>正在查看 <strong>{{ selectedAuthorName || '该作者' }}</strong> 的作品</span><button type="button" @click="clearAuthorGames">清除作者筛选</button></div>
             <div v-if="visibleProjects.length === 0" class="catalog-state" role="status"><span>{{ emptyLibraryText }}</span><button v-if="search || selectedCategory !== 'all' || selectedAuthorKey" type="button" @click="clearCatalogFilters">清除筛选</button></div>
             <div v-else class="catalog-groups">
-              <section v-for="group in presentationGroups" :key="group.key" class="catalog-group" :class="{ 'catalog-group--featured': group.featured, 'catalog-group--illustrated': group.visual?.artwork, 'catalog-group--themed': !group.featured && group.name }" :style="group.visual ? { ...categorySectionStyleFor(group.key), '--category-art-wash': group.visual.wash, '--category-art-ink': group.visual.ink } : undefined" :aria-label="group.name || '游戏列表'">
-                <CatalogSectionTail v-if="group.visual" :slug="group.key" />
+              <section v-for="group in presentationGroups" :key="group.key" class="catalog-group" :data-category-section="group.featured ? undefined : group.key" :class="{ 'catalog-group--featured': group.featured, 'catalog-group--illustrated': group.visual?.artwork, 'catalog-group--themed': !group.featured && group.name }" :style="group.visual ? categorySectionStyleFor(group.key) : undefined" :aria-label="group.name || '游戏列表'">
                 <header v-if="group.name && !group.featured" class="catalog-group__heading">
-                  <div class="catalog-group__title"><CatalogCategoryOrnament v-if="group.visual?.artwork" :visual="group.visual" /><h2><button type="button" @click="browseCategory(group.key)">{{ group.name }}<RightOutlined aria-hidden="true" /></button></h2></div>
-                  <div class="catalog-group__meta"><span class="catalog-group__count">共 {{ group.total }} 款 · 展示 {{ group.projects.length }} 款</span><button type="button" :aria-label="`查看全部${group.name}游戏`" @click="browseCategory(group.key)">查看更多 <RightOutlined aria-hidden="true" /></button></div>
+                  <div class="catalog-group__title"><h2><button type="button" @click="browseCategory(group.key)">{{ group.name }}</button></h2><CatalogCategoryOrnament v-if="group.visual?.artwork" :visual="group.visual" /></div>
+                  <div class="catalog-group__meta"><span class="catalog-group__count">{{ group.total }} 款</span><button type="button" :aria-label="`查看全部${group.name}游戏`" @click="browseCategory(group.key)">查看更多 <RightOutlined aria-hidden="true" /></button></div>
+                  <CatalogCategoryAccent :slug="group.key" placement="heading" />
                 </header>
-                <div class="catalog-grid" :class="{ 'catalog-grid--featured': group.featured }">
+                <CatalogCategoryAccent v-if="!group.featured" :slug="group.key" placement="card-corner" />
+                <component :is="!group.featured && isDiscovery ? CatalogCategoryRail : 'div'" v-bind="!group.featured && isDiscovery ? { name: group.name, slug: group.key, total: group.total, composition: categorySectionThemeFor(group.key).composition } : {}" :class="{ 'catalog-grid': group.featured || !isDiscovery, 'catalog-grid--featured': group.featured }">
                   <template v-for="(project, index) in group.featured ? heroSlots : group.projects" :key="project?.id ?? `empty:${index}`">
                     <CatalogGameCard v-if="project"
                       :title="displayName(project)" :href="project.url" :cover="coverUrl(project)" :category-name="categoryName(project.categorySlug)"
@@ -423,13 +448,16 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
                       :heat="project.heat" :wanted="wantedIds.has(project.id)" :eager="index < 3"
                       :featured="group.featured && (index === 0 || index === 5)" :data-hero-slot="group.featured ? index : undefined"
                       :data-project-id="project.id" :data-card-key="projectCardKey(group.key, project.id)"
-                      @open="recordGameOpen(project, $event)" @toggle-wanted="toggleWanted(project)">
+                        :data-cover-format="(coverAspects.get(coverUrl(project) ?? '') ?? 1) < .9 ? 'portrait' : undefined"
+                        @open="recordGameOpen(project, $event)" @toggle-wanted="toggleWanted(project)" @cover-measured="rememberCoverAspect">
                       <template #rating><CatalogAiRating :rating="project.aiRating" :game-name="displayName(project)" /></template>
                     </CatalogGameCard>
                     <span v-else class="catalog-hero-slot-empty" :class="{ 'catalog-hero-slot-empty--featured': index === 0 || index === 5 }" :data-hero-slot="index" aria-hidden="true"></span>
                   </template>
                   <p v-if="group.featured && heroProjects.length === 0" class="catalog-hero-empty" role="status">暂无符合该推荐主题的游戏</p>
-                </div>
+                  <button v-if="group.featured && heroOffset > 0" type="button" class="catalog-hero-arrow catalog-hero-arrow--previous" aria-label="上一组推荐游戏" @click="heroOffset = Math.max(0, heroOffset - 6)"><LeftOutlined aria-hidden="true" /></button>
+                  <button v-if="group.featured && heroOffset + 6 < heroRecommendations.length" type="button" class="catalog-hero-arrow catalog-hero-arrow--next" aria-label="下一组推荐游戏" @click="heroOffset += 6"><RightOutlined aria-hidden="true" /></button>
+                </component>
               </section>
             </div>
             <div v-if="!isDiscovery && displayedProjects.length < visibleProjects.length" class="catalog-load-more"><button type="button" @click="loadMoreProjects">加载更多</button><span>还有 {{ visibleProjects.length - displayedProjects.length }} 个游戏</span></div>

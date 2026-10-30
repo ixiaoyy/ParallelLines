@@ -1,131 +1,71 @@
-// Load after the base catalog rules. The paper belongs to the whole section,
-// while the real cover grid keeps the same tracks and horizontal alignment.
+// Selected reference: a title band above real covers. Art shares the card edge,
+// with per-category proportions and anchors rather than matching icon boxes.
 .catalog-group--themed {
-  --category-section-inset: 16px;
+  --category-card-height: clamp(190px, 24vw, 280px);
+  --category-title-size: clamp(32px, 4.5vw, 46px);
   position: relative;
   isolation: isolate;
   min-width: 0;
-  margin-inline: calc(-1 * var(--category-section-inset));
-  padding: 0 var(--category-section-inset) 18px;
-  color: var(--category-section-ink, #183c34);
-  background: var(--category-section-bg, #e8eae3);
+  border-radius: 30px;
+  padding: 0 19px 19px;
+  color: var(--category-section-ink);
+  background: var(--category-section-bg);
 }
-
 .catalog-group--themed .catalog-group__heading {
   position: relative;
-  z-index: 1;
-  min-height: 64px;
-  align-items: flex-end;
-  gap: 14px;
-  margin: 0 0 2px;
+  height: var(--category-heading-height, 96px);
+  min-height: 0;
+  display: block;
+  margin: 0;
 }
-
-.catalog-group--themed .catalog-group__heading > div:first-child {
-  min-width: 0;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.catalog-group--themed .catalog-category-art {
-  --catalog-art-height: 64px;
-  --catalog-art-max-width: 145px;
-  align-self: flex-end;
-  margin-bottom: -1px;
-}
-
+.catalog-group--themed .catalog-group__title { display: contents; }
 .catalog-group--themed .catalog-group__heading h2 {
-  margin: 0 0 9px;
-  color: var(--category-section-ink, #183c34);
-  background: none;
-  line-height: 1.2;
+  position: absolute; z-index: 2; top: 13px; left: 0;
+  margin: 0; color: var(--category-section-ink); background: none;
+  font: 800 var(--category-title-size) / 1.2 var(--catalog-heading-font);
 }
-
-.catalog-group--themed .catalog-group__meta,
-.catalog-group--themed .catalog-group__actions {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  padding-bottom: 8px;
-  color: #627166;
-  font: 11px / 1.4 var(--catalog-font);
-  white-space: nowrap;
+.catalog-group--themed .catalog-group__heading h2 button {
+  min-height: 50px; padding: 0; color: inherit; border: 0; background: none; font: inherit; cursor: pointer;
 }
-
-.catalog-group--themed .catalog-group__count {
-  color: #627166;
-  font: 11px / 1.4 var(--catalog-font);
+.catalog-group--themed .catalog-category-art {
+  position: absolute; z-index: 1; left: var(--category-art-left); right: var(--category-art-right);
+  bottom: -1px; margin: 0; pointer-events: none;
 }
-
-.catalog-group--themed .catalog-group__heading > button,
-.catalog-group--themed .catalog-group__actions > button {
-  position: relative;
-  z-index: 2;
-  min-height: 44px;
-  border: 0;
-  padding-inline: 4px;
-  color: var(--category-section-accent, #64766d);
-  background: transparent;
-  font: 12px / 1.4 var(--catalog-font);
-  white-space: nowrap;
-  cursor: pointer;
+.catalog-group--themed .catalog-group__meta {
+  position: absolute; z-index: 3; top: 8px; right: 0; gap: 7px;
+  color: var(--category-section-ink); opacity: .8;
 }
-
-.catalog-group--themed .catalog-group__heading > button:hover,
-.catalog-group--themed .catalog-group__actions > button:hover {
-  color: var(--catalog-ink, #183c34);
-  text-decoration: underline;
+.catalog-group--themed .catalog-group__count { color: inherit; font: 11px / 1.4 var(--catalog-font); }
+.catalog-group--themed .catalog-group__meta > button {
+  min-height: 44px; border: 0; padding: 0 2px 0 5px; color: inherit;
+  background: transparent; font: 11px / 1.4 var(--catalog-font); cursor: pointer;
 }
-
-.catalog-group--themed .catalog-grid {
-  position: relative;
-  z-index: 1;
-}
-
-// This hook is only for a supplied raster decoration. It draws no placeholder.
-.catalog-group--themed .catalog-group__tail {
-  position: absolute;
-  z-index: 0;
-  inset: 7px calc(var(--category-section-inset) + 224px) auto auto;
-  width: min(21%, 220px);
-  height: 58px;
-  object-fit: contain;
-  object-position: right bottom;
-  pointer-events: none;
-}
-
-@media (max-width: 1000px) {
-  .catalog-group--themed .catalog-group__tail { right: calc(var(--category-section-inset) + 100px); }
-  .catalog-group--themed .catalog-group__meta,
-  .catalog-group--themed .catalog-group__actions { gap: 8px; }
-  .catalog-group--themed .catalog-group__count { font-size: 10px; }
-}
+.catalog-group--themed .catalog-group__meta > button:hover { text-decoration: underline; }
+.catalog-group--themed .catalog-group__meta .anticon { font-size: 10px; }
+.catalog-group--themed .catalog-category-rail { z-index: 2; }
+.catalog-group--themed[data-category-section="horror"] { --category-card-height: clamp(185px, 23.3vw, 272px); }
+.catalog-group--themed[data-category-section="horror"] .catalog-group__meta { left: 104px; right: auto; top: 15px; }
+.catalog-group--themed[data-category-section="farming"] :deep(.catalog-category-rail--single .catalog-card__cover img) { object-position: center top; }
 
 @media (max-width: 760px) {
-  .catalog-group--themed {
-    --category-section-inset: 12px;
-    padding-bottom: 14px;
-  }
-  .catalog-group--themed .catalog-group__heading {
-    min-height: 55px;
-    gap: 8px;
-    margin-bottom: 3px;
-  }
-  .catalog-group--themed .catalog-group__heading > div:first-child { gap: 6px; }
+  .catalog-group--themed { --category-card-height: auto; border-radius: 23px; padding: 0 12px 14px; }
+  .catalog-group--themed .catalog-group__heading { height: clamp(92px, var(--category-heading-height), 116px); }
+  .catalog-group--themed { --category-title-size: 30px; }
+  .catalog-group--themed .catalog-group__heading h2 { top: 15px; }
+  .catalog-group--themed .catalog-group__heading h2 button { min-height: 44px; }
   .catalog-group--themed .catalog-category-art {
-    --catalog-art-height: 48px;
-    --catalog-art-max-width: 100px;
+    --catalog-art-height: 88px;
+    --catalog-art-max-width: min(58vw, 240px);
+    left: auto; right: 0;
   }
-  .catalog-group--themed .catalog-group__heading h2 { margin-bottom: 8px; }
-  .catalog-group--themed .catalog-group__meta,
-  .catalog-group--themed .catalog-group__actions { gap: 6px; padding-bottom: 4px; }
-  .catalog-group--themed .catalog-group__heading > button,
-  .catalog-group--themed .catalog-group__actions > button { font-size: 11px; }
-  .catalog-group--themed .catalog-group__tail { width: 120px; height: 46px; }
-}
-
-@media (max-width: 520px) {
-  .catalog-group--themed .catalog-group__count,
-  .catalog-group--themed .catalog-group__tail { display: none; }
+  .catalog-group--themed[data-category-section="horror"] .catalog-category-art { --catalog-art-height: 105px; }
+  .catalog-group--themed[data-category-section="horror"] .catalog-group__title > .catalog-category-art { left: 22%; right: auto; }
+  .catalog-group--themed[data-category-section="horror"] .catalog-group__meta { left: auto; right: 0; top: 1px; }
+  .catalog-group--themed[data-category-section="exploration"] .catalog-category-art { --catalog-art-height: 70px; }
+  .catalog-group--themed[data-category-section="exploration"] .catalog-group__title > .catalog-category-art { left: 68px; right: 0; --catalog-art-max-width: calc(100% - 68px); }
+  .catalog-group--themed .catalog-group__meta { top: 2px; gap: 3px; }
+  .catalog-group--themed .catalog-group__count { display: none; }
+  .catalog-group--themed .catalog-group__meta > button { font-size: 10px; }
+  .catalog-group--themed[data-category-section="farming"] :deep(.catalog-category-rail--single .catalog-card__cover) { aspect-ratio: auto; }
+  .catalog-group--themed[data-category-section="farming"] :deep(.catalog-category-rail--single .catalog-card__cover img) { height: auto; }
 }

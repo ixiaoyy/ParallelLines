@@ -206,6 +206,41 @@ test("Back and refresh restore only the hero selection and keep the category lay
   await expect(page.locator(".catalog-controls")).toHaveCount(0);
 });
 
+test("hero next page changes only its six games and changing topic resets that page", async ({ page, context }) => {
+  const catalog = await localCatalog(context);
+  await readOnlyPreview(context, catalog);
+  await page.setViewportSize({ width: 921, height: 1100 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(new URL("/games", baseURL).href);
+  await ready(page);
+  const baseline = await layout(page);
+  const initialIds = await heroIds(page);
+  const initialUrl = page.url();
+  const railPositions = () => page.locator(".catalog-category-rail__viewport")
+    .evaluateAll((rails) => rails.map((rail) => rail.scrollLeft));
+  const initialRailPositions = await railPositions();
+  await page.getByRole("button", { name: "下一组推荐游戏", exact: true }).click();
+  await expect.poll(() => heroIds(page)).not.toEqual(initialIds);
+  const nextIds = await heroIds(page);
+  expect(nextIds).toHaveLength(6);
+  expect(new Set(nextIds).size).toBe(6);
+  const actualIds = new Set(catalog.data.categories.flatMap((category) => category.projects).map((project) => project.id));
+  expect(nextIds.every((id) => actualIds.has(id) && !initialIds.includes(id))).toBe(true);
+  await expect.poll(() => layout(page)).toEqual(baseline);
+  expect(await railPositions()).toEqual(initialRailPositions);
+  expect(page.url()).toBe(initialUrl);
+  await expect(page.getByRole("button", { name: "上一组推荐游戏", exact: true })).toBeVisible();
+  await selectTopic(page, "nostalgia");
+  const nostalgicIds = catalog.data.categories.flatMap((category) => category.projects)
+    .filter((project) => nostalgiaSlugs.has(project.slug)).map((project) => project.id);
+  expect((await heroIds(page)).sort()).toEqual(nostalgicIds.sort());
+  await expect(page.getByRole("button", { name: "上一组推荐游戏", exact: true })).toHaveCount(0);
+  await selectTopic(page, "all");
+  expect(await heroIds(page)).toEqual(initialIds);
+  await expect.poll(() => layout(page)).toEqual(baseline);
+  expect(await railPositions()).toEqual(initialRailPositions);
+});
+
 test("global search and category results ignore a hero topic and hide the hero tabs", async ({ page, context }) => {
   const catalog = await localCatalog(context);
   await readOnlyPreview(context, catalog);
@@ -263,7 +298,7 @@ for (const count of [0, 2, 3]) {
   });
 }
 
-test("390px sparse topics retain the full hero height and two-column categories without overflow", async ({ page, context }) => {
+test("390px sparse topics keep all four hero states and category rails contained without page overflow", async ({ page, context }) => {
   const source = await localCatalog(context);
   let catalog = source;
   await readOnlyPreview(context, () => catalog);
@@ -278,16 +313,26 @@ test("390px sparse topics retain the full hero height and two-column categories 
     expect(baseline.slots[5]!.rect.width).toBe(baseline.hero.width);
     expect(baseline.slots[1]!.rect.y).toBe(baseline.slots[2]!.rect.y);
     expect(baseline.slots[3]!.rect.y).toBe(baseline.slots[4]!.rect.y);
-    await selectTopic(page, "nostalgia");
-    await expectEmptySlots(page, count);
-    await expect.poll(() => layout(page)).toEqual(baseline);
+    for (const id of ["nostalgia", "quick", "brain", "all"] as const) {
+      await selectTopic(page, id);
+      if (id === "nostalgia") await expectEmptySlots(page, count);
+      await expect.poll(() => layout(page)).toEqual(baseline);
+      await expect(page.locator(".catalog-controls")).toHaveCount(0);
+    }
     const mobile = await page.evaluate(() => ({
       overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-      columns: [...document.querySelectorAll(".catalog-group:not(.catalog-group--featured) .catalog-grid")]
-        .map((grid) => getComputedStyle(grid).gridTemplateColumns.split(/\s+/).length),
+      rails: [...document.querySelectorAll(".catalog-category-rail__viewport")].map((rail) => {
+        const box = rail.getBoundingClientRect();
+        const style = getComputedStyle(rail);
+        return {
+          contained: box.left >= 0 && box.right <= document.documentElement.clientWidth + 1,
+          localOverflow: ["auto", "scroll"].includes(style.overflowX),
+          hasWidth: rail.clientWidth > 0,
+        };
+      }),
     }));
     expect(mobile.overflow).toBe(false);
-    expect(mobile.columns.length).toBe(baseline.sections.length);
-    expect(mobile.columns.every((columns) => columns === 2)).toBe(true);
+    expect(mobile.rails).toHaveLength(baseline.sections.length);
+    expect(mobile.rails.every((rail) => rail.contained && rail.localOverflow && rail.hasWidth)).toBe(true);
   }
 });

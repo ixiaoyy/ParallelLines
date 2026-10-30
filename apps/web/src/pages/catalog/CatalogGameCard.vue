@@ -24,7 +24,15 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   open: [event: MouseEvent];
   toggleWanted: [];
+  coverMeasured: [cover: string, aspect: number];
 }>();
+
+function measureCover(event: Event): void {
+  const image = event.currentTarget as HTMLImageElement;
+  if (props.cover && image.naturalWidth > 0 && image.naturalHeight > 0) {
+    emit("coverMeasured", props.cover, image.naturalWidth / image.naturalHeight);
+  }
+}
 
 const card = ref<HTMLElement | null>(null);
 const touchActionsOpen = ref(false);
@@ -103,7 +111,7 @@ onUnmounted(() => {
   <article ref="card" class="catalog-card" :class="{ 'catalog-card--featured': featured, 'catalog-card--touch-actions': touchActionsOpen, 'catalog-card--keyboard-actions': keyboardActionsOpen }" tabindex="-1" @pointerdown="startHold" @pointermove="moveHold" @pointerup="cancelHold" @pointercancel="cancelHold" @contextmenu="handleContextMenu" @focusin="revealKeyboardFocus" @focusout="releaseKeyboardFocus" @keydown.esc="touchActionsOpen = false">
     <a class="catalog-card__open" :href="href" target="_blank" rel="noopener noreferrer" :aria-label="`打开${title}`" @click="open" @auxclick="open">
       <span class="catalog-card__cover">
-        <img v-if="cover" :src="cover" alt="" :loading="eager ? 'eager' : 'lazy'" decoding="async" />
+        <img v-if="cover" :src="cover" alt="" :loading="eager ? 'eager' : 'lazy'" decoding="async" @load="measureCover" />
         <span v-else class="catalog-card__missing">{{ title }}</span>
       </span>
       <span class="catalog-card__mobile-name" :title="title">{{ title }}</span>

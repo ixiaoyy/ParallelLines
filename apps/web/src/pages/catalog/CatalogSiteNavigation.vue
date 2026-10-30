@@ -11,21 +11,19 @@ import CatalogIcon from "./CatalogIcon.vue";
 </template>
 
 <style scoped lang="scss">
-.catalog-site-navigation { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; color: var(--catalog-ink, #123d32); font: 700 18px var(--catalog-heading-font, var(--catalog-font)); white-space: nowrap; }
-.catalog-site-navigation a, .catalog-site-navigation button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 9px; border: 0; border-radius: 7px; padding: 0 14px; color: inherit; background: transparent; font: inherit; text-decoration: none; }
-.catalog-site-navigation :deep(.catalog-icon) { font-size: 24px; }
-.catalog-site-navigation a:hover { background: #dce5dc; }
-.catalog-site-navigation a.is-active { color: #fff; background: var(--catalog-nav-active, #4f8974); }
+.catalog-site-navigation { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 2px; color: #796c85; font: 700 16px var(--catalog-heading-font, var(--catalog-font)); white-space: nowrap; }
+.catalog-site-navigation a, .catalog-site-navigation button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; border: 0; border-radius: 10px; padding: 0 8px; color: inherit; background: transparent; font: inherit; text-decoration: none; }
+.catalog-site-navigation :deep(.catalog-icon) { display: none; }
+.catalog-site-navigation a:hover { background: #f1eff4; }
+.catalog-site-navigation a.is-active { color: #65546f; background: transparent; }
 .catalog-site-navigation a:focus-visible { outline: 2px solid var(--catalog-focus); outline-offset: 3px; }
-.catalog-site-navigation button:disabled { color: #284a3e; opacity: .72; cursor: not-allowed; }
+.catalog-site-navigation button:disabled { color: #796c85; opacity: .8; cursor: not-allowed; }
 @media (max-width: 760px) {
   .catalog-site-navigation { margin-left: auto; gap: 2px; font-size: 13px; }
-  .catalog-site-navigation a, .catalog-site-navigation button { min-height: 44px; gap: 4px; padding-inline: 6px; }
-  .catalog-site-navigation :deep(.catalog-icon) { font-size: 18px; }
+  .catalog-site-navigation a, .catalog-site-navigation button { min-height: 44px; padding-inline: 6px; }
 }
 @media (max-width: 359px) {
   .catalog-site-navigation { font-size: 12px; }
   .catalog-site-navigation a, .catalog-site-navigation button { padding-inline: 4px; }
-  .catalog-site-navigation :deep(.catalog-icon) { font-size: 15px; }
 }
 </style>

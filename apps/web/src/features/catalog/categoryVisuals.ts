@@ -26,6 +26,7 @@ export type CategoryArtwork =
   | {
       readonly kind: "image";
       readonly src: string;
+      readonly aspectRatio?: number;
     };
 
 export interface CatalogCategoryVisual {

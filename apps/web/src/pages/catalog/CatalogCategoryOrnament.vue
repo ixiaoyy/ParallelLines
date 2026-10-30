@@ -8,7 +8,7 @@ const cropStyle = computed<CSSProperties>(() => {
   const art = artwork.value;
   return {
     "--catalog-art-aspect": art?.kind === "atlas"
-      ? String(art.bounds.width / art.bounds.height) : "2.5",
+      ? String(art.bounds.width / art.bounds.height) : String(art?.aspectRatio ?? 2.5),
   };
 });
 const sourceStyle = computed<CSSProperties>(() => {

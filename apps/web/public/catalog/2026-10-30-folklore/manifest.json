@@ -1,0 +1,80 @@
+{
+  "source_reference_library_id": "libfile_f5155695a7f881919e66bae0f6174108",
+  "purpose": "Decorative category artwork only; never game covers",
+  "source_bytes_preserved": true,
+  "files": [
+    {
+      "file": "horror-bride-lantern-transparent.png",
+      "library_file_id": "libfile_60d9517357c8819194210a5ce9b94d59",
+      "size_bytes": 1428093,
+      "sha256": "8440933f2e7828e1337295324e217ec81b9361ee1d93875b51bd04f4af7b19e3"
+    },
+    {
+      "file": "exploration-scroll-transparent.png",
+      "library_file_id": "libfile_f7df3ae3a2a88191a9941e9e24024072",
+      "size_bytes": 1540568,
+      "sha256": "48c8f5af2d01c47ec3630542eb258e26b98e2cb2933ab4a243914c6f7cd13ce7"
+    },
+    {
+      "file": "fox-pinwheel-transparent.png",
+      "library_file_id": "libfile_ad775eface688191b26e9cf97030a2cc",
+      "size_bytes": 1044859,
+      "sha256": "1064cb79b21813e2c163be1ac0edae46dc21d5a0f938dcca92357757c4cbf64f"
+    },
+    {
+      "file": "buffalo-boy-rice-transparent.png",
+      "library_file_id": "libfile_fc8ac10488d0819198ee5bfabb5ebe16",
+      "size_bytes": 1820898,
+      "sha256": "11246f67744ea13e242912f862059f7b3b75770eaea8cfee512f193c6238b4c7"
+    },
+    {
+      "file": "garden-pavilion-bridge-transparent.png",
+      "library_file_id": "libfile_fa484b5356fc81918713666fc8d8e558",
+      "size_bytes": 1690302,
+      "sha256": "e69df9d1959f4f8321a42e58e272b54b292404313723fe7d48a57dd410493496",
+      "source_pixels": [
+        1817,
+        866
+      ],
+      "supplied_subject_bbox": [
+        56,
+        82,
+        1761,
+        787
+      ]
+    },
+    {
+      "file": "horror-plum-paper-tags-transparent.png",
+      "library_file_id": "libfile_bf24f44ffb248191b68c916dcb24e78a",
+      "size_bytes": 723577,
+      "sha256": "abdf02096d571dfcb4c0edd4a41ebffa126c5da9720101411fb27e1a44d07b29",
+      "source_pixels": [
+        1605,
+        980
+      ],
+      "role": "sparse category accent; never a game cover"
+    },
+    {
+      "file": "exploration-brass-compass-transparent.png",
+      "library_file_id": "libfile_c0839bea34a08191a44fedb626951ae8",
+      "size_bytes": 1394732,
+      "sha256": "5a239cde64c682a04aa05bf55489eaeac222af368fe35694c37051c62f23a86a",
+      "source_pixels": [
+        1145,
+        1374
+      ],
+      "role": "sparse category accent; never a game cover"
+    },
+    {
+      "file": "casual-vermilion-leaves-transparent.png",
+      "library_file_id": "libfile_2dba8b8767cc8191a3e1f756b487f9b1",
+      "size_bytes": 489350,
+      "sha256": "a9fdf425d07ac40ab1ca74628673886d81f92be33af9273cc234d6ba212bce21",
+      "source_pixels": [
+        2146,
+        733
+      ],
+      "role": "sparse category accent; never a game cover"
+    }
+  ]
+}

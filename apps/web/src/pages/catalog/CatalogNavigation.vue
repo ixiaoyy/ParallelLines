@@ -166,12 +166,13 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .catalog-navigation {
   position: fixed;
-  inset: var(--catalog-header-height, 80px) auto 0 0;
+  inset: var(--catalog-header-height, 60px) auto 0 0;
   z-index: 35;
-  width: 64px;
-  border-radius: 0 14px 0 0;
-  color: var(--catalog-ink, #123d32);
-  background: #dce6df;
+  width: var(--catalog-rail-width, 56px);
+  box-sizing: border-box;
+  border-right: 1px solid #e9f5f2;
+  color: #0d211d;
+  background: #f3fcfa;
   font-family: var(--catalog-font, "Microsoft YaHei", "PingFang SC", sans-serif);
 }
 
@@ -180,10 +181,10 @@ onUnmounted(() => {
   max-height: 100%;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   box-sizing: border-box;
   overflow: auto;
-  padding: 12px 10px;
+  padding: 12px 5px;
   scrollbar-width: none;
 }
 .catalog-navigation__items::-webkit-scrollbar { display: none; }
@@ -196,24 +197,24 @@ onUnmounted(() => {
   flex: 0 0 44px;
   place-items: center;
   border: 0;
-  border-radius: 9px;
+  border-radius: 14px;
   padding: 0;
-  color: #123d32;
+  color: #0d211d;
   background: transparent;
-  font-size: 25px;
+  font-size: 23px;
   cursor: pointer;
 }
-.catalog-navigation__button:hover, .catalog-navigation__close:hover { background: #cadcd0; }
-.catalog-navigation__button.is-active { color: #fff; background: var(--catalog-nav-active, #4f8974); }
+.catalog-navigation__button:hover, .catalog-navigation__close:hover { background: #e3f3ef; }
+.catalog-navigation__button.is-active { color: #0d211d; background: #ddf4ee; }
 .catalog-navigation__button.is-separated { margin-block-start: 13px; }
-.catalog-navigation__button.is-separated::before { position: absolute; inset: -8px 7px auto; height: 1px; background: #719687; content: ""; }
+.catalog-navigation__button.is-separated::before { position: absolute; inset: -8px 7px auto; height: 1px; background: #dceee8; content: ""; }
 .catalog-navigation button:focus-visible { outline: 2px solid var(--catalog-focus, #3b7864); outline-offset: 2px; }
 
 .catalog-navigation__panel {
   position: absolute;
-  inset: 12px auto auto 72px;
-  width: min(280px, calc(100vw - 90px));
-  max-height: calc(100dvh - var(--catalog-header-height, 80px) - 24px);
+  inset: 12px auto auto calc(var(--catalog-rail-width, 56px) + 8px);
+  width: min(280px, calc(100vw - var(--catalog-rail-width, 56px) - 24px));
+  max-height: calc(100dvh - var(--catalog-header-height, 60px) - 24px);
   box-sizing: border-box;
   overflow: auto;
   border-radius: 12px;
@@ -259,7 +260,7 @@ onUnmounted(() => {
 .catalog-navigation__tooltip--above { transform: translate(-50%, -100%); }
 
 @media (max-width: 760px) {
-  .catalog-navigation { inset: auto 8px calc(8px + env(safe-area-inset-bottom)) 8px; z-index: 40; width: auto; border-radius: 14px; background: #dce6dff5; box-shadow: 0 3px 18px #183c3418; }
+  .catalog-navigation { inset: auto 8px calc(8px + env(safe-area-inset-bottom)) 8px; z-index: 40; width: auto; border: 1px solid #dceee8; border-radius: 16px; background: #f1faf8f5; box-shadow: 0 3px 18px #183c3418; }
   .catalog-navigation__items { max-height: none; flex-direction: row; justify-content: flex-start; gap: 4px; overflow-x: auto; overflow-y: hidden; padding: 6px; }
   .catalog-navigation__button { font-size: 23px; }
   .catalog-navigation__button.is-separated { margin-block-start: 0; margin-inline-start: 9px; }

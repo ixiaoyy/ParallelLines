@@ -53,7 +53,7 @@ async function openIntegratedCatalog(page: Page, context: BrowserContext) {
   expect(projects.size).toBe(225);
   expect(projects.has("14")).toBe(false);
   expect(projects.has("37")).toBe(false);
-  expect([...projects.values()].filter((project) => project.ai_rating?.score != null)).toHaveLength(22);
+  expect([...projects.values()].filter((project) => project.ai_rating?.score != null)).toHaveLength(28);
   return { views, gameOpens, otherWrites, projects, categories: payload.data.categories };
 }
 
