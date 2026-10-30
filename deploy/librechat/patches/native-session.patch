@@ -467,7 +467,7 @@ diff --git a/client/src/routes/ssoLoginLoader.ts b/client/src/routes/ssoLoginLoa
 new file mode 100644
 --- /dev/null
 +++ b/client/src/routes/ssoLoginLoader.ts
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,48 @@
 +import { redirectDocument } from 'react-router-dom';
 +import type { LoaderFunctionArgs } from 'react-router-dom';
 +
@@ -509,9 +509,10 @@ new file mode 100644
 +  // Stop native authentication failures on the server's neutral error response.
 +  // Restarting OIDC here would hide a real failure behind a fresh login loop.
 +  if (query.has('error') || query.get('redirect') === 'false') {
-+    return redirectDocument(base + '/login?redirect=false&error=AUTH_FAILED');
++    return redirectDocument('/login?redirect=false&error=AUTH_FAILED');
 +  }
 +  const continuations = query.getAll('redirect_to');
 +  const target = continuations.length === 1 ? ssoChatReturn(continuations[0]) : null;
-+  return redirectDocument(base + '/oauth/openid?returnTo=' + encodeURIComponent(target ?? base + '/'));
++  // React Router prepends the basename; only returnTo contains the deployment prefix.
++  return redirectDocument('/oauth/openid?returnTo=' + encodeURIComponent(target ?? base + '/'));
 +}

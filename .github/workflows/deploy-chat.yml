@@ -59,6 +59,7 @@ jobs:
           git apply --check "$GITHUB_WORKSPACE/deploy/librechat/patches/native-session.patch"
           git apply "$GITHUB_WORKSPACE/deploy/librechat/patches/native-session.patch"
           npm ci --no-audit --no-fund
+          node --test "$GITHUB_WORKSPACE/deploy/librechat/sso/runtime/test/sso-loader-basename.test.cjs"
           npm run frontend
           npm run typecheck --workspace client
       - name: Package only verified regular native client files
