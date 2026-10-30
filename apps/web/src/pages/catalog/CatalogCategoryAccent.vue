@@ -30,15 +30,15 @@ const imageStyle = computed<CSSProperties>(() => {
 .catalog-category-accent .catalog-category-accent__image { inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .catalog-category-accent__caption { position: absolute; color: #914330; font: 700 12px / 1.4 var(--catalog-heading-font); letter-spacing: 2px; white-space: nowrap; }
 [data-accent-kind="leaves"] { --accent-width: 170px; --accent-max-height: 58px; right: 110px; top: 13px; }
-[data-accent-kind="branch-paper"] { --accent-width: 180px; --accent-max-height: 110px; right: -3px; top: -4px; }
+[data-accent-kind="branch-paper"] { --accent-width: 180px; --accent-max-height: 110px; right: 4px; top: 8px; }
 [data-accent-kind="branch-paper"] .catalog-category-accent__caption { right: 9px; top: 50%; writing-mode: vertical-rl; }
-[data-accent-kind="compass"] { --accent-width: 50px; --accent-max-height: 60px; left: 23px; top: calc(var(--category-heading-height) - 11px); }
+[data-accent-kind="compass"] { --accent-width: 50px; --accent-max-height: 60px; left: 23px; top: calc(var(--category-heading-space, var(--category-heading-height)) - 11px); }
 [data-accent-kind="compass"] .catalog-category-accent__caption { left: calc(100% + 5px); top: 7px; }
 @media (max-width: 760px) {
   [data-accent-kind="leaves"] { --accent-width: 110px; --accent-max-height: 38px; left: 60px; right: auto; top: 1px; }
   [data-accent-kind="branch-paper"] { --accent-width: 100px; --accent-max-height: 70px; top: 26px; }
   [data-accent-kind="branch-paper"] .catalog-category-accent__caption { display: none; }
-  [data-accent-kind="compass"] { --accent-width: 36px; --accent-max-height: 44px; left: 16px; top: 81px; }
+  [data-accent-kind="compass"] { --accent-width: 36px; --accent-max-height: 44px; left: 16px; }
   [data-accent-kind="compass"] .catalog-category-accent__caption { font-size: 10px; letter-spacing: 1px; }
 }
 </style>

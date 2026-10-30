@@ -1,0 +1,14 @@
+{
+  "library_file_id": "libfile_8fa80950bb5c8191b8e303bcf82d8998",
+  "file": "folklore-micro-objects-atlas.png",
+  "sourcePixels": [
+    1254,
+    1254
+  ],
+  "sha256": "99568d16d1ca1606da1472e42ba2f3f11e7b1110242b69df5ed66ae192bd8b60",
+  "bytes": 972150,
+  "sourceBytesPreserved": true,
+  "purpose": "tiny decorative category sprites only; never a game cover",
+  "bboxRegistry": "src/pages/catalog/catalogMicroAccents.ts",
+  "displayPixels": "6–20px wide, original aspect ratio"
+}

@@ -12,10 +12,6 @@ export interface CatalogCategoryAccent {
 
 // Only supplied, inspected raster assets enter this registry; no placeholders.
 const accents: Readonly<Record<string, CatalogCategoryAccent>> = {
-  casual: {
-    kind: "leaves", placement: "heading",
-    artwork: { kind: "image", src: staticAssetUrl("/catalog/2026-10-30-folklore/casual-vermilion-leaves-transparent.png"), aspectRatio: 2146 / 733 },
-  },
   horror: {
     kind: "branch-paper", placement: "heading", caption: "夜游",
     artwork: { kind: "image", src: staticAssetUrl("/catalog/2026-10-30-folklore/horror-plum-paper-tags-transparent.png"), aspectRatio: 1605 / 980 },

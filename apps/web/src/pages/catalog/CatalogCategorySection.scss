@@ -3,6 +3,7 @@
 .catalog-group--themed {
   --category-card-height: clamp(190px, 24vw, 280px);
   --category-title-size: clamp(32px, 4.5vw, 46px);
+  --category-heading-space: max(112px, var(--category-heading-height, 96px), calc(var(--catalog-art-height, 96px) + 12px));
   position: relative;
   isolation: isolate;
   min-width: 0;
@@ -13,7 +14,7 @@
 }
 .catalog-group--themed .catalog-group__heading {
   position: relative;
-  height: var(--category-heading-height, 96px);
+  height: var(--category-heading-space);
   min-height: 0;
   display: block;
   margin: 0;
@@ -27,9 +28,13 @@
 .catalog-group--themed .catalog-group__heading h2 button {
   min-height: 50px; padding: 0; color: inherit; border: 0; background: none; font: inherit; cursor: pointer;
 }
+.catalog-group--themed .catalog-group__description {
+  position: absolute; z-index: 2; top: 73px; left: 0;
+  margin: 0; color: inherit; font: 400 13px / 1.5 var(--catalog-font);
+}
 .catalog-group--themed .catalog-category-art {
   position: absolute; z-index: 1; left: var(--category-art-left); right: var(--category-art-right);
-  bottom: -1px; margin: 0; pointer-events: none;
+  bottom: 4px; margin: 0; pointer-events: none;
 }
 .catalog-group--themed .catalog-group__meta {
   position: absolute; z-index: 3; top: 8px; right: 0; gap: 7px;
@@ -48,18 +53,19 @@
 .catalog-group--themed[data-category-section="farming"] :deep(.catalog-category-rail--single .catalog-card__cover img) { object-position: center top; }
 
 @media (max-width: 760px) {
-  .catalog-group--themed { --category-card-height: auto; border-radius: 23px; padding: 0 12px 14px; }
-  .catalog-group--themed .catalog-group__heading { height: clamp(92px, var(--category-heading-height), 116px); }
+  .catalog-group--themed { --category-card-height: auto; --category-heading-space: max(128px, var(--category-heading-height, 96px)); border-radius: 23px; padding: 0 12px 14px; }
   .catalog-group--themed { --category-title-size: 30px; }
   .catalog-group--themed .catalog-group__heading h2 { top: 15px; }
   .catalog-group--themed .catalog-group__heading h2 button { min-height: 44px; }
+  .catalog-group--themed .catalog-group__description { top: 58px; font-size: 12px; }
   .catalog-group--themed .catalog-category-art {
     --catalog-art-height: 88px;
     --catalog-art-max-width: min(58vw, 240px);
     left: auto; right: 0;
   }
   .catalog-group--themed[data-category-section="horror"] .catalog-category-art { --catalog-art-height: 105px; }
-  .catalog-group--themed[data-category-section="horror"] .catalog-group__title > .catalog-category-art { left: 22%; right: auto; }
+  .catalog-group--themed[data-category-section="horror"] .catalog-group__title > .catalog-category-art { left: auto; right: 0; max-width: calc(100% - 132px); }
+  .catalog-group--themed:is([data-category-section="rpg"], [data-category-section="simulation"]) .catalog-category-art { max-width: calc(100% - 132px); }
   .catalog-group--themed[data-category-section="horror"] .catalog-group__meta { left: auto; right: 0; top: 1px; }
   .catalog-group--themed[data-category-section="exploration"] .catalog-category-art { --catalog-art-height: 70px; }
   .catalog-group--themed[data-category-section="exploration"] .catalog-group__title > .catalog-category-art { left: 68px; right: 0; --catalog-art-max-width: calc(100% - 68px); }

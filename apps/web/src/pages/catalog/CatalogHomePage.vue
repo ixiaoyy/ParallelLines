@@ -26,6 +26,7 @@ import CatalogAiRating from "./CatalogAiRating.vue";
 import CatalogIcon from "./CatalogIcon.vue";
 import CatalogCategoryRail from "./CatalogCategoryRail.vue";
 import CatalogCategoryAccent from "./CatalogCategoryAccent.vue";
+import CatalogMicroAccents from "./CatalogMicroAccents.vue";
 import { arrangeMixedCovers } from "./catalogCoverComposition";
 import { folkloreArtworkFor } from "./catalogFolkloreArtwork";
 import { categorySectionStyleFor, categorySectionThemeFor } from "./catalogCategoryThemes";
@@ -435,9 +436,10 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
             <div v-else class="catalog-groups">
               <section v-for="group in presentationGroups" :key="group.key" class="catalog-group" :data-category-section="group.featured ? undefined : group.key" :class="{ 'catalog-group--featured': group.featured, 'catalog-group--illustrated': group.visual?.artwork, 'catalog-group--themed': !group.featured && group.name }" :style="group.visual ? categorySectionStyleFor(group.key) : undefined" :aria-label="group.name || '游戏列表'">
                 <header v-if="group.name && !group.featured" class="catalog-group__heading">
-                  <div class="catalog-group__title"><h2><button type="button" @click="browseCategory(group.key)">{{ group.name }}</button></h2><CatalogCategoryOrnament v-if="group.visual?.artwork" :visual="group.visual" /></div>
+                  <div class="catalog-group__title"><h2><button type="button" @click="browseCategory(group.key)">{{ group.name }}</button></h2><p v-if="group.key === 'horror'" class="catalog-group__description">悬疑、惊悚与未知</p><CatalogCategoryOrnament v-if="group.visual?.artwork" :visual="group.visual" /></div>
                   <div class="catalog-group__meta"><span class="catalog-group__count">{{ group.total }} 款</span><button type="button" :aria-label="`查看全部${group.name}游戏`" @click="browseCategory(group.key)">查看更多 <RightOutlined aria-hidden="true" /></button></div>
                   <CatalogCategoryAccent :slug="group.key" placement="heading" />
+                    <CatalogMicroAccents :slug="group.key" />
                 </header>
                 <CatalogCategoryAccent v-if="!group.featured" :slug="group.key" placement="card-corner" />
                 <component :is="!group.featured && isDiscovery ? CatalogCategoryRail : 'div'" v-bind="!group.featured && isDiscovery ? { name: group.name, slug: group.key, total: group.total, composition: categorySectionThemeFor(group.key).composition } : {}" :class="{ 'catalog-grid': group.featured || !isDiscovery, 'catalog-grid--featured': group.featured }">
