@@ -1,72 +1,148 @@
 import { describe, expect, it } from "vitest";
 
-import { parseCatalogNavigation } from "./catalogNavigation";
-import { catalogGameplayFor, CATALOG_MORE_TOPICS, countCatalogTopics, isCatalogTopicId, matchesCatalogTopic } from "./catalogTopics";
-import type { CatalogTopicProject } from "./catalogTopics";
+import { parseCatalogHeroTopic, parseCatalogNavigation } from "./catalogNavigation";
+import { CATALOG_HERO_TABS, matchesCatalogTopic, selectCatalogRecommendations } from "./catalogTopics";
 
-function project(name: string, description: string | null = null, slug = "unknown"): CatalogTopicProject {
-  return { name, description, slug };
+function rated(slug: string, score: number | null) {
+  return { slug, aiRating: { score } };
 }
 
-describe("catalog gameplay topics", () => {
-  it("does not infer gameplay from internal authorship, popularity or AI score", () => {
-    const unknown = { ...project("不明玩法"), authorName: "original", kind: "internal", viewCount: 999999, aiRating: { score: 10 } };
-    expect(matchesCatalogTopic(unknown, "classic")).toBe(false);
-    expect(matchesCatalogTopic(unknown, "quick")).toBe(false);
-    expect(matchesCatalogTopic(project("Chess Cubed"), "classic")).toBe(true);
-    expect(matchesCatalogTopic(project("Chess Cubed"), "quick")).toBe(false);
+describe("catalog hero recommendations", () => {
+  it("keeps the four approved hero tabs in their exact order", () => {
+    expect(CATALOG_HERO_TABS.map(({ id, name }) => ({ id, name }))).toEqual([
+      { id: "all", name: "全部推荐" },
+      { id: "nostalgia", name: "经典怀旧" },
+      { id: "quick", name: "即玩即乐" },
+      { id: "brain", name: "多动脑子" },
+    ]);
   });
 
-  it("uses a concrete gameplay description even when the title is unrelated", () => {
-    const city = project("CityMaker / 城市营造", "在 4×4 街区上玩 2048：合并相同建筑。");
-    expect(matchesCatalogTopic(city, "classic")).toBe(true);
-    expect(matchesCatalogTopic(city, "number-merging")).toBe(true);
-    expect(catalogGameplayFor(city).map((rule) => rule.id)).toEqual(["number-merge"]);
-    expect(matchesCatalogTopic(project("很经典的新世界", "休闲"), "classic")).toBe(false);
+  it("ranks real scores descending with stable ties without mutating the input", () => {
+    const projects = [
+      rated("unknown-zero", 0),
+      rated("unknown-highest", 10),
+      rated("unknown-first-tie", 8),
+      rated("unknown-middle", 5),
+      rated("unknown-second-tie", 8),
+    ];
+    const originalOrder = [...projects];
+    for (const entry of projects) {
+      Object.freeze(entry.aiRating);
+      Object.freeze(entry);
+    }
+    Object.freeze(projects);
+
+    const selected = selectCatalogRecommendations(projects, "all");
+
+    expect(selected.map((entry) => entry.slug)).toEqual([
+      "unknown-highest", "unknown-first-tie", "unknown-second-tie", "unknown-middle", "unknown-zero",
+    ]);
+    expect(selected).not.toBe(projects);
+    expect(selected[0]).toBe(projects[1]);
+    expect(projects).toEqual(originalOrder);
   });
 
-  it("distinguishes snake ordering from classic snake gameplay", () => {
-    const ordering = project("蛇蛇出洞", "按顺序放走彩色小蛇，避开阻挡，在倒计时结束前清空棋盘。", "snake-escape");
-    expect(matchesCatalogTopic(ordering, "classic")).toBe(false);
-    expect(matchesCatalogTopic(ordering, "quick")).toBe(true);
-    expect(matchesCatalogTopic(project("反向贪吃蛇 3D"), "classic")).toBe(true);
+  it("keeps unknown scores stable after real zero without fabricating scores", () => {
+    const projects = [
+      { slug: "no-rating" },
+      { slug: "null-rating", aiRating: null },
+      { slug: "user-rating-only", averageScore: 10, score: 10 },
+      rated("null-score", null),
+      rated("nan-score", Number.NaN),
+      rated("positive-infinity", Number.POSITIVE_INFINITY),
+      rated("negative-infinity", Number.NEGATIVE_INFINITY),
+      rated("below-zero", -0.01),
+      rated("above-ten", 10.01),
+      rated("valid-zero", 0),
+      rated("valid-ten", 10),
+    ];
+
+    const originalOrder = [...projects];
+    for (const entry of projects) {
+      if (entry.aiRating) Object.freeze(entry.aiRating);
+      Object.freeze(entry);
+    }
+    Object.freeze(projects);
+
+    const selected = selectCatalogRecommendations(projects, "all");
+
+    expect(selected.map((entry) => entry.slug)).toEqual([
+      "valid-ten", "valid-zero",
+      "no-rating", "null-rating", "user-rating-only", "null-score", "nan-score",
+      "positive-infinity", "negative-infinity", "below-zero", "above-ten",
+    ]);
+    expect(selected[2]).toBe(projects[0]);
+    expect(selected.find((entry) => entry.slug === "no-rating")).not.toHaveProperty("aiRating");
+    expect(selected.find((entry) => entry.slug === "null-rating")?.aiRating).toBeNull();
+    expect(selected.find((entry) => entry.slug === "null-score")?.aiRating?.score).toBeNull();
+    expect(selected.find((entry) => entry.slug === "nan-score")?.aiRating?.score).toBeNaN();
+    expect(selected.find((entry) => entry.slug === "below-zero")?.aiRating?.score).toBe(-0.01);
+    expect(selected.find((entry) => entry.slug === "above-ten")?.aiRating?.score).toBe(10.01);
+    expect(projects).toEqual(originalOrder);
+    expect(selectCatalogRecommendations([], "all")).toEqual([]);
   });
 
-  it("normalises full-width titles and avoids numbers that only contain 2048", () => {
-    expect(matchesCatalogTopic(project("Ａｓｔｒａ ２０４８"), "number-merging")).toBe(true);
-    expect(matchesCatalogTopic(project("Project 120480"), "number-merging")).toBe(false);
-  });
+  it("does not infer a mechanism for an unknown slug from title, metadata or score", () => {
+    const unknown = {
+      ...rated("unknown-evidence-free-slug", 10),
+      name: "2048 Chess Word Puzzle RPG",
+      description: "经典怀旧、即玩即乐和多动脑子",
+      authorName: "original",
+      kind: "internal",
+      viewCount: 999999,
+    };
 
-  it("keeps the small explicit canonical mapping exact", () => {
-    expect(matchesCatalogTopic(project("流心西瓜", "休闲", "liuxin-watermelon"), "number-merging")).toBe(true);
-    expect(matchesCatalogTopic(project("未注明玩法", null, "liuxin-watermelon-other"), "number-merging")).toBe(false);
-  });
-
-  it("keeps real zero-result topics empty instead of falling back to all games", () => {
-    const projects = [project("未注明玩法")];
-    const counts = countCatalogTopics(projects);
-    expect(counts.all).toBe(1);
-    for (const topic of CATALOG_MORE_TOPICS) {
-      expect(counts[topic.id]).toBe(0);
-      expect(projects.filter((entry) => matchesCatalogTopic(entry, topic.id))).toEqual([]);
+    expect(matchesCatalogTopic(unknown, "all")).toBe(true);
+    const unscored = { slug: "unknown-unscored", aiRating: null };
+    expect(selectCatalogRecommendations([unscored, unknown], "all")).toEqual([unknown, unscored]);
+    for (const topic of CATALOG_HERO_TABS) {
+      if (topic.id === "all") continue;
+      expect(matchesCatalogTopic(unknown, topic.id)).toBe(false);
+      expect(selectCatalogRecommendations([unknown], topic.id)).toEqual([]);
+      expect(matchesCatalogTopic(unscored, topic.id)).toBe(false);
     }
   });
 
-  it("counts each API project once and does not mutate metadata", () => {
-    const entry = Object.freeze(project("Astra 2048", "滑动合并相同数字并挑战 2048。"));
-    const projects = Object.freeze([entry]);
-    const before = JSON.stringify(projects);
-    expect(countCatalogTopics(projects)["number-merging"]).toBe(1);
-    expect(JSON.stringify(projects)).toBe(before);
-    expect(CATALOG_MORE_TOPICS.map((topic) => topic.name)).toEqual(["数字与合成", "消除与解压", "一指挑战", "棋盘对弈"]);
+  it("parses the hero topic independently from every global catalog filter", () => {
+    const globalQuery = {
+      q: "Chess",
+      category: "shooting",
+      author: "original",
+      sort: "hot",
+      feed: "hot",
+      scope: "wanted",
+      view: "authors",
+    };
+    const combinedQuery = { ...globalQuery, topic: "nostalgia" };
+
+    expect(parseCatalogHeroTopic(combinedQuery)).toBe("nostalgia");
+    expect(parseCatalogNavigation(combinedQuery)).toEqual(parseCatalogNavigation(globalQuery));
+    expect(parseCatalogNavigation(combinedQuery)).not.toHaveProperty("topic");
+    expect(parseCatalogNavigation(combinedQuery)).not.toHaveProperty("heroTopic");
+    expect(parseCatalogNavigation(combinedQuery)).toMatchObject({
+      search: "Chess", category: "shooting", author: "original", sort: "hot", feed: "hot", scope: "wanted", view: "authors",
+    });
+    expect(parseCatalogHeroTopic({ q: "nostalgia", category: "brain", author: "quick" })).toBe("all");
   });
 
-  it("parses topic URLs independently from source-author and sorting filters", () => {
-    expect(parseCatalogNavigation({ topic: "classic" })).toMatchObject({ topic: "classic", author: null, sort: "latest", feed: "discovery" });
-    expect(parseCatalogNavigation({ topic: "board-duels", q: "Chess" })).toMatchObject({ topic: "board-duels", search: "Chess" });
-    expect(parseCatalogNavigation({ author: "original" }).topic).toBe("all");
-    expect(parseCatalogNavigation({ topic: "unknown" }).topic).toBe("all");
-    expect(parseCatalogNavigation({ topic: ["classic", "quick"] }).topic).toBe("all");
-    expect(isCatalogTopicId("original")).toBe(false);
+  it("keeps user-confirmed Mario and CS nostalgia separate from ordinary number puzzles", () => {
+    expect(matchesCatalogTopic({ slug: "super-mario" }, "nostalgia")).toBe(true);
+    expect(matchesCatalogTopic({ slug: "csgo-desert" }, "nostalgia")).toBe(true);
+    expect(matchesCatalogTopic({ slug: "astra-2048-eddy" }, "nostalgia")).toBe(false);
+    expect(matchesCatalogTopic({ slug: "astra-2048-eddy" }, "brain")).toBe(true);
+    expect(matchesCatalogTopic({ slug: "entropy-blade", aiRating: { score: 7.5 } }, "nostalgia")).toBe(false);
+  });
+
+  it("accepts only the new hero topic IDs and treats malformed or legacy queries as all", () => {
+    for (const topic of CATALOG_HERO_TABS) {
+      expect(parseCatalogHeroTopic({ topic: topic.id })).toBe(topic.id);
+    }
+    for (const topic of ["classic", "word-puzzle", "short-session", "deep-progress", "board-duels", "unknown", "", "NOSTALGIA"]) {
+      expect(parseCatalogHeroTopic({ topic })).toBe("all");
+    }
+    expect(parseCatalogHeroTopic({})).toBe("all");
+    expect(parseCatalogHeroTopic({ topic: null })).toBe("all");
+    expect(parseCatalogHeroTopic({ topic: ["nostalgia", "quick"] })).toBe("all");
+    expect(parseCatalogHeroTopic({ topic: ["brain"] })).toBe("all");
   });
 });
