@@ -516,14 +516,15 @@
 }
 
 .auth-submit {
+  justify-content: center;
   width: 100%;
-  min-height: 3.9rem !important;
+  min-height: 3rem !important;
   border: 1px solid var(--btn-primary-border) !important;
   border-radius: 0.62rem !important;
   color: var(--btn-primary-fg) !important;
   background: var(--btn-primary-bg) !important;
   box-shadow: var(--btn-primary-shadow) !important;
-  font-size: 1.28rem !important;
+  font-size: 1rem !important;
   font-weight: 820 !important;
 }
 
@@ -834,7 +835,7 @@
   .auth-submit {
     min-height: 3rem !important;
     border-radius: 0.68rem !important;
-    font-size: 1.06rem !important;
+    font-size: 1rem !important;
   }
 
   .auth-social-block {
@@ -983,9 +984,9 @@
   }
 
   .auth-submit {
-    min-height: 2.68rem !important;
+    min-height: 2.75rem !important;
     border-radius: 0.58rem !important;
-    font-size: 0.98rem !important;
+    font-size: 1rem !important;
   }
 
   .auth-switch-copy {
