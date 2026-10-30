@@ -2,7 +2,7 @@
 const { isUnavailable } = require('./errors.cjs');
 
 const lifetimeMs = 10 * 60 * 1000;
-const reserved = /^(?:api|oauth|images|assets|fonts|auth|login|register|chat|health|livez|readyz|metrics|index\.html)$/i;
+const reserved = /^(?:api|oauth|images|assets|fonts|auth|login|register|forgot-password|reset-password|verify|chat|health|livez|readyz|metrics|index\.html)$/i;
 const staticExtension = /\.(?:html?|js|mjs|css|map|json|wasm|webmanifest|png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|otf|eot)$/i;
 
 /** Path only: no query, fragment, encodings, normalization or external destination. */
@@ -123,17 +123,13 @@ function createDocumentEntry({ domainClient, authenticateDocument, clock = Date.
   return Object.freeze({ document, prepareOAuth });
 }
 
-/** UI-only bootstrap. It grants no authentication and never reads cookies or tokens. */
-function injectDocumentLoadingShell(html, req) {
-  const target = safeChatReturn(req.ssoDocumentTarget) || '/chat/';
-  const destination = '/chat/oauth/openid?returnTo=' + encodeURIComponent(target);
-  const config = JSON.stringify({ destination }).replace(/</g, '\\u003c');
-  const script = `<script data-pl-sso-entry>(function(){var c=${config};var root=document.documentElement;var leaving=false;function login(){return /^\\/chat\\/login(?:\\/|$)/i.test(location.pathname);}function mask(){root.removeAttribute('data-pl-sso-ready');}function start(){if(leaving)return;leaving=true;mask();location.replace(c.destination);}['pushState','replaceState'].forEach(function(key){var native=history[key];history[key]=function(){var value=arguments[2];if(value!=null){var next=new URL(String(value),location.href);if(next.origin===location.origin&&/^\\/chat\\/login(?:\\/|$)/i.test(next.pathname)){start();return;}}return native.apply(this,arguments);};});window.addEventListener('popstate',function(){if(login())start();},true);function ready(){if(login()){start();return;}var app=document.getElementById('root');if(app&&Array.from(app.children).some(function(child){return child.id!=='loading-container';}))root.setAttribute('data-pl-sso-ready','');}new MutationObserver(ready).observe(document.documentElement,{childList:true,subtree:true});document.addEventListener('DOMContentLoaded',ready);})();</script>`;
-  const style = '<style data-pl-sso-entry>#root{visibility:hidden!important}html[data-pl-sso-ready] #root{visibility:visible!important}#pl-sso-loading{position:fixed;inset:0;display:grid;place-content:center;background:#f8fafc;color:#475569;font:15px system-ui;z-index:2147483647}html[data-pl-sso-ready] #pl-sso-loading{display:none}@media(prefers-color-scheme:dark){#pl-sso-loading{background:#0f172a;color:#e2e8f0}}</style>';
-  return html.replace(/<head(?:\s[^>]*)?>/i, match => match + style + script)
-    .replace(/<body(?:\s[^>]*)?>/i, match => match + '<div id="pl-sso-loading" role="status" aria-live="polite">正在进入聊天…</div>');
+/** Deployment hint for a pre-render router redirect; never an authentication proof. */
+function injectSsoDocumentMeta(html, req) {
+  if (!safeChatReturn(req.ssoDocumentTarget)) return html;
+  return html.replace(/<head(?:\s[^>]*)?>/i,
+    match => match + '<meta name="pl-sso-only" content="true">');
 }
 
 function unavailablePage(req, res) { return neutralPage(res, documentTarget(req, '/chat'), 503); }
 
-module.exports = { safeChatReturn, createDocumentEntry, injectDocumentLoadingShell, unavailablePage };
+module.exports = { safeChatReturn, createDocumentEntry, injectSsoDocumentMeta, unavailablePage };

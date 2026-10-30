@@ -99,7 +99,7 @@ const initializeMCPs = require('./services/initializeMCPs');
 const { configureSubagentTaskRouting } = require('./services/Endpoints/agents/subagentThreadStore');
 const configureSocialLogins = require('./socialLogins');
 const createSpaFallback = require('./utils/fallback');
-const { injectDocumentLoadingShell } = require('./sso-runtime/document-entry.cjs');
+const { injectSsoDocumentMeta } = require('./sso-runtime/document-entry.cjs');
 const { getAppConfig, rederiveEndpoints } = require('./services/Config');
 const staticCache = require('./utils/staticCache');
 const noIndex = require('./middleware/noIndex');
@@ -347,7 +347,7 @@ const startServer = async () => {
       () => `lang="${saneLang}"`,
     );
     updatedIndexHtml = maybeInjectQueryDevtoolsBootstrap(updatedIndexHtml, req);
-    updatedIndexHtml = injectDocumentLoadingShell(updatedIndexHtml, req);
+    updatedIndexHtml = injectSsoDocumentMeta(updatedIndexHtml, req);
 
     /* Nonce last: every injected script above must be stamped too. */
     if (cspPolicy) {

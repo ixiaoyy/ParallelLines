@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import vm from 'node:vm';
 import entry from '../document-entry.cjs';
 
 const domainClient = 'https://fixture.test/chat';
@@ -103,22 +102,17 @@ test('wrong state, expired target, unsafe target and native failure cannot redir
   assert.deepEqual(res.redirectArgs, ['/chat/']);
 });
 
-test('loading bootstrap masks early paint and converts only internal login navigation to native OIDC', () => {
-  const html = entry.injectDocumentLoadingShell('<html><head><script type="module" src="app.js"></script></head><body><div id="root"><div id="loading-container"></div></div></body></html>', { ssoDocumentTarget: '/chat/c/conversation-id' });
-  assert.ok(html.indexOf('data-pl-sso-entry') < html.indexOf('src="app.js"'));
-  assert.match(html, /正在进入聊天/); assert.doesNotMatch(html, /document\.cookie|localStorage|access_token|id_token/);
-  const script = /<script data-pl-sso-entry>([\s\S]*?)<\/script>/.exec(html)[1];
-  const replacements = []; const historyCalls = []; const attributes = new Set();
-  const location = { origin: 'https://fixture.test', pathname: '/chat/c/conversation-id', href: 'https://fixture.test/chat/c/conversation-id', replace(value) { replacements.push(value); } };
-  const context = { URL, Array, location, history: { pushState(...args) { historyCalls.push(args); }, replaceState(...args) { historyCalls.push(args); } },
-    document: { documentElement: { removeAttribute(name) { attributes.delete(name); }, setAttribute(name) { attributes.add(name); } },
-      addEventListener() {}, getElementById() { return { children: [{ id: 'loading-container' }] }; } },
-    MutationObserver: class { constructor(callback) { this.callback = callback; } observe() {} }, window: { addEventListener() {} } };
-  vm.runInNewContext(script, context);
-  context.history.pushState({}, '', '/chat/c/another'); assert.equal(historyCalls.length, 1); assert.equal(replacements.length, 0);
-  context.history.replaceState({}, '', '/chat/login?redirect_to=%2Fc%2Fconversation-id');
-  assert.deepEqual(replacements, ['/chat/oauth/openid?returnTo=%2Fchat%2Fc%2Fconversation-id']);
-  assert.equal(attributes.has('data-pl-sso-ready'), false); assert.equal(historyCalls.length, 1);
+test('verified document adds only SSO metadata without hiding or replacing native navigation', () => {
+  const original = '<html><head><script type="module" src="app.js"></script></head><body><div id="root"></div></body></html>';
+  const meta = '<meta name="pl-sso-only" content="true">';
+  for (const target of ['/chat/', '/chat/c/conversation-id']) {
+    const html = entry.injectSsoDocumentMeta(original, { ssoDocumentTarget: target });
+    assert.equal(html.replace(meta, ''), original);
+    assert.ok(html.indexOf(meta) < html.indexOf('src="app.js"'));
+    assert.doesNotMatch(html, /visibility|MutationObserver|pushState|replaceState|location\.replace|document\.cookie|localStorage|access_token|id_token/);
+  }
+  assert.equal(entry.injectSsoDocumentMeta(original, {}), original);
+  assert.equal(entry.injectSsoDocumentMeta(original, { ssoDocumentTarget: '//evil.test' }), original);
 });
 
 test('native index applies document gate after session initialization and before shell/static index delivery', () => {
@@ -126,5 +120,5 @@ test('native index applies document gate after session initialization and before
   assert.ok(source.indexOf('await configureSocialLogins(app, appConfig)') < source.indexOf("app.get('/index.html', chatSsoRuntime.document(sendIndexHtml))"));
   assert.match(source, /createSpaFallback\(chatSsoRuntime\.document\(sendIndexHtml\)\)/);
   assert.match(source, /index\\\.html\$\/i\.test\(req\.path\) \? next\(\)/);
-  assert.ok(source.indexOf('injectDocumentLoadingShell(updatedIndexHtml, req)') < source.indexOf('applyCspNonce(updatedIndexHtml, csp.nonce)'));
+  assert.ok(source.indexOf('injectSsoDocumentMeta(updatedIndexHtml, req)') < source.indexOf('applyCspNonce(updatedIndexHtml, csp.nonce)'));
 });

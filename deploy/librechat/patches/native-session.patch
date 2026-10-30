@@ -426,3 +426,92 @@ diff --git a/packages/data-provider/src/request.ts b/packages/data-provider/src/
    dispatchTokenUpdatedEvent,
    redirectIfTwoFactorSetupPayload,
  };
+diff --git a/client/src/routes/index.tsx b/client/src/routes/index.tsx
+--- a/client/src/routes/index.tsx
++++ b/client/src/routes/index.tsx
+@@ -16,6 +16,7 @@
+ import MarketplaceRoute from './Marketplace';
+ import { codeSetupRoute } from './CodeSetup';
+ import LoginLayout from './Layouts/Login';
++import { ssoLoginLoader } from './ssoLoginLoader';
+ import dashboardRoutes from './Dashboard';
+ import WithRum from '~/lib/rum/WithRum';
+ import ShareRoute from './ShareRoute';
+@@ -87,14 +88,17 @@
+       children: [
+         {
+           path: 'register',
++          loader: ssoLoginLoader,
+           element: <Registration />,
+         },
+         {
+           path: 'forgot-password',
++          loader: ssoLoginLoader,
+           element: <RequestPasswordReset />,
+         },
+         {
+           path: 'reset-password',
++          loader: ssoLoginLoader,
+           element: <ResetPassword />,
+         },
+       ],
+@@ -117,6 +121,7 @@
+               children: [
+                 {
+                   path: 'login',
++                  loader: ssoLoginLoader,
+                   element: <Login />,
+                 },
+                 {
+diff --git a/client/src/routes/ssoLoginLoader.ts b/client/src/routes/ssoLoginLoader.ts
+new file mode 100644
+--- /dev/null
++++ b/client/src/routes/ssoLoginLoader.ts
+@@ -0,0 +1,47 @@
++import { redirectDocument } from 'react-router-dom';
++import type { LoaderFunctionArgs } from 'react-router-dom';
++
++const base = '/chat';
++const reserved = /^(?:api|oauth|images|assets|fonts|auth|login|register|forgot-password|reset-password|verify|chat|health|livez|readyz|metrics|index\.html)$/i;
++const staticExtension = /\.(?:html?|js|mjs|css|map|json|wasm|webmanifest|png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|otf|eot)$/i;
++
++/** UI continuation only. Authentication remains entirely server-side. */
++export function ssoChatReturn(value: unknown): string | null {
++  if (typeof value !== 'string' || value.length > 2048 || !value.startsWith('/')) {
++    return null;
++  }
++  // The server return contract is a pathname, never a query or credential handoff.
++  const pathname = value.split(/[?#]/, 1)[0];
++  const target = pathname === base || pathname.startsWith(base + '/')
++    ? pathname
++    : base + pathname;
++  if (target.length > 2048 || /[^A-Za-z0-9/._~-]/.test(target) || target.includes('//')) {
++    return null;
++  }
++  if (target === base || target === base + '/') {
++    return target;
++  }
++  const segments = target.slice(base.length + 1).split('/');
++  if (segments.some((segment) => !segment || segment === '.' || segment === '..') ||
++      reserved.test(segments[0]) || staticExtension.test(segments.at(-1) ?? '')) {
++    return null;
++  }
++  return target;
++}
++
++/** Runs before LoginLayout/Welcome/SocialButton can mount in this deployment. */
++export function ssoLoginLoader({ request }: LoaderFunctionArgs): Response | null {
++  if (typeof document === 'undefined' ||
++      document.querySelector<HTMLMetaElement>('meta[name="pl-sso-only"]')?.content !== 'true') {
++    return null;
++  }
++  const query = new URL(request.url).searchParams;
++  // Stop native authentication failures on the server's neutral error response.
++  // Restarting OIDC here would hide a real failure behind a fresh login loop.
++  if (query.has('error') || query.get('redirect') === 'false') {
++    return redirectDocument(base + '/login?redirect=false&error=AUTH_FAILED');
++  }
++  const continuations = query.getAll('redirect_to');
++  const target = continuations.length === 1 ? ssoChatReturn(continuations[0]) : null;
++  return redirectDocument(base + '/oauth/openid?returnTo=' + encodeURIComponent(target ?? base + '/'));
++}
