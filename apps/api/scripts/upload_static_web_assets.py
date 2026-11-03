@@ -129,6 +129,11 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-10-23-v1/covers/qunying-zhulu.webp",
     # 遗迹：破巢正式封面与目录映射同批交付，可按独立版本定向发布。
     "catalog/2026-10-24-v1/covers/yiji-pochao.webp",
+    # 本批四款外链游戏的正式封面按独立版本上传，不重传旧资源。
+    "catalog/2026-11-03-v1/covers/gd-spectrum.webp",
+    "catalog/2026-11-03-v1/covers/gd-fungi-run.webp",
+    "catalog/2026-11-03-v1/covers/gd-super-chicken-td.webp",
+    "catalog/2026-11-03-v1/covers/gd-golf-adventures-2.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 STATIC_ASSETS = (
@@ -299,3 +304,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

@@ -217,8 +217,14 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "qunying-zhulu": "/catalog/2026-10-23-v1/covers/qunying-zhulu.webp",
   // 遗迹：破巢使用依据实机内容制作的正式封面，路径与静态资源发布清单保持一致。
   "yiji-pochao": "/catalog/2026-10-24-v1/covers/yiji-pochao.webp",
+  // 本批 gd.games 作品沿用原站图片，Spectrum 使用作者实机图，旧映射不变。
+  "gd-spectrum": "/catalog/2026-11-03-v1/covers/gd-spectrum.webp",
+  "gd-fungi-run": "/catalog/2026-11-03-v1/covers/gd-fungi-run.webp",
+  "gd-super-chicken-td": "/catalog/2026-11-03-v1/covers/gd-super-chicken-td.webp",
+  "gd-golf-adventures-2": "/catalog/2026-11-03-v1/covers/gd-golf-adventures-2.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {
   return CATALOG_COVER_PATHS[slug] ?? null;
 }
+
