@@ -34,4 +34,10 @@ services:
         bind: {create_host_path: false}
   nginx:
     ports: !override ["0.0.0.0:80:80", "0.0.0.0:443:443"]
-    networks: [default, fablespace]
+    # 现网网关必须加入 Chat/API 已有网络，重建后保留原有代理可达性。
+    networks: [default, fablespace, official_services]
+
+networks:
+  official_services:
+    external: true
+    name: pl-official-candidate-20261030_default
