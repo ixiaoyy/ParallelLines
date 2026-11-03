@@ -159,8 +159,9 @@ jobs:
           test "$(ssh-keygen -lf /tmp/deploy-host-key | awk '{print $2}')" = "SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA"
           cat /tmp/deploy-host-key >> ~/.ssh/known_hosts
           ARTIFACT="$RUNNER_TEMP/parallellines-web-image/parallellines-web-$DEPLOY_SHA"
+          cp "$RUNNER_TEMP/parallellines-web-image/web-image.json" "${ARTIFACT}.image.json"
           # 本次服务器链路实际约 0.1 MB/s；保留总时限并容纳完整镜像，不额外等待快链路。
-          timeout 900 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${ARTIFACT}.tar.gz" "${ARTIFACT}.tar.gz.sha256" "${ARTIFACT}.image-id" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
+          timeout 900 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${ARTIFACT}.tar.gz" "${ARTIFACT}.tar.gz.sha256" "${ARTIFACT}.image-id" "${ARTIFACT}.image-config-digest" "${ARTIFACT}.image.json" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
 
       - name: Deploy all services to server
         uses: appleboy/ssh-action@v1.0.3
@@ -203,11 +204,12 @@ jobs:
             # 先核传输完整性，再确认 SHA 标签、兼容 latest 与实际镜像身份一致。
             (cd /tmp && sha256sum -c "${WEB_IMAGE_ARCHIVE}.sha256")
             sudo docker load -i "${WEB_IMAGE_ARCHIVE}"
-            EXPECTED_WEB_IMAGE_ID="$(cat "$WEB_IMAGE_BASE.image-id")"
-            test "$(sudo docker image inspect --format '{{.Id}}' "parallellines-web:$DEPLOY_REVISION")" = "$EXPECTED_WEB_IMAGE_ID"
-            test "$(sudo docker image inspect --format '{{.Id}}' parallellines-web:latest)" = "$EXPECTED_WEB_IMAGE_ID"
-            test "$(sudo docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "parallellines-web:$DEPLOY_REVISION")" = "$DEPLOY_REVISION"
-            rm -f "${WEB_IMAGE_ARCHIVE}" "${WEB_IMAGE_ARCHIVE}.sha256" "$WEB_IMAGE_BASE.image-id"
+            # native ID 仅作构建审计；跨 classic/containerd 使用 config 原始内容摘要核验。
+            sudo python3 -B .github/scripts/deploy_artifacts.py verify-loaded --sha "$DEPLOY_REVISION" \
+              --receipt "$WEB_IMAGE_BASE.image.json" --run-id "${{ env.SOURCE_RUN_ID }}" \
+              --expected-config-digest "$(cat "$WEB_IMAGE_BASE.image-config-digest")"
+            rm -f "${WEB_IMAGE_ARCHIVE}" "${WEB_IMAGE_ARCHIVE}.sha256" "$WEB_IMAGE_BASE.image-id" \
+              "$WEB_IMAGE_BASE.image-config-digest" "$WEB_IMAGE_BASE.image.json"
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] frontend image load took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -372,8 +374,9 @@ jobs:
           test "$(ssh-keygen -lf /tmp/deploy-host-key | awk '{print $2}')" = "SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA"
           cat /tmp/deploy-host-key >> ~/.ssh/known_hosts
           ARTIFACT="$RUNNER_TEMP/parallellines-web-image/parallellines-web-$DEPLOY_SHA"
+          cp "$RUNNER_TEMP/parallellines-web-image/web-image.json" "${ARTIFACT}.image.json"
           # 与全量发布使用相同的有限传输窗口。
-          timeout 900 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${ARTIFACT}.tar.gz" "${ARTIFACT}.tar.gz.sha256" "${ARTIFACT}.image-id" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
+          timeout 900 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${ARTIFACT}.tar.gz" "${ARTIFACT}.tar.gz.sha256" "${ARTIFACT}.image-id" "${ARTIFACT}.image-config-digest" "${ARTIFACT}.image.json" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
 
       - name: Deploy frontend service to server
         uses: appleboy/ssh-action@v1.0.3
@@ -415,11 +418,12 @@ jobs:
             # 先核传输完整性，再确认 SHA 标签、兼容 latest 与实际镜像身份一致。
             (cd /tmp && sha256sum -c "${WEB_IMAGE_ARCHIVE}.sha256")
             sudo docker load -i "${WEB_IMAGE_ARCHIVE}"
-            EXPECTED_WEB_IMAGE_ID="$(cat "$WEB_IMAGE_BASE.image-id")"
-            test "$(sudo docker image inspect --format '{{.Id}}' "parallellines-web:$DEPLOY_REVISION")" = "$EXPECTED_WEB_IMAGE_ID"
-            test "$(sudo docker image inspect --format '{{.Id}}' parallellines-web:latest)" = "$EXPECTED_WEB_IMAGE_ID"
-            test "$(sudo docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "parallellines-web:$DEPLOY_REVISION")" = "$DEPLOY_REVISION"
-            rm -f "${WEB_IMAGE_ARCHIVE}" "${WEB_IMAGE_ARCHIVE}.sha256" "$WEB_IMAGE_BASE.image-id"
+            # native ID 仅作构建审计；跨 classic/containerd 使用 config 原始内容摘要核验。
+            sudo python3 -B .github/scripts/deploy_artifacts.py verify-loaded --sha "$DEPLOY_REVISION" \
+              --receipt "$WEB_IMAGE_BASE.image.json" --run-id "${{ env.SOURCE_RUN_ID }}" \
+              --expected-config-digest "$(cat "$WEB_IMAGE_BASE.image-config-digest")"
+            rm -f "${WEB_IMAGE_ARCHIVE}" "${WEB_IMAGE_ARCHIVE}.sha256" "$WEB_IMAGE_BASE.image-id" \
+              "$WEB_IMAGE_BASE.image-config-digest" "$WEB_IMAGE_BASE.image.json"
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] image load took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
