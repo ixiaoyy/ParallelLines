@@ -159,7 +159,8 @@ jobs:
           test "$(ssh-keygen -lf /tmp/deploy-host-key | awk '{print $2}')" = "SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA"
           cat /tmp/deploy-host-key >> ~/.ssh/known_hosts
           ARTIFACT="$RUNNER_TEMP/parallellines-web-image/parallellines-web-$DEPLOY_SHA"
-          timeout 300 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${ARTIFACT}.tar.gz" "${ARTIFACT}.tar.gz.sha256" "${ARTIFACT}.image-id" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
+          # 本次服务器链路实际约 0.1 MB/s；保留总时限并容纳完整镜像，不额外等待快链路。
+          timeout 900 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${ARTIFACT}.tar.gz" "${ARTIFACT}.tar.gz.sha256" "${ARTIFACT}.image-id" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
 
       - name: Deploy all services to server
         uses: appleboy/ssh-action@v1.0.3
@@ -371,7 +372,8 @@ jobs:
           test "$(ssh-keygen -lf /tmp/deploy-host-key | awk '{print $2}')" = "SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA"
           cat /tmp/deploy-host-key >> ~/.ssh/known_hosts
           ARTIFACT="$RUNNER_TEMP/parallellines-web-image/parallellines-web-$DEPLOY_SHA"
-          timeout 300 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${ARTIFACT}.tar.gz" "${ARTIFACT}.tar.gz.sha256" "${ARTIFACT}.image-id" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
+          # 与全量发布使用相同的有限传输窗口。
+          timeout 900 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${ARTIFACT}.tar.gz" "${ARTIFACT}.tar.gz.sha256" "${ARTIFACT}.image-id" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
 
       - name: Deploy frontend service to server
         uses: appleboy/ssh-action@v1.0.3

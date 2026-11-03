@@ -16,6 +16,7 @@ CLIENT_ID = "parallellines-chat"
 APPROVAL_PURPOSE = "chat_oidc_approval"
 BINDING_PURPOSE = "chat_oidc_binding"
 OPAQUE_ID = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
+MAIN_ROLES = frozenset({"user", "moderator", "admin"})
 
 
 class SsoDenied(Exception):
@@ -34,6 +35,10 @@ class UserState:
     id: str
     status: str
     name: str
+    username: str = ""
+    email: str | None = None
+    email_verified: bool = False
+    role: str | None = None
 
 
 @dataclass(frozen=True)
@@ -99,6 +104,21 @@ def valid_finish_url(value: str) -> bool:
         and parsed.hostname in {"127.0.0.1", "localhost", "::1"}
         and parsed.path == "/auth/oidc/interaction/finish"
     )
+
+
+def profile_claims(user: UserState) -> dict[str, object]:
+    """Expose current profile attributes without using them as identity keys."""
+    # 角色只来自当前主站账户；旧调用未提供时不补默认角色，非法值明确拒绝。
+    if user.role is not None and (not isinstance(user.role, str) or user.role not in MAIN_ROLES):
+        raise SsoDenied("invalid_main_role")
+    verified = user.email_verified is True and bool(user.email)
+    return {
+        "name": user.name,
+        "username": user.username,
+        "email": user.email if verified else None,
+        "email_verified": verified,
+        **({"role": user.role} if user.role is not None else {}),
+    }
 
 
 class ChatSsoCore:
@@ -255,7 +275,7 @@ class ChatSsoCore:
             "sub": user.id,
             "binding_id": data["binding_id"],
             "auth_expires_at": login.auth_expires_at,
-            "name": user.name,
+            **profile_claims(user),
         }
 
     async def revoke(self, *, client_id: str, binding_id: str) -> dict[str, object]:
@@ -285,6 +305,7 @@ class ChatSsoCore:
                 "sub": user.id,
                 "binding_id": binding_id,
                 "auth_expires_at": login.auth_expires_at,
+                **profile_claims(user),
             }
         except SsoDenied:
             return {"active": False, "sub": None, "binding_id": binding_id, "auth_expires_at": None}

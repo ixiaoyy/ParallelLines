@@ -501,6 +501,10 @@ class AuthService:
         if existing and existing.id != user.id:
             raise ConflictError("email_exists", "Email is already registered", {"email": new_email})
         user.email = new_email
+        # Mark only this successfully redeemed token, never the other tokens
+        # invalidated below. SSO uses this proof for the current verified email.
+        data["email_verified"] = True
+        token.payload = json.dumps(data, separators=(",", ":"))
         await self._consume_open_security_tokens(user.id, EMAIL_CHANGE_PURPOSE)
         await self.session.commit()
         await self.session.refresh(user)

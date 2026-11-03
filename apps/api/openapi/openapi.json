@@ -4472,9 +4472,41 @@
             "title": "Binding Id",
             "type": "string"
           },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "email_verified": {
+            "default": false,
+            "title": "Email Verified",
+            "type": "boolean"
+          },
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "user",
+                  "moderator",
+                  "admin"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
           },
           "sub": {
             "anyOf": [
@@ -4486,6 +4518,10 @@
               }
             ],
             "title": "Sub"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
           }
         },
         "required": [
@@ -4493,7 +4529,8 @@
           "sub",
           "binding_id",
           "auth_expires_at",
-          "name"
+          "name",
+          "username"
         ],
         "title": "ChatSsoExchangeResponse",
         "type": "object"
@@ -4543,6 +4580,49 @@
             "title": "Binding Id",
             "type": "string"
           },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "email_verified": {
+            "default": false,
+            "title": "Email Verified",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "user",
+                  "moderator",
+                  "admin"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
           "sub": {
             "anyOf": [
               {
@@ -4553,6 +4633,17 @@
               }
             ],
             "title": "Sub"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
           }
         },
         "required": [

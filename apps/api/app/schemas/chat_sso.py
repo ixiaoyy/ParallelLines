@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -30,7 +32,13 @@ class ChatSsoStateResponse(BaseModel):
     sub: str | None
     binding_id: str
     auth_expires_at: int | None
+    name: str | None = None
+    username: str | None = None
+    email: str | None = None
+    email_verified: bool = False
+    role: Literal["user", "moderator", "admin"] | None = None
 
 
 class ChatSsoExchangeResponse(ChatSsoStateResponse):
     name: str
+    username: str

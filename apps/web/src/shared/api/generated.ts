@@ -1019,8 +1019,12 @@ export interface components {
       active: boolean;
       auth_expires_at: number | null;
       binding_id: string;
+      email?: string | null;
+      email_verified?: boolean;
       name: string;
+      role?: "user" | "moderator" | "admin" | null;
       sub: string | null;
+      username: string;
     };
     ChatSsoStateRequest: {
       binding_id: string;
@@ -1030,7 +1034,12 @@ export interface components {
       active: boolean;
       auth_expires_at: number | null;
       binding_id: string;
+      email?: string | null;
+      email_verified?: boolean;
+      name?: string | null;
+      role?: "user" | "moderator" | "admin" | null;
       sub: string | null;
+      username?: string | null;
     };
     DailyReportInput: {
       extra_work?: Array<string>;

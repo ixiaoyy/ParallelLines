@@ -1,13 +1,15 @@
 """SQLAlchemy adapter over existing UserSecurityToken rows; no new account store."""
 
 import hmac
+import json
 from datetime import datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.chat_sso import (
     CLIENT_ID,
+    MAIN_ROLES,
     ChatSsoCore,
     SecurityRecord,
     SessionState,
@@ -19,7 +21,21 @@ from app.core.config import Settings
 from app.core.exceptions import AuthenticationError, PermissionDeniedError
 from app.core.security import decode_token
 from app.db.base import utcnow
-from app.models.user import User, UserSecurityToken, UserSession
+from app.models.user import EmailVerificationCode, User, UserSecurityToken, UserSession
+
+
+def verified_email_change(payload: str | None, current_email: str) -> bool:
+    """Only the successfully redeemed change token gets this explicit proof."""
+    try:
+        data = json.loads(payload or "{}")
+    except (TypeError, ValueError):
+        return False
+    return (
+        isinstance(data, dict)
+        and data.get("email_verified") is True
+        and isinstance(data.get("new_email"), str)
+        and data["new_email"].lower() == current_email
+    )
 
 
 class SqlChatSsoRepository:
@@ -28,7 +44,46 @@ class SqlChatSsoRepository:
 
     async def get_user(self, user_id: str) -> UserState | None:
         user = await self.session.get(User, user_id, populate_existing=True)
-        return UserState(user.id, user.status, user.display_name or user.username) if user else None
+        if user is None:
+            return None
+        # 从数据库读取当前权限；异常角色不得降级成普通用户或推断成管理员。
+        if not isinstance(user.role, str) or user.role not in MAIN_ROLES:
+            raise SsoDenied("invalid_main_role")
+        email = (user.email or "").lower()
+        verified = False
+        if email:
+            # Initial verification marks consumed_at only after a valid code.
+            proof = await self.session.scalar(
+                select(EmailVerificationCode.id).where(
+                    EmailVerificationCode.user_id == user.id,
+                    func.lower(EmailVerificationCode.email) == email,
+                    EmailVerificationCode.consumed_at.is_not(None),
+                    EmailVerificationCode.consumed_at <= EmailVerificationCode.expires_at,
+                ).limit(1)
+            )
+            verified = proof is not None
+            if not verified:
+                # Other email-change tokens are consumed when invalidated: their
+                # consumed_at alone must never be accepted as verification.
+                payloads = await self.session.scalars(
+                    select(UserSecurityToken.payload).where(
+                        UserSecurityToken.user_id == user.id,
+                        UserSecurityToken.purpose == "email_change",
+                        func.lower(UserSecurityToken.email) == email,
+                        UserSecurityToken.consumed_at.is_not(None),
+                        UserSecurityToken.consumed_at <= UserSecurityToken.expires_at,
+                    )
+                )
+                verified = any(verified_email_change(value, email) for value in payloads)
+        return UserState(
+            id=user.id,
+            status=user.status,
+            name=user.display_name or user.username,
+            username=user.username,
+            email=email if verified else None,
+            email_verified=verified,
+            role=user.role,
+        )
 
     async def get_session(self, session_id: str) -> SessionState | None:
         row = await self.session.get(UserSession, session_id, populate_existing=True)
