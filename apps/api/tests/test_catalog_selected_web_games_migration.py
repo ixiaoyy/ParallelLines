@@ -223,7 +223,8 @@ def test_missing_any_category_stops_before_first_insert(migration_store, categor
     before = project_rows(connection)
     ratings = rating_rows(connection)
     with pytest.raises(
-        RuntimeError, match="0102 requires catalog categories puzzle, stages, tower-defense and casual"
+        RuntimeError,
+        match="0102 requires catalog categories puzzle, stages, tower-defense and casual",
     ):
         migration.upgrade()
     assert project_rows(connection) == before
@@ -244,5 +245,8 @@ def test_empty_target_categories_start_at_zero_and_preserve_other_category(migra
             "SELECT slug, category_id, sort_order, view_count FROM catalog_projects "
             "WHERE id > 55 ORDER BY id"
         )
-    ).all() == [(game[1], category_id, 0, 0) for game, category_id in zip(GAMES, (1, 2, 3, 4))]
+    ).all() == [
+        (game[1], category_id, 0, 0)
+        for game, category_id in zip(GAMES, (1, 2, 3, 4), strict=True)
+    ]
 
