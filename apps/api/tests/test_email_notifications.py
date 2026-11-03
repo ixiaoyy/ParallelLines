@@ -9,7 +9,10 @@ from app.api.v1.dependencies import get_session
 from app.core.config import Settings
 from app.db.base import utcnow
 from app.main import create_app
+from app.models.background_job import BackgroundJob
 from app.models.email import UserEmailPreference
+from app.models.interaction import Notification
+from app.models.user import User
 from app.services.background_jobs import BackgroundJobService
 from app.services.email import EMAIL_OUTBOX, clear_email_outbox
 from app.services.email_notifications import EmailNotificationService
@@ -128,7 +131,9 @@ async def test_reply_notification_email_respects_user_preferences() -> None:
 
 
 @pytest.mark.asyncio
-async def test_digest_job_sends_only_due_active_users() -> None:
+async def test_legacy_digest_service_sends_only_due_active_users() -> None:
+    """保留摘要服务的发信断言，不通过已退役的生产队列入口。"""
+
     session_factory, engine = await create_test_session()
 
     async def override_session():
@@ -154,17 +159,73 @@ async def test_digest_job_sends_only_due_active_users() -> None:
         clear_email_outbox()
 
         async with session_factory() as session:
-            await BackgroundJobService(session).enqueue(
-                "send_digest_emails",
-                queue="mail",
-                idempotency_key="test:digest:once",
-            )
-        await drain_background_jobs(session_factory)
+            result = await EmailNotificationService(session).send_digest_emails()
+            await session.commit()
+            assert result["sent_count"] == 1
 
         digest_emails = [email for email in EMAIL_OUTBOX if email.kind == "email_digest"]
         assert len(digest_emails) == 1
         assert digest_emails[0].to_email == owner["email"]
         assert "每日摘要" in digest_emails[0].subject
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_retired_digest_job_is_consumed_without_email_or_preference_changes() -> None:
+    """真实消费历史摘要任务；即使存在到期通知，也不能发信或推进摘要水位。"""
+
+    session_factory, engine = await create_test_session()
+    clear_email_outbox()
+
+    async with session_factory() as session:
+        user = User(
+            username="retireddigest",
+            email="retireddigest@example.com",
+            hashed_password="hashed",
+            status="active",
+        )
+        session.add(user)
+        await session.flush()
+        preference = UserEmailPreference(
+            user_id=user.id,
+            email_enabled=True,
+            delivery_status="ok",
+            digest_frequency="daily",
+            last_digest_sent_at=(utcnow() - timedelta(days=2)).replace(microsecond=0),
+        )
+        session.add(preference)
+        session.add(
+            Notification(
+                user_id=user.id,
+                type="replied",
+                data={"topic_title": "历史摘要任务不能恢复发送"},
+            )
+        )
+        job = await BackgroundJobService(session).enqueue(
+            "send_digest_emails",
+            queue="mail",
+            idempotency_key="test:retired-digest:once",
+        )
+        await session.refresh(preference)
+        preference_id = preference.id
+        last_digest_sent_at = preference.last_digest_sent_at
+        job_id = job.id
+
+    assert await drain_background_jobs(session_factory) == 1
+
+    async with session_factory() as session:
+        completed = await session.get(BackgroundJob, job_id)
+        assert completed is not None
+        assert completed.status == "succeeded"
+        assert completed.result == {"status": "skipped", "reason": "forum_retired"}
+        assert completed.attempts == 1
+        assert completed.last_error is None
+        assert completed.finished_at is not None
+        persisted_preference = await session.get(UserEmailPreference, preference_id)
+        assert persisted_preference is not None
+        assert persisted_preference.last_digest_sent_at == last_digest_sent_at
+        assert EMAIL_OUTBOX == []
 
     await engine.dispose()
 

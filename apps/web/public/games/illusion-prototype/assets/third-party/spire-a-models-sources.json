@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "output": {
     "path": "assets/spire-a-models.js",
-    "sha256": "a96ffcba5f990d919a70df413ed8d78fc00711b8e2e3e41198cbc891e3115bc6",
-    "bytes": 98942
+    "sha256": "99b9afc6c6cefebb4f760ef40777fcabcf534c537d8d1ac265cc3c2168d261a6",
+    "bytes": 99050
   },
   "models": [
     {

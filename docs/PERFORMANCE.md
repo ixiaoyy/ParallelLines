@@ -33,6 +33,8 @@
 5. 后端或 Nginx 单独更新的正常路径不构建/下载 Web。Compose、全量、手动路径准备 Web；原缺服务 bootstrap 分支仍可能在服务器构建 Web。
 6. 手动 `workflow_dispatch` 保留显式源码构建能力，不依赖历史 CI 产物。自动链省去重复 Vite，但仍有归档传输成本，实际端到端收益须实测。
 
+自动范围只描述本次 push，不累计前一次 CI 失败后尚未发布的变化。修复推送通过后，发布负责方须检查前一批未上线的服务范围：可使用现有显式全量入口，或在同一已验证提交上补齐缺失服务。已由 CI 交付的 Web 镜像无需再次运行 Vite；不能把最后一次分流任务成功当成此前所有服务均已更新。
+
 合同测试位于 `.github/scripts/test_deploy_artifacts.py`，只使用临时文件，不连接 Docker、GitHub 或服务器。
 静态缓存条件另由 `.github/scripts/test_static_cache_contract.py` 核对，不用离线正则检查替代实际 Nginx 语法和响应头验收。
 

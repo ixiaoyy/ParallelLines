@@ -66,7 +66,7 @@
   "runtime": "静态交错位置/法线数组，不含运行时 FBX/OBJ 解析器、Unity 代码、插件或新增依赖。",
   "output": {
     "path": "../garden-roof-model.js",
-    "sha256": "c62c0f82be88958a9151bfebfeb59ac52cca2ed73e1fd182e058ca54f28aa4b3",
-    "bytes": 20720
+    "sha256": "ec46c6415a64efc5dc4e01916e85361c5b34fd6c75a703f8983e245cab162aa5",
+    "bytes": 20836
   }
 }
