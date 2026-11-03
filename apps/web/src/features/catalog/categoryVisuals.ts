@@ -121,9 +121,9 @@ export type CategoryVisualKey = keyof typeof CATEGORY_VISUAL_THEMES;
 export const CATEGORY_VISUAL_ALIASES: Readonly<Record<string, CategoryVisualKey>> = {};
 
 /** Populate only after real source images and measured pixel bounds are available. */
-const atlasA = { kind: "atlas", src: "/catalog/jade-folklore-v1/atlas-a.png", sourceWidth: 972, sourceHeight: 1619 } as const;
-const atlasB = { kind: "atlas", src: "/catalog/jade-folklore-v1/atlas-b.png", sourceWidth: 887, sourceHeight: 1774 } as const;
-const atlasC = { kind: "atlas", src: "/catalog/jade-folklore-v1/atlas-c.png", sourceWidth: 1024, sourceHeight: 1536 } as const;
+const atlasA = { kind: "atlas", src: "/catalog/jade-folklore-v1/atlas-a.webp", sourceWidth: 972, sourceHeight: 1619 } as const;
+const atlasB = { kind: "atlas", src: "/catalog/jade-folklore-v1/atlas-b.webp", sourceWidth: 887, sourceHeight: 1774 } as const;
+const atlasC = { kind: "atlas", src: "/catalog/jade-folklore-v1/atlas-c.webp", sourceWidth: 1024, sourceHeight: 1536 } as const;
 export const CATEGORY_ARTWORK: Readonly<Partial<Record<CategoryVisualKey, CategoryArtwork>>> = {
   action: { ...atlasA, bounds: { x: 175, y: 15, width: 625, height: 316 } },
   shooting: { ...atlasA, bounds: { x: 150, y: 336, width: 675, height: 369 } },

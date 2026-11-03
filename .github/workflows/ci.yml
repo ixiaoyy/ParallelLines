@@ -18,25 +18,103 @@ jobs:
     name: Detect changed areas
     runs-on: ubuntu-latest
     outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      workflow: ${{ steps.filter.outputs.workflow }}
+      backend: ${{ steps.plan.outputs.check_backend }}
+      frontend: ${{ steps.plan.outputs.check_frontend }}
+      workflow: ${{ steps.plan.outputs.check_workflow }}
+      web: ${{ steps.plan.outputs.frontend }}
+      compose: ${{ steps.plan.outputs.compose }}
+      pipeline: ${{ steps.filter.outputs.pipeline == 'true' || steps.base.outputs.full == 'true' }}
     steps:
       - uses: actions/checkout@v4
+      # 保存原 push 的 before；无法取得旧提交时按全范围检查，不猜 HEAD 的上一提交。
+      - name: Resolve push comparison base
+        id: base
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          FULL=false
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = 0000000000000000000000000000000000000000 ]; then
+              FULL=true
+            elif ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+              if ! timeout 45 git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then
+                FULL=true
+              fi
+            fi
+          fi
+          echo "full=$FULL" >> "$GITHUB_OUTPUT"
       - uses: dorny/paths-filter@v3
         id: filter
+        if: steps.base.outputs.full != 'true'
         with:
+          base: ${{ github.event.repository.default_branch }}
           filters: |
             backend:
               - 'apps/api/**'
               - '.github/workflows/ci.yml'
+            api:
+              - 'apps/api/**'
             frontend:
               - 'apps/web/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.dockerignore'
+              - '.github/scripts/**'
               - '.github/workflows/ci.yml'
+            web:
+              - 'apps/web/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.dockerignore'
+            nginx:
+              - 'deploy/nginx/**'
+            compose:
+              - 'docker-compose.yml'
+              - 'deploy/docker-compose.migration.yml'
             workflow:
               - '.github/workflows/ci.yml'
+            pipeline:
+              - '.github/workflows/**'
+              - '.github/scripts/**'
+              - 'apps/web/Dockerfile*'
+              - '.dockerignore'
+              - 'docker-compose.yml'
+              - 'deploy/docker-compose.migration.yml'
+      - name: Record exact commit and deploy scope
+        id: plan
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          FULL_SCOPE: ${{ steps.base.outputs.full }}
+          BACKEND_CHANGED: ${{ steps.filter.outputs.api || 'false' }}
+          FRONTEND_CHANGED: ${{ steps.filter.outputs.web || 'false' }}
+          NGINX_CHANGED: ${{ steps.filter.outputs.nginx || 'false' }}
+          COMPOSE_CHANGED: ${{ steps.filter.outputs.compose || 'false' }}
+          CHECK_BACKEND: ${{ steps.filter.outputs.backend || 'false' }}
+          CHECK_FRONTEND: ${{ steps.filter.outputs.frontend || 'false' }}
+          CHECK_WORKFLOW: ${{ steps.filter.outputs.workflow || 'false' }}
+        run: python3 .github/scripts/deploy_artifacts.py plan --output "$RUNNER_TEMP/parallellines-ci/deploy-plan.json" --github-output "$GITHUB_OUTPUT"
+      - name: Publish main-push scope for the matching Deploy run
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-plan-${{ github.sha }}
+          path: ${{ runner.temp }}/parallellines-ci/deploy-plan.json
+          if-no-files-found: error
+          retention-days: 14
+          # 同一 run 重跑只替换该 SHA 的交接产物，避免同名不可变产物阻断重试。
+          overwrite: true
+
+  pipeline:
+    name: Deploy artifact contracts
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.pipeline == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s .github/scripts -p 'test_*.py' -v
 
   backend:
     name: Backend lint and tests
@@ -73,8 +151,13 @@ jobs:
             poppler-utils \
             tesseract-ocr \
             tesseract-ocr-chi-sim
-      - name: Install uv
-        run: python -m pip install uv
+      # 缓存按 Python 版本及依赖锁隔离；不缓存测试结果或数据库状态。
+      - name: Install uv with dependency cache
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+          cache-suffix: python-3.12
       - name: Install backend dependencies
         run: uv sync --frozen
       - name: Ruff
@@ -98,7 +181,7 @@ jobs:
     name: Frontend lint typecheck build
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflow == 'true'
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.workflow == 'true' || needs.changes.outputs.compose == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -117,4 +200,46 @@ jobs:
       - name: Typecheck
         run: pnpm --dir apps/web typecheck
       - name: Build
+        env:
+          VITE_API_BASE_URL: /api/v1
+          VITE_STATIC_ASSET_BASE_URL: https://img.pingxingxian.space/static/web
         run: pnpm --dir apps/web build
+      # 只有本仓 main push 交付镜像；PR 仅运行检查，不进入生产产物链。
+      - name: Prepare checked Web runtime context
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
+        run: python3 .github/scripts/deploy_artifacts.py context --dist apps/web/dist --nginx apps/web/nginx.conf --output "$RUNNER_TEMP/parallellines-web-context"
+      - uses: docker/setup-buildx-action@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
+      - name: Package the same checked dist without another Vite build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ runner.temp }}/parallellines-web-context
+          file: apps/web/Dockerfile.prebuilt
+          build-args: SOURCE_REVISION=${{ github.sha }}
+          tags: |
+            parallellines-web:${{ github.sha }}
+            parallellines-web:latest
+          load: true
+          cache-from: type=gha,scope=web-runtime
+          cache-to: type=gha,mode=max,scope=web-runtime
+      - name: Export commit-bound Web image and receipt
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/parallellines-web-image"
+          mkdir -p "$OUT"
+          docker save "parallellines-web:$GITHUB_SHA" parallellines-web:latest | gzip > "$OUT/parallellines-web-$GITHUB_SHA.tar.gz"
+          python3 .github/scripts/deploy_artifacts.py receipt --directory "$OUT" --sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
+            --image-id "$(docker image inspect --format '{{.Id}}' "parallellines-web:$GITHUB_SHA")" \
+            --image-revision "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "parallellines-web:$GITHUB_SHA")"
+      - name: Publish the checked Web image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
+        uses: actions/upload-artifact@v4
+        with:
+          name: parallellines-web-${{ github.sha }}
+          path: ${{ runner.temp }}/parallellines-web-image/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: true

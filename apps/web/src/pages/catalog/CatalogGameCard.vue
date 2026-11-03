@@ -18,8 +18,10 @@ const props = withDefaults(defineProps<{
   wanted: boolean;
   featured?: boolean;
   eager?: boolean;
+  /** 只为当前首张关键封面提权，不改变其他卡片默认加载策略。 */
+  highPriority?: boolean;
   aiRating?: CatalogCardAiRating | null;
-}>(), { categoryName: null, authorName: null, siteHosted: false, featured: false, eager: false, aiRating: null });
+}>(), { categoryName: null, authorName: null, siteHosted: false, featured: false, eager: false, highPriority: false, aiRating: null });
 
 const emit = defineEmits<{
   open: [event: MouseEvent];
@@ -111,7 +113,7 @@ onUnmounted(() => {
   <article ref="card" class="catalog-card" :class="{ 'catalog-card--featured': featured, 'catalog-card--touch-actions': touchActionsOpen, 'catalog-card--keyboard-actions': keyboardActionsOpen }" tabindex="-1" @pointerdown="startHold" @pointermove="moveHold" @pointerup="cancelHold" @pointercancel="cancelHold" @contextmenu="handleContextMenu" @focusin="revealKeyboardFocus" @focusout="releaseKeyboardFocus" @keydown.esc="touchActionsOpen = false">
     <a class="catalog-card__open" :href="href" target="_blank" rel="noopener noreferrer" :aria-label="`打开${title}`" @click="open" @auxclick="open">
       <span class="catalog-card__cover">
-        <img v-if="cover" :src="cover" alt="" :loading="eager ? 'eager' : 'lazy'" decoding="async" @load="measureCover" />
+        <img v-if="cover" :src="cover" alt="" :loading="eager ? 'eager' : 'lazy'" :fetchpriority="highPriority ? 'high' : undefined" decoding="async" @load="measureCover" />
         <span v-else class="catalog-card__missing">{{ title }}</span>
       </span>
       <span class="catalog-card__mobile-name" :title="title">{{ title }}</span>

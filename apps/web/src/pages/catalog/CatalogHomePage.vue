@@ -444,10 +444,12 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
                 <CatalogCategoryAccent v-if="!group.featured" :slug="group.key" placement="card-corner" />
                 <component :is="!group.featured && isDiscovery ? CatalogCategoryRail : 'div'" v-bind="!group.featured && isDiscovery ? { name: group.name, slug: group.key, total: group.total, composition: categorySectionThemeFor(group.key).composition } : {}" :class="{ 'catalog-grid': group.featured || !isDiscovery, 'catalog-grid--featured': group.featured }">
                   <template v-for="(project, index) in group.featured ? heroSlots : group.projects" :key="project?.id ?? `empty:${index}`">
+                    <!-- 仅首组或筛选结果的前三张立即加载，后续分类不抢占首屏连接。 -->
                     <CatalogGameCard v-if="project"
                       :title="displayName(project)" :href="project.url" :cover="coverUrl(project)" :category-name="categoryName(project.categorySlug)"
                       :author-name="project.authorName" :site-hosted="isSiteHostedProject(project)"
-                      :heat="project.heat" :wanted="wantedIds.has(project.id)" :eager="index < 3"
+                      :heat="project.heat" :wanted="wantedIds.has(project.id)" :eager="(group.featured || !isDiscovery) && index < 3"
+                      :high-priority="(group.featured || !isDiscovery) && index === 0"
                       :featured="group.featured && (index === 0 || index === 5)" :data-hero-slot="group.featured ? index : undefined"
                       :data-project-id="project.id" :data-card-key="projectCardKey(group.key, project.id)"
                         :data-cover-format="(coverAspects.get(coverUrl(project) ?? '') ?? 1) < .9 ? 'portrait' : undefined"

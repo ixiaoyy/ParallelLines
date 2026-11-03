@@ -37,9 +37,10 @@ const themes: { value: Theme; label: string }[] = [
   { value: "nature", label: "自然" },
   { value: "tech", label: "科技" },
 ];
-const mascotArt = "/games/generals-soldiers/miaomiao-chibi.png";
-const generalArt = "/games/generals-soldiers/general-chibi.png";
-const soldierArt = "/games/generals-soldiers/soldier-chibi.png";
+// 无损 WebP 随前端同源发布，保留旧 PNG 地址兼容既有访问，不依赖尚未上传的 CDN 素材。
+const mascotArt = "/games/generals-soldiers/miaomiao-chibi.webp";
+const generalArt = "/games/generals-soldiers/general-chibi.webp";
+const soldierArt = "/games/generals-soldiers/soldier-chibi.webp";
 const previewBoard = createInitialState().board;
 const OPENING_AI_DELAY_MS = 900;
 const REPLY_AI_DELAY_MS = 500;
@@ -387,7 +388,7 @@ onBeforeUnmount(() => {
             </div>
             <div v-if="state.winner" class="gs-result" :class="playerWon ? 'gs-result--win' : 'gs-result--lose'" role="status">
               <img
-                :src="playerWon ? '/games/generals-soldiers/miaomiao-win.png' : '/games/generals-soldiers/miaomiao-try-again.png'"
+                :src="playerWon ? '/games/generals-soldiers/miaomiao-win.webp' : '/games/generals-soldiers/miaomiao-try-again.webp'"
                 alt=""
                 width="560"
                 height="610"

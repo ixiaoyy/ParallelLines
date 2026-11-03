@@ -1,12 +1,28 @@
 import { fileURLToPath, URL } from "node:url";
 
 import vue from "@vitejs/plugin-vue";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 
 const devApiProxyTarget = process.env.VITE_DEV_API_PROXY_TARGET;
 
+/** 按实际静态资源配置预连 CDN；相对路径保持同源，不额外建立第三方连接。 */
+function staticAssetPreconnect(): Plugin {
+  let origin: string | undefined;
+  return {
+    name: "static-asset-preconnect",
+    configResolved(config) {
+      const base = config.env.VITE_STATIC_ASSET_BASE_URL?.trim()
+        || "https://img.pingxingxian.space/static/web";
+      if (/^https?:\/\//.test(base)) origin = new URL(base).origin;
+    },
+    transformIndexHtml() {
+      return origin ? [{ tag: "link", attrs: { rel: "preconnect", href: origin }, injectTo: "head" }] : [];
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), staticAssetPreconnect()],
   build: {
     rollupOptions: {
       output: {

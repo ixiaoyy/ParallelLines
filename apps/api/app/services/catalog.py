@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import ipaddress
 import logging
+from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 from sqlalchemy import func, select, update
@@ -54,12 +55,45 @@ RATING_UNAVAILABLE_MESSAGE = "评分暂时不可用，请稍后重试。"
 SAVE_FAILED_MESSAGE = "保存失败，请稍后重试。"
 
 
+@dataclass(frozen=True)
+class CatalogPublicLink:
+    """公开首屏所需链接资料，不包含评分、访客身份或打开统计。"""
+
+    url: str
+    name: str
+    description: str | None
+
+
 class CatalogService:
     """管理公开目录、管理员内容和访客的一次性评分。"""
 
     def __init__(self, session: AsyncSession, settings: Settings) -> None:
         self.session = session
         self.settings = settings
+
+    async def public_project_links(self) -> list[CatalogPublicLink]:
+        """一次读取 SEO 所需公开链接，沿用分类及项目顺序；不聚合评分、不写计数。"""
+
+        # HTML 仅使用链接资料；在数据库同时过滤父分类和项目，避免加载隐藏记录或评分。
+        rows = (
+            await self.session.execute(
+                select(
+                    CatalogProject.destination_url,
+                    CatalogProject.name,
+                    CatalogProject.description,
+                )
+                .join(CatalogCategory, CatalogCategory.id == CatalogProject.category_id)
+                .where(CatalogCategory.is_visible.is_(True), CatalogProject.is_visible.is_(True))
+                .order_by(
+                    CatalogCategory.sort_order, CatalogCategory.id,
+                    CatalogProject.sort_order, CatalogProject.id,
+                )
+            )
+        ).all()
+        return [
+            CatalogPublicLink(url=url, name=name, description=description)
+            for url, name, description in rows
+        ]
 
     async def public_catalog(self, request: Request | None = None) -> CatalogResponse:
         """返回可见目录；有请求时按访客 IP 附上首次评分。"""

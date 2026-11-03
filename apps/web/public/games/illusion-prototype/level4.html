@@ -125,6 +125,8 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
         this.program=this.programOf(vertex,fragment);this.vpLocation=gl.getUniformLocation(this.program,'uVP');this.geometries={};
         for(const name of ['box','cyl','sphere'])this.createGeometry(name,makeGeometry(name));
         gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);this.static=[];this.dynamic=[];this.vp=M.id();this.width=0;this.height=0;
+        // 只保留固定几何种类的实例缓冲；每帧绘制顺序仍按当前场景首次出现顺序生成。
+        this.instanceGroups=new Map();this.drawGroups=[];
       }
       /** 编译指定类型的 shader，返回句柄；失败保留驱动诊断并抛出。 */
       shader(type,source){const gl=this.gl,shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS)){const detail=gl.getShaderInfoLog(shader);gl.deleteShader(shader);throw new Error(detail||'Shader compilation failed');}return shader;}
@@ -180,7 +182,27 @@ void main(){vec3 normal=normalize(vNormal);float direct=max(dot(normal,normalize
       /** 将世界坐标 point 投影到 CSS 像素，返回屏幕位置和深度。 */
       project(point){const p=M.point(this.vp,point);return{x:(p[0]+1)*this.width/2,y:(1-p[1])*this.height/2,depth:p[2]};}
       /** 按种类批量绘制本帧物件；最多由本关固定数量的几何组成。 */
-      render(){const gl=this.gl;gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);gl.uniformMatrix4fv(this.vpLocation,false,this.vp);const groups=new Map();for(const object of [...this.static,...this.dynamic]){if(object.visible===false)continue;if(!groups.has(object.kind))groups.set(object.kind,[]);groups.get(object.kind).push(object);}for(const [kind,items] of groups){const geometry=this.geometries[kind],data=new Float32Array(items.length*20);items.forEach((item,i)=>{data.set(item.matrix,i*20);data.set(item.color,i*20+16);});gl.bindVertexArray(geometry.vao);gl.bindBuffer(gl.ARRAY_BUFFER,geometry.instances);gl.bufferData(gl.ARRAY_BUFFER,data,gl.DYNAMIC_DRAW);gl.drawArraysInstanced(gl.TRIANGLES,0,geometry.count,items.length);}gl.bindVertexArray(null);}
+      render(){
+        const gl=this.gl;gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);gl.uniformMatrix4fv(this.vpLocation,false,this.vp);
+        this.drawGroups.length=0;for(const group of this.instanceGroups.values()){group.count=0;group.dirty=false;}
+        for(const list of[this.static,this.dynamic])for(const object of list){
+          if(object.visible===false)continue;
+          let group=this.instanceGroups.get(object.kind);
+          if(!group){group={geometry:this.geometries[object.kind],data:new Float32Array(0),count:0,dirty:false,bufferBytes:0};this.instanceGroups.set(object.kind,group);}
+          if(group.count===0)this.drawGroups.push(group);
+          const offset=group.count++*20;
+          if(offset+20>group.data.length){const data=new Float32Array(Math.max(offset+20,group.data.length*2));data.set(group.data);group.data=data;group.dirty=true;}
+          // 逐项比较实际 Float32 数据，保留负零；实例或颜色变化才上传，不能按 static 名称冻结机关。
+          for(let index=0;index<20;index++){const value=index<16?object.matrix[index]:Math.fround(object.color[index-16]);if(!Object.is(group.data[offset+index],value)){group.data[offset+index]=value;group.dirty=true;}}
+        }
+        for(const group of this.drawGroups){
+          const geometry=group.geometry;gl.bindVertexArray(geometry.vao);gl.bindBuffer(gl.ARRAY_BUFFER,geometry.instances);
+          if(group.bufferBytes!==group.data.byteLength){gl.bufferData(gl.ARRAY_BUFFER,group.data.byteLength,gl.DYNAMIC_DRAW);group.bufferBytes=group.data.byteLength;group.dirty=true;}
+          if(group.dirty)gl.bufferSubData(gl.ARRAY_BUFFER,0,group.data,0,group.count*20);
+          gl.drawArraysInstanced(gl.TRIANGLES,0,geometry.count,group.count);
+        }
+        gl.bindVertexArray(null);
+      }
     }
 
 // 红帽旅人沿用同一圆润鞋楦；全身姿态和鞋底采样都使用当前实际支持面的局部框架。
@@ -1015,8 +1037,12 @@ function drawBControl() {
     function glyph(owner,x,y,z,w,h,ry=0){return addWaterPalacePattern(renderer,{x,y,z,width:w,height:h,rotation:ry,hex:P.glyph},renderer.static,frameMatrix(owner));}
     /** 高门用实际两侧立柱与门楣，洞内暗面留出帽顶及衣袖空间。 */
     function doorway(owner,x,y,z,roof=true,width=.72,doorNode=null){const face=(...args)=>{const o=solid(...args);o.doorNode=doorNode;return o;};for(const dx of[-width/2,width/2])face('door-column',owner,x+dx,y+.65,z,.14,1.3,.36,P.stone);face('door-lintel',owner,x,y+1.35,z,width+.14,.14,.36,P.stone);face('door-dark',owner,x,y+.62,z-.19,.60,1.24,.025,P.dark);if(roof){solid('door-tower',owner,x,y+1.63,z,.86,.44,.55,P.stone);renderer.add('iv-onion-roof',x,y+1.85,z,1,.68,.72,P.pink,0,renderer.static,frameMatrix(owner));}}
+    // 仅缓存世界坐标下不变且无 walk 支撑的水院装饰，顺序和遮挡属性原样保留。
+    let fixedEnvironment=null;
     /** 三楼水面、荷叶、粉亭和原位黑鸟；不引入第五章阻路AI。 */
     function environment(){
+      if(fixedEnvironment){renderer.static.push(...fixedEnvironment);return;}
+      const firstObject=renderer.static.length;
       // 荷叶分布覆盖三座宫殿的水院，数量有上限；所有坐标沿用固定水位，不登记道路或水位开关。
       const pads=Array.from({length:88},(_,i)=>[-5+(i*13%37),-9+(i*7%23),.26+(i%3)*.07,i*.37,i%11===0]);
       addWaterPalaceWater(renderer,{y:-.21,width:160,depth:160,pads,water:0x10cbbb});
@@ -1026,6 +1052,7 @@ function drawBControl() {
         const o=renderer.add('box',x+.06*Math.sin(row*1.3),-.196,z+h/2+row*.22,w*(1-row*.065),.002,.19,0x397f83,0,renderer.static);
         o.occludes=false;o.decorative=true;o.color[3]=.16*(1-row/8);
       }
+      fixedEnvironment=renderer.static.slice(firstObject);
     }
     /** 黑鸟只作原位环境角色，步行道路不由鸟AI改写。 */
     function crow(owner,x,y,z){return addWaterPalaceBird(renderer,{x,y,z,size:1},renderer.static,frameMatrix(owner));}

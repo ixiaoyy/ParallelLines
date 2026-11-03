@@ -9,6 +9,7 @@ import type { BeadPattern, CropRegion } from "../model";
 import { getGridSize, loadBeadImage, sampleBeadImage } from "../image";
 import type { LoadedImage } from "../image";
 import { drawPattern } from "../render";
+import type { PatternLayout } from "../render";
 import { downloadMaterialsCsv, downloadPatternPng, printPattern } from "../exports";
 import CropSelector from "./CropSelector.vue";
 
@@ -40,7 +41,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const stageWidth = ref(600);
 const focusedCell = ref(0);
 const canvasFocused = ref(false);
-let layout = { cellSize: 12, offsetX: 0, offsetY: 0, width: 0, height: 0 };
+const layout = shallowRef<PatternLayout>({ cellSize: 12, offsetX: 0, offsetY: 0, width: 0, height: 0 });
 let worker: Worker | null = null;
 let workerTimer: ReturnType<typeof setTimeout> | undefined;
 let drawFrame = 0;
@@ -60,6 +61,13 @@ const cellDescription = computed(() => {
   return `第 ${Math.floor(index / pattern.value.width) + 1} 行，第 ${index % pattern.value.width + 1} 列 · ${pattern.value.cells[index] ?? "空格"}`;
 });
 const selectedHex = computed(() => palette.find((color) => color.code === selectedColor.value)?.hex ?? "#000000");
+// 缩放只改变显示尺寸；焦点使用轻量矢量覆盖层，不重绘或复制图纸像素。
+const canvasSize = computed(() => ({ width: `${layout.value.width * zoom.value / 100}px`, height: `${layout.value.height * zoom.value / 100}px` }));
+const focusCell = computed(() => ({
+  x: layout.value.offsetX + (focusedCell.value % (pattern.value?.width ?? 1)) * layout.value.cellSize + 1.5,
+  y: layout.value.offsetY + Math.floor(focusedCell.value / (pattern.value?.width ?? 1)) * layout.value.cellSize + 1.5,
+  size: layout.value.cellSize - 3,
+}));
 
 /** 选择新图片只更新取景；已有图纸在成功重新生成前保留，并明确标记待更新。 */
 async function selectImage(input: File | string, name: string) {
@@ -153,22 +161,10 @@ function redraw() {
   if (!canvas.value || !pattern.value || view.value === "original") return;
   const base = Math.min(16, Math.max(4, Math.floor((stageWidth.value - 80) / pattern.value.width)));
   const cellSize = view.value === "chart" ? 24 : base;
-  layout = drawPattern(canvas.value, pattern.value, palette, {
+  layout.value = drawPattern(canvas.value, pattern.value, palette, {
     cellSize, grid: view.value === "chart", codes: view.value === "chart", coordinates: view.value === "chart",
     highlight: tool.value === "inspect" ? highlight.value : null,
   });
-  // 放大只改变显示尺寸，128 格图纸在手机上也不会因三倍缩放创建九倍像素缓冲。
-  canvas.value.style.width = `${layout.width * zoom.value / 100}px`;
-  canvas.value.style.height = `${layout.height * zoom.value / 100}px`;
-  if (canvasFocused.value) {
-    const ctx = canvas.value.getContext("2d");
-    const x = layout.offsetX + (focusedCell.value % pattern.value.width) * layout.cellSize;
-    const y = layout.offsetY + Math.floor(focusedCell.value / pattern.value.width) * layout.cellSize;
-    if (ctx) {
-      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3; ctx.strokeRect(x + 1.5, y + 1.5, cellSize - 3, cellSize - 3);
-      ctx.strokeStyle = "#17202b"; ctx.lineWidth = 1; ctx.strokeRect(x + 1.5, y + 1.5, cellSize - 3, cellSize - 3);
-    }
-  }
 }
 /** 合并同一帧的连续绘制请求，避免逐格操作重复重绘整个画布。 */
 function queueDraw() { cancelAnimationFrame(drawFrame); drawFrame = requestAnimationFrame(redraw); }
@@ -177,8 +173,8 @@ function queueDraw() { cancelAnimationFrame(drawFrame); drawFrame = requestAnima
 function indexAt(event: PointerEvent): number | null {
   if (!canvas.value || !pattern.value) return null;
   const rect = canvas.value.getBoundingClientRect();
-  const x = Math.floor(((event.clientX - rect.left) * canvas.value.width / rect.width - layout.offsetX) / layout.cellSize);
-  const y = Math.floor(((event.clientY - rect.top) * canvas.value.height / rect.height - layout.offsetY) / layout.cellSize);
+  const x = Math.floor(((event.clientX - rect.left) * canvas.value.width / rect.width - layout.value.offsetX) / layout.value.cellSize);
+  const y = Math.floor(((event.clientY - rect.top) * canvas.value.height / rect.height - layout.value.offsetY) / layout.value.cellSize);
   return x >= 0 && y >= 0 && x < pattern.value.width && y < pattern.value.height ? y * pattern.value.width + x : null;
 }
 /** 根据当前工具修改指定格，并连接同一笔画中的上一个格子。 */
@@ -282,7 +278,7 @@ async function exportResult(kind: "preview" | "chart" | "csv" | "print") {
 function clampEdge() { edge.value = Math.min(128, Math.max(8, Math.round(edge.value) || 48)); }
 
 watch([edge, maxColors, crop], () => { if (pattern.value) stale.value = true; }, { deep: true, flush: "sync" });
-watch([pattern, view, zoom, highlight, tool, focusedCell, canvasFocused, stageWidth], async () => { await nextTick(); queueDraw(); });
+watch([pattern, view, highlight, tool, stageWidth], async () => { await nextTick(); queueDraw(); });
 onMounted(() => {
   observer = new ResizeObserver((entries) => { stageWidth.value = entries[0]?.contentRect.width ?? 600; });
   if (stage.value) observer.observe(stage.value);
@@ -330,7 +326,13 @@ onBeforeUnmount(() => {
           <div class="bead-viewbar"><div class="bead-tabs" role="group" aria-label="查看方式"><button type="button" :aria-pressed="view === 'preview'" @click="view = 'preview'">效果图</button><button type="button" :aria-pressed="view === 'chart'" @click="view = 'chart'">编号图纸</button><button type="button" :aria-pressed="view === 'original'" @click="view = 'original'">原图</button></div><label v-if="view !== 'original'" class="bead-zoom">缩放<select v-model.number="zoom" aria-label="图纸缩放"><option v-for="value in [100, 150, 200, 300]" :key="value" :value="value">{{ value }}%</option></select></label></div>
           <div ref="stage" class="bead-stage" :class="{ 'is-editing': tool !== 'inspect' }" aria-label="图纸工作区" :aria-busy="busy">
             <img v-if="view === 'original' && source" :src="source.url" alt="当前选择的原图" class="bead-original" />
-            <canvas v-show="pattern && view !== 'original'" ref="canvas" role="img" aria-label="拼豆图案画布" aria-describedby="bead-canvas-help" tabindex="0" @pointerdown="beginStroke" @pointermove="moveStroke" @pointerup="finishStroke" @pointercancel="finishStroke" @lostpointercapture="finishStroke" @keydown="onCanvasKey" @focus="canvasFocused = true" @blur="canvasFocused = false" />
+            <div v-show="pattern && view !== 'original'" class="bead-canvas" :style="canvasSize">
+              <canvas ref="canvas" role="img" aria-label="拼豆图案画布" aria-describedby="bead-canvas-help" tabindex="0" @pointerdown="beginStroke" @pointermove="moveStroke" @pointerup="finishStroke" @pointercancel="finishStroke" @lostpointercapture="finishStroke" @keydown="onCanvasKey" @focus="canvasFocused = true" @blur="canvasFocused = false" />
+              <svg v-if="canvasFocused" class="bead-cell-focus" :viewBox="`0 0 ${layout.width} ${layout.height}`" aria-hidden="true">
+                <rect :x="focusCell.x" :y="focusCell.y" :width="focusCell.size" :height="focusCell.size" fill="none" stroke="#ffffff" stroke-width="3" />
+                <rect :x="focusCell.x" :y="focusCell.y" :width="focusCell.size" :height="focusCell.size" fill="none" stroke="#17202b" stroke-width="1" />
+              </svg>
+            </div>
             <div v-if="!pattern" class="bead-empty"><PictureOutlined /><p>{{ busy ? '正在准备示例图纸…' : '选择图片，或使用示例体验' }}</p></div>
             <div v-if="busy && pattern" class="bead-busy" role="status">{{ loading ? '正在读取图片…' : '正在生成图纸…' }}</div>
           </div>

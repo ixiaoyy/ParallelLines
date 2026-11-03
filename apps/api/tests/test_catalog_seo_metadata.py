@@ -44,9 +44,9 @@ def catalog_home(monkeypatch):
             assert actual_session is session
             assert actual_settings is settings
 
-        async def public_catalog(self, request=None):
-            calls.append(request)
-            return SimpleNamespace(categories=[SimpleNamespace(projects=projects)])
+        async def public_project_links(self):
+            calls.append(None)
+            return projects
 
         def __getattr__(self, name):
             raise AssertionError(f"SEO must only read the public catalog: {name}")

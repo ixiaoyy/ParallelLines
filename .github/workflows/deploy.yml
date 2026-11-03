@@ -2,78 +2,146 @@ name: Deploy
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - "apps/api/**"
-      - "apps/web/**"
-      - "deploy/nginx/**"
-      - "docker-compose.yml"
-      - "deploy/docker-compose.migration.yml"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
 
 concurrency:
   group: deploy-production
+  # 不在替换服务期间取消已开始的任务；迟到的旧 CI 在下面按 main 提交过滤。
   cancel-in-progress: false
 
 permissions:
   contents: read
 
+env:
+  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+  SOURCE_RUN_ID: ${{ github.event.workflow_run.id || github.run_id }}
+
 jobs:
   changes:
-    name: Detect deploy scope
+    name: Prepare checked deploy scope and image
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # workflow_run 可能获得 secrets；只接受本仓 main push 的成功 CI，拒绝两类 PR。
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    permissions:
+      contents: read
+      actions: read
     outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      nginx: ${{ steps.filter.outputs.nginx }}
-      compose: ${{ steps.filter.outputs.compose }}
+      ready: ${{ steps.target.outputs.ready }}
+      sha: ${{ steps.plan.outputs.sha }}
+      source_run_id: ${{ steps.plan.outputs.source_run_id }}
+      backend: ${{ steps.plan.outputs.backend }}
+      frontend: ${{ steps.plan.outputs.frontend }}
+      nginx: ${{ steps.plan.outputs.nginx }}
+      compose: ${{ steps.plan.outputs.compose }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
         with:
-          filters: |
-            backend:
-              - 'apps/api/**'
-            frontend:
-              - 'apps/web/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-            nginx:
-              - 'deploy/nginx/**'
-            compose:
-              - 'docker-compose.yml'
-              - 'deploy/docker-compose.migration.yml'
+          ref: ${{ env.DEPLOY_SHA }}
+      - name: Skip late CI for an older main commit
+        id: target
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then
+            CURRENT="$(timeout 30 git ls-remote origin refs/heads/main | cut -f1)"
+            [[ "$CURRENT" =~ ^[0-9a-f]{40}$ ]]
+            if [ "$CURRENT" != "$DEPLOY_SHA" ]; then
+              echo "ready=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::Skipping an older CI result; main has moved."
+              exit 0
+            fi
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+      - name: Download the exact CI scope
+        if: steps.target.outputs.ready == 'true' && github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-plan-${{ env.DEPLOY_SHA }}
+          path: ${{ runner.temp }}/parallellines-plan
+          github-token: ${{ github.token }}
+          run-id: ${{ env.SOURCE_RUN_ID }}
+      - name: Prepare manual full-stack scope without a historical artifact
+        if: steps.target.outputs.ready == 'true' && github.event_name == 'workflow_dispatch'
+        run: python3 .github/scripts/deploy_artifacts.py plan --output "$RUNNER_TEMP/parallellines-plan/deploy-plan.json" --github-output "$GITHUB_OUTPUT"
+      - name: Validate source commit and scope
+        id: plan
+        if: steps.target.outputs.ready == 'true'
+        run: python3 .github/scripts/deploy_artifacts.py read-plan --source "$RUNNER_TEMP/parallellines-plan/deploy-plan.json" --github-output "$GITHUB_OUTPUT"
+      - name: Download the checked CI Web image
+        if: steps.target.outputs.ready == 'true' && steps.plan.outputs.web_required == 'true' && github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: parallellines-web-${{ env.DEPLOY_SHA }}
+          path: ${{ runner.temp }}/parallellines-web-image
+          github-token: ${{ github.token }}
+          run-id: ${{ env.SOURCE_RUN_ID }}
+      - uses: docker/setup-buildx-action@v3
+        if: steps.target.outputs.ready == 'true' && github.event_name == 'workflow_dispatch'
+      # 手动入口保留原源码构建能力；自动链路缺产物直接失败，绝不悄悄重建。
+      - name: Build Web once for an explicit manual deployment
+        if: steps.target.outputs.ready == 'true' && github.event_name == 'workflow_dispatch'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          build-args: |
+            VITE_API_BASE_URL=/api/v1
+            SOURCE_REVISION=${{ env.DEPLOY_SHA }}
+          tags: |
+            parallellines-web:${{ env.DEPLOY_SHA }}
+            parallellines-web:latest
+          load: true
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+      - name: Export the manual Web image and receipt
+        if: steps.target.outputs.ready == 'true' && github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/parallellines-web-image"
+          mkdir -p "$OUT"
+          docker save "parallellines-web:$DEPLOY_SHA" parallellines-web:latest | gzip > "$OUT/parallellines-web-$DEPLOY_SHA.tar.gz"
+          python3 .github/scripts/deploy_artifacts.py receipt --directory "$OUT" --sha "$DEPLOY_SHA" --run-id "$GITHUB_RUN_ID" \
+            --image-id "$(docker image inspect --format '{{.Id}}' "parallellines-web:$DEPLOY_SHA")" \
+            --image-revision "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "parallellines-web:$DEPLOY_SHA")"
+      - name: Verify Web artifact before any server changes
+        if: steps.target.outputs.ready == 'true' && steps.plan.outputs.web_required == 'true'
+        run: python3 .github/scripts/deploy_artifacts.py verify-web --directory "$RUNNER_TEMP/parallellines-web-image" --sha "$DEPLOY_SHA" --run-id "$SOURCE_RUN_ID"
+      - name: Pass the same verified archive to the existing deployment jobs
+        if: steps.target.outputs.ready == 'true' && steps.plan.outputs.web_required == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-image-ready-${{ env.DEPLOY_SHA }}
+          path: ${{ runner.temp }}/parallellines-web-image/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+          overwrite: true
 
   deploy-full-stack:
     name: Deploy full stack (compose)
     runs-on: ubuntu-latest
     needs: changes
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && needs.changes.outputs.compose == 'true')
+    if: needs.changes.outputs.ready == 'true' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.compose == 'true')
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Build frontend image on runner
-        uses: docker/build-push-action@v6
         with:
-          context: .
-          file: apps/web/Dockerfile
-          build-args: VITE_API_BASE_URL=/api/v1
-          tags: parallellines-web:latest
-          load: true
-          cache-from: type=gha,scope=web
-          cache-to: type=gha,mode=max,scope=web
-
-      - name: Export frontend image archive
-        run: docker save parallellines-web:latest | gzip > "/tmp/parallellines-web-${GITHUB_SHA}.tar.gz"
+          ref: ${{ needs.changes.outputs.sha }}
+      - name: Download the already verified image
+        uses: actions/download-artifact@v4
+        with:
+          name: web-image-ready-${{ env.DEPLOY_SHA }}
+          path: ${{ runner.temp }}/parallellines-web-image
+      - name: Verify the exact image before transfer
+        run: python3 .github/scripts/deploy_artifacts.py verify-web --directory "$RUNNER_TEMP/parallellines-web-image" --sha "$DEPLOY_SHA" --run-id "$SOURCE_RUN_ID"
 
       - name: Upload frontend image archive to server
         env:
@@ -90,7 +158,8 @@ jobs:
           ssh-keyscan -T 10 -t ed25519 -p "${PORT}" "${DEPLOY_HOST}" > /tmp/deploy-host-key 2>/dev/null
           test "$(ssh-keygen -lf /tmp/deploy-host-key | awk '{print $2}')" = "SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA"
           cat /tmp/deploy-host-key >> ~/.ssh/known_hosts
-          scp -P "${PORT}" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "/tmp/parallellines-web-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/parallellines-web-${GITHUB_SHA}.tar.gz"
+          ARTIFACT="$RUNNER_TEMP/parallellines-web-image/parallellines-web-$DEPLOY_SHA"
+          timeout 300 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${ARTIFACT}.tar.gz" "${ARTIFACT}.tar.gz.sha256" "${ARTIFACT}.image-id" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
 
       - name: Deploy all services to server
         uses: appleboy/ssh-action@v1.0.3
@@ -103,11 +172,13 @@ jobs:
           command_timeout: 30m
           script: |
             set -eu
+            DEPLOY_REVISION="${{ needs.changes.outputs.sha }}"
             sudo mountpoint -q /data
             sudo test -d /data/uploads/parallellines
             sudo test -d /data/backups/parallellines
             sudo test -s /opt/parallellines/apps/api/.env
-            WEB_IMAGE_ARCHIVE="/tmp/parallellines-web-${{ github.sha }}.tar.gz"
+            WEB_IMAGE_BASE="/tmp/parallellines-web-$DEPLOY_REVISION"
+            WEB_IMAGE_ARCHIVE="$WEB_IMAGE_BASE.tar.gz"
             DEPLOY_STARTED_AT=$(date +%s)
             echo "[deploy] mode=full stack reason=docker-compose changed"
 
@@ -115,7 +186,9 @@ jobs:
             cd /opt/parallellines
             git remote set-url origin https://github.com/${{ github.repository }}.git
             git fetch --prune origin main
-            git reset --hard origin/main
+            git cat-file -e "${DEPLOY_REVISION}^{commit}" 2>/dev/null || git fetch origin "$DEPLOY_REVISION"
+            git reset --hard "$DEPLOY_REVISION"
+            test "$(git rev-parse HEAD)" = "$DEPLOY_REVISION"
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -126,8 +199,14 @@ jobs:
             echo "[deploy] storage directory check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
+            # 先核传输完整性，再确认 SHA 标签、兼容 latest 与实际镜像身份一致。
+            (cd /tmp && sha256sum -c "${WEB_IMAGE_ARCHIVE}.sha256")
             sudo docker load -i "${WEB_IMAGE_ARCHIVE}"
-            rm -f "${WEB_IMAGE_ARCHIVE}"
+            EXPECTED_WEB_IMAGE_ID="$(cat "$WEB_IMAGE_BASE.image-id")"
+            test "$(sudo docker image inspect --format '{{.Id}}' "parallellines-web:$DEPLOY_REVISION")" = "$EXPECTED_WEB_IMAGE_ID"
+            test "$(sudo docker image inspect --format '{{.Id}}' parallellines-web:latest)" = "$EXPECTED_WEB_IMAGE_ID"
+            test "$(sudo docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "parallellines-web:$DEPLOY_REVISION")" = "$DEPLOY_REVISION"
+            rm -f "${WEB_IMAGE_ARCHIVE}" "${WEB_IMAGE_ARCHIVE}.sha256" "$WEB_IMAGE_BASE.image-id"
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] frontend image load took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -162,11 +241,6 @@ jobs:
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] certificate check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
-            STEP_STARTED_AT=$(date +%s)
-            sudo docker image prune -f
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] image prune took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
             DEPLOY_FINISHED_AT=$(date +%s)
             echo "[deploy] total took $((DEPLOY_FINISHED_AT - DEPLOY_STARTED_AT))s"
 
@@ -174,7 +248,7 @@ jobs:
     name: Deploy backend (api + worker)
     runs-on: ubuntu-latest
     needs: changes
-    if: github.event_name == 'push' && needs.changes.outputs.backend == 'true' && needs.changes.outputs.compose != 'true'
+    if: needs.changes.outputs.ready == 'true' && needs.changes.outputs.backend == 'true' && needs.changes.outputs.compose != 'true'
 
     steps:
       - name: Deploy backend services to server
@@ -188,6 +262,7 @@ jobs:
           command_timeout: 20m
           script: |
             set -eu
+            DEPLOY_REVISION="${{ needs.changes.outputs.sha }}"
             sudo mountpoint -q /data
             sudo test -d /data/uploads/parallellines
             sudo test -d /data/backups/parallellines
@@ -199,7 +274,9 @@ jobs:
             cd /opt/parallellines
             git remote set-url origin https://github.com/${{ github.repository }}.git
             git fetch --prune origin main
-            git reset --hard origin/main
+            git cat-file -e "${DEPLOY_REVISION}^{commit}" 2>/dev/null || git fetch origin "$DEPLOY_REVISION"
+            git reset --hard "$DEPLOY_REVISION"
+            test "$(git rev-parse HEAD)" = "$DEPLOY_REVISION"
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -249,11 +326,6 @@ jobs:
               echo "[deploy] bootstrap certificate check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
             fi
 
-            STEP_STARTED_AT=$(date +%s)
-            sudo docker image prune -f
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] image prune took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
             DEPLOY_FINISHED_AT=$(date +%s)
             echo "[deploy] total took $((DEPLOY_FINISHED_AT - DEPLOY_STARTED_AT))s"
 
@@ -265,29 +337,23 @@ jobs:
       - deploy-backend
     if: |
       always() &&
-      github.event_name == 'push' &&
+      needs.changes.result == 'success' &&
+      needs.changes.outputs.ready == 'true' &&
       needs.changes.outputs.frontend == 'true' &&
       needs.changes.outputs.compose != 'true' &&
       (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Build frontend image on runner
-        uses: docker/build-push-action@v6
         with:
-          context: .
-          file: apps/web/Dockerfile
-          build-args: VITE_API_BASE_URL=/api/v1
-          tags: parallellines-web:latest
-          load: true
-          cache-from: type=gha,scope=web
-          cache-to: type=gha,mode=max,scope=web
-
-      - name: Export frontend image archive
-        run: docker save parallellines-web:latest | gzip > "/tmp/parallellines-web-${GITHUB_SHA}.tar.gz"
+          ref: ${{ needs.changes.outputs.sha }}
+      - name: Download the already verified image
+        uses: actions/download-artifact@v4
+        with:
+          name: web-image-ready-${{ env.DEPLOY_SHA }}
+          path: ${{ runner.temp }}/parallellines-web-image
+      - name: Verify the exact image before transfer
+        run: python3 .github/scripts/deploy_artifacts.py verify-web --directory "$RUNNER_TEMP/parallellines-web-image" --sha "$DEPLOY_SHA" --run-id "$SOURCE_RUN_ID"
 
       - name: Upload frontend image archive to server
         env:
@@ -304,7 +370,8 @@ jobs:
           ssh-keyscan -T 10 -t ed25519 -p "${PORT}" "${DEPLOY_HOST}" > /tmp/deploy-host-key 2>/dev/null
           test "$(ssh-keygen -lf /tmp/deploy-host-key | awk '{print $2}')" = "SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA"
           cat /tmp/deploy-host-key >> ~/.ssh/known_hosts
-          scp -P "${PORT}" -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "/tmp/parallellines-web-${GITHUB_SHA}.tar.gz" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/parallellines-web-${GITHUB_SHA}.tar.gz"
+          ARTIFACT="$RUNNER_TEMP/parallellines-web-image/parallellines-web-$DEPLOY_SHA"
+          timeout 300 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${ARTIFACT}.tar.gz" "${ARTIFACT}.tar.gz.sha256" "${ARTIFACT}.image-id" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
 
       - name: Deploy frontend service to server
         uses: appleboy/ssh-action@v1.0.3
@@ -317,19 +384,23 @@ jobs:
           command_timeout: 20m
           script: |
             set -eu
+            DEPLOY_REVISION="${{ needs.changes.outputs.sha }}"
             sudo mountpoint -q /data
             sudo test -d /data/uploads/parallellines
             sudo test -d /data/backups/parallellines
             sudo test -s /opt/parallellines/apps/api/.env
             DEPLOY_STARTED_AT=$(date +%s)
-            WEB_IMAGE_ARCHIVE="/tmp/parallellines-web-${{ github.sha }}.tar.gz"
+            WEB_IMAGE_BASE="/tmp/parallellines-web-$DEPLOY_REVISION"
+            WEB_IMAGE_ARCHIVE="$WEB_IMAGE_BASE.tar.gz"
             echo "[deploy] mode=frontend service=web"
 
             STEP_STARTED_AT=$(date +%s)
             cd /opt/parallellines
             git remote set-url origin https://github.com/${{ github.repository }}.git
             git fetch --prune origin main
-            git reset --hard origin/main
+            git cat-file -e "${DEPLOY_REVISION}^{commit}" 2>/dev/null || git fetch origin "$DEPLOY_REVISION"
+            git reset --hard "$DEPLOY_REVISION"
+            test "$(git rev-parse HEAD)" = "$DEPLOY_REVISION"
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -339,8 +410,14 @@ jobs:
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] storage directory check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
             STEP_STARTED_AT=$(date +%s)
+            # 先核传输完整性，再确认 SHA 标签、兼容 latest 与实际镜像身份一致。
+            (cd /tmp && sha256sum -c "${WEB_IMAGE_ARCHIVE}.sha256")
             sudo docker load -i "${WEB_IMAGE_ARCHIVE}"
-            rm -f "${WEB_IMAGE_ARCHIVE}"
+            EXPECTED_WEB_IMAGE_ID="$(cat "$WEB_IMAGE_BASE.image-id")"
+            test "$(sudo docker image inspect --format '{{.Id}}' "parallellines-web:$DEPLOY_REVISION")" = "$EXPECTED_WEB_IMAGE_ID"
+            test "$(sudo docker image inspect --format '{{.Id}}' parallellines-web:latest)" = "$EXPECTED_WEB_IMAGE_ID"
+            test "$(sudo docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "parallellines-web:$DEPLOY_REVISION")" = "$DEPLOY_REVISION"
+            rm -f "${WEB_IMAGE_ARCHIVE}" "${WEB_IMAGE_ARCHIVE}.sha256" "$WEB_IMAGE_BASE.image-id"
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] image load took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -387,11 +464,6 @@ jobs:
               echo "[deploy] bootstrap certificate check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
             fi
 
-            STEP_STARTED_AT=$(date +%s)
-            sudo docker image prune -f
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] image prune took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
             DEPLOY_FINISHED_AT=$(date +%s)
             echo "[deploy] total took $((DEPLOY_FINISHED_AT - DEPLOY_STARTED_AT))s"
 
@@ -404,7 +476,8 @@ jobs:
       - deploy-frontend
     if: |
       always() &&
-      github.event_name == 'push' &&
+      needs.changes.result == 'success' &&
+      needs.changes.outputs.ready == 'true' &&
       needs.changes.outputs.nginx == 'true' &&
       needs.changes.outputs.compose != 'true' &&
       (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped') &&
@@ -422,6 +495,7 @@ jobs:
           command_timeout: 20m
           script: |
             set -eu
+            DEPLOY_REVISION="${{ needs.changes.outputs.sha }}"
             sudo mountpoint -q /data
             sudo test -d /data/uploads/parallellines
             sudo test -d /data/backups/parallellines
@@ -433,7 +507,9 @@ jobs:
             cd /opt/parallellines
             git remote set-url origin https://github.com/${{ github.repository }}.git
             git fetch --prune origin main
-            git reset --hard origin/main
+            git cat-file -e "${DEPLOY_REVISION}^{commit}" 2>/dev/null || git fetch origin "$DEPLOY_REVISION"
+            git reset --hard "$DEPLOY_REVISION"
+            test "$(git rev-parse HEAD)" = "$DEPLOY_REVISION"
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -477,11 +553,6 @@ jobs:
             fi
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] certificate check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            sudo docker image prune -f
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] image prune took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             DEPLOY_FINISHED_AT=$(date +%s)
             echo "[deploy] total took $((DEPLOY_FINISHED_AT - DEPLOY_STARTED_AT))s"

@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -17,7 +18,9 @@ RUN apt-get update \
 RUN pip install --no-cache-dir uv
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev
+# 只缓存依赖下载；环境继续按锁文件创建，复制安装避免跨缓存挂载点链接。
+RUN --mount=type=cache,id=parallellines-uv-py312,target=/root/.cache/uv \
+    UV_LINK_MODE=copy uv sync --frozen --no-dev
 
 COPY alembic.ini ./
 COPY alembic ./alembic

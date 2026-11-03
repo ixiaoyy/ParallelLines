@@ -50,12 +50,16 @@ export function drawPattern(
     width: pattern.width * cellSize + gutter * 2,
     height: pattern.height * cellSize + gutter * 2,
   };
-  canvas.width = layout.width;
-  canvas.height = layout.height;
+  // 尺寸不变时复用缓冲，仍清空旧像素，避免擦除或取消高亮后残留内容。
+  if (canvas.width !== layout.width) canvas.width = layout.width;
+  if (canvas.height !== layout.height) canvas.height = layout.height;
   const context = canvas.getContext("2d");
   if (!context) throw new Error("bead_canvas_unavailable");
+  context.clearRect(0, 0, canvas.width, canvas.height);
   context.imageSmoothingEnabled = false;
   const colors = new Map(palette.map((color) => [color.code, color]));
+  // 同一色号的对比色与格子位置无关，每次绘图只计算一次。
+  const textColors = new Map(options.codes ? palette.map((color) => [color.code, cellTextColor(color)]) : []);
 
   // 参考图以纸面背景显示坐标；无网格的效果图不填背景，保留原图空白。
   if (options.grid || options.coordinates) {
@@ -88,7 +92,7 @@ export function drawPattern(
       context.fillRect(x, y, cellSize, cellSize);
       context.globalAlpha = 1;
       if (options.codes && cellSize >= 18) {
-        context.fillStyle = dimmed ? "#334155" : cellTextColor(color);
+        context.fillStyle = dimmed ? "#334155" : textColors.get(code)!;
         const fontSize = Math.min(12, Math.floor(cellSize / Math.max(2.5, code.length * 0.7)));
         context.font = `600 ${fontSize}px Arial, sans-serif`;
         context.textAlign = "center";

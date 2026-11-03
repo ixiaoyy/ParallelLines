@@ -286,12 +286,11 @@ class SeoService:
         """生成根路径目录首屏语义 HTML，与公开 API 使用同一项目数据源。"""
 
         identity = await self._site_identity()
-        catalog = await CatalogService(self.session, get_settings()).public_catalog()
-        # 只渲染可见分类中的项目，避免无 JS 首屏重新露出旧论坛内容。
+        projects = await CatalogService(self.session, get_settings()).public_project_links()
+        # 首屏只需要可见项目的链接，不再为浏览器随后获取的目录提前聚合评分。
         links = tuple(
             SeoPageLink(path=project.url, label=project.name, description=project.description)
-            for category in catalog.categories
-            for project in category.projects
+            for project in projects
         )
         return SeoPageDocument(
             kind="home",
