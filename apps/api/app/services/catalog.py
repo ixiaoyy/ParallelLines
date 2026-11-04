@@ -265,8 +265,10 @@ class CatalogService:
                 and_(CatalogProject.created_at == timestamp, rank == priority,
                      CatalogProject.id < project_id),
             ))
+        # MySQL 将 ORDER BY 绑定常量视作列序号；没有优先名单时完全省略该排序项。
         projects = (await self.session.scalars(query.order_by(
-            CatalogProject.created_at.desc(), rank, CatalogProject.id.desc(),
+            CatalogProject.created_at.desc(), *([rank] if priorities else []),
+            CatalogProject.id.desc(),
         ).limit(limit + 1))).all()
         has_more = len(projects) > limit
         projects = projects[:limit]

@@ -23,12 +23,17 @@ describe("公开目录请求边界", () => {
     await fetchCatalogOverview(undefined, 0);
     await fetchCatalogOverview([], 0);
     await fetchCatalogCategoryPage("real-slug", 13, "opaque+/=", ["first", "second"]);
+    await fetchCatalogCategoryPage("real-slug", 3, null, []);
     const urls = fetch.mock.calls.map((call) => new URL(String(call[0])));
     expect(urls[0]!.searchParams.has("hero_slugs")).toBe(false);
     expect(urls[1]!.searchParams.get("hero_slugs")).toBe("");
     expect(urls[2]!.searchParams.get("limit")).toBe("13");
     expect(urls[2]!.searchParams.get("cursor")).toBe("opaque+/=");
     expect(urls[2]!.searchParams.get("priority_slugs")).toBe("first,second");
+    // 空优先列表必须仍能使用服务端默认创建时间/ID顺序，不依赖内置种子名单才能分页。
+    expect(urls[3]!.searchParams.get("priority_slugs")).toBe("");
+    expect(urls[3]!.searchParams.get("limit")).toBe("3");
+    expect(urls[3]!.searchParams.has("cursor")).toBe(false);
   });
   it("沿用API错误边界，不以失败的公开接口回退全量", async () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(JSON.stringify({ error: { code: "not_found", message: "missing" } }), { status: 404 }));

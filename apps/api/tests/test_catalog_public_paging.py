@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import unittest
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
@@ -12,6 +13,7 @@ import sqlalchemy as sa
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.dialects import mysql
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -253,6 +255,37 @@ class CatalogPublicPagingTests(unittest.IsolatedAsyncioTestCase):
                 f"/api/v1/catalog/categories/cards/projects?limit={value}"
             )
             self.assertEqual(response.status_code, 422)
+
+    async def test_empty_priority_pages_have_no_mysql_ordinal_ordering(self):
+        first = await self.service.public_category_projects("cards", limit=3)
+        second = await self.service.public_category_projects(
+            "cards",
+            limit=3,
+            cursor=first.next_cursor,
+        )
+        self.assertEqual([item.id for item in first.projects], ["4", "10", "3"])
+        self.assertEqual([item.id for item in second.projects], ["2", "1", "18"])
+        self.assertEqual(first.total, second.total)
+        self.assertNotEqual(first.next_cursor, second.next_cursor)
+        self.assertEqual(len({item.id for item in first.projects + second.projects}), 6)
+        queries = [
+            statement
+            for statement in self.bridge.statements
+            if "catalog_projects.description" in str(statement)
+        ]
+        self.assertEqual(len(queries), 2)
+        for statement in queries:
+            # SQLite 允许 ORDER BY 绑定常量；MySQL/asyncmy 会将零视作无效列序号。
+            sql = str(statement.compile(dialect=mysql.dialect()))
+            ordering = re.search(r"ORDER BY\s+(.*?)\s+LIMIT\b", sql, flags=re.S).group(1)
+            self.assertEqual(
+                " ".join(ordering.split()),
+                "catalog_projects.created_at DESC, catalog_projects.id DESC",
+            )
+            self.assertNotIn("%s", ordering)
+        second_sql = str(queries[1].compile(dialect=mysql.dialect()))
+        self.assertIn("catalog_projects.created_at <", second_sql)
+        self.assertIn("catalog_projects.id <", second_sql)
 
     async def test_overview_column_metadata_empty_candidate_and_six_card_bound(self):
         empty = await self.service.public_overview(hero_slugs=())
