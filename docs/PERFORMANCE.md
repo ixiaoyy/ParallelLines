@@ -57,6 +57,17 @@ CDN 发布时发现 `gd-super-chicken-td.webp` 仍命中旧字节缓存，源站
 
 恢复时先回旧 Web，必要时再回旧 API/worker；保留旧 PNG、CDN 对象、旧镜像和本次源代码。回滚不删除新对象，不做全局缓存清理，不使用迁移备份覆盖现有数据库。
 
+### 本批最终上线记录
+
+- 实际应用版本为 `a07a8a73a50945ed3ecdccebb5544969c1f891b3`，供新版引用的 23 个 CDN 地址先行核对完成，再发布 API/worker，最后发布 Web。服务器 Web 镜像 revision 与该提交完全一致，API/Web 健康，Nginx、数据库、Redis 镜像保持发布前版本；网关仅 reload。没有新增迁移、改写旧数据、清理备份或全局清缓存。
+- 首次 [CI 41809377044](https://github.com/ixiaoyy/ParallelLines/actions/runs/41809377044) 后端 Ruff、MySQL 迁移、633 项测试及 OpenAPI 通过，但前端被新增测试中的 6 个未使用参数拦住，因此整体 CI 失败且自动部署跳过。`c9eaa3c8` 已修正测试声明；后续提交未出现新的 CI 运行，原因未证实，不能把它记为云端验证通过。
+- 生产验收另发现无优先名单的分页 SQL 被 MySQL 将绑定常量当成列序号，首次请求为 500。`a07a8a73` 只在无优先名单时省略该 ORDER BY 项，保留创建时间/ID与 CASE 排序、游标语义；离线回归先复现再通过，新增真实 MySQL 测试保留待 CI 执行。修复后的真实公开默认/CASE 首、次页四次 GET 均 200、无重复、游标推进，已对真实 MySQL 入口补验，未把 SQLite 检查当作生产证明。
+- 在已有定向发布授权下，采用原 Dockerfile 和现有 SSH 通道从精确提交构建 API/worker；Web 从 `git archive` 的干净已跟踪源码构建一次，未将服务器未跟踪的旧数据库/证书备份送入构建上下文。不使用全栈手动 workflow，不改变流水线权限或取消既有完整性要求。最终原生镜像、健康与源码记录在服务器 `/data/releases/catalog-20261104-01a1a594/final-ready.json`。
+- 线上桌面首次创建 33 张卡片、5 次目录请求，手机为 9 张、2 次请求；解压后的 JSON 正文分别为 33,953 / 16,721 字节，不代表压缩传输量或 LCP。默认发现页没有请求完整 `/catalog`，未加载分类没有游戏卡片；手机园林大图请求为零，滚动/横移后继续增加数据和图片。
+- 14 个非空分类、229 款游戏已逐类到真实 EOF、逐款封面实际滚入视口核对；ID 唯一、数量与当前总数相符，封面最终均为 `200 image/*` 且自然尺寸非零。公开项目的 `my_score` 均为 `null`；真实服务端缓存 hit、ETag 条件请求 304、空正文和 `public, no-cache` 已通过。目录 API 的 CF 状态为 DYNAMIC，不能冒称已做边缘 JSON 命中。
+- 一张旧封面首轮已收到 200 响应头但正文超过 25 秒限时；同 URL 无 cache-bust 定向复核完整 139,300 字节、耗时 2.39 秒且 CF HIT，随后所在分类逐款通过。保留首次超时及手机结束时取消屏外预取的原始记录，只补验受影响部分；不据本次成功宣称所有线路都没有 CDN 延迟。
+- 最终综合页面清单为本地 `.tmp/catalog-incremental-20261104/online-a07a8a73a50945ed3ecdccebb5544969c1f891b3-summary.json`，真实 API 清单为 `.tmp/catalog-release-20261104/online-api-acceptance.json`；父级已查看电脑/手机实际截图。所有自有测试浏览器和一次性发布进程均已结束，生产服务与回滚入口保持可用。
+
 ## 构建缓存
 
 - Web 的 pnpm、API 的 uv 下载缓存挂载只在同一持久 BuildKit 构建器内复用。GitHub Actions 的 `type=gha` 保存镜像构建层，不自动持久化 cache mount，不能据此宣称锁变化后仍命中下载缓存。
