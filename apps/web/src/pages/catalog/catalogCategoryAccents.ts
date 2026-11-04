@@ -14,11 +14,11 @@ export interface CatalogCategoryAccent {
 const accents: Readonly<Record<string, CatalogCategoryAccent>> = {
   horror: {
     kind: "branch-paper", placement: "heading", caption: "夜游",
-    artwork: { kind: "image", src: staticAssetUrl("/catalog/2026-10-30-folklore/horror-plum-paper-tags-transparent.png"), aspectRatio: 1605 / 980 },
+    artwork: { kind: "image", src: staticAssetUrl("/catalog/2026-10-30-folklore/horror-plum-paper-tags-transparent.webp"), aspectRatio: 1605 / 980 },
   },
   exploration: {
     kind: "compass", placement: "card-corner", caption: "寻迹",
-    artwork: { kind: "atlas", src: staticAssetUrl("/catalog/2026-10-30-folklore/exploration-brass-compass-transparent.png"), sourceWidth: 1145, sourceHeight: 1374, bounds: { x: 165, y: 84, width: 816, height: 1139 } },
+    artwork: { kind: "atlas", src: staticAssetUrl("/catalog/2026-10-30-folklore/exploration-brass-compass-transparent.webp"), sourceWidth: 1145, sourceHeight: 1374, bounds: { x: 165, y: 84, width: 816, height: 1139 } },
   },
 };
 

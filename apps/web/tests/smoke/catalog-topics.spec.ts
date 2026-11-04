@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { catalogPublicFixture } from "./catalog-public-fixture";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5199";
 const localHost = (hostname: string) => ["127.0.0.1", "localhost", "[::1]"].includes(hostname);
@@ -61,6 +62,8 @@ async function readOnlyPreview(context: BrowserContext, catalog: CatalogPayload 
       await route.fulfill({ json: typeof catalog === "function" ? catalog() : catalog });
       return;
     }
+    const paged = catalogPublicFixture(url, (typeof catalog === "function" ? catalog() : catalog).data.categories);
+    if (paged) { await route.fulfill({ json: paged }); return; }
     await route.continue();
   });
 }

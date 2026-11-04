@@ -55,6 +55,8 @@ const sortOptions: { label: string; value: UserDirectorySort; description: strin
           :src="resolveApiAssetUrl(user.avatar_url)"
           :role="user.role"
           :level="user.level"
+          loading="lazy"
+          decoding="async"
         />
         <div class="directory-card__main">
           <div class="directory-card__identity">

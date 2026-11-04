@@ -67,6 +67,42 @@ export interface CatalogResponse {
   categories: CatalogCategoryResponse[];
 }
 
+export interface CatalogPublicProjectResponse extends CatalogProjectResponse {
+  category_slug: string;
+  my_score: null;
+}
+
+export interface CatalogOverviewResponse {
+  categories: Array<Omit<CatalogCategoryResponse, "projects"> & { total: number }>;
+  hero: { projects: CatalogPublicProjectResponse[]; total: number; next_offset: number | null };
+}
+
+export interface CatalogCategoryPageResponse {
+  category_id: string;
+  category_slug: string;
+  projects: CatalogPublicProjectResponse[];
+  total: number;
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
+export interface CatalogBrowseProject extends CatalogProject { categorySlug: string }
+export interface CatalogOverview {
+  categories: Array<CatalogCategory & { total: number }>;
+  hero: { projects: CatalogBrowseProject[]; total: number; nextOffset: number | null };
+}
+export interface CatalogCategoryPage {
+  projects: CatalogBrowseProject[];
+  total: number;
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+/** 映射新增公开项目，复用旧目录字段解释；公开缓存不存当前用户评分。 */
+export function toCatalogBrowseProject(project: CatalogPublicProjectResponse): CatalogBrowseProject {
+  return { ...toCatalogProject(project), myScore: null, categorySlug: project.category_slug };
+}
+
 export interface CatalogRatingRequest {
   score: number;
 }
@@ -199,43 +235,27 @@ function catalogAuthorUrl(url: string | null | undefined): string | undefined {
   }
 }
 
-// 将一个 API 分类及其项目映射为页面结构；外链显示域名，站内项目不显示域名。
-// 参数是 API 分类，返回可直接用于筛选和展示的分类，不产生写入。
-export function toCatalogCategory(category: CatalogCategoryResponse): CatalogCategory {
+/** 映射一个真实 API 项目；外链显示域名、上传图标和作者地址沿用原有安全规则。 */
+export function toCatalogProject(project: CatalogProjectResponse): CatalogProject {
+  let host = "";
+  if (project.kind === "external") {
+    try { host = new URL(project.url).hostname.replace(/^www\./, ""); }
+    catch { host = ""; }
+  }
   return {
-    id: category.id,
-    slug: category.slug,
-    name: category.name,
-    iconUrl: catalogIconUrl(category.icon_url),
-    projects: category.projects.map((project) => {
-      let host = "";
-      if (project.kind === "external") {
-        try {
-          host = new URL(project.url).hostname.replace(/^www\./, "");
-        } catch {
-          host = "";
-        }
-      }
-      return {
-        id: project.id,
-        slug: project.slug,
-        name: project.name,
-        url: project.url,
-        kind: project.kind,
-        description: project.description,
-        authorName: project.author_name ?? null,
-        authorUrl: catalogAuthorUrl(project.author_url),
-        iconUrl: catalogIconUrl(project.icon_url),
-        createdAt: project.created_at,
-        averageScore: project.average_score,
-        ratingCount: project.rating_count,
-        ratingScoreSum: project.rating_score_sum ?? 0,
-        // 旧版目录响应尚无浏览量时从零展示，不推算历史访问。
-        viewCount: project.view_count ?? 0,
-        myScore: project.my_score,
-        aiRating: toCatalogAiRating(project.ai_rating),
-        host,
-      };
-    }),
+    id: project.id, slug: project.slug, name: project.name, url: project.url, kind: project.kind,
+    description: project.description, authorName: project.author_name ?? null,
+    authorUrl: catalogAuthorUrl(project.author_url), iconUrl: catalogIconUrl(project.icon_url),
+    createdAt: project.created_at, averageScore: project.average_score, ratingCount: project.rating_count,
+    ratingScoreSum: project.rating_score_sum ?? 0,
+    // 旧响应缺失浏览量仍按零展示，不推算历史访问。
+    viewCount: project.view_count ?? 0, myScore: project.my_score,
+    aiRating: toCatalogAiRating(project.ai_rating), host,
   };
+}
+
+// 将 API 分类映射为页面结构，单项目与分页调用复用同一字段解释，不产生写入。
+export function toCatalogCategory(category: CatalogCategoryResponse): CatalogCategory {
+  return { id: category.id, slug: category.slug, name: category.name,
+    iconUrl: catalogIconUrl(category.icon_url), projects: category.projects.map(toCatalogProject) };
 }

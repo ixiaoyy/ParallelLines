@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Locator, type Page } from "@playwright/test";
+import { catalogPublicFixture } from "./catalog-public-fixture";
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5199";
 const localHost = (hostname: string) => ["127.0.0.1", "localhost", "[::1]"].includes(hostname);
@@ -13,7 +14,7 @@ interface CatalogPayload {
   data: { categories: CatalogCategory[]; [key: string]: unknown };
   [key: string]: unknown;
 }
-const guards = new WeakMap<BrowserContext, { writes: string[]; externalNavigations: string[] }>();
+const guards = new WeakMap<BrowserContext, { writes: string[]; externalNavigations: string[]; fullReads: string[] }>();
 
 async function readOnlyCatalog(context: BrowserContext): Promise<CatalogPayload> {
   expect(localHost(new URL(baseURL).hostname)).toBe(true);
@@ -21,7 +22,7 @@ async function readOnlyCatalog(context: BrowserContext): Promise<CatalogPayload>
   expect(response.ok()).toBe(true);
   const catalog = await response.json() as CatalogPayload;
   expect(catalog.data.categories.length).toBeGreaterThan(0);
-  const guard = { writes: [] as string[], externalNavigations: [] as string[] };
+  const guard = { writes: [] as string[], externalNavigations: [] as string[], fullReads: [] as string[] };
   guards.set(context, guard);
   await context.route("**/*", async (route) => {
     const request = route.request();
@@ -37,9 +38,12 @@ async function readOnlyCatalog(context: BrowserContext): Promise<CatalogPayload>
       return;
     }
     if (url.pathname === "/api/v1/catalog") {
-      await route.fulfill({ json: catalog });
+      guard.fullReads.push(url.href);
+      await route.fulfill({ status: 409, json: { error: { code: "FULL_CATALOG_NOT_ALLOWED_ON_DISCOVERY" } } });
       return;
     }
+    const paged = catalogPublicFixture(url, catalog.data.categories);
+    if (paged) { await route.fulfill({ json: paged }); return; }
     await route.continue();
   });
   return catalog;
@@ -91,6 +95,7 @@ test.afterEach(async ({ context }) => {
   if (guard) {
     expect(guard.writes).toEqual([]);
     expect(guard.externalNavigations).toEqual([]);
+    expect(guard.fullReads).toEqual([]);
   }
   expect(context.pages()).toHaveLength(1);
 });
@@ -102,8 +107,11 @@ test("a category arrow reveals later real games without changing routes, other r
   await page.setViewportSize({ width: 921, height: 1100 });
   await openCatalog(page);
   const rail = railFor(page, category.slug);
+  await rail.scrollIntoViewIfNeeded();
+  await expect.poll(() => rail.locator(".catalog-card").count()).toBeGreaterThan(0);
   const before = await railState(rail);
-  expect([...before.ids].sort()).toEqual(category.projects.map((project) => project.id).sort());
+  expect(before.ids.length).toBeLessThan(category.projects.length);
+  expect(before.ids.every((id) => category.projects.some((project) => project.id === id))).toBe(true);
   expect(new Set(before.ids).size).toBe(before.ids.length);
   expect(before.scrollWidth).toBeGreaterThan(before.clientWidth);
   const unrelated = await otherState(page, category.slug);
@@ -111,7 +119,7 @@ test("a category arrow reveals later real games without changing routes, other r
   await rail.getByRole("button", { name: `下一组${category.name}游戏`, exact: true }).click();
   await expect.poll(async () => (await railState(rail)).scrollLeft).toBeGreaterThan(before.scrollLeft);
   await expect.poll(async () => (await railState(rail)).visibleIds.some((id) => !before.visibleIds.includes(id))).toBe(true);
-  expect((await railState(rail)).ids).toEqual(before.ids);
+  expect((await railState(rail)).ids.slice(0, before.ids.length)).toEqual(before.ids);
   expect(await otherState(page, category.slug)).toEqual(unrelated);
   expect(page.url()).toBe(initialUrl);
   await expect(page.locator(".catalog-controls")).toHaveCount(0);
@@ -126,9 +134,30 @@ test("the real single farming game has no filler or ineffective rail arrows", as
   await page.setViewportSize({ width: 921, height: 1100 });
   await openCatalog(page);
   const rail = railFor(page, farming.slug);
+  await rail.scrollIntoViewIfNeeded();
   await expect(rail.locator(".catalog-card")).toHaveCount(1);
   expect((await railState(rail)).ids).toEqual([farming.projects[0]!.id]);
   await expect(rail.locator(".catalog-category-rail__arrow")).toHaveCount(0);
+});
+
+test("repeated horizontal appends eventually cover every real ID without changing the committed prefix", async ({ page, context }) => {
+  const catalog = await readOnlyCatalog(context);
+  const category = catalog.data.categories.find((entry) => entry.projects.length > 6)!;
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openCatalog(page);
+  const rail = railFor(page, category.slug);
+  await rail.scrollIntoViewIfNeeded();
+  await expect.poll(() => rail.locator(".catalog-card").count()).toBeGreaterThan(0);
+  let before = await railState(rail);
+  for (let step = 0; step < category.projects.length && before.ids.length < category.projects.length; step += 1) {
+    await rail.getByRole("button", { name: `下一组${category.name}游戏`, exact: true }).click();
+    await expect.poll(async () => (await railState(rail)).scrollLeft).toBeGreaterThan(before.scrollLeft);
+    const after = await railState(rail);
+    expect(after.ids.slice(0, before.ids.length)).toEqual(before.ids);
+    expect(new Set(after.ids).size).toBe(after.ids.length);
+    before = after;
+  }
+  expect([...before.ids].sort()).toEqual(category.projects.map((project) => project.id).sort());
 });
 
 test("Tab reaches native game links and arrow keys affect only a focused rail", async ({ page, context }) => {
@@ -137,6 +166,8 @@ test("Tab reaches native game links and arrow keys affect only a focused rail", 
   await page.setViewportSize({ width: 921, height: 1100 });
   await openCatalog(page);
   const rail = railFor(page, category.slug);
+  await rail.scrollIntoViewIfNeeded();
+  await expect.poll(() => rail.locator(".catalog-card").count()).toBeGreaterThan(0);
   const viewport = rail.locator(".catalog-category-rail__viewport");
   await viewport.focus();
   await expect(viewport).toBeFocused();
@@ -164,6 +195,8 @@ test.describe("390px touch viewport", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openCatalog(page);
     const rail = railFor(page, category.slug);
+    await rail.scrollIntoViewIfNeeded();
+    await expect.poll(() => rail.locator(".catalog-card").count()).toBeGreaterThan(0);
     const before = await railState(rail);
     const unrelated = await otherState(page, category.slug);
     const initialUrl = page.url();

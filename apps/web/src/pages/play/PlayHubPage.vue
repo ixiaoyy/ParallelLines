@@ -175,15 +175,15 @@ onBeforeUnmount(() => {
           <p>选将军突围，或带领小兵围困对手。喵喵酱已经摆好棋盘。</p>
           <span class="play-feature-card__action">开始对弈 <ArrowRightOutlined aria-hidden="true" /></span>
           <span class="play-feature-card__pieces" aria-hidden="true">
-            <i><img src="/games/generals-soldiers/general-chibi.png" alt="" width="320" height="320" /></i>
-            <i><img src="/games/generals-soldiers/soldier-chibi.png" alt="" width="320" height="320" /></i>
+            <i><img src="/games/generals-soldiers/general-chibi.webp" alt="" width="320" height="320" decoding="async" /></i>
+            <i><img src="/games/generals-soldiers/soldier-chibi.webp" alt="" width="320" height="320" decoding="async" /></i>
           </span>
-          <img class="play-feature-card__character" src="/games/generals-soldiers/miaomiao-chibi.png" alt="" width="760" height="827" />
+          <img class="play-feature-card__character" src="/games/generals-soldiers/miaomiao-chibi.webp" alt="" width="760" height="827" decoding="async" />
         </RouterLink>
 
         <RouterLink class="play-game-card play-game-card--melon" :to="{ name: 'play-melon' }">
           <span class="play-game-card__top">新加入 · 半流体合成 <ArrowRightOutlined aria-hidden="true" /></span>
-          <span class="play-game-card__art" aria-hidden="true"><img src="/games/melon/mark.svg" alt="" width="48" height="48" /></span>
+          <span class="play-game-card__art" aria-hidden="true"><img src="/games/melon/mark.svg" alt="" width="48" height="48" loading="lazy" decoding="async" /></span>
           <strong>瓜体实验室</strong>
           <p>让水果像果冻一样流动、碰撞、融合，合成大西瓜。</p>
           <span class="play-game-card__action">开始实验</span>
@@ -191,7 +191,7 @@ onBeforeUnmount(() => {
 
         <RouterLink class="play-game-card play-game-card--clockout" :to="{ name: 'play-clockout' }">
           <span class="play-game-card__top">新加入 · 18 关潜行 <ArrowRightOutlined aria-hidden="true" /></span>
-          <span class="play-game-card__art" aria-hidden="true"><img src="/games/clockout/scene.png" alt="" width="820" height="460" /></span>
+          <span class="play-game-card__art" aria-hidden="true"><img src="/games/clockout/scene.webp" alt="" width="820" height="460" loading="lazy" decoding="async" /></span>
           <strong>准点下班</strong>
           <p>躲开巡视，带上背包，赶在 18:00 前走进电梯。</p>
           <span class="play-game-card__action">开始闯关</span>
@@ -199,7 +199,7 @@ onBeforeUnmount(() => {
 
         <RouterLink class="play-game-card play-game-card--match" :to="{ name: 'play-match3' }">
           <span class="play-game-card__top">轻松休闲 <ArrowRightOutlined aria-hidden="true" /></span>
-          <span class="play-game-card__art" aria-hidden="true"><img src="/match3-game-mark.png" alt="" width="96" height="96" /></span>
+          <span class="play-game-card__art" aria-hidden="true"><img src="/match3-game-mark.png" alt="" width="96" height="96" loading="lazy" decoding="async" /></span>
           <strong>平行消消乐</strong>
           <p>打开即玩，来一局轻松的消除。</p>
           <span class="play-game-card__action">开始游戏</span>

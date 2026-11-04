@@ -1,0 +1,5551 @@
+{
+  "write": true,
+  "contract": "exact_rgba_animation_metadata",
+  "summary": {
+    "files": 312,
+    "statuses": {
+      "skipped": 268,
+      "optimized": 44
+    },
+    "reasons": {
+      "no_byte_reduction": 260,
+      "lossless_png": 1,
+      "lossless_webp": 35,
+      "protected_brand_asset": 7,
+      "encoder_changed_rgba_or_animation": 1,
+      "reuse_existing_equivalent_webp": 8
+    },
+    "source_bytes": 66212461,
+    "delivery_bytes": 56257381,
+    "saved_bytes": 9955080,
+    "groups": {
+      "rewritten_png": {
+        "files": 1,
+        "original_bytes": 137100,
+        "optimized_bytes": 114100,
+        "saved_bytes": 23000
+      },
+      "new_webp": {
+        "files": 21,
+        "original_bytes": 25532472,
+        "optimized_bytes": 17887738,
+        "saved_bytes": 7644734
+      },
+      "rewritten_webp": {
+        "files": 14,
+        "original_bytes": 6179390,
+        "optimized_bytes": 6101014,
+        "saved_bytes": 78376
+      },
+      "reused_existing_webp": {
+        "files": 8,
+        "original_bytes": 5962592,
+        "optimized_bytes": 3753622,
+        "saved_bytes": 2208970
+      }
+    },
+    "actual_changed_binary_files": 36,
+    "adopted_metadata_verified_files": 44,
+    "preserved_metadata_keys": [
+      "icc_profile",
+      "exif",
+      "xmp"
+    ],
+    "delivery_bytes_note": "HEAD inventory comparison only; includes old PNG files whose equivalent WebP already existed. Not a measured page transfer total or load-time improvement."
+  },
+  "images": [
+    {
+      "source": "apps/web/public/avatars/cat-boots-bronze.png",
+      "target": "apps/web/public/avatars/cat-boots-bronze.png",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 102017,
+      "optimized_bytes": 102017,
+      "saved_bytes": 0,
+      "width": 256,
+      "height": 256,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 102017
+    },
+    {
+      "source": "apps/web/public/avatars/momo-offline.png",
+      "target": "apps/web/public/avatars/momo-offline.png",
+      "status": "optimized",
+      "reason": "lossless_png",
+      "original_bytes": 137100,
+      "optimized_bytes": 114100,
+      "saved_bytes": 23000,
+      "width": 256,
+      "height": 256,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 114100,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/avatars/nate-passing-heart.png",
+      "target": "apps/web/public/avatars/nate-passing-heart.png",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 99352,
+      "optimized_bytes": 99352,
+      "saved_bytes": 0,
+      "width": 256,
+      "height": 256,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 99352
+    },
+    {
+      "source": "apps/web/public/avatars/page-margin-light.png",
+      "target": "apps/web/public/avatars/page-margin-light.png",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 83014,
+      "optimized_bytes": 83014,
+      "saved_bytes": 0,
+      "width": 256,
+      "height": 256,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 83014
+    },
+    {
+      "source": "apps/web/public/avatars/xiaogua.png",
+      "target": "apps/web/public/avatars/xiaogua.png",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 83689,
+      "optimized_bytes": 83689,
+      "saved_bytes": 0,
+      "width": 256,
+      "height": 256,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 83689
+    },
+    {
+      "source": "apps/web/public/avatars/xiaomanjia.png",
+      "target": "apps/web/public/avatars/xiaomanjia.png",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 118601,
+      "optimized_bytes": 118601,
+      "saved_bytes": 0,
+      "width": 256,
+      "height": 256,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 118601
+    },
+    {
+      "source": "apps/web/public/avatars/xiaoxiao-jizai.png",
+      "target": "apps/web/public/avatars/xiaoxiao-jizai.png",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 78814,
+      "optimized_bytes": 78814,
+      "saved_bytes": 0,
+      "width": 256,
+      "height": 256,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 78814
+    },
+    {
+      "source": "apps/web/public/avatars/xiaoxiao-zixun.png",
+      "target": "apps/web/public/avatars/xiaoxiao-zixun.png",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 82391,
+      "optimized_bytes": 82391,
+      "saved_bytes": 0,
+      "width": 256,
+      "height": 256,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 82391
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-29-ui/bridge-spring.png",
+      "target": "apps/web/public/catalog/2026-10-29-ui/bridge-spring.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 2282674,
+      "optimized_bytes": 1544612,
+      "saved_bytes": 738062,
+      "width": 2172,
+      "height": 724,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1544612,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-29-ui/story-tails-a.png",
+      "target": "apps/web/public/catalog/2026-10-29-ui/story-tails-a.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 2237238,
+      "optimized_bytes": 1511808,
+      "saved_bytes": 725430,
+      "width": 1024,
+      "height": 1536,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1511808,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-29-ui/story-tails-b.png",
+      "target": "apps/web/public/catalog/2026-10-29-ui/story-tails-b.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 2387893,
+      "optimized_bytes": 1641232,
+      "saved_bytes": 746661,
+      "width": 1024,
+      "height": 1536,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1641232,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-29-ui/story-tails-c.png",
+      "target": "apps/web/public/catalog/2026-10-29-ui/story-tails-c.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 1921207,
+      "optimized_bytes": 1324356,
+      "saved_bytes": 596851,
+      "width": 1024,
+      "height": 1536,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1324356,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-30-folklore/buffalo-boy-rice-transparent.png",
+      "target": "apps/web/public/catalog/2026-10-30-folklore/buffalo-boy-rice-transparent.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 1820898,
+      "optimized_bytes": 1294254,
+      "saved_bytes": 526644,
+      "width": 2191,
+      "height": 718,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1294254,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-30-folklore/casual-vermilion-leaves-transparent.png",
+      "target": "apps/web/public/catalog/2026-10-30-folklore/casual-vermilion-leaves-transparent.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 489350,
+      "optimized_bytes": 356814,
+      "saved_bytes": 132536,
+      "width": 2146,
+      "height": 733,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 356814,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-30-folklore/exploration-brass-compass-transparent.png",
+      "target": "apps/web/public/catalog/2026-10-30-folklore/exploration-brass-compass-transparent.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 1394732,
+      "optimized_bytes": 967244,
+      "saved_bytes": 427488,
+      "width": 1145,
+      "height": 1374,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 967244,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-30-folklore/exploration-scroll-transparent.png",
+      "target": "apps/web/public/catalog/2026-10-30-folklore/exploration-scroll-transparent.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 1540568,
+      "optimized_bytes": 1197128,
+      "saved_bytes": 343440,
+      "width": 2174,
+      "height": 723,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1197128,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-30-folklore/fox-pinwheel-transparent.png",
+      "target": "apps/web/public/catalog/2026-10-30-folklore/fox-pinwheel-transparent.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 1044859,
+      "optimized_bytes": 715010,
+      "saved_bytes": 329849,
+      "width": 2170,
+      "height": 725,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 715010,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-30-folklore/garden-pavilion-bridge-transparent.png",
+      "target": "apps/web/public/catalog/2026-10-30-folklore/garden-pavilion-bridge-transparent.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 1690302,
+      "optimized_bytes": 1369932,
+      "saved_bytes": 320370,
+      "width": 1817,
+      "height": 866,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1369932,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-30-folklore/horror-bride-lantern-transparent.png",
+      "target": "apps/web/public/catalog/2026-10-30-folklore/horror-bride-lantern-transparent.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 1428093,
+      "optimized_bytes": 1057332,
+      "saved_bytes": 370761,
+      "width": 1891,
+      "height": 831,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1057332,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-30-folklore/horror-plum-paper-tags-transparent.png",
+      "target": "apps/web/public/catalog/2026-10-30-folklore/horror-plum-paper-tags-transparent.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 723577,
+      "optimized_bytes": 503144,
+      "saved_bytes": 220433,
+      "width": 1605,
+      "height": 980,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 503144,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/2026-10-30-micro/folklore-micro-objects-atlas.png",
+      "target": "apps/web/public/catalog/2026-10-30-micro/folklore-micro-objects-atlas.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 972150,
+      "optimized_bytes": 659310,
+      "saved_bytes": 312840,
+      "width": 1254,
+      "height": 1254,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 659310,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/pixel-arcade/button-frame.png",
+      "target": "apps/web/public/catalog/pixel-arcade/button-frame.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 203457,
+      "optimized_bytes": 115070,
+      "saved_bytes": 88387,
+      "width": 1254,
+      "height": 1254,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 115070,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/pixel-arcade/frame-card.png",
+      "target": "apps/web/public/catalog/pixel-arcade/frame-card.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 347700,
+      "optimized_bytes": 216868,
+      "saved_bytes": 130832,
+      "width": 1254,
+      "height": 1254,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 216868,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/favicon.png",
+      "target": "apps/web/public/favicon.png",
+      "status": "skipped",
+      "reason": "protected_brand_asset",
+      "original_bytes": 92185,
+      "optimized_bytes": 92185,
+      "saved_bytes": 0,
+      "width": 746,
+      "height": 257,
+      "frames": 1
+    },
+    {
+      "source": "apps/web/public/games/clockout/scene.png",
+      "target": "apps/web/public/games/clockout/scene.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 105024,
+      "optimized_bytes": 67524,
+      "saved_bytes": 37500,
+      "width": 820,
+      "height": 460,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 67524,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/games/melon/fruits.png",
+      "target": "apps/web/public/games/melon/fruits.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 1959664,
+      "optimized_bytes": 1484414,
+      "saved_bytes": 475250,
+      "width": 1254,
+      "height": 1254,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1484414,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/logo-icon.png",
+      "target": "apps/web/public/logo-icon.png",
+      "status": "skipped",
+      "reason": "protected_brand_asset",
+      "original_bytes": 92185,
+      "optimized_bytes": 92185,
+      "saved_bytes": 0,
+      "width": 746,
+      "height": 257,
+      "frames": 1
+    },
+    {
+      "source": "apps/web/public/logo-lines-mark.png",
+      "target": "apps/web/public/logo-lines-mark.png",
+      "status": "skipped",
+      "reason": "protected_brand_asset",
+      "original_bytes": 154648,
+      "optimized_bytes": 154648,
+      "saved_bytes": 0,
+      "width": 512,
+      "height": 512,
+      "frames": 1
+    },
+    {
+      "source": "apps/web/public/logo-lines.png",
+      "target": "apps/web/public/logo-lines.png",
+      "status": "skipped",
+      "reason": "protected_brand_asset",
+      "original_bytes": 150334,
+      "optimized_bytes": 150334,
+      "saved_bytes": 0,
+      "width": 746,
+      "height": 559,
+      "frames": 1
+    },
+    {
+      "source": "apps/web/public/logo.png",
+      "target": "apps/web/public/logo.png",
+      "status": "skipped",
+      "reason": "protected_brand_asset",
+      "original_bytes": 92185,
+      "optimized_bytes": 92185,
+      "saved_bytes": 0,
+      "width": 746,
+      "height": 257,
+      "frames": 1
+    },
+    {
+      "source": "apps/web/public/match3-game-mark.png",
+      "target": "apps/web/public/match3-game-mark.png",
+      "status": "skipped",
+      "reason": "protected_brand_asset",
+      "original_bytes": 853,
+      "optimized_bytes": 853,
+      "saved_bytes": 0,
+      "width": 64,
+      "height": 64,
+      "frames": 1
+    },
+    {
+      "source": "apps/web/public/tools/bead-pattern/portrait-example.png",
+      "target": "apps/web/public/tools/bead-pattern/portrait-example.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 791555,
+      "optimized_bytes": 344120,
+      "saved_bytes": 447435,
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 344120,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "static/web/auth-visual/auth-mark.png",
+      "target": "static/web/auth-visual/auth-mark.png",
+      "status": "skipped",
+      "reason": "protected_brand_asset",
+      "original_bytes": 7279,
+      "optimized_bytes": 7279,
+      "saved_bytes": 0,
+      "width": 60,
+      "height": 61,
+      "frames": 1
+    },
+    {
+      "source": "static/web/auth-visual/parallel-auth-h5-bg.png",
+      "target": "static/web/auth-visual/parallel-auth-h5-bg.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 477249,
+      "optimized_bytes": 305364,
+      "saved_bytes": 171885,
+      "width": 853,
+      "height": 1844,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 305364,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "static/web/auth-visual/parallel-auth-pc-bg.png",
+      "target": "static/web/auth-visual/parallel-auth-pc-bg.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 907948,
+      "optimized_bytes": 552072,
+      "saved_bytes": 355876,
+      "width": 1536,
+      "height": 1024,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 552072,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "static/web/private-space-entry-b7d15288.png",
+      "target": "static/web/private-space-entry-b7d15288.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 806334,
+      "optimized_bytes": 660130,
+      "saved_bytes": 146204,
+      "width": 1008,
+      "height": 576,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 660130,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/jade-folklore-v1/atlas-a.webp",
+      "target": "apps/web/public/catalog/jade-folklore-v1/atlas-a.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 964914,
+      "optimized_bytes": 963038,
+      "saved_bytes": 1876,
+      "width": 972,
+      "height": 1619,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 963038,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true,
+      "baseline_verified_from": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+      "optimization_pass": "initial_high_effort_batch"
+    },
+    {
+      "source": "apps/web/public/catalog/jade-folklore-v1/atlas-b.webp",
+      "target": "apps/web/public/catalog/jade-folklore-v1/atlas-b.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 595802,
+      "optimized_bytes": 594700,
+      "saved_bytes": 1102,
+      "width": 887,
+      "height": 1774,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 594700,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true,
+      "baseline_verified_from": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+      "optimization_pass": "initial_high_effort_batch"
+    },
+    {
+      "source": "apps/web/public/catalog/jade-folklore-v1/atlas-c.webp",
+      "target": "apps/web/public/catalog/jade-folklore-v1/atlas-c.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 1124630,
+      "optimized_bytes": 1087194,
+      "saved_bytes": 37436,
+      "width": 1024,
+      "height": 1536,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1087194,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true,
+      "baseline_verified_from": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+      "optimization_pass": "initial_high_effort_batch"
+    },
+    {
+      "source": "apps/web/public/catalog/jade-library-v1/puzzle-vignette.webp",
+      "target": "apps/web/public/catalog/jade-library-v1/puzzle-vignette.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 19716,
+      "optimized_bytes": 19716,
+      "saved_bytes": 0,
+      "width": 420,
+      "height": 142,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 60522
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/authors-hero-scene.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/authors-hero-scene.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 254674,
+      "optimized_bytes": 254674,
+      "saved_bytes": 0,
+      "width": 2048,
+      "height": 768,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1357598
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/contributors-hero-scene.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/contributors-hero-scene.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 267110,
+      "optimized_bytes": 267110,
+      "saved_bytes": 0,
+      "width": 1930,
+      "height": 815,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1314704
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/device-shell.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/device-shell.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 346364,
+      "optimized_bytes": 341750,
+      "saved_bytes": 4614,
+      "width": 1635,
+      "height": 962,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 341750,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true,
+      "baseline_verified_from": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+      "optimization_pass": "initial_high_effort_batch"
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/footer-cat.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/footer-cat.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 35680,
+      "optimized_bytes": 35680,
+      "saved_bytes": 0,
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 135656
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/footer-scene.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/footer-scene.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 55802,
+      "optimized_bytes": 55802,
+      "saved_bytes": 0,
+      "width": 1536,
+      "height": 512,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 180092
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/gold-crown.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/gold-crown.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 22038,
+      "optimized_bytes": 22038,
+      "saved_bytes": 0,
+      "width": 512,
+      "height": 384,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 74524
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/header-mascot.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/header-mascot.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 79418,
+      "optimized_bytes": 79418,
+      "saved_bytes": 0,
+      "width": 1254,
+      "height": 1254,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 331154
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/hero-scene.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/hero-scene.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 243526,
+      "optimized_bytes": 243526,
+      "saved_bytes": 0,
+      "width": 2172,
+      "height": 428,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 888626
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/leaderboard-frame.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/leaderboard-frame.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 76444,
+      "optimized_bytes": 76444,
+      "saved_bytes": 0,
+      "width": 1448,
+      "height": 1086,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 311964
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/podium-block.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/podium-block.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 225998,
+      "optimized_bytes": 222936,
+      "saved_bytes": 3062,
+      "width": 1024,
+      "height": 409,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 222936,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true,
+      "baseline_verified_from": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+      "optimization_pass": "initial_high_effort_batch"
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/podium-decoration.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/podium-decoration.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 212682,
+      "optimized_bytes": 212682,
+      "saved_bytes": 0,
+      "width": 1738,
+      "height": 905,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 215400
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/side-scene.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/side-scene.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 89912,
+      "optimized_bytes": 89912,
+      "saved_bytes": 0,
+      "width": 1536,
+      "height": 1024,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 298696
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/trophy-medal.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/trophy-medal.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 24764,
+      "optimized_bytes": 24764,
+      "saved_bytes": 0,
+      "width": 512,
+      "height": 640,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 85900
+    },
+    {
+      "source": "apps/web/public/catalog/night-arcade-v1/yellow-button-frame.webp",
+      "target": "apps/web/public/catalog/night-arcade-v1/yellow-button-frame.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 297160,
+      "optimized_bytes": 294832,
+      "saved_bytes": 2328,
+      "width": 1909,
+      "height": 824,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 294832,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true,
+      "baseline_verified_from": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+      "optimization_pass": "initial_high_effort_batch"
+    },
+    {
+      "source": "apps/web/public/catalog/pixel-arcade/hero-v3.webp",
+      "target": "apps/web/public/catalog/pixel-arcade/hero-v3.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 1161186,
+      "optimized_bytes": 1159354,
+      "saved_bytes": 1832,
+      "width": 2169,
+      "height": 725,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1159354,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true,
+      "baseline_verified_from": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+      "optimization_pass": "initial_high_effort_batch"
+    },
+    {
+      "source": "apps/web/public/games/generals-soldiers/general-chibi.webp",
+      "target": "apps/web/public/games/generals-soldiers/general-chibi.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 93946,
+      "optimized_bytes": 91582,
+      "saved_bytes": 2364,
+      "width": 320,
+      "height": 320,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 91582,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true,
+      "baseline_verified_from": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+      "optimization_pass": "initial_high_effort_batch"
+    },
+    {
+      "source": "apps/web/public/games/generals-soldiers/miaomiao-chibi.webp",
+      "target": "apps/web/public/games/generals-soldiers/miaomiao-chibi.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 419740,
+      "optimized_bytes": 408068,
+      "saved_bytes": 11672,
+      "width": 760,
+      "height": 827,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 408068,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true,
+      "baseline_verified_from": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+      "optimization_pass": "initial_high_effort_batch"
+    },
+    {
+      "source": "apps/web/public/games/generals-soldiers/miaomiao-try-again.webp",
+      "target": "apps/web/public/games/generals-soldiers/miaomiao-try-again.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 258618,
+      "optimized_bytes": 254872,
+      "saved_bytes": 3746,
+      "width": 560,
+      "height": 610,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 254872,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true,
+      "baseline_verified_from": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+      "optimization_pass": "initial_high_effort_batch"
+    },
+    {
+      "source": "apps/web/public/games/generals-soldiers/miaomiao-win.webp",
+      "target": "apps/web/public/games/generals-soldiers/miaomiao-win.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 270674,
+      "optimized_bytes": 266938,
+      "saved_bytes": 3736,
+      "width": 560,
+      "height": 610,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 266938,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true,
+      "baseline_verified_from": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+      "optimization_pass": "initial_high_effort_batch"
+    },
+    {
+      "source": "apps/web/public/games/generals-soldiers/soldier-chibi.webp",
+      "target": "apps/web/public/games/generals-soldiers/soldier-chibi.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 89220,
+      "optimized_bytes": 87230,
+      "saved_bytes": 1990,
+      "width": 320,
+      "height": 320,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 87230,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true,
+      "baseline_verified_from": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+      "optimization_pass": "initial_high_effort_batch"
+    },
+    {
+      "source": "static/web/avatar-frames/level-1.webp",
+      "target": "static/web/avatar-frames/level-1.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 23942,
+      "optimized_bytes": 23942,
+      "saved_bytes": 0,
+      "width": 384,
+      "height": 384,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 58250
+    },
+    {
+      "source": "static/web/avatar-frames/level-2.webp",
+      "target": "static/web/avatar-frames/level-2.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 32210,
+      "optimized_bytes": 32210,
+      "saved_bytes": 0,
+      "width": 384,
+      "height": 384,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 78970
+    },
+    {
+      "source": "static/web/avatar-frames/level-3.webp",
+      "target": "static/web/avatar-frames/level-3.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 43808,
+      "optimized_bytes": 43808,
+      "saved_bytes": 0,
+      "width": 384,
+      "height": 384,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 106140
+    },
+    {
+      "source": "static/web/avatar-frames/level-4.webp",
+      "target": "static/web/avatar-frames/level-4.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 52166,
+      "optimized_bytes": 52166,
+      "saved_bytes": 0,
+      "width": 384,
+      "height": 384,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 124622
+    },
+    {
+      "source": "static/web/avatar-frames/level-5.webp",
+      "target": "static/web/avatar-frames/level-5.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 54018,
+      "optimized_bytes": 54018,
+      "saved_bytes": 0,
+      "width": 384,
+      "height": 384,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 134984
+    },
+    {
+      "source": "static/web/avatar-frames/ultimate-animated.webp",
+      "target": "static/web/avatar-frames/ultimate-animated.webp",
+      "status": "skipped",
+      "reason": "encoder_changed_rgba_or_animation",
+      "original_bytes": 598052,
+      "optimized_bytes": 598052,
+      "saved_bytes": 0,
+      "width": 320,
+      "height": 320,
+      "frames": 14,
+      "durations_ms": [
+        140,
+        140,
+        140,
+        140,
+        140,
+        140,
+        140,
+        140,
+        140,
+        140,
+        140,
+        140,
+        140,
+        140
+      ],
+      "loop": 0,
+      "mismatch_details": {
+        "frame_count_preserved": true,
+        "durations_preserved": true,
+        "loop_preserved": true,
+        "background_preserved": true,
+        "metadata_preserved": true,
+        "frame_differences": [
+          {
+            "frame": 0,
+            "different_pixels": 53921,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 1,
+            "different_pixels": 54835,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 2,
+            "different_pixels": 53724,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 3,
+            "different_pixels": 49094,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 4,
+            "different_pixels": 54157,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 5,
+            "different_pixels": 52001,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 6,
+            "different_pixels": 52572,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 7,
+            "different_pixels": 52208,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 8,
+            "different_pixels": 52082,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 9,
+            "different_pixels": 51830,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 10,
+            "different_pixels": 51809,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 11,
+            "different_pixels": 52056,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 12,
+            "different_pixels": 50829,
+            "only_fully_transparent_rgb": true
+          },
+          {
+            "frame": 13,
+            "different_pixels": 50161,
+            "only_fully_transparent_rgb": true
+          }
+        ]
+      }
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/chibi-cat-explorer.webp",
+      "target": "static/web/catalog/2026-09-24-v1/chibi-cat-explorer.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 92358,
+      "optimized_bytes": 92358,
+      "saved_bytes": 0,
+      "width": 520,
+      "height": 620,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 334188
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/cf-transport.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/cf-transport.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 82828,
+      "optimized_bytes": 82828,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 500076
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/clock-out.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/clock-out.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 90558,
+      "optimized_bytes": 90558,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 548244
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/csgo-desert.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/csgo-desert.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 65804,
+      "optimized_bytes": 65804,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 433440
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/discover.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/discover.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 92736,
+      "optimized_bytes": 92736,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 549024
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/fablespace.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/fablespace.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 128058,
+      "optimized_bytes": 128058,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 645658
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/fruit-ninja.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/fruit-ninja.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 79738,
+      "optimized_bytes": 79738,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 541840
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/generals-soldiers.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/generals-soldiers.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 117502,
+      "optimized_bytes": 117502,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 635418
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/infinite-garden.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/infinite-garden.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 129020,
+      "optimized_bytes": 129020,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 625152
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/merge-watermelon.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/merge-watermelon.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 71418,
+      "optimized_bytes": 71418,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 520174
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/pelican-bike.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/pelican-bike.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 92740,
+      "optimized_bytes": 92740,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 563526
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/qin-imperial-factory.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/qin-imperial-factory.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 109456,
+      "optimized_bytes": 109456,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 609580
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/qq-racing.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/qq-racing.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 93194,
+      "optimized_bytes": 93194,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 598246
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/covers/super-mario.webp",
+      "target": "static/web/catalog/2026-09-24-v1/covers/super-mario.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 100220,
+      "optimized_bytes": 100220,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 587704
+    },
+    {
+      "source": "static/web/catalog/2026-09-24-v1/hero-sky.webp",
+      "target": "static/web/catalog/2026-09-24-v1/hero-sky.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 40230,
+      "optimized_bytes": 40230,
+      "saved_bytes": 0,
+      "width": 1600,
+      "height": 640,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 443874
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/encounter-command-console.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/encounter-command-console.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 107396,
+      "optimized_bytes": 107396,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 457,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 593968
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/geodesic-explorer.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/geodesic-explorer.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 67350,
+      "optimized_bytes": 67350,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 427,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 471586
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/hyperbolic-room.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/hyperbolic-room.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 81828,
+      "optimized_bytes": 81828,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 450,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 530494
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/liuxin-watermelon.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/liuxin-watermelon.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 67610,
+      "optimized_bytes": 67610,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 450,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 531456
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/non-euclidean-lab.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/non-euclidean-lab.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 99056,
+      "optimized_bytes": 99056,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 450,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 580548
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/sanguo-zhengshi.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/sanguo-zhengshi.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 115658,
+      "optimized_bytes": 115658,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 450,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 615770
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/secondhand-3c-store.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/secondhand-3c-store.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 94454,
+      "optimized_bytes": 94454,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 450,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 543418
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/sneaky-thief.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/sneaky-thief.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 66038,
+      "optimized_bytes": 66038,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 463272
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/voxel-tides.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/voxel-tides.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 106340,
+      "optimized_bytes": 106340,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 457,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 609138
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/xing-lei-shou-wei.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/xing-lei-shou-wei.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 87732,
+      "optimized_bytes": 87732,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 457,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 538042
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/yeyu-tanglou.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/yeyu-tanglou.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 93914,
+      "optimized_bytes": 93914,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 450,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 525158
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/yongyao-crystal-tower.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/yongyao-crystal-tower.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 104880,
+      "optimized_bytes": 104880,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 602506
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/yu-gi-oh-destiny-duel.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/yu-gi-oh-destiny-duel.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 101276,
+      "optimized_bytes": 101276,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 427,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 583546
+    },
+    {
+      "source": "static/web/catalog/2026-09-25-v1/covers/zhi-guai-lu.webp",
+      "target": "static/web/catalog/2026-09-25-v1/covers/zhi-guai-lu.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 114986,
+      "optimized_bytes": 114986,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 458,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 620566
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-018c7f79463bb6a93fe7.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-018c7f79463bb6a93fe7.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 104548,
+      "optimized_bytes": 104548,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 562544
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-020bc8d35fff46649d48.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-020bc8d35fff46649d48.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 107958,
+      "optimized_bytes": 107958,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 583206
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-02e8a97587019eaa433a.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-02e8a97587019eaa433a.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 121122,
+      "optimized_bytes": 121122,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 636172
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-033070040847094f8086.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-033070040847094f8086.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 88186,
+      "optimized_bytes": 88186,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 562758
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-0751dc4e0b9b7bc13c1f.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-0751dc4e0b9b7bc13c1f.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 91696,
+      "optimized_bytes": 91696,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 617542
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-08fc75f5fd8f3ba4bd73.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-08fc75f5fd8f3ba4bd73.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 125836,
+      "optimized_bytes": 125836,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 630966
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-097dd5d8242f560dea43.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-097dd5d8242f560dea43.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 137742,
+      "optimized_bytes": 137742,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 696122
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-0a5696802efe2cf4eb0b.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-0a5696802efe2cf4eb0b.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 101962,
+      "optimized_bytes": 101962,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 652684
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-0df6eab4b08d9cec0900.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-0df6eab4b08d9cec0900.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 123618,
+      "optimized_bytes": 123618,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 655338
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-0e23961af475dd79edb9.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-0e23961af475dd79edb9.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 97752,
+      "optimized_bytes": 97752,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 550088
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-0fc050c56af452204941.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-0fc050c56af452204941.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 119896,
+      "optimized_bytes": 119896,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 634056
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-110eb6b0d2cacba8d82a.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-110eb6b0d2cacba8d82a.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 76654,
+      "optimized_bytes": 76654,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 565920
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-11e2fc3f012ef76af1b3.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-11e2fc3f012ef76af1b3.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 89598,
+      "optimized_bytes": 89598,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 639070
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-1262d1b2a44aba7aeb65.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-1262d1b2a44aba7aeb65.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 74736,
+      "optimized_bytes": 74736,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 536232
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-13508b94fa3c711d6b18.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-13508b94fa3c711d6b18.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 55866,
+      "optimized_bytes": 55866,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 455134
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-13e191190e8a1455565e.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-13e191190e8a1455565e.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 88496,
+      "optimized_bytes": 88496,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 545858
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-1456aaa71e27fd2dd5e4.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-1456aaa71e27fd2dd5e4.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 125320,
+      "optimized_bytes": 125320,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 699140
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-1457d625c8a918dc1e2a.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-1457d625c8a918dc1e2a.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 132320,
+      "optimized_bytes": 132320,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 650402
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-1647d744e3f32e884f07.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-1647d744e3f32e884f07.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 128586,
+      "optimized_bytes": 128586,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 651094
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-169a094a99f2babbad62.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-169a094a99f2babbad62.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 124336,
+      "optimized_bytes": 124336,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 659346
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-171ef06c04fe47b6aba4.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-171ef06c04fe47b6aba4.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 82666,
+      "optimized_bytes": 82666,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 424386
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-1a08e60416474715e4c9.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-1a08e60416474715e4c9.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 117650,
+      "optimized_bytes": 117650,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 648634
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-1ad2d1b439fada4dad43.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-1ad2d1b439fada4dad43.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 90688,
+      "optimized_bytes": 90688,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 516132
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-1e630c47189c3cb4ad86.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-1e630c47189c3cb4ad86.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 118010,
+      "optimized_bytes": 118010,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 605940
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-1f124b8987bc57034cb4.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-1f124b8987bc57034cb4.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 137468,
+      "optimized_bytes": 137468,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 742110
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-1f43aa750906959d1b06.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-1f43aa750906959d1b06.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 130806,
+      "optimized_bytes": 130806,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 613194
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-1f6a98b5e4ffccd9e0e0.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-1f6a98b5e4ffccd9e0e0.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 105428,
+      "optimized_bytes": 105428,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 649652
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-21fdaee391d39bb0fe8e.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-21fdaee391d39bb0fe8e.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 127112,
+      "optimized_bytes": 127112,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 693414
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-23b1fcf02285084d4a7a.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-23b1fcf02285084d4a7a.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 125472,
+      "optimized_bytes": 125472,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 679844
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-2462f7e67812cd9ee2e6.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-2462f7e67812cd9ee2e6.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 114222,
+      "optimized_bytes": 114222,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 690890
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-2550b40d229c543ba438.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-2550b40d229c543ba438.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 84868,
+      "optimized_bytes": 84868,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 574460
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-27f541f14365c72d05f5.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-27f541f14365c72d05f5.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 138396,
+      "optimized_bytes": 138396,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 679610
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-2816434faa3e026e79a3.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-2816434faa3e026e79a3.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 94658,
+      "optimized_bytes": 94658,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 569042
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-28ab51385456596132c2.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-28ab51385456596132c2.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 109966,
+      "optimized_bytes": 109966,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 654100
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-29d562b3c4875f2e1f3e.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-29d562b3c4875f2e1f3e.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 127584,
+      "optimized_bytes": 127584,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 634026
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-2a8764b03af3aca71817.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-2a8764b03af3aca71817.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 125832,
+      "optimized_bytes": 125832,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 665474
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-2ad71fb927a8d308c2d9.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-2ad71fb927a8d308c2d9.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 108904,
+      "optimized_bytes": 108904,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 596586
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-2afd72d658a118edf721.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-2afd72d658a118edf721.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 135810,
+      "optimized_bytes": 135810,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 655748
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-2d533a07e0ef09ed8b9c.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-2d533a07e0ef09ed8b9c.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 138336,
+      "optimized_bytes": 138336,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 685000
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-2e78b1f9bfe2d5a51ddb.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-2e78b1f9bfe2d5a51ddb.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 138438,
+      "optimized_bytes": 138438,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 755014
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-2ed775b07a1f3dec93af.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-2ed775b07a1f3dec93af.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 129218,
+      "optimized_bytes": 129218,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 685852
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-2f8b06306e8317e776f7.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-2f8b06306e8317e776f7.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 133478,
+      "optimized_bytes": 133478,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 672690
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-302db576aa575673a6b8.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-302db576aa575673a6b8.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 132986,
+      "optimized_bytes": 132986,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 734784
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-32c586b2d4fdbceea43b.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-32c586b2d4fdbceea43b.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 111014,
+      "optimized_bytes": 111014,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 619644
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-336bdb8fe529f674d208.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-336bdb8fe529f674d208.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 99112,
+      "optimized_bytes": 99112,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 568534
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-3613b6738feb9721018b.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-3613b6738feb9721018b.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 136676,
+      "optimized_bytes": 136676,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 742556
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-3bc0ec5d5d3997e98bfe.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-3bc0ec5d5d3997e98bfe.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 80070,
+      "optimized_bytes": 80070,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 514978
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-3ddd716f2c1c5dc5bbf9.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-3ddd716f2c1c5dc5bbf9.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 139300,
+      "optimized_bytes": 139300,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 670788
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-3e01116f87092370c360.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-3e01116f87092370c360.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 124142,
+      "optimized_bytes": 124142,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 594012
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-3e12e1f7db12c5958a70.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-3e12e1f7db12c5958a70.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 139632,
+      "optimized_bytes": 139632,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 645168
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-3f1d96e276c8d953ada4.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-3f1d96e276c8d953ada4.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 137268,
+      "optimized_bytes": 137268,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 705572
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-40bf72afcb8c1f4782ab.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-40bf72afcb8c1f4782ab.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 100604,
+      "optimized_bytes": 100604,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 563996
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-41517b64128da07f9617.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-41517b64128da07f9617.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 136386,
+      "optimized_bytes": 136386,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 631934
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-427abefc3be5bb52b0f4.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-427abefc3be5bb52b0f4.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 130672,
+      "optimized_bytes": 130672,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 645884
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-4b26cfbaf3acf31f2e91.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-4b26cfbaf3acf31f2e91.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 109330,
+      "optimized_bytes": 109330,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 581444
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-4ba67655fe5503789186.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-4ba67655fe5503789186.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 121340,
+      "optimized_bytes": 121340,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 615954
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-4c2940525db8caea8e83.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-4c2940525db8caea8e83.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 118128,
+      "optimized_bytes": 118128,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 610736
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-4e56244d7b46908ff88a.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-4e56244d7b46908ff88a.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 138080,
+      "optimized_bytes": 138080,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 676804
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-510528ad665e86f7105b.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-510528ad665e86f7105b.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 139574,
+      "optimized_bytes": 139574,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 642938
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-514f1f85af2c13a8a0db.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-514f1f85af2c13a8a0db.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 114486,
+      "optimized_bytes": 114486,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 580480
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-5499fb7a30e7096d20a2.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-5499fb7a30e7096d20a2.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 126880,
+      "optimized_bytes": 126880,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 694176
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-57a0366da3327902a1d2.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-57a0366da3327902a1d2.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 106156,
+      "optimized_bytes": 106156,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 592754
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-5a1fc7753e77b9c80f1e.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-5a1fc7753e77b9c80f1e.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 91754,
+      "optimized_bytes": 91754,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 564302
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-5d63b84efb1e7eddf60a.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-5d63b84efb1e7eddf60a.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 127802,
+      "optimized_bytes": 127802,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 703222
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-5e2dfc04f35bdbdc5182.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-5e2dfc04f35bdbdc5182.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 139088,
+      "optimized_bytes": 139088,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 776780
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-5ed24019b4bc6c2f4bba.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-5ed24019b4bc6c2f4bba.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 116980,
+      "optimized_bytes": 116980,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 681320
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-618cbf01a70a0a9bbd98.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-618cbf01a70a0a9bbd98.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 62258,
+      "optimized_bytes": 62258,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 477278
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-62518178767a834b0c47.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-62518178767a834b0c47.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 139034,
+      "optimized_bytes": 139034,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 657528
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-663eb3201a700c806ecf.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-663eb3201a700c806ecf.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 101138,
+      "optimized_bytes": 101138,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 548988
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-675f30f4da9dcb9b6abb.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-675f30f4da9dcb9b6abb.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 87040,
+      "optimized_bytes": 87040,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 547252
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-6a00ceb67a98334c3d14.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-6a00ceb67a98334c3d14.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 93942,
+      "optimized_bytes": 93942,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 556278
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-6b6d8bab39e3e7aa0e40.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-6b6d8bab39e3e7aa0e40.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 114978,
+      "optimized_bytes": 114978,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 609072
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-6c4baeb741c84dea15a5.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-6c4baeb741c84dea15a5.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 129894,
+      "optimized_bytes": 129894,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 681658
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-6c6975eca8cff6aac94b.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-6c6975eca8cff6aac94b.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 125144,
+      "optimized_bytes": 125144,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 701520
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-6db391ac7ca0252ae0e0.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-6db391ac7ca0252ae0e0.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 103348,
+      "optimized_bytes": 103348,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 642650
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-6dfeaf0e929ecc36236c.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-6dfeaf0e929ecc36236c.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 90758,
+      "optimized_bytes": 90758,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 535676
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-737515ccf06e471b66db.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-737515ccf06e471b66db.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 119526,
+      "optimized_bytes": 119526,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 637014
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-75786d9934b010b4af5f.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-75786d9934b010b4af5f.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 137890,
+      "optimized_bytes": 137890,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 664574
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-7a8bc7cf73a496a2a730.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-7a8bc7cf73a496a2a730.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 130382,
+      "optimized_bytes": 130382,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 696414
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-7e0d2e37b2e9a32fdd31.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-7e0d2e37b2e9a32fdd31.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 87506,
+      "optimized_bytes": 87506,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 509498
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-7edd4effafa83b4fd55a.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-7edd4effafa83b4fd55a.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 126038,
+      "optimized_bytes": 126038,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 622790
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-822e1e16714fc7467967.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-822e1e16714fc7467967.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 63352,
+      "optimized_bytes": 63352,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 513246
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-830858db804e19269f8b.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-830858db804e19269f8b.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 137940,
+      "optimized_bytes": 137940,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 679250
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-851063cb241124496353.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-851063cb241124496353.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 119480,
+      "optimized_bytes": 119480,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 623712
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-8a030cbab06c13f6c191.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-8a030cbab06c13f6c191.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 139718,
+      "optimized_bytes": 139718,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 693284
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-8e8e67c90f76ee3d4e3d.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-8e8e67c90f76ee3d4e3d.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 114924,
+      "optimized_bytes": 114924,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 652550
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-91365a2c81a00fb7fbe4.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-91365a2c81a00fb7fbe4.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 76542,
+      "optimized_bytes": 76542,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 478644
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-9162b8eb054a23001222.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-9162b8eb054a23001222.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 135064,
+      "optimized_bytes": 135064,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 652518
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-91e926e559e666303499.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-91e926e559e666303499.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 136400,
+      "optimized_bytes": 136400,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 743324
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-9243a9d003c2a862c3f1.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-9243a9d003c2a862c3f1.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 70244,
+      "optimized_bytes": 70244,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 472176
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-9343e6e1d5a4134df6dd.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-9343e6e1d5a4134df6dd.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 114858,
+      "optimized_bytes": 114858,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 576174
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-940973d6b1805a52c1f0.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-940973d6b1805a52c1f0.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 90658,
+      "optimized_bytes": 90658,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 561550
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-9525ab52b6ffdd451247.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-9525ab52b6ffdd451247.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 119822,
+      "optimized_bytes": 119822,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 602698
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-9681da78b6870a313d7b.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-9681da78b6870a313d7b.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 79456,
+      "optimized_bytes": 79456,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 559006
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-9823a3093b650ec22bca.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-9823a3093b650ec22bca.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 92810,
+      "optimized_bytes": 92810,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 624590
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-98ab881e21164befcedf.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-98ab881e21164befcedf.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 141630,
+      "optimized_bytes": 141630,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 694750
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-9901d0cd25f74f721cf1.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-9901d0cd25f74f721cf1.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 120184,
+      "optimized_bytes": 120184,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 600564
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-9a73cbc429bb4b6302fd.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-9a73cbc429bb4b6302fd.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 124524,
+      "optimized_bytes": 124524,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 634406
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-9a9c8b8c9d6ed29e3d5d.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-9a9c8b8c9d6ed29e3d5d.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 112032,
+      "optimized_bytes": 112032,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 598896
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-9dbd59a9718b252daedf.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-9dbd59a9718b252daedf.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 113228,
+      "optimized_bytes": 113228,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 625338
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-9e76a4627ebd2c414574.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-9e76a4627ebd2c414574.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 127264,
+      "optimized_bytes": 127264,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 621744
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-9f6053150e5437975ac9.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-9f6053150e5437975ac9.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 123634,
+      "optimized_bytes": 123634,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 669222
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-a0dbfc0153d5468171c8.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-a0dbfc0153d5468171c8.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 82614,
+      "optimized_bytes": 82614,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 530420
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-a146ecd81e3c0fd17f7c.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-a146ecd81e3c0fd17f7c.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 124532,
+      "optimized_bytes": 124532,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 578456
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-a3c15daa5c7684de01cd.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-a3c15daa5c7684de01cd.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 109242,
+      "optimized_bytes": 109242,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 594788
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-a530e034c1041a8a6bb6.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-a530e034c1041a8a6bb6.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 101304,
+      "optimized_bytes": 101304,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 672012
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-ac4711656abf9e51fd5d.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-ac4711656abf9e51fd5d.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 98290,
+      "optimized_bytes": 98290,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 631304
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-ad8fb9993f77c939ac37.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-ad8fb9993f77c939ac37.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 113252,
+      "optimized_bytes": 113252,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 613484
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-ad990346ecd44af5763a.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-ad990346ecd44af5763a.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 104080,
+      "optimized_bytes": 104080,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 619400
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-b1aa19771af411e30123.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-b1aa19771af411e30123.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 98366,
+      "optimized_bytes": 98366,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 570728
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-b380953a44102d0db87f.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-b380953a44102d0db87f.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 92758,
+      "optimized_bytes": 92758,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 618064
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-b423557db87dd3dfe26c.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-b423557db87dd3dfe26c.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 64096,
+      "optimized_bytes": 64096,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 520024
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-b56616ef96dcdfd3915c.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-b56616ef96dcdfd3915c.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 103826,
+      "optimized_bytes": 103826,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 599966
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-b5a8161cbae513e928bf.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-b5a8161cbae513e928bf.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 115466,
+      "optimized_bytes": 115466,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 594212
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-b697350134145531b660.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-b697350134145531b660.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 110696,
+      "optimized_bytes": 110696,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 569360
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-b75c762d7b3587880bde.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-b75c762d7b3587880bde.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 126226,
+      "optimized_bytes": 126226,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 755422
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-b804c57bcee1770a6984.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-b804c57bcee1770a6984.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 88070,
+      "optimized_bytes": 88070,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 616012
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-ba96746fb674fe6e5d75.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-ba96746fb674fe6e5d75.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 114036,
+      "optimized_bytes": 114036,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 648238
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-bd4a5c51c39e59d80055.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-bd4a5c51c39e59d80055.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 88476,
+      "optimized_bytes": 88476,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 531456
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-c077e9c5e3e217e584b6.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-c077e9c5e3e217e584b6.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 81364,
+      "optimized_bytes": 81364,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 543302
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-c3ad2159872d2b53299e.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-c3ad2159872d2b53299e.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 122294,
+      "optimized_bytes": 122294,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 591214
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-c54ccbf7b89c49bc169f.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-c54ccbf7b89c49bc169f.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 142426,
+      "optimized_bytes": 142426,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 681928
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-c7b9aeab0d6f3976e12c.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-c7b9aeab0d6f3976e12c.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 114916,
+      "optimized_bytes": 114916,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 585134
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-ca4e89010438edf3221e.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-ca4e89010438edf3221e.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 111892,
+      "optimized_bytes": 111892,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 588316
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-cba3393948adc795e4bf.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-cba3393948adc795e4bf.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 102302,
+      "optimized_bytes": 102302,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 630976
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-cc9ad512ca686135fe76.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-cc9ad512ca686135fe76.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 123542,
+      "optimized_bytes": 123542,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 679018
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-ce6f6e868e0d7108ec78.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-ce6f6e868e0d7108ec78.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 134702,
+      "optimized_bytes": 134702,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 675992
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-cf21798c175fa3c01ea5.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-cf21798c175fa3c01ea5.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 125770,
+      "optimized_bytes": 125770,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 716880
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-d1673479a545e9932b92.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-d1673479a545e9932b92.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 134222,
+      "optimized_bytes": 134222,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 694070
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-d1a1713d7d1c68ad526c.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-d1a1713d7d1c68ad526c.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 125070,
+      "optimized_bytes": 125070,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 682986
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-d29e74ac15e222629347.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-d29e74ac15e222629347.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 95796,
+      "optimized_bytes": 95796,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 600054
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-d539e7dea52f4dbdbe98.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-d539e7dea52f4dbdbe98.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 123926,
+      "optimized_bytes": 123926,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 671222
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-d5a4ccdc9837ddd7bf70.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-d5a4ccdc9837ddd7bf70.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 84550,
+      "optimized_bytes": 84550,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 562318
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-d84a25a4df3178232958.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-d84a25a4df3178232958.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 103522,
+      "optimized_bytes": 103522,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 601692
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-d98f28295a8e9b7abb3e.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-d98f28295a8e9b7abb3e.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 80214,
+      "optimized_bytes": 80214,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 509236
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-dc6c61d34f6085cec364.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-dc6c61d34f6085cec364.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 137972,
+      "optimized_bytes": 137972,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 702048
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-ddd7c102793a0868582d.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-ddd7c102793a0868582d.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 93790,
+      "optimized_bytes": 93790,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 437972
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-df451d3127e5ce9143ab.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-df451d3127e5ce9143ab.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 100320,
+      "optimized_bytes": 100320,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 560984
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-e0757a3020dbd424e5f7.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-e0757a3020dbd424e5f7.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 130732,
+      "optimized_bytes": 130732,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 677412
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-e13954694a0138f0245e.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-e13954694a0138f0245e.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 129168,
+      "optimized_bytes": 129168,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 679448
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-e1736be90df14b693943.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-e1736be90df14b693943.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 119912,
+      "optimized_bytes": 119912,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 640772
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-e26e7da684d9a4ee7920.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-e26e7da684d9a4ee7920.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 129098,
+      "optimized_bytes": 129098,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 643710
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-e27160e1a2ea0440b983.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-e27160e1a2ea0440b983.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 98710,
+      "optimized_bytes": 98710,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 570414
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-e2e57a088c363d9523dc.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-e2e57a088c363d9523dc.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 98970,
+      "optimized_bytes": 98970,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 587584
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-e3695f0dd288ac441539.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-e3695f0dd288ac441539.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 139196,
+      "optimized_bytes": 139196,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 638874
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-e3e0c3779acf611a0d8a.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-e3e0c3779acf611a0d8a.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 129748,
+      "optimized_bytes": 129748,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 635176
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-e48428f88519b6c8b7a3.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-e48428f88519b6c8b7a3.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 120006,
+      "optimized_bytes": 120006,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 623202
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-e5528b49d98bff3b4a47.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-e5528b49d98bff3b4a47.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 97774,
+      "optimized_bytes": 97774,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 533434
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-e7a008ef7eb73d0c1e54.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-e7a008ef7eb73d0c1e54.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 86140,
+      "optimized_bytes": 86140,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 586976
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-e97dc74ac42fa72b2013.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-e97dc74ac42fa72b2013.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 123680,
+      "optimized_bytes": 123680,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 658098
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-ee2530db3a32bac36e92.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-ee2530db3a32bac36e92.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 103522,
+      "optimized_bytes": 103522,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 648564
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-f029a391ce93b0a0b3e2.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-f029a391ce93b0a0b3e2.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 84796,
+      "optimized_bytes": 84796,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 492354
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-f3e517b6e512b56ed07a.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-f3e517b6e512b56ed07a.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 132714,
+      "optimized_bytes": 132714,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 669880
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-f4db700a1d7970c900b3.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-f4db700a1d7970c900b3.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 111126,
+      "optimized_bytes": 111126,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 590660
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-f5b73abc93d34c914618.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-f5b73abc93d34c914618.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 104184,
+      "optimized_bytes": 104184,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 641438
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-f8ca3c8fc5591faad3fb.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-f8ca3c8fc5591faad3fb.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 99940,
+      "optimized_bytes": 99940,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 627130
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-fc74f8d97d62a6f67c35.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-fc74f8d97d62a6f67c35.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 128236,
+      "optimized_bytes": 128236,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 638458
+    },
+    {
+      "source": "static/web/catalog/2026-09-26-v2/covers/astra-ff7eb021356988a2ee2e.webp",
+      "target": "static/web/catalog/2026-09-26-v2/covers/astra-ff7eb021356988a2ee2e.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 116394,
+      "optimized_bytes": 116394,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 594442
+    },
+    {
+      "source": "static/web/catalog/2026-09-27-v1/covers/hongloumeng-haitang-shishe.webp",
+      "target": "static/web/catalog/2026-09-27-v1/covers/hongloumeng-haitang-shishe.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 139914,
+      "optimized_bytes": 139914,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 698032
+    },
+    {
+      "source": "static/web/catalog/2026-09-27-v1/covers/shi-yu-yuanfang.webp",
+      "target": "static/web/catalog/2026-09-27-v1/covers/shi-yu-yuanfang.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 127238,
+      "optimized_bytes": 127238,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 682172
+    },
+    {
+      "source": "static/web/catalog/2026-09-27-v2/covers/hongloumeng-haitang-shishe.webp",
+      "target": "static/web/catalog/2026-09-27-v2/covers/hongloumeng-haitang-shishe.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 139914,
+      "optimized_bytes": 139914,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 698032
+    },
+    {
+      "source": "static/web/catalog/2026-09-27-v2/covers/shi-yu-yuanfang.webp",
+      "target": "static/web/catalog/2026-09-27-v2/covers/shi-yu-yuanfang.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 127238,
+      "optimized_bytes": 127238,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 682172
+    },
+    {
+      "source": "static/web/catalog/2026-09-27-v3/covers/fengling-town.webp",
+      "target": "static/web/catalog/2026-09-27-v3/covers/fengling-town.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 137642,
+      "optimized_bytes": 137642,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 630862
+    },
+    {
+      "source": "static/web/catalog/2026-09-28-v1/covers/double-feature.webp",
+      "target": "static/web/catalog/2026-09-28-v1/covers/double-feature.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 128588,
+      "optimized_bytes": 128588,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 618842
+    },
+    {
+      "source": "static/web/catalog/2026-09-29-v1/covers/backrooms.webp",
+      "target": "static/web/catalog/2026-09-29-v1/covers/backrooms.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 70916,
+      "optimized_bytes": 70916,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 365154
+    },
+    {
+      "source": "static/web/catalog/2026-09-30-v1/covers/flappy-dunk.webp",
+      "target": "static/web/catalog/2026-09-30-v1/covers/flappy-dunk.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 62644,
+      "optimized_bytes": 62644,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 371044
+    },
+    {
+      "source": "static/web/catalog/2026-09-30-v1/covers/snake-escape.webp",
+      "target": "static/web/catalog/2026-09-30-v1/covers/snake-escape.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 115328,
+      "optimized_bytes": 115328,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 562052
+    },
+    {
+      "source": "static/web/catalog/2026-10-06-v1/covers/achroma.webp",
+      "target": "static/web/catalog/2026-10-06-v1/covers/achroma.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 107066,
+      "optimized_bytes": 107066,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 340434
+    },
+    {
+      "source": "static/web/catalog/2026-10-06-v1/covers/bubble-tank.webp",
+      "target": "static/web/catalog/2026-10-06-v1/covers/bubble-tank.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 95746,
+      "optimized_bytes": 95746,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 511450
+    },
+    {
+      "source": "static/web/catalog/2026-10-06-v1/covers/pelican-rider.webp",
+      "target": "static/web/catalog/2026-10-06-v1/covers/pelican-rider.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 74306,
+      "optimized_bytes": 74306,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 465790
+    },
+    {
+      "source": "static/web/catalog/2026-10-06-v1/covers/shousui.webp",
+      "target": "static/web/catalog/2026-10-06-v1/covers/shousui.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 66066,
+      "optimized_bytes": 66066,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 372566
+    },
+    {
+      "source": "static/web/catalog/2026-10-06-v1/covers/sketch-rts.webp",
+      "target": "static/web/catalog/2026-10-06-v1/covers/sketch-rts.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 197678,
+      "optimized_bytes": 197678,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 725214
+    },
+    {
+      "source": "static/web/catalog/2026-10-06-v1/covers/soulforge.webp",
+      "target": "static/web/catalog/2026-10-06-v1/covers/soulforge.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 121814,
+      "optimized_bytes": 121814,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 591018
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/astra-2048-eddy.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/astra-2048-eddy.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 19210,
+      "optimized_bytes": 19210,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 75592
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/canyon-overdrive.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/canyon-overdrive.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 62550,
+      "optimized_bytes": 62550,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 331774
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/flight-1073.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/flight-1073.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 56590,
+      "optimized_bytes": 56590,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 362400
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/foe-to-fleet.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/foe-to-fleet.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 10662,
+      "optimized_bytes": 10662,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 57696
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/hollowmark.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/hollowmark.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 15004,
+      "optimized_bytes": 15004,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 90590
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/jellyblob.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/jellyblob.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 24442,
+      "optimized_bytes": 24442,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 180596
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/midway-1942.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/midway-1942.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 47250,
+      "optimized_bytes": 47250,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 259962
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/moxride.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/moxride.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 66062,
+      "optimized_bytes": 66062,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 379624
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/saber-descent.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/saber-descent.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 48232,
+      "optimized_bytes": 48232,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 246250
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/sandline.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/sandline.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 75276,
+      "optimized_bytes": 75276,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 393840
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/sulli-run.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/sulli-run.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 13124,
+      "optimized_bytes": 13124,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 81942
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/surge-for-oinja.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/surge-for-oinja.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 35752,
+      "optimized_bytes": 35752,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 269042
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v1/covers/the-fourth-knock.webp",
+      "target": "static/web/catalog/2026-10-08-v1/covers/the-fourth-knock.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 41960,
+      "optimized_bytes": 41960,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 268638
+    },
+    {
+      "source": "static/web/catalog/2026-10-08-v2/covers/greyfall.webp",
+      "target": "static/web/catalog/2026-10-08-v2/covers/greyfall.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 98688,
+      "optimized_bytes": 98688,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 338548
+    },
+    {
+      "source": "static/web/catalog/2026-10-09-v1/covers/emberfall.webp",
+      "target": "static/web/catalog/2026-10-09-v1/covers/emberfall.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 34836,
+      "optimized_bytes": 34836,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 407,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 150498
+    },
+    {
+      "source": "static/web/catalog/2026-10-09-v1/covers/entropy-blade.webp",
+      "target": "static/web/catalog/2026-10-09-v1/covers/entropy-blade.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 71926,
+      "optimized_bytes": 71926,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 540,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 348646
+    },
+    {
+      "source": "static/web/catalog/2026-10-09-v1/covers/nexus.webp",
+      "target": "static/web/catalog/2026-10-09-v1/covers/nexus.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 117948,
+      "optimized_bytes": 117948,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 540,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 538094
+    },
+    {
+      "source": "static/web/catalog/2026-10-09-v2/covers/nanbeidou.webp",
+      "target": "static/web/catalog/2026-10-09-v2/covers/nanbeidou.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 122210,
+      "optimized_bytes": 122210,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 454,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 526820
+    },
+    {
+      "source": "static/web/catalog/2026-10-09-v3/covers/shinobi-chronicles.webp",
+      "target": "static/web/catalog/2026-10-09-v3/covers/shinobi-chronicles.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 77318,
+      "optimized_bytes": 77318,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 540,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 411924
+    },
+    {
+      "source": "static/web/catalog/2026-10-09-v4/covers/illusion-prototype.webp",
+      "target": "static/web/catalog/2026-10-09-v4/covers/illusion-prototype.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 5040,
+      "optimized_bytes": 5040,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 19358
+    },
+    {
+      "source": "static/web/catalog/2026-10-10-v1/covers/1589n-golden-right-foot.webp",
+      "target": "static/web/catalog/2026-10-10-v1/covers/1589n-golden-right-foot.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 34624,
+      "optimized_bytes": 34624,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 205828
+    },
+    {
+      "source": "static/web/catalog/2026-10-14-v1/covers/yaochao-dujie.webp",
+      "target": "static/web/catalog/2026-10-14-v1/covers/yaochao-dujie.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 141762,
+      "optimized_bytes": 141762,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 594682
+    },
+    {
+      "source": "static/web/catalog/2026-10-14-v2/covers/reverse-snake-3d.webp",
+      "target": "static/web/catalog/2026-10-14-v2/covers/reverse-snake-3d.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 9060,
+      "optimized_bytes": 9060,
+      "saved_bytes": 0,
+      "width": 960,
+      "height": 452,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 60974
+    },
+    {
+      "source": "static/web/catalog/2026-10-19-v1/covers/empty-throne.webp",
+      "target": "static/web/catalog/2026-10-19-v1/covers/empty-throne.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 265272,
+      "optimized_bytes": 265272,
+      "saved_bytes": 0,
+      "width": 1280,
+      "height": 720,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1434138
+    },
+    {
+      "source": "static/web/catalog/2026-10-21-v1/covers/fablespace.webp",
+      "target": "static/web/catalog/2026-10-21-v1/covers/fablespace.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 140880,
+      "optimized_bytes": 140818,
+      "saved_bytes": 62,
+      "width": 460,
+      "height": 215,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 140818,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "static/web/catalog/2026-10-22-v1/covers/dont-speak-chinese.webp",
+      "target": "static/web/catalog/2026-10-22-v1/covers/dont-speak-chinese.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 72282,
+      "optimized_bytes": 72282,
+      "saved_bytes": 0,
+      "width": 512,
+      "height": 512,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 268830
+    },
+    {
+      "source": "static/web/catalog/2026-10-22-v1/covers/miami-flap.webp",
+      "target": "static/web/catalog/2026-10-22-v1/covers/miami-flap.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 26244,
+      "optimized_bytes": 26244,
+      "saved_bytes": 0,
+      "width": 439,
+      "height": 721,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 126390
+    },
+    {
+      "source": "static/web/catalog/2026-10-22-v1/covers/moxriding.webp",
+      "target": "static/web/catalog/2026-10-22-v1/covers/moxriding.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 158598,
+      "optimized_bytes": 158598,
+      "saved_bytes": 0,
+      "width": 1156,
+      "height": 677,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 730542
+    },
+    {
+      "source": "static/web/catalog/2026-10-22-v1/covers/within.webp",
+      "target": "static/web/catalog/2026-10-22-v1/covers/within.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 51740,
+      "optimized_bytes": 51740,
+      "saved_bytes": 0,
+      "width": 1200,
+      "height": 800,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 256264
+    },
+    {
+      "source": "static/web/catalog/2026-10-22-v2/covers/pokebonk.webp",
+      "target": "static/web/catalog/2026-10-22-v2/covers/pokebonk.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 231734,
+      "optimized_bytes": 231734,
+      "saved_bytes": 0,
+      "width": 1200,
+      "height": 630,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1036958
+    },
+    {
+      "source": "static/web/catalog/2026-10-23-v1/covers/qunying-zhulu.webp",
+      "target": "static/web/catalog/2026-10-23-v1/covers/qunying-zhulu.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 394034,
+      "optimized_bytes": 394034,
+      "saved_bytes": 0,
+      "width": 1536,
+      "height": 1024,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 2228640
+    },
+    {
+      "source": "static/web/catalog/2026-10-24-v1/covers/yiji-pochao.webp",
+      "target": "static/web/catalog/2026-10-24-v1/covers/yiji-pochao.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 178074,
+      "optimized_bytes": 178074,
+      "saved_bytes": 0,
+      "width": 1279,
+      "height": 720,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 982724
+    },
+    {
+      "source": "static/web/catalog/2026-11-03-v1/covers/gd-fungi-run.webp",
+      "target": "static/web/catalog/2026-11-03-v1/covers/gd-fungi-run.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 116794,
+      "optimized_bytes": 116794,
+      "saved_bytes": 0,
+      "width": 1920,
+      "height": 1080,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 571922
+    },
+    {
+      "source": "static/web/catalog/2026-11-03-v1/covers/gd-golf-adventures-2.webp",
+      "target": "static/web/catalog/2026-11-03-v1/covers/gd-golf-adventures-2.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 6518,
+      "optimized_bytes": 6518,
+      "saved_bytes": 0,
+      "width": 1920,
+      "height": 1080,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 6890
+    },
+    {
+      "source": "static/web/catalog/2026-11-03-v1/covers/gd-spectrum.webp",
+      "target": "static/web/catalog/2026-11-03-v1/covers/gd-spectrum.webp",
+      "status": "skipped",
+      "reason": "no_byte_reduction",
+      "original_bytes": 30802,
+      "optimized_bytes": 30802,
+      "saved_bytes": 0,
+      "width": 320,
+      "height": 180,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 31002
+    },
+    {
+      "source": "static/web/catalog/2026-11-03-v1/covers/gd-super-chicken-td.webp",
+      "target": "static/web/catalog/2026-11-03-v1/covers/gd-super-chicken-td.webp",
+      "status": "optimized",
+      "reason": "lossless_webp",
+      "original_bytes": 190258,
+      "optimized_bytes": 187702,
+      "saved_bytes": 2556,
+      "width": 1920,
+      "height": 1080,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 187702,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/jade-folklore-v1/atlas-a.png",
+      "target": "apps/web/public/catalog/jade-folklore-v1/atlas-a.webp",
+      "status": "optimized",
+      "reason": "reuse_existing_equivalent_webp",
+      "original_bytes": 1346069,
+      "optimized_bytes": 963038,
+      "saved_bytes": 383031,
+      "width": 972,
+      "height": 1619,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 963038,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/jade-folklore-v1/atlas-b.png",
+      "target": "apps/web/public/catalog/jade-folklore-v1/atlas-b.webp",
+      "status": "optimized",
+      "reason": "reuse_existing_equivalent_webp",
+      "original_bytes": 906173,
+      "optimized_bytes": 594700,
+      "saved_bytes": 311473,
+      "width": 887,
+      "height": 1774,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 594700,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/catalog/jade-folklore-v1/atlas-c.png",
+      "target": "apps/web/public/catalog/jade-folklore-v1/atlas-c.webp",
+      "status": "optimized",
+      "reason": "reuse_existing_equivalent_webp",
+      "original_bytes": 1714515,
+      "optimized_bytes": 1087194,
+      "saved_bytes": 627321,
+      "width": 1024,
+      "height": 1536,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 1087194,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/games/generals-soldiers/general-chibi.png",
+      "target": "apps/web/public/games/generals-soldiers/general-chibi.webp",
+      "status": "optimized",
+      "reason": "reuse_existing_equivalent_webp",
+      "original_bytes": 151012,
+      "optimized_bytes": 91582,
+      "saved_bytes": 59430,
+      "width": 320,
+      "height": 320,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 91582,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/games/generals-soldiers/miaomiao-chibi.png",
+      "target": "apps/web/public/games/generals-soldiers/miaomiao-chibi.webp",
+      "status": "optimized",
+      "reason": "reuse_existing_equivalent_webp",
+      "original_bytes": 790727,
+      "optimized_bytes": 408068,
+      "saved_bytes": 382659,
+      "width": 760,
+      "height": 827,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 408068,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/games/generals-soldiers/miaomiao-try-again.png",
+      "target": "apps/web/public/games/generals-soldiers/miaomiao-try-again.webp",
+      "status": "optimized",
+      "reason": "reuse_existing_equivalent_webp",
+      "original_bytes": 445723,
+      "optimized_bytes": 254872,
+      "saved_bytes": 190851,
+      "width": 560,
+      "height": 610,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 254872,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/games/generals-soldiers/miaomiao-win.png",
+      "target": "apps/web/public/games/generals-soldiers/miaomiao-win.webp",
+      "status": "optimized",
+      "reason": "reuse_existing_equivalent_webp",
+      "original_bytes": 457019,
+      "optimized_bytes": 266938,
+      "saved_bytes": 190081,
+      "width": 560,
+      "height": 610,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 266938,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    },
+    {
+      "source": "apps/web/public/games/generals-soldiers/soldier-chibi.png",
+      "target": "apps/web/public/games/generals-soldiers/soldier-chibi.webp",
+      "status": "optimized",
+      "reason": "reuse_existing_equivalent_webp",
+      "original_bytes": 151354,
+      "optimized_bytes": 87230,
+      "saved_bytes": 64124,
+      "width": 320,
+      "height": 320,
+      "frames": 1,
+      "durations_ms": [
+        null
+      ],
+      "loop": null,
+      "candidate_bytes": 87230,
+      "exact_rgba_and_animation": true,
+      "exact_rgba_animation_and_metadata": true
+    }
+  ],
+  "baseline": {
+    "commit": "5b35453f43a46f3d7b5ff40500006dfbe59fde6e",
+    "source": "task_start_clean_HEAD",
+    "tracked_image_files": 312,
+    "original_image_bytes": 66212461,
+    "interrupted_batch_recovered_files": [
+      "apps/web/public/catalog/jade-folklore-v1/atlas-a.webp",
+      "apps/web/public/catalog/jade-folklore-v1/atlas-b.webp",
+      "apps/web/public/catalog/jade-folklore-v1/atlas-c.webp",
+      "apps/web/public/catalog/night-arcade-v1/device-shell.webp",
+      "apps/web/public/catalog/night-arcade-v1/podium-block.webp",
+      "apps/web/public/catalog/night-arcade-v1/yellow-button-frame.webp",
+      "apps/web/public/catalog/pixel-arcade/hero-v3.webp",
+      "apps/web/public/games/generals-soldiers/general-chibi.webp",
+      "apps/web/public/games/generals-soldiers/miaomiao-chibi.webp",
+      "apps/web/public/games/generals-soldiers/miaomiao-try-again.webp",
+      "apps/web/public/games/generals-soldiers/miaomiao-win.webp",
+      "apps/web/public/games/generals-soldiers/soldier-chibi.webp"
+    ],
+    "recovery_note": "The first high-effort batch had already written twelve WebP files before its buffered PowerShell progress log was visible. The first batch was stopped; no optimizer process remains. All twelve outputs were checked directly against this HEAD for exact RGBA, dimensions, frames, durations, loop, background and ICC/EXIF/XMP, without re-encoding."
+  }
+}

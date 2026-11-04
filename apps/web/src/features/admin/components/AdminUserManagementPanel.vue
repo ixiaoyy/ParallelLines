@@ -351,7 +351,7 @@ function accountStatusClass(status: string): string {
             :aria-pressed="user.id === selectedUser?.id"
             @click="selectUser(user)"
           >
-            <UiAvatar :src="user.avatar_url" :name="user.username" :role="user.role" :level="user.level" size="sm" />
+            <UiAvatar :src="user.avatar_url" :name="user.username" :role="user.role" :level="user.level" size="sm" loading="lazy" decoding="async" />
             <span class="user-list__identity">
               <strong>{{ user.username }}</strong>
               <small>{{ user.email }}</small>

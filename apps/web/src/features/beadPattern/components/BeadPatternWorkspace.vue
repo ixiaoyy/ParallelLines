@@ -93,7 +93,7 @@ async function selectImage(input: File | string, name: string) {
 /** 载入本站示例并采用适合该素材的格数，首次进入时不自动滚动页面。 */
 async function useExample(kind: "pixel" | "portrait", initial = false) {
   if (busy.value) return;
-  await selectImage(`/tools/bead-pattern/${kind === "pixel" ? "pixel-example.svg" : "portrait-example.png"}`, kind === "pixel" ? "盆栽示例" : "人像示例");
+  await selectImage(`/tools/bead-pattern/${kind === "pixel" ? "pixel-example.svg" : "portrait-example.webp"}`, kind === "pixel" ? "盆栽示例" : "人像示例");
   if (error.value || disposed) return;
   edge.value = kind === "pixel" ? 32 : 64;
   maxColors.value = kind === "pixel" ? 8 : 24;
@@ -305,7 +305,7 @@ onBeforeUnmount(() => {
               <UiButton tone="subtle" :disabled="busy" @click="fileInput?.click()"><PictureOutlined /> 选择图片</UiButton>
               <p>或将图片拖到这里</p><small>JPG / PNG / WebP · 最大 10 MB</small>
             </div>
-            <div class="bead-examples"><button type="button" :disabled="busy" @click="useExample('pixel')"><img src="/tools/bead-pattern/pixel-example.svg" alt="" /><span>体验简单图案</span></button><button type="button" :disabled="busy" @click="useExample('portrait')"><img src="/tools/bead-pattern/portrait-example.png" alt="" /><span>体验人像</span></button></div>
+            <div class="bead-examples"><button type="button" :disabled="busy" @click="useExample('pixel')"><img src="/tools/bead-pattern/pixel-example.svg" alt="" loading="lazy" decoding="async" /><span>体验简单图案</span></button><button type="button" :disabled="busy" @click="useExample('portrait')"><img src="/tools/bead-pattern/portrait-example.webp" alt="" loading="lazy" decoding="async" /><span>体验人像</span></button></div>
             <div v-if="source" class="bead-source"><p class="bead-source__name" :title="sourceName">{{ sourceName }} <span>{{ source.image.naturalWidth }} × {{ source.image.naturalHeight }}</span></p><details class="bead-crop-panel"><summary>裁剪图片（可选）</summary><CropSelector v-model="crop" :src="source.url" :image-width="source.image.naturalWidth" :image-height="source.image.naturalHeight" :disabled="busy" /></details></div>
           </section>
           <section class="bead-section"><h2><span>2</span> 设置图纸</h2>

@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, Request, Response, UploadFile, status
+from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile, status
 from pydantic import ValidationError as PydanticValidationError
 
 from app.api.v1.dependencies import CurrentUserDep, SessionDep, SettingsDep
@@ -11,7 +11,9 @@ from app.schemas.catalog import (
     AdminCatalogResponse,
     AdminCatalogSubmissionResponse,
     CatalogCategoryCreateRequest,
+    CatalogCategoryProjectsResponse,
     CatalogCategoryUpdateRequest,
+    CatalogOverviewResponse,
     CatalogProjectCreateRequest,
     CatalogProjectUpdateRequest,
     CatalogRatingCreateRequest,
@@ -23,7 +25,12 @@ from app.schemas.catalog import (
     CatalogViewStateResponse,
 )
 from app.schemas.common import ApiResponse
-from app.services.catalog import CatalogService
+from app.services.catalog import CatalogService, parse_catalog_slug_list
+from app.services.catalog_cache import (
+    public_catalog_json_response,
+    read_public_catalog_cache,
+    store_public_catalog_cache,
+)
 from app.services.catalog_submissions import CatalogSubmissionError, CatalogSubmissionService
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
@@ -38,6 +45,61 @@ async def get_catalog(
 
     response.headers["Cache-Control"] = "private, no-store"
     return ApiResponse(data=await CatalogService(session, settings).public_catalog(request))
+
+
+@router.get("/overview", response_model=ApiResponse[CatalogOverviewResponse])
+async def get_catalog_overview(
+    request: Request, session: SessionDep, settings: SettingsDep,
+    hero_slugs: Annotated[str | None, Query(max_length=8192)] = None,
+    hero_offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0,
+) -> Response:
+    """读取公开分类与六张推荐；省略候选代表全部，显式空串代表没有推荐候选。"""
+
+    slugs = parse_catalog_slug_list(hero_slugs)
+    # Hero 名单仅表示成员，规范化集合避免同一请求因排列不同占用额外缓存。
+    slugs = tuple(sorted(slugs)) if slugs is not None else None
+    key = ("overview", slugs, hero_offset)
+    cached, generation = read_public_catalog_cache(key)
+    if cached is not None:
+        return public_catalog_json_response(
+            cached, if_none_match=request.headers.get("if-none-match"), cache_status="hit",
+        )
+    data = await CatalogService(session, settings).public_overview(
+        hero_slugs=slugs, hero_offset=hero_offset,
+    )
+    content = ApiResponse(data=data).model_dump_json()
+    store_public_catalog_cache(key, content, generation)
+    return public_catalog_json_response(
+        content, if_none_match=request.headers.get("if-none-match"), cache_status="miss",
+    )
+
+
+@router.get(
+    "/categories/{slug}/projects", response_model=ApiResponse[CatalogCategoryProjectsResponse],
+)
+async def get_catalog_category_projects(
+    slug: str, request: Request, session: SessionDep, settings: SettingsDep,
+    limit: Annotated[int, Query(ge=1, le=60)] = 24,
+    cursor: Annotated[str | None, Query(min_length=1, max_length=2048)] = None,
+    priority_slugs: Annotated[str | None, Query(max_length=8192)] = None,
+) -> Response:
+    """按可视区所需数量读取分类卡片；游标与顺序条件均进入公开缓存键。"""
+
+    priorities = parse_catalog_slug_list(priority_slugs) or ()
+    key = ("category", slug, limit, cursor, priorities)
+    cached, generation = read_public_catalog_cache(key)
+    if cached is not None:
+        return public_catalog_json_response(
+            cached, if_none_match=request.headers.get("if-none-match"), cache_status="hit",
+        )
+    data = await CatalogService(session, settings).public_category_projects(
+        slug, limit=limit, cursor=cursor, priority_slugs=priorities,
+    )
+    content = ApiResponse(data=data).model_dump_json()
+    store_public_catalog_cache(key, content, generation)
+    return public_catalog_json_response(
+        content, if_none_match=request.headers.get("if-none-match"), cache_status="miss",
+    )
 
 
 @router.post(

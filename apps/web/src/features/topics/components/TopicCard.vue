@@ -91,6 +91,8 @@ function requestDeleteTopic() {
       :level="topic.authorLevel"
       size="sm"
       :title="topic.authorName"
+      loading="lazy"
+      decoding="async"
     />
     <div class="topic-main">
       <div class="topic-title-line">
@@ -137,6 +139,8 @@ function requestDeleteTopic() {
           :level="topic.authorLevel"
           size="sm"
           :title="topic.authorName"
+          loading="lazy"
+          decoding="async"
         />
         <div class="participant-copy">
           <span class="participant-name">{{ topic.authorName }}</span>

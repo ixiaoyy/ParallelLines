@@ -28,6 +28,7 @@ from app.schemas.catalog import (
     CatalogSubmissionCreateResponse,
 )
 from app.services.catalog import CatalogService
+from app.services.catalog_cache import invalidate_public_catalog_cache
 from app.services.uploads import UploadContent, UploadService
 
 logger = logging.getLogger(__name__)
@@ -205,6 +206,8 @@ class CatalogSubmissionService:
                 target_status = "approved" if decision == "approve" else "rejected"
                 if submission.status == target_status:
                     await self.session.commit()
+                    if decision == "approve":
+                        invalidate_public_catalog_cache()
                     return self._response(submission)
                 if submission.status != "pending":
                     raise CatalogSubmissionError("conflict")
@@ -256,6 +259,9 @@ class CatalogSubmissionService:
                 await self.session.flush()
                 result = self._response(submission)
                 await self.session.commit()
+                # 只有审核通过会改变公开目录，提交成功后再让公开分页和推荐失效。
+                if decision == "approve":
+                    invalidate_public_catalog_cache()
                 return result
             except CatalogSubmissionError:
                 await self.session.rollback()

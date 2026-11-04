@@ -458,6 +458,29 @@ export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
   return apiRequest<T>(path, { cache: "no-cache", ...init, method: "GET" });
 }
 
+/** 读取新增的公开缓存接口；不携带身份、访客标识或 Cookie，最多等待 8 秒并支持调用方取消。 */
+export async function publicApiGet<T>(path: string, signal?: AbortSignal): Promise<T> {
+  const controller = new AbortController();
+  const cancel = () => controller.abort(signal?.reason);
+  if (signal?.aborted) cancel();
+  else signal?.addEventListener("abort", cancel, { once: true });
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+  activeApiRequestCount.value += 1;
+  try {
+    const response = await fetch(getApiUrl(path), {
+      method: "GET", credentials: "omit", cache: "default",
+      headers: { Accept: "application/json" }, signal: controller.signal,
+    });
+    const payload = await readJsonPayload(response);
+    if (!response.ok) throw toApiError(response, payload);
+    return unwrapApiResponse<T>(payload);
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", cancel);
+    activeApiRequestCount.value = Math.max(0, activeApiRequestCount.value - 1);
+  }
+}
+
 // GET an API envelope while preserving response metadata like `next_cursor`.
 // Key parameters are request path and optional init. Return value is the full
 // API envelope. Side effect: performs a network request.

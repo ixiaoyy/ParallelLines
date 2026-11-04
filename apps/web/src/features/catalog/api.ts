@@ -1,14 +1,30 @@
-import { apiGet, apiPost } from "@/shared/api/client";
+import { apiGet, apiPost, publicApiGet } from "@/shared/api/client";
 
 import type {
   CatalogResponse,
   CatalogRatingRequest,
   CatalogRatingResponse,
   CatalogViewResponse,
+  CatalogOverviewResponse,
+  CatalogCategoryPageResponse,
 } from "./model";
 
-export function fetchCatalog(): Promise<CatalogResponse> {
-  return apiGet<CatalogResponse>("/catalog");
+export function fetchCatalog(signal?: AbortSignal): Promise<CatalogResponse> {
+  return apiGet<CatalogResponse>("/catalog", { signal });
+}
+
+/** 读取公开分类概览和六项精选；undefined 为全部，空候选明确请求空专题。 */
+export function fetchCatalogOverview(slugs: readonly string[] | undefined, offset: number, signal?: AbortSignal): Promise<CatalogOverviewResponse> {
+  const query = new URLSearchParams({ hero_offset: String(offset) });
+  if (slugs !== undefined) query.set("hero_slugs", slugs.join(","));
+  return publicApiGet<CatalogOverviewResponse>(`/catalog/overview?${query}`, signal);
+}
+
+/** 按服务端游标读取一批真实分类项目；请求量来自横排几何，不回退到全量目录。 */
+export function fetchCatalogCategoryPage(slug: string, limit: number, cursor: string | null, prioritySlugs: readonly string[], signal?: AbortSignal): Promise<CatalogCategoryPageResponse> {
+  const query = new URLSearchParams({ limit: String(limit), priority_slugs: prioritySlugs.join(",") });
+  if (cursor) query.set("cursor", cursor);
+  return publicApiGet<CatalogCategoryPageResponse>(`/catalog/categories/${encodeURIComponent(slug)}/projects?${query}`, signal);
 }
 
 export function rateCatalogProject(

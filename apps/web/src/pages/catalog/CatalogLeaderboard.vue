@@ -39,19 +39,20 @@ const rows = computed(() => props.entries.filter((entry) => entry.rank > 3));
     <p v-if="!entries.length" class="catalog-leaderboard__empty" role="status">没有找到匹配的作者。</p>
     <section v-if="podium.length" class="catalog-leaderboard__panel catalog-leaderboard__panel--podium" :aria-label="`${title}前三名`">
       <header class="catalog-leaderboard__heading">
-        <h2><img src="/catalog/night-arcade-v1/trophy-medal.webp" alt="" aria-hidden="true" />{{ variant === "authors" ? "TOP 3 创作者" : "TOP 3 贡献者" }}</h2>
+        <h2><img src="/catalog/night-arcade-v1/trophy-medal.webp" alt="" loading="lazy" decoding="async" fetchpriority="low" aria-hidden="true" />{{ variant === "authors" ? "TOP 3 创作者" : "TOP 3 贡献者" }}</h2>
         <p class="catalog-leaderboard__motto" aria-hidden="true"><template v-if="variant === 'authors'">PLAY INDIE <HeartFilled /> SUPPORT CREATORS</template><template v-else><HeartFilled /> CONTRIBUTORS MAKE<br />A BRIGHTER PLAYGROUND</template></p>
       </header>
       <ol class="catalog-podium" :aria-label="`${title}前三名`">
         <li v-for="entry in podium" :key="entry.key" class="catalog-podium__place" :class="`catalog-podium__place--${entry.rank}`" :data-rank="entry.rank" :value="entry.rank">
-          <img v-if="entry.rank === 1" class="catalog-podium__crown" src="/catalog/night-arcade-v1/gold-crown.webp" alt="" aria-hidden="true" />
+          <img v-if="entry.rank === 1" class="catalog-podium__crown" src="/catalog/night-arcade-v1/gold-crown.webp" alt="" loading="lazy" decoding="async" fetchpriority="low" aria-hidden="true" />
           <div class="catalog-podium__card">
             <div class="catalog-podium__art" :class="{ 'catalog-podium__art--source': entry.sourceUrl }">
               <!-- 来源贡献使用独立开源装饰，不借用作者游戏封面或推算作品数。 -->
               <GithubOutlined v-if="entry.sourceUrl" class="catalog-podium__source-art" aria-hidden="true" />
-              <img v-else-if="entry.cover" :src="entry.cover" alt="" decoding="async" />
+              <!-- 首屏前三名作品及时加载，装饰和后续名次不抢占首屏请求。 -->
+              <img v-else-if="entry.cover" :src="entry.cover" alt="" loading="eager" decoding="async" />
               <TrophyFilled v-else class="catalog-podium__art-fallback" aria-hidden="true" />
-              <span class="catalog-podium__medal" :aria-label="`第${entry.rank}名`"><img src="/catalog/night-arcade-v1/trophy-medal.webp" alt="" aria-hidden="true" /><b aria-hidden="true">{{ entry.rank }}</b></span>
+              <span class="catalog-podium__medal" :aria-label="`第${entry.rank}名`"><img src="/catalog/night-arcade-v1/trophy-medal.webp" alt="" loading="lazy" decoding="async" fetchpriority="low" aria-hidden="true" /><b aria-hidden="true">{{ entry.rank }}</b></span>
             </div>
             <div class="catalog-podium__identity">
               <a v-if="entry.url" class="catalog-podium__name" :href="entry.url" target="_blank" rel="noopener noreferrer">{{ entry.name }}</a>

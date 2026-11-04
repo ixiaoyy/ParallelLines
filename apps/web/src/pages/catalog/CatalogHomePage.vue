@@ -7,8 +7,9 @@ import { useCurrentUser } from "@/features/auth/queries";
 import type { CatalogProject } from "@/features/catalog/model";
 import { catalogAuthorKey, rankCatalogAuthors } from "@/features/catalog/authorRanking";
 import { categoryVisualFor } from "@/features/catalog/categoryVisuals";
-import { getCatalogCoverPath } from "@/features/catalog/coverManifest";
-import { useCatalog, useRecordCatalogProjectView } from "@/features/catalog/queries";
+import { catalogCoverUrl as coverUrl, catalogCoverAspect } from "@/features/catalog/covers";
+import { CATALOG_PRIORITY_SLUGS } from "@/features/catalog/catalogOrder";
+import { useCatalog, useCatalogOverview, useRecordCatalogProjectView } from "@/features/catalog/queries";
 import { readPersonalLibrary, recordRecentProject, savePersonalLibrary, toggleWantedProject } from "@/features/catalog/personalLibrary";
 import type { PersonalLibrary } from "@/features/catalog/personalLibrary";
 import { staticAssetUrl } from "@/shared/assets/staticAssets";
@@ -27,11 +28,10 @@ import CatalogIcon from "./CatalogIcon.vue";
 import CatalogCategoryRail from "./CatalogCategoryRail.vue";
 import CatalogCategoryAccent from "./CatalogCategoryAccent.vue";
 import CatalogMicroAccents from "./CatalogMicroAccents.vue";
-import { arrangeMixedCovers } from "./catalogCoverComposition";
 import { folkloreArtworkFor } from "./catalogFolkloreArtwork";
 import { categorySectionStyleFor, categorySectionThemeFor } from "./catalogCategoryThemes";
 import CatalogBrandMark from "./CatalogBrandMark.vue";
-import { CATALOG_HERO_TABS, selectCatalogRecommendations } from "./catalogTopics";
+import { CATALOG_HERO_TABS, CATALOG_RECOMMENDATION_EVIDENCE, matchesCatalogTopic, selectCatalogRecommendations } from "./catalogTopics";
 
 type SortMode = "latest" | "hot";
 type CatalogView = "games" | "authors" | "contributors";
@@ -41,26 +41,8 @@ const PAGE_SIZE = 24;
 const AUTHOR_PAGE_SIZE = 20;
 const HEART_HEAT_WEIGHT = 5;
 const SOURCE_CONTRIBUTOR_URL = "https://github.com/MartinDelophy/awesome-gpt-6-astra";
-const catalogAssetPath = "/catalog/2026-09-24-v1";
-const newCatalogAssetPath = "/catalog/2026-09-25-v1";
-const originalCoverSlugs = new Set([
-  "clock-out", "merge-watermelon", "qin-imperial-factory", "super-mario",
-  "csgo-desert", "infinite-garden", "fruit-ninja", "qq-racing",
-  "cf-transport", "pelican-bike", "generals-soldiers",
-]);
-const newCoverSlugs = new Set([
-  "yu-gi-oh-destiny-duel", "secondhand-3c-store", "voxel-tides", "sneaky-thief",
-  "liuxin-watermelon", "xing-lei-shou-wei", "yongyao-crystal-tower",
-  "zhi-guai-lu", "sanguo-zhengshi", "yeyu-tanglou", "non-euclidean-lab",
-  "geodesic-explorer", "hyperbolic-room", "encounter-command-console",
-]);
-const seedOrder = new Map([
-  "clock-out", "merge-watermelon", "qin-imperial-factory", "super-mario",
-  "csgo-desert", "infinite-garden", "fruit-ninja", "qq-racing",
-  "cf-transport", "pelican-bike", "fablespace", "generals-soldiers",
-].map((slug, index) => [slug, index]));
+const seedOrder = new Map<string, number>(CATALOG_PRIORITY_SLUGS.map((slug, index) => [slug, index]));
 
-const catalogQuery = useCatalog();
 const currentUserQuery = useCurrentUser();
 const NotificationBell = defineAsyncComponent(() => import("@/features/notifications/components/NotificationBell.vue"));
 const viewMutation = useRecordCatalogProjectView();
@@ -89,6 +71,18 @@ const wantedLimitReached = ref(false);
 const catalogNavigation = useCatalogNavigation({ catalogView, libraryScope, selectedCategory, selectedAuthorKey,
   sortMode, feed: catalogFeed, search, searchInput });
 const heroTopic = catalogNavigation.heroTopic;
+const heroOffset = ref(0);
+// 发现页只读取公开概览和按需分类页；完整搜索、榜单和个人范围进入后才读旧目录。
+const isDiscovery = computed(() => catalogView.value === "games" && catalogFeed.value === "discovery" && libraryScope.value === "all"
+  && selectedCategory.value === "all" && !search.value.trim() && !selectedAuthorKey.value);
+const heroCandidates = computed(() => heroTopic.value === "all" ? undefined
+  : Object.keys(CATALOG_RECOMMENDATION_EVIDENCE).filter((slug) => matchesCatalogTopic({ slug }, heroTopic.value)));
+const catalogQuery = useCatalog(() => !isDiscovery.value);
+const overviewQuery = useCatalogOverview(heroCandidates, heroOffset, isDiscovery);
+const catalogLoading = computed(() => isDiscovery.value ? overviewQuery.isLoading.value : catalogQuery.isLoading.value);
+const catalogError = computed(() => isDiscovery.value ? overviewQuery.isError.value : catalogQuery.isError.value);
+function reloadCatalog(): void { void (isDiscovery.value ? overviewQuery.refetch() : catalogQuery.refetch()); }
+
 const catalogTitle = computed(() => {
   if (catalogView.value !== "games") return catalogView.value === "authors" ? "作者榜" : "贡献榜";
   if (libraryScope.value === "wanted") return "想玩清单";
@@ -106,8 +100,8 @@ const recentOrder = computed(() => new Map(personalLibrary.value.recent.map((ent
 
 // 种田分类固定在末尾；其余分类仍沿用后台排序。
 const allCategories = computed(() => catalogQuery.data.value ?? []);
-const categories = computed(() => allCategories.value
-  .filter((category) => category.projects.length > 0)
+const categories = computed(() => (isDiscovery.value ? overviewQuery.data.value?.categories ?? [] : allCategories.value)
+  .filter((category) => ("total" in category ? Number(category.total) : category.projects.length) > 0)
   .sort((left, right) => Number(left.slug === "farming") - Number(right.slug === "farming")));
 // User-selected discovery order; labels, membership and records remain API-owned.
 const discoveryCategoryPriority = ["casual", "horror", "exploration"] as const;
@@ -230,17 +224,16 @@ const visibleProjects = computed(() => {
 // 大目录只先渲染首批卡片；筛选变化后重新从首批展示，搜索仍覆盖全部项目。
 const displayedProjects = computed(() => visibleProjects.value.slice(0, visibleLimit.value));
 const heroRecommendations = computed(() => selectCatalogRecommendations(allProjects.value, heroTopic.value));
-const heroOffset = ref(0);
-const heroProjects = computed(() => heroRecommendations.value.slice(heroOffset.value, heroOffset.value + 6));
+const heroProjects = computed<CatalogEntry[]>(() => isDiscovery.value
+  ? (overviewQuery.data.value?.hero.projects ?? []).map((project) => ({ ...project, heat: projectHeat(project) }))
+  : heroRecommendations.value.slice(heroOffset.value, heroOffset.value + 6));
+const heroTotal = computed(() => isDiscovery.value ? overviewQuery.data.value?.hero.total ?? 0 : heroRecommendations.value.length);
 watch(heroTopic, () => { heroOffset.value = 0; });
-watch(() => heroRecommendations.value.length, () => {
-  if (heroOffset.value >= heroRecommendations.value.length) heroOffset.value = 0;
+watch(heroTotal, (total) => {
+  if (!overviewQuery.isFetching.value && total > 0 && heroOffset.value >= total) heroOffset.value = 0;
 });
 // Empty, noninteractive cells preserve the six-slot mosaic without inventing games.
 const heroSlots = computed(() => Array.from({ length: 6 }, (_, index) => heroProjects.value[index] ?? null));
-// Each category rail uses its own complete API records; only the hero follows heroTopic.
-const isDiscovery = computed(() => catalogFeed.value === "discovery" && libraryScope.value === "all"
-  && selectedCategory.value === "all" && !normalizedSearch.value && !selectedAuthorKey.value);
 const coverAspects = ref(new Map<string, number>());
 function rememberCoverAspect(cover: string, aspect: number): void {
   if (!Number.isFinite(aspect) || aspect <= 0 || coverAspects.value.get(cover) === aspect) return;
@@ -249,25 +242,15 @@ function rememberCoverAspect(cover: string, aspect: number): void {
 const presentationGroups = computed(() => {
   if (!isDiscovery.value) return [{ key: "results", name: "", featured: false, visual: undefined,
     total: visibleProjects.value.length, projects: displayedProjects.value }];
-  const byCategory = new Map<string, CatalogEntry[]>();
-  for (const project of visibleProjects.value) {
-    const projects = byCategory.get(project.categorySlug) ?? [];
-    projects.push(project);
-    byCategory.set(project.categorySlug, projects);
-  }
   return [
     { key: "featured", name: "精选推荐", featured: true, visual: undefined,
-      total: heroProjects.value.length, projects: heroProjects.value },
+      total: heroTotal.value, projects: heroProjects.value },
     ...discoveryCategories.value.map((category) => {
-      const records = byCategory.get(category.slug) ?? [];
-      const projects = categorySectionThemeFor(category.slug).composition === "mixed"
-        ? arrangeMixedCovers(records, (project) => coverAspects.value.get(coverUrl(project) ?? ""), (project) => project.heat)
-        : records;
       const visual = categoryVisualFor(category);
       return { key: category.slug, name: category.name, featured: false,
         visual: visual ? { ...visual, artwork: folkloreArtworkFor(category.slug) ?? visual.artwork } : undefined,
-        total: projects.length, projects };
-    }).filter((group) => group.projects.length),
+        total: "total" in category ? Number(category.total) : category.projects.length, projects: [] as CatalogEntry[] };
+    }),
   ];
 });
 
@@ -330,17 +313,12 @@ function categoryName(slug: string): string {
   return allCategories.value.find((category) => category.slug === slug)?.name ?? "游戏";
 }
 
-// 后台封面优先；首批专属图和后续原创卡面均使用各自的版本化 CDN 地址。
-function coverUrl(project: CatalogProject): string | null {
-  if (project.iconUrl) return project.iconUrl;
-  if (newCoverSlugs.has(project.slug)) {
-    return staticAssetUrl(`${newCatalogAssetPath}/covers/${project.slug}.webp`);
-  }
-  if (originalCoverSlugs.has(project.slug)) {
-    return staticAssetUrl(`${catalogAssetPath}/covers/${project.slug}.webp`);
-  }
-  const importedCover = getCatalogCoverPath(project.slug);
-  return importedCover ? staticAssetUrl(importedCover) : null;
+/** 使用真实静态元数据或已显示图片的自然尺寸，不猜测自定义上传的方向。 */
+function coverAspectFor(project: CatalogProject): number | undefined {
+  return coverAspects.value.get(coverUrl(project) ?? "") ?? catalogCoverAspect(project);
+}
+function projectHeat(project: CatalogProject): number {
+  return (project.viewCount ?? 0) + (project.ratingScoreSum ?? 0) * HEART_HEAT_WEIGHT;
 }
 
 function submitSearch(): void {
@@ -405,14 +383,18 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
       <section class="catalog-intro" :class="{ 'catalog-intro--discovery': isDiscovery }">
         <h1 v-if="isDiscovery" id="catalog-title">从经典游戏到短时乐趣，<span>看看这些值得一试的游戏</span></h1>
         <h1 v-else id="catalog-title">{{ catalogTitle }}</h1>
-        <img v-if="isDiscovery" class="catalog-intro__landscape" :src="staticAssetUrl('/catalog/2026-10-30-folklore/garden-pavilion-bridge-transparent.png')" alt="" width="1817" height="866" decoding="async" aria-hidden="true" />
+        <!-- 手机端不显示园林装饰，直接选择内嵌空图，避免下载桌面大图；装饰不抢占游戏封面。 -->
+        <picture v-if="isDiscovery" class="catalog-intro__art">
+          <source media="(max-width: 760px)" srcset="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" />
+          <img class="catalog-intro__landscape" :src="staticAssetUrl('/catalog/2026-10-30-folklore/garden-pavilion-bridge-transparent.webp')" alt="" width="1817" height="866" loading="lazy" decoding="async" fetchpriority="low" aria-hidden="true" />
+        </picture>
         <nav v-if="isDiscovery" class="catalog-recommendation-tabs" aria-label="发现游戏">
           <button v-for="tab in CATALOG_HERO_TABS" :key="tab.id" type="button" :class="{ 'is-active': heroTopic === tab.id }" :aria-pressed="heroTopic === tab.id" @click="catalogNavigation.topic(tab.id)">{{ tab.name }}</button>
         </nav>
       </section>
       <section class="catalog-list" aria-label="游戏与作者">
-        <div v-if="catalogQuery.isLoading.value" class="catalog-state catalog-state--loading" role="status" aria-label="正在加载游戏目录"><span class="catalog-state__spinner" aria-hidden="true"></span><span>正在加载游戏目录…</span></div>
-        <div v-else-if="catalogQuery.isError.value" class="catalog-state" role="alert"><span>项目目录暂时不可用，请稍后重试。</span><button type="button" @click="catalogQuery.refetch()">重新加载</button></div>
+        <div v-if="catalogLoading" class="catalog-state catalog-state--loading" role="status" aria-label="正在加载游戏目录"><span class="catalog-state__spinner" aria-hidden="true"></span><span>正在加载游戏目录…</span></div>
+        <div v-else-if="catalogError" class="catalog-state" role="alert"><span>项目目录暂时不可用，请稍后重试。</span><button type="button" @click="reloadCatalog">重新加载</button></div>
         <template v-else>
           <template v-if="catalogView === 'games'">
             <div v-if="!isDiscovery" class="catalog-controls">
@@ -432,7 +414,7 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
             <p v-if="!libraryCanPersist" class="catalog-library__notice" role="alert">本地存储不可用，当前清单只在本次页面访问期间保留。</p>
             <p v-if="wantedLimitReached" class="catalog-library__notice" role="alert">想玩清单最多保存 500 款游戏，请先移出部分游戏。</p>
             <div v-if="selectedAuthorKey && selectedAuthorKey !== 'original'" class="catalog-author-selection"><span>正在查看 <strong>{{ selectedAuthorName || '该作者' }}</strong> 的作品</span><button type="button" @click="clearAuthorGames">清除作者筛选</button></div>
-            <div v-if="visibleProjects.length === 0" class="catalog-state" role="status"><span>{{ emptyLibraryText }}</span><button v-if="search || selectedCategory !== 'all' || selectedAuthorKey" type="button" @click="clearCatalogFilters">清除筛选</button></div>
+            <div v-if="!isDiscovery && visibleProjects.length === 0" class="catalog-state" role="status"><span>{{ emptyLibraryText }}</span><button v-if="search || selectedCategory !== 'all' || selectedAuthorKey" type="button" @click="clearCatalogFilters">清除筛选</button></div>
             <div v-else class="catalog-groups">
               <section v-for="group in presentationGroups" :key="group.key" class="catalog-group" :data-category-section="group.featured ? undefined : group.key" :class="{ 'catalog-group--featured': group.featured, 'catalog-group--illustrated': group.visual?.artwork, 'catalog-group--themed': !group.featured && group.name }" :style="group.visual ? categorySectionStyleFor(group.key) : undefined" :aria-label="group.name || '游戏列表'">
                 <header v-if="group.name && !group.featured" class="catalog-group__heading">
@@ -442,7 +424,20 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
                     <CatalogMicroAccents :slug="group.key" />
                 </header>
                 <CatalogCategoryAccent v-if="!group.featured" :slug="group.key" placement="card-corner" />
-                <component :is="!group.featured && isDiscovery ? CatalogCategoryRail : 'div'" v-bind="!group.featured && isDiscovery ? { name: group.name, slug: group.key, total: group.total, composition: categorySectionThemeFor(group.key).composition } : {}" :class="{ 'catalog-grid': group.featured || !isDiscovery, 'catalog-grid--featured': group.featured }">
+                <CatalogCategoryRail v-if="!group.featured && isDiscovery" :name="group.name" :slug="group.key" :total="group.total"
+                  :composition="categorySectionThemeFor(group.key).composition" :cover-aspect="coverAspectFor">
+                  <template #default="{ projects }">
+                    <CatalogGameCard v-for="project in projects" :key="projectCardKey(group.key, project.id)"
+                      :title="displayName(project)" :href="project.url" :cover="coverUrl(project)" :category-name="categoryName(project.categorySlug)"
+                      :author-name="project.authorName" :site-hosted="isSiteHostedProject(project)" :heat="projectHeat(project)" :wanted="wantedIds.has(project.id)"
+                      :data-project-id="project.id" :data-card-key="projectCardKey(group.key, project.id)"
+                      :data-cover-format="(coverAspectFor(project) ?? 1) < .9 ? 'portrait' : undefined"
+                      @open="recordGameOpen(project, $event)" @toggle-wanted="toggleWanted(project)" @cover-measured="rememberCoverAspect">
+                      <template #rating><CatalogAiRating :rating="project.aiRating" :game-name="displayName(project)" /></template>
+                    </CatalogGameCard>
+                  </template>
+                </CatalogCategoryRail>
+                <div v-else class="catalog-grid" :class="{ 'catalog-grid--featured': group.featured }">
                   <template v-for="(project, index) in group.featured ? heroSlots : group.projects" :key="project?.id ?? `empty:${index}`">
                     <!-- 仅首组或筛选结果的前三张立即加载，后续分类不抢占首屏连接。 -->
                     <CatalogGameCard v-if="project"
@@ -452,16 +447,16 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
                       :high-priority="(group.featured || !isDiscovery) && index === 0"
                       :featured="group.featured && (index === 0 || index === 5)" :data-hero-slot="group.featured ? index : undefined"
                       :data-project-id="project.id" :data-card-key="projectCardKey(group.key, project.id)"
-                        :data-cover-format="(coverAspects.get(coverUrl(project) ?? '') ?? 1) < .9 ? 'portrait' : undefined"
+                        :data-cover-format="(coverAspectFor(project) ?? 1) < .9 ? 'portrait' : undefined"
                         @open="recordGameOpen(project, $event)" @toggle-wanted="toggleWanted(project)" @cover-measured="rememberCoverAspect">
                       <template #rating><CatalogAiRating :rating="project.aiRating" :game-name="displayName(project)" /></template>
                     </CatalogGameCard>
                     <span v-else class="catalog-hero-slot-empty" :class="{ 'catalog-hero-slot-empty--featured': index === 0 || index === 5 }" :data-hero-slot="index" aria-hidden="true"></span>
                   </template>
-                  <p v-if="group.featured && heroProjects.length === 0" class="catalog-hero-empty" role="status">暂无符合该推荐主题的游戏</p>
+                  <p v-if="group.featured && heroProjects.length === 0" class="catalog-hero-empty" role="status">{{ overviewQuery.isFetching.value ? '正在加载推荐…' : '暂无符合该推荐主题的游戏' }}</p>
                   <button v-if="group.featured && heroOffset > 0" type="button" class="catalog-hero-arrow catalog-hero-arrow--previous" aria-label="上一组推荐游戏" @click="heroOffset = Math.max(0, heroOffset - 6)"><LeftOutlined aria-hidden="true" /></button>
-                  <button v-if="group.featured && heroOffset + 6 < heroRecommendations.length" type="button" class="catalog-hero-arrow catalog-hero-arrow--next" aria-label="下一组推荐游戏" @click="heroOffset += 6"><RightOutlined aria-hidden="true" /></button>
-                </component>
+                  <button v-if="group.featured && heroOffset + 6 < heroTotal" type="button" class="catalog-hero-arrow catalog-hero-arrow--next" aria-label="下一组推荐游戏" @click="heroOffset += 6"><RightOutlined aria-hidden="true" /></button>
+                </div>
               </section>
             </div>
             <div v-if="!isDiscovery && displayedProjects.length < visibleProjects.length" class="catalog-load-more"><button type="button" @click="loadMoreProjects">加载更多</button><span>还有 {{ visibleProjects.length - displayedProjects.length }} 个游戏</span></div>
@@ -478,7 +473,7 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
     <CatalogSubmissionDialog v-model:open="submissionOpen" />
     <dialog ref="authorDialog" class="catalog-author-dialog" aria-labelledby="catalog-author-dialog-title" @close="selectedAuthor = null">
       <div class="catalog-author-dialog__header"><div><h2 id="catalog-author-dialog-title">{{ selectedAuthor }}</h2><span>{{ selectedAuthorProjects.length }} 个游戏</span></div><button type="button" class="catalog-author-dialog__close" aria-label="关闭作者窗口" @click="closeAuthorIntro"><CloseOutlined aria-hidden="true" /></button></div>
-      <ul class="catalog-author-dialog__games"><li v-for="project in selectedAuthorProjects" :key="project.id"><a :href="project.url" target="_blank" rel="noopener noreferrer" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)"><img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" loading="lazy" /><span>{{ displayName(project) }}</span><span class="catalog-icon catalog-icon--arrow" aria-hidden="true"></span></a></li></ul>
+      <ul class="catalog-author-dialog__games"><li v-for="project in selectedAuthorProjects" :key="project.id"><a :href="project.url" target="_blank" rel="noopener noreferrer" @click="recordGameOpen(project, $event)" @auxclick="recordGameOpen(project, $event)"><img v-if="coverUrl(project)" :src="coverUrl(project) ?? undefined" alt="" loading="lazy" decoding="async" /><span>{{ displayName(project) }}</span><span class="catalog-icon catalog-icon--arrow" aria-hidden="true"></span></a></li></ul>
     </dialog>
   </main>
 </template>

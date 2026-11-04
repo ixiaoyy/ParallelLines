@@ -1622,6 +1622,14 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "ApiResponse_CatalogCategoryProjectsResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_CatalogOverviewResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ApiResponse_CatalogRatingStateResponse_": {
         "additionalProperties": true,
         "type": "object"
@@ -3732,6 +3740,54 @@
         "title": "CatalogCategoryCreateRequest",
         "type": "object"
       },
+      "CatalogCategoryProjectsResponse": {
+        "properties": {
+          "category_id": {
+            "title": "Category Id",
+            "type": "string"
+          },
+          "category_slug": {
+            "title": "Category Slug",
+            "type": "string"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogPublicProjectResponse"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "category_id",
+          "category_slug",
+          "projects",
+          "total",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "CatalogCategoryProjectsResponse",
+        "type": "object"
+      },
       "CatalogCategoryResponse": {
         "properties": {
           "icon_url": {
@@ -3839,6 +3895,99 @@
           }
         },
         "title": "CatalogCategoryUpdateRequest",
+        "type": "object"
+      },
+      "CatalogHeroResponse": {
+        "properties": {
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogPublicProjectResponse"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "projects",
+          "total",
+          "next_offset"
+        ],
+        "title": "CatalogHeroResponse",
+        "type": "object"
+      },
+      "CatalogOverviewCategoryResponse": {
+        "properties": {
+          "icon_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Url"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "icon_url",
+          "total"
+        ],
+        "title": "CatalogOverviewCategoryResponse",
+        "type": "object"
+      },
+      "CatalogOverviewResponse": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogOverviewCategoryResponse"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "hero": {
+            "$ref": "#/components/schemas/CatalogHeroResponse"
+          }
+        },
+        "required": [
+          "categories",
+          "hero"
+        ],
+        "title": "CatalogOverviewResponse",
         "type": "object"
       },
       "CatalogProjectCreateRequest": {
@@ -4221,6 +4370,145 @@
           }
         },
         "title": "CatalogProjectUpdateRequest",
+        "type": "object"
+      },
+      "CatalogPublicProjectResponse": {
+        "description": "可共享缓存的公开卡片；始终排除访客评分，并明确所属真实分类。",
+        "properties": {
+          "ai_rating": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CatalogAiRatingResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "author_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "author_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Url"
+          },
+          "average_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Score"
+          },
+          "category_slug": {
+            "title": "Category Slug",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "icon_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Url"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "external",
+              "internal"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "my_score": {
+            "title": "My Score",
+            "type": "null"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "rating_count": {
+            "title": "Rating Count",
+            "type": "integer"
+          },
+          "rating_score_sum": {
+            "title": "Rating Score Sum",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "view_count": {
+            "default": 0,
+            "title": "View Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "url",
+          "kind",
+          "description",
+          "author_name",
+          "author_url",
+          "icon_url",
+          "created_at",
+          "average_score",
+          "rating_count",
+          "rating_score_sum",
+          "my_score",
+          "category_slug"
+        ],
+        "title": "CatalogPublicProjectResponse",
         "type": "object"
       },
       "CatalogRatingCreateRequest": {
@@ -18641,6 +18929,159 @@
           }
         },
         "summary": "Get Catalog",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/categories/{slug}/projects": {
+      "get": {
+        "description": "按可视区所需数量读取分类卡片；游标与顺序条件均进入公开缓存键。",
+        "operationId": "get_catalog_category_projects_api_v1_catalog_categories__slug__projects_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 60,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "priority_slugs",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 8192,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Priority Slugs"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_CatalogCategoryProjectsResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Catalog Category Projects",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/overview": {
+      "get": {
+        "description": "读取公开分类与六张推荐；省略候选代表全部，显式空串代表没有推荐候选。",
+        "operationId": "get_catalog_overview_api_v1_catalog_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "hero_slugs",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 8192,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hero Slugs"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hero_offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Hero Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_CatalogOverviewResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Catalog Overview",
         "tags": [
           "catalog"
         ]

@@ -463,7 +463,7 @@ async function reviewSubmission(submission: AdminCatalogSubmission, decision: "a
             <button v-if="!coverPreviewUrls[submission.id]" type="button" :disabled="Boolean(coverPreviewLoadingId)" @click="previewSubmissionCover(submission)">
               {{ coverPreviewLoadingId === submission.id ? '正在读取封面…' : '查看投稿封面' }}
             </button>
-            <img v-else :src="coverPreviewUrls[submission.id]" :alt="`${submission.project_name} 的投稿封面`" />
+            <img v-else :src="coverPreviewUrls[submission.id]" :alt="`${submission.project_name} 的投稿封面`" decoding="async" />
             <p v-if="coverPreviewErrorId === submission.id" role="alert">封面加载失败，请稍后重试。</p>
           </div>
           <div class="catalog-admin__submission-actions">
@@ -494,7 +494,7 @@ async function reviewSubmission(submission: AdminCatalogSubmission, decision: "a
               <div class="catalog-admin__list-head"><h3 id="categories-heading">分类</h3><span>{{ categories.length }}</span></div>
               <p v-if="!categories.length" class="catalog-admin__empty">暂无分类。</p>
               <div v-for="category in categories" :key="category.id" class="catalog-admin__row">
-                <img v-if="category.icon_url" :src="resolveApiAssetUrl(category.icon_url)" alt="" />
+                <img v-if="category.icon_url" :src="resolveApiAssetUrl(category.icon_url)" alt="" loading="lazy" decoding="async" />
                 <span v-else class="catalog-admin__icon-fallback" aria-hidden="true">#</span>
                 <div class="catalog-admin__row-main"><strong>{{ category.name }}</strong><small>{{ category.slug }} · {{ category.projects.length }} 个项目</small></div>
                 <span v-if="!category.is_visible" class="catalog-admin__hidden">已隐藏</span>
@@ -511,7 +511,7 @@ async function reviewSubmission(submission: AdminCatalogSubmission, decision: "a
               </label>
               <p v-if="!filteredProjects.length" class="catalog-admin__empty">当前分类暂无项目。</p>
               <div v-for="project in filteredProjects" :key="project.id" class="catalog-admin__row">
-                <img v-if="project.icon_url" :src="resolveApiAssetUrl(project.icon_url)" alt="" />
+                <img v-if="project.icon_url" :src="resolveApiAssetUrl(project.icon_url)" alt="" loading="lazy" decoding="async" />
                 <span v-else class="catalog-admin__icon-fallback" aria-hidden="true">↗</span>
                 <div class="catalog-admin__row-main"><strong>{{ project.name }}</strong><small>{{ categories.find((item) => item.id === project.category_id)?.name }}<span v-if="project.author_name"> · 作者：{{ project.author_name }}</span> · {{ project.rating_count }} 人评分<span v-if="project.average_score !== null"> · {{ project.average_score.toFixed(1) }} 分</span></small></div>
                 <span v-if="!project.is_visible" class="catalog-admin__hidden">已隐藏</span>
@@ -538,7 +538,7 @@ async function reviewSubmission(submission: AdminCatalogSubmission, decision: "a
               <label>排序<input v-if="editorKind === 'category'" v-model.number="categoryDraft.sort_order" type="number" min="0" step="1" required /><input v-else v-model.number="projectDraft.sort_order" type="number" min="0" step="1" required /></label>
               <div class="catalog-admin__icon-field">
                 <label for="catalog-icon-upload">图标（可选）</label>
-                <div class="catalog-admin__icon-controls"><img v-if="existingIconUrl" :src="resolveApiAssetUrl(existingIconUrl)" alt="当前图标" /><input id="catalog-icon-upload" ref="fileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" @change="selectIcon" /><button v-if="existingIconUrl || selectedIconFile" type="button" @click="clearIcon">清除图标</button></div>
+                <div class="catalog-admin__icon-controls"><img v-if="existingIconUrl" :src="resolveApiAssetUrl(existingIconUrl)" alt="当前图标" decoding="async" /><input id="catalog-icon-upload" ref="fileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" @change="selectIcon" /><button v-if="existingIconUrl || selectedIconFile" type="button" @click="clearIcon">清除图标</button></div>
                 <p v-if="iconError" class="catalog-admin__error" role="alert">{{ iconError }}</p>
               </div>
               <label class="catalog-admin__check"><input v-if="editorKind === 'category'" v-model="categoryDraft.is_visible" type="checkbox" /><input v-else v-model="projectDraft.is_visible" type="checkbox" />公开显示</label>

@@ -108,7 +108,7 @@ function clearFilters(): void {
                 <span>4</span><strong>合计</strong><strong class="tools-tool__answer">250</strong>
               </div>
             </div>
-            <div v-else class="tools-bead-preview"><img src="/tools/bead-pattern/pixel-example.svg" alt="" width="160" height="160" /><span>一格，一颗豆</span></div>
+            <div v-else class="tools-bead-preview"><img src="/tools/bead-pattern/pixel-example.svg" alt="" width="160" height="160" loading="lazy" decoding="async" /><span>一格，一颗豆</span></div>
           </div>
           <div class="tools-tool__content">
             <div class="tools-tool__meta"><span class="tools-tool__category">{{ categoryLabels[tool.category] }}</span><span>{{ tool.detail }}</span></div>

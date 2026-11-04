@@ -134,7 +134,31 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-11-03-v1/covers/gd-fungi-run.webp",
     "catalog/2026-11-03-v1/covers/gd-super-chicken-td.webp",
     "catalog/2026-11-03-v1/covers/gd-golf-adventures-2.webp",
+    # 旧地址已有边缘缓存，压缩版本使用新文件名，避免清全局缓存或发布后继续下载旧字节。
+    "catalog/2026-11-03-v1/covers/gd-super-chicken-td-optimized.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
+
+# 压缩后的目录装饰来自 Web public；仍用原版本目录，保留 PNG 和旧对象便于恢复。
+PUBLIC_CATALOG_ASSET_KEYS = (
+    "catalog/2026-10-29-ui/bridge-spring.webp",
+    "catalog/2026-10-29-ui/story-tails-a.webp",
+    "catalog/2026-10-29-ui/story-tails-b.webp",
+    "catalog/2026-10-29-ui/story-tails-c.webp",
+    "catalog/2026-10-30-folklore/buffalo-boy-rice-transparent.webp",
+    "catalog/2026-10-30-folklore/casual-vermilion-leaves-transparent.webp",
+    "catalog/2026-10-30-folklore/exploration-brass-compass-transparent.webp",
+    "catalog/2026-10-30-folklore/exploration-scroll-transparent.webp",
+    "catalog/2026-10-30-folklore/fox-pinwheel-transparent.webp",
+    "catalog/2026-10-30-folklore/garden-pavilion-bridge-transparent.webp",
+    "catalog/2026-10-30-folklore/horror-bride-lantern-transparent.webp",
+    "catalog/2026-10-30-folklore/horror-plum-paper-tags-transparent.webp",
+    "catalog/2026-10-30-micro/folklore-micro-objects-atlas.webp",
+    "catalog/jade-folklore-v1/atlas-a.webp",
+    "catalog/jade-folklore-v1/atlas-b.webp",
+    "catalog/jade-folklore-v1/atlas-c.webp",
+    "catalog/pixel-arcade/button-frame.webp",
+    "catalog/pixel-arcade/frame-card.webp",
+)
 
 STATIC_ASSETS = (
     StaticAsset(
@@ -156,6 +180,22 @@ STATIC_ASSETS = (
         source="static/web/private-space-entry-b7d15288.png",
         key="private-space-entry-b7d15288.png",
         media_type="image/png",
+    ),
+    # 新格式使用独立地址，先上传新图再发布前端引用，不覆盖旧 PNG。
+    StaticAsset(
+        source="static/web/auth-visual/parallel-auth-pc-bg.webp",
+        key="auth-visual/parallel-auth-pc-bg.webp",
+        media_type="image/webp",
+    ),
+    StaticAsset(
+        source="static/web/auth-visual/parallel-auth-h5-bg.webp",
+        key="auth-visual/parallel-auth-h5-bg.webp",
+        media_type="image/webp",
+    ),
+    StaticAsset(
+        source="static/web/private-space-entry-b7d15288.webp",
+        key="private-space-entry-b7d15288.webp",
+        media_type="image/webp",
     ),
     StaticAsset(
         source="static/web/avatar-frames/level-1.webp",
@@ -194,6 +234,13 @@ STATIC_ASSETS = (
         media_type="image/svg+xml" if key.endswith(".svg") else "image/webp",
     )
     for key in CATALOG_ASSET_KEYS
+) + tuple(
+    StaticAsset(
+        source=f"apps/web/public/{key}",
+        key=key,
+        media_type="image/webp",
+    )
+    for key in PUBLIC_CATALOG_ASSET_KEYS
 )
 
 
@@ -226,7 +273,10 @@ def upload_static_assets(
 
     # 本次发布只写入新版目录图片，避免重传已有的认证页和头像资源。
     assets = (
-        (asset for asset in STATIC_ASSETS if asset.key in CATALOG_ASSET_KEYS)
+        (
+            asset for asset in STATIC_ASSETS
+            if asset.key in CATALOG_ASSET_KEYS or asset.key in PUBLIC_CATALOG_ASSET_KEYS
+        )
         if catalog_only
         else STATIC_ASSETS
     )

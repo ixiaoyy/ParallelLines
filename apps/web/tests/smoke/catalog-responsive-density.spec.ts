@@ -98,24 +98,27 @@ test("measured column transitions and local arrows preserve all records", async 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(new URL("/games", origin).href);
   const rail = page.locator("[data-category-rail='action'] .catalog-category-rail__viewport");
+  await rail.scrollIntoViewIfNeeded();
   await expect(rail).toBeVisible();
   for (const [width, count] of [[999, 4], [1000, 5], [1199, 5], [1200, 6]]) {
     await page.setViewportSize({ width: width!, height: 1080 });
-    const visible = await rail.evaluate((e) => {
+    await expect.poll(() => rail.evaluate((e) => {
       const r = e.getBoundingClientRect();
       return [...e.querySelectorAll(".catalog-card")].filter((card) => { const b = card.getBoundingClientRect(); return b.x >= r.x - 1 && b.right <= r.right + 1; }).length;
-    });
-    expect(visible, `${width}px real complete cards`).toBe(count);
+    }), `${width}px real complete cards`).toBe(count);
   }
+  await page.locator("[data-category-section='exploration']").scrollIntoViewIfNeeded();
+  await expect.poll(() => page.locator("[data-category-section='exploration'] .catalog-card").count()).toBeGreaterThan(0);
   const ids = await page.locator("[data-category-section='exploration'] .catalog-card").evaluateAll((cards) => cards.map((c) => c.getAttribute("data-project-id")));
   const sectionOrder = await page.locator("[data-category-section]").evaluateAll((sections) => sections.map((s) => s.getAttribute("data-category-section")));
   await page.getByRole("button", { name: "下一组探索游戏", exact: true }).click();
   await expect.poll(() => page.locator("[data-category-rail='exploration'] .catalog-category-rail__viewport").evaluate((e) => e.scrollLeft)).toBeGreaterThan(0);
-  expect(await page.locator("[data-category-section='exploration'] .catalog-card").count()).toBe(ids.length);
-  expect(ids.length).toBeGreaterThan(6);
+  const appendedIds = await page.locator("[data-category-section='exploration'] .catalog-card").evaluateAll((cards) => cards.map((c) => c.getAttribute("data-project-id")));
+  expect(appendedIds.slice(0, ids.length)).toEqual(ids);
+  expect(appendedIds.length).toBeGreaterThanOrEqual(ids.length);
   await page.getByRole("button", { name: "多动脑子", exact: true }).click();
   expect(await page.locator("[data-category-section]").evaluateAll((sections) => sections.map((s) => s.getAttribute("data-category-section")))).toEqual(sectionOrder);
-  expect(await page.locator("[data-category-section='exploration'] .catalog-card").evaluateAll((cards) => cards.map((c) => c.getAttribute("data-project-id")))).toEqual(ids);
+  expect(await page.locator("[data-category-section='exploration'] .catalog-card").evaluateAll((cards) => cards.map((c) => c.getAttribute("data-project-id")))).toEqual(appendedIds);
 });
 
 test("single real farming cover and illustration are ready before snapshots", async ({ page }) => {

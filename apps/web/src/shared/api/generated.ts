@@ -309,6 +309,12 @@ export interface components {
     ApiResponse_bool_: {
       [key: string]: unknown;
     };
+    ApiResponse_CatalogCategoryProjectsResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_CatalogOverviewResponse_: {
+      [key: string]: unknown;
+    };
     ApiResponse_CatalogRatingStateResponse_: {
       [key: string]: unknown;
     };
@@ -916,6 +922,14 @@ export interface components {
       slug: string;
       sort_order?: number;
     };
+    CatalogCategoryProjectsResponse: {
+      category_id: string;
+      category_slug: string;
+      has_more: boolean;
+      next_cursor: string | null;
+      projects: Array<components["schemas"]["CatalogPublicProjectResponse"]>;
+      total: number;
+    };
     CatalogCategoryResponse: {
       icon_url: string | null;
       id: string;
@@ -929,6 +943,22 @@ export interface components {
       name?: string | null;
       slug?: string | null;
       sort_order?: number | null;
+    };
+    CatalogHeroResponse: {
+      next_offset: number | null;
+      projects: Array<components["schemas"]["CatalogPublicProjectResponse"]>;
+      total: number;
+    };
+    CatalogOverviewCategoryResponse: {
+      icon_url: string | null;
+      id: string;
+      name: string;
+      slug: string;
+      total: number;
+    };
+    CatalogOverviewResponse: {
+      categories: Array<components["schemas"]["CatalogOverviewCategoryResponse"]>;
+      hero: components["schemas"]["CatalogHeroResponse"];
     };
     CatalogProjectCreateRequest: {
       author_name?: string | null;
@@ -973,6 +1003,25 @@ export interface components {
       slug?: string | null;
       sort_order?: number | null;
       url?: string | null;
+    };
+    CatalogPublicProjectResponse: {
+      ai_rating?: components["schemas"]["CatalogAiRatingResponse"] | null;
+      author_name: string | null;
+      author_url: string | null;
+      average_score: number | null;
+      category_slug: string;
+      created_at: string;
+      description: string | null;
+      icon_url: string | null;
+      id: string;
+      kind: "external" | "internal";
+      my_score: null;
+      name: string;
+      rating_count: number;
+      rating_score_sum: number;
+      slug: string;
+      url: string;
+      view_count?: number;
     };
     CatalogRatingCreateRequest: {
       score: number;
@@ -2761,6 +2810,12 @@ export interface paths {
     };
     "/api/v1/catalog": {
       get: { response: components["schemas"]["ApiResponse_CatalogResponse_"]; operationId: "get_catalog_api_v1_catalog_get" };
+    };
+    "/api/v1/catalog/categories/{slug}/projects": {
+      get: { response: components["schemas"]["ApiResponse_CatalogCategoryProjectsResponse_"]; operationId: "get_catalog_category_projects_api_v1_catalog_categories__slug__projects_get" };
+    };
+    "/api/v1/catalog/overview": {
+      get: { response: components["schemas"]["ApiResponse_CatalogOverviewResponse_"]; operationId: "get_catalog_overview_api_v1_catalog_overview_get" };
     };
     "/api/v1/catalog/projects/{project_id}/ratings": {
       post: { response: components["schemas"]["ApiResponse_CatalogRatingStateResponse_"]; operationId: "rate_catalog_project_api_v1_catalog_projects__project_id__ratings_post" };

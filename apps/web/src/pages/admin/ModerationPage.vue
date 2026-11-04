@@ -1502,6 +1502,7 @@ function mutationErrorMessage(error: unknown) {
                     :src="selectedFrontierPreviewCard.imageUrl"
                     :alt="selectedFrontierPreviewCard.imageAlt || selectedFrontierPreviewCard.title"
                     loading="lazy"
+                    decoding="async"
                   />
                   <div class="frontier-preview-card__copy">
                     <a :href="selectedFrontierPreviewCard.url" target="_blank" rel="noopener noreferrer">

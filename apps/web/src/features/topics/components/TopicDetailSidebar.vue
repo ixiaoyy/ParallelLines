@@ -108,6 +108,8 @@ function toPlainText(value: string) {
           :level="poster === topic.authorName ? topic.authorLevel : undefined"
           size="sm"
           :title="poster"
+          loading="lazy"
+          decoding="async"
         />
       </div>
     </UiCard>

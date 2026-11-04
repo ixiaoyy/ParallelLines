@@ -1,7 +1,7 @@
 import { staticAssetUrl } from "@/shared/assets/staticAssets";
 
 interface Sprite { src: string; sourceWidth: number; sourceHeight: number; box: readonly [number, number, number, number]; width: number }
-const atlas = staticAssetUrl("/catalog/2026-10-30-micro/folklore-micro-objects-atlas.png");
+const atlas = staticAssetUrl("/catalog/2026-10-30-micro/folklore-micro-objects-atlas.webp");
 const micro = (box: Sprite["box"], width: number): Sprite => ({ src: atlas, sourceWidth: 1254, sourceHeight: 1254, box, width });
 const old = (path: string, box: Sprite["box"], width: number): Sprite => ({ src: staticAssetUrl(path), sourceWidth: 1024, sourceHeight: 1536, box, width });
 
@@ -14,9 +14,9 @@ export const CATALOG_MICRO_SPRITES = {
   card: micro([87, 673, 159, 255], 9), knot: micro([391, 650, 183, 295], 8),
   coin: micro([677, 681, 227, 232], 11), ash: micro([1019, 655, 184, 286], 6),
   ember: micro([126, 984, 110, 208], 6), rice: micro([433, 983, 100, 209], 6),
-  kite: old("/catalog/jade-folklore-v1/atlas-c.png", [530, 10, 260, 192], 20),
-  petal: old("/catalog/2026-10-29-ui/story-tails-c.png", [168, 257, 25, 18], 12),
-  flower: old("/catalog/2026-10-29-ui/story-tails-c.png", [157, 1442, 18, 15], 10),
+  kite: old("/catalog/jade-folklore-v1/atlas-c.webp", [530, 10, 260, 192], 20),
+  petal: old("/catalog/2026-10-29-ui/story-tails-c.webp", [168, 257, 25, 18], 12),
+  flower: old("/catalog/2026-10-29-ui/story-tails-c.webp", [157, 1442, 18, 15], 10),
 } as const satisfies Record<string, Sprite>;
 
 type Motif = keyof typeof CATALOG_MICRO_SPRITES;

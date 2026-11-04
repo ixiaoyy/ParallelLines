@@ -1,8 +1,10 @@
+// 使用 vitest.catalog-resources.config.ts，保留公开图片 URL，独立验证 SSR 图片加载属性。
 import { describe, expect, it } from "vitest";
 import { createSSRApp, h } from "vue";
 import { renderToString } from "vue/server-renderer";
 
 import CatalogGameCard from "./CatalogGameCard.vue";
+import CatalogLeaderboard from "./CatalogLeaderboard.vue";
 
 const project = {
   title: "验收游戏",
@@ -29,5 +31,25 @@ describe("目录封面资源优先级", () => {
     const html = await renderToString(createSSRApp({ render: () => h(CatalogGameCard, project) }));
     expect(html).toContain('loading="lazy"');
     expect(html).not.toContain("fetchpriority=");
+  });
+
+  it("榜单前三名作品及时加载，后续作品和奖牌装饰继续懒加载", async () => {
+    const html = await renderToString(createSSRApp({
+      render: () => h(CatalogLeaderboard, {
+        title: "作者榜",
+        entries: [
+          { key: "first", name: "首位作者", rank: 1, cover: "/first.webp", metric: "3 个作品" },
+          { key: "fourth", name: "后续作者", rank: 4, cover: "/fourth.webp", metric: "1 个作品" },
+        ],
+        hasMore: false,
+        moreLabel: "加载更多作者",
+      }),
+    }));
+    const images = html.match(/<img\b[^>]*>/g) ?? [];
+    expect(images.find((image) => image.includes('src="/first.webp"'))).toContain('loading="eager"');
+    expect(images.find((image) => image.includes('src="/fourth.webp"'))).toContain('loading="lazy"');
+    const ornaments = images.filter((image) => image.includes("/catalog/night-arcade-v1/"));
+    expect(ornaments.length).toBeGreaterThan(0);
+    expect(ornaments.every((image) => image.includes('loading="lazy"') && image.includes('fetchpriority="low"'))).toBe(true);
   });
 });

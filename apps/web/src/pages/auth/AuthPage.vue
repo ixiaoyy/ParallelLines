@@ -50,8 +50,8 @@ const USERNAME_HELPER = "用户名需为 3-32 位，可使用中文、字母、�
 const shouldUseDevVerificationCode = import.meta.env.DEV;
 const authMarkUrl = staticAssetUrl("/auth-visual/auth-mark.png");
 const authPageStyle = computed(() => ({
-  "--auth-pc-bg": cssUrl(staticAssetUrl("/auth-visual/parallel-auth-pc-bg.png")),
-  "--auth-h5-bg": cssUrl(staticAssetUrl("/auth-visual/parallel-auth-h5-bg.png")),
+  "--auth-pc-bg": cssUrl(staticAssetUrl("/auth-visual/parallel-auth-pc-bg.webp")),
+  "--auth-h5-bg": cssUrl(staticAssetUrl("/auth-visual/parallel-auth-h5-bg.webp")),
 }));
 
 const OAUTH_PROVIDER_OPTIONS: Record<string, OAuthProviderOption> = {

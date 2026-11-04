@@ -220,7 +220,7 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   // 与 0102 收录和上传清单同批发布；Spectrum 使用作者实机图，旧映射不变。
   "gd-spectrum": "/catalog/2026-11-03-v1/covers/gd-spectrum.webp",
   "gd-fungi-run": "/catalog/2026-11-03-v1/covers/gd-fungi-run.webp",
-  "gd-super-chicken-td": "/catalog/2026-11-03-v1/covers/gd-super-chicken-td.webp",
+  "gd-super-chicken-td": "/catalog/2026-11-03-v1/covers/gd-super-chicken-td-optimized.webp",
   "gd-golf-adventures-2": "/catalog/2026-11-03-v1/covers/gd-golf-adventures-2.webp",
 };
 

@@ -3,11 +3,16 @@ from __future__ import annotations
 import hashlib
 import hmac
 import ipaddress
+import json
 import logging
+import math
+import re
+from base64 import b64decode, urlsafe_b64encode
 from dataclasses import dataclass
+from datetime import datetime
 from urllib.parse import urlsplit
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, case, func, literal, or_, select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -21,25 +26,33 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.permissions import is_admin
+from app.db.base import as_utc_datetime
 from app.models.catalog import CatalogCategory, CatalogProject, CatalogRating
 from app.models.upload import Upload
 from app.models.user import User
 from app.schemas.catalog import (
+    SLUG_PATTERN,
     AdminCatalogCategoryResponse,
     AdminCatalogProjectResponse,
     AdminCatalogResponse,
     CatalogAiRatingResponse,
     CatalogCategoryCreateRequest,
+    CatalogCategoryProjectsResponse,
     CatalogCategoryResponse,
     CatalogCategoryUpdateRequest,
+    CatalogHeroResponse,
+    CatalogOverviewCategoryResponse,
+    CatalogOverviewResponse,
     CatalogProjectCreateRequest,
     CatalogProjectResponse,
     CatalogProjectUpdateRequest,
+    CatalogPublicProjectResponse,
     CatalogRatingStateResponse,
     CatalogResponse,
     CatalogViewStateResponse,
 )
 from app.services.catalog_ai_ratings import CatalogAiRatingService
+from app.services.catalog_cache import invalidate_public_catalog_cache
 
 logger = logging.getLogger(__name__)
 # 只允许已交付的游戏直达页，后台编辑与隐藏条目也使用同一白名单。
@@ -53,6 +66,23 @@ INTERNAL_PROJECT_URLS = frozenset(
 )
 RATING_UNAVAILABLE_MESSAGE = "评分暂时不可用，请稍后重试。"
 SAVE_FAILED_MESSAGE = "保存失败，请稍后重试。"
+HERO_BATCH_SIZE = 6
+MAX_CATALOG_SLUGS = 64
+
+
+def parse_catalog_slug_list(raw: str | None) -> tuple[str, ...] | None:
+    """解析有界 slug 参数；缺失保持 None，显式空串返回空候选，重复项保留首次顺序。"""
+
+    if raw is None:
+        return None
+    if not raw.strip():
+        return ()
+    values = [value.strip() for value in raw.split(",")]
+    if len(values) > MAX_CATALOG_SLUGS or any(
+        len(value) > 80 or re.fullmatch(SLUG_PATTERN, value) is None for value in values
+    ):
+        raise ValidationError("invalid_catalog_slugs", "Catalog slug list is invalid")
+    return tuple(dict.fromkeys(values))
 
 
 @dataclass(frozen=True)
@@ -128,6 +158,178 @@ class CatalogService:
             ]
         )
 
+    async def public_overview(
+        self, *, hero_slugs: tuple[str, ...] | None = None, hero_offset: int = 0,
+    ) -> CatalogOverviewResponse:
+        """返回分类计数和六张公开推荐；候选仅来自前端名单，不读取访客评分。"""
+
+        # 列投影避开 CatalogCategory.projects 的 selectin 全集加载。
+        counts = select(
+            CatalogProject.category_id, func.count().label("total"),
+        ).where(CatalogProject.is_visible.is_(True)).group_by(
+            CatalogProject.category_id,
+        ).subquery()
+        category_rows = (await self.session.execute(select(
+            CatalogCategory.id, CatalogCategory.slug, CatalogCategory.name,
+            CatalogCategory.icon_upload_id, func.coalesce(counts.c.total, 0).label("total"),
+        ).outerjoin(counts, counts.c.category_id == CatalogCategory.id).where(
+            CatalogCategory.is_visible.is_(True),
+        ).order_by(CatalogCategory.sort_order, CatalogCategory.id))).all()
+        categories = [CatalogOverviewCategoryResponse(
+            id=row.id, slug=row.slug, name=row.name,
+            icon_url=self._icon_url(row.icon_upload_id), total=row.total,
+        ) for row in category_rows]
+        if hero_slugs == ():
+            return CatalogOverviewResponse(
+                categories=categories,
+                hero=CatalogHeroResponse(projects=[], total=0, next_offset=None),
+            )
+
+        # 先读轻量候选标识和 AI 分；仅选中的六张才读取完整项目及人工评分聚合。
+        query = select(
+            CatalogProject.id, CatalogCategory.slug.label("category_slug"),
+        ).join(CatalogCategory, CatalogCategory.id == CatalogProject.category_id).where(
+            CatalogCategory.is_visible.is_(True), CatalogProject.is_visible.is_(True),
+        ).order_by(
+            CatalogCategory.sort_order, CatalogCategory.id,
+            CatalogProject.sort_order, CatalogProject.id,
+        )
+        if hero_slugs is not None:
+            query = query.where(CatalogProject.slug.in_(hero_slugs))
+        rows = (await self.session.execute(query)).all()
+        ai_summaries = await CatalogAiRatingService(self.session).public_summaries(
+            [row.id for row in rows],
+        )
+
+        def recommendation_key(row):
+            """有效 AI 分降序；未知分在后，同分保持输入的原 API 顺序。"""
+            summary = ai_summaries.get(row.id)
+            score = summary.score if summary is not None else None
+            valid = score is not None and math.isfinite(score) and 0 <= score <= 10
+            return (not valid, -score if valid else 0)
+
+        ranked = sorted(rows, key=recommendation_key)
+        selected = ranked[hero_offset:hero_offset + HERO_BATCH_SIZE]
+        selected_ids = [row.id for row in selected]
+        projects = (await self.session.scalars(select(CatalogProject).join(
+            CatalogCategory, CatalogCategory.id == CatalogProject.category_id,
+        ).where(
+            CatalogProject.id.in_(selected_ids), CatalogProject.is_visible.is_(True),
+            CatalogCategory.is_visible.is_(True),
+        ).limit(HERO_BATCH_SIZE))).all() if selected_ids else []
+        by_id = {project.id: project for project in projects}
+        summaries = await self._rating_summaries(selected_ids)
+        next_offset = hero_offset + len(selected)
+        return CatalogOverviewResponse(categories=categories, hero=CatalogHeroResponse(
+            projects=[self._public_project_response(
+                by_id[row.id], row.category_slug, summaries, ai_summaries,
+            ) for row in selected if row.id in by_id],
+            total=len(ranked), next_offset=next_offset if next_offset < len(ranked) else None,
+        ))
+
+    async def public_category_projects(
+        self, slug: str, *, limit: int, cursor: str | None = None,
+        priority_slugs: tuple[str, ...] = (),
+    ) -> CatalogCategoryProjectsResponse:
+        """SQL 游标读取一类公开项目；limit 1..60，游标绑定分类和同秒优先顺序。"""
+
+        if not 1 <= limit <= 60:
+            raise ValidationError("invalid_limit", "Catalog page limit is invalid")
+        category = (await self.session.execute(select(
+            CatalogCategory.id, CatalogCategory.slug,
+        ).where(CatalogCategory.slug == slug, CatalogCategory.is_visible.is_(True)))).one_or_none()
+        if category is None:
+            raise NotFoundError()
+        priorities = {value: index for index, value in enumerate(priority_slugs)}
+        rank = case(priorities, value=CatalogProject.slug, else_=len(priorities)) \
+            if priorities else literal(0)
+        scope = hashlib.sha256(json.dumps(
+            [category.id, category.slug, priority_slugs], separators=(",", ":"),
+        ).encode()).hexdigest()
+        position = self._category_cursor(cursor, scope, len(priorities))
+        conditions = [
+            CatalogProject.category_id == category.id, CatalogProject.is_visible.is_(True),
+        ]
+        total = await self.session.scalar(select(func.count()).select_from(CatalogProject).where(
+            *conditions,
+        ))
+        query = select(CatalogProject).join(
+            CatalogCategory, CatalogCategory.id == CatalogProject.category_id,
+        ).where(*conditions, CatalogCategory.is_visible.is_(True))
+        if position is not None:
+            timestamp, priority, project_id = position
+            # 与 created_at DESC、优先序 ASC、数值 ID DESC 完全对应，跨批不漏重。
+            query = query.where(or_(
+                CatalogProject.created_at < timestamp,
+                and_(CatalogProject.created_at == timestamp, rank > priority),
+                and_(CatalogProject.created_at == timestamp, rank == priority,
+                     CatalogProject.id < project_id),
+            ))
+        projects = (await self.session.scalars(query.order_by(
+            CatalogProject.created_at.desc(), rank, CatalogProject.id.desc(),
+        ).limit(limit + 1))).all()
+        has_more = len(projects) > limit
+        projects = projects[:limit]
+        project_ids = [project.id for project in projects]
+        summaries = await self._rating_summaries(project_ids)
+        ai_summaries = await CatalogAiRatingService(self.session).public_summaries(project_ids)
+        next_cursor = None
+        if has_more:
+            last = projects[-1]
+            payload = [1, scope, as_utc_datetime(last.created_at).isoformat(),
+                       priorities.get(last.slug, len(priorities)), last.id]
+            next_cursor = urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode()) \
+                .decode().rstrip("=")
+        return CatalogCategoryProjectsResponse(
+            category_id=category.id, category_slug=category.slug,
+            projects=[self._public_project_response(
+                project, category.slug, summaries, ai_summaries,
+            ) for project in projects], total=total or 0,
+            next_cursor=next_cursor, has_more=has_more,
+        )
+
+    @staticmethod
+    def _category_cursor(
+        raw: str | None, scope: str, max_priority: int,
+    ) -> tuple[datetime, int, str] | None:
+        """校验不透明位置游标；格式、版本、分类或排序不匹配均报 422，不回退首批。"""
+
+        if raw is None:
+            return None
+        try:
+            if not raw or len(raw) > 2048:
+                raise ValueError("cursor length")
+            decoded = b64decode(raw + "=" * (-len(raw) % 4), altchars=b"-_", validate=True)
+            value = json.loads(decoded)
+            if not isinstance(value, list) or len(value) != 5:
+                raise ValueError("cursor shape")
+            version, binding, timestamp, priority, project_id = value
+            if type(version) is not int or version != 1 or binding != scope:
+                raise ValueError("cursor scope")
+            if type(priority) is not int or not 0 <= priority <= max_priority:
+                raise ValueError("cursor priority")
+            if (not isinstance(project_id, str) or len(project_id) > 19
+                    or not project_id.isascii() or not project_id.isdigit()
+                    or not 1 <= int(project_id) <= 2**63 - 1):
+                raise ValueError("cursor id")
+            # 数据库存 UTC DATETIME；API 的时区字符串不能直接作为数据库比较基准。
+            parsed = as_utc_datetime(datetime.fromisoformat(timestamp)).replace(tzinfo=None)
+            return parsed, priority, project_id
+        except (ValueError, TypeError, OverflowError) as exc:
+            raise ValidationError("invalid_cursor", "Pagination cursor is invalid") from exc
+
+    def _public_project_response(
+        self, project: CatalogProject, category_slug: str,
+        summaries: dict[str, tuple[float | None, int, int]],
+        ai_summaries: dict[str, CatalogAiRatingResponse],
+    ) -> CatalogPublicProjectResponse:
+        """从现有卡片投影生成公开 DTO；传空个人评分集合，固定 my_score=null。"""
+
+        return CatalogPublicProjectResponse(
+            **self._project_response(project, summaries, {}, ai_summaries).model_dump(),
+            category_slug=category_slug,
+        )
+
     async def record_view(self, project_id: str) -> CatalogViewStateResponse:
         """为指定公开项目累计一次打开并返回总数；不可见项目不写入且返回 404。"""
 
@@ -158,6 +360,8 @@ class CatalogService:
                 select(CatalogProject.view_count).where(CatalogProject.id == resolved_project_id)
             )
             await self.session.commit()
+            # 公开缓存含浏览统计，真实提交成功后再失效，不回退已返回的服务端计数。
+            invalidate_public_catalog_cache()
             return CatalogViewStateResponse(project_id=resolved_project_id, view_count=view_count)
         except SQLAlchemyError as exc:
             await self.session.rollback()
@@ -211,6 +415,8 @@ class CatalogService:
                     if rating is None:
                         raise
             await self.session.commit()
+            # 人工评分会改变公开聚合值；个人票仍只通过私有接口返回。
+            invalidate_public_catalog_cache()
             summaries = await self._rating_summaries([resolved_project_id])
             average, count, score_sum = summaries.get(resolved_project_id, (None, 0, 0))
             return CatalogRatingStateResponse(
@@ -546,6 +752,8 @@ class CatalogService:
     async def _commit_admin(self) -> None:
         try:
             await self.session.commit()
+            # 新增、编辑和隐藏都改变公开目录，失败事务不得清理成功快照。
+            invalidate_public_catalog_cache()
         except IntegrityError as exc:
             await self.session.rollback()
             raise ValidationError() from exc

@@ -356,7 +356,7 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
             :aria-pressed="user.user_id === selectedUserId"
             @click="selectUser(user)"
           >
-            <UiAvatar :src="user.avatar_url" :name="user.username" :role="user.forum_role" size="sm" />
+            <UiAvatar :src="user.avatar_url" :name="user.username" :role="user.forum_role" size="sm" loading="lazy" decoding="async" />
             <span class="access-list__identity">
               <strong>{{ user.username }}</strong>
               <small>{{ user.email }}</small>

@@ -251,6 +251,41 @@ class CatalogResponse(BaseModel):
     categories: list[CatalogCategoryResponse]
 
 
+class CatalogPublicProjectResponse(CatalogProjectResponse):
+    """可共享缓存的公开卡片；始终排除访客评分，并明确所属真实分类。"""
+
+    category_slug: str
+    my_score: None
+
+
+class CatalogOverviewCategoryResponse(BaseModel):
+    id: str
+    slug: str
+    name: str
+    icon_url: str | None
+    total: int
+
+
+class CatalogHeroResponse(BaseModel):
+    projects: list[CatalogPublicProjectResponse]
+    total: int
+    next_offset: int | None
+
+
+class CatalogOverviewResponse(BaseModel):
+    categories: list[CatalogOverviewCategoryResponse]
+    hero: CatalogHeroResponse
+
+
+class CatalogCategoryProjectsResponse(BaseModel):
+    category_id: str
+    category_slug: str
+    projects: list[CatalogPublicProjectResponse]
+    total: int
+    next_cursor: str | None
+    has_more: bool
+
+
 class AdminCatalogProjectResponse(CatalogProjectResponse):
     category_id: str
     icon_upload_id: str | None

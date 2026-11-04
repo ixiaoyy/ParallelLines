@@ -1049,6 +1049,8 @@ function socialErrorMessage(error: unknown): string {
             :role="relatedUser.role"
             :level="relatedUser.level"
             size="md"
+            loading="lazy"
+            decoding="async"
           />
           <div>
             <strong>{{ relatedUser.display_name?.trim() || relatedUser.username }}</strong>

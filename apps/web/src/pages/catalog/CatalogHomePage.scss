@@ -52,6 +52,7 @@
 .catalog-intro--discovery { margin-top: 12px; border-radius: 29px 29px 0 0; background: #edfaf7; }
 .catalog-intro h1 { position: relative; z-index: 1; max-width: calc(100% - 155px); margin: 0 0 10px; color: #0a1510; font: 800 clamp(22px, 3.15vw, 36px) / 1.2 var(--catalog-heading-font); letter-spacing: 0; }
 .catalog-intro h1 > span { color: var(--catalog-red); }
+.catalog-intro__art { display: contents; }
 .catalog-intro__landscape { position: absolute; top: 0; right: -6px; width: 224px; height: 107px; object-fit: contain; pointer-events: none; }
 .catalog-intro:not(.catalog-intro--discovery) h1 { max-width: 100%; }
 .catalog-recommendation-tabs { position: relative; z-index: 1; display: flex; width: max-content; max-width: 100%; gap: 7px; overflow-x: auto; padding: 0 1px 1px; scrollbar-width: none; }

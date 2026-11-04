@@ -7,21 +7,21 @@ import { categorySectionThemeFor } from "./catalogCategoryThemes";
 
 const props = defineProps<{ slug: string }>();
 const artByCategory = {
-  action: { file: "story-tails-a.png", crop: [39, 57, 977, 242] },
-  shooting: { file: "story-tails-a.png", crop: [33, 335, 983, 273] },
-  racing: { file: "story-tails-a.png", crop: [30, 656, 984, 266] },
-  stages: { file: "story-tails-a.png", crop: [50, 941, 966, 296] },
-  puzzle: { file: "story-tails-a.png", crop: [208, 1258, 806, 262] },
-  rts: { file: "story-tails-b.png", crop: [19, 125, 971, 184] },
-  "tower-defense": { file: "story-tails-b.png", crop: [29, 341, 975, 303] },
-  cards: { file: "story-tails-b.png", crop: [24, 682, 979, 239] },
-  rpg: { file: "story-tails-b.png", crop: [22, 973, 977, 229] },
-  simulation: { file: "story-tails-b.png", crop: [21, 1253, 981, 244] },
-  casual: { file: "story-tails-c.png", crop: [31, 64, 988, 264] },
-  romance: { file: "story-tails-c.png", crop: [184, 398, 825, 228] },
-  horror: { file: "story-tails-c.png", crop: [195, 649, 823, 244] },
-  exploration: { file: "story-tails-c.png", crop: [69, 958, 944, 252] },
-  farming: { file: "story-tails-c.png", crop: [150, 1234, 866, 266] },
+  action: { file: "story-tails-a.webp", crop: [39, 57, 977, 242] },
+  shooting: { file: "story-tails-a.webp", crop: [33, 335, 983, 273] },
+  racing: { file: "story-tails-a.webp", crop: [30, 656, 984, 266] },
+  stages: { file: "story-tails-a.webp", crop: [50, 941, 966, 296] },
+  puzzle: { file: "story-tails-a.webp", crop: [208, 1258, 806, 262] },
+  rts: { file: "story-tails-b.webp", crop: [19, 125, 971, 184] },
+  "tower-defense": { file: "story-tails-b.webp", crop: [29, 341, 975, 303] },
+  cards: { file: "story-tails-b.webp", crop: [24, 682, 979, 239] },
+  rpg: { file: "story-tails-b.webp", crop: [22, 973, 977, 229] },
+  simulation: { file: "story-tails-b.webp", crop: [21, 1253, 981, 244] },
+  casual: { file: "story-tails-c.webp", crop: [31, 64, 988, 264] },
+  romance: { file: "story-tails-c.webp", crop: [184, 398, 825, 228] },
+  horror: { file: "story-tails-c.webp", crop: [195, 649, 823, 244] },
+  exploration: { file: "story-tails-c.webp", crop: [69, 958, 944, 252] },
+  farming: { file: "story-tails-c.webp", crop: [150, 1234, 866, 266] },
 } as const satisfies Readonly<Record<CategoryVisualKey, { file: string; crop: readonly [number, number, number, number] }>>;
 const art = computed(() => {
   const key = categorySectionThemeFor(props.slug).tail;

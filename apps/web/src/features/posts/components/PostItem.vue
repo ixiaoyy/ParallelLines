@@ -949,12 +949,15 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
     <article ref="bodyRef" class="post-body">
       <header v-if="!hideHeader" class="post-header">
         <div class="post-author-line">
+          <!-- 楼主头像及时加载；回复列表头像随滚动加载，不改变共享头像组件默认值。 -->
           <UiAvatar
             :src="resolveApiAssetUrl(post.authorAvatarUrl)"
             :name="post.authorName"
             :role="post.authorRole"
             :level="post.authorLevel"
             size="sm"
+            :loading="post.floor === 1 ? 'eager' : 'lazy'"
+            decoding="async"
           />
           <div class="post-author-copy">
             <div class="post-author-name">

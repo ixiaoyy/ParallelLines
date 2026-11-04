@@ -23,6 +23,11 @@ interface LibrarySnapshot {
 }
 
 async function openLocalCatalog(page: Page, context: BrowserContext) {
+  expect(localHost(new URL(baseURL).hostname)).toBe(true);
+  // 完整快照只用于独立核对真实卡片字段；发现页自身不得再请求全量入口。
+  const expected = await context.request.get(new URL("/api/v1/catalog", baseURL).href);
+  expect(expected.ok()).toBe(true);
+  const payload = await expected.json() as { data: CatalogPayload };
   const views: string[] = [];
   const navigations: string[] = [];
   const otherWrites: string[] = [];
@@ -53,9 +58,9 @@ async function openLocalCatalog(page: Page, context: BrowserContext) {
     }
     await route.continue();
   });
-  const catalogResponse = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/v1/catalog");
+  const catalogResponse = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/v1/catalog/overview");
   await page.goto(`${baseURL}/games`);
-  const payload = await (await catalogResponse).json() as { data: CatalogPayload };
+  await catalogResponse;
   await expect(page.locator(".catalog-card").first()).toBeVisible();
   const projects = new Map(payload.data.categories.flatMap((category) => category.projects.map((project) => ({ ...project, categoryName: category.name }))).map((project) => [project.id, project]));
   for (const href of await page.locator(".catalog-card__open").evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).href))) targets.add(href);
