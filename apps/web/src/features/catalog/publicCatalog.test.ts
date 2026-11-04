@@ -8,7 +8,7 @@ describe("公开目录请求边界", () => {
   it("允许浏览器缓存，不读取本地身份、不携带Cookie或访客头", async () => {
     const getItem = vi.fn(() => "private-token");
     vi.stubGlobal("window", { localStorage: { getItem } });
-    const fetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }));
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }));
     vi.stubGlobal("fetch", fetch);
     expect(await publicApiGet("/catalog/overview")).toEqual({ ok: true });
     const init = fetch.mock.calls[0]?.[1] as RequestInit;
@@ -18,7 +18,7 @@ describe("公开目录请求边界", () => {
     expect(getItem).not.toHaveBeenCalled();
   });
   it("省略专题与明确空专题不同；分类按真实limit和游标请求", async () => {
-    const fetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ data: {} }), { status: 200 }));
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(JSON.stringify({ data: {} }), { status: 200 }));
     vi.stubGlobal("fetch", fetch);
     await fetchCatalogOverview(undefined, 0);
     await fetchCatalogOverview([], 0);
@@ -31,7 +31,7 @@ describe("公开目录请求边界", () => {
     expect(urls[2]!.searchParams.get("priority_slugs")).toBe("first,second");
   });
   it("沿用API错误边界，不以失败的公开接口回退全量", async () => {
-    const fetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify({ error: { code: "not_found", message: "missing" } }), { status: 404 }));
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(JSON.stringify({ error: { code: "not_found", message: "missing" } }), { status: 404 }));
     vi.stubGlobal("fetch", fetch);
     await expect(fetchCatalogOverview(undefined, 0)).rejects.toMatchObject({ code: "not_found", status: 404 });
     expect(fetch).toHaveBeenCalledTimes(1);
