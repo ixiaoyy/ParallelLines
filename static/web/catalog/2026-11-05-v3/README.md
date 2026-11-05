@@ -92,3 +92,28 @@ ZType 实际开局至第一波 / 结算，但没有成功命中验证。未测�
 目录手机视口检查不等于外站手机版验收。原始加载 / 超时和失败素材记录保留，不能只报正面观察。
 所有来源和证据在：
 `C:/Users/phpxi/.codex/visualizations/2026/11/05/01a1a966-0b33-7c53-9384-b9a750ccae19/native-direct-games-release/`。
+
+## 实际生产发布与验收
+
+- 应用提交：`cbd1b4653d79a6c4fe3072a83497943529c4d773`，仅本批 11 个文件。
+- [CI 41983448279](https://github.com/ixiaoyy/ParallelLines/actions/runs/41983448279) 成功，
+  包含真实 MySQL 迁移 / 后端测试、前端 lint / 类型 / 构建与同一产物打包。
+- [Deploy 41984445272](https://github.com/ixiaoyy/ParallelLines/actions/runs/41984445272) 成功。
+  根代理实查服务器源码及 Web 运行镜像 revision 均为上述提交，API / Web 健康，worker 运行，
+  Nginx / MySQL / Redis 镜像与发布前一致，公网 `/healthz` 正常。
+- 生产 schema 已到 `0106_add_direct_game_sites`，新记录 ID 为 `239`、`240`、`241`。
+  三个准确名称 / 分类 / 单游戏直达 URL / 完整作者及主页 / external / 可见状态均回读正确，初读浏览为零。
+- 之前十二条原 ID 与其他字段、评分关联和浏览量前后核对完全保持；原九款仍隐藏。
+  Canteen 浏览 6、Dungeon 浏览 1、其余旧目标 0 均未改变。公开项目 **227→230**，恰好新增本批三个 ID。
+- 真实公共 `/catalog` 与 overview 均为 230，九隐藏目标未返回，两端搜索均无卡片。
+  新三款在电脑 / 手机分别准确出现一次，链接、作者、试玩名称与分类正确。
+- 六张真实卡片均已逐张实看：两张 `200 image/webp` 与 ZType `200 image/jpeg`，自然尺寸与清单一致，
+  实际解码和裁切正常；ZType 为 `50% 100%`，飞船 / 敌词 / 激光保留，其他图保持 `50% 50%`。
+- Tobias 一行两作品，tobspr Games 与 PhobosLab 搜索有效，两个作者 URL 正确；
+  作者作品两图真实解码。根代理已查看六张生产卡片及两端共享作者作品截图。
+- 两端 `pageerror=0`、无横向溢出，没有点击真实游戏或发产品 API 写请求；所有浏览器已关闭。
+  没有重测外站完整玩法或扫描旧首屏 / 慢图，不把目录手机视口验收说成外站手机版通过。
+
+`new-records-after.json`、旧记录前后快照与 `previous-records-preservation.json` 均在本地和生产恢复目录留存。
+实际页面 / 公开 API 证据在本次可视化 `online/production-acceptance-summary.json`、`public-api-evidence.json`。
+最终记录作为本批文档跟进提交，不重新构建或部署；实际运行应用仍以上述已验收应用提交为准。
