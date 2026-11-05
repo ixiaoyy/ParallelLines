@@ -69,4 +69,27 @@ Spectrum 还验证了 Play → New Game 菜单切换；其余只核到菜单，�
 本地快照、数据保留核验和截图位于：
 `C:/Users/phpxi/.codex/visualizations/2026/11/05/01a1a966-0b33-7c53-9384-b9a750ccae19/direct-entry-correction/`。
 
-本批 CI、部署、真实前后数据与生产页面验收将在完成后记录。
+## 生产发布与验收结果
+
+- 应用提交：`21b129bfc65340831f923de4492b4271e7722dc4`，仅本批四个文件。
+- [CI 41974057029](https://github.com/ixiaoyy/ParallelLines/actions/runs/41974057029) 成功；
+  原流水线真实 MySQL 迁移 / 后端测试与前端 lint / 类型 / 构建及同一产物打包通过。
+- [Deploy 41974795342](https://github.com/ixiaoyy/ParallelLines/actions/runs/41974795342) 成功；
+  实际发布 API、worker、Web，full-stack 与 Nginx 独立任务按范围跳过。
+- 实际服务器源码和 Web 运行镜像 revision 均为上述提交，API / Web 健康，worker 运行；
+  Nginx、MySQL、Redis 镜像与发布前一致，公网 `/healthz` 正常。
+- 真实 MySQL 当前为 `0105_catalog_direct_entries`。前后十二条全部原 ID 保留，
+  **严格只有三条目的 URL 和九条可见性改变**，其他项目字段（含时间、分类、作者、封面和排序）完全一致。
+- Canteen 浏览量 `6→6`，Dungeon `1→1`，其余目标 `0→0`；十二条用户评分 / AI 评分关联前后均为零。
+  非零评分和 AI 表保留由离线回归覆盖，不把零数据回读写成非零业务样本验证。
+- 实际公开项目 **236→227**，正好隐藏九个指定 ID，没有其他可见项目新增或消失。
+- 生产浏览器电脑 / 手机两端：九名称搜索均无卡片；三款存留项目各准确出现一条，
+  精确新 href（含 Spectrum 版本查询参数）、`target` / `rel` 正确。
+- 三张既有正式封面在真实卡片均返回 `200 image/webp` 并解码，尺寸仍为
+  `320×180`、`630×500`、`1200×800`，根代理已实看六张卡片和两端隐藏搜索空状态，裁切正常。
+- 两端 `pageerror=0`、无横向溢出，没有产品 API 写请求。未点击真实外链、制造浏览或评分，
+  未重新上传图片、重复外站试玩或扫描无关旧图片。所有隔离浏览器已关闭。
+
+`after-state.json`、`preservation-result.json` 已与前值一同保存到生产恢复目录；本地完整证据在
+可视化目录 `direct-entry-correction/online/production-acceptance-summary.json`、`public-api-evidence.json`。
+最终记录作为本批文档跟进提交，不重复构建或部署；运行应用仍以上述已验收应用提交为准。
