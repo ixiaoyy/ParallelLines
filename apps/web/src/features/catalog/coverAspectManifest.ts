@@ -238,4 +238,8 @@ export const CATALOG_COVER_ASPECTS_BY_PATH: Readonly<Record<string, number>> = {
   "/catalog/2026-11-03-v1/covers/gd-spectrum.webp": 1.777777777778,
   "/catalog/2026-11-03-v1/covers/gd-super-chicken-td.webp": 1.777777777778,
   "/catalog/2026-11-03-v1/covers/gd-super-chicken-td-optimized.webp": 1.777777777778,
+  "/catalog/2026-11-05-v1/covers/gd-helicopter-sos.webp": 1.777777777778,
+  "/catalog/2026-11-05-v1/covers/gd-rocket-racers.webp": 0.653125,
+  "/catalog/2026-11-05-v1/covers/itch-six-cats-under.webp": 1.26,
+  "/catalog/2026-11-05-v1/covers/itch-the-final-earth-2.webp": 1.5,
 };

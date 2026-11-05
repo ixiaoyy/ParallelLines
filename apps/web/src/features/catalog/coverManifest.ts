@@ -222,6 +222,11 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "gd-fungi-run": "/catalog/2026-11-03-v1/covers/gd-fungi-run.webp",
   "gd-super-chicken-td": "/catalog/2026-11-03-v1/covers/gd-super-chicken-td-optimized.webp",
   "gd-golf-adventures-2": "/catalog/2026-11-03-v1/covers/gd-golf-adventures-2.webp",
+  // 0103 外链收录复用作者正式封面与实机图，版本路径与静态上传清单一致。
+  "gd-helicopter-sos": "/catalog/2026-11-05-v1/covers/gd-helicopter-sos.webp",
+  "gd-rocket-racers": "/catalog/2026-11-05-v1/covers/gd-rocket-racers.webp",
+  "itch-six-cats-under": "/catalog/2026-11-05-v1/covers/itch-six-cats-under.webp",
+  "itch-the-final-earth-2": "/catalog/2026-11-05-v1/covers/itch-the-final-earth-2.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {

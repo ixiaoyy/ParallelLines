@@ -136,6 +136,11 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-11-03-v1/covers/gd-golf-adventures-2.webp",
     # 旧地址已有边缘缓存，压缩版本使用新文件名，避免清全局缓存或发布后继续下载旧字节。
     "catalog/2026-11-03-v1/covers/gd-super-chicken-td-optimized.webp",
+    # 0103 收录的四张正式图片先按新版本上传，再发布目录数据和前端引用。
+    "catalog/2026-11-05-v1/covers/gd-helicopter-sos.webp",
+    "catalog/2026-11-05-v1/covers/gd-rocket-racers.webp",
+    "catalog/2026-11-05-v1/covers/itch-six-cats-under.webp",
+    "catalog/2026-11-05-v1/covers/itch-the-final-earth-2.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 # 压缩后的目录装饰来自 Web public；仍用原版本目录，保留 PNG 和旧对象便于恢复。
