@@ -149,6 +149,8 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-11-05-v3/covers/yorg-io.webp",
     "catalog/2026-11-05-v3/covers/shapez-demo.webp",
     "catalog/2026-11-05-v3/covers/ztype.jpg",
+    # BIRDLAND 鸟群正式封面独立发布，署名与封面许可随前端一起公开。
+    "catalog/2026-11-05-v4/covers/birdland.jpg",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 # 压缩后的目录装饰来自 Web public；仍用原版本目录，保留 PNG 和旧对象便于恢复。

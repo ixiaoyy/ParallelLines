@@ -235,6 +235,8 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "yorg-io": "/catalog/2026-11-05-v3/covers/yorg-io.webp",
   "shapez-demo": "/catalog/2026-11-05-v3/covers/shapez-demo.webp",
   ztype: "/catalog/2026-11-05-v3/covers/ztype.jpg",
+  // 作者以 CC BY 3.0 US 发布的正式鸟群封面；公开署名见目录页脚。
+  birdland: "/catalog/2026-11-05-v4/covers/birdland.jpg",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {
