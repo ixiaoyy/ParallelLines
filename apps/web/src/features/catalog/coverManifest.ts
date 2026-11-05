@@ -227,6 +227,10 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "gd-rocket-racers": "/catalog/2026-11-05-v1/covers/gd-rocket-racers.webp",
   "itch-six-cats-under": "/catalog/2026-11-05-v1/covers/itch-six-cats-under.webp",
   "itch-the-final-earth-2": "/catalog/2026-11-05-v1/covers/itch-the-final-earth-2.webp",
+  // 0104 三款经典网页游戏使用真实游戏/教学棋盘截图，避免标题或低清图占位。
+  "choppy-orc": "/catalog/2026-11-05-v2/covers/choppy-orc.webp",
+  "0hh1": "/catalog/2026-11-05-v2/covers/0hh1.webp",
+  "0hn0": "/catalog/2026-11-05-v2/covers/0hn0.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {

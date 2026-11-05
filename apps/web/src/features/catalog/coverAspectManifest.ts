@@ -242,4 +242,7 @@ export const CATALOG_COVER_ASPECTS_BY_PATH: Readonly<Record<string, number>> = {
   "/catalog/2026-11-05-v1/covers/gd-rocket-racers.webp": 0.653125,
   "/catalog/2026-11-05-v1/covers/itch-six-cats-under.webp": 1.26,
   "/catalog/2026-11-05-v1/covers/itch-the-final-earth-2.webp": 1.5,
+  "/catalog/2026-11-05-v2/covers/choppy-orc.webp": 1.772853185596,
+  "/catalog/2026-11-05-v2/covers/0hh1.webp": 1,
+  "/catalog/2026-11-05-v2/covers/0hn0.webp": 1,
 };
