@@ -284,4 +284,3 @@ for (const viewport of [
     });
   });
 }
-

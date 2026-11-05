@@ -84,4 +84,34 @@ Choppy Orc 官网另署美术 `0×72`、`Adam Saltsman`；音乐为 `Rolemusic` 
 
 三张 v2 图片上传前均确认为不存在的新对象，现已实际上传并存储回读通过；公开 GET 全部为
 `200 image/webp`，字节与本地一致且可解码，没有覆盖旧对象或清缓存。
-这些检查不代替上线后的真实目录验收；本批 CI、部署、生产 MySQL 和页面结果完成后另记。
+这些检查不代替上线后的真实目录验收。
+
+## 生产发布记录
+
+- 应用提交：`f53d66a0cec5685b8f12d448f8ea099ccd1ae004`，仅本批 10 个文件。
+- [CI 41958065830](https://github.com/ixiaoyy/ParallelLines/actions/runs/41958065830) 成功：
+  后端真实 MySQL 迁移、Pytest、OpenAPI，以及前端 lint、类型检查、构建与同一构建产物打包通过。
+- [Deploy 41958779149](https://github.com/ixiaoyy/ParallelLines/actions/runs/41958779149) 成功：
+  实际发布 API、worker、Web，full-stack / Nginx 独立任务按范围跳过。
+- 根代理实际核对源码与 Web 运行镜像 revision 为上述提交，API / Web 健康，worker 运行；
+  Nginx、MySQL、Redis 镜像与发布前一致，公网 `/healthz` 为 `200`。
+- 生产 MySQL 已到 `0104_add_classic_web_games`，三条可见外链记录 ID 为 `236`、`237`、`238`，
+  名称、分类、准确入口、完整作者字段及 Q42 共用作者 URL 均回读通过。未创建评分或测试浏览数据。
+- Choppy 简介收窄为已有证据支持的投斧，精确资料用例定向 1 passed，其余 14 项沿用未变合同证据。
+- 本批新 smoke 末尾额外空白行仅作格式清理，断言与执行逻辑不变；收尾提交与最终记录一起交付，
+  不重复测试或重新部署服务。实际应用版本仍以上述提交为准。
+
+生产浏览器电脑 1280×900、手机 390×844 的本批验收通过：
+
+- 每款精确名称搜索只出现一条，准确外链、`target=_blank`、`rel` 正确。
+- 三张真实卡片全部读取 v2 正式地址，实际响应 `200 image/webp`，自然尺寸与清单一致且可解码；
+  根代理已逐张查看六张真实卡片，游戏内容及裁切正常，没有用本地响应替换真实 API 或图片。
+- eddynardo / Q42 作者链接正确，Q42 仅一行两作品，Martin Kool 搜索与两款作者作品集合通过。
+  作者作品两图已在电脑 / 手机实际解码显示，采用补拍后的 `q42-production-works-decoded-*` 截图，
+  保留原先加载瞬间截图，不以其空白状态作为完成证据。
+- 两端 `pageerror=0`，无横向溢出，没有产品 API 写请求；不点击真实游戏打开计数或评分。
+- 本次只检查新增三款及其作者，不重复扫描上批已独立记录的旧图片加载问题。
+
+完整证据保存在可视化目录 `next-web-games/online/production-acceptance-summary.json` 与六张
+`*-production-card-{desktop,mobile}.png`，根代理已实看卡片与最终作者作品截图，所有隔离浏览器已关闭。
+收尾格式修复后的 diff 空白检查通过，本地与外站试玩范围仍遵守上文限制。
