@@ -13,6 +13,8 @@
 .catalog-card__open { display: block; position: absolute; inset: 0; border-radius: inherit; color: inherit; text-decoration: none; }
 .catalog-card__cover { display: block; position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
 .catalog-card__cover img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 220ms ease; }
+// 这张正式实机图的玩家飞船靠近底边；仅定位该素材，避免横卡裁掉主体，其他封面保持默认。
+.catalog-card__cover img[src$="/catalog/2026-11-05-v3/covers/ztype.jpg"] { object-position: center bottom; }
 .catalog-card__missing { display: grid; height: 100%; place-items: center; padding: 12px; color: var(--catalog-ink); }
 .catalog-card__mobile-name, .catalog-card__play { display: none; }
 .catalog-card__details {

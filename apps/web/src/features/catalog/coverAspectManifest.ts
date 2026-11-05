@@ -245,4 +245,7 @@ export const CATALOG_COVER_ASPECTS_BY_PATH: Readonly<Record<string, number>> = {
   "/catalog/2026-11-05-v2/covers/choppy-orc.webp": 1.772853185596,
   "/catalog/2026-11-05-v2/covers/0hh1.webp": 1,
   "/catalog/2026-11-05-v2/covers/0hn0.webp": 1,
+  "/catalog/2026-11-05-v3/covers/yorg-io.webp": 2.89592760181,
+  "/catalog/2026-11-05-v3/covers/shapez-demo.webp": 1.2375,
+  "/catalog/2026-11-05-v3/covers/ztype.jpg": 1.505376344086,
 };

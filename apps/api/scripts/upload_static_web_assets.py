@@ -145,6 +145,10 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-11-05-v2/covers/choppy-orc.webp",
     "catalog/2026-11-05-v2/covers/0hh1.webp",
     "catalog/2026-11-05-v2/covers/0hn0.webp",
+    # 0106三款单游戏直站的正式封面先上传新版本，不覆盖之前隐藏项目的旧图。
+    "catalog/2026-11-05-v3/covers/yorg-io.webp",
+    "catalog/2026-11-05-v3/covers/shapez-demo.webp",
+    "catalog/2026-11-05-v3/covers/ztype.jpg",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 # 压缩后的目录装饰来自 Web public；仍用原版本目录，保留 PNG 和旧对象便于恢复。
@@ -240,7 +244,11 @@ STATIC_ASSETS = (
     StaticAsset(
         source=f"static/web/{key}",
         key=key,
-        media_type="image/svg+xml" if key.endswith(".svg") else "image/webp",
+        # 原JPEG小于无损WebP时保留编码；既有SVG和WebP发布类型保持不变。
+        media_type=(
+            "image/svg+xml" if key.endswith(".svg") else
+            "image/jpeg" if key.endswith(".jpg") else "image/webp"
+        ),
     )
     for key in CATALOG_ASSET_KEYS
 ) + tuple(

@@ -231,6 +231,10 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "choppy-orc": "/catalog/2026-11-05-v2/covers/choppy-orc.webp",
   "0hh1": "/catalog/2026-11-05-v2/covers/0hh1.webp",
   "0hn0": "/catalog/2026-11-05-v2/covers/0hn0.webp",
+  // 0106 使用作者原版宣传图与实际试玩画面；ZType保留更小的原始JPEG，非平台页截图。
+  "yorg-io": "/catalog/2026-11-05-v3/covers/yorg-io.webp",
+  "shapez-demo": "/catalog/2026-11-05-v3/covers/shapez-demo.webp",
+  ztype: "/catalog/2026-11-05-v3/covers/ztype.jpg",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {
