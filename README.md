@@ -61,6 +61,8 @@ pnpm dev:web
 
 ## 检查与部署
 
+站内游戏的目录、图片 CDN、数据迁移、分阶段发布及验收要求见 [站内游戏开发与部署规范](docs/INTERNAL_GAME_DEVELOPMENT_DEPLOYMENT.md)。开始此类任务前先读项目 `AGENTS.md` 和该文档，不把本地完成当成已经上线。
+
 ```powershell
 pnpm typecheck:web
 pnpm lint:web

@@ -1,0 +1,66 @@
+{
+  "446": {
+    "name": "detective24",
+    "body": "<% s.melancholyup -=1 %>你：这只不过是简单的逻辑推理罢了。当你排除了所有错误的答案，剩下的唯一可能，自然就是正确答案。走吧，我想我们在这儿的工作已经完成了。\n\n<%= display(\"detective6\") %>"
+  },
+  "447": {
+    "name": "detective25",
+    "body": "<% s.vigilanceup += 1 %>你：靠直觉，老兄。一名优秀的侦探总是懂得顺着自己的鼻子追查线索。\n\n<% if (s.pirate27) { %> 助手：就像海盗那样吗？\n\n你：哈？\n\n助手：请忘掉我刚才说的那句话。那无关紧要。\n\n你：哦。好吧……我呃，我想是时候告辞了。<% } else { %> 助手：一种基于嗅觉的破案方案。\n\n你：正是如此。我想是时候告辞了。<% } %>\n\n<%= display(\"detective6\") %>\t"
+  },
+  "448": {
+    "name": "detective26",
+    "body": "<% s.alacrityup += 1 %>你：纯粹靠运气，老伙计。我撞大运了。只不过我恰好足够机灵，能在恰当的时机撞上大运罢了。走吧，我想我们在这儿的工作已经完成了。\n\n<%= display(\"detective6\") %>"
+  },
+  "449": {
+    "name": "detective27",
+    "body": "你：就问到这里吧，夫人。谢谢配合。在我的调查结束之前，请不要离开这个房间。\n\n公爵夫人：我绝不会离开我丈夫的身边，无论他的躯体是否已经成为一具没有生命的尸体。离开他所带来的痛苦是我无法承受的。\n\n<%= display(\"detective29\") %>"
+  },
+  "450": {
+    "name": "detective29",
+    "body": "<% if (!s.detective13) { %>* [[问询公爵夫人。|detective13]]\n<% } %><% if (!s.detective15) { %>* [[问询二流子少爷。|detective15]]\n<% } %><% if (!s.detective14) { %>* [[问询上校。|detective14]]\n<% } %><% if (!s.detective16) { %>* [[问询管家。|detective16]]\n<% } %><% if (!s.detective28) { %>* [[勘查案发现场。|detective28]]\n<% } %>* [[detective17<-指认凶手。]]"
+  },
+  "451": {
+    "name": "detective28",
+    "body": "<% s.serenityup += 1; s.detective28 = true %>*(你仔细勘查了案发现场。你找到了一条手帕、一枚象牙国际象棋棋子，以及一把带血的刀。)*\n\n* [[detective48<-对手帕使用带血的刀。]]\n* [[detective49<-对国际象棋棋子使用手帕。]]\n* [[detective50<-对带血的刀使用国际象棋棋子。]]"
+  },
+  "452": {
+    "name": "detective30",
+    "body": "<% s.detective30 = true %>你：跟我说说你的丈夫吧。他生前是个怎样的人？\n\n公爵夫人：他是个极其善良的男人。我对他产生了名为“爱”的人类情感，这也是促成我们婚姻的若干因素之一。此外，他身高一百八十一厘米，头发呈灰色，被分配的性别为男性。\n\n* [[detective32<-你能详细说说那一点吗？]]\n<% if (!s.detective31) { %>* [[谋杀案发生时你就在这里吗？|detective31]]\n<% } %><% if (!s.detective36) { %>* [[所以你并不希望他死。|detective36]]\n<% } %>* <a href=\"javascript:void(0)\" data-passage=\"detective27\">就问到这里吧。</a>"
+  },
+  "453": {
+    "name": "detective31",
+    "body": "<% s.detective31 = true %>你：凶案发生的时候，你真的就在这间屋子里吗？\n\n公爵夫人：我怎么会知道这起谋杀案是在什么时间发生的呢？作为一个并非凶手的人，我无权获取那项信息。\n\n你：但受害者还活着的时候，你肯定在场吧？\n\n公爵夫人：自然在场。像我这样地位尊贵的女性，若非丈夫本人在场且处于存活状态，是绝不会在会客室里消磨任何时间的。\n\n你：而现在受害者死了，你也在这里。\n\n公爵夫人：我在。\n\n你：而且在这期间你一步也没有离开过？\n\n公爵夫人：我当然没有离开过。但我看不出这与谋杀案有什么关系。\n\n<% if (!s.detective30) { %>* [[跟我说说你的丈夫吧。|detective30]]\n<% } %><% if (!s.detective38) { %>* [[你能想到有谁希望你丈夫死吗？|detective38]]\n<% } %>* <a href=\"javascript:void(0)\" data-passage=\"detective27\">就问到这里吧。</a>"
+  },
+  "454": {
+    "name": "detective32",
+    "body": "你：你能详细说说那一点吗？\n\n公爵夫人：当然可以。作为男性性别的一员，他通常被以男性代词来指代。\n\n你：我指的是关于“爱”的那部分。\n\n公爵夫人：啊，是的。爱。爱是一种情感。当多名个体同时向彼此回馈这种情感时，他们就会被称为“坠入爱河”。不过需要指出的是，此种情境下的“爱”依然是一个无形的概念，并不会——像这种不够精确的人类语言所暗示的那样——转化为某种可供人浸入其中的液态物质。\n\n你：那么你和你丈夫是相爱的啰？\n\n公爵夫人：是的。我们生前正处于上述状态之中。\n\n<% if (!s.detective36) { %>* [[所以你并不希望他死。|detective36]]\n<% } %><% if (!s.detective31) { %>* [[谋杀案发生时你就在这里吗？|detective31]]\n<% } %><% if (!s.detective38) { %>* [[你能想到有谁希望你丈夫死吗？|detective38]]\n<% } %>* <a href=\"javascript:void(0)\" data-passage=\"detective27\">就问到这里吧。</a>"
+  },
+  "455": {
+    "name": "detective33",
+    "body": "你：你丈夫被杀，你是最大的受益人，对吧？他的巨额财产现在全都归你了。\n\n公爵夫人：我们原本就已经在彼此之间自由共享所有积累的财富了。我在财务层面上没有任何未获满足的欲望。\n\n* [[detective35<-但前提是你们还维持着婚姻关系。]]\n* [[detective34<-那其他层面的欲望呢？]]\n<% if (!s.detective36) { %>* [[所以你并不希望他死。|detective36]]\n<% } %>* <a href=\"javascript:void(0)\" data-passage=\"detective27\">就问到这里吧。</a>"
+  },
+  "456": {
+    "name": "detective34",
+    "body": "你：那*非*财务层面的欲望呢？\n\n公爵夫人：我不明白你的意思。请详细说明。\n\n你：你的丈夫……能让你满足吗？\n\n公爵夫人：是的，我对丈夫的各项行为均报告为“满意”。\n\n<% if (!s.detective68) { %>* [[你就从来没有动过心吗？|detective68]]\n<% } %><% if (!s.detective36) { %>* [[所以你并不希望他死。|detective36]]\n<% } %><% if (!s.detective31) { %>* [[谋杀案发生时你就在这里吗？|detective31]]\n<% } %><% if (!s.detective38) { %>* [[你能想到有谁希望你丈夫死吗？|detective38]]\n<% } %>* <a href=\"javascript:void(0)\" data-passage=\"detective27\">就问到这里吧。</a>"
+  },
+  "457": {
+    "name": "detective35",
+    "body": "<% s.melancholyup -=1 %>你：但前提是你们还维持着婚姻关系。如果你们哪天分手了……\n\n公爵夫人：我没有任何终结我们婚姻关系的意愿。婚姻使我维持在幸福的状态之中。而现在我已不再处于该状态。这是一起极其悲惨的事件。\n\n<% if (!s.detective36) { %>* [[所以你并不希望他死。|detective36]]\n<% } %><% if (!s.detective31) { %>* [[谋杀案发生时你就在这里吗？|detective31]]\n<% } %><% if (!s.detective38) { %>* [[你能想到有谁希望你丈夫死吗？|detective38]]\n<% } %><% if (!s.detective37) { %>* [[你看起来非常难过。|detective37]]\n<% } %>* <a href=\"javascript:void(0)\" data-passage=\"detective27\">就问到这里吧。</a>"
+  },
+  "458": {
+    "name": "detective36",
+    "body": "<% s.detective36 = true %>你：所以你并不希望他死。\n\n公爵夫人：我没有任何想要终结我丈夫生命的意愿。我希望他存活下去。我的偏好是让他永远活下去、永不向死亡屈服，尽管那是一件不可能实现的事。\n\n<% if (!s.detective33) { %>* [[你丈夫的死能让你从中获利。|detective33]]\n<% } %><% if (!s.detective31) { %>* [[谋杀案发生时你就在这里吗？|detective31]]\n<% } %><% if (!s.detective38) { %>* [[你能想到有谁希望你丈夫死吗？|detective38]]\n<% } %>* <a href=\"javascript:void(0)\" data-passage=\"detective27\">就问到这里吧。</a>"
+  },
+  "459": {
+    "name": "detective37",
+    "body": "<% s.serenityup += 1; s.detective37 = true %>你：你看起来非常难过。\n\n公爵夫人：当然。如果你的丈夫不幸身亡，难道你不会如此难过吗？\n\n你：我倒不觉得自己像是那种会找个丈夫结婚的人。\n\n公爵夫人：好吧，我可以向你保证，以这种方式失去丈夫是极其令人难过的。这是我记忆中最悲惨的一天。这一事件给我带来的悲伤，超过了我一生中所经历过的任何其他事情。\n\n<% if (!s.detective36) { %>* [[所以你并不希望他死。|detective36]]\n<% } %><% if (!s.detective31) { %>* [[谋杀案发生时你就在这里吗？|detective31]]\n<% } %><% if (!s.detective30) { %>* [[跟我说说你的丈夫吧。|detective30]]\n<% } %><% if (!s.detective38) { %>* [[你能想到有谁希望你丈夫死吗？|detective38]]\n<% } %>* <a href=\"javascript:void(0)\" data-passage=\"detective27\">就问到这里吧。</a>"
+  },
+  "460": {
+    "name": "detective38",
+    "body": "<% s.detective38 = true %>你：你能想到有谁可能希望你丈夫死吗？\n\n公爵夫人：我只能想到三个这样的人：上校、管家，以及我们的二流子少爷。他们三个都嫉妒他的财富，并企图将其据为己有。\n\n你：我跟你说，夫人。你真觉得他们会为此诉诸谋杀吗？\n\n公爵夫人：在我与这三名个体相识的所有时间里，他们中没有一个人曾明确表态过自己会拒绝谋杀我的丈夫。关于这个问题，我只能说这么多。\n\n<% if (!s.detective31) { %>* [[谋杀案发生时你就在这里吗？|detective31]]\n<% } %>* <a href=\"javascript:void(0)\" data-passage=\"detective27\">就问到这里吧。</a>"
+  },
+  "461": {
+    "name": "music-start",
+    "body": "<% dreamstart() %>\n[\n<%= display(\"music-portrait\") %>\n]{.delay1s}\n\n\n**那天夜里……**\n\n[\n<%= display(\"music1\") %>\n]{.delay1s}\n<% autosave() %>"
+  }
+}

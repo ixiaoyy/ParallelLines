@@ -1,0 +1,70 @@
+{
+  "543": {
+    "name": "crush29",
+    "body": "你：……内森？\n\n*(贝尔挑起一边眉毛。)*\n\n泰勒·M：哇哦！内森？真的假的？\n\n泰勒·C：为什么是*内森*啊？\n\n* [[crush8<-他……挺帅的？]]\n* [[crush9<-他……挺聪明的？]]\n* [[crush10<-他……挺风趣的？]]\n* [[crush11<-他，呃，简直完美无缺嘛。]]"
+  },
+  "544": {
+    "name": "bell27",
+    "body": "<% s.bell27 = true %>*(你使劲抓紧了绳子。)*\n\n贝尔：漂亮！你抓稳了！\n\n你：噢！太棒了！\n\n*(你感觉绳子又绷紧了。)*\n\n你：呃，我现在该放松一点还是抓紧一点？？\n\n贝尔：现在稍微放松一点！\n\n*(你稍微松了松手，绳子“嗖”的一下从你手里抽了出去。在出什么岔子之前，贝尔伸手一把抓住了它。)*\n\n贝尔：放得太松啦。\n\n你：呃啊啊啊啊……\n\n贝尔：没事的！在你松手之前，你做得非常棒。\n\n你：真的吗？\n\n<%= display(\"bell11\") %>"
+  },
+  "545": {
+    "name": "bell28",
+    "body": "*(你一慌神，松开了绳子。)*\n\n你：噢，天哪！\n\n*(在出什么岔子之前，贝尔伸手一把抢过了绳子。)*\n\n贝尔：好吧，这稍微放得太松了一点。\n\n你：呃啊啊啊啊……\n\n贝尔：没事的！在你松手之前，你做得挺好的。\n\n你：真的吗？\n\n<%= display(\"bell11\") %>"
+  },
+  "546": {
+    "name": "boystuff7",
+    "body": "*(你在水里漂了一会儿，漫无目的地来回游着。)*\n\nTJ·游泳：布里奇特！\n\n*(你抬头望向救生椅。)*\n\nTJ·游泳：拿出热情来！\n\n*(你点点头，游得稍微卖力了一些。)*\n\nTJ·游泳：这就对了嘛。\n\n你：好啦！我，呃，我想我现在要上岸了！\n\nTJ·游泳：*(往后一靠)* 只要你充满热情地上岸就行。\n\n* [[boystuff1<-从水里出来。]]"
+  },
+  "547": {
+    "name": "boystuff8",
+    "body": "<script>\ntimeunderwater = 0;\nboystuffidlist = [\"#boystuff8a1\",\"#boystuff8a2\",\"#boystuff8a3\",\"#boystuff8a4\",\"#boystuff8a5\",\".boystuffb\",\"#boystuff8b1\",\"#boystuff8b2\",\"#boystuff8b3\",\"#boystuff8b4\",\".boystuffc\",\"#boystuff8c1\",\"#boystuff8c2\",\"#boystuff8c3\",\"#boystuff8c4\",\".boystuffd\",\"#boystuff8d1\",\"#boystuff8d2\"];\nvar underwaterloop = setInterval(function() {\n\t$(boystuffidlist[timeunderwater]).fadeTo(400,1);\n\tif (timeunderwater < boystuffidlist.length) { timeunderwater += 1; }\n\telse { \n\t\t$(\".boystuff8e\").hide();\n \t\t$(\".boystuff10a\").fadeTo(400,1);\n\t\tclearInterval(underwaterloop);\n\t}\n\tif (timeunderwater === 3) {\t$(\".boystuff8e\").fadeTo(400,1); }\n\tif (timeunderwater > 14) { story.state.breath = true };\n\t},1000);\n\n$(\"#boystuff8link\").click(function() {\n\t$(\".boystuff8e\").hide()\n\tif (story.state.breath) { $(\".boystuff10a\").fadeTo(400,1) }\n\telse { $(\".boystuff10b\").fadeTo(400,1) }\n\tclearInterval(underwaterloop);\n});\n\n</script>\n\n*(你深吸一口气，然后潜入水下。[1……]{-#boystuff8a1} [2……]{-#boystuff8a2} [3……]{-#boystuff8a3} [4……]{-#boystuff8a4} [5……]{-#boystuff8a5})*\n\n<p class=\"hide boystuffb\">你：唔。</p>\n\n<p class=\"hide boystuffb\">*(你睁开眼睛。6…… [7……]{-#boystuff8b1} [8……]{-#boystuff8b2} [9……]{-#boystuff8b3} [10……]{-#boystuff8b4})*</p>\n\n<p class=\"hide boystuffc\">你：唔咕唔。</p>\n\n<p class=\"hide boystuffc\">*(几个气泡从你嘴里冒了出来。11…… [12……]{-#boystuff8c1} [13……]{-#boystuff8c2} [14……]{-#boystuff8c3} [15……]{-#boystuff8c4})*</p>\n\n<p class=\"hide boystuffd\">你：呼咕咕。</p>\n\n<p class=\"hide boystuffd\">*(越来越多的气泡冒了出来。16…… [17……]{-#boystuff8d1} [18……]{-#boystuff8d2})*</p>\n\n<ul class=\"hide boystuff8e\">\n<li><a href=\"javascript:void(0)\" id=\"boystuff8link\">浮出水面换气。</a></li>\n</ul>\n\n<%= display(\"boystuff10\") %>"
+  },
+  "548": {
+    "name": "boystuff9",
+    "body": "<% s.boystuff9 = true %>*(你走到码头边缘的跳水塔旁。你把手搭在梯子上，抬头向上望去。它可真高。就连低跳板看起来都相当高。你从梯子旁退开，结果撞上了麦肯齐。)*\n\n你：哎呀！\n\n麦肯齐：抱歉！你要上去吗？\n\n*(你又抬头看了一眼。)*\n\n你：噢，呃……不了。你先请吧。\n\n麦肯齐：你确定？\n\n你：确定。我现在不太想跳水。\n\n*(仿佛是为了证明这一事实，你在码头边缘坐下，慢慢滑回了水里。)*\n\n麦肯齐：好吧！回见。\n\n*(你挥了挥手。)*\n\n* [[boystuff1<-在水里游上一会儿。]]"
+  },
+  "549": {
+    "name": "beach27",
+    "body": "你：别这么说。你又不是……故意要刻薄待人什么的。\n\n贝尔：我知道，但像那样硬要从别人嘴里撬出话来，依然是个挺混蛋的做法。我又不是看不出你不想谈这件事，我真该适可而止的。对不起。\n\n你：唔……谢谢你。\n\n*(她捏了捏你的手。)*\n\n你：所以，呃……你刚才是认真的吗？关于保留秘密也没关系那件事？这话从侦探嘴里说出来感觉怪怪的。\n\n贝尔：我猜你的秘密应该不涉及什么保险诈骗或者盗窃历史文物之类的吧？\n\n*(你摇了摇头。)*\n\n贝尔：对嘛。那就不归我管啦。每个人都有权保留自己的私事。\n\n你：太好了。这……听你这么说我真高兴。\n\n贝尔：*(体贴地笑了笑)* 现在我们大概得合计一下，等内森过来找你说话的时候，你该跟他说些什么了。\n\n* [[beach36<-说到这个……]]"
+  },
+  "550": {
+    "name": "beach28",
+    "body": "你：你有什么好道歉的呀？\n\n贝尔：我对你用了我那套愚蠢的测谎把戏。就好像你是个嫌犯或者骗子似的。\n\n你：没关系的。*(你露出一丝淡淡的苦笑。)* <% if (s.bell26) { %> 你确实提前警告过我，你不擅长正常的闲聊嘛。 <% } else { %> 这大概……就是你的职业习惯吧。 <% } %>\n\n*(她摇了摇头。)*\n\n<% if (s.bell26) { %> 贝尔：平时没这么糟的。 <% } else { %> 贝尔：平时不会这样的。我是说，在普通人面前不会这样。 <% } %> 你只是勾起了我的好奇心，让我有点得意忘形了。有时候我实在太想查清真相了……\n\n*(她捏了捏你的手。)*\n\n贝尔：对不起，那样对待你。你又不是嫌疑人。\n\n你：唔，至少这让我松了口气。\n\n贝尔：好啦，现在我们大概得合计一下，等内森过来找你说话的时候，你该跟他说些什么了。\n\n* [[beach36<-说到这个……]]"
+  },
+  "551": {
+    "name": "beach36",
+    "body": "你：呃……他已经来找过我了……\n\n贝尔：噢，天哪。我猜进展得不太顺利？\n\n你：你猜对了。\n\n贝尔：哎呀。\n\n你：他拒绝了我。而且摆出了一副人类所能达到的最臭屁的嘴脸。\n\n贝尔：那也太糟心了。\n\n<% if (s.nathan6) { %> 你：我觉得自己像个白痴。我一直试图向他解释我其实根本不喜欢他，但他当然不信。\n\n贝尔：嘿，往好处想，情况本来可能更糟呢。万一你真的想跟这家伙约会呢。 <% } else if (s.nathan7) { %> 你：我觉得自己像个白痴。我一直试图向他解释我其实根本不喜欢他，但他当然不信。然后我就彻底抓狂了，场面变得……呃啊。\n\n贝尔：我是说，换个角度想嘛。情况本来可能更糟的，对吧？万一你真的想跟这家伙约会呢。 <% } else { %> 你：我觉得自己像个白痴。我不得不站在那儿，*假装*自己很伤心。\n\n贝尔：情况本来可能更糟呢。你的心本来可能会*真的*受伤的。 <% } %>\n\n* [[beach12<-也是吧。]]\n* [[beach13<-算是一点小小的安慰吧。]]\n<% if (s.nathan6 || s.nathan7) { %>* [[那可不太可能。|beach34]] <% } %>"
+  },
+  "552": {
+    "name": "whatisart12",
+    "body": "<%= display(\"whatisart19\") %>\n\n麦肯齐：我喜欢这幅画！感觉很舒缓。*(她眯起眼睛。)* 它为什么戴着一顶牛仔帽？\n\n你：我也不知道。大概它是一只牛仔鸟？怪傻气的。\n\n<%= display(\"whatisart11\") %>"
+  },
+  "553": {
+    "name": "whatisart13",
+    "body": "<%= display(\"whatisart19\") %>\n\n麦肯齐：我喜欢这幅画！特别欢快。*(她眯起眼睛。)* 它为什么戴着一顶海盗帽？\n\n你：说不好。大概它是一只海盗鸟，而这片湖对鸟来说就相当于大海？……现在我把这话大声说出来，感觉好像有点说不通。\n\n<%= display(\"whatisart11\") %>"
+  },
+  "554": {
+    "name": "whatisart14",
+    "body": "<%= display(\"whatisart19\") %>\n\n麦肯齐：我喜欢这幅画！感觉它像是在守卫整片森林。*(她眯起眼睛。)* 它为什么戴着一顶小小的曲棍球头盔？\n\n你：老实说我完全不知道。就是觉得给小鸟戴上这个会挺可爱的？\n\n<%= display(\"whatisart11\") %>"
+  },
+  "555": {
+    "name": "whatisart15",
+    "body": "<%= display(\"whatisart19\") %>\n\n麦肯齐：我喜欢这幅画！很有感染力。*(她眯起眼睛。)* 它是栖息在一个麦克风上吗？\n\n你：对。我猜这对小鸟来说还挺搭的？毕竟小鸟爱唱歌什么的嘛。我也不知道，挺蠢的。\n\n<%= display(\"whatisart11\") %>"
+  },
+  "556": {
+    "name": "whatisart16",
+    "body": "<%= display(\"whatisart19\") %>\n\n麦肯齐：我喜欢这幅画！透着一股非常坚定的气场。*(她眯起眼睛。)* 它为什么戴着一顶福尔摩斯帽？\n\n你：我也不知道。大概我最近满脑子都是侦探的事？我猜这种概念混搭确实怪怪的。\n\n<%= display(\"whatisart11\") %>"
+  },
+  "557": {
+    "name": "whatisart17",
+    "body": "<%= display(\"whatisart19\") %>\n\n麦肯齐：我喜欢这幅画！看起来它在上面憋着什么坏点子呢。*(她眯起眼睛。)* 它穿的是一件小小的校队夹克吗？\n\n你：对。我猜它大概是在……上鸟类大学？\n\n<%= display(\"whatisart11\") %>"
+  },
+  "558": {
+    "name": "whatisart18",
+    "body": "*(麦肯齐走过来，从你肩头探头看了看。)*\n\n麦肯齐：噢，透着一股不祥的气息。\n\n*(你低头盯着画纸。)*\n\n你：不祥？真的吗？\n\n麦肯齐：绝对是。至少很有山雨欲来的感觉。\n\n你：天哪……我画的时候倒没*觉得*有什么不祥的。\n\n麦肯齐：唔……跟我说说，布里奇特。你是个会受梦境困扰的人吗？\n\n* [[whatisart10<-也算不上困扰吧……]]\n* <%= melancholylink(\"经你这么一提……\",\"whatisart7\",2) %>\n* <%= guilelink(\"不，当然不是。这想法太荒谬了。\",\"whatisart8\",2) %>"
+  },
+  "559": {
+    "name": "whatisart19",
+    "body": "*(你坐下来开始画画。过了一会儿，麦肯齐走过来，从你肩头探头看了看。)*\n\n麦肯齐：这只鸟画得真不错。\n\n你：谢谢。画得也没那么好啦。"
+  }
+}

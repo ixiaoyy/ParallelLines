@@ -1,0 +1,30 @@
+{
+  "484": {
+    "name": "music20",
+    "body": "<script>\nstory.state.serenityup -= 1;\nstory.state.tenacityup += 1;\n\n$(\"#music20alink\").click(function() {\n\t$(\"#music20a\").show()\n\t$(\"#music20alink\").hide()\n\t$(\"#music20blink\").show()\n}); \n$(\"#music20blink\").click(function() {\n\t$(\"#music20b\").show()\n\t$(\"#music20blink\").hide()\n\t$(\"#music20clink\").show()\n}); \n$(\"#music20clink\").click(function() {\n\t$(\"#music20c\").show()\n\t$(\"#music20clink\").hide()\n\t$(\"#music20dlink\").show()\n}); \n$(\"#music20dlink\").click(function() {\n\t$(\"#music20d\").show()\n\t$(\"#music20dlink\").hide()\n\t$(\"#music20elink\").show()\n}); \n$(\"#music20elink\").click(function() {\n\t$(\"#music20e\").show()\n\t$(\"#music20elink\").hide()\n\t$(\"#music20flink\").show()\n}); \n$(\"#music20flink\").click(function() {\n\t$(\"#music20f\").show()\n\t$(\"#music20flink\").hide()\n\t$(\"#music20glink\").show()\n}); \n$(\"#music20glink\").click(function() {\n\t$(\"#music20g\").show()\n\t$(\".music20h\").fadeTo(400,1)\n\t$(\"#music20glink\").hide()\n\t$(\".music13\").fadeTo(400,1)\n}); \n</script>\n\n你：……《恨》。这是一首关于我自己的歌。\n\n♪ 我恨我自己  \n我恨我自己   \n我恨我这该死的自己  \n恨，恨，恨，恨  \n恨，恨，恨，恨，恨\n\n[操]{-#music20a}<a href=\"javascript:void(0)\" id=\"music20alink\">操</a>  \n[该死的]{-#music20b}<a href=\"javascript:void(0)\" class=\"hide\" id=\"music20blink\">该死的</a>  \n[混账东西]{-#music20c}<a href=\"javascript:void(0)\" class=\"hide\" id=\"music20clink\">混账东西</a>  \n[我是最差劲的]{-#music20d}<a href=\"javascript:void(0)\" class=\"hide\" id=\"music20dlink\">我是最差劲的</a>  \n[人，在这整个]{-#music20e}<a href=\"javascript:void(0)\" class=\"hide\" id=\"music20elink\">人，在这整个</a>  \n[地球上]{-#music20f}<a href=\"javascript:void(0)\" class=\"hide\" id=\"music20flink\">地球上</a>  \n[啊啊啊啊啊]{-#music20g}<a href=\"javascript:void(0)\" class=\"hide\" id=\"music20glink\">啊啊啊啊啊</a>\n\n<p class=\"hide music20h\">恨————————————————</p>\n\n<p class=\"hide music20h\">*(长达十分钟、刺耳嘈杂的架子鼓独奏。)*</p>\n\n<p class=\"hide music20h\">啊啊啊啊啊啊啊啊啊啊啊啊 ♫</p>\n\n<%= display(\"music13\") %>"
+  },
+  "485": {
+    "name": "music21",
+    "body": "<% s.guileup -=1 %>你：……《主待我恩重如山》。我知道你们大家都会唱这首，所以尽管跟着一起唱吧。\n\n♪ 噢——————主待我恩重如山  \n（恩重如山！）  \n所以我感谢主  \n（感谢主！）  \n赐予我所需的一切  \n哒哒哒哒还有苹果籽  \n噢，主待我恩重如山。 ♫\n\n观众群：阿门。\n\n你：好啦，今晚我们还有最后一首歌要献给大家。这首歌叫……\n\n* [[music18<-《我心中的谎言》]]\n* [[music19<-《宣泄出来》]]\n* [[music20<-《恨》]]"
+  },
+  "486": {
+    "name": "music22",
+    "body": "*(你走下舞台。舞台监督递给你一瓶水，你一口气喝了个精光。)*\n\n克莱门汀·克里维：*(不知为何出现在后台)* 嘿，刚才那场演得太棒了。\n\n你：谢啦。\n\n*(樱桃糖霜乐队的其他成员也纷纷附和，拍了拍你的背。)*\n\n经纪人：我觉得这种行为令人费解。你已经结束了你的演出，但观众依然留在座位上。\n\n你：对啊，这叫安可（返场）。你先下台待一会儿，然后再走出去多演一两首歌。\n\n经纪人：那么这种行为的目的是什么？这难道不是一种低效的音乐传输模式吗？\n\n你：这是个……好问题。\n\n台下观众：*(异口同声)* 我们请求返场演出。我们请求返场演出。\n\n你：到我出场的时候了。回见，老兄。\n\n* [[music5<-回到舞台上。]]"
+  },
+  "487": {
+    "name": "music13",
+    "body": "<p class=\"music13 hide\">*(台下观众鼓掌。)*</p>\n\n<p class=\"music13 hide\">你：谢谢大家！你们真是太棒的观众了！晚安！</p>\n\n<ul>\n<li class=\"music13 hide\">[[music22<-走下舞台。]]</li>\n</ul>"
+  },
+  "488": {
+    "name": "pirate6",
+    "body": "<% s.melancholyup += 1;\ns.tarotorder = _.sample(_.shuffle([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]), 3);\ns.tarotcards = [\"厄运的无知者。对于严重颅脑损伤的恐惧将被证明是毫无根据的。\", \"幻术表演者。在全方位的欺骗之中，强烈的情感联结将提供明晰的认知。\", \"女性宗教领袖。你对一位密友的信任将使你得以完成一项艰巨的任务。\", \"女性政治领袖。你将导致一名敌人掉进湖中。\", \"男性政治领袖。你对某位权威人物一成不变的信任将被证明是不明智的。\", \"男性宗教领袖。你不愿参与某项传统习俗的意愿，将比你预想的更能反映出你的性格特征。\", \"处于恋爱关系中的个体。你的一位同伴将被证明与你志同道合，其程度正是你曾无比期盼却又不敢允许自己相信的。\", \"马力驱动的双轮车。你无法操作某特定载具的状况将导致全身完全浸入水中。\", \"身体强健的特质。你精神状态的改变将创造出新的契机。\", \"独居的个体。你将发现自己无法与同龄人保持所期望的社交隔离程度。\", \"运气随时间变化的隐喻性表征。分数的落后局面将被决定性地逆转。\", \"法律体系内适当待遇的概念。你将设法为了自身利益而颠覆一套规则。\", \"悬挂于树枝上的个体。你将对出现在陌生位置的一件废弃物品感到困惑。\", \"生命的终结。在即将到来的一场看似无法保证生还的经历中，你必将安然幸存。\", \"克制酩酊大醉的意愿。你将获得饮用某种令你反感的液体的机会。\", \"邪恶的神话拟人化形象。你将在遭遇令人生畏的威胁时逃离现场。\", \"高耸的建筑结构。你将发现自己独自一人身处极高之处。\", \"遥远的等离子体球体。意料之外的访客将打乱你当前社交环境的自然秩序。\", \"天然卫星。深夜造访某处僻静区域将为你带来巨大的益处。\", \"邻近的等离子体球体。你将在一个天气宜人的早晨得出一个毫不含糊的结论。\", \"具有约束力的法律结果的裁决。对法律规范的过度依赖将在关键时刻对一名敌对者造成致命后果。\", \"行星天体。你将发现自己与一种水火不容的世界观发生冲突。\"];\ns.tarotnumbers = [\"0\", \"I\", \"II\", \"III\", \"IV\", \"V\", \"VI\", \"VII\", \"VIII\", \"IX\", \"X\", \"XI\", \"XII\", \"XIII\", \"XIV\", \"XV\", \"XVI\", \"XVII\", \"XVIII\", \"XIX\", \"XX\", \"XXI\"];\ns.tarotimages = [\"一只正走出悬崖边缘的鸟\", \"一只举着蜡烛的鸟\", \"一只身穿长袍、坐在两根柱子之间的鸟\", \"一只拿着权杖、靠在软垫上的鸟\", \"一只坐在王座上的老鸟\", \"一只戴着教皇冠冕的鸟\", \"在一只巨鸟下方手牵着手的两个赤裸人类\", \"一只乘着战车的鸟\", \"一只掰开狮子嘴巴的鸟\", \"一只披着斗篷、提着灯笼的鸟\", \"一只栖息在轮子顶端的鸟\", \"一只拿着天平和宝剑的鸟\", \"一只倒挂在树上的鸟\", \"一只骑着白马、举着绘有羽毛的黑旗的鸟\", \"一只把水从一个杯子倒进另一个杯子的鸟\", \"一只额头上印有五角星的长角鸟\", \"一对从坍塌高塔中飞出的鸟\", \"一只在八角星下方倒水的鸟\", \"两只对着印有鸟脸的月亮嚎叫的狗\", \"一只在太阳底下骑着小马的雏鸟\", \"一只正在吹奏号角的鸟\", \"一只被花环环绕的鸟\"]; %>你：没错，算一卦吧。\n\n*(你在她的桌子旁坐下。)*\n\n占卜师：很好。*(她抽出三张牌，面朝下摆在自己面前。)* 让我们看看我的占卜道具预测了什么。\n\n*(她翻开第一张牌。上面画着<%= s.tarotimages[s.tarotorder[0]] %>，顶部标着数字 <%= s.tarotnumbers[s.tarotorder[0]] %>。)*\n\n占卜师：“<%= s.tarotcards[s.tarotorder[0]] %>”\n\n*(她翻开第二张牌。这张牌上画着<%= s.tarotimages[s.tarotorder[1]] %>。上面标着数字 <%= s.tarotnumbers[s.tarotorder[1]] %>。)*\n\n占卜师：“<%= s.tarotcards[s.tarotorder[1]] %>”\n\n*(她翻开最后一张牌。它的编号是 <%= s.tarotnumbers[s.tarotorder[2]] %>，上面画着<%= s.tarotimages[s.tarotorder[2]] %>。)*\n\n占卜师：“<%= s.tarotcards[s.tarotorder[2]] %>”\n\n<% if (s.tarotorder[0] === 6) { %> 你：等等，第一张牌刚才说的是什么来着？ <% } else if (s.tarotorder[1] === 6) { %> 你：等等，第二张牌刚才说的是什么来着？ <% } else if (s.tarotorder[2] === 6) { %> 你：等等，最后一张牌刚才说的是什么来着？ <% } else { %> 你：那么……这一切具体什么时候会发生？\n\n占卜师：卡牌并未明确指出。但诸如此类的预测极少涉及遥远的未来。 <% } %>\n\n大副：我们走吧。我们已经听了够多毫无意义的预言了。\n\n* [[pirate23<-离开。]]"
+  },
+  "489": {
+    "name": "olympics13",
+    "body": "你：贝尔，有件事我必须告诉你。\n\n贝尔：呃，现在可能不是进行这类谈话的最佳时机。\n\n你：不，你听我说。是关于那些羽毛的。我一直在做这些——我的天啊。\n\n<%= display(\"olympics11\") %>"
+  },
+  "490": {
+    "name": "olympics14",
+    "body": "你：好吧，呃，这到底是怎么回事？我有点慌了。\n\n贝尔：我……我不知道。\n\n你：这可不太妙。\n\n贝尔：我们会搞清楚的。\n\n你：因为问题是……我觉得我——我的天啊。\n\n<%= display(\"olympics11\") %>"
+  }
+}

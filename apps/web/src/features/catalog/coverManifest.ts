@@ -237,6 +237,12 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   ztype: "/catalog/2026-11-05-v3/covers/ztype.jpg",
   // 作者以 CC BY 3.0 US 发布的正式鸟群封面；公开署名见目录页脚。
   birdland: "/catalog/2026-11-05-v4/covers/birdland.jpg",
+  // 0108 五款直玩作品的正式介绍缩略图，来源与署名随同批公开记录。
+  "her-tears-were-my-light": "/catalog/2026-11-05-v5/covers/her-tears-were-my-light.webp",
+  "farmhand": "/catalog/2026-11-05-v5/covers/farmhand.webp",
+  "exhibit-of-sorrows": "/catalog/2026-11-05-v5/covers/exhibit-of-sorrows.webp",
+  "known-unknowns": "/catalog/2026-11-05-v5/covers/known-unknowns.webp",
+  "crosscode-demo": "/catalog/2026-11-05-v5/covers/crosscode-demo.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {

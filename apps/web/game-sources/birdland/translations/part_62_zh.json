@@ -1,0 +1,66 @@
+{
+  "912": {
+    "name": "intro-portrait",
+    "body": "<div class=\"sidebox\"><img src=\"img/bridget.png\"/>\n***布里奇特·利赛德（你）***\n<img src=\"img/mackenzie.png\" style=\"margin-top:-15px;\"/>\n***麦肯齐·辛格***</div>"
+  },
+  "913": {
+    "name": "boystuff-portrait1",
+    "body": "<div class=\"sidebox\"><img src=\"img/tjswim.png\"/>\n***TJ·“游泳”·菲利普斯***</div>"
+  },
+  "914": {
+    "name": "boystuff-portrait2",
+    "body": "<div class=\"sidebox\"><img src=\"img/taylorm.png\"/>\n***泰勒·马西***\n<img src=\"img/taylorc.png\"/>\n***泰勒·克里克***</div>"
+  },
+  "915": {
+    "name": "ready-portrait",
+    "body": "<div class=\"sidebox\"><img src=\"img/dancanoe.png\"/>\n***丹·“独木舟”·兰丁***</div>"
+  },
+  "916": {
+    "name": "compass-portrait",
+    "body": "<div class=\"sidebox\"><img src=\"img/cassidywoods.png\"/>\n***卡西迪·“森林”·沃登***\n<img src=\"img/liz.png\" style=\"margin-top:8px;\"/>\n***伊丽莎白·魏***</div>"
+  },
+  "917": {
+    "name": "spotter-portrait",
+    "body": "<div class=\"sidebox\"><img src=\"img/heatherropes.png\"/>\n***海瑟·“绳索”·巴劳***\n<img src=\"img/zoe.png\" style=\"margin-top:20px;\"/>\n***佐伊·普莱斯***</div>"
+  },
+  "918": {
+    "name": "west-portrait",
+    "body": "<div class=\"sidebox\"><img src=\"img/deputy.png\"/>\n***副警长***</div>"
+  },
+  "919": {
+    "name": "pirate-portrait",
+    "body": "<div class=\"sidebox\"><img src=\"img/firstmate.png\"/>\n***大副***</div>"
+  },
+  "920": {
+    "name": "hockey-portrait",
+    "body": "<div class=\"sidebox\"><img src=\"img/coach.png\"/>\n***教练***</div>"
+  },
+  "921": {
+    "name": "music-portrait",
+    "body": "<div class=\"sidebox\"><img src=\"img/manager.png\"/>\n***经纪人***</div>"
+  },
+  "922": {
+    "name": "detective-portrait",
+    "body": "<div class=\"sidebox\"><img src=\"img/assistant.png\"/>\n***助手***</div>"
+  },
+  "923": {
+    "name": "college-portrait",
+    "body": "<div class=\"sidebox\"><img src=\"img/fellowstudent.png\"/>\n***同学***</div>"
+  },
+  "924": {
+    "name": "likeabird8",
+    "body": "你：哈，我倒没从那个角度想过。\n\n* [[likeabird4<-而且还不止他一个。]]\n* [[likeabird6<-我很担心。]]"
+  },
+  "925": {
+    "name": "lastnight125",
+    "body": "<% setevening() %>你：……谢谢你。\n\n贝尔：我只是希望你能好好的。\n\n你：*(迷迷糊糊地)* 你是个……好人。\n\n*(她揉了揉你的肩膀。)*\n\n贝尔：准备去睡觉了吗？\n\n你：不……\n\n贝尔：确定？你听起来困得要命。\n\n你：……不能睡。*(你打了个哈欠。)* 有……鸟。\n\n贝尔：鸟？\n\n你：……梦里有鸟。*(你的身子又往下滑了一点。)*\n\n贝尔：*(轻声地)* 嘘，没错。做梦都有鸟，美梦成真嘛。\n\n你：……你真是……最差劲了。\n\n*(你闭上了眼睛。)*\n\n你：……不管怎样……\n\n* [[lastnight-end<-继续 →]]"
+  },
+  "926": {
+    "name": "lastnight56",
+    "body": "<% if (!s.lastnight46) { %>* [[最喜欢的课？|lastnight46]]\n<% } if (!s.lastnight47) { %>* [[最喜欢的食物？|lastnight47]]\n<% } if (!s.lastnight48) { %>* [[最喜欢的颜色？|lastnight48]]\n<% } if (!s.lastnight50) { %>* [[最喜欢的运动？|lastnight50]]\n<% } if (!s.lastnight51) { %>* [[最喜欢的音乐？|lastnight51]] <% } %>"
+  },
+  "927": {
+    "name": "continue",
+    "body": "<%= display(s.currentPassage) %>"
+  }
+}

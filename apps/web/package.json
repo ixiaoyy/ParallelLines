@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:birdland": "node scripts/build-birdland.mjs",
     "preview": "vite preview",
     "typecheck": "vue-tsc -b --pretty",
     "lint": "eslint . --ext .ts,.vue --max-warnings 0",

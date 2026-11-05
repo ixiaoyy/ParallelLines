@@ -1,0 +1,30 @@
+{
+  "32": {
+    "name": "chapters",
+    "body": "<div class=\"close\"><a href=\"javascript:void(0)\" data-passage=\"title\">✖</a></div><% setmenu() %>\n章节选择\n--------\n<ol></ol>\n**7月12日**\n<ol>\n<li><a href=\"javascript:void(0)\" data-passage=\"newgame\">数日子</a> ~ 20号木屋</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"west-start\">职位名称：警长</a> ~ ????</li>\n</ol>\n**7月13日**\n<ol start=\"3\">\n<li><a href=\"javascript:void(0)\" data-passage=\"ready-start\">敬畏船桨</a> ~ 独木舟码头</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"boystuff-start\">羞羞的事</a> ~ 游泳码头</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"bell-start\">死死抓牢</a> ~ 帆船码头</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"pirate-start\">职位名称：海盗船长</a> ~ ????</li>\n</ol>\n**7月14日**\n<ol start=\"7\">\n<li><a href=\"javascript:void(0)\" data-passage=\"compass-start\">定向越野</a> ~ 自然区</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"spotter-start\">每次一个</a> ~ 绳索训练场</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"whatisart-start\">何为艺术？</a> ~ 美术手工小屋</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"sadie-start\">安全区</a> ~ 篮球场</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"hockey-start\">职位名称：冰球运动员</a> ~ ????</li>\n</ol>\n**7月15日**\n<ol start=\"12\">\n<li><a href=\"javascript:void(0)\" data-passage=\"mushroom-start\">可食用性调查</a> ~ 自然区</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"tip-start\">营员们，集合</a> ~ 独木舟码头</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"crush-start\">暗恋对象</a> ~ 美术手工小屋</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"music-start\">职位名称：音乐人</a> ~ ????</li>\n</ol>\n**7月16日**\n<ol start=\"16\">\n<li><a href=\"javascript:void(0)\" data-passage=\"nathan-start\">闲言碎语</a> ~ 帆船码头</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"likeabird-start\">像鸟儿一样</a> ~ 游泳码头</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"beach-start\">秘密沙滩</a> ~ 绳索训练场</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"detective-start\">职位名称：侦探</a> ~ ????</li>\n</ol>\n**7月17日**\n<ol start=\"20\">\n<li><a href=\"javascript:void(0)\" data-passage=\"follow-start\">正常的人类机能</a> ~ 游泳码头</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"withdrawl-start\">滑动并不存在的触摸屏</a> ~ 独木舟码头</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"cassidy-start\">潜行专家</a> ~ 自然区</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"college-start\">职位名称：大学生</a> ~ ????</li>\n</ol>\n**7月18日**\n<ol start=\"24\">\n<li><a href=\"javascript:void(0)\" data-passage=\"niceday-start\">美好的一天</a> ~ 湖面上</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"heights-start\">迟早的事</a> ~ 绳索训练场</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"pottery-start\">那该死的转盘玩意儿</a> ~ 美术手工小屋</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"lastnight-start\">没那个心情</a> ~ 20号木屋外</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"nightmare-start\">羽毛</a> ~ ????</li>\n</ol>\n**7月19日**\n<ol start=\"29\">\n<li><a href=\"javascript:void(0)\" data-passage=\"roundswim-start\">第一轮</a> ~ 游泳码头</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"roundwoods-start\">第二轮</a> ~ 自然区</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"roundropes-start\">第三轮</a> ~ 绳索训练场</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"roundcrafts-start\">第四轮</a> ~ 美术手工小屋</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"roundcanoe-start\">第五轮</a> ~ 独木舟码头</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"roundsail-start\">第六轮</a> ~ 帆船码头</li>\n<li><a href=\"javascript:void(0)\" data-passage=\"warning-start\">我们的职责已履行完毕</a> ~ ????</li>\n</ol>\n**7月26日**\n<ol start=\"36\">\n<li><a href=\"javascript:void(0)\" data-passage=\"euchre-start\">道别</a> ~ 20号木屋外</li>\n</ol>"
+  },
+  "33": {
+    "name": "lastnight5",
+    "body": "*(你们俩沿着山坡走到篝火坑。这里离营地其他地方有一段距离——空无一人，四周树木环绕，万籁俱寂。你搓了搓自己的肩膀。)*\n\n你：这地方要是没点着火、光剩个坑的话，感觉可就没那么温馨了。\n\n贝尔：早就替你想到了。*(她亮了亮手里的打火机。)* 来看看……\n\n*(她拢起了一大把火绒和引火柴。)*\n\n你：哇。我都没发现上生火课的时候你居然有在认真听讲。\n\n贝尔：呵，其实这是来夏令营之前就懂的知识。*(她开始在篝火坑中央搭一个圆锥形的柴堆。)* 我十岁那年受雇去树林里的一间闹鬼木屋寻找失落的宝藏。我想着在出发之前先学点基本的野外求生技能会比较稳妥。好啦。\n\n*(她点燃引火柴，对着火苗吹了几口气。火烧起来了。)*\n\n贝尔：那地方当然没有真的闹鬼。所谓的鬼叫声基本上只是风声和树枝刮擦的声音。不过宝藏倒是真有。那是我的……第二十四桩案子？不是二十四就是二十五。\n\n* [[lastnight6<-办过的案子真多啊。]]\n* [[lastnight7<-你还会给案子编号？]]\n* [[lastnight74<-是什么样的宝藏？]]\n* [[lastnight54<-整天搞这些侦探调查，你从来不会厌倦吗？]]"
+  },
+  "34": {
+    "name": "whatisart1",
+    "body": "*(美术手工辅导员洛根正一言不发地站在手工小屋前头。所有营员都坐在各自的桌子旁，回望着他。)*\n\n洛根·手工：*(得意地坏笑)* 咱们把气氛搞轻松一点怎么样，嗯？\n\n*(他走到屋子后头，拎起一把椅子，一路拖到前面。接着他把椅子转了个向，让椅背对着你们，然后反跨着坐了上去。)*\n\n洛根·手工：何为……艺术？\n\n*(没人接话。)*\n\n洛根·手工：嗯？到底何*为*艺术？认真想想。\n\n*(他从椅子上站了起来。)*\n\n洛根·手工：总之，趁我出去办点营地公务的工夫，你们好好思考一下这个问题。\n\n*(他走了出去。)*\n\n* [[whatisart4<-画幅水彩画。]]\n* [[whatisart5<-画幅素描。]]\n* [[whatisart6<-用橡皮泥捏点东西。]]\n* [[whatisart3<-去找麦肯齐聊聊。]]"
+  },
+  "35": {
+    "name": "whatisart3",
+    "body": "*(你走到麦肯齐那一桌，在她身旁坐下。)*\n\n麦肯齐：嘿，布里奇特。不做点美术手工吗？\n\n你：不太确定该做什么好。\n\n麦肯齐：唔，过度的创作自由确实容易让人无所适从。\n\n你：我该做点什么呢？\n\n麦肯齐：我觉得艺术是梳理自己心中所想的好办法。你最近脑子里都在想些什么？\n\n* [[whatisart2<-鸟。]]\n* [[whatisart20<-家。]]\n* [[whatisart21<-好多事情。]]"
+  },
+  "36": {
+    "name": "west16",
+    "body": "<% s.serenityup += 1 %>你：看来咱们得劝劝他们放下武器了，老兄。\n\n*(你把双手举过头顶)*\n\n你：咱们可不想惹事生非啊，麦克伯德福德！\n\n麦克伯德福德 #1：遗憾的是，麻烦正是你们必将获得之物。\n\n*(其余几个麦克伯德福德兄弟从银行里头大声喊道。)*\n\n麦克伯德福德 #2：我们的偏好是对旁观者进行射击！\n\n麦克伯德福德 #3：旁观者必将被我们射击！\n\n麦克伯德福德 #4：射击旁观者将为我们带来愉悦，且我们意欲亲自实施该行为！\n\n副警长：我认为他们打算对旁观者进行射击。\n\n你：咱寻思你说得一点没错。事到如今只有一个办法了……\n\n* [[west28<-来场枪战。]]\n* [[west19<-用激将法。]]"
+  },
+  "37": {
+    "name": "west17",
+    "body": "<% s.guileup += 1 %>你：咱们从后门溜进去。听我指挥。\n\n*(你把双手举过头顶，开始倒退着走。)*\n\n你：嘿，麦克伯德福德！咱们这就离开这家银行，永远不回来了！\n\n麦克伯德福德 #1：非常明智的决定，警长。\n\n*(你和副警长继续倒退着走。一退出麦克伯德福德的视线范围，你们俩便一头扎进旁边的小巷，悄悄绕到了银行后侧。)*\n\n你：就在那儿。里头。\n\n*(你和副警长透过窗户往里窥探。另外三个麦克伯德福德兄弟正在粗麻布袋上画美元符号，并往袋子里塞满现钞。)*\n\n麦克伯德福德 #2：继续抢劫，兄弟同胞们。我们的货币容器已接近装满货币。\n\n副警长：我们必须谨慎行事，警长。\n\n* [[west36<-把他们熏出来。]]\n* [[west35<-把他们通通击毙。]]"
+  },
+  "38": {
+    "name": "west18",
+    "body": "你：数到三就动手。\n\n*(他点了点头。)*\n\n你：一……二……三！\n\n*(你们同时拔枪。麦克伯德福德用左轮手枪连开六枪，每一发都偏得离谱，分别打穿了六个不同的水桶。水柱喷涌到尘土飞扬的路面上，而他还在扣动空枪的扳机，发出咔哒咔哒的响声。)*\n\n你：你到头了，败类。\n\n* [[west20<-将他击毙。]]\n* [[west21<-使用非致命武力。]]"
+  }
+}

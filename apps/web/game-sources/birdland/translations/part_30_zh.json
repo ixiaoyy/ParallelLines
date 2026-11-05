@@ -1,0 +1,54 @@
+{
+  "462": {
+    "name": "music1",
+    "body": "*(你梦见自己是一名音乐人，正在参加一场观众全是鸟人的音乐节。在亮粉色的天空下，你坐在后台，你的鸟人经纪人正目不转睛地上下打量着你。)*\n\n经纪人：请陈述你的职位名称。\n\n你：音乐人。\n\n经纪人：那么“音乐人”的职能是什么？\n\n* [[music2<-娱乐大众。]]\n* [[music3<-表达自我。]]\n* [[music4<-泡妞把妹。]]"
+  },
+  "463": {
+    "name": "music2",
+    "body": "<% s.alacrityup += 1 %>你：音乐能给世界带来欢乐。就像那首歌里唱的一样。\n\n经纪人：人类歌曲不计其数。我不知道你指的是哪一首。\n\n你：我也记不清歌名了。反正那不重要。重要的是音乐能让人开心。\n\n经纪人：音乐人的宗旨是为他人提供娱乐？\n\n你：一点没错。\n\n经纪人：很好。请演示人类音乐人的行为。\n\n你：酷。\n\n<%= display(\"music8\") %>"
+  },
+  "464": {
+    "name": "music3",
+    "body": "<% s.melancholyup += 1 %>你：音乐是*灵魂*的语言，老兄。我的灵魂渴望释放出来。从我的嘴里冲出去，传遍台下的人海。\n\n经纪人：这与我对人类解剖学结构的理解并不相符。\n\n你：我的意思是，我用音乐来表达自我。让人们知道我内心深处的想法。\n\n经纪人：音乐人的宗旨是传达音乐人自身的情绪状态？\n\n你：一点没错。\n\n经纪人：很好。请演示人类音乐人的行为。\n\n你：酷。\n\n<%= display(\"music8\") %>"
+  },
+  "465": {
+    "name": "music4",
+    "body": "<% s.vigilanceup -=1 %>你：我搞音乐纯粹是为了泡那些追星迷妹（groupies），你懂我意思吧？\n\n经纪人：“泡追星迷妹”是什么意思？我无法理解这一委婉俚语。\n\n你：一点没错。\n\n经纪人：我们还是直接进入由你演示人类音乐人行为的环节吧。\n\n你：没问题。\n\n<%= display(\"music8\") %>"
+  },
+  "466": {
+    "name": "boystuff6",
+    "body": "*(游泳教练TJ坐在救生员高椅上，看着大家练习自由泳。他吹响哨子，所有营员都停了下来。)*\n\nTJ·游泳：好啦，练够了。我都看腻了。自由游泳时间！\n\n*(一个高级营男生把泳镜推到额头上。)*\n\n高级营男生：你认真的？\n\nTJ·游泳：比心脏病发作还认真，老弟。去跳跳板、随便游游，想干嘛干嘛。*(他伸了个懒腰。)* 不管你们干什么，只要拿出十二分的热情来就行。\n\n* [[boystuff8<-试着在水下憋气。]]\n* [[boystuff9<-考虑爬上跳水板看看。]]\n* [[boystuff7<-随便游游混时间。]]"
+  },
+  "467": {
+    "name": "detective39",
+    "body": "你：我们现在还不能打草惊蛇。还有很多事情我们尚不清楚。比方说，谋杀案的受害者到底是谁，还有他们遇害的房间长什么样。眼下，我们先前往犯罪现场，看看那儿都有什么线索吧！\n\n*(你推开刚才管家走进去的那扇壁橱门。门后现在变成了一间会客室。)*\n\n<%= display(\"detective11\") %>"
+  },
+  "468": {
+    "name": "music8",
+    "body": "*(一名鸟人舞台监督手里拿着写字夹板跑了进来。)*\n\n舞台监督：你按计划将在整整一秒钟后登台演出。\n\n*(你把手头那根根本没点燃的香烟按进烟灰缸里使劲捻了捻，仿佛在掐灭烟头一样。)*\n\n你：是时候创造一点奇迹（magic）了。\n\n经纪人：我以为这次活动的目的是创作*音乐*（music）。这两个词发音相似，但含义截然不同。\n\n*(你冲上了舞台。)*\n\n经纪人：是我理解错了吗？\n\n舞台监督：请勿向我询问此事。我对这些概念的了解程度并不比你更深。\n\n* [[music9<-向台下观众打招呼。]]"
+  },
+  "469": {
+    "name": "music5",
+    "body": "*(你重新跑回舞台上。台下观众鼓起掌来。)*\n\n你：今晚我们还有最后一首歌要送给大家。这首歌叫《鸟之国》（Birdland）。预备——一、二、走起……\n\n♪ 活在一场梦境里  \n周遭一切都不对劲  \n这让你—— ♫\n\n*(在黑压压的鸟群观众当中，你的目光突然被一个孤零零的人类身影吸住了。霎时间，一切都变得不对劲起来。)*\n\n你：这……让你……那个什么什么，而我……呃……干点什么事？\n\n*(那个人类在观众席里冲你大喊着什么，但你听不清。)*\n\n你：*(眯起眼睛)* ……贝尔？\n\n*(真的是她。她在台下鼓掌。而其他所有观众都在大喝倒彩。)*\n\n观众 #1：我们对这场音乐演出明确表达不满！\n\n观众 #2：我们原本期待看到一场更符合我们喜好的演出，而这一期待落空了！\n\n观众 #3：我们正感受到一种理应享受高质量娱乐的权利感，紧接着便是对眼前这场低质量演出的强烈谴责！\n\n* [[music6<-拔腿逃跑。]]\n* [[music7<-乞求原谅。]]"
+  },
+  "470": {
+    "name": "music6",
+    "body": "<% setdream(); s.serenityup -= 1 %>*(你冲下了舞台。)*\n\n经纪人：这又是另一场返场安可吗？\n\n你：*(上气不接下气)* 不。快收拾东西装上面包车。\n\n经纪人：地面交通工具与当前场景有何关联？\n\n台下观众：*(异口同声地)* 我们很不满意。我们很不满意。\n\n你：嘿老兄，场面彻底失控了。我们得赶紧溜。马上。\n\n经纪人：没有这个必要。感谢你的演示，音乐人。祝你有一个愉快的早晨。\n\n* [[music-out<-继续 →]]"
+  },
+  "471": {
+    "name": "music7",
+    "body": "<% setdream(); s.vigilanceup -=1 %>你：等等！对不起！我只是想给大家演奏音乐而已！再给我一次机会吧！\n\n观众 #4：无论在任何情况下，我们都绝不会答应你的请求！\n\n*(台下观众朝你扔来了烂番茄、旧靴子、空易拉罐、整条鱼骨头、三角钢琴、大铁砧等等杂物。)*\n\n你：等等！\n\n*(你和贝尔四目相对。她无声地用口型对你说：“小心！”)*\n\n你：我——  \n\n*(一只靴子正中你的脑袋，把你砸得一屁股跌坐在地。)*\n\n你：……呃啊啊啊……\n\n*(台下掌声雷动，一名鸟人舞台助理慢条斯理地把你拖下了舞台。你的经纪人走上前来，上下检查了一番。)*\n\n经纪人：音乐人，你似乎在履行自身职能方面遭遇了彻头彻尾的失败。你受伤了吗？\n\n你：唔呃呃。*(你吐出了一大把牙齿。)*\n\n经纪人：我明白了。那么很好。感谢你的演示，祝你有一个愉快的早晨。\n\n* [[music-out<-继续 →]]"
+  },
+  "472": {
+    "name": "music-out",
+    "body": "<% setcard() %>*(你醒来时，感觉自己和昨天稍微有些不太一样了。)*\n<% tabulate() %>\n<%= display(\"newstats\") %>\n\n* [[music-end<-继续 →]]"
+  },
+  "473": {
+    "name": "music-end",
+    "body": "<%= display(\"nathan-start\") %>"
+  },
+  "474": {
+    "name": "music10",
+    "body": "<script>\n$(\"#music10a1link\").click(function() {\n\t$(\".music10a1\").fadeTo(400,1)\n\t$(\".music10a\").hide()\n\t$(\".music10b\").fadeTo(400,1)\n\tstory.state.music10a1 = true;\n}); \n$(\"#music10a2link\").click(function() {\n\t$(\".music10a2\").fadeTo(400,1)\n\t$(\".music10a\").hide()\n\t$(\".music10b\").fadeTo(400,1)\n\tstory.state.music10a2 = true;\n});  \n$(\"#music10a3link\").click(function() {\n\t$(\".music10a3\").fadeTo(400,1)\n\t$(\".music10a\").hide()\n\t$(\".music10b\").fadeTo(400,1)\n});  \n$(\"#music10b1link\").click(function() {\n\t$(\".music10b1\").fadeTo(400,1)\n\t$(\"#music10links\").hide()\n\tif (story.state.music10a1) { $(\".music10c1\").fadeTo(400,1) }\n\telse if (story.state.music10a2) { $(\".music10c2\").fadeTo(400,1) }\n\telse { $(\".music10c3\").fadeTo(400,1) }\n\t$(\".music11\").fadeTo(400,1)\n}); \n$(\"#music10b2link\").click(function() {\n\t$(\".music10b2\").fadeTo(400,1)\n\t$(\"#music10links\").hide()\n\tif (story.state.music10a1) { $(\".music10c1\").fadeTo(400,1) }\n\telse if (story.state.music10a2) { $(\".music10c2\").fadeTo(400,1) }\n\telse { $(\".music10c3\").fadeTo(400,1) }\n\t$(\".music11\").fadeTo(400,1)\n});\n</script> \n\n你：……《上学日》（School Dayz）。结尾用加拿大拼法写个 Z。大概是这么唱的：\n\n<p class=\"hide music10a1\">♪ 我根本不想去上学  \n学校里全是一帮蠢货  \n要是逼我去上学  \n那可一点都不酷</p>\n\n<p class=\"hide music10a2\">♪ 整天坐在学校里  \n真是让我生不如死  \n他们把你整天关在学校里  \n却从来不告诉你为什么</p>\n\n<p class=\"hide music10a3\">♪ 这辈子没什么比上学更糟    \n没什么比上学更让人煎熬    \n日复一日被困在学校    \n学校的一切我都恨透了</p>\n\n<p class=\"hide music10b1\">上学 上学 上学 上学 上学 上学 上学  \n上学 上学 上学 上学 上学 上学 上学  \n上学 上学 上学 上学 上学 上学 上学  \n上学 上学 上学 上学 上学 上学 上学</p>\n\n<p class=\"hide music10b2\">我恨 我恨 我恨上学  \n我他妈恨透了上学  \n恨 恨 恨 恨 恨 恨 恨  \n恨 恨 恨 恨 恨 恨上学</p>\n\n<p class=\"hide music10b1 music10b2\">上学！上学！上学！上学！（×12）</p>\n\n<p class=\"hide music10c1\">我根本不想去那儿！ ♫</p>\n\n<p class=\"hide music10c2\">让我生不如死！ ♫</p>\n\n<p class=\"hide music10c3\">没什么比这更糟！ ♫</p>\n\n<ul id=\"music10links\">\n<li class=\"music10a\"><a href=\"javascript:void(0)\" id=\"music10a1link\">我根本不想去上学</a></li>\n<li class=\"music10a\"><a href=\"javascript:void(0)\" id=\"music10a2link\">整天坐在学校里</a></li>\n<li class=\"music10a\"><a href=\"javascript:void(0)\" id=\"music10a3link\">这辈子没什么比上学更糟</a></li>\n<li class=\"hide music10b\"><a href=\"javascript:void(0)\" id=\"music10b1link\">上学 上学 上学 上学 上学 上学 上学</a></li>\n<li class=\"hide music10b\"><a href=\"javascript:void(0)\" id=\"music10b2link\">我恨 我恨 我恨上学</a></li>\n</ul>\n\n<%= display(\"music11\") %>"
+  }
+}

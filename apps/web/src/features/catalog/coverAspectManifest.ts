@@ -249,4 +249,9 @@ export const CATALOG_COVER_ASPECTS_BY_PATH: Readonly<Record<string, number>> = {
   "/catalog/2026-11-05-v3/covers/shapez-demo.webp": 1.2375,
   "/catalog/2026-11-05-v3/covers/ztype.jpg": 1.505376344086,
   "/catalog/2026-11-05-v4/covers/birdland.jpg": 1,
+  "/catalog/2026-11-05-v5/covers/her-tears-were-my-light.webp": 3.096774193548,
+  "/catalog/2026-11-05-v5/covers/farmhand.webp": 1.200000000000,
+  "/catalog/2026-11-05-v5/covers/exhibit-of-sorrows.webp": 1.152046783626,
+  "/catalog/2026-11-05-v5/covers/known-unknowns.webp": 0.833333333333,
+  "/catalog/2026-11-05-v5/covers/crosscode-demo.webp": 0.741666666667,
 };
