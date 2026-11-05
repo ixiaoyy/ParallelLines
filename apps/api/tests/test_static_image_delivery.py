@@ -106,6 +106,32 @@ class StaticImageDeliveryTests(unittest.TestCase):
                 catalog_only=True, catalog_version="missing-version",
             )
 
+    def test_birdland_prefix_preview_does_not_touch_other_assets(self):
+        output = StringIO()
+        with redirect_stdout(output):
+            self.module["upload_static_assets"](
+                prefix="static/web", dry_run=True, verify=True,
+                asset_prefix="games/birdland/2026-11-05-v1",
+            )
+        uploads = [line for line in output.getvalue().splitlines()
+                   if line.startswith("would upload ")]
+        self.assertEqual(len(uploads), 20)
+        self.assertTrue(all("static/web/games/birdland/2026-11-05-v1/" in line
+                            for line in uploads))
+        self.assertTrue(all(".webp" in line for line in uploads))
+
+    def test_invalid_prefix_and_mixed_filters_stop_before_storage(self):
+        for prefix in ("", "/", "games/../birdland", "missing-version"):
+            with self.subTest(prefix=prefix), self.assertRaises(ValueError):
+                self.module["upload_static_assets"](
+                    prefix="static/web", dry_run=True, verify=False, asset_prefix=prefix,
+                )
+        with self.assertRaisesRegex(ValueError, "cannot be combined"):
+            self.module["upload_static_assets"](
+                prefix="static/web", dry_run=True, verify=False,
+                asset_prefix="games/birdland", catalog_only=True,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

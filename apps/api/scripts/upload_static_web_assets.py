@@ -151,6 +151,12 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-11-05-v3/covers/ztype.jpg",
     # BIRDLAND 鸟群正式封面独立发布，署名与封面许可随前端一起公开。
     "catalog/2026-11-05-v4/covers/birdland.jpg",
+    # 0108 五张新版本缩略图先发布，既有图片路径与媒体类型不变。
+    "catalog/2026-11-05-v5/covers/her-tears-were-my-light.webp",
+    "catalog/2026-11-05-v5/covers/farmhand.webp",
+    "catalog/2026-11-05-v5/covers/exhibit-of-sorrows.webp",
+    "catalog/2026-11-05-v5/covers/known-unknowns.webp",
+    "catalog/2026-11-05-v5/covers/crosscode-demo.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 # 压缩后的目录装饰来自 Web public；仍用原版本目录，保留 PNG 和旧对象便于恢复。
@@ -173,6 +179,16 @@ PUBLIC_CATALOG_ASSET_KEYS = (
     "catalog/jade-folklore-v1/atlas-c.webp",
     "catalog/pixel-arcade/button-frame.webp",
     "catalog/pixel-arcade/frame-card.webp",
+)
+
+# Birdland 本体插画独立版本发布，原 PNG 留在汉化源目录，不上传或覆盖旧资源。
+BIRDLAND_ASSET_KEYS = tuple(
+    f"games/birdland/2026-11-05-v1/{name}.webp"
+    for name in (
+        "alishasail", "assistant", "bell", "bridget", "cassidywoods", "coach",
+        "dancanoe", "deputy", "fellowstudent", "firstmate", "heatherropes", "liz",
+        "logancrafts", "mackenzie", "manager", "taylorc", "taylorm", "title", "tjswim", "zoe",
+    )
 )
 
 STATIC_ASSETS = (
@@ -260,6 +276,9 @@ STATIC_ASSETS = (
         media_type="image/webp",
     )
     for key in PUBLIC_CATALOG_ASSET_KEYS
+) + tuple(
+    StaticAsset(source=f"static/web/{key}", key=key, media_type="image/webp")
+    for key in BIRDLAND_ASSET_KEYS
 )
 
 
@@ -281,14 +300,13 @@ def object_key(asset: StaticAsset, prefix: str) -> str:
 def upload_static_assets(
     *, prefix: str, dry_run: bool, verify: bool,
     catalog_only: bool = False, catalog_version: str | None = None,
+    asset_prefix: str | None = None,
 ) -> None:
-    """Upload configured frontend static assets to S3/R2 and print their public CDN URLs."""
+    """上传清单资源；asset_prefix 仅筛选指定键目录，旧目录筛选与默认行为保持不变。"""
 
-    settings = Settings()
-    storage = None if dry_run else S3UploadStorage(settings)
-    root = repo_root()
-    if not settings.upload_cdn_base_url:
-        raise RuntimeError("UPLOAD_CDN_BASE_URL is required to print public static asset URLs")
+    # 定向发布不可与目录专用筛选混用，避免误以为限制已生效而上传其他资源。
+    if asset_prefix is not None and (catalog_only or catalog_version is not None):
+        raise ValueError("asset-prefix cannot be combined with catalog filters")
 
     # 本次发布只写入新版目录图片，避免重传已有的认证页和头像资源。
     assets = (
@@ -307,6 +325,20 @@ def upload_static_assets(
         assets = tuple(asset for asset in assets if asset.key.startswith(version_prefix))
         if not assets:
             raise ValueError(f"no catalog assets for version {catalog_version}")
+    if asset_prefix is not None:
+        parts = asset_prefix.strip("/").split("/")
+        if any(part in ("", ".", "..") for part in parts):
+            raise ValueError("asset-prefix must name a nonempty asset directory")
+        selected_prefix = f"{'/'.join(parts)}/"
+        assets = tuple(asset for asset in assets if asset.key.startswith(selected_prefix))
+        if not assets:
+            raise ValueError(f"no static assets for prefix {asset_prefix}")
+
+    settings = Settings()
+    storage = None if dry_run else S3UploadStorage(settings)
+    root = repo_root()
+    if not settings.upload_cdn_base_url:
+        raise RuntimeError("UPLOAD_CDN_BASE_URL is required to print public static asset URLs")
     for asset in assets:
         source_path = root / asset.source
         if not source_path.is_file():
@@ -354,6 +386,10 @@ def parse_args() -> argparse.Namespace:
         "--catalog-version",
         help="Upload only catalog images in this version directory.",
     )
+    parser.add_argument(
+        "--asset-prefix",
+        help="Only upload this key directory, e.g. games/birdland/2026-11-05-v1.",
+    )
     return parser.parse_args()
 
 
@@ -368,6 +404,7 @@ def main() -> None:
         verify=args.verify,
         catalog_only=args.catalog_only,
         catalog_version=args.catalog_version,
+        asset_prefix=args.asset_prefix,
     )
 
 

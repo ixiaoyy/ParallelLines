@@ -62,6 +62,7 @@ INTERNAL_PROJECT_URLS = frozenset(
         "/play/snake-escape",
         "/play/flappy-dunk",
         "/games/illusion-prototype/index.html",
+        "/games/birdland/index.html",
     }
 )
 RATING_UNAVAILABLE_MESSAGE = "评分暂时不可用，请稍后重试。"
