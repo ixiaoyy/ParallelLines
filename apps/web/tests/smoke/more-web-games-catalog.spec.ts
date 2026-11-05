@@ -8,7 +8,7 @@ import { CATALOG_COVER_ASPECTS_BY_PATH } from "../../src/features/catalog/coverA
 import type { CatalogProjectResponse, CatalogResponse } from "../../src/features/catalog/model";
 import { catalogPublicFixture } from "./catalog-public-fixture";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5192";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5173";
 const staticRoot = path.resolve(process.cwd(), "../../static/web");
 const publicRoot = path.resolve(process.cwd(), "public");
 const version = "2026-11-05-v1";

@@ -84,7 +84,7 @@ Rocket 的偏暗星空来自官方实机，不人为增亮或编造画面；页�
   Rocket 另报 `Permissions check failed`，未接受权限或绕过，不能宣称三款试玩通过。
   隔离浏览器已关闭；完整外站报告与实际截图位于可视化目录 `gd-assets/external-play/`。
 - 初始只读生产检查：主站 `/healthz` 为 `200`，API 与 Web 健康，迁移为 `0102`。
-  真实 MySQL 中三个分类齐全，四个 slug 或外链均未存在。本批部署及最终页面验收尚未完成。
+  真实 MySQL 中三个分类齐全，四个 slug 或外链均未存在。
 
 `downgrade()` 只回退版本号，不删除作品或其评分、人工编辑；撤下单款使用管理员隐藏入口。
 恢复前端时保留旧版本对象与旧镜像，不清全局缓存或删除资源。
@@ -93,3 +93,29 @@ Rocket 的偏暗星空来自官方实机，不人为增亮或编造画面；页�
 恢复目录为生产服务器 `/data/releases/more-web-games-20261105-01a1a966/`。
 其中 `recover.sh` 与 `rollback.yml` 可恢复原镜像，健康检查独立使用公网 `/healthz`；
 旧 API 恢复时跳过迁移启动，避免旧镜像不识别 `0103`，不回写或删除业务数据。
+服务恢复脚本不隐藏新记录；如一并恢复旧 Web，需要由管理员同步隐藏本批记录，避免旧版缺少封面映射。
+
+## 生产发布结果
+
+- 应用提交：`256e7e1df3a1a937139dfd2decd0ed55ac8c505b`，仅本批 11 个文件。
+- [CI 41952896475](https://github.com/ixiaoyy/ParallelLines/actions/runs/41952896475) 成功，
+  包括真实 MySQL 迁移与后端测试、前端 lint、类型检查、构建及同一构建产物打包。
+- [Deploy 41953744625](https://github.com/ixiaoyy/ParallelLines/actions/runs/41953744625) 成功，
+  实际发布 API、worker、Web；full-stack 与 Nginx 独立任务按范围跳过。
+- 根代理回读服务器源码与 Web 镜像 revision 均为上述应用提交，API / Web 健康，worker 运行。
+  Nginx、MySQL、Redis 镜像与发布前一致，公网 `/healthz` 返回 `200`。
+- 真实生产 MySQL 当前版本为 `0103_add_more_web_games`，四条可见外链记录 ID 为 `232`、`233`、`234`、`235`；
+  名称、分类、精确入口、完整作者字段均回读通过，未创建评分或测试浏览记录。
+- 生产浏览器两端四款搜索、实际新版本封面 URL、自然尺寸、`200 image/webp`、作者榜及 Mosu 搜索通过，
+  无页面异常；没有替换真实 API / 图片，也没有向产品 API 写入。
+  根代理已实际查看四款电脑 / 手机八张卡片及首屏，正式封面显示与裁切正常。
+  同批验收记录归档在可视化目录 `online/production-acceptance-summary.json`，浏览器均已关闭。
+- 补充的旧图片加载稳定性检查未通过：桌面旧休闲卡片等待 30 秒仍空白，作者缩略图也有加载未完成。
+  一次 10 秒有界诊断中，旧反向贪吃蛇、Golf Adventures! 2、Miami Flap、弹跳灌篮及三张 Astra 封面
+  已请求但未收到响应；未观察到 HTTP 错误，不能确定资源损坏或归因 CDN。
+  手机首屏六张推荐已加载。此项与本批四图通过证据分开，未改旧资源或扩修加载流程，
+  具体 URL 与实际空白截图保留在 `online/production-first-screen-bounded-diagnostic-desktop.json`，
+  原始等待失败保留在 `online/production-visible-screens.json`。
+- 本地 smoke 默认端口从独立验证端口 `5192` 对齐项目默认 `5173`，仅测试入口修复，
+  不影响已用显式 `PLAYWRIGHT_BASE_URL=...:5192` 取得的通过证据或生产构建；未重复运行。
+  此修复与最终发布记录作为本批跟进提交，不重新部署服务。
