@@ -29,26 +29,25 @@ const sourceStyle = computed<CSSProperties>(() => {
     :style="cropStyle" aria-hidden="true">
     <span class="catalog-category-art__crop">
       <img class="catalog-category-art__source" :class="{ 'catalog-category-art__source--image': artwork.kind === 'image' }"
-        :src="artwork.src" :style="sourceStyle" alt="" draggable="false" loading="lazy" decoding="async" />
+        :src="artwork.src" :style="sourceStyle" alt="" draggable="false" loading="lazy" decoding="async" fetchpriority="low" />
     </span>
   </span>
 </template>
 
 <style scoped lang="scss">
 .catalog-category-art {
-  // Follow the real artwork width so portrait figures do not leave a wide gap
-  // before the title. Parent sections may set both dimensions without distortion.
+  // 沿用原图比例与裁切边界；竖向人物不占用横向插画的整段宽度。
   display: grid;
-  width: min(var(--catalog-art-max-width, 145px), calc(var(--catalog-art-height, 64px) * var(--catalog-art-aspect)));
-  height: var(--catalog-art-height, 64px);
+  width: min(var(--catalog-art-max-width), calc(var(--catalog-art-height) * var(--catalog-art-aspect)));
+  height: var(--catalog-art-height);
   flex: 0 0 auto;
-  place-items: end center;
+  place-items: center;
   pointer-events: none;
 }
 .catalog-category-art__crop {
   position: relative;
   display: block;
-  width: min(100%, calc(var(--catalog-art-height, 64px) * var(--catalog-art-aspect)));
+  width: 100%;
   aspect-ratio: var(--catalog-art-aspect);
   overflow: hidden;
 }
@@ -63,11 +62,5 @@ const sourceStyle = computed<CSSProperties>(() => {
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-@media (max-width: 760px) {
-  .catalog-category-art {
-    width: min(var(--catalog-art-max-width, 100px), calc(var(--catalog-art-height, 48px) * var(--catalog-art-aspect)));
-    height: var(--catalog-art-height, 48px);
-  }
 }
 </style>

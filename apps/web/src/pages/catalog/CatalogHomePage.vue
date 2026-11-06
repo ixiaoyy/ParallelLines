@@ -416,14 +416,19 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
             <div v-if="selectedAuthorKey && selectedAuthorKey !== 'original'" class="catalog-author-selection"><span>正在查看 <strong>{{ selectedAuthorName || '该作者' }}</strong> 的作品</span><button type="button" @click="clearAuthorGames">清除作者筛选</button></div>
             <div v-if="!isDiscovery && visibleProjects.length === 0" class="catalog-state" role="status"><span>{{ emptyLibraryText }}</span><button v-if="search || selectedCategory !== 'all' || selectedAuthorKey" type="button" @click="clearCatalogFilters">清除筛选</button></div>
             <div v-else class="catalog-groups">
-              <section v-for="group in presentationGroups" :key="group.key" class="catalog-group" :data-category-section="group.featured ? undefined : group.key" :class="{ 'catalog-group--featured': group.featured, 'catalog-group--illustrated': group.visual?.artwork, 'catalog-group--themed': !group.featured && group.name }" :style="group.visual ? categorySectionStyleFor(group.key) : undefined" :aria-label="group.name || '游戏列表'">
+              <section v-for="group in presentationGroups" :key="group.key" class="catalog-group" :data-category-section="group.featured ? undefined : group.key" :class="{ 'catalog-group--featured': group.featured, 'catalog-group--themed': !group.featured && group.name }" :style="group.name && !group.featured ? categorySectionStyleFor(group.key) : undefined" :aria-label="group.name || '游戏列表'">
                 <header v-if="group.name && !group.featured" class="catalog-group__heading">
-                  <div class="catalog-group__title"><h2><button type="button" @click="browseCategory(group.key)">{{ group.name }}</button></h2><p v-if="group.key === 'horror'" class="catalog-group__description">悬疑、惊悚与未知</p><CatalogCategoryOrnament v-if="group.visual?.artwork" :visual="group.visual" /></div>
-                  <div class="catalog-group__meta"><span class="catalog-group__count">{{ group.total }} 款</span><button type="button" :aria-label="`查看全部${group.name}游戏`" @click="browseCategory(group.key)">查看更多 <RightOutlined aria-hidden="true" /></button></div>
+                  <div class="catalog-group__title">
+                    <h2><button type="button" @click="browseCategory(group.key)">{{ group.name }}</button></h2>
+                    <CatalogCategoryOrnament v-if="group.visual?.artwork" :visual="group.visual" />
+                    <p v-if="group.key === 'horror'" class="catalog-group__description">悬疑、惊悚与未知</p>
+                  </div>
+                  <!-- 微点缀分布在标题和操作之间；首卡点缀以标题栏底边为锚，不为它预留空行。 -->
+                  <CatalogMicroAccents :slug="group.key" />
                   <CatalogCategoryAccent :slug="group.key" placement="heading" />
-                    <CatalogMicroAccents :slug="group.key" />
+                  <div class="catalog-group__meta"><span class="catalog-group__count">{{ group.total }} 款</span><button type="button" :aria-label="`查看全部${group.name}游戏`" @click="browseCategory(group.key)">查看更多 <RightOutlined aria-hidden="true" /></button></div>
+                  <CatalogCategoryAccent :slug="group.key" placement="card-corner" />
                 </header>
-                <CatalogCategoryAccent v-if="!group.featured" :slug="group.key" placement="card-corner" />
                 <CatalogCategoryRail v-if="!group.featured && isDiscovery" :name="group.name" :slug="group.key" :total="group.total"
                   :composition="categorySectionThemeFor(group.key).composition" :cover-aspect="coverAspectFor">
                   <template #default="{ projects }">

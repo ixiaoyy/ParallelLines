@@ -1,77 +1,60 @@
-// Selected reference: a title band above real covers. Art shares the card edge,
-// with per-category proportions and anchors rather than matching icon boxes.
+// 标题栏高度由浏览入口决定，国风插画只在标题旁点缀，不挤占封面。
 .catalog-group--themed {
-  --category-card-height: clamp(190px, 24vw, 280px);
-  --category-title-size: clamp(32px, 4.5vw, 46px);
-  --category-heading-space: max(112px, var(--category-heading-height, 96px), calc(var(--catalog-art-height, 96px) + 12px));
+  --catalog-art-max-width: 64px;
+  --catalog-art-height: 32px;
+  --category-spark-size: 6px;
   position: relative;
   isolation: isolate;
   min-width: 0;
-  border-radius: 30px;
-  padding: 0 19px 19px;
+  border-radius: 24px;
+  padding: 0 19px 12px;
   color: var(--category-section-ink);
   background: var(--category-section-bg);
 }
 .catalog-group--themed .catalog-group__heading {
   position: relative;
-  height: var(--category-heading-space);
-  min-height: 0;
-  display: block;
-  margin: 0;
+  min-height: 54px;
+  gap: 10px;
 }
-.catalog-group--themed .catalog-group__title { display: contents; }
 .catalog-group--themed .catalog-group__heading h2 {
-  position: absolute; z-index: 2; top: 13px; left: 0;
-  margin: 0; color: var(--category-section-ink); background: none;
-  font: 800 var(--category-title-size) / 1.2 var(--catalog-heading-font);
+  min-width: 0;
+  color: inherit;
+  font-size: 28px;
 }
 .catalog-group--themed .catalog-group__heading h2 button {
-  min-height: 50px; padding: 0; color: inherit; border: 0; background: none; font: inherit; cursor: pointer;
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .catalog-group--themed .catalog-group__description {
-  position: absolute; z-index: 2; top: 73px; left: 0;
-  margin: 0; color: inherit; font: 400 13px / 1.5 var(--catalog-font);
+  flex: none;
+  margin: 0;
+  color: inherit;
+  font: 400 12px / 1.5 var(--catalog-font);
 }
-.catalog-group--themed .catalog-category-art {
-  position: absolute; z-index: 1; left: var(--category-art-left); right: var(--category-art-right);
-  bottom: 4px; margin: 0; pointer-events: none;
-}
-.catalog-group--themed .catalog-group__meta {
-  position: absolute; z-index: 3; top: 8px; right: 0; gap: 7px;
-  color: var(--category-section-ink); opacity: .8;
-}
-.catalog-group--themed .catalog-group__count { color: inherit; font: 11px / 1.4 var(--catalog-font); }
-.catalog-group--themed .catalog-group__meta > button {
-  min-height: 44px; border: 0; padding: 0 2px 0 5px; color: inherit;
-  background: transparent; font: 11px / 1.4 var(--catalog-font); cursor: pointer;
-}
-.catalog-group--themed .catalog-group__meta > button:hover { text-decoration: underline; }
-.catalog-group--themed .catalog-group__meta .anticon { font-size: 10px; }
+.catalog-group--themed .catalog-group__meta { gap: 8px; color: inherit; }
+.catalog-group--themed .catalog-group__count { color: inherit; opacity: .8; }
+.catalog-group--themed .catalog-group__meta > button { color: inherit; }
 .catalog-group--themed .catalog-category-rail { z-index: 2; }
-.catalog-group--themed[data-category-section="horror"] { --category-card-height: clamp(185px, 23.3vw, 272px); }
-.catalog-group--themed[data-category-section="horror"] .catalog-group__meta { left: 104px; right: auto; top: 15px; }
 .catalog-group--themed[data-category-section="farming"] :deep(.catalog-category-rail--single .catalog-card__cover img) { object-position: center top; }
 
 @media (max-width: 760px) {
-  .catalog-group--themed { --category-card-height: auto; --category-heading-space: max(128px, var(--category-heading-height, 96px)); border-radius: 23px; padding: 0 12px 14px; }
-  .catalog-group--themed { --category-title-size: 30px; }
-  .catalog-group--themed .catalog-group__heading h2 { top: 15px; }
-  .catalog-group--themed .catalog-group__heading h2 button { min-height: 44px; }
-  .catalog-group--themed .catalog-group__description { top: 58px; font-size: 12px; }
-  .catalog-group--themed .catalog-category-art {
-    --catalog-art-height: 88px;
-    --catalog-art-max-width: min(58vw, 240px);
-    left: auto; right: 0;
+  .catalog-group--themed {
+    --catalog-art-max-width: 44px;
+    --catalog-art-height: 23px;
+    --category-spark-size: 4px;
+    border-radius: 18px;
+    padding: 0 12px 10px;
   }
-  .catalog-group--themed[data-category-section="horror"] .catalog-category-art { --catalog-art-height: 105px; }
-  .catalog-group--themed[data-category-section="horror"] .catalog-group__title > .catalog-category-art { left: auto; right: 0; max-width: calc(100% - 132px); }
-  .catalog-group--themed:is([data-category-section="rpg"], [data-category-section="simulation"]) .catalog-category-art { max-width: calc(100% - 132px); }
-  .catalog-group--themed[data-category-section="horror"] .catalog-group__meta { left: auto; right: 0; top: 1px; }
-  .catalog-group--themed[data-category-section="exploration"] .catalog-category-art { --catalog-art-height: 70px; }
-  .catalog-group--themed[data-category-section="exploration"] .catalog-group__title > .catalog-category-art { left: 68px; right: 0; --catalog-art-max-width: calc(100% - 68px); }
-  .catalog-group--themed .catalog-group__meta { top: 2px; gap: 3px; }
-  .catalog-group--themed .catalog-group__count { display: none; }
-  .catalog-group--themed .catalog-group__meta > button { font-size: 10px; }
+  .catalog-group--themed .catalog-group__heading { min-height: 48px; gap: 5px; }
+  .catalog-group--themed .catalog-group__heading h2 { font-size: 23px; }
+  .catalog-group--themed .catalog-group__description { font-size: 11px; }
   .catalog-group--themed[data-category-section="farming"] :deep(.catalog-category-rail--single .catalog-card__cover) { aspect-ratio: auto; }
   .catalog-group--themed[data-category-section="farming"] :deep(.catalog-category-rail--single .catalog-card__cover img) { height: auto; }
+}
+
+@media (max-width: 360px) {
+  // 极窄屏允许恐怖分类副标题换行，保住完整分类名、插画和查看入口。
+  .catalog-group--themed .catalog-group__description { max-width: 5.5em; }
 }
