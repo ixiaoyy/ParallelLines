@@ -236,7 +236,6 @@ for (const viewport of [{ name: "desktop", width: 1280, height: 900 }, { name: "
         await expect(popup).toHaveURL(game.url);
         await expect(popup.getByRole("heading", { name: "本地精确直达目标" })).toBeVisible();
         await expect.poll(() => opened.filter((id) => id === game.id).length).toBe(1);
-        const project = projects.find((entry) => entry.id === game.id)!;
         await expect(card.locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
         await popup.close();
       }

@@ -268,8 +268,6 @@ test("landscape, square, portrait and farming cover frames follow the original p
         // 不用 reduced-motion 掩盖悬停时的缩放，等图片自身的短动效结束后再检查。
         await card.hover();
         const transform = await card.locator(".catalog-card__cover img").evaluate(async (image) => {
-          const style = getComputedStyle(image);
-          style.transform;
           await Promise.all(image.getAnimations().map((animation) => animation.finished));
           return getComputedStyle(image).transform;
         });
