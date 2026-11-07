@@ -265,7 +265,7 @@ for (const viewport of [
       await expect(oldCover).toHaveAttribute("src", /\/catalog\/2026-11-05-v4\/covers\/birdland\.jpg$/);
       expect(await oldCover.evaluate((image) => getComputedStyle(image).objectPosition)).toBe("50% 50%");
       await expect.poll(() => oldCover.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
-      await expect(page.locator('[data-project-id="242"] .catalog-card__heat')).toHaveAttribute("aria-label", "综合热度 22");
+      await expect(page.locator('[data-project-id="242"] .catalog-card__heat, [data-project-id="242"] .catalog-card__category, [data-project-id="242"] .catalog-ai-rating')).toHaveCount(0);
       await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
       await page.screenshot({ path: path.join(output, `five-browser-games-results-${viewport.name}.png`), fullPage: true });
 
@@ -292,8 +292,7 @@ for (const viewport of [
         await expect(card.locator("h3")).toHaveText(game.name);
         if (game.slug === "crosscode-demo") await expect(card.locator("h3")).toHaveText("CrossCode（网页试玩版）");
         await inspectCover(card, game.slug);
-        await expect(card.locator(".catalog-card__heat")).toHaveAttribute("aria-label", "综合热度 0");
-        await expect(card.locator(".catalog-ai-rating")).toHaveCount(0);
+        await expect(card.locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
         const link = card.getByRole("link", { name: `打开${game.name}`, exact: true });
         await expect(link).toHaveAttribute("href", game.url);
         await expect(link).toHaveAttribute("target", "_blank");
@@ -306,7 +305,7 @@ for (const viewport of [
         await expect(popup).toHaveURL(new URL(game.url).href);
         await expect(popup.getByRole("heading", { name: "本地外链验收目标" })).toBeVisible();
         await expect.poll(() => opened.filter((id) => id === game.id).length).toBe(1);
-        await expect(card.locator(".catalog-card__heat")).toHaveAttribute("aria-label", "综合热度 1");
+        await expect(card.locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
         await popup.close();
       }
 
@@ -341,16 +340,10 @@ for (const viewport of [
       await page.getByRole("searchbox", { name: "搜索作者", exact: true }).fill("LydianChord");
       await expect(leaderboard.getByRole("link", { name: "NomnomNami", exact: true })).toHaveCount(1);
 
-      // 真实打开已有公开署名页，逐作核来源和不同许可范围；旧Birdland授权不能被覆盖。
-      const footerLink = page.locator(`.catalog-footer a[href="${licensePath}"]`);
-      await footerLink.scrollIntoViewIfNeeded();
-      await expect(footerLink).toBeVisible();
-      await expect(footerLink).toHaveAttribute("target", "_blank");
-      await expect(footerLink).toHaveAttribute("rel", "noopener noreferrer");
-      const licensePromise = context.waitForEvent("page");
-      await footerLink.click();
-      const licensePage = await licensePromise;
-      await expect(licensePage).toHaveURL(new URL(licensePath, localOrigin).href);
+      // 目录页不再放署名入口；署名页本身仍可直接打开，逐作核来源和不同许可范围。
+      await expect(page.locator(`.catalog-footer a[href="${licensePath}"]`)).toHaveCount(0);
+      const licensePage = await context.newPage();
+      await licensePage.goto(new URL(licensePath, localOrigin).href);
       await licensePage.waitForLoadState("domcontentloaded");
       expect(licenseStatus).toBe(200);
       await expect(licensePage.locator("main section")).toHaveCount(6);

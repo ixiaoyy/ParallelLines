@@ -154,7 +154,7 @@ test("想玩可用键盘切换、刷新恢复，并保持收藏与原生打开�
   await expect(first.getByRole("button", { name: "移出想玩", exact: true })).toHaveAttribute("aria-pressed", "true");
   await openGame(page, first.locator(".catalog-card__open"));
   await expect.poll(() => requests.opened).toEqual(["901"]);
-  await expect(first.locator(".catalog-card__heat")).toHaveAttribute("aria-label", "热度 1");
+  await expect(first.locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
   expect((await savedLibrary(page))?.wantedIds).toEqual(["901"]);
   expect((await savedLibrary(page))?.recent.map((item) => item.projectId)).toEqual(["901"]);
   await first.getByRole("button", { name: "移出想玩", exact: true }).click();
@@ -181,8 +181,8 @@ test("排序下拉框沿用最新和热门顺序，网格列表切换保留排�
   const sort = page.getByRole("combobox", { name: "游戏排序", exact: true });
   await expect(sort).toHaveValue("latest");
   await expect(page.locator(".catalog-group--featured .catalog-card h2")).toHaveText(["打工摸鱼", "合成大西瓜", "蛇蛇出洞"]);
-  await expect(card(page, "打工摸鱼").locator(".catalog-card__heat")).toHaveAttribute("aria-label", "热度 32");
-  await expect(card(page, "合成大西瓜").locator(".catalog-card__heat")).toHaveAttribute("aria-label", "热度 15");
+  await expect(card(page, "打工摸鱼").locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
+  await expect(card(page, "合成大西瓜").locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
   await sort.selectOption("hot");
   await expect(page.locator(".catalog-group--featured .catalog-card h2")).toHaveText(["打工摸鱼", "蛇蛇出洞", "合成大西瓜"]);
   await card(page, "蛇蛇出洞").getByRole("button", { name: "加入想玩", exact: true }).click();
@@ -207,7 +207,7 @@ test("封面、标题、试玩及作者弹窗各记录一次打开，最近列�
   await page.goto("/");
   await openGame(page, card(page, "打工摸鱼").locator(".catalog-card__media-link"));
   await expect.poll(() => requests.opened).toEqual(["901"]);
-  await expect(card(page, "打工摸鱼").locator(".catalog-card__heat")).toHaveAttribute("aria-label", "热度 1");
+  await expect(card(page, "打工摸鱼").locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
   await openGame(page, card(page, "合成大西瓜").locator(".catalog-card__title-link"), "keyboard");
   await openGame(page, card(page, "蛇蛇出洞").locator(".catalog-card__open"), "middle");
   await card(page, "打工摸鱼").getByRole("button", { name: "查看测试作者甲的作品", exact: true }).click();
@@ -215,7 +215,7 @@ test("封面、标题、试玩及作者弹窗各记录一次打开，最近列�
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "关闭作者窗口", exact: true }).click();
   await expect.poll(() => requests.opened).toEqual(["901", "902", "903", "901"]);
-  await expect(card(page, "打工摸鱼").locator(".catalog-card__heat")).toHaveAttribute("aria-label", "热度 2");
+  await expect(card(page, "打工摸鱼").locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
   // 右键只打开菜单，不应写最近记录或增加公共打开量。
   await card(page, "打工摸鱼").locator(".catalog-card__media-link").click({ button: "right" });
   await page.keyboard.press("Escape");
@@ -314,7 +314,7 @@ test("写入失败与打开接口失败分别保留内存清单及本地最近�
   await page.locator(".catalog-library-filters").getByRole("button", { name: "最近打开", exact: true }).click();
   await expect(page.locator(".catalog-card h2")).toHaveText(["合成大西瓜", "打工摸鱼"]);
   expect((await savedLibrary(page))?.recent.map((item) => item.projectId)).toEqual(["901"]);
-  await expect(card(page, "打工摸鱼").locator(".catalog-card__heat")).toHaveAttribute("aria-label", "热度 0");
+  await expect(card(page, "打工摸鱼").locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
 });
 
 test("想玩满额提示后可移出再加入，不删除现存的未收录标识", async ({ page, context }) => {

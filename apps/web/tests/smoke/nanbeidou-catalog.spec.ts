@@ -192,7 +192,7 @@ for (const viewport of [
         await expect(popup).toHaveURL(new URL(game.url).href);
         await expect(popup.getByRole("heading", { name: "已打开本地验收目标" })).toBeVisible();
         await expect.poll(() => opened.length).toBe(index + 1);
-        await expect(card.locator(".catalog-card__heat")).toHaveAttribute("aria-label", `热度 ${index + 1}`);
+        await expect(card.locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
         await popup.close();
       }
       expect(opened).toEqual([game.id, game.id, game.id]);

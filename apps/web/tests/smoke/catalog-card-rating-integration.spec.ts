@@ -81,66 +81,33 @@ async function expectNoGameSideEffects(page: Page, context: BrowserContext, requ
 test.describe("card/rating/navigation integration: desktop", () => {
   test.use({ viewport: { width: 1440, height: 1000 } });
 
-  test("scored hover badge opens native detail with real provenance/dimensions; Escape restores focus", async ({ page, context }) => {
+  test("hover and keyboard reveal only the game name", async ({ page, context }) => {
     const requests = await openIntegratedCatalog(page, context);
     const card = await cardFor(page, requests, "211");
     const project = requests.projects.get("211")!;
-    const rating = project.ai_rating!;
-    const badge = card.locator(".catalog-ai-rating__badge");
-    await expect(badge).toBeHidden();
+    expect(project.ai_rating?.score).not.toBeNull();
+    const hidden = card.locator(".catalog-ai-rating, .catalog-card__ai-rating, .catalog-card__category, .catalog-card__heat");
+    await expect(hidden).toHaveCount(0);
     await card.hover();
-    await expect(badge).toBeVisible();
-    await expect(badge.locator("strong")).toHaveText(rating.score!.toFixed(1));
-    expect(await badge.evaluate((node) => node.closest("a") === null)).toBe(true);
-    await badge.click();
-    const dialog = page.locator("dialog.catalog-ai-rating-dialog[open]");
-    await expect(dialog).toBeVisible();
-    expect(await dialog.evaluate((node) => node.matches(":modal"))).toBe(true);
-    await expect(dialog.locator("h2")).toHaveText(project.name);
-    await expect(dialog.locator(".catalog-ai-rating-dialog__total strong")).toHaveText(rating.score!.toFixed(1));
-    await expect(dialog.locator(".catalog-ai-rating-dialog__provenance")).toContainText("其他 AI 提供，用户采纳");
-    await expect(dialog.locator("time")).toHaveAttribute("datetime", rating.evaluated_at ?? rating.reported_review_date!);
-    await expect(dialog.locator(".catalog-ai-rating-dialog__provenance")).toContainText("具体时间未提供");
-    await expect(dialog.locator(".catalog-ai-rating-dialog__provenance")).toContainText("时区未提供");
-    await expect(dialog.locator(".catalog-ai-rating-dialog__provenance")).toContainText(`游戏版本 ${rating.game_version || "未知"}`);
-    const dimensions = dialog.locator(".catalog-ai-rating-dialog__dimensions li");
-    await expect(dimensions).toHaveCount(rating.dimensions.length);
-    for (const [index, dimension] of rating.dimensions.entries()) {
-      await expect(dimensions.nth(index).locator(".catalog-ai-rating-dialog__dimension-name > span")).toHaveText(dimension.label);
-      await expect(dimensions.nth(index).locator("small")).toHaveText(`权重 ${dimension.weight * 100}%`);
-      await expect(dimensions.nth(index).locator("strong")).toHaveText(String(dimension.score));
-    }
-    await expect(dialog.locator(".catalog-ai-rating-dialog__scope")).toContainText(String(rating.play_scope.reported_description));
-    await expect(dialog.locator(".catalog-ai-rating-dialog__limits li")).toHaveText(rating.limitations);
-    await expectNoGameSideEffects(page, context, requests);
+    await expect(card.locator(".catalog-card__details")).toHaveCSS("opacity", "1");
+    await expect(card.locator(".catalog-card__details")).toHaveText(project.name);
     await page.mouse.move(0, 0);
-    await page.keyboard.press("Escape");
-    await expect(dialog).toHaveCount(0);
-    await expect(badge).toBeFocused();
-    await expectNoGameSideEffects(page, context, requests);
-  });
-
-  test("keyboard focus reveals AI button and Enter opens the dialog without launching a game", async ({ page, context }) => {
-    const requests = await openIntegratedCatalog(page, context);
-    const card = await cardFor(page, requests, "211");
-    const badge = card.locator(".catalog-ai-rating__badge");
     await card.locator(".catalog-card__open").focus();
-    await expect(badge).toBeVisible();
-    await page.keyboard.press("Tab");
-    await expect(badge).toBeFocused();
-    await page.keyboard.press("Enter");
-    await expect(page.locator("dialog.catalog-ai-rating-dialog[open]")).toBeVisible();
+    await expect(card.locator(".catalog-card__details")).toHaveText(project.name);
+    await expect(card.locator(".catalog-card__wanted")).toHaveCSS("opacity", "1");
+    await expect(page.locator("dialog.catalog-ai-rating-dialog")).toHaveCount(0);
     await expectNoGameSideEffects(page, context, requests);
   });
 
-  test("null AI entries have no badge or invented zero score", async ({ page, context }) => {
+  test("games without an AI score also show only the name", async ({ page, context }) => {
     const requests = await openIntegratedCatalog(page, context);
     for (const id of ["73"]) {
       expect(requests.projects.get(id)?.ai_rating ?? null).toBeNull();
       const card = await cardFor(page, requests, id);
+      const project = requests.projects.get(id)!;
       await card.hover();
-      await expect(card.locator(".catalog-ai-rating, .catalog-card__ai-rating")).toHaveCount(0);
-      await expect(card.locator(".catalog-card__heat")).toBeVisible();
+      await expect(card.locator(".catalog-ai-rating, .catalog-card__ai-rating, .catalog-card__category, .catalog-card__heat")).toHaveCount(0);
+      await expect(card.locator(".catalog-card__details")).toHaveText(project.name);
     }
     await expectNoGameSideEffects(page, context, requests);
   });
@@ -170,13 +137,12 @@ test.describe("card/rating/navigation integration: desktop", () => {
 test.describe("card/rating integration: touch", () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
 
-  test("hidden AI badge does not steal the first cover tap at its resting footprint", async ({ page, context }) => {
+  test("cover tap opens the game and does not reveal hidden attributes", async ({ page, context }) => {
     const requests = await openIntegratedCatalog(page, context);
     const card = await cardFor(page, requests, "211");
-    const badge = card.locator(".catalog-ai-rating__badge");
     await page.locator(".catalog-search input").blur();
-    await expect(badge).toBeHidden();
-    const point = await badge.evaluate((node) => {
+    await expect(card.locator(".catalog-ai-rating, .catalog-card__category, .catalog-card__heat")).toHaveCount(0);
+    const point = await card.locator(".catalog-card__cover").evaluate((node) => {
       const rect = node.getBoundingClientRect();
       return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
     });
@@ -204,9 +170,10 @@ test.describe("card/rating integration: touch", () => {
     await popup.close();
   });
 
-  test("longpress makes AI detail reachable; dialog opens and closes without game/favorite side effects", async ({ page, context }) => {
+  test("longpress reveals only the name and does not open a game", async ({ page, context }) => {
     const requests = await openIntegratedCatalog(page, context);
     const card = await cardFor(page, requests, "211");
+    const project = requests.projects.get("211")!;
     await page.locator(".catalog-search input").blur();
     const cover = await card.locator(".catalog-card__cover").boundingBox();
     if (!cover) throw new Error("Missing local game cover");
@@ -214,16 +181,9 @@ test.describe("card/rating integration: touch", () => {
     await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: cover.x + cover.width / 2, y: cover.y + cover.height / 2, id: 1 }] });
     await expect(card).toHaveClass(/catalog-card--touch-actions/);
     await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-    await card.locator(".catalog-ai-rating__badge").tap();
-    const dialog = page.locator("dialog.catalog-ai-rating-dialog[open]");
-    await expect(dialog).toBeVisible();
-    await expect(dialog.locator(".catalog-ai-rating-dialog__dimensions li")).toHaveCount(5);
-    await expectNoGameSideEffects(page, context, requests);
-    const close = dialog.locator(".catalog-ai-rating-dialog__close");
-    const box = await close.boundingBox();
-    expect(box && box.x >= 0 && box.y >= 0 && box.x + box.width <= 390 && box.y + box.height <= 844).toBe(true);
-    await close.tap();
-    await expect(dialog).toHaveCount(0);
+    await expect(card.locator(".catalog-card__details")).toHaveText(project.name);
+    await expect(card.locator(".catalog-ai-rating, .catalog-card__category, .catalog-card__heat")).toHaveCount(0);
+    await expect(page.locator("dialog.catalog-ai-rating-dialog")).toHaveCount(0);
     await expectNoGameSideEffects(page, context, requests);
     await session.detach();
   });

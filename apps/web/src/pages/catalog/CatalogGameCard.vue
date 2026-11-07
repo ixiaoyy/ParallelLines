@@ -1,27 +1,22 @@
 <script setup lang="ts">
 import { StarFilled, StarOutlined } from "@ant-design/icons-vue";
-import { computed, onMounted, onUnmounted, ref } from "vue";
-
-export interface CatalogCardAiRating {
-  score: number;
-  maxScore: number;
-}
+import { onMounted, onUnmounted, ref } from "vue";
 
 const props = withDefaults(defineProps<{
   title: string;
   href: string;
   cover: string | null;
+  /** 分类、热度、作者和站内标记只随目录数据保留，卡片不展示。 */
   categoryName?: string | null;
   authorName?: string | null;
   siteHosted?: boolean;
-  heat: number;
+  heat?: number;
   wanted: boolean;
   featured?: boolean;
   eager?: boolean;
   /** 只为当前首张关键封面提权，不改变其他卡片默认加载策略。 */
   highPriority?: boolean;
-  aiRating?: CatalogCardAiRating | null;
-}>(), { categoryName: null, authorName: null, siteHosted: false, featured: false, eager: false, highPriority: false, aiRating: null });
+}>(), { categoryName: null, authorName: null, siteHosted: false, heat: 0, featured: false, eager: false, highPriority: false });
 
 const emit = defineEmits<{
   open: [event: MouseEvent];
@@ -42,10 +37,6 @@ const keyboardActionsOpen = ref(false);
 let holdTimer: ReturnType<typeof setTimeout> | undefined;
 let touchOrigin: { x: number; y: number } | undefined;
 let suppressHoldClick = false;
-const validAiRating = computed(() => props.aiRating && Number.isFinite(props.aiRating.score)
-  && Number.isFinite(props.aiRating.maxScore) && props.aiRating.maxScore > 0
-  && props.aiRating.score >= 0 && props.aiRating.score <= props.aiRating.maxScore ? props.aiRating : null);
-
 function cancelHold(): void {
   if (holdTimer) clearTimeout(holdTimer);
   holdTimer = undefined;
@@ -121,11 +112,6 @@ onUnmounted(() => {
     </a>
     <div class="catalog-card__details">
       <h3>{{ title }}</h3>
-      <div class="catalog-card__metrics">
-        <span v-if="categoryName" class="catalog-card__category">{{ categoryName }}</span>
-        <slot name="rating" :rating="validAiRating"><span v-if="validAiRating" class="catalog-card__ai-rating">AI {{ validAiRating.score }}/{{ validAiRating.maxScore }}</span></slot>
-        <span class="catalog-card__heat" :aria-label="`综合热度 ${heat}`" title="综合热度：累计打开数＋用户评分心数×5">热度 {{ heat }}</span>
-      </div>
     </div>
     <button type="button" class="catalog-card__wanted" :class="{ 'is-active': wanted }" :aria-pressed="wanted" :aria-label="`${wanted ? '移除想玩' : '加入想玩'}：${title}`" :title="wanted ? '移除想玩' : '加入想玩'" @click.stop="emit('toggleWanted')"><StarFilled v-if="wanted" aria-hidden="true" /><StarOutlined v-else aria-hidden="true" /></button>
   </article>

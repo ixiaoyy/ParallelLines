@@ -23,7 +23,6 @@ import CatalogSubmissionDialog from "./CatalogSubmissionDialog.vue";
 import CatalogLeaderboard from "./CatalogLeaderboard.vue";
 import CatalogCategoryOrnament from "./CatalogCategoryOrnament.vue";
 import CatalogGameCard from "./CatalogGameCard.vue";
-import CatalogAiRating from "./CatalogAiRating.vue";
 import CatalogIcon from "./CatalogIcon.vue";
 import CatalogCategoryRail from "./CatalogCategoryRail.vue";
 import CatalogCategoryAccent from "./CatalogCategoryAccent.vue";
@@ -436,10 +435,8 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
                       :title="displayName(project)" :href="project.url" :cover="coverUrl(project)" :category-name="categoryName(project.categorySlug)"
                       :author-name="project.authorName" :site-hosted="isSiteHostedProject(project)" :heat="projectHeat(project)" :wanted="wantedIds.has(project.id)"
                       :data-project-id="project.id" :data-card-key="projectCardKey(group.key, project.id)"
-                      :data-cover-format="(coverAspectFor(project) ?? 1) < .9 ? 'portrait' : undefined"
-                      @open="recordGameOpen(project, $event)" @toggle-wanted="toggleWanted(project)" @cover-measured="rememberCoverAspect">
-                      <template #rating><CatalogAiRating :rating="project.aiRating" :game-name="displayName(project)" /></template>
-                    </CatalogGameCard>
+                      :style="{ '--category-cover-aspect': coverAspectFor(project) }"
+                      @open="recordGameOpen(project, $event)" @toggle-wanted="toggleWanted(project)" @cover-measured="rememberCoverAspect" />
                   </template>
                 </CatalogCategoryRail>
                 <div v-else class="catalog-grid" :class="{ 'catalog-grid--featured': group.featured }">
@@ -453,9 +450,7 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
                       :featured="group.featured && (index === 0 || index === 5)" :data-hero-slot="group.featured ? index : undefined"
                       :data-project-id="project.id" :data-card-key="projectCardKey(group.key, project.id)"
                         :data-cover-format="(coverAspectFor(project) ?? 1) < .9 ? 'portrait' : undefined"
-                        @open="recordGameOpen(project, $event)" @toggle-wanted="toggleWanted(project)" @cover-measured="rememberCoverAspect">
-                      <template #rating><CatalogAiRating :rating="project.aiRating" :game-name="displayName(project)" /></template>
-                    </CatalogGameCard>
+                        @open="recordGameOpen(project, $event)" @toggle-wanted="toggleWanted(project)" @cover-measured="rememberCoverAspect" />
                     <span v-else class="catalog-hero-slot-empty" :class="{ 'catalog-hero-slot-empty--featured': index === 0 || index === 5 }" :data-hero-slot="index" aria-hidden="true"></span>
                   </template>
                   <p v-if="group.featured && heroProjects.length === 0" class="catalog-hero-empty" role="status">{{ overviewQuery.isFetching.value ? '正在加载推荐…' : '暂无符合该推荐主题的游戏' }}</p>
@@ -473,7 +468,7 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
 
         </template>
       </section>
-      <footer class="catalog-footer"><div><strong>平行线</strong><span>让好玩的小游戏被更多人发现</span></div><SiteNavigation /><a class="catalog-footer__credits" href="/licenses/catalog-covers.html" target="_blank" rel="noopener noreferrer">封面署名</a><p class="catalog-library__hint">记录保存在当前浏览器，清理浏览器数据后会丢失。</p></footer>
+      <footer class="catalog-footer"><div><strong>平行线</strong><span>让好玩的小游戏被更多人发现</span></div><SiteNavigation /><p class="catalog-library__hint">记录保存在当前浏览器，清理浏览器数据后会丢失。</p></footer>
     </div>
     <CatalogSubmissionDialog v-model:open="submissionOpen" />
     <dialog ref="authorDialog" class="catalog-author-dialog" aria-labelledby="catalog-author-dialog-title" @close="selectedAuthor = null">

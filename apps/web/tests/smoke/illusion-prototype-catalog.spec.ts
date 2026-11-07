@@ -177,7 +177,7 @@ for (const viewport of [
         await expect(popup.getByRole("main", { name: "回廊彼岸第一关", exact: true })).toBeVisible();
         await expect(popup.locator("#scene")).toBeVisible();
         await expect.poll(() => opened.length).toBe(index + 1);
-        await expect(card.locator(".catalog-card__heat")).toHaveAttribute("aria-label", `热度 ${index + 1}`);
+        await expect(card.locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
         await expect.poll(() => page.evaluate((key) => {
           const snapshot = JSON.parse(localStorage.getItem(key) ?? "null") as {
             recent: Array<{ projectId: string; lastOpenedAt: number }>;

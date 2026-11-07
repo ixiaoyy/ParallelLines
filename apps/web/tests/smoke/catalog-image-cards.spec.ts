@@ -101,7 +101,7 @@ async function touchEnd(session: CDPSession) {
 test.describe("image cards: desktop", () => {
   test.use({ viewport: { width: 1440, height: 1000 } });
 
-  test("all cards rest as images; hover exposes full title and real aggregate heat", async ({ page, context }) => {
+  test("all cards rest as images; hover exposes only the full title", async ({ page, context }) => {
     const requests = await openLocalCatalog(page, context);
     await page.mouse.move(0, 0);
     const rest = await page.locator(".catalog-card").evaluateAll((cards) => cards.map((card) => {
@@ -115,7 +115,7 @@ test.describe("image cards: desktop", () => {
     expect(rest.length).toBeGreaterThan(6);
     expect(rest.every((card) => card.details === "0" && card.wanted === "0" && card.names === "none" && card.plays.every((display) => display === "none") && card.links === 1)).toBe(true);
     await expect(page.locator(".catalog-grid--list, .catalog-layout-toggle")).toHaveCount(0);
-    // Only the supplied AI slot may display AI data; never synthesize a score from user ratings.
+    // 分类、热度和 AI 评分保留在目录数据中，卡片上不展示。
     await expect(page.locator(".catalog-card__ai-rating")).toHaveCount(0);
     await expect(page.locator(".catalog-card__author")).toHaveCount(0);
     const card = page.locator(".catalog-group:not(.catalog-group--featured) .catalog-card").first();
@@ -125,9 +125,8 @@ test.describe("image cards: desktop", () => {
     await expect(card.locator(".catalog-card__details")).toHaveCSS("opacity", "1");
     await expect(card.locator("h3")).toHaveText(project.name);
     await expect(card.locator("h3")).toHaveCSS("white-space", "normal");
-    await expect(card.locator(".catalog-card__category")).toHaveText(project.categoryName!);
-    await expect(card.locator(".catalog-card__heat")).toHaveText(`热度 ${(project.view_count ?? 0) + (project.rating_score_sum ?? 0) * 5}`);
-    await expect(card.locator(".catalog-card__heat")).toHaveAttribute("title", /5/);
+    await expect(card.locator(".catalog-card__details")).toHaveText(project.name);
+    await expect(card.locator(".catalog-card__category, .catalog-card__heat, .catalog-ai-rating, .catalog-card__ai-rating")).toHaveCount(0);
     const revealedBox = await card.boundingBox();
     expect(revealedBox!.height).toBeCloseTo(restingBox!.height, 1);
     expect((await card.locator(".catalog-card__details").boundingBox())!.height).toBeLessThan(revealedBox!.height * .6);

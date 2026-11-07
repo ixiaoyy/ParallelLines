@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -66,7 +66,8 @@ for (const width of [1920, 1440, 390]) {
         const art = element.querySelector(".catalog-category-art")!.getBoundingClientRect();
         const cards = [...element.querySelectorAll(".catalog-card")].map((card) => {
           const b = card.getBoundingClientRect();
-          return { width: b.width, height: b.height, x: b.x, right: b.right, id: card.getAttribute("data-project-id") };
+          const cover = card.querySelector(".catalog-card__cover")!.getBoundingClientRect();
+          return { width: b.width, height: b.height, coverWidth: cover.width, coverHeight: cover.height, x: b.x, right: b.right, id: card.getAttribute("data-project-id") };
         });
         return { key: element.getAttribute("data-category-section"), sectionWidth: box.width, railWidth: rect.width, headerHeight: header.height, artTopFromSection: art.top - box.top, artBottomFromHeader: art.bottom - header.bottom, completeVisible: cards.filter((c) => c.x >= rect.x - 1 && c.right <= rect.right + 1).length, totalCards: cards.length, firstCards: cards.slice(0, 8), nextArrow: !!element.querySelector(".catalog-category-rail__arrow--next") };
       });
@@ -79,10 +80,13 @@ for (const width of [1920, 1440, 390]) {
     if (phase === "after") {
       for (const row of rows) expect(row.artTopFromSection, `${row.key} illustration stays inside its title band`).toBeGreaterThanOrEqual(0);
       expect(rows[1]!.totalCards).toBe(3);
-      expect(rows[1]!.firstCards.every((c) => c.width <= 220)).toBe(true);
+      expect(rows[1]!.nextArrow, "all three horror games fit or the rail offers scrolling")
+        .toBe(rows[1]!.completeVisible < rows[1]!.totalCards);
+      expect(rows[3]!.totalCards).toBe(1);
       expect(rows[3]!.firstCards[0]!.width).toBeLessThanOrEqual(340);
       expect(rows[3]!.nextArrow).toBe(false);
-      expect(rows[2]!.completeVisible).toBeGreaterThanOrEqual(width >= 1800 ? 7 : width >= 1200 ? 5 : 2);
+      expect(rows[2]!.completeVisible).toBeGreaterThan(0);
+      expect(rows[2]!.nextArrow).toBe(true);
       await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
       await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
       await page.screenshot({ path: path.join(folder, `${phase}-${width}-viewport.png`) });
@@ -158,29 +162,47 @@ test("compact category headings keep all artwork and tiny, non-interactive accen
   if (output) await writeFile(path.join(output, "all-category-accents.json"), JSON.stringify(rows, null, 2));
 });
 
-test("measured column transitions and local arrows preserve all records", async ({ page }) => {
+test("rail fills the measured viewport and local arrows preserve loaded records", async ({ page }) => {
   test.skip(phase === "before");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(new URL("/games", origin).href);
-  const rail = page.locator("[data-category-rail='action'] .catalog-category-rail__viewport");
+  const action = page.locator("[data-category-rail='action']");
+  const rail = action.locator(".catalog-category-rail__viewport");
   await rail.scrollIntoViewIfNeeded();
   await expect(rail).toBeVisible();
-  for (const [width, count] of [[999, 4], [1000, 5], [1199, 5], [1200, 6]]) {
-    await page.setViewportSize({ width: width!, height: 1080 });
-    await expect.poll(() => rail.evaluate((e) => {
-      const r = e.getBoundingClientRect();
-      return [...e.querySelectorAll(".catalog-card")].filter((card) => { const b = card.getBoundingClientRect(); return b.x >= r.x - 1 && b.right <= r.right + 1; }).length;
-    }), `${width}px real complete cards`).toBe(count);
+  const actionTotal = snapshot?.data.categories.find((category) => category.slug === "action")?.projects.length;
+  for (const width of [999, 1000, 1199, 1200]) {
+    await page.setViewportSize({ width, height: 1080 });
+    // 原比例使卡数随素材变化；以末张实际像素覆盖轨道，不把固定列数当成验收条件。
+    await expect.poll(() => rail.evaluate((element) => {
+      const last = [...element.querySelectorAll(".catalog-card")].at(-1);
+      return last ? element.getBoundingClientRect().right - last.getBoundingClientRect().right : Infinity;
+    }), `${width}px rail has no blank tail while more games exist`).toBeLessThanOrEqual(1);
+    await expect(action).toHaveAttribute("data-load-state", "ready");
+    if (actionTotal !== undefined) expect(await rail.locator(".catalog-card").count()).toBeLessThan(actionTotal);
   }
   await page.locator("[data-category-section='exploration']").scrollIntoViewIfNeeded();
-  await expect.poll(() => page.locator("[data-category-section='exploration'] .catalog-card").count()).toBeGreaterThan(0);
-  const ids = await page.locator("[data-category-section='exploration'] .catalog-card").evaluateAll((cards) => cards.map((c) => c.getAttribute("data-project-id")));
+  const exploration = page.locator("[data-category-rail='exploration'] .catalog-category-rail__viewport");
+  const cards = exploration.locator(".catalog-card");
+  await expect.poll(() => cards.count()).toBeGreaterThan(0);
+  const ids = await cards.evaluateAll((entries) => entries.map((card) => card.getAttribute("data-project-id")));
+  const visibleIds = () => exploration.evaluate((element) => {
+    const viewport = element.getBoundingClientRect();
+    return [...element.querySelectorAll(".catalog-card")].filter((card) => {
+      const box = card.getBoundingClientRect();
+      return box.left >= viewport.left - 1 && box.right <= viewport.right + 1;
+    }).map((card) => card.getAttribute("data-project-id"));
+  });
+  const initialVisible = await visibleIds();
   const sectionOrder = await page.locator("[data-category-section]").evaluateAll((sections) => sections.map((s) => s.getAttribute("data-category-section")));
+  const routeBeforeArrow = page.url();
   await page.getByRole("button", { name: "下一组探索游戏", exact: true }).click();
-  await expect.poll(() => page.locator("[data-category-rail='exploration'] .catalog-category-rail__viewport").evaluate((e) => e.scrollLeft)).toBeGreaterThan(0);
-  const appendedIds = await page.locator("[data-category-section='exploration'] .catalog-card").evaluateAll((cards) => cards.map((c) => c.getAttribute("data-project-id")));
+  await expect.poll(() => exploration.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await expect.poll(async () => (await visibleIds()).some((id) => !initialVisible.includes(id))).toBe(true);
+  expect(page.url()).toBe(routeBeforeArrow);
+  const appendedIds = await cards.evaluateAll((entries) => entries.map((card) => card.getAttribute("data-project-id")));
   expect(appendedIds.slice(0, ids.length)).toEqual(ids);
-  expect(appendedIds.length).toBeGreaterThanOrEqual(ids.length);
+  expect(new Set(appendedIds).size).toBe(appendedIds.length);
   await page.getByRole("button", { name: "多动脑子", exact: true }).click();
   expect(await page.locator("[data-category-section]").evaluateAll((sections) => sections.map((s) => s.getAttribute("data-category-section")))).toEqual(sectionOrder);
   expect(await page.locator("[data-category-section='exploration'] .catalog-card").evaluateAll((cards) => cards.map((c) => c.getAttribute("data-project-id")))).toEqual(appendedIds);
@@ -191,17 +213,82 @@ test("measured column transitions and local arrows preserve all records", async 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("探索");
 });
 
-test("single real farming cover and illustration are ready before snapshots", async ({ page }) => {
+/** 核对正式图已解码，图框与原图比例一致，图片填满图框且不越出当前横排。 */
+async function measureRailCover(card: Locator) {
+  await card.scrollIntoViewIfNeeded();
+  const cover = card.locator(".catalog-card__cover img");
+  await expect.poll(() => cover.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0 && image.naturalHeight > 0)).toBe(true);
+  return cover.evaluate(async (image: HTMLImageElement) => {
+    await image.decode();
+    const frame = image.closest(".catalog-card__cover")!.getBoundingClientRect();
+    const box = image.getBoundingClientRect();
+    const viewport = image.closest(".catalog-category-rail__viewport")!.clientWidth;
+    return { frameWidth: frame.width, frameHeight: frame.height, imageWidth: box.width, imageHeight: box.height,
+      offsetX: box.x - frame.x, offsetY: box.y - frame.y, viewport, fit: getComputedStyle(image).objectFit,
+      naturalWidth: image.naturalWidth, naturalHeight: image.naturalHeight };
+  });
+}
+
+test("landscape, square, portrait and farming cover frames follow the original proportions", async ({ page }) => {
   test.skip(phase === "before");
+  test.setTimeout(120_000);
   await page.goto(new URL("/games", origin).href);
-  for (const width of [1920, 1440]) {
-    await page.setViewportSize({ width, height: 1080 });
+  const samples = [
+    { category: "casual", cover: "miami-flap.webp", dimensions: [439, 721] },
+    { category: "casual", cover: "flappy-dunk.webp", dimensions: [960, 452] },
+    { category: "exploration", cover: "within.webp", dimensions: [1200, 800] },
+    { category: "romance", cover: "birdland.jpg", dimensions: [900, 900] },
+    { category: "tower-defense", cover: "yorg-io.webp", dimensions: [1280, 442] },
+    { category: "farming", cover: "fablespace.webp", dimensions: [460, 215] },
+  ] as const;
+  for (const width of [1920, 1440, 390, 320]) {
+    await page.setViewportSize({ width, height: width <= 760 ? 844 : 1080 });
+    await page.mouse.move(0, 0);
+    const sizes = [];
+    for (const sample of samples) {
+      const section = page.locator(`[data-category-section="${sample.category}"]`);
+      await section.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
+      const card = section.locator(".catalog-card").filter({ has: page.locator(`.catalog-card__cover img[src$="/${sample.cover}"]`) });
+      const measured = await measureRailCover(card);
+      const label = `${width}px ${sample.cover}`;
+      expect([measured.naturalWidth, measured.naturalHeight], label).toEqual(sample.dimensions);
+      const aspect = measured.naturalWidth / measured.naturalHeight;
+      expect(Math.abs(measured.frameWidth - measured.frameHeight * aspect), label).toBeLessThan(1);
+      expect(Math.abs(measured.imageWidth - measured.frameWidth), label).toBeLessThan(1);
+      expect(Math.abs(measured.imageHeight - measured.frameHeight), label).toBeLessThan(1);
+      expect(Math.abs(measured.offsetX), label).toBeLessThan(1);
+      expect(Math.abs(measured.offsetY), label).toBeLessThan(1);
+      expect(measured.fit, label).toBe("contain");
+      if (width <= 760) {
+        const name = card.locator(".catalog-card__mobile-name");
+        await expect(name).toBeVisible();
+        await expect(name).toHaveText(await card.locator("h3").innerText());
+      }
+      if (width === 1440 && sample.cover === "flappy-dunk.webp") {
+        // 不用 reduced-motion 掩盖悬停时的缩放，等图片自身的短动效结束后再检查。
+        await card.hover();
+        const transform = await card.locator(".catalog-card__cover img").evaluate(async (image) => {
+          const style = getComputedStyle(image);
+          style.transform;
+          await Promise.all(image.getAnimations().map((animation) => animation.finished));
+          return getComputedStyle(image).transform;
+        });
+        expect(transform).toBe("none");
+        await page.mouse.move(0, 0);
+      }
+      sizes.push({ label, ...measured, aspect });
+    }
+    const referenceHeight = sizes.find((sample) => sample.naturalWidth === sample.naturalHeight)!.frameHeight;
+    for (const sample of sizes) {
+      const expectedWidth = Math.min(referenceHeight * sample.aspect, sample.viewport, 340);
+      expect(Math.abs(sample.frameWidth - expectedWidth), sample.label).toBeLessThan(1);
+    }
     const section = page.locator("[data-category-section='farming']");
     await section.scrollIntoViewIfNeeded();
     await expect(section.locator(".catalog-card")).toHaveCount(1);
+    await expect(section.locator(".catalog-category-rail__arrow")).toHaveCount(0);
     await expect.poll(() => section.locator("img").evaluateAll((images) => images.every((img) => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth > 0))).toBe(true);
-    expect(await section.locator(".catalog-card").evaluate((e) => e.getBoundingClientRect().width)).toBeLessThanOrEqual(340);
-    if (output) await section.screenshot({ path: path.join(output, `after-${width}-farming.png`) });
+    if (output && width > 760) await section.screenshot({ path: path.join(output, `after-${width}-farming.png`) });
   }
 });
 

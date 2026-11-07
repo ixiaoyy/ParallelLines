@@ -115,8 +115,6 @@
 .catalog-footer > div { display: flex; align-items: center; gap: 18px; }
 .catalog-footer strong { color: var(--catalog-ink); font: 700 22px var(--catalog-heading-font); }
 .catalog-footer > div > span { font-size: 12px; }
-.catalog-footer__credits { color: var(--catalog-muted); font-size: 12px; text-underline-offset: 3px; }
-.catalog-footer__credits:hover, .catalog-footer__credits:focus-visible { color: var(--catalog-ink); }
 .catalog-library__hint { width: 100%; margin: 0; font-size: 11px; line-height: 1.8; }
 .catalog-author-dialog { width: min(640px, calc(100% - 32px)); max-height: 85dvh; border: 0; border-radius: 14px; padding: 24px; color: var(--catalog-ink); background: #f7f8f2; box-shadow: 0 20px 70px #183c3440; }
 .catalog-author-dialog::backdrop { background: #183c3473; }

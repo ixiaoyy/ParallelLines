@@ -5,27 +5,21 @@ export interface CatalogRailGeometry {
   viewport: number;
   gap: number;
   peek: number;
-  normal: number;
-  lead: number;
-  portrait: number;
-  panorama: number;
+  estimatedWidth: number;
 }
 
 /** 根据当前横向位置恢复尾端需求；零位置不自发追加，不依赖历史最大滚动距离。 */
 export function catalogRailTailTarget(geometry: CatalogRailGeometry, scrollLeft: number, contentRight: number): number | null {
-  return scrollLeft > .5 && contentRight - scrollLeft - geometry.viewport <= geometry.normal + geometry.gap
+  return scrollLeft > .5 && contentRight - scrollLeft - geometry.viewport <= geometry.estimatedWidth + geometry.gap
     ? scrollLeft + geometry.viewport * 1.85 : null;
 }
 
-/** 将像素缺口转为有上限的请求量；mixed 只补完整三元组，不使用固定每类条数。 */
-export function catalogRailRequestLimit(geometry: CatalogRailGeometry, deficit: number, pending: number, remaining: number, composition?: CatalogCategoryComposition, firstItem = false): number {
-  // 后续项目方向未知时先按普通卡片估算，不能用最窄竖版把整排一次过取成多屏。
-  // 真正的竖版占比由响应后卡片 rect 体现；调用方仅对剩余像素缺口有限补页。
-  const width = composition === "panorama" ? geometry.panorama : geometry.normal;
+/** 将像素缺口按已展示卡的平均宽度估算为请求量；混排仍需补齐三元组。 */
+export function catalogRailRequestLimit(geometry: CatalogRailGeometry, deficit: number, pending: number, remaining: number, composition?: CatalogCategoryComposition, observedWidth?: number): number {
+  // 首屏还没有真实卡宽时用探针估算；窄图较多时按已加载内容修正下一批。
+  const width = observedWidth && observedWidth > 0 ? observedWidth : geometry.estimatedWidth;
   if (!(width > 0) || !(geometry.viewport > 0) || remaining <= 0) return 0;
-  const leadExtra = firstItem && composition !== "mixed" && composition !== "balanced" && composition !== "panorama"
-    ? Math.max(0, geometry.lead - geometry.normal) : 0;
-  const count = Math.max(1, Math.ceil((Math.max(0, deficit - leadExtra) + geometry.gap) / (width + geometry.gap)));
+  const count = Math.max(1, Math.ceil((Math.max(0, deficit) + geometry.gap) / (width + geometry.gap)));
   const grouped = composition === "mixed" ? Math.max(1, Math.ceil(count / 3) * 3 - pending) : count;
   return Math.min(60, remaining, grouped);
 }

@@ -237,7 +237,7 @@ for (const viewport of [{ name: "desktop", width: 1280, height: 900 }, { name: "
         await expect(popup.getByRole("heading", { name: "本地精确直达目标" })).toBeVisible();
         await expect.poll(() => opened.filter((id) => id === game.id).length).toBe(1);
         const project = projects.find((entry) => entry.id === game.id)!;
-        await expect(card.locator(".catalog-card__heat")).toHaveAttribute("aria-label", `综合热度 ${project.view_count + 1 + project.rating_score_sum * 5}`);
+        await expect(card.locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
         await popup.close();
       }
       const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null") as PersonalLibrary, PERSONAL_LIBRARY_KEY);

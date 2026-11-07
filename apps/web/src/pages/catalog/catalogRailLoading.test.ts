@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { catalogRailRequestLimit, catalogRailTailTarget, stableCatalogRailPrefix, type CatalogRailGeometry } from "./catalogRailLoading";
 
-const geometry: CatalogRailGeometry = { viewport: 600, gap: 4, peek: 20, normal: 120, lead: 168, portrait: 58, panorama: 192 };
+const geometry: CatalogRailGeometry = { viewport: 600, gap: 4, peek: 20, estimatedWidth: 120 };
 const item = (id: string, aspect: number | undefined = 1.8, heat = 1): { id: string; aspect: number | undefined; heat: number } => ({ id, aspect, heat });
 const aspect = (project: ReturnType<typeof item>) => project.aspect;
 const heat = (project: ReturnType<typeof item>) => project.heat;
 
 describe("按真实几何请求分类页", () => {
   it("near重入恢复当前尾端需求，回滚后不受历史最大位置限制，初始零位置不连拉", () => {
-    const mobile = { ...geometry, viewport: 342, normal: 157 };
+    const mobile = { ...geometry, viewport: 342, estimatedWidth: 157 };
     expect(catalogRailTailTarget(mobile, 0, 378)).toBeNull();
     expect(catalogRailTailTarget(mobile, 942, 1284)).toBeCloseTo(1574.7);
     expect(catalogRailTailTarget(mobile, 100, 442)).toBeCloseTo(732.7);
@@ -18,12 +18,13 @@ describe("按真实几何请求分类页", () => {
     const small = catalogRailRequestLimit(geometry, 620, 0, 100, "balanced");
     const wide = catalogRailRequestLimit({ ...geometry, viewport: 1400 }, 1420, 0, 100, "balanced");
     expect(wide).toBeGreaterThan(small);
-    expect(catalogRailRequestLimit({ ...geometry, normal: 200 }, 620, 0, 100, "balanced")).toBeLessThan(small);
+    expect(catalogRailRequestLimit({ ...geometry, estimatedWidth: 200 }, 620, 0, 100, "balanced")).toBeLessThan(small);
   });
-  it("考虑首张lead、全景卡片和混合竖版的真实宽度", () => {
-    expect(catalogRailRequestLimit(geometry, 500, 0, 100, "split", true)).toBe(4);
-    expect(catalogRailRequestLimit(geometry, 500, 0, 100, "balanced", true)).toBe(5);
-    expect(catalogRailRequestLimit(geometry, 620, 0, 100, "panorama")).toBe(4);
+  it("已展示的窄图多就多补几张，宽图多就少补，混排仍凑完整三元组", () => {
+    expect(catalogRailRequestLimit(geometry, 500, 0, 100, "split")).toBe(5);
+    expect(catalogRailRequestLimit(geometry, 500, 0, 100, "split", 55)).toBe(9);
+    expect(catalogRailRequestLimit(geometry, 500, 0, 100, "split", 180)).toBe(3);
+    expect(catalogRailRequestLimit(geometry, 500, 0, 100, "mixed", 180)).toBe(3);
     expect(catalogRailRequestLimit(geometry, 620, 0, 100, "mixed") % 3).toBe(0);
     expect(catalogRailRequestLimit(geometry, 620, 2, 100, "mixed") + 2).toBe(catalogRailRequestLimit(geometry, 620, 0, 100, "mixed"));
   });
@@ -34,10 +35,10 @@ describe("按真实几何请求分类页", () => {
     expect(catalogRailRequestLimit(geometry, 100_000, 0, 1000, "mixed")).toBe(60);
   });
   it("mixed首批按普通卡片估算且只为三元组补齐，不用最窄竖版预取多屏", () => {
-    const mobile = { ...geometry, viewport: 341, normal: 157, lead: 157, portrait: 56 };
-    const desktop = { ...geometry, viewport: 1320, normal: 182, lead: 245.7, portrait: 88.4 };
-    expect(catalogRailRequestLimit(mobile, mobile.viewport + 20, 0, 100, "mixed", true)).toBe(3);
-    expect(catalogRailRequestLimit(desktop, desktop.viewport + 20, 0, 100, "mixed", true)).toBe(9);
+    const mobile = { ...geometry, viewport: 341, estimatedWidth: 163 };
+    const desktop = { ...geometry, viewport: 1320, estimatedWidth: 230 };
+    expect(catalogRailRequestLimit(mobile, mobile.viewport + 20, 0, 100, "mixed")).toBe(3);
+    expect(catalogRailRequestLimit(desktop, desktop.viewport + 20, 0, 100, "mixed")).toBe(6);
     expect(catalogRailRequestLimit(desktop, 100, 0, 100, "mixed")).toBe(3);
   });
 });

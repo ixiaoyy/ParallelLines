@@ -37,7 +37,6 @@
 .catalog-group--themed .catalog-group__count { color: inherit; opacity: .8; }
 .catalog-group--themed .catalog-group__meta > button { color: inherit; }
 .catalog-group--themed .catalog-category-rail { z-index: 2; }
-.catalog-group--themed[data-category-section="farming"] :deep(.catalog-category-rail--single .catalog-card__cover img) { object-position: center top; }
 
 @media (max-width: 760px) {
   .catalog-group--themed {
@@ -50,8 +49,6 @@
   .catalog-group--themed .catalog-group__heading { min-height: 48px; gap: 5px; }
   .catalog-group--themed .catalog-group__heading h2 { font-size: 23px; }
   .catalog-group--themed .catalog-group__description { font-size: 11px; }
-  .catalog-group--themed[data-category-section="farming"] :deep(.catalog-category-rail--single .catalog-card__cover) { aspect-ratio: auto; }
-  .catalog-group--themed[data-category-section="farming"] :deep(.catalog-category-rail--single .catalog-card__cover img) { height: auto; }
 }
 
 @media (max-width: 360px) {

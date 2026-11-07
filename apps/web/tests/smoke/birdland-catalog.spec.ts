@@ -211,7 +211,7 @@ for (const viewport of [{ name: "desktop", width: 1280, height: 900 }, { name: "
       await expect(popup).toHaveURL(game.url);
       await expect(popup.getByRole("heading", { name: "本地BIRDLAND精确目标" })).toBeVisible();
       await expect.poll(() => opened).toEqual([game.id]);
-      await expect(card.locator(".catalog-card__heat")).toHaveAttribute("aria-label", "综合热度 1");
+      await expect(card.locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
       await popup.close();
 
       await page.getByRole("button", { name: "作者榜", exact: true }).click();
@@ -225,17 +225,10 @@ for (const viewport of [{ name: "desktop", width: 1280, height: 900 }, { name: "
       await expect(leaderboard.getByRole("link")).toHaveCount(1);
       await page.screenshot({ path: path.join(output, `birdland-izzy-search-${viewport.name}.png`) });
 
-      // 从实际目录页footer读取许可地址，再正常打开实际HTML；原站游戏链接与资料来源不可混用。
-      const attributionLink = page.locator(`.catalog-footer a[href="${attribution.path}"]`);
-      await expect(attributionLink).toHaveCount(1);
-      await expect(attributionLink).toHaveText(/封面/);
-      await attributionLink.scrollIntoViewIfNeeded();
-      await expect(attributionLink).toBeVisible();
-      await expect(attributionLink).toHaveAttribute("target", "_blank");
-      await expect(attributionLink).toHaveAttribute("rel", "noopener noreferrer");
-      const licensePagePromise = context.waitForEvent("page");
-      await attributionLink.click();
-      const licensePage = await licensePagePromise;
+      // 目录页脚不再展示署名入口；许可页仍直接打开实际 HTML，原站游戏链接与资料来源不可混用。
+      await expect(page.locator(`.catalog-footer a[href="${attribution.path}"]`)).toHaveCount(0);
+      const licensePage = await context.newPage();
+      await licensePage.goto(new URL(attribution.path, origin).href);
       await expect(licensePage).toHaveURL(new URL(attribution.path, origin).href);
       await licensePage.waitForLoadState("domcontentloaded");
       expect(licenseStatus).toBe(200);

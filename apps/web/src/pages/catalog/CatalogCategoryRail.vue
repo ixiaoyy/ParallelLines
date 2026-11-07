@@ -15,7 +15,7 @@ const props = defineProps<{
 }>();
 const root = ref<HTMLElement | null>(null);
 const viewport = ref<HTMLElement | null>(null);
-const probes = ref<HTMLElement | null>(null);
+const widthProbe = ref<HTMLElement | null>(null);
 const canPrevious = ref(false);
 const canNext = ref(false);
 const near = ref(false);
@@ -64,10 +64,14 @@ function ensureCoverage(right: number, refresh = false): Promise<void> {
       // 已发请求可以完成并入缓存；纵向离开附近后，不再补发后续小批。
       while (!disposed && near.value && geometry && requests < 4) {
         const needsInitial = !query.data.value || refresh;
-        if (!needsInitial && (ended.value || contentRight() >= targetRight - 1)) break;
+        const filled = contentRight();
+        if (!needsInitial && (ended.value || filled >= targetRight - 1)) break;
         const remaining = needsInitial ? Math.max(props.total, total.value) : Math.max(0, total.value - allItems.value.length);
-        requestedLimit.value = catalogRailRequestLimit(geometry, targetRight - contentRight(),
-          allItems.value.length - projects.value.length, remaining, props.composition, !allItems.value.length);
+        // 卡片不再等宽：用已呈现的实际平均宽度估算缺口，已覆盖的边界仍以 DOM 为准。
+        const count = projects.value.length;
+        const observedWidth = count > 0 ? (filled - (count - 1) * geometry.gap) / count : undefined;
+        requestedLimit.value = catalogRailRequestLimit(geometry, targetRight - filled,
+          allItems.value.length - count, remaining, props.composition, observedWidth);
         if (!requestedLimit.value) break;
         const before = allItems.value.length;
         const result = needsInitial ? await query.refetch({ cancelRefetch: false }) : await query.fetchNextPage({ cancelRefetch: false });
@@ -93,17 +97,16 @@ function ensureCoverage(right: number, refresh = false): Promise<void> {
   return activePump;
 }
 
-/** CSS 探针求解 min/calc/cqw 后的像素，列数、lead、竖版和全景宽度均沿实际布局。 */
+/** 测量轨道和首批估算宽度；有真实卡后，补页以已渲染几何为准。 */
 function measure(): void {
   const rail = viewport.value;
-  const sizes = probes.value?.children;
-  if (!rail || !sizes?.length || disposed) return;
+  const probe = widthProbe.value;
+  if (!rail || !probe || disposed) return;
   const width = rail.clientWidth;
   const oldWidth = geometry?.viewport;
-  const size = (index: number) => (sizes[index] as HTMLElement).getBoundingClientRect().width;
   geometry = { viewport: width, gap: Number.parseFloat(getComputedStyle(rail).columnGap) || 0,
     peek: Number.parseFloat(getComputedStyle(root.value!).getPropertyValue("--category-rail-peek")) || 0,
-    normal: size(0), lead: size(1), portrait: size(2), panorama: size(3) };
+    estimatedWidth: probe.getBoundingClientRect().width };
   canPrevious.value = rail.scrollLeft > 2;
   canNext.value = contentRight() - width - rail.scrollLeft > 2 || (started.value && !ended.value && projects.value.length > 0);
   // 屏宽变化后重新建立当前像素目标，不能用宽屏旧目标要求缩窄后的卡片继续补页。
@@ -169,7 +172,7 @@ function observeVisibility(): void {
 onMounted(() => {
   resizeObserver = new ResizeObserver(scheduleMeasure);
   if (viewport.value) resizeObserver.observe(viewport.value);
-  if (probes.value) resizeObserver.observe(probes.value);
+  if (widthProbe.value) resizeObserver.observe(widthProbe.value);
   observeVisibility();
   window.addEventListener("resize", observeVisibility);
   scheduleMeasure();
@@ -186,7 +189,7 @@ onUnmounted(() => {
 
 <template>
   <div ref="root" class="catalog-category-rail" :data-category-rail="slug" :data-load-state="state" :data-composition="composition" :class="{ 'catalog-category-rail--single': total === 1, 'catalog-category-rail--waiting': !projects.length }">
-    <div ref="probes" class="catalog-category-rail__probes" aria-hidden="true"><i /><i /><i /><i /></div>
+    <div ref="widthProbe" class="catalog-category-rail__width-probe" aria-hidden="true"></div>
     <div ref="viewport" class="catalog-category-rail__viewport" :aria-label="`${name}游戏`" :aria-busy="query.isFetching.value" role="group" tabindex="0" @scroll.passive="handleScroll" @keydown="handleKey">
       <slot :projects="projects" />
     </div>
@@ -199,27 +202,16 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .catalog-category-rail {
-  --category-columns: 2;
   --category-rail-gap: 4px;
   --category-rail-peek: 20px;
-  --category-tile-width: min(220px, calc((100cqw - var(--category-rail-peek) - var(--category-rail-gap) * var(--category-columns)) / var(--category-columns)));
-  --category-tile-height: calc(var(--category-tile-width) * 4 / 7);
-  --category-lead-width: min(300px, calc(var(--category-tile-width) * var(--category-lead-scale, 1)));
-  --category-portrait-width: calc(var(--category-tile-height) * .85);
-  --category-panorama-width: min(100cqw, var(--category-single-max-width, 340px), calc(var(--category-tile-width) * 1.6));
+  --category-tile-height: clamp(76px, calc(66px + 3.2cqw), 114px);
+  --category-max-cover-width: min(100cqw, 340px);
+  // 只在比例未知或估算首批时借用常见正式封面 960×452 的比例。
+  --category-estimated-aspect: 2.1239;
   position: relative;
   min-width: 0;
   container-type: inline-size;
 }
-// 1000/1200 are measured CrazyGames transitions. The other thresholds are
-// ParallelLines adaptations, checked against our own container and sidebar.
-@media (min-width: 600px) { .catalog-category-rail { --category-columns: 3; } }
-@media (min-width: 800px) { .catalog-category-rail { --category-columns: 4; } }
-@media (min-width: 1000px) { .catalog-category-rail { --category-columns: 5; } }
-@media (min-width: 1200px) { .catalog-category-rail { --category-columns: 6; } }
-@media (min-width: 1400px) { .catalog-category-rail { --category-columns: 7; } }
-@media (min-width: 1600px) { .catalog-category-rail { --category-columns: 8; } }
-@media (min-width: 1800px) { .catalog-category-rail { --category-columns: 9; } }
 .catalog-category-rail__viewport {
   display: flex; align-items: flex-end; gap: var(--category-rail-gap);
   overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: none;
@@ -228,38 +220,22 @@ onUnmounted(() => {
 }
 .catalog-category-rail__viewport::-webkit-scrollbar { display: none; }
 .catalog-category-rail--waiting .catalog-category-rail__viewport { min-height: var(--category-tile-height); }
-.catalog-category-rail__probes { position: absolute; inset: 0 auto auto 0; width: 100%; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
-.catalog-category-rail__probes > i { display: block; height: 1px; width: var(--category-tile-width); }
-.catalog-category-rail__probes > i:nth-child(2) { width: var(--category-lead-width); }
-.catalog-category-rail__probes > i:nth-child(3) { width: var(--category-portrait-width); }
-.catalog-category-rail__probes > i:nth-child(4) { width: var(--category-panorama-width); }
+.catalog-category-rail__width-probe {
+  position: absolute; inset: 0 auto auto 0; height: 0; visibility: hidden; pointer-events: none;
+  width: min(var(--category-max-cover-width), calc(var(--category-tile-height) * var(--category-estimated-aspect)));
+}
 .catalog-category-rail__status { display: flex; align-items: center; gap: 12px; min-height: 36px; padding-top: 8px; color: var(--catalog-muted); font-size: 13px; }
 .catalog-category-rail__status button { min-height: 36px; border: 0; border-radius: 6px; padding: 0 12px; color: var(--catalog-ink); background: #dce6da; cursor: pointer; }
 .catalog-category-rail[data-composition="mixed"] .catalog-category-rail__viewport { overflow-anchor: none; scroll-snap-type: none; }
 .catalog-category-rail__viewport > :deep(.catalog-card) {
-  width: var(--category-tile-width);
-  min-width: 0; height: var(--category-tile-height); flex: 0 0 auto;
-  aspect-ratio: auto; scroll-snap-align: start;
+  // 同排按基准高度换算宽度；超宽卡碰到上限后整张等比缩小，不从边缘切掉内容。
+  --category-card-aspect: var(--category-cover-aspect, var(--category-estimated-aspect));
+  width: min(var(--category-max-cover-width), calc(var(--category-tile-height) * var(--category-card-aspect)));
+  flex: none;
+  aspect-ratio: var(--category-card-aspect);
+  scroll-snap-align: start;
 }
-.catalog-category-rail[data-composition="mixed"] :deep(.catalog-card[data-cover-format="portrait"] .catalog-card__cover img),
-.catalog-category-rail[data-composition="panorama"] :deep(.catalog-card__cover img) { object-fit: contain; }
-.catalog-category-rail[data-composition="panorama"] .catalog-category-rail__viewport > :deep(.catalog-card) {
-  width: var(--category-panorama-width);
-  height: auto;
-  aspect-ratio: 7 / 4;
-}
-@media (min-width: 761px) {
-  // One modest lead, not a repeated percentage-based page filling pattern.
-  .catalog-category-rail:not([data-composition="balanced"]):not([data-composition="panorama"]) .catalog-category-rail__viewport > :deep(.catalog-card:first-child:not([data-cover-format="portrait"])) {
-    width: var(--category-lead-width);
-    height: calc(var(--category-tile-height) * var(--category-lead-height-scale, 1));
-  }
-  // Portrait placement follows the measured source format, never a card index.
-  .catalog-category-rail[data-composition="mixed"] .catalog-category-rail__viewport > :deep(.catalog-card[data-cover-format="portrait"]) {
-    width: var(--category-portrait-width);
-    height: calc(var(--category-tile-height) * 1.35);
-  }
-}
+.catalog-category-rail__viewport > :deep(.catalog-card .catalog-card__cover img) { object-fit: contain; }
 .catalog-category-rail__arrow {
   position: absolute; z-index: 4; top: 50%; display: grid; width: 44px; height: 44px;
   place-items: center; transform: translateY(-50%); border: 1px solid #ffffff9c;
@@ -269,12 +245,9 @@ onUnmounted(() => {
 .catalog-category-rail__arrow--next { right: -9px; }
 .catalog-category-rail__arrow--previous { left: -9px; }
 @media (max-width: 760px) {
-  .catalog-category-rail { --category-lead-width: var(--category-tile-width); --category-portrait-width: max(44px, calc(var(--category-tile-height) * 17 / 27)); }
-  .catalog-category-rail__viewport > :deep(.catalog-card) { height: auto; aspect-ratio: auto; }
-  .catalog-category-rail :deep(.catalog-card__cover) { aspect-ratio: 7 / 4; }
-  .catalog-category-rail[data-composition="mixed"] .catalog-category-rail__viewport > :deep(.catalog-card[data-cover-format="portrait"]) { width: var(--category-portrait-width); }
-  .catalog-category-rail[data-composition="mixed"] :deep(.catalog-card[data-cover-format="portrait"] .catalog-card__cover) { aspect-ratio: 17 / 27; }
-  .catalog-category-rail[data-composition="panorama"] .catalog-category-rail__viewport > :deep(.catalog-card) { aspect-ratio: auto; }
+  // 手机名称在图下，原图比例只用于封面而不是整张卡。
+  .catalog-category-rail__viewport > :deep(.catalog-card) { aspect-ratio: auto; }
+  .catalog-category-rail__viewport > :deep(.catalog-card .catalog-card__cover) { aspect-ratio: var(--category-card-aspect); }
   .catalog-category-rail__arrow { width: 44px; height: 44px; font-size: 18px; }
   .catalog-category-rail__arrow--next { right: -7px; }
   .catalog-category-rail__arrow--previous { left: -7px; }

@@ -1,5 +1,6 @@
 .catalog-card {
   --catalog-card-radius: 22px;
+  container-type: inline-size;
   position: relative;
   isolation: isolate;
   min-width: 0;
@@ -12,7 +13,7 @@
 
 .catalog-card__open { display: block; position: absolute; inset: 0; border-radius: inherit; color: inherit; text-decoration: none; }
 .catalog-card__cover { display: block; position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
-.catalog-card__cover img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 220ms ease; }
+.catalog-card__cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
 // 这张正式实机图的玩家飞船靠近底边；仅定位该素材，避免横卡裁掉主体，其他封面保持默认。
 .catalog-card__cover img[src$="/catalog/2026-11-05-v3/covers/ztype.jpg"] { object-position: center bottom; }
 // 此试玩缩略图的主角头部靠上，仅定位该精确素材，保留其他图片与分类混排的适配规则。
@@ -23,9 +24,11 @@
   position: absolute;
   inset: auto 0 0;
   max-height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
   border-radius: 0 0 var(--catalog-card-radius) var(--catalog-card-radius);
-  padding: 10px 13px 11px;
+  box-sizing: border-box;
+  /* cqi 取本张卡片宽度，写在子元素上才会跟着这张图变，而不是整行容器。 */
+  padding: clamp(3px, 1.6cqi, 10px) calc(clamp(10px, 5.5cqi, 20px) + clamp(6px, 2cqi, 12px)) clamp(4px, 1.8cqi, 11px) clamp(6px, 2.4cqi, 12px);
   color: #fff;
   background: #101c1aeb;
   opacity: 0;
@@ -33,14 +36,11 @@
   pointer-events: none;
   transition: opacity 150ms ease;
 }
-.catalog-card__details h3 { margin: 0; font: 700 15px / 1.35 var(--catalog-font); overflow-wrap: anywhere; }
-.catalog-card__metrics { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 9px; margin-top: 5px; color: #e2e9e3; font: 11px / 1.4 var(--catalog-font); }
-.catalog-card__category { color: #d4e2dc; }
-.catalog-card__heat { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.catalog-card__ai-rating { font-weight: 700; }
-.catalog-card__wanted { position: absolute; top: 8px; right: 8px; display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 50%; color: #fff; background: #101c1ae6; font-size: 19px; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 150ms ease; }
+.catalog-card__details h3 { margin: 0; font: 700 clamp(8px, 4.8cqi, 22px) / 1.25 var(--catalog-font); overflow-wrap: break-word; }
+.catalog-card__wanted { position: absolute; top: clamp(3px, 1.4cqi, 8px); right: clamp(3px, 1.4cqi, 8px); display: grid; width: clamp(10px, 5.5cqi, 20px); height: clamp(10px, 5.5cqi, 20px); place-items: center; border: 0; border-radius: 0; padding: 0; color: #fff; background: transparent; font-size: clamp(10px, 5.5cqi, 20px); line-height: 1; cursor: pointer; opacity: 0; pointer-events: none; filter: drop-shadow(0 1px 1px rgb(16 28 26 / 75%)); transition: opacity 150ms ease; }
+.catalog-card__wanted :deep(svg) { width: 1em; height: 1em; }
 .catalog-card__wanted.is-active { color: #ffda7b; }
-.catalog-card__wanted:hover { background: #244e3f; }
+.catalog-card__wanted:hover { background: transparent; color: #ffe7a3; }
 .catalog-card:focus-within { outline: 3px solid var(--catalog-focus, #3b7864); outline-offset: 3px; }
 .catalog-card:is(:focus-visible, :has(:focus-visible, button:focus, [aria-expanded="true"])) .catalog-card__details,
 .catalog-card--keyboard-actions .catalog-card__details,
@@ -52,9 +52,6 @@
 
 @media (hover: hover) and (pointer: fine) {
   .catalog-card:hover { box-shadow: 0 7px 20px #183c3426; }
-  .catalog-card:hover .catalog-card__cover img,
-  .catalog-card:has(:focus-visible) .catalog-card__cover img,
-  .catalog-card--keyboard-actions .catalog-card__cover img { transform: scale(1.035); }
   .catalog-card:hover .catalog-card__details { opacity: 1; visibility: visible; }
   .catalog-card:hover .catalog-card__wanted { opacity: 1; pointer-events: auto; }
 }
@@ -63,13 +60,11 @@
   .catalog-card { --catalog-card-radius: 16px; aspect-ratio: auto; background: transparent; }
   .catalog-card__open { position: relative; }
   .catalog-card__cover { position: relative; aspect-ratio: 4 / 3; }
-  .catalog-card__mobile-name { display: block; overflow: hidden; padding: 7px 1px 2px; color: var(--catalog-ink); font: 700 13px / 1.4 var(--catalog-font); text-overflow: ellipsis; white-space: nowrap; }
-  .catalog-card__details { bottom: 27px; max-height: calc(100% - 27px); padding: 9px 10px 10px; }
-  .catalog-card__details h3 { font-size: 13px; }
-  .catalog-card__wanted { top: 5px; right: 5px; }
+  .catalog-card__mobile-name { display: block; overflow: hidden; padding: 7px 1px 2px; color: var(--catalog-ink); font: 700 clamp(8px, 4.8cqi, 22px) / 1.4 var(--catalog-font); text-overflow: ellipsis; white-space: nowrap; }
+  .catalog-card__details { bottom: 27px; max-height: calc(100% - 27px); }
   .catalog-card--featured { grid-column: 1 / -1; }
   .catalog-card--featured .catalog-card__cover { aspect-ratio: 16 / 9; }
-  .catalog-card--featured .catalog-card__mobile-name { position: absolute; inset: auto 0 0; padding: 24px 116px 15px 12px; border-radius: 0 0 var(--catalog-card-radius) var(--catalog-card-radius); color: #fff; background: linear-gradient(transparent, #102a22e6); font-size: 18px; }
+  .catalog-card--featured .catalog-card__mobile-name { position: absolute; inset: auto 0 0; padding: 24px 116px 15px 12px; border-radius: 0 0 var(--catalog-card-radius) var(--catalog-card-radius); color: #fff; background: linear-gradient(transparent, #102a22e6); }
   .catalog-card--featured .catalog-card__play { position: absolute; right: 10px; bottom: 10px; display: grid; min-height: 44px; place-items: center; border-radius: 8px; padding: 0 12px; color: #fff; background: var(--btn-primary-bg); font: 700 13px var(--catalog-font); }
   .catalog-card--featured .catalog-card__details { bottom: 0; max-height: 100%; }
   .catalog-card--featured:is(:focus-visible, :has(:focus-visible, button:focus, [aria-expanded="true"])) .catalog-card__mobile-name,
@@ -81,8 +76,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .catalog-card, .catalog-card__cover img, .catalog-card__details, .catalog-card__wanted { transition: none; }
-  .catalog-card:hover .catalog-card__cover img,
-  .catalog-card:has(:focus-visible) .catalog-card__cover img,
-  .catalog-card--keyboard-actions .catalog-card__cover img { transform: none; }
+  .catalog-card, .catalog-card__details, .catalog-card__wanted { transition: none; }
 }

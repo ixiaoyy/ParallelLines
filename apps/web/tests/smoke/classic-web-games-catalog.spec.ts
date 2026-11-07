@@ -246,7 +246,7 @@ for (const viewport of [
         await expect(popup).toHaveURL(new URL(game.url).href);
         await expect(popup.getByRole("heading", { name: "本地外链验收目标" })).toBeVisible();
         await expect.poll(() => opened.filter((id) => id === game.id).length).toBe(1);
-        await expect(card.locator(".catalog-card__heat")).toHaveAttribute("aria-label", "综合热度 1");
+        await expect(card.locator(".catalog-card__heat, .catalog-card__category, .catalog-ai-rating")).toHaveCount(0);
         await popup.close();
       }
 
