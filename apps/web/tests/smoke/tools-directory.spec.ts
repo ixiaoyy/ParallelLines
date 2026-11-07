@@ -10,12 +10,18 @@ test.beforeEach(async ({ page }) => {
 
 test("聚合页默认列出真实工具，独立工具入口仍可用", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "工具", exact: true })).toBeVisible();
-  await expect(page.locator("main article")).toHaveCount(2);
+  await expect(page.locator("main article")).toHaveCount(3);
   await expect(page.getByRole("heading", { name: "Excel 公式速查", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "两份名单核对", exact: true })).toBeVisible();
   const beadCard = page.locator("article").filter({ has: page.getByRole("heading", { name: "拼豆图纸生成器", exact: true }) });
   await beadCard.getByRole("link", { name: /打开工具/ }).click();
   await expect(page).toHaveURL(/\/tools\/bead-pattern$/);
   await expect(page.getByRole("img", { name: "拼豆图案画布", exact: true })).toBeVisible();
+  await page.getByRole("link", { name: /返回工具/ }).click();
+  const listCard = page.locator("article").filter({ has: page.getByRole("heading", { name: "两份名单核对", exact: true }) });
+  await listCard.getByRole("link", { name: /打开工具/ }).click();
+  await expect(page).toHaveURL(/\/tools\/list-compare$/);
+  await expect(page.getByRole("heading", { name: "两份名单核对", exact: true })).toBeVisible();
   await page.getByRole("link", { name: /返回工具/ }).click();
   const excelCard = page.locator("article").filter({ has: page.getByRole("heading", { name: "Excel 公式速查", exact: true }) });
   await excelCard.getByRole("link", { name: /打开工具/ }).click();
@@ -25,14 +31,15 @@ test("聚合页默认列出真实工具，独立工具入口仍可用", async ({
 test("分类与名称用途搜索组合生效，无匹配后可清除恢复", async ({ page }) => {
   const search = page.getByRole("searchbox", { name: "搜索工具名称或用途", exact: true });
   await page.getByRole("button", { name: /^办公/ }).click();
-  await expect(page.locator("main article")).toHaveCount(1);
+  await expect(page.locator("main article")).toHaveCount(2);
   await expect(page.getByRole("heading", { name: "Excel 公式速查", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "两份名单核对", exact: true })).toBeVisible();
   await search.fill("色号");
   await expect(page.locator("main article")).toHaveCount(0);
   await expect(page.getByText("没有找到匹配的工具。", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "清除筛选", exact: true }).click();
   await expect(search).toHaveValue("");
-  await expect(page.locator("main article")).toHaveCount(2);
+  await expect(page.locator("main article")).toHaveCount(3);
   await search.fill("  eXcEl  ");
   await expect(page.locator("main article")).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "Excel 公式速查", exact: true })).toBeVisible();
@@ -57,7 +64,7 @@ test("工具网格在桌面并排，手机单列且无横向溢出", async ({ pa
   await mkdir(output, { recursive: true });
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    await expect(page.locator("main article")).toHaveCount(2);
+    await expect(page.locator("main article")).toHaveCount(3);
     const cards = await page.locator("main article").evaluateAll(elements => elements.map(element => {
       const rect = element.getBoundingClientRect();
       return { top: rect.top, left: rect.left, width: rect.width };
@@ -65,7 +72,11 @@ test("工具网格在桌面并排，手机单列且无横向溢出", async ({ pa
     if (width === 1440) {
       expect(Math.abs(cards[0].top - cards[1].top)).toBeLessThan(2);
       expect(cards[1].left).toBeGreaterThan(cards[0].left + cards[0].width);
-    } else expect(cards[1].top).toBeGreaterThan(cards[0].top);
+      expect(cards[2].top).toBeGreaterThan(cards[0].top);
+    } else {
+      expect(cards[1].top).toBeGreaterThan(cards[0].top);
+      expect(cards[2].top).toBeGreaterThan(cards[1].top);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
     await page.screenshot({ path: resolve(output, `tools-${width}.png`), fullPage: true });
   }

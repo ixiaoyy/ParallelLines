@@ -13,8 +13,8 @@ interface ToolEntry {
   category: ToolCategory;
   detail: string;
   tags: string[];
-  routeName: "tool-excel-formulas" | "tool-bead-pattern";
-  previewKind: "excel" | "bead";
+  routeName: "tool-excel-formulas" | "tool-bead-pattern" | "tool-list-compare";
+  previewKind: "excel" | "bead" | "lists";
 }
 
 // 聚合页只登记已可使用的独立工具，筛选不加载教程或制图工作区。
@@ -28,6 +28,16 @@ const tools: ToolEntry[] = [
     tags: ["金额汇总", "人员匹配", "名单核对", "数据清理"],
     routeName: "tool-excel-formulas",
     previewKind: "excel",
+  },
+  {
+    id: "list-compare",
+    title: "两份名单核对",
+    description: "粘贴两份名单，找出共有和各自独有的条目。",
+    category: "office",
+    detail: "浏览器本地处理",
+    tags: ["粘贴核对", "重复项", "编号对照", "本地处理"],
+    routeName: "tool-list-compare",
+    previewKind: "lists",
   },
   {
     id: "bead",
@@ -107,6 +117,13 @@ function clearFilters(): void {
                 <span>3</span><span>张三</span><span>150</span>
                 <span>4</span><strong>合计</strong><strong class="tools-tool__answer">250</strong>
               </div>
+            </div>
+            <div v-else-if="tool.previewKind === 'lists'" class="tools-lists-preview">
+              <div class="tools-lists-preview__cols">
+                <div><b>A</b><span>张三</span><span>李四</span><span>001</span></div>
+                <div><b>B</b><span>李四</span><span>王五</span><span>001</span></div>
+              </div>
+              <p><span>共有 2</span><span>仅 A 1</span><span>仅 B 1</span></p>
             </div>
             <div v-else class="tools-bead-preview"><img src="/tools/bead-pattern/pixel-example.svg" alt="" width="160" height="160" loading="lazy" decoding="async" /><span>一格，一颗豆</span></div>
           </div>
