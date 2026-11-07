@@ -13,32 +13,23 @@ interface ToolEntry {
   category: ToolCategory;
   detail: string;
   tags: string[];
-  routeName: "tool-excel-formulas" | "tool-bead-pattern" | "tool-list-compare";
-  previewKind: "excel" | "bead" | "lists";
+  routeName: "tool-excel-formulas" | "tool-bead-pattern";
+  previewKind: "excel" | "bead";
 }
 
 // 聚合页只登记已可使用的独立工具，筛选不加载教程或制图工作区。
 const tools: ToolEntry[] = [
   {
     id: "excel",
-    title: "Excel 公式速查",
-    description: "文职常用公式，按步骤照着做。",
+    title: "Excel 公式速查与操作",
+    description: "文职常用公式速查、两列比对查重与表格清洗，按步骤照着做。",
     category: "office",
-    detail: "50 篇完整教程",
-    tags: ["金额汇总", "人员匹配", "名单核对", "数据清理"],
+    detail: "50 篇教程 + 查重工具",
+    tags: ["金额汇总", "人员匹配", "两列比对", "查重核对", "数据清理"],
     routeName: "tool-excel-formulas",
     previewKind: "excel",
   },
-  {
-    id: "list-compare",
-    title: "两份名单核对",
-    description: "粘贴两份名单，找出共有和各自独有的条目。",
-    category: "office",
-    detail: "浏览器本地处理",
-    tags: ["粘贴核对", "重复项", "编号对照", "本地处理"],
-    routeName: "tool-list-compare",
-    previewKind: "lists",
-  },
+  
   {
     id: "bead",
     title: "拼豆图纸生成器",
@@ -117,13 +108,6 @@ function clearFilters(): void {
                 <span>3</span><span>张三</span><span>150</span>
                 <span>4</span><strong>合计</strong><strong class="tools-tool__answer">250</strong>
               </div>
-            </div>
-            <div v-else-if="tool.previewKind === 'lists'" class="tools-lists-preview">
-              <div class="tools-lists-preview__cols">
-                <div><b>A</b><span>张三</span><span>李四</span><span>001</span></div>
-                <div><b>B</b><span>李四</span><span>王五</span><span>001</span></div>
-              </div>
-              <p><span>共有 2</span><span>仅 A 1</span><span>仅 B 1</span></p>
             </div>
             <div v-else class="tools-bead-preview"><img src="/tools/bead-pattern/pixel-example.svg" alt="" width="160" height="160" loading="lazy" decoding="async" /><span>一格，一颗豆</span></div>
           </div>

@@ -10,8 +10,10 @@ import type { OperationOptions } from "@/features/excelFormulaGuide/localProcess
 import UiButton from "@/shared/ui/Button.vue";
 import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
 import ExcelLocalProcessor from "./ExcelLocalProcessor.vue";
+import ListCompareOperator from "@/features/listCompare/components/ListCompareOperator.vue";
 
 const localOpen = ref(false);
+const activeOperationTab = ref<"compare" | "workbook">("compare");
 const localOperation = ref<OperationOptions["kind"]>("clean");
 const lessonOperations: Partial<Record<string, OperationOptions["kind"]>> = {
   "trim-name": "clean",
@@ -39,16 +41,38 @@ const selectedLesson = computed(() => {
   return formulaLessons.find((lesson) => lesson.id === requested) ?? formulaLessons[0];
 });
 const relatedLocalOperation = computed(() => lessonOperations[selectedLesson.value?.id ?? ""]);
+const isCompareRelatedLesson = computed(() => {
+  const id = selectedLesson.value?.id ?? "";
+  return ["missing-submissions", "duplicate-id", "unique-employees"].includes(id);
+});
 watch(relatedLocalOperation, (kind) => { if (kind) localOperation.value = kind; }, { immediate: true });
 
-/** 打开本地处理区并将键盘焦点移到该区，教程和已导入数据继续保留。 */
-async function openLocalProcessor(): Promise<void> {
+async function openCompareOperator(): Promise<void> {
   localOpen.value = true;
+  activeOperationTab.value = "compare";
   await nextTick();
   const panel = document.getElementById("excel-local-processor");
   panel?.focus({ preventScroll: true });
   panel?.scrollIntoView({ block: "start", behavior: "auto" });
 }
+
+async function openWorkbookProcessor(operation?: OperationOptions["kind"]): Promise<void> {
+  localOpen.value = true;
+  activeOperationTab.value = "workbook";
+  if (operation) localOperation.value = operation;
+  await nextTick();
+  const panel = document.getElementById("excel-local-processor");
+  panel?.focus({ preventScroll: true });
+  panel?.scrollIntoView({ block: "start", behavior: "auto" });
+}
+
+watch(() => route.query.op, (op) => {
+  if (op === "compare") {
+    openCompareOperator();
+  } else if (op === "clean" || op === "dedupe" || op === "sum" || op === "count") {
+    openWorkbookProcessor(op as OperationOptions["kind"]);
+  }
+}, { immediate: true });
 
 const categories = computed(() => [...new Set(formulaLessons.map((lesson) => lesson.category))]);
 // 任务分组只筛选已有教程；推荐项沿用完整场景说明，避免要求用户先知道函数名。
@@ -205,11 +229,12 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
         </div>
         <div class="formula-intro__practice">
           <div class="formula-intro__actions">
-          <UiButton tone="ghost" aria-controls="excel-local-processor" :aria-expanded="localOpen" @click="openLocalProcessor">处理我的表格</UiButton>
-          <UiButton :href="PRACTICE_WORKBOOK_URL" download="excel-formula-practice.xlsx" class="formula-download">
-            <template #icon><DownloadOutlined aria-hidden="true" /></template>
-            下载练习表
-          </UiButton>
+            <UiButton tone="ghost" aria-controls="excel-local-processor" :aria-expanded="localOpen && activeOperationTab === 'compare'" @click="openCompareOperator">两列查重比对</UiButton>
+            <UiButton tone="ghost" aria-controls="excel-local-processor" :aria-expanded="localOpen && activeOperationTab === 'workbook'" @click="() => openWorkbookProcessor()">处理表格文件</UiButton>
+            <UiButton :href="PRACTICE_WORKBOOK_URL" download="excel-formula-practice.xlsx" class="formula-download">
+              <template #icon><DownloadOutlined aria-hidden="true" /></template>
+              下载练习表
+            </UiButton>
           </div>
           <p>{{ formulaLessons.length }} 篇教程共用一份 Excel<br />示例数据已填好，公式留给你练习。</p>
         </div>
@@ -288,10 +313,43 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
           <section class="formula-section" aria-labelledby="lesson-scenario-title">
             <h3 id="lesson-scenario-title">什么时候用</h3>
             <p>{{ selectedLesson.scenario }}</p>
-            <UiButton v-if="relatedLocalOperation && !localOpen" tone="ghost" class="formula-local-entry" @click="openLocalProcessor">跟着教程处理自己的表格</UiButton>
+            <div v-if="!localOpen" class="formula-scenario-actions">
+              <UiButton v-if="isCompareRelatedLesson" tone="ghost" class="formula-local-entry" @click="openCompareOperator">直接在线查重比对两列</UiButton>
+              <UiButton v-if="relatedLocalOperation" tone="ghost" class="formula-local-entry" @click="openWorkbookProcessor(relatedLocalOperation)">跟着教程处理自己的表格文件</UiButton>
+            </div>
           </section>
 
-          <ExcelLocalProcessor v-if="localOpen" :suggested-operation="localOperation" />
+          <section v-if="localOpen" id="excel-local-processor" class="excel-operations-panel" tabindex="-1" aria-label="本地操作面板">
+            <div class="excel-operations-switch">
+              <div class="excel-operations-tabs" role="tablist" aria-label="操作工具类型">
+                <button
+                  type="button"
+                  role="tab"
+                  :aria-selected="activeOperationTab === 'compare'"
+                  class="excel-operations-tab"
+                  :class="{ 'is-active': activeOperationTab === 'compare' }"
+                  @click="activeOperationTab = 'compare'"
+                >
+                  两列名单查重比对
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  :aria-selected="activeOperationTab === 'workbook'"
+                  class="excel-operations-tab"
+                  :class="{ 'is-active': activeOperationTab === 'workbook' }"
+                  @click="activeOperationTab = 'workbook'"
+                >
+                  表格文件处理 (.xlsx)
+                </button>
+              </div>
+              <UiButton tone="ghost" class="excel-operations-close" @click="localOpen = false">收起操作</UiButton>
+            </div>
+            <div class="excel-operations-body">
+              <ListCompareOperator v-if="activeOperationTab === 'compare'" />
+              <ExcelLocalProcessor v-else :suggested-operation="localOperation" />
+            </div>
+          </section>
 
           <details class="formula-first-steps">
             <summary>第一次用 Excel？先看这几步</summary>

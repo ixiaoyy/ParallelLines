@@ -141,18 +141,10 @@ export const router = createRouter({
         },
       },
     },
-    // 名单核对独立加载，对照过程只在浏览器本地完成。
+    // 名单核对重定向至 Excel 工具内置查重比对操作
     {
       path: "/tools/list-compare",
-      name: "tool-list-compare",
-      component: () => import("@/pages/tools/ListComparePage.vue"),
-      meta: {
-        seo: {
-          title: "两份名单核对 · {siteTitle}",
-          description: "粘贴两份名单，找出共有和各自独有的条目。名单只在浏览器本地处理。",
-          canonicalPath: "/tools/list-compare",
-        },
-      },
+      redirect: { path: "/tools/excel-formulas", query: { op: "compare" } },
     },
     // 旧论坛地址继续保留；主导航中的圈子暂未开放。
     {

@@ -196,3 +196,71 @@
 .formula-intro__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .formula-intro__actions > .ui-button { min-height: 44px; }
 .formula-local-entry { margin-top: 14px; }
+
+.formula-scenario-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.formula-scenario-actions .formula-local-entry { margin-top: 0; }
+
+.excel-operations-panel {
+  margin-block: 28px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  padding: 22px;
+  scroll-margin-top: 24px;
+
+  :deep(.excel-local) {
+    margin-block: 0;
+    border-block: 0;
+    padding-block: 0;
+  }
+}
+
+.excel-operations-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.excel-operations-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.excel-operations-tab {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 14px;
+  background: var(--bg-app);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: var(--primary);
+    color: var(--title);
+  }
+
+  &.is-active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+    font-weight: 600;
+  }
+}
+
+.excel-operations-close {
+  min-height: 36px;
+  font-size: 13px;
+}
