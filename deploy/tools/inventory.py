@@ -69,8 +69,9 @@ def summarize_nginx(text):
             value = match.group(2).strip()
             if not re.fullmatch(r"[A-Za-z0-9_./*:\[\]$~ -]{1,1024}", value):
                 continue
+            directive = "document_directory" if match.group(1) == "root" else match.group(1)
             result.append({"source": source, "line": line_number,
-                           "directive": match.group(1), "value": value})
+                           "directive": directive, "value": value})
         elif re.fullmatch(r"\s*location\s+(?:\^~\s+)?/\.well-known/acme-challenge/\s*\{\s*", line):
             result.append({"source": source, "line": line_number,
                            "directive": "acme_location", "value": "/.well-known/acme-challenge/"})
@@ -176,7 +177,7 @@ def certificate_inventory(reader, gateway, containers):
             result.setdefault("certbot_versions", []).append(version.stdout.strip()[:120])
     if root is None:
         raise InventoryError("certificate_mount_not_found")
-    result["certificate_root"] = str(root)
+    result["certificate_store"] = str(root)
     configs = sorted((root / "renewal").glob("*.conf"))
     result["renewal_config_paths"] = [str(path) for path in configs[:MAX_CERTIFICATES]]
     result["renewal_config_truncated"] = len(configs) > MAX_CERTIFICATES

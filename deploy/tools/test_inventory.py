@@ -4,8 +4,11 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
+import tempfile
+import textwrap
 import unittest
 from unittest.mock import patch
 
@@ -37,6 +40,7 @@ server {
         self.assertNotIn("SECRET", serialized)
         self.assertNotIn("Authorization", serialized)
         self.assertNotIn("ssl_certificate_key", serialized)
+        self.assertTrue(any(item["directive"] == "document_directory" for item in result))
 
     def test_other_operations_stop_before_any_inventory(self):
         with patch.object(INVENTORY, "storage_inventory") as storage:
@@ -74,6 +78,36 @@ server {
         self.assertNotIn(".Config.Env", template)
         self.assertNotIn("json .Config.Labels", template)
         self.assertIn("com.docker.compose.service", template)
+
+    def test_transport_preserves_python_heredoc_without_line_injection(self):
+        project = Path(__file__).resolve().parents[2]
+        workflow = (project / ".github/workflows/tools-ops.yml").read_text(encoding="utf-8")
+        self.assertIn("script_stop: false", workflow)
+        self.assertNotIn("script_stop: true", workflow)
+        runner_python = textwrap.dedent(
+            workflow.split("          python3 - <<'PY'\n", 1)[1].split("\n          PY", 1)[0]
+        )
+        source = (project / "deploy/tools/inventory.py").read_text(encoding="utf-8")
+        # 只执行 runner 侧的传输组装，输出到临时文件；不执行 inventory 或 SSH。
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "step-output"
+            previous = Path.cwd()
+            try:
+                os.chdir(project)
+                with patch.dict(os.environ, {"GITHUB_OUTPUT": str(output)}):
+                    exec(compile(runner_python, "workflow-payload", "exec"), {})
+            finally:
+                os.chdir(previous)
+            lines = output.read_text(encoding="utf-8").splitlines()
+        output_marker = lines[0].removeprefix("script<<")
+        self.assertEqual(lines[-1], output_marker)
+        payload = "\n".join(lines[1:-1]) + "\n"
+        self.assertTrue(payload.startswith("set -eu\nsudo -n python3 -B - inventory <<'"))
+        self.assertNotIn("DRONE_SSH_PREV_COMMAND_EXIT_CODE", payload)
+        command, body = payload.split("\n", 2)[1:]
+        marker = command.split("<<'", 1)[1].removesuffix("'")
+        self.assertTrue(body.endswith(marker + "\n"))
+        self.assertEqual(body.removesuffix(marker + "\n"), source + "\n")
 
 
 if __name__ == "__main__":

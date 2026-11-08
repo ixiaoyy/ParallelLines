@@ -53,7 +53,7 @@ jobs:
 
           source = Path("deploy/tools/inventory.py").read_text(encoding="utf-8")
           marker = "TOOLS_INVENTORY_" + uuid.uuid4().hex
-          payload = "sudo -n python3 -B - inventory <<'" + marker + "'\n" + source + "\n" + marker + "\n"
+          payload = "set -eu\nsudo -n python3 -B - inventory <<'" + marker + "'\n" + source + "\n" + marker + "\n"
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write("script<<" + marker + "_OUTPUT\n" + payload + marker + "_OUTPUT\n")
           PY
@@ -67,5 +67,6 @@ jobs:
           fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           timeout: 30s
           command_timeout: 3m
-          script_stop: true
+          # drone-ssh 的逐行停止注入会破坏 heredoc；退出状态由 payload 的 set -eu 和末条 Python 命令保留。
+          script_stop: false
           script: ${{ steps.payload.outputs.script }}
