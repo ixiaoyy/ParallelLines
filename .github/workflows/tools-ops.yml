@@ -1,0 +1,71 @@
+name: Tools operations (inventory only)
+
+on:
+  push:
+    branches: [ops/tools-deploy-20261109]
+    paths:
+      - .github/workflows/tools-ops.yml
+      - deploy/tools/**
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Read-only production inventory; deployment is not implemented
+        type: choice
+        required: true
+        default: inventory
+        options: [inventory]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tools-production-inventory
+  cancel-in-progress: false
+
+jobs:
+  inventory:
+    # 只信任本仓库已明确授权的运维分支；不接 PR、main 或任意 dispatch ref。
+    if: >-
+      github.repository == 'ixiaoyy/ParallelLines' &&
+      github.ref == 'refs/heads/ops/tools-deploy-20261109' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && inputs.operation == 'inventory'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      OPERATION: inventory
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Prepare the reviewed read-only script
+        id: payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$OPERATION" = inventory
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import uuid
+
+          source = Path("deploy/tools/inventory.py").read_text(encoding="utf-8")
+          marker = "TOOLS_INVENTORY_" + uuid.uuid4().hex
+          payload = "sudo -n python3 -B - inventory <<'" + marker + "'\n" + source + "\n" + marker + "\n"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write("script<<" + marker + "_OUTPUT\n" + payload + marker + "_OUTPUT\n")
+          PY
+      - name: Read production metadata without changing services
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
+          timeout: 30s
+          command_timeout: 3m
+          script_stop: true
+          script: ${{ steps.payload.outputs.script }}
