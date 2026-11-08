@@ -94,7 +94,7 @@ server {
             previous = Path.cwd()
             try:
                 os.chdir(project)
-                with patch.dict(os.environ, {"GITHUB_OUTPUT": str(output)}):
+                with patch.dict(os.environ, {"GITHUB_OUTPUT": str(output), "OPERATION": "inventory"}):
                     exec(compile(runner_python, "workflow-payload", "exec"), {})
             finally:
                 os.chdir(previous)

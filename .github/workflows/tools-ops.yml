@@ -1,4 +1,4 @@
-name: Tools operations (inventory only)
+name: Tools operations
 
 on:
   push:
@@ -9,55 +9,74 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Read-only production inventory; deployment is not implemented
+        description: Push only inventories; TLS writes require this explicit operation
         type: choice
         required: true
         default: inventory
-        options: [inventory]
+        options: [inventory, health, prepare-tls]
+      expected_config_sha256:
+        description: Required for prepare-tls; trusted local preimage, not a masked log value
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
 
 concurrency:
-  group: tools-production-inventory
+  # 只读健康入口不等待写阶段，以便部署执行通道出错时仍可独立检查。
+  group: ${{ github.event_name == 'push' && 'tools-read-inventory' || inputs.operation == 'health' && 'tools-read-health' || inputs.operation == 'inventory' && 'tools-read-inventory' || 'tools-production-mutation' }}
   cancel-in-progress: false
 
 jobs:
   inventory:
+    name: ${{ github.event_name == 'push' && 'Read-only inventory' || inputs.operation }}
     # 只信任本仓库已明确授权的运维分支；不接 PR、main 或任意 dispatch ref。
     if: >-
       github.repository == 'ixiaoyy/ParallelLines' &&
       github.ref == 'refs/heads/ops/tools-deploy-20261109' &&
       (github.event_name == 'push' ||
-       (github.event_name == 'workflow_dispatch' && inputs.operation == 'inventory'))
+       (github.event_name == 'workflow_dispatch' &&
+        (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'prepare-tls')))
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 12
     env:
-      OPERATION: inventory
+      OPERATION: ${{ github.event_name == 'push' && 'inventory' || inputs.operation }}
+      EXPECTED_CONFIG_SHA256: ${{ inputs.expected_config_sha256 }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
           fetch-depth: 1
-      - name: Prepare the reviewed read-only script
+      - name: Prepare the reviewed explicit operation
         id: payload
         shell: bash
         run: |
           set -euo pipefail
-          test "$OPERATION" = inventory
           python3 - <<'PY'
           import os
           from pathlib import Path
+          import re
           import uuid
 
-          source = Path("deploy/tools/inventory.py").read_text(encoding="utf-8")
+          operation = os.environ["OPERATION"]
+          scripts = {"inventory": "inventory.py", "health": "health.py", "prepare-tls": "tls.py"}
+          if operation not in scripts:
+              raise SystemExit("Unsupported tools operation")
+          arguments = operation
+          if operation == "prepare-tls":
+              expected = os.environ.get("EXPECTED_CONFIG_SHA256", "")
+              if not re.fullmatch(r"[0-9a-f]{64}", expected):
+                  raise SystemExit("A trusted complete preimage is required")
+              arguments += " " + expected
+          source = (Path("deploy/tools") / scripts[operation]).read_text(encoding="utf-8")
           marker = "TOOLS_INVENTORY_" + uuid.uuid4().hex
-          payload = "set -eu\nsudo -n python3 -B - inventory <<'" + marker + "'\n" + source + "\n" + marker + "\n"
+          payload = "set -eu\nsudo -n python3 -B - " + arguments + " <<'" + marker + "'\n" + source + "\n" + marker + "\n"
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write("script<<" + marker + "_OUTPUT\n" + payload + marker + "_OUTPUT\n")
           PY
-      - name: Read production metadata without changing services
+      - name: Execute only the selected tools operation
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -66,7 +85,7 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           timeout: 30s
-          command_timeout: 3m
+          command_timeout: 10m
           # drone-ssh 的逐行停止注入会破坏 heredoc；退出状态由 payload 的 set -eu 和末条 Python 命令保留。
           script_stop: false
           script: ${{ steps.payload.outputs.script }}
