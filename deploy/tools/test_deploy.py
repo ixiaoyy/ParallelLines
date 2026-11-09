@@ -3,6 +3,7 @@
 import importlib.util
 import contextlib
 import io
+import urllib.request
 import json
 import hashlib
 import os
@@ -28,7 +29,8 @@ class DeployTests(unittest.TestCase):
         response.status = 200
         with tempfile.TemporaryDirectory() as directory, \
              patch.object(DEPLOY, "deadline", return_value=contextlib.nullcontext()) as bound, \
-             patch.object(DEPLOY.urllib.request, "build_opener") as opener:
+             patch.object(DEPLOY.urllib.request, "build_opener") as opener, \
+             patch("github_assets.request", side_effect=lambda url, _opener: urllib.request.Request(url)):
             opener.return_value.open.return_value = response
             target = Path(directory) / "toolbox-dist.tar.gz"
             self.assertEqual(DEPLOY.download("https://github.com/public/fixture", target, len(data), hashlib.sha256(data).hexdigest(), len(data)), len(data))
@@ -39,7 +41,8 @@ class DeployTests(unittest.TestCase):
     def test_download_reports_http_status_and_asset_without_response_body(self):
         with tempfile.TemporaryDirectory() as directory, \
              patch.object(DEPLOY, "deadline", return_value=contextlib.nullcontext()), \
-             patch.object(DEPLOY.urllib.request, "build_opener") as opener:
+             patch.object(DEPLOY.urllib.request, "build_opener") as opener, \
+             patch("github_assets.request", side_effect=lambda url, _opener: urllib.request.Request(url)):
             opener.return_value.open.side_effect = DEPLOY.urllib.error.HTTPError("https://github.com/public/fixture", 504, "private response not logged", None, None)
             target = Path(directory) / "deployment-receipt.json"
             with self.assertRaisesRegex(DEPLOY.DeployError, "^release_download_http_504:deployment-receipt.json$"):

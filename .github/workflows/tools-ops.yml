@@ -13,14 +13,19 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, health, main-web-inventory, prepare-tls, deploy, rollback]
+        options: [inventory, health, main-web-inventory, prepare-tls, deploy, rollback, deploy-main-web, rollback-main-web]
       release_tag:
-        description: Required for deploy/rollback; site-<40 lowercase hex application revision>
+        description: Required for deploy/rollback; site-<40 hex> or main-web-<40 hex> for main Web
         type: string
         required: false
         default: ''
       receipt_sha256:
-        description: Required for deploy; trusted SHA256 of deployment-receipt.json
+        description: Required for deploy; trusted SHA256 of deployment-receipt.json or web-image.json
+        type: string
+        required: false
+        default: ''
+      main_web_run_id:
+        description: Required for deploy-main-web; exact producer workflow run ID in schema 2
         type: string
         required: false
         default: ''
@@ -47,7 +52,7 @@ jobs:
       github.ref == 'refs/heads/ops/tools-deploy-20261109' &&
       (github.event_name == 'push' ||
        (github.event_name == 'workflow_dispatch' &&
-        (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'main-web-inventory' || inputs.operation == 'prepare-tls' || inputs.operation == 'deploy' || inputs.operation == 'rollback')))
+        (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'main-web-inventory' || inputs.operation == 'prepare-tls' || inputs.operation == 'deploy' || inputs.operation == 'rollback' || inputs.operation == 'deploy-main-web' || inputs.operation == 'rollback-main-web')))
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -55,6 +60,7 @@ jobs:
       EXPECTED_CONFIG_SHA256: ${{ inputs.expected_config_sha256 }}
       RELEASE_TAG: ${{ inputs.release_tag }}
       RECEIPT_SHA256: ${{ inputs.receipt_sha256 }}
+      MAIN_WEB_RUN_ID: ${{ inputs.main_web_run_id }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,11 +79,11 @@ jobs:
           import uuid
 
           operation = os.environ["OPERATION"]
-          scripts = {"inventory": "inventory.py", "health": "health.py", "main-web-inventory": "main_web.py", "prepare-tls": "tls.py", "deploy": "deploy.py", "rollback": "rollback.py"}
+          scripts = {"inventory": "inventory.py", "health": "health.py", "main-web-inventory": "main_web.py", "prepare-tls": "tls.py", "deploy": "deploy.py", "rollback": "rollback.py", "deploy-main-web": "main_web.py", "rollback-main-web": "main_web.py"}
           if operation not in scripts:
               raise SystemExit("Unsupported tools operation")
           arguments = operation
-          if operation in ("prepare-tls", "deploy"):
+          if operation in ("prepare-tls", "deploy", "deploy-main-web"):
               expected = os.environ.get("EXPECTED_CONFIG_SHA256", "")
               if not re.fullmatch(r"[0-9a-f]{64}", expected):
                   raise SystemExit("A trusted complete preimage is required")
@@ -94,12 +100,28 @@ jobs:
               arguments += " " + tag + " " + receipt + " " + expected
           elif operation == "rollback":
               arguments += " " + tag[5:]
+          elif operation in ("deploy-main-web", "rollback-main-web"):
+              tag = os.environ.get("RELEASE_TAG", "")
+              if not re.fullmatch(r"main-web-[0-9a-f]{40}", tag):
+                  raise SystemExit("A complete public main Web release tag is required")
+              if operation == "deploy-main-web":
+                  receipt = os.environ.get("RECEIPT_SHA256", "")
+                  run_id = os.environ.get("MAIN_WEB_RUN_ID", "")
+                  if not re.fullmatch(r"[0-9a-f]{64}", receipt) or not re.fullmatch(r"[0-9]{1,20}", run_id):
+                      raise SystemExit("A trusted receipt digest and exact producer run ID are required")
+                  arguments += " " + tag + " " + receipt + " " + run_id + " " + expected
+              else:
+                  arguments += " " + tag[9:]
           source = (Path("deploy/tools") / scripts[operation]).read_text(encoding="utf-8")
-          if operation in ("prepare-tls", "deploy", "rollback"):
-              names = ("deploy.py", "rollback.py", "release_contract.py", "managed_config.py", "tls.py", "health.py", "vhost.conf")
+          if operation in ("prepare-tls", "deploy", "rollback", "deploy-main-web", "rollback-main-web"):
+              main_web = operation in ("deploy-main-web", "rollback-main-web")
+              names = ("main_web.py", "managed_config.py", "tls.py", "health.py", "github_assets.py") if main_web else ("deploy.py", "rollback.py", "release_contract.py", "managed_config.py", "tls.py", "health.py", "vhost.conf", "github_assets.py")
               bundle = {name: (Path("deploy/tools") / name).read_text(encoding="utf-8") for name in names}
-              dependencies = ["managed_config"]
-              if operation in ("deploy", "rollback"):
+              dependencies = ["managed_config", "github_assets"]
+              if main_web:
+                  bundle["deploy_artifacts.py"] = Path(".github/scripts/deploy_artifacts.py").read_text(encoding="utf-8")
+                  dependencies += ["deploy_artifacts", "health", "tls"]
+              elif operation in ("deploy", "rollback"):
                   dependencies += ["release_contract", "health", "tls"]
               if operation == "rollback":
                   dependencies += ["deploy"]
@@ -129,7 +151,7 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           timeout: 30s
-          command_timeout: ${{ inputs.operation == 'deploy' && '35m' || '10m' }}
+          command_timeout: ${{ (inputs.operation == 'deploy' || inputs.operation == 'deploy-main-web') && '35m' || '10m' }}
           # drone-ssh 的逐行停止注入会破坏 heredoc；退出状态由 payload 的 set -eu 和末条 Python 命令保留。
           script_stop: false
           script: ${{ steps.payload.outputs.script }}

@@ -38,7 +38,7 @@ CRON_TEXT = ("# Managed by parallellines-tools; do not merge into existing cront
              "17 */12 * * * root /usr/bin/timeout --signal=TERM --kill-after=10s 600s /usr/bin/python3 -B "
              "/opt/parallellines-tools/ops/tls.py scheduled-renew "
              ">/opt/parallellines-tools/ops/last-renewal.stdout 2>/opt/parallellines-tools/ops/last-renewal.stderr\n")
-SOURCE_NAMES = ("deploy.py", "rollback.py", "release_contract.py", "managed_config.py", "tls.py", "health.py", "vhost.conf")
+SOURCE_NAMES = ("deploy.py", "rollback.py", "release_contract.py", "managed_config.py", "tls.py", "health.py", "vhost.conf", "github_assets.py")
 
 
 class DeployError(Exception):
@@ -151,9 +151,10 @@ class ReleaseRedirect(urllib.request.HTTPRedirectHandler):
 def download(url, output, limit, expected_sha, expected_bytes=None):
     """流式下载限总计300秒、连接/空闲30秒；完整摘要/大小通过后才解析。"""
     digest, size = hashlib.sha256(), 0
-    request = urllib.request.Request(url, headers={"User-Agent": "ParallelLinesToolsDeploy/1"})
+    import github_assets
+    opener = urllib.request.build_opener(ReleaseRedirect())
     try:
-        with deadline(300), urllib.request.build_opener(ReleaseRedirect()).open(request, timeout=30) as response:
+        with deadline(300), opener.open(github_assets.request(url, opener), timeout=30) as response:
             if response.status != 200:
                 raise DeployError("release_download_status")
             with Path(output).open("xb") as handle:
@@ -245,7 +246,7 @@ def known_configuration(source, fragment):
     if run("main_index_clean", base + ["diff", "--no-ext-diff", "--cached", "--quiet", "--", "deploy/nginx/default.conf"], accepted=(0, 1)).returncode:
         return False
     head = run("main_configuration_head", base + ["show", "HEAD:deploy/nginx/default.conf"], binary=True).stdout
-    return owned_delta_allowed(source, head, fragment)
+    return owned_delta_allowed(source, head, fragment, tls.main_web_redirect_record())
 
 
 def inplace_configuration(expected, replacement):

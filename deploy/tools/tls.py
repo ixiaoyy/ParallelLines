@@ -94,6 +94,19 @@ def clean_main_configuration():
     return True
 
 
+def main_web_redirect_record():
+    """仅读本次主站 Web 发布保存的两处 exact 授权记录，不接受任意配置片段。"""
+    path = APPLICATION / "ops/main-web/redirects.json"
+    if not path.exists():
+        return None
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 32768:
+        raise OperationError("main_web_redirect_record_invalid")
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise OperationError("main_web_redirect_record_invalid")
+    return value
+
+
 def configuration_may_reload():
     """接受整体 clean 或仅本工具已记录的 owned delta；外部未提交/已暂存变化仍停止。"""
     if clean_main_configuration():
@@ -108,7 +121,7 @@ def configuration_may_reload():
     head = command("main_config_head_bytes", base + ["show", "HEAD:" + name], binary=True).stdout
     saved = recorded.read_bytes()
     try:
-        return owned_delta_allowed(MAIN_CONFIG.read_bytes(), head, saved or None)
+        return owned_delta_allowed(MAIN_CONFIG.read_bytes(), head, saved or None, main_web_redirect_record())
     except ManagedConfigError:
         return False
 
