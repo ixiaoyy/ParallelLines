@@ -54,27 +54,22 @@ const entries = [
 ];
 
 for (const entry of entries) {
-  test(`${entry.path} 原工具入口文字保留并在新标签页打开`, async ({ page, context }) => {
-    await page.goto(entry.path);
-    const originalURL = page.url();
+  test(`${entry.path} 原工具入口文字保留并在同页直达`, async ({ page, context }) => {
     for (const [index, selector] of entry.selectors.entries()) {
+      await page.goto(entry.path);
       const container = page.locator(selector);
       const link = selector.endsWith("navigation") ? container.getByRole("link", { name: "工具", exact: true }) : container;
       await expect(link).toHaveText(entry.names[index]);
-      await expect(link).toHaveAttribute("href", "/tools");
-      await expect(link).toHaveAttribute("target", "_blank");
-      await expect(link).toHaveAttribute("rel", "noopener noreferrer");
-      const popupPromise = context.waitForEvent("page");
+      await expect(link).toHaveAttribute("href", toolsOrigin + "/");
+      expect(await link.getAttribute("target")).toBeNull();
       await link.focus();
       await link.press("Enter");
-      const popup = await popupPromise;
-      await expect(popup).toHaveURL(toolsOrigin + "/");
-      await expect(popup).toHaveTitle("工具站导航测试");
-      expect(await popup.evaluate(() => window.opener === null)).toBe(true);
-      await popup.close();
-      await expect(page).toHaveURL(originalURL);
+      await expect(page).toHaveURL(toolsOrigin + "/");
+      await expect(page).toHaveTitle("工具站导航测试");
+      expect(context.pages()).toHaveLength(1);
     }
     if (entry.path === "/") {
+      await page.goto(entry.path);
       const game = page.locator(".catalog-site-navigation").getByRole("link", { name: "游戏", exact: true });
       await expect(game).toHaveAttribute("href", "/");
       expect(await game.getAttribute("target")).toBeNull();

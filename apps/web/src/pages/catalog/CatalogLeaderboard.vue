@@ -13,8 +13,6 @@ const props = withDefaults(defineProps<{
     authorKey?: string;
     cover?: string;
     metric: string;
-    detail?: string;
-    isHeartMetric?: boolean;
     sourceUrl?: string;
   }>;
   hasMore: boolean;
@@ -40,7 +38,7 @@ const rows = computed(() => props.entries.filter((entry) => entry.rank > 3));
     <section v-if="podium.length" class="catalog-leaderboard__panel catalog-leaderboard__panel--podium" :aria-label="`${title}前三名`">
       <header class="catalog-leaderboard__heading">
         <h2><img src="/catalog/night-arcade-v1/trophy-medal.webp" alt="" loading="lazy" decoding="async" fetchpriority="low" aria-hidden="true" />{{ variant === "authors" ? "TOP 3 创作者" : "TOP 3 贡献者" }}</h2>
-        <p class="catalog-leaderboard__motto" aria-hidden="true"><template v-if="variant === 'authors'">PLAY INDIE <HeartFilled /> SUPPORT CREATORS</template><template v-else><HeartFilled /> CONTRIBUTORS MAKE<br />A BRIGHTER PLAYGROUND</template></p>
+        <p class="catalog-leaderboard__motto" aria-hidden="true"><template v-if="variant === 'authors'"><span>PLAY INDIE</span><span>SUPPORT CREATORS</span></template><template v-else><HeartFilled /> CONTRIBUTORS MAKE<br />A BRIGHTER PLAYGROUND</template></p>
       </header>
       <ol class="catalog-podium" :aria-label="`${title}前三名`">
         <li v-for="entry in podium" :key="entry.key" class="catalog-podium__place" :class="`catalog-podium__place--${entry.rank}`" :data-rank="entry.rank" :value="entry.rank">
@@ -57,8 +55,7 @@ const rows = computed(() => props.entries.filter((entry) => entry.rank > 3));
             <div class="catalog-podium__identity">
               <a v-if="entry.url" class="catalog-podium__name" :href="entry.url" target="_blank" rel="noopener noreferrer">{{ entry.name }}</a>
               <strong v-else class="catalog-podium__name">{{ entry.name }}</strong>
-              <span v-if="entry.detail" class="catalog-podium__detail">{{ entry.detail }}</span>
-              <span class="catalog-podium__metric"><HeartFilled v-if="entry.isHeartMetric" aria-hidden="true" /><GithubOutlined v-else-if="entry.sourceUrl" aria-hidden="true" />{{ entry.metric }}</span>
+              <span class="catalog-podium__metric"><GithubOutlined v-if="entry.sourceUrl" aria-hidden="true" />{{ entry.metric }}</span>
               <a v-if="entry.sourceUrl" class="catalog-leaderboard__open" :href="entry.sourceUrl" target="_blank" rel="noopener noreferrer">查看清单 <ArrowRightOutlined aria-hidden="true" /></a>
               <button v-else-if="entry.authorKey" type="button" class="catalog-leaderboard__open" :aria-label="`查看${entry.name}的作品`" @click="emit('showGames', entry.authorKey)">查看作品 <ArrowRightOutlined aria-hidden="true" /></button>
             </div>
@@ -70,7 +67,7 @@ const rows = computed(() => props.entries.filter((entry) => entry.rank > 3));
     <section v-if="rows.length" class="catalog-leaderboard__panel catalog-leaderboard__panel--list" :aria-label="`${title}其他名次`">
       <header class="catalog-leaderboard__heading">
         <h2><BarChartOutlined aria-hidden="true" />{{ variant === "authors" ? "其他作者" : "其他贡献者" }}</h2>
-        <p class="catalog-leaderboard__motto" aria-hidden="true"><template v-if="variant === 'authors'">MORE CREATORS <HeartFilled /> MORE FUN</template><template v-else>MORE CONTRIBUTIONS <HeartFilled /> A BRIGHTER TOMORROW</template></p>
+        <p class="catalog-leaderboard__motto" aria-hidden="true"><template v-if="variant === 'authors'"><span>MORE CREATORS</span><span>MORE FUN</span></template><template v-else>MORE CONTRIBUTIONS <HeartFilled /> A BRIGHTER TOMORROW</template></p>
       </header>
       <ol class="catalog-leaderboard__list" :aria-label="`${title}其他名次`">
         <li v-for="entry in rows" :key="entry.key" class="catalog-leaderboard__row" :class="{ 'catalog-leaderboard__row--has-cover': entry.cover || entry.sourceUrl }" :data-rank="entry.rank" :value="entry.rank">
@@ -79,9 +76,8 @@ const rows = computed(() => props.entries.filter((entry) => entry.rank > 3));
           <img v-else-if="entry.cover" class="catalog-leaderboard__cover" :src="entry.cover" alt="" loading="lazy" decoding="async" />
           <div class="catalog-leaderboard__identity">
             <a v-if="entry.url" :href="entry.url" target="_blank" rel="noopener noreferrer">{{ entry.name }}</a><strong v-else>{{ entry.name }}</strong>
-            <small v-if="entry.detail">{{ entry.detail }}</small>
           </div>
-          <span class="catalog-leaderboard__metric"><HeartFilled v-if="entry.isHeartMetric" aria-hidden="true" /><GithubOutlined v-else-if="entry.sourceUrl" aria-hidden="true" />{{ entry.metric }}</span>
+          <span class="catalog-leaderboard__metric"><GithubOutlined v-if="entry.sourceUrl" aria-hidden="true" />{{ entry.metric }}</span>
           <a v-if="entry.sourceUrl" class="catalog-leaderboard__open" :href="entry.sourceUrl" target="_blank" rel="noopener noreferrer">查看清单 <ArrowRightOutlined aria-hidden="true" /></a>
           <button v-else-if="entry.authorKey" type="button" class="catalog-leaderboard__open" :aria-label="`查看${entry.name}的作品`" @click="emit('showGames', entry.authorKey)">查看作品 <ArrowRightOutlined aria-hidden="true" /></button>
         </li>

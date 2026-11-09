@@ -131,7 +131,6 @@ const matchingAuthors = computed(() => rankedAuthors.value.filter((author) =>
   author.searchText.includes(normalizedAuthorSearch.value),
 ));
 const displayedAuthors = computed(() => matchingAuthors.value.slice(0, authorVisibleLimit.value));
-const allAuthorHeartsEmpty = computed(() => authorRanks.value.every((author) => author.totalHearts === 0));
 const rankedContributors = computed(() => [...authorRanks.value]
   .filter((author) => author.name.toLocaleLowerCase() !== "martindelophy")
   .sort((left, right) => right.projectCount - left.projectCount
@@ -149,13 +148,12 @@ const authorCovers = computed(() => {
   }
   return covers;
 });
+// 作者榜统一只展示作品数；累计评分仍用于现有排名，不再显示心数。
 const authorLeaderboardEntries = computed(() => displayedAuthors.value.map((author) => ({
   ...author,
   authorKey: author.key,
   cover: authorCovers.value.get(author.key),
-  metric: allAuthorHeartsEmpty.value ? `${author.projectCount} 个作品` : `${author.totalHearts} 心`,
-  isHeartMetric: !allAuthorHeartsEmpty.value,
-  detail: allAuthorHeartsEmpty.value ? undefined : `${author.projectCount} 个作品`,
+  metric: `${author.projectCount} 个作品`,
 })));
 // 来源贡献固定为第一名，保留开源身份；不为它推算作者作品数。
 const contributorLeaderboardEntries = computed(() => [

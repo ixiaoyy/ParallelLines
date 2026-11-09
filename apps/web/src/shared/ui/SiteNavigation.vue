@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { useRoute } from "vue-router";
+
 withDefaults(defineProps<{ tone?: "default" | "catalog" }>(), { tone: "default" });
+// 保留旧工具首页的选中态；实际链接直达独立工具站，避免站内地址中转。
+const route = useRoute();
 </script>
 
 <template>
@@ -8,7 +12,7 @@ withDefaults(defineProps<{ tone?: "default" | "catalog" }>(), { tone: "default" 
     <span aria-hidden="true">|</span>
     <button type="button" disabled title="圈子暂未开放" aria-label="圈子，暂未开放">圈子</button>
     <span aria-hidden="true">|</span>
-    <RouterLink :to="{ name: 'tools' }" target="_blank" rel="noopener noreferrer" exact-active-class="is-active">工具</RouterLink>
+    <a href="https://tools.pingxingxian.space/" :class="{ 'is-active': route.name === 'tools' }" :aria-current="route.name === 'tools' ? 'page' : undefined">工具</a>
   </nav>
 </template>
 

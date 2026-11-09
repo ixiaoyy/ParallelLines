@@ -19,25 +19,22 @@
 .catalog-podium__medal > img,
 .catalog-leaderboard__heading h2 > img,
 .catalog-podium__step { display: none; }
-.catalog-podium__card { height: 100%; border: 1px solid #d4ddd2; border-radius: 12px; overflow: hidden; background: #fffefa; }
+// 等高卡片让长姓名与无主页作者共用底部基线，不随内容高度抬高按钮。
+.catalog-podium__card { display: flex; height: 100%; flex-direction: column; border: 1px solid #d4ddd2; border-radius: 12px; overflow: hidden; background: #fffefa; }
 .catalog-podium__place--1 .catalog-podium__card { border-color: #9cb8a5; background: #f0f5ed; }
-.catalog-podium__art { position: relative; width: 100%; aspect-ratio: 2.12; background: #e3eae0; }
+.catalog-podium__art { position: relative; width: 100%; flex-shrink: 0; aspect-ratio: 2.12; background: #e3eae0; }
 .catalog-podium__art > img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .catalog-podium__art--source { display: grid; place-items: center; color: #345b48; background: #dce8da; }
 .catalog-podium__source-art { font-size: 64px; }
 .catalog-podium__art-fallback { display: grid; height: 100%; place-items: center; color: #658575; font-size: 54px; }
 .catalog-podium__medal { position: absolute; left: 12px; bottom: -16px; display: grid; width: 34px; height: 34px; place-items: center; border-radius: 8px; color: #fffefa; background: #315c47; }
 .catalog-podium__medal b { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1; }
-.catalog-podium__identity { display: flex; min-height: 184px; flex-direction: column; align-items: center; gap: 8px; padding: 29px 16px 20px; }
-.catalog-podium__name { max-width: 100%; color: var(--catalog-ink); font-size: 21px; font-weight: 650; line-height: 1.4; overflow-wrap: anywhere; text-decoration: none; }
-.catalog-podium__name[href] { display: inline-flex; min-height: 44px; align-items: center; }
+.catalog-podium__identity { display: flex; min-height: 184px; flex: 1; flex-direction: column; align-items: center; gap: 8px; padding: 29px 16px 20px; }
+.catalog-podium__name { display: flex; min-height: 44px; max-width: 100%; align-items: center; justify-content: center; color: var(--catalog-ink); font-size: 21px; font-weight: 650; line-height: 1.4; overflow-wrap: anywhere; text-decoration: none; }
 .catalog-podium__name[href]:hover { text-decoration: underline; text-underline-offset: 4px; }
-.catalog-podium__detail { color: var(--catalog-muted); font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
-.catalog-podium__metric { display: inline-flex; align-items: center; gap: 6px; color: #456b54; font-size: 17px; font-weight: 600; line-height: 1.4; }
+.catalog-podium__metric { display: inline-flex; align-items: center; gap: 6px; margin-top: auto; color: #456b54; font-size: 17px; font-weight: 600; line-height: 1.4; }
 .catalog-podium__metric .anticon { font-size: 16px; }
-.catalog-podium__metric .anticon-heart,
-.catalog-leaderboard__metric .anticon-heart { color: #a45b5e; }
-.catalog-podium__identity .catalog-leaderboard__open { min-width: 144px; margin-top: auto; }
+.catalog-podium__identity .catalog-leaderboard__open { min-width: 144px; }
 
 .catalog-leaderboard__list { margin: 18px 0 0; padding: 0; list-style: none; }
 .catalog-leaderboard__row { display: grid; min-width: 0; min-height: 88px; grid-template-columns: 42px minmax(0, 1fr) 118px 136px; align-items: center; gap: 10px 18px; padding: 14px 8px; }
@@ -52,7 +49,6 @@
 .catalog-leaderboard__identity strong { display: block; color: var(--catalog-ink); font-size: 18px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; text-decoration: none; }
 .catalog-leaderboard__identity a { display: flex; min-height: 44px; align-items: center; }
 .catalog-leaderboard__identity a:hover { text-decoration: underline; text-underline-offset: 4px; }
-.catalog-leaderboard__identity small { display: block; margin-top: 4px; color: var(--catalog-muted); font-size: 13px; }
 .catalog-leaderboard__metric { display: inline-flex; align-items: center; gap: 6px; color: #456b54; font-size: 15px; font-weight: 600; line-height: 1.4; }
 .catalog-leaderboard__open,
 .catalog-leaderboard__more { display: inline-flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 8px; padding: 9px 16px; color: var(--btn-primary-fg, #fff); background: var(--btn-primary-bg, #409eff); font: 600 14px / 1.4 var(--catalog-font); text-decoration: none; white-space: nowrap; cursor: pointer; }
@@ -113,9 +109,8 @@
   .catalog-podium__source-art { font-size: 48px; }
   .catalog-podium__art-fallback { font-size: 40px; }
   .catalog-podium__identity { min-height: 0; align-items: flex-start; gap: 6px; padding: 0; text-align: left; }
-  .catalog-podium__name { font-size: 19px; }
-  .catalog-podium__metric { font-size: 14px; }
-  .catalog-podium__detail { font-size: 13px; }
+  .catalog-podium__name { justify-content: flex-start; font-size: 19px; }
+  .catalog-podium__metric { margin-top: 0; font-size: 14px; }
   .catalog-podium__identity .catalog-leaderboard__open { max-width: 100%; margin-top: 3px; }
   .catalog-leaderboard__list { margin-top: 10px; }
   .catalog-leaderboard__row,

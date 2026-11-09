@@ -217,7 +217,7 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
         <img src="/logo-lines-mark.png" alt="" width="48" height="42" />
         <strong>平行线</strong>
       </RouterLink>
-      <RouterLink class="formula-back-link" :to="{ name: 'tools' }" target="_blank" rel="noopener noreferrer"><ArrowLeftOutlined aria-hidden="true" /> 返回工具列表</RouterLink>
+      <a class="formula-back-link" href="https://tools.pingxingxian.space/"><ArrowLeftOutlined aria-hidden="true" /> 返回工具列表</a>
     </header>
 
     <main class="formula-guide" aria-labelledby="formula-guide-title">

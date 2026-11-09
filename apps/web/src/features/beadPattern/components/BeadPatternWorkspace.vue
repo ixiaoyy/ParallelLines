@@ -293,7 +293,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="bead-shell">
-    <header class="bead-header"><RouterLink to="/tools" class="bead-brand" target="_blank" rel="noopener noreferrer"><img src="/logo-lines-mark.png" alt="" width="40" height="36" /><strong>平行线</strong></RouterLink><RouterLink to="/tools" class="bead-back" target="_blank" rel="noopener noreferrer"><ArrowLeftOutlined /> 返回工具</RouterLink></header>
+    <header class="bead-header"><a href="https://tools.pingxingxian.space/" class="bead-brand"><img src="/logo-lines-mark.png" alt="" width="40" height="36" /><strong>平行线</strong></a><a href="https://tools.pingxingxian.space/" class="bead-back"><ArrowLeftOutlined /> 返回工具</a></header>
     <main class="bead-page">
       <div class="bead-intro"><div><span class="bead-kicker">创作工具</span><h1>拼豆图纸生成器</h1><p>将图片转换为拼豆图纸，查看色号和用量。</p></div><span class="bead-local">图片仅在你的设备上处理</span></div>
       <div class="bead-workspace">
