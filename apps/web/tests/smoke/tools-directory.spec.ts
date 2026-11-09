@@ -1,77 +1,93 @@
-import { mkdir } from "node:fs/promises";
-import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
-test.beforeEach(async ({ page }) => {
-  // 聚合页验证不向后台写入访问统计，工具本身仍通过真实页面和静态资源运行。
-  await page.route(url => url.pathname.startsWith("/api/"), route => route.fulfill({ json: { data: null } }));
-  await page.goto("/tools");
-});
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5173";
+const toolsOrigin = "https://tools.pingxingxian.space";
 
-test("聚合页默认列出真实工具，独立工具入口仍可用", async ({ page }) => {
-  await expect(page.getByRole("heading", { name: "工具", exact: true })).toBeVisible();
-  await expect(page.locator("main article")).toHaveCount(2);
-  await expect(page.getByRole("heading", { name: "Excel 公式速查与操作", exact: true })).toBeVisible();
-  const beadCard = page.locator("article").filter({ has: page.getByRole("heading", { name: "拼豆图纸生成器", exact: true }) });
-  await beadCard.getByRole("link", { name: /打开工具/ }).click();
-  await expect(page).toHaveURL(/\/tools\/bead-pattern$/);
-  await expect(page.getByRole("img", { name: "拼豆图案画布", exact: true })).toBeVisible();
-  await page.getByRole("link", { name: /返回工具/ }).click();
-  const excelCard = page.locator("article").filter({ has: page.getByRole("heading", { name: "Excel 公式速查与操作", exact: true }) });
-  await excelCard.getByRole("link", { name: /打开工具/ }).click();
-  await expect(page).toHaveURL(/\/tools\/excel-formulas/);
-});
+test.use({ serviceWorkers: "block" });
 
-test("分类与名称用途搜索组合生效，无匹配后可清除恢复", async ({ page }) => {
-  const search = page.getByRole("searchbox", { name: "搜索工具名称或用途", exact: true });
-  await page.getByRole("button", { name: /^办公/ }).click();
-  await expect(page.locator("main article")).toHaveCount(1);
-  await expect(page.getByRole("heading", { name: "Excel 公式速查与操作", exact: true })).toBeVisible();
-  await search.fill("色号");
-  await expect(page.locator("main article")).toHaveCount(0);
-  await expect(page.getByText("没有找到匹配的工具。", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "清除筛选", exact: true }).click();
-  await expect(search).toHaveValue("");
-  await expect(page.locator("main article")).toHaveCount(2);
-  await search.fill("  eXcEl  ");
-  await expect(page.locator("main article")).toHaveCount(1);
-  await expect(page.getByRole("heading", { name: "Excel 公式速查与操作", exact: true })).toBeVisible();
-  await search.fill("查重");
-  await expect(page.locator("main article")).toHaveCount(1);
-  await expect(page.getByRole("heading", { name: "Excel 公式速查与操作", exact: true })).toBeVisible();
-  await search.fill("色号");
-  await expect(page.getByRole("heading", { name: "拼豆图纸生成器", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: /^创作/ }).click();
-  await expect(page.locator("main article")).toHaveCount(1);
-  await expect(page.getByRole("button", { name: /^创作/ })).toHaveAttribute("aria-pressed", "true");
-});
-
-test("分类筛选支持键盘操作", async ({ page }) => {
-  const category = page.getByRole("button", { name: /^创作/ });
-  await category.focus();
-  await page.keyboard.press("Enter");
-  await expect(category).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("main article")).toHaveCount(1);
-  await expect(page.getByRole("heading", { name: "拼豆图纸生成器", exact: true })).toBeVisible();
-});
-
-test("工具网格在桌面并排，手机单列且无横向溢出", async ({ page }) => {
-  const output = resolve(process.cwd(), "../../.tmp/tools-directory-qa");
-  await mkdir(output, { recursive: true });
-  for (const width of [320, 390, 1440]) {
-    await page.setViewportSize({ width, height: 900 });
-    await expect(page.locator("main article")).toHaveCount(2);
-    const cards = await page.locator("main article").evaluateAll(elements => elements.map(element => {
-      const rect = element.getBoundingClientRect();
-      return { top: rect.top, left: rect.left, width: rect.width };
-    }));
-    if (width === 1440) {
-      expect(Math.abs(cards[0].top - cards[1].top)).toBeLessThan(2);
-      expect(cards[1].left).toBeGreaterThan(cards[0].left + cards[0].width);
-    } else {
-      expect(cards[1].top).toBeGreaterThan(cards[0].top);
+test.beforeEach(async ({ context }) => {
+  const localOrigin = new URL(baseURL).origin;
+  // 保留真实主站页面和路由，工具站只模拟导航落点；禁止访问生产接口或站外资源。
+  await context.route("**/*", async route => {
+    const url = new URL(route.request().url());
+    if (url.origin === toolsOrigin) {
+      return route.fulfill({ contentType: "text/html; charset=utf-8", body: "<!doctype html><meta charset=\"utf-8\"><title>工具站导航测试</title><h1>工具站导航测试</h1>" });
     }
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
-    await page.screenshot({ path: resolve(output, `tools-${width}.png`), fullPage: true });
-  }
+    if (url.origin !== localOrigin) return route.abort();
+    if (url.pathname.startsWith("/api/")) {
+      let data: unknown = null;
+      if (url.pathname.endsWith("/catalog/overview")) data = { categories: [], hero: { projects: [], total: 0, next_offset: null } };
+      if (url.pathname.endsWith("/catalog")) data = { categories: [] };
+      if (url.pathname.endsWith("/site/settings")) data = { settings: {}, updated_at: null };
+      if (url.pathname.endsWith("/site/visits")) data = { recorded: false };
+      return route.fulfill({ json: { data } });
+    }
+    return route.continue();
+  });
+});
+
+for (const path of ["/tools", "/tools/"]) {
+  test(`${path} 直达新工具站并保留入口参数与片段`, async ({ page }) => {
+    const suffix = "?source=qa&tag=one&tag=two&empty=#entry";
+    await page.goto(path + suffix);
+    await expect(page).toHaveURL(toolsOrigin + "/" + suffix);
+    await expect(page).toHaveTitle("工具站导航测试");
+  });
+}
+
+test("SPA 历史导航也真正跨域，不只更新主站地址栏", async ({ page }) => {
+  await page.goto("/tools/excel-formulas");
+  await expect(page.getByRole("heading", { name: "Excel 公式速查", exact: true })).toBeVisible();
+  // 沿用已有历史事件回归方式，覆盖没有经过网关 HTTP 请求的 SPA 跳转。
+  await page.evaluate(() => {
+    history.pushState(null, "", "/tools?source=spa#entry");
+    dispatchEvent(new PopStateEvent("popstate", { state: history.state }));
+  });
+  await expect(page).toHaveURL(toolsOrigin + "/?source=spa#entry");
+  await expect(page).toHaveTitle("工具站导航测试");
+});
+
+const entries = [
+  { path: "/", selectors: [".catalog-site-navigation", ".site-navigation"], names: ["工具", "工具"] },
+  { path: "/tools/excel-formulas?lesson=person-total", selectors: [".formula-back-link", ".site-navigation"], names: ["返回工具列表", "工具"] },
+  { path: "/tools/bead-pattern", selectors: [".bead-brand", ".bead-back", ".site-navigation"], names: ["平行线", "返回工具", "工具"] },
+];
+
+for (const entry of entries) {
+  test(`${entry.path} 原工具入口文字保留并在新标签页打开`, async ({ page, context }) => {
+    await page.goto(entry.path);
+    const originalURL = page.url();
+    for (const [index, selector] of entry.selectors.entries()) {
+      const container = page.locator(selector);
+      const link = selector.endsWith("navigation") ? container.getByRole("link", { name: "工具", exact: true }) : container;
+      await expect(link).toHaveText(entry.names[index]);
+      await expect(link).toHaveAttribute("href", "/tools");
+      await expect(link).toHaveAttribute("target", "_blank");
+      await expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      const popupPromise = context.waitForEvent("page");
+      await link.focus();
+      await link.press("Enter");
+      const popup = await popupPromise;
+      await expect(popup).toHaveURL(toolsOrigin + "/");
+      await expect(popup).toHaveTitle("工具站导航测试");
+      expect(await popup.evaluate(() => window.opener === null)).toBe(true);
+      await popup.close();
+      await expect(page).toHaveURL(originalURL);
+    }
+    if (entry.path === "/") {
+      const game = page.locator(".catalog-site-navigation").getByRole("link", { name: "游戏", exact: true });
+      await expect(game).toHaveAttribute("href", "/");
+      expect(await game.getAttribute("target")).toBeNull();
+    }
+  });
+}
+
+test("名单核对旧别名保留固定 op 查询及片段，Excel 其它查询不受入口跳转影响", async ({ page }) => {
+  await page.goto("/tools/list-compare?lesson=ignored&op=clean&source=old#excel-local-processor");
+  await expect(page).toHaveURL(/\/tools\/excel-formulas\?op=compare#excel-local-processor$/);
+  await expect(page.locator("#compare-operator-title")).toBeVisible();
+  await page.goto("/tools/excel-formulas?lesson=person-total&op=clean&source=old");
+  await expect(page.getByRole("heading", { name: "同一个人有多笔，算他的总金额", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "本地操作面板", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/lesson=person-total&op=clean&source=old$/);
 });

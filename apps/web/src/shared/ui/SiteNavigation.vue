@@ -8,7 +8,7 @@ withDefaults(defineProps<{ tone?: "default" | "catalog" }>(), { tone: "default" 
     <span aria-hidden="true">|</span>
     <button type="button" disabled title="圈子暂未开放" aria-label="圈子，暂未开放">圈子</button>
     <span aria-hidden="true">|</span>
-    <RouterLink :to="{ name: 'tools' }" exact-active-class="is-active">工具</RouterLink>
+    <RouterLink :to="{ name: 'tools' }" target="_blank" rel="noopener noreferrer" exact-active-class="is-active">工具</RouterLink>
   </nav>
 </template>
 

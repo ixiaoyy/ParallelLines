@@ -107,6 +107,15 @@ export const router = createRouter({
       path: "/tools",
       name: "tools",
       component: () => import("@/pages/tools/ToolsPage.vue"),
+      beforeEnter: (to) => {
+        // 兼容 SPA 和旧书签入口，只转交工具目录；既有工具子路径仍留在主站。
+        const source = new URL(to.fullPath, window.location.origin);
+        const destination = new URL("https://tools.pingxingxian.space/");
+        destination.search = source.search;
+        destination.hash = source.hash;
+        window.location.replace(destination.href);
+        return false;
+      },
       meta: {
         seo: {
           title: "工具 · {siteTitle}",

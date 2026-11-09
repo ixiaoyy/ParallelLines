@@ -223,7 +223,7 @@ test("论坛品牌与主题不残留到原目录后台，原后台保持独立�
   expect(state.unexpected).toEqual([]);
 });
 
-test("默认进入游戏目录，圈子禁用，工具为空状态且不加载具体工具", async ({ page }, testInfo) => {
+test("默认进入游戏目录，圈子禁用，工具新标签页打开且不改变游戏入口", async ({ page }, testInfo) => {
   const state = await fixture(page);
   await page.goto("/?source=qa#entry");
   await expect(page).toHaveURL(/\/\?source=qa#entry$/);
@@ -277,27 +277,27 @@ test("默认进入游戏目录，圈子禁用，工具为空状态且不加载�
     await page.screenshot({ path: testInfo.outputPath(`games-entry-${width}.png`), fullPage: true });
     await page.locator(".catalog-footer").screenshot({ path: testInfo.outputPath(`games-footer-${width}.png`) });
   }
-  await nav.getByRole("link", { name: "工具", exact: true }).click();
-  await expect(page).toHaveURL(/\/tools$/);
-  await expect(page.getByRole("heading", { name: "暂无可用工具", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: /个人日报助手|PDF 英文化/ })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "圈子，暂未开放", exact: true })).toBeDisabled();
-  for (const width of [1280, 390, 320]) {
-    await page.setViewportSize({ width, height: 900 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-    await expect(nav).toHaveCSS("position", "static");
-    await nav.scrollIntoViewIfNeeded();
-    const beforeScroll = await page.evaluate(() => window.scrollY);
-    const beforeBox = await nav.boundingBox();
-    await page.evaluate(() => window.scrollTo(0, 0));
-    const afterBox = await nav.boundingBox();
-    expect(afterBox!.y - beforeBox!.y).toBeCloseTo(beforeScroll, 0);
-    await page.screenshot({ path: testInfo.outputPath(`tools-entry-${width}.png`), fullPage: true });
-  }
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "暂无可用工具", exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "去看看游戏", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
+  // 只验证跨站导航合同；工具站响应在本地拦截，不访问生产或写入统计。
+  await page.context().route("**/*", route => {
+    const url = new URL(route.request().url());
+    if (url.origin === "https://tools.pingxingxian.space") {
+      return route.fulfill({ contentType: "text/html; charset=utf-8", body: "<!doctype html><meta charset=\"utf-8\"><title>工具站导航测试</title>" });
+    }
+    const localOrigin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5173").origin;
+    if (url.origin !== localOrigin) return route.abort();
+    if (url.pathname.startsWith("/api/")) return route.fulfill({ json: { data: null } });
+    return route.continue();
+  });
+  const toolsLink = nav.getByRole("link", { name: "工具", exact: true });
+  await expect(toolsLink).toHaveAttribute("target", "_blank");
+  await expect(toolsLink).toHaveAttribute("rel", "noopener noreferrer");
+  const popupPromise = page.context().waitForEvent("page");
+  await toolsLink.click();
+  const popup = await popupPromise;
+  await expect(popup).toHaveURL("https://tools.pingxingxian.space/");
+  expect(await popup.evaluate(() => window.opener === null)).toBe(true);
+  await popup.close();
+  await expect(page).toHaveURL(/\/\?source=qa#entry$/);
   await page.goto("/games?source=compat#entry");
   await expect(page).toHaveURL(/\/games\?source=compat#entry$/);
   await expect(page.locator(".catalog-page")).toBeVisible();

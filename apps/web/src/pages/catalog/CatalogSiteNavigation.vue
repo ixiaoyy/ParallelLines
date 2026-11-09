@@ -6,7 +6,7 @@ import CatalogIcon from "./CatalogIcon.vue";
   <nav class="catalog-site-navigation" aria-label="站点导航">
     <RouterLink :to="{ name: 'home' }" exact-active-class="is-active"><CatalogIcon name="game" />游戏</RouterLink>
     <button type="button" disabled title="圈子暂未开放" aria-label="圈子，暂未开放"><CatalogIcon name="circle" />圈子</button>
-    <RouterLink :to="{ name: 'tools' }" exact-active-class="is-active"><CatalogIcon name="tools" />工具</RouterLink>
+    <RouterLink :to="{ name: 'tools' }" target="_blank" rel="noopener noreferrer" exact-active-class="is-active"><CatalogIcon name="tools" />工具</RouterLink>
   </nav>
 </template>
 

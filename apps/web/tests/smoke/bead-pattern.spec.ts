@@ -120,10 +120,8 @@ test.beforeEach(async ({ context }) => {
   await isolateLocalTool(context);
 });
 
-test("从工具目录进入，默认示例可用，人像转换遵守格数和限色设置", async ({ page }) => {
-  await page.goto("/tools");
-  const card = page.locator("article").filter({ has: page.getByRole("heading", { name: "拼豆图纸生成器", exact: true }) });
-  await card.getByRole("link", { name: /打开工具/ }).click();
+test("旧工具深链保留，默认示例可用，人像转换遵守格数和限色设置", async ({ page }) => {
+  await page.goto("/tools/bead-pattern");
   await expect(page).toHaveURL(/\/tools\/bead-pattern$/);
   await expect(page.getByRole("heading", { name: "拼豆图纸生成器", exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "拼豆图案画布", exact: true })).toBeVisible();

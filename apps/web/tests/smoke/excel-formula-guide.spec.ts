@@ -318,8 +318,8 @@ test("手机分享和刷新教程时定位正文，普通入口及后退保留�
   // 历史记录的恢复优先于首次进入定位，返回页面时不把已经读到的位置改回标题。
   await page.getByTestId("formula-recipe").scrollIntoViewIfNeeded();
   const readingPosition = await page.evaluate(() => window.scrollY);
-  await page.evaluate(() => document.querySelector<HTMLAnchorElement>(".formula-back-link")?.click());
-  await expect(page).toHaveURL(/\/tools$/);
+  await page.locator(".formula-site-brand").click();
+  await expect(page).toHaveURL(/\/$/);
   await page.goBack();
   await expect.poll(async () => Math.abs(await page.evaluate(() => window.scrollY) - readingPosition)).toBeLessThan(4);
 
@@ -370,12 +370,11 @@ test("日常完整问句和函数括号可搜索，保留否定及条件之间�
   }
 });
 
-test("从工具入口进入完整教程，五十篇教程可定位且保留公式、步骤与正确结果", async ({ page }) => {
+test("旧工具深链进入完整教程，五十篇教程可定位且保留公式、步骤与正确结果", async ({ page }) => {
   test.setTimeout(90_000);
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
-  await page.goto("/tools");
-  await page.getByRole("link", { name: "打开工具" }).click();
+  await page.goto("/tools/excel-formulas");
   await expect(page).toHaveURL(/\/tools\/excel-formulas/);
   await expect(page.getByRole("heading", { name: "Excel 公式速查", exact: true })).toBeVisible();
 
@@ -461,7 +460,7 @@ test("复制真实公式、复制失败可手动选择，并能下载真实练�
   expect(bytes.length).toBeGreaterThan(2000);
 });
 
-test("手机和桌面正文可读，长公式不撑宽页面，键盘可进入独立工具", async ({ page }) => {
+test("手机和桌面正文可读，长公式不撑宽页面，键盘可选择教程", async ({ page }) => {
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/tools/excel-formulas?lesson=department-status-total");
@@ -475,11 +474,10 @@ test("手机和桌面正文可读，长公式不撑宽页面，键盘可进入�
     }));
     expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
   }
-  await page.goto("/tools");
-  const launch = page.getByRole("link", { name: "打开工具" });
-  await launch.focus();
+  const firstLesson = page.getByRole("navigation", { name: "公式教程目录" }).getByRole("button").first();
+  await firstLesson.focus();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/tools\/excel-formulas/);
+  await expect(page).toHaveURL(/lesson=total-amount/);
 });
 
 test("按想得到的结果选课，八类任务覆盖五十篇教程并清除旧筛选", async ({ page }) => {
@@ -670,9 +668,7 @@ test("易混用途可互相切换，公式先于步骤且明确标出粘贴位�
 });
 
 test("直接标明适用范围，全部教程可选且新版教程始终提供旧版替代入口", async ({ page }) => {
-  await page.goto("/tools");
-  await expect(page.getByText("办公工具 · 50 篇完整教程", { exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "打开工具" }).click();
+  await page.goto("/tools/excel-formulas");
   const directory = page.getByRole("navigation", { name: "公式教程目录" });
   await expect(page.getByRole("combobox")).toHaveCount(0);
   await expect(page.getByText("按 Excel 版本找教程", { exact: true })).toHaveCount(0);
