@@ -37,7 +37,8 @@
   transition: opacity 150ms ease;
 }
 .catalog-card__details h3 { margin: 0; font: 700 clamp(8px, 4.8cqi, 22px) / 1.25 var(--catalog-font); overflow-wrap: break-word; }
-.catalog-card__wanted { position: absolute; top: clamp(3px, 1.4cqi, 8px); right: clamp(3px, 1.4cqi, 8px); display: grid; width: clamp(10px, 5.5cqi, 20px); height: clamp(10px, 5.5cqi, 20px); place-items: center; border: 0; border-radius: 0; padding: 0; color: #fff; background: transparent; font-size: clamp(10px, 5.5cqi, 20px); line-height: 1; cursor: pointer; opacity: 0; pointer-events: none; filter: drop-shadow(0 1px 1px rgb(16 28 26 / 75%)); transition: opacity 150ms ease; }
+// 透明点击区内居中星星，避开封面圆角；窄竖封不向相邻卡片扩出点击区。
+.catalog-card__wanted { position: absolute; top: 0; right: 0; display: grid; width: min(44px, 100cqi); height: 44px; place-items: center; border: 0; border-radius: 50%; padding: 0; color: #fff; background: transparent; font-size: clamp(10px, 5.5cqi, 20px); line-height: 1; cursor: pointer; opacity: 0; pointer-events: none; filter: drop-shadow(0 1px 1px rgb(16 28 26 / 75%)); transition: opacity 150ms ease; }
 .catalog-card__wanted :deep(svg) { width: 1em; height: 1em; }
 .catalog-card__wanted.is-active { color: #ffda7b; }
 .catalog-card__wanted:hover { background: transparent; color: #ffe7a3; }
@@ -48,7 +49,8 @@
 .catalog-card:is(:focus-visible, :has(:focus-visible, button:focus, [aria-expanded="true"])) .catalog-card__wanted,
 .catalog-card--keyboard-actions .catalog-card__wanted,
 .catalog-card--touch-actions .catalog-card__wanted { opacity: 1; pointer-events: auto; }
-.catalog-card__wanted:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+// 收藏焦点向内绘制，优先于目录页对通用控件的外扩焦点规则。
+.catalog-card > button.catalog-card__wanted:focus-visible { outline: 3px solid #fff; outline-offset: -5px; }
 
 @media (hover: hover) and (pointer: fine) {
   .catalog-card:hover { box-shadow: 0 7px 20px #183c3426; }

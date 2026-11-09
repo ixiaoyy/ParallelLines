@@ -188,13 +188,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="root" class="catalog-category-rail" :data-category-rail="slug" :data-load-state="state" :data-composition="composition" :class="{ 'catalog-category-rail--single': total === 1, 'catalog-category-rail--waiting': !projects.length }">
+  <div ref="root" class="catalog-category-rail" :data-category-rail="slug" :data-load-state="state" :data-composition="composition" :class="{ 'catalog-category-rail--single': total === 1 }">
     <div ref="widthProbe" class="catalog-category-rail__width-probe" aria-hidden="true"></div>
     <div ref="viewport" class="catalog-category-rail__viewport" :aria-label="`${name}游戏`" :aria-busy="query.isFetching.value" role="group" tabindex="0" @scroll.passive="handleScroll" @keydown="handleKey">
       <slot :projects="projects" />
     </div>
     <div v-if="state === 'loading' || state === 'loading-more'" class="catalog-category-rail__status" role="status">正在加载{{ name }}游戏…</div>
-    <div v-if="localError" class="catalog-category-rail__status" role="alert"><span>{{ localError }}</span><button type="button" :aria-label="`重新加载${name}游戏`" @click="retry">重试</button></div>
+    <div v-if="localError" class="catalog-category-rail__status catalog-category-rail__status--error" role="alert"><span>{{ localError }}</span><button type="button" :aria-label="`重新加载${name}游戏`" @click="retry">重试</button></div>
     <button v-if="canPrevious" class="catalog-category-rail__arrow catalog-category-rail__arrow--previous" type="button" :aria-label="`上一组${name}游戏`" @click="move(-1)"><LeftOutlined aria-hidden="true" /></button>
     <button v-if="canNext" class="catalog-category-rail__arrow catalog-category-rail__arrow--next" type="button" :aria-label="`下一组${name}游戏`" @click="move(1)"><RightOutlined aria-hidden="true" /></button>
   </div>
@@ -214,18 +214,22 @@ onUnmounted(() => {
 }
 .catalog-category-rail__viewport {
   display: flex; align-items: flex-end; gap: var(--category-rail-gap);
+  // 初载、图片解码和补页共用同一行高，状态浮层不再撑开下方分类。
+  height: var(--category-tile-height);
   overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: none;
   scroll-snap-type: x mandatory; scroll-padding-inline: 1px;
   border-radius: var(--catalog-card-radius, 22px);
 }
 .catalog-category-rail__viewport::-webkit-scrollbar { display: none; }
-.catalog-category-rail--waiting .catalog-category-rail__viewport { min-height: var(--category-tile-height); }
 .catalog-category-rail__width-probe {
   position: absolute; inset: 0 auto auto 0; height: 0; visibility: hidden; pointer-events: none;
   width: min(var(--category-max-cover-width), calc(var(--category-tile-height) * var(--category-estimated-aspect)));
 }
-.catalog-category-rail__status { display: flex; align-items: center; gap: 12px; min-height: 36px; padding-top: 8px; color: var(--catalog-muted); font-size: 13px; }
-.catalog-category-rail__status button { min-height: 36px; border: 0; border-radius: 6px; padding: 0 12px; color: var(--catalog-ink); background: #dce6da; cursor: pointer; }
+.catalog-category-rail__status { position: absolute; z-index: 3; left: 8px; bottom: calc(var(--category-caption-height, 0px) + 8px); display: flex; max-width: calc(100% - 16px); max-height: calc(100% - var(--category-caption-height, 0px) - 16px); align-items: center; gap: 8px; overflow: auto; border-radius: 8px; padding: 6px 10px; color: var(--catalog-muted); background: var(--category-section-bg, var(--catalog-paper)); font-size: 13px; pointer-events: none; }
+// 错误仍可阅读并定向重试；加载提示透传点击，不挡住已有游戏或横向浏览。
+.catalog-category-rail__status--error { z-index: 5; align-items: flex-start; pointer-events: auto; }
+.catalog-category-rail__status span { min-width: 0; overflow-wrap: anywhere; }
+.catalog-category-rail__status button { min-width: 44px; min-height: 44px; flex-shrink: 0; border: 0; border-radius: 6px; padding: 0 12px; color: var(--catalog-ink); background: #dce6da; cursor: pointer; }
 .catalog-category-rail[data-composition="mixed"] .catalog-category-rail__viewport { overflow-anchor: none; scroll-snap-type: none; }
 .catalog-category-rail__viewport > :deep(.catalog-card) {
   // 同排按基准高度换算宽度；超宽卡碰到上限后整张等比缩小，不从边缘切掉内容。
@@ -245,9 +249,13 @@ onUnmounted(() => {
 .catalog-category-rail__arrow--next { right: -9px; }
 .catalog-category-rail__arrow--previous { left: -9px; }
 @media (max-width: 760px) {
-  // 手机名称在图下，原图比例只用于封面而不是整张卡。
+  // 手机预留固定标题带；原图比例只控制封面，窄竖封和晚到图片不改变行高。
+  .catalog-category-rail { --category-caption-height: 32px; }
+  .catalog-category-rail__viewport { height: calc(var(--category-tile-height) + var(--category-caption-height)); }
   .catalog-category-rail__viewport > :deep(.catalog-card) { aspect-ratio: auto; }
   .catalog-category-rail__viewport > :deep(.catalog-card .catalog-card__cover) { aspect-ratio: var(--category-card-aspect); }
+  .catalog-category-rail__viewport > :deep(.catalog-card .catalog-card__mobile-name) { box-sizing: border-box; height: var(--category-caption-height); }
+  .catalog-category-rail__viewport > :deep(.catalog-card .catalog-card__details) { bottom: var(--category-caption-height); max-height: calc(100% - var(--category-caption-height)); }
   .catalog-category-rail__arrow { width: 44px; height: 44px; font-size: 18px; }
   .catalog-category-rail__arrow--next { right: -7px; }
   .catalog-category-rail__arrow--previous { left: -7px; }
