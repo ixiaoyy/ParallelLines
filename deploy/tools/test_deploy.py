@@ -2,6 +2,7 @@
 
 import importlib.util
 import contextlib
+import io
 import json
 import hashlib
 import os
@@ -21,6 +22,30 @@ with patch.dict(sys.modules, {"fcntl": types.SimpleNamespace()} if sys.platform 
 
 
 class DeployTests(unittest.TestCase):
+    def test_download_keeps_integrity_and_declared_network_bounds(self):
+        data = b"small public fixture"
+        response = io.BytesIO(data)
+        response.status = 200
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(DEPLOY, "deadline", return_value=contextlib.nullcontext()) as bound, \
+             patch.object(DEPLOY.urllib.request, "build_opener") as opener:
+            opener.return_value.open.return_value = response
+            target = Path(directory) / "toolbox-dist.tar.gz"
+            self.assertEqual(DEPLOY.download("https://github.com/public/fixture", target, len(data), hashlib.sha256(data).hexdigest(), len(data)), len(data))
+            self.assertEqual(target.read_bytes(), data)
+            bound.assert_called_once_with(300)
+            self.assertEqual(opener.return_value.open.call_args.kwargs["timeout"], 30)
+
+    def test_download_reports_http_status_and_asset_without_response_body(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(DEPLOY, "deadline", return_value=contextlib.nullcontext()), \
+             patch.object(DEPLOY.urllib.request, "build_opener") as opener:
+            opener.return_value.open.side_effect = DEPLOY.urllib.error.HTTPError("https://github.com/public/fixture", 504, "private response not logged", None, None)
+            target = Path(directory) / "deployment-receipt.json"
+            with self.assertRaisesRegex(DEPLOY.DeployError, "^release_download_http_504:deployment-receipt.json$"):
+                DEPLOY.download("https://github.com/public/fixture", target, 10, "a" * 64)
+            self.assertFalse(target.exists())
+
     def test_fixed_runtime_has_only_one_service_and_declared_resource_limits(self):
         spec = DEPLOY.compose_spec()
         self.assertEqual(set(spec["services"]), {"tools-static"})

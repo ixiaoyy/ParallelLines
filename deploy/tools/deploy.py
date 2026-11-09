@@ -149,11 +149,11 @@ class ReleaseRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def download(url, output, limit, expected_sha, expected_bytes=None):
-    """限时流式下载公开资产，完整摘要/大小通过后才交给 JSON 或 tar 解析。"""
+    """流式下载限总计300秒、连接/空闲30秒；完整摘要/大小通过后才解析。"""
     digest, size = hashlib.sha256(), 0
     request = urllib.request.Request(url, headers={"User-Agent": "ParallelLinesToolsDeploy/1"})
     try:
-        with deadline(120), urllib.request.build_opener(ReleaseRedirect()).open(request, timeout=15) as response:
+        with deadline(300), urllib.request.build_opener(ReleaseRedirect()).open(request, timeout=30) as response:
             if response.status != 200:
                 raise DeployError("release_download_status")
             with Path(output).open("xb") as handle:
@@ -166,8 +166,10 @@ def download(url, output, limit, expected_sha, expected_bytes=None):
                         raise DeployError("release_download_size_limit")
                     digest.update(chunk)
                     handle.write(chunk)
+    except urllib.error.HTTPError as error:
+        raise DeployError("release_download_http_" + str(error.code) + ":" + Path(output).name) from None
     except (OSError, urllib.error.URLError) as error:
-        raise DeployError("release_download:" + type(error).__name__) from None
+        raise DeployError("release_download:" + type(error).__name__ + ":" + Path(output).name) from None
     if digest.hexdigest() != expected_sha or (expected_bytes is not None and size != expected_bytes):
         raise DeployError("release_download_integrity_mismatch")
     return size
