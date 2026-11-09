@@ -1,0 +1,114 @@
+name: Release Main Web image
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_revision:
+        description: Complete 40-character lowercase SHA of the published Main source
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main-web-${{ inputs.source_revision }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'ixiaoyy/ParallelLines' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      SOURCE_REVISION: ${{ inputs.source_revision }}
+      TAG: main-web-${{ inputs.source_revision }}
+      GH_REPO: ${{ github.repository }}
+      OUT: ${{ runner.temp }}/parallellines-web-image
+      CONTEXT: ${{ runner.temp }}/parallellines-web-context
+    steps:
+      - name: Require an explicit public source and an unused release tag
+        timeout-minutes: 2
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          test "$(timeout 30 gh api "repos/$GITHUB_REPOSITORY" --jq '.private')" = false
+          # 任意既有 tag 或草稿都停止；鉴权和网络错误不能当作不存在。
+          for path in "git/ref/tags/$TAG" "releases/tags/$TAG"; do
+            status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+              -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              -o "$RUNNER_TEMP/release-check.json" -w '%{http_code}' \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/$path")
+            test "$status" = 404 || { echo "Tag/release check refused: HTTP $status"; exit 1; }
+          done
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_revision }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify the selected source identity
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_REVISION"
+          test "$(python3 -c 'import json; print(json.load(open("package.json"))["packageManager"])')" = pnpm@11.1.1
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install the locked frontend dependencies
+        timeout-minutes: 8
+        run: pnpm install --frozen-lockfile
+      - name: Build Web with the existing production settings
+        timeout-minutes: 8
+        env:
+          VITE_API_BASE_URL: /api/v1
+          VITE_STATIC_ASSET_BASE_URL: https://img.pingxingxian.space/static/web
+        run: pnpm --dir apps/web build
+      - name: Package the same dist and verify its schema 2 receipt
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/deploy_artifacts.py context \
+            --dist apps/web/dist --nginx apps/web/nginx.conf --output "$CONTEXT"
+          timeout 300 docker build --platform linux/amd64 -f apps/web/Dockerfile.prebuilt \
+            --build-arg "SOURCE_REVISION=$SOURCE_REVISION" \
+            -t "parallellines-web:$SOURCE_REVISION" -t parallellines-web:latest "$CONTEXT"
+          mkdir -p "$OUT"
+          timeout 120 docker save "parallellines-web:$SOURCE_REVISION" parallellines-web:latest \
+            | gzip > "$OUT/parallellines-web-$SOURCE_REVISION.tar.gz"
+          python3 .github/scripts/deploy_artifacts.py receipt --directory "$OUT" \
+            --sha "$SOURCE_REVISION" --run-id "$GITHUB_RUN_ID" \
+            --image-id "$(docker image inspect --format '{{.Id}}' "parallellines-web:$SOURCE_REVISION")" \
+            --image-revision "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "parallellines-web:$SOURCE_REVISION")"
+          python3 .github/scripts/deploy_artifacts.py verify-web \
+            --directory "$OUT" --sha "$SOURCE_REVISION" --run-id "$GITHUB_RUN_ID"
+      - name: Publish only the verified image and its five-file identity contract
+        timeout-minutes: 3
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BASE="$OUT/parallellines-web-$SOURCE_REVISION"
+          files=("$BASE.tar.gz" "$BASE.tar.gz.sha256" "$BASE.image-id" "$BASE.image-config-digest" "$OUT/web-image.json")
+          for file in "${files[@]}"; do test -s "$file"; done
+          test "$(timeout 30 gh api "repos/$GITHUB_REPOSITORY" --jq '.private')" = false
+          for path in "git/ref/tags/$TAG" "releases/tags/$TAG"; do
+            status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
+              -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              -o "$RUNNER_TEMP/release-check.json" -w '%{http_code}' \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/$path")
+            test "$status" = 404 || { echo "Tag/release appeared: HTTP $status"; exit 1; }
+          done
+          # 原子创建本次轻量 tag；并发创建时失败，不借用或移动他人的 tag。
+          timeout 30 gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f "ref=refs/tags/$TAG" -f "sha=$SOURCE_REVISION" >/dev/null
+          # 先上传草稿，失败保留证据；不 clobber、不修改已有 release/tag。
+          timeout 120 gh release create "$TAG" "${files[@]}" --draft --verify-tag \
+            --title "Main Web $SOURCE_REVISION" \
+            --notes "Web image only; source $SOURCE_REVISION; receipt run_id $GITHUB_RUN_ID. No production deployment."
+          test "$(timeout 30 gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq '.object.sha')" = "$SOURCE_REVISION"
+          timeout 30 gh release edit "$TAG" --draft=false --latest=false
