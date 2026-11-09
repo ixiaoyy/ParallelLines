@@ -9,13 +9,23 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Push only inventories; TLS writes require this explicit operation
+        description: Push only inventories; all write operations require explicit dispatch
         type: choice
         required: true
         default: inventory
-        options: [inventory, health, prepare-tls]
+        options: [inventory, health, prepare-tls, deploy, rollback]
+      release_tag:
+        description: Required for deploy/rollback; site-<40 lowercase hex application revision>
+        type: string
+        required: false
+        default: ''
+      receipt_sha256:
+        description: Required for deploy; trusted SHA256 of deployment-receipt.json
+        type: string
+        required: false
+        default: ''
       expected_config_sha256:
-        description: Required for prepare-tls; trusted local preimage, not a masked log value
+        description: Required for prepare-tls/deploy; trusted local preimage, not a masked log value
         type: string
         required: false
         default: ''
@@ -25,7 +35,7 @@ permissions:
 
 concurrency:
   # 只读健康入口不等待写阶段，以便部署执行通道出错时仍可独立检查。
-  group: ${{ github.event_name == 'push' && 'tools-read-inventory' || inputs.operation == 'health' && 'tools-read-health' || inputs.operation == 'inventory' && 'tools-read-inventory' || 'tools-production-mutation' }}
+  group: ${{ github.event_name == 'push' && 'tools-read-inventory' || inputs.operation == 'health' && 'tools-read-health' || inputs.operation == 'inventory' && 'tools-read-inventory' || 'deploy-production' }}
   cancel-in-progress: false
 
 jobs:
@@ -37,12 +47,14 @@ jobs:
       github.ref == 'refs/heads/ops/tools-deploy-20261109' &&
       (github.event_name == 'push' ||
        (github.event_name == 'workflow_dispatch' &&
-        (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'prepare-tls')))
+        (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'prepare-tls' || inputs.operation == 'deploy' || inputs.operation == 'rollback')))
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 40
     env:
       OPERATION: ${{ github.event_name == 'push' && 'inventory' || inputs.operation }}
       EXPECTED_CONFIG_SHA256: ${{ inputs.expected_config_sha256 }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      RECEIPT_SHA256: ${{ inputs.receipt_sha256 }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -61,18 +73,50 @@ jobs:
           import uuid
 
           operation = os.environ["OPERATION"]
-          scripts = {"inventory": "inventory.py", "health": "health.py", "prepare-tls": "tls.py"}
+          scripts = {"inventory": "inventory.py", "health": "health.py", "prepare-tls": "tls.py", "deploy": "deploy.py", "rollback": "rollback.py"}
           if operation not in scripts:
               raise SystemExit("Unsupported tools operation")
           arguments = operation
-          if operation == "prepare-tls":
+          if operation in ("prepare-tls", "deploy"):
               expected = os.environ.get("EXPECTED_CONFIG_SHA256", "")
               if not re.fullmatch(r"[0-9a-f]{64}", expected):
                   raise SystemExit("A trusted complete preimage is required")
+          if operation in ("deploy", "rollback"):
+              tag = os.environ.get("RELEASE_TAG", "")
+              if not re.fullmatch(r"site-[0-9a-f]{40}", tag):
+                  raise SystemExit("A complete public release tag is required")
+          if operation == "prepare-tls":
               arguments += " " + expected
+          elif operation == "deploy":
+              receipt = os.environ.get("RECEIPT_SHA256", "")
+              if not re.fullmatch(r"[0-9a-f]{64}", receipt):
+                  raise SystemExit("A trusted complete receipt digest is required")
+              arguments += " " + tag + " " + receipt + " " + expected
+          elif operation == "rollback":
+              arguments += " " + tag[5:]
           source = (Path("deploy/tools") / scripts[operation]).read_text(encoding="utf-8")
+          if operation in ("prepare-tls", "deploy", "rollback"):
+              names = ("deploy.py", "rollback.py", "release_contract.py", "managed_config.py", "tls.py", "health.py", "vhost.conf")
+              bundle = {name: (Path("deploy/tools") / name).read_text(encoding="utf-8") for name in names}
+              dependencies = ["managed_config"]
+              if operation in ("deploy", "rollback"):
+                  dependencies += ["release_contract", "health", "tls"]
+              if operation == "rollback":
+                  dependencies += ["deploy"]
+              # 只打包此提交中已审核的公开 source；不是生产响应的编码/脱敏替代通道。
+              prefix = "import sys, types\nOPS_SOURCES = " + repr(bundle) + "\n"
+              prefix += "for _name in " + repr(dependencies) + ":\n"
+              prefix += "    _module = types.ModuleType(_name)\n"
+              prefix += "    _module.__file__ = '/opt/parallellines-tools/ops/' + _name + '.py'\n"
+              prefix += "    _module.OPS_SOURCES = OPS_SOURCES\n"
+              prefix += "    sys.modules[_name] = _module\n"
+              prefix += "    exec(compile(OPS_SOURCES[_name + '.py'], _module.__file__, 'exec'), _module.__dict__)\n"
+              # 选定入口已在静态 source 包内，直接执行，避免重复携带约31KB突破 SSH exec 单串限制。
+              source = prefix + "exec(compile(OPS_SOURCES[" + repr(scripts[operation]) + "], '/opt/parallellines-tools/ops/" + scripts[operation] + "', 'exec'), globals())\n"
           marker = "TOOLS_INVENTORY_" + uuid.uuid4().hex
           payload = "set -eu\nsudo -n python3 -B - " + arguments + " <<'" + marker + "'\n" + source + "\n" + marker + "\n"
+          if len(payload.encode("utf-8")) > 120000:
+              raise SystemExit("Reviewed source exceeds the bounded SSH exec transport")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write("script<<" + marker + "_OUTPUT\n" + payload + marker + "_OUTPUT\n")
           PY
@@ -85,7 +129,7 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           timeout: 30s
-          command_timeout: 10m
+          command_timeout: ${{ inputs.operation == 'deploy' && '35m' || '10m' }}
           # drone-ssh 的逐行停止注入会破坏 heredoc；退出状态由 payload 的 set -eu 和末条 Python 命令保留。
           script_stop: false
           script: ${{ steps.payload.outputs.script }}

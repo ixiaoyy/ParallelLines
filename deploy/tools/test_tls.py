@@ -1,6 +1,7 @@
 """TLS 写阶段只在本地替身/临时目录验证，绝不访问生产、CA、Docker 或公网。"""
 
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -85,13 +86,15 @@ class TlsTests(unittest.TestCase):
                 TLS.verify_public_probe("http://" + TLS.DOMAIN + "/.well-known/acme-challenge/test", b"probe")
 
     def test_renewal_reloads_only_after_changed_certificate_and_successful_config_test(self):
-        certificate = types.SimpleNamespace(read_bytes=unittest.mock.Mock(side_effect=[b"before", b"after"]))
         report = {}
         with patch.object(TLS, "context_preflight", return_value={}), \
              patch.object(TLS, "clean_main_configuration", return_value=True), \
              patch.object(TLS, "certificate_status", return_value={"exists": True}), \
              patch.object(TLS, "tls_lock", return_value=contextlib.nullcontext()), \
-             patch.object(TLS, "PUBLIC_CERTIFICATE", certificate), \
+             patch.object(TLS, "certificate_identity", side_effect=["a" * 64, "b" * 64]), \
+             patch.object(TLS, "certificate_record", return_value=None), \
+             patch.object(TLS, "save_certificate_record"), \
+             patch.object(TLS, "confirm_loaded_certificate", return_value=True), \
              patch.object(TLS, "request_certificate"), \
              patch.object(TLS, "command", return_value=subprocess.CompletedProcess([], 0, "", "")) as commands:
             TLS.renew_tools(report)
@@ -101,17 +104,74 @@ class TlsTests(unittest.TestCase):
 
     def test_unchanged_certificate_does_not_reload(self):
         report = {}
-        certificate = types.SimpleNamespace(read_bytes=lambda: b"unchanged")
         with patch.object(TLS, "context_preflight", return_value={}), \
              patch.object(TLS, "clean_main_configuration", return_value=True), \
              patch.object(TLS, "certificate_status", return_value={"exists": True}), \
              patch.object(TLS, "tls_lock", return_value=contextlib.nullcontext()), \
-             patch.object(TLS, "PUBLIC_CERTIFICATE", certificate), \
-             patch.object(TLS, "request_certificate"), \
-             patch.object(TLS, "command") as commands:
+             patch.object(TLS, "certificate_identity", return_value="a" * 64), \
+             patch.object(TLS, "certificate_record", return_value=None), \
+             patch.object(TLS, "request_certificate"), patch.object(TLS, "command") as commands:
             TLS.renew_tools(report)
         self.assertFalse(report["gateway_reloaded"])
         self.assertFalse(commands.called)
+
+    def test_failed_reload_keeps_identity_and_next_unchanged_run_retries(self):
+        for failure in ("nginx_test", "nginx_reload", "confirmation"):
+            with self.subTest(failure=failure):
+                records = {"loaded": {"domain": TLS.DOMAIN, "identity": "a" * 64}}
+                second = [False]
+
+                def save(name, identity):
+                    records[name] = {"domain": TLS.DOMAIN, "identity": identity}
+
+                def confirm():
+                    if failure == "confirmation" and not second[0]:
+                        raise TLS.OperationError("origin_still_serves_previous_certificate")
+                    save("loaded", "b" * 64)
+                    records.pop("pending", None)
+                    return True
+
+                def command(label, arguments, **_kwargs):
+                    if label == failure and not second[0]:
+                        raise TLS.OperationError(label + ":exit_1")
+                    return subprocess.CompletedProcess(arguments, 0, "", "")
+
+                with patch.object(TLS, "context_preflight", return_value={}), \
+                     patch.object(TLS, "configuration_may_reload", return_value=True), \
+                     patch.object(TLS, "certificate_status", return_value={"exists": True}), \
+                     patch.object(TLS, "tls_lock", side_effect=lambda: contextlib.nullcontext()), \
+                     patch.object(TLS, "certificate_identity", side_effect=["a" * 64, "b" * 64, "b" * 64, "b" * 64]), \
+                     patch.object(TLS, "certificate_record", side_effect=lambda name: records.get(name)), \
+                     patch.object(TLS, "save_certificate_record", side_effect=save), \
+                     patch.object(TLS, "confirm_loaded_certificate", side_effect=confirm), \
+                     patch.object(TLS, "request_certificate"), patch.object(TLS, "command", side_effect=command) as commands:
+                    with self.assertRaises(TLS.OperationError):
+                        TLS.renew_tools({})
+                    self.assertEqual(records["pending"]["identity"], "b" * 64)
+                    self.assertEqual(records["loaded"]["identity"], "a" * 64)
+                    second[0] = True
+                    commands.reset_mock()
+                    report = {}
+                    TLS.renew_tools(report)
+                    self.assertFalse(report["certificate_changed"])
+                    self.assertTrue(report["gateway_reloaded"])
+                    self.assertNotIn("pending", records)
+                    self.assertEqual(records["loaded"]["identity"], "b" * 64)
+
+    def test_origin_confirmation_uses_sni_and_only_then_records_loaded_identity(self):
+        der = b"public-certificate-der"
+        identity = hashlib.sha256(der).hexdigest()
+        with tempfile.TemporaryDirectory() as temporary, \
+             patch.object(TLS, "APPLICATION", Path(temporary)), \
+             patch.object(TLS, "certificate_identity", return_value=identity), \
+             patch.object(TLS.socket, "create_connection") as connect, \
+             patch.object(TLS.ssl, "create_default_context") as context, \
+             patch.object(TLS, "save_certificate_record") as save:
+            context.return_value.wrap_socket.return_value.__enter__.return_value.getpeercert.return_value = der
+            self.assertTrue(TLS.confirm_loaded_certificate())
+        self.assertEqual(connect.call_args.args[0], ("127.0.0.1", 443))
+        self.assertEqual(context.return_value.wrap_socket.call_args.kwargs["server_hostname"], TLS.DOMAIN)
+        save.assert_called_once_with("loaded", identity)
 
     def test_unknown_operation_is_rejected_without_touching_the_server(self):
         with patch.object(TLS, "prepare_tls") as prepare, contextlib.redirect_stdout(io.StringIO()) as output:

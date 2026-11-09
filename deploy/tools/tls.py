@@ -12,12 +12,16 @@ import re
 import secrets
 import shutil
 import signal
+import socket
+import ssl
 import subprocess
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+
+from managed_config import ManagedConfigError, owned_delta_allowed
 
 
 DOMAIN = "tools.pingxingxian.space"
@@ -54,10 +58,10 @@ class OperationError(Exception):
     """稳定错误码，不携带 Certbot 输出、配置原文、密钥或环境。"""
 
 
-def command(label, arguments, timeout=12, accepted=(0,)):
-    """执行固定 argv 并保留真实退出码；不使用 shell、不返回原始 stderr。"""
+def command(label, arguments, timeout=12, accepted=(0,), binary=False):
+    """执行固定 argv；binary 用于逐字节核对 Git 配置，不变更旧调用的文本返回约定。"""
     try:
-        result = subprocess.run(arguments, capture_output=True, text=True, check=False, timeout=timeout)
+        result = subprocess.run(arguments, capture_output=True, text=not binary, check=False, timeout=timeout)
     except subprocess.TimeoutExpired:
         raise OperationError(label + ":timeout") from None
     except OSError as error:
@@ -88,6 +92,25 @@ def clean_main_configuration():
         if command("main_config_clean", base + options + ["--", name], accepted=(0, 1)).returncode:
             return False
     return True
+
+
+def configuration_may_reload():
+    """接受整体 clean 或仅本工具已记录的 owned delta；外部未提交/已暂存变化仍停止。"""
+    if clean_main_configuration():
+        return True
+    recorded = APPLICATION / "ops/managed-vhost.conf"
+    if not recorded.is_file() or recorded.is_symlink():
+        return False
+    base = ["git", "--no-optional-locks", "-c", "core.fsmonitor=false", "-C", str(MAIN_DIRECTORY)]
+    name = "deploy/nginx/default.conf"
+    if command("main_config_index", base + ["diff", "--no-ext-diff", "--cached", "--quiet", "--", name], accepted=(0, 1)).returncode:
+        return False
+    head = command("main_config_head_bytes", base + ["show", "HEAD:" + name], binary=True).stdout
+    saved = recorded.read_bytes()
+    try:
+        return owned_delta_allowed(MAIN_CONFIG.read_bytes(), head, saved or None)
+    except ManagedConfigError:
+        return False
 
 
 def context_preflight():
@@ -297,6 +320,73 @@ def request_certificate(verb, dry_run=False):
         raise OperationError("tools_certbot:" + category)
 
 
+def certificate_identity():
+    """同步身份使用公共叶证书 DER 的 SHA256，不读取或输出私钥/完整证书。"""
+    certificate_status()
+    data = command("public_leaf_identity", ["openssl", "x509", "-in", str(PUBLIC_CERTIFICATE), "-outform", "DER"], timeout=5, binary=True).stdout
+    return hashlib.sha256(data).hexdigest()
+
+
+def certificate_record(name):
+    """仅读取本任务的 pending/loaded 记录，非法或跨域记录直接失败。"""
+    path = APPLICATION / "ops" / ("certificate-" + name + ".json")
+    if not path.exists():
+        return None
+    if path.is_symlink() or path.stat().st_size > 4096:
+        raise OperationError("invalid_certificate_state")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if data.get("domain") != DOMAIN or not re.fullmatch(r"[0-9a-f]{64}", data.get("identity", "")):
+        raise OperationError("invalid_certificate_state")
+    return data
+
+
+def save_certificate_record(name, identity):
+    """受限地持久保存待加载/已加载公共身份，失败时不能把新文件当已生效。"""
+    private_directory(APPLICATION / "ops")
+    path = APPLICATION / "ops" / ("certificate-" + name + ".json")
+    if path.is_symlink():
+        raise OperationError("certificate_state_symlink")
+    temporary = path.with_name(path.name + ".new-" + secrets.token_hex(4))
+    data = {"domain": DOMAIN, "identity": identity, "recorded_at": datetime.now(timezone.utc).isoformat()}
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        json.dump(data, handle)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def confirm_loaded_certificate():
+    """reload 后以真实源站 SNI/CA 验证叶证书身份，确认后才清 pending，不能仅看文件变更。"""
+    identity = certificate_identity()
+    context = ssl.create_default_context()
+    for attempt in range(5):
+        try:
+            with socket.create_connection(("127.0.0.1", 443), timeout=5) as raw:
+                with context.wrap_socket(raw, server_hostname=DOMAIN) as connection:
+                    observed = hashlib.sha256(connection.getpeercert(binary_form=True)).hexdigest()
+        except ssl.SSLCertVerificationError:
+            raise OperationError("origin_certificate_validation_failed") from None
+        except OSError as error:
+            if attempt == 4:
+                raise OperationError("origin_certificate_probe:" + type(error).__name__) from None
+            time.sleep(0.3)
+            continue
+        if observed == identity:
+            if certificate_identity() != identity:
+                raise OperationError("public_certificate_changed_during_confirmation")
+            save_certificate_record("loaded", identity)
+            pending = APPLICATION / "ops/certificate-pending.json"
+            if pending.exists():
+                if certificate_record("pending")["identity"] != identity:
+                    raise OperationError("pending_certificate_changed_during_confirmation")
+                pending.unlink()
+            return True
+        if attempt < 4:
+            time.sleep(0.3)
+    raise OperationError("origin_still_serves_previous_certificate")
+
+
 def prepare_tls(expected, report):
     """前像、现场和公网探针均通过后才创建独立证书；不安装 vhost、不 reload gateway。"""
     matches, source = expected_preimage(expected)
@@ -331,29 +421,63 @@ def prepare_tls(expected, report):
 def renew_tools(report, dry_run=False):
     """供部署后专属定时器调用；只续工具证书，内容变化且 nginx-t 通过才 reload。"""
     report["context"] = context_preflight()
-    if not clean_main_configuration():
-        raise OperationError("main_configuration_dirty_stop_before_renewal")
-    before = certificate_status()
-    if not before["exists"]:
-        raise OperationError("tools_certificate_not_prepared")
     with tls_lock():
-        previous = hashlib.sha256(PUBLIC_CERTIFICATE.read_bytes()).digest()
-        request_certificate("renew", dry_run=dry_run)
+        if not configuration_may_reload():
+            raise OperationError("main_configuration_not_owned_stop_before_renewal")
+        before = certificate_status()
+        if not before["exists"]:
+            raise OperationError("tools_certificate_not_prepared")
+        previous = certificate_identity()
+        request_error = None
+        try:
+            request_certificate("renew", dry_run=dry_run)
+        except OperationError as error:
+            # 失败前也可能已经写入证书；仍需记录公共文件新身份，不能丢掉下一轮重载消费者。
+            request_error = error
         report["certificate_after"] = certificate_status()
-        changed = previous != hashlib.sha256(PUBLIC_CERTIFICATE.read_bytes()).digest()
-        report["certificate_changed"] = changed
-        report["gateway_reloaded"] = False
+        latest = certificate_identity()
+        changed = previous != latest
         if changed and not dry_run:
-            if not clean_main_configuration():
-                raise OperationError("main_configuration_changed_stop_before_reload")
+            save_certificate_record("pending", latest)
+        if request_error is not None:
+            raise request_error
+        pending, loaded = certificate_record("pending"), certificate_record("loaded")
+        report["certificate_changed"] = changed
+        needs_reload = changed or pending is not None or (loaded is not None and loaded["identity"] != latest)
+        report["certificate_reload_pending"] = needs_reload
+        report["gateway_reloaded"] = False
+        if needs_reload and not dry_run:
+            save_certificate_record("pending", latest)
+            if not configuration_may_reload():
+                raise OperationError("main_configuration_not_owned_stop_before_reload")
             command("nginx_test", ["docker", "exec", GATEWAY, "nginx", "-t"])
             command("nginx_reload", ["docker", "exec", GATEWAY, "nginx", "-s", "reload"])
+            confirm_loaded_certificate()
             report["gateway_reloaded"] = True
+            report["certificate_reload_pending"] = False
+
+
+def save_scheduled_result(report):
+    """仅保留最新一份有界消费者记录；不能把未完成或失败运行写成成功。"""
+    private_directory(APPLICATION / "ops")
+    data = (json.dumps(report, ensure_ascii=True, indent=2) + "\n").encode("utf-8")
+    if len(data) > 32768:
+        raise OperationError("scheduled_result_size_limit")
+    target = APPLICATION / "ops/last-renewal.json"
+    if target.is_symlink():
+        raise OperationError("scheduled_result_symlink")
+    temporary = target.with_name(target.name + ".new-" + secrets.token_hex(4))
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "wb") as handle:
+        handle.write(data)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, target)
 
 
 def main(arguments):
     """prepare-tls 必须传已知前像；renew/renew-check 仅由部署后专属消费者显式调用。"""
-    if not arguments or arguments[0] not in ("prepare-tls", "renew", "renew-check"):
+    if not arguments or arguments[0] not in ("prepare-tls", "renew", "renew-check", "scheduled-renew"):
         print(json.dumps({"operation": "rejected", "error": "unsupported_tls_operation"}))
         return 2
     operation = arguments[0]
@@ -363,6 +487,8 @@ def main(arguments):
     report = {"operation": operation, "domain": DOMAIN, "errors": [],
               "started_at": datetime.now(timezone.utc).isoformat()}
     try:
+        if operation == "scheduled-renew":
+            save_scheduled_result({**report, "complete": False, "stage": "running"})
         if operation == "prepare-tls":
             prepare_tls(arguments[1], report)
         else:
@@ -372,6 +498,13 @@ def main(arguments):
     except (OSError, ValueError, KeyError, TypeError, http.client.HTTPException) as error:
         report["errors"].append("tools_tls:" + type(error).__name__)
     report["complete"] = not report["errors"]
+    report["finished_at"] = datetime.now(timezone.utc).isoformat()
+    if operation == "scheduled-renew":
+        try:
+            save_scheduled_result(report)
+        except (OSError, OperationError) as error:
+            report["errors"].append("scheduled_result:" + type(error).__name__)
+            report["complete"] = False
     print(json.dumps(report, ensure_ascii=True, indent=2))
     return 0 if report["complete"] else 2
 
