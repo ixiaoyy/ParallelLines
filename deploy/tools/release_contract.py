@@ -17,10 +17,12 @@ MAX_MEMBERS = 10000
 DEPLOY_FILES = {"deploy/Dockerfile.prebuilt", "deploy/Dockerfile.prebuilt.dockerignore",
                 "deploy/nginx/default.conf", "deploy/compose.yaml"}
 REQUIRED_FILES = DEPLOY_FILES | {"dist/index.html", "dist/THIRD_PARTY_NOTICES.txt",
-                                "dist/release-components.json", "dist/toolbox-source-local-20261109.zip"}
+                                "dist/release-components.json"}
+LEGACY_APPLICATION_SOURCE = "dist/toolbox-source-local-20261109.zip"
+LEGACY_DOCKERFILE_SHA256 = "7c1b90a2bb2c2700e21f9359d63207bf2a4e71291037383a0e90e8fb5c7b33ac"
 # schema 1 已审核的封装/运行能力边界；变化必须连同 ops 合同评审，不能执行任意包内描述符。
 DESCRIPTOR_SHA256 = {
-    "deploy/Dockerfile.prebuilt": "7c1b90a2bb2c2700e21f9359d63207bf2a4e71291037383a0e90e8fb5c7b33ac",
+    "deploy/Dockerfile.prebuilt": "7fdcd571f8a9848e6bb8cd450897baefcc717c14e60b7693d5a200b87fd2fc6c",
     "deploy/Dockerfile.prebuilt.dockerignore": "b1548871ac919120f29ea30c3e8fd9302d5f8a95af31285545f4fb3f8a2031d4",
     "deploy/compose.yaml": "456f211219422fd599a7d33834073188e8f5c6147f33ee27e6757ce62c649a5f",
     "deploy/nginx/default.conf": "5d1fdd28385aae04d6a0af32a625c889452d6bcbf9feebc248679ca92645bf2b",
@@ -137,9 +139,21 @@ def safe_extract_bundle(tar_path, destination):
 
 
 def validate_descriptors(directory):
-    """对齐已审核的 COPY-only 和独立 Compose 描述符，拒绝未知 RUN、env_file 或服务能力。"""
+    """只认两个精确 COPY-only 版本；新版本无应用 ZIP，历史版本仍保留原交付约束。"""
+    directory = Path(directory)
+    legacy = False
     for name, expected in DESCRIPTOR_SHA256.items():
-        data = (Path(directory) / name).read_bytes()
-        if len(data) > 65536 or hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest() != expected:
+        data = (directory / name).read_bytes()
+        digest = hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()
+        allowed = {expected, LEGACY_DOCKERFILE_SHA256} if name == "deploy/Dockerfile.prebuilt" else {expected}
+        if len(data) > 65536 or digest not in allowed:
             raise ContractError("release_descriptor_requires_review")
+        if name == "deploy/Dockerfile.prebuilt":
+            legacy = digest == LEGACY_DOCKERFILE_SHA256
+    if legacy:
+        source = directory / LEGACY_APPLICATION_SOURCE
+        if not source.is_file() or not source.stat().st_size:
+            raise ContractError("bundle_required_file_missing")
+    elif any(re.fullmatch(r"toolbox-source.*\.zip", item.name, re.IGNORECASE) for item in (directory / "dist").rglob("*")):
+        raise ContractError("retired_application_source_zip_forbidden")
     return True
