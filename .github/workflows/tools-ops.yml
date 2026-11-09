@@ -13,7 +13,7 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, health, prepare-tls, deploy, rollback]
+        options: [inventory, health, main-web-inventory, prepare-tls, deploy, rollback]
       release_tag:
         description: Required for deploy/rollback; site-<40 lowercase hex application revision>
         type: string
@@ -35,7 +35,7 @@ permissions:
 
 concurrency:
   # 只读健康入口不等待写阶段，以便部署执行通道出错时仍可独立检查。
-  group: ${{ github.event_name == 'push' && 'tools-read-inventory' || inputs.operation == 'health' && 'tools-read-health' || inputs.operation == 'inventory' && 'tools-read-inventory' || 'deploy-production' }}
+  group: ${{ github.event_name == 'push' && 'tools-read-inventory' || inputs.operation == 'health' && 'tools-read-health' || inputs.operation == 'main-web-inventory' && 'tools-read-main-web-inventory' || inputs.operation == 'inventory' && 'tools-read-inventory' || 'deploy-production' }}
   cancel-in-progress: false
 
 jobs:
@@ -47,7 +47,7 @@ jobs:
       github.ref == 'refs/heads/ops/tools-deploy-20261109' &&
       (github.event_name == 'push' ||
        (github.event_name == 'workflow_dispatch' &&
-        (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'prepare-tls' || inputs.operation == 'deploy' || inputs.operation == 'rollback')))
+        (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'main-web-inventory' || inputs.operation == 'prepare-tls' || inputs.operation == 'deploy' || inputs.operation == 'rollback')))
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -73,7 +73,7 @@ jobs:
           import uuid
 
           operation = os.environ["OPERATION"]
-          scripts = {"inventory": "inventory.py", "health": "health.py", "prepare-tls": "tls.py", "deploy": "deploy.py", "rollback": "rollback.py"}
+          scripts = {"inventory": "inventory.py", "health": "health.py", "main-web-inventory": "main_web.py", "prepare-tls": "tls.py", "deploy": "deploy.py", "rollback": "rollback.py"}
           if operation not in scripts:
               raise SystemExit("Unsupported tools operation")
           arguments = operation
