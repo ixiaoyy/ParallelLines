@@ -36,12 +36,31 @@ def command(label, arguments, timeout=12, accepted=(0,)):
     return result
 
 
-def web_metadata():
+def inspect_fields(label, fields, optional=False):
+    """读取白名单字段组；仅定位不兼容字段名，不回显 Docker 原始错误。"""
+    template = "{" + ",".join(json.dumps(key) + ":{{json " + value + "}}" for key, value in fields.items()) + "}"
+    result = command(label, ["docker", "inspect", "--format", template, WEB], accepted=(0, 1) if optional else (0,))
+    if result.returncode == 0:
+        return json.loads(result.stdout), []
+    values, unavailable = {}, []
+    for name, expression in fields.items():
+        single = command("main_web_field_" + name, ["docker", "inspect", "--format", "{{json " + expression + "}}", WEB], accepted=(0, 1))
+        if single.returncode:
+            unavailable.append(name)
+        else:
+            values[name] = json.loads(single.stdout)
+    return values, unavailable
+
+
+def web_metadata(require_complete=True):
     """读取 Web 公共规格白名单，不请求 Config.Env、完整 labels 或完整 inspect。"""
-    fields = {
+    basic = {
         "id": ".Id", "image_id": ".Image", "image": ".Config.Image", "running": ".State.Running",
         "project": '(index .Config.Labels "com.docker.compose.project")',
         "service": '(index .Config.Labels "com.docker.compose.service")',
+    }
+    value, _ = inspect_fields("main_web_identity", basic)
+    fields = {
         "working_directory": '(index .Config.Labels "com.docker.compose.project.working_dir")',
         "compose_files": '(index .Config.Labels "com.docker.compose.project.config_files")',
         "container_number": '(index .Config.Labels "com.docker.compose.container-number")',
@@ -53,20 +72,28 @@ def web_metadata():
         "cpu_shares": ".HostConfig.CpuShares", "pids_limit": ".HostConfig.PidsLimit", "init": ".HostConfig.Init",
         "cap_add": ".HostConfig.CapAdd", "cap_drop": ".HostConfig.CapDrop", "security_opt": ".HostConfig.SecurityOpt",
     }
-    template = "{" + ",".join(json.dumps(key) + ":{{json " + value + "}}" for key, value in fields.items()) + ","
-    template += '"networks":"{{range $name, $network := .NetworkSettings.Networks}}{{$name}} {{end}}"}'
-    value = json.loads(command("main_web_metadata", ["docker", "inspect", "--format", template, WEB]).stdout)
-    value["networks"] = sorted(value["networks"].split())
+    value["unavailable_fields"] = []
+    entries = list(fields.items())
+    for start in range(0, len(entries), 6):
+        group, unavailable = inspect_fields("main_web_spec_group_" + str(start // 6), dict(entries[start:start + 6]), optional=True)
+        value.update(group)
+        value["unavailable_fields"].extend(unavailable)
+    networks = command("main_web_networks", ["docker", "inspect", "--format",
+                       "{{range $name, $network := .NetworkSettings.Networks}}{{$name}} {{end}}", WEB]).stdout
+    value["networks"] = sorted(networks.split())
     if value.get("project") != PROJECT or value.get("service") != "web" or value.get("running") is not True:
         raise MainWebError("main_web_not_running_in_expected_project")
     if not re.fullmatch(r"[0-9a-f]{64}", value.get("id", "")):
         raise MainWebError("main_web_identifier_invalid")
     # 只输出已知静态 Nginx 命令；若被他人改为未知命令，不回显可能夹带的参数。
-    if value.get("entrypoint") != ["/docker-entrypoint.sh"] or value.get("command") != ["nginx", "-g", "daemon off;"]:
+    if (("entrypoint" in value and value["entrypoint"] != ["/docker-entrypoint.sh"])
+            or ("command" in value and value["command"] != ["nginx", "-g", "daemon off;"])):
         raise MainWebError("main_web_command_not_approved")
     check = value.get("healthcheck") or {}
-    if check.get("Test") != ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]:
+    if "healthcheck" in value and check.get("Test") != ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]:
         raise MainWebError("main_web_healthcheck_not_approved")
+    if require_complete and value["unavailable_fields"]:
+        raise MainWebError("main_web_spec_fields_unavailable:" + ",".join(value["unavailable_fields"]))
     return value
 
 
@@ -92,9 +119,10 @@ def gateway_metadata():
 def inventory():
     """只读现场规格，用于确定下一次显式 Web 发布的固定配置；不创建状态/目录。"""
     started = time.monotonic()
-    web, gateway = web_metadata(), gateway_metadata()
+    web, gateway = web_metadata(require_complete=False), gateway_metadata()
     return {"operation": "main-web-inventory", "read_only": True, "complete": True,
-            "web": web, "gateway": gateway, "elapsed_seconds": round(time.monotonic() - started, 3)}
+            "web": web, "gateway": gateway, "spec_complete": not web["unavailable_fields"],
+            "elapsed_seconds": round(time.monotonic() - started, 3)}
 
 
 def main(arguments):

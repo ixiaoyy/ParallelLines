@@ -24,8 +24,6 @@ jobs:
       SOURCE_REVISION: ${{ inputs.source_revision }}
       TAG: main-web-${{ inputs.source_revision }}
       GH_REPO: ${{ github.repository }}
-      OUT: ${{ runner.temp }}/parallellines-web-image
-      CONTEXT: ${{ runner.temp }}/parallellines-web-context
     steps:
       - name: Require an explicit public source and an unused release tag
         timeout-minutes: 2
@@ -33,6 +31,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          printf 'OUT=%s\nCONTEXT=%s\n' "$RUNNER_TEMP/parallellines-web-image" "$RUNNER_TEMP/parallellines-web-context" >> "$GITHUB_ENV"
           [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]]
           test "$(timeout 30 gh api "repos/$GITHUB_REPOSITORY" --jq '.private')" = false
           # 任意既有 tag 或草稿都停止；鉴权和网络错误不能当作不存在。
