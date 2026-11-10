@@ -101,15 +101,11 @@ async function inspectCover(card: Locator, slug: string): Promise<{ width: numbe
   });
   expect(dimensions).toEqual({ width: covers[slug]!.width, height: covers[slug]!.height });
   expect(dimensions.width / dimensions.height).toBeCloseTo(CATALOG_COVER_ASPECTS_BY_PATH[coverPath]!, 8);
-  // 分类横排的既有规则：panorama与mixed中的portrait完整适配；其他位置仍走默认cover。
-  const composition = await card.evaluate((element) => element.closest(".catalog-category-rail")?.getAttribute("data-composition") ?? null);
-  const portrait = covers[slug]!.width / covers[slug]!.height < .9;
-  const expectedFit = composition === "panorama" || (composition === "mixed" && portrait) ? "contain" : "cover";
-  expect(await cover.evaluate((image) => getComputedStyle(image).objectFit), `${slug}/${composition ?? "grid"} fit`).toBe(expectedFit);
-  // 种田仅单项横排原有顶部定位不应被本批改写；CrossCode另有根代理批准的精确素材规则。
-  const farmingSingle = await card.evaluate((element) => Boolean(element.closest('[data-category-section="farming"]') && element.closest(".catalog-category-rail--single")));
-  const expectedPosition = slug === "crosscode-demo" || farmingSingle ? "50% 0%" : "50% 50%";
-  expect(await cover.evaluate((image) => getComputedStyle(image).objectPosition), `${slug}/${composition ?? "grid"} position`).toBe(expectedPosition);
+  // 分类横排统一完整显示原图；搜索网格仍裁切，CrossCode 保留其精确素材顶部定位。
+  const inRail = await card.evaluate((element) => Boolean(element.closest("[data-category-rail]")));
+  expect(await cover.evaluate((image) => getComputedStyle(image).objectFit), `${slug} fit`).toBe(inRail ? "contain" : "cover");
+  const expectedPosition = slug === "crosscode-demo" ? "50% 0%" : "50% 50%";
+  expect(await cover.evaluate((image) => getComputedStyle(image).objectPosition), `${slug} position`).toBe(expectedPosition);
   const imageBounds = await cover.boundingBox();
   const coverBounds = await card.locator(".catalog-card__cover").boundingBox();
   expect(imageBounds).not.toBeNull();
@@ -219,13 +215,10 @@ for (const viewport of [
 
       await page.goto("/games");
       const featured = page.locator(".catalog-group--featured");
-      await expect(featured.locator(".catalog-card")).toHaveCount(6);
-      for (const game of games) {
-        const card = featured.locator(`[data-project-id="${game.id}"]`);
-        dimensions[game.slug] = await inspectCover(card, game.slug);
-        await expect(card.getByRole("link", { name: `打开${game.name}`, exact: true })).toHaveAttribute("href", game.url);
-        await card.screenshot({ path: path.join(output, `${game.slug}-hero-${viewport.name}.png`) });
-      }
+      // 此批旧游戏不在当前编辑精选池内；保留六个空槽，不能从旧目录补推荐。
+      await expect(featured.locator(".catalog-card")).toHaveCount(0);
+      await expect(featured.locator(".catalog-hero-slot-empty")).toHaveCount(6);
+      await expect(featured.getByText("暂无符合该推荐主题的游戏", { exact: true })).toBeVisible();
       for (const category of categories) {
         const section = page.locator(`[data-category-section="${category.slug}"]`);
         await section.scrollIntoViewIfNeeded();
@@ -233,7 +226,8 @@ for (const viewport of [
         for (const game of expectedGames) {
           const card = section.locator(`[data-project-id="${game.id}"]`);
           await expect(card).toHaveCount(1);
-          await inspectCover(card, game.slug);
+          dimensions[game.slug] = await inspectCover(card, game.slug);
+          await expect(card.getByRole("link", { name: `打开${game.name}`, exact: true })).toHaveAttribute("href", game.url);
           await card.screenshot({ path: path.join(output, `${game.slug}-category-${viewport.name}.png`) });
         }
       }
@@ -346,7 +340,10 @@ for (const viewport of [
       await licensePage.goto(new URL(licensePath, localOrigin).href);
       await licensePage.waitForLoadState("domcontentloaded");
       expect(licenseStatus).toBe(200);
-      await expect(licensePage.locator("main section")).toHaveCount(6);
+      // 只核本批五项与原 BIRDLAND 署名仍完整，后续新增独立署名不应破坏旧收录回归。
+      const priorNotices = [...games.map((game) => game.slug), "birdland"]
+        .map((slug) => `main section[aria-labelledby="${slug}-cover"]`).join(",");
+      await expect(licensePage.locator(priorNotices)).toHaveCount(6);
       for (const game of games) {
         const section = licensePage.locator(`section[aria-labelledby="${game.slug}-cover"]`);
         await expect(section.getByRole("heading", { name: game.licenseTitle })).toHaveCount(1);

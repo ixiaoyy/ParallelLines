@@ -87,7 +87,9 @@ async function inspectCover(card: Locator, slug: string): Promise<{ width: numbe
   });
   expect(dimensions).toEqual(coverSizes[slug]);
   expect(dimensions.width / dimensions.height).toBeCloseTo(CATALOG_COVER_ASPECTS_BY_PATH[coverPath]!, 8);
-  expect(await cover.evaluate((image) => getComputedStyle(image).objectFit)).toBe("cover");
+  // 分类横排始终完整显示原图；搜索等普通网格仍沿用 cover，不能混用两种容器预期。
+  const inRail = await card.evaluate((element) => Boolean(element.closest("[data-category-rail]")));
+  expect(await cover.evaluate((image) => getComputedStyle(image).objectFit)).toBe(inRail ? "contain" : "cover");
   const imageBounds = await cover.boundingBox();
   const coverBounds = await card.locator(".catalog-card__cover").boundingBox();
   expect(imageBounds).not.toBeNull();
@@ -187,13 +189,10 @@ for (const viewport of [
 
       await page.goto("/games");
       const featured = page.locator(".catalog-group--featured");
-      await expect(featured.locator(".catalog-card")).toHaveCount(6);
-      for (const game of games) {
-        const card = featured.locator(`[data-project-id="${game.id}"]`);
-        dimensions[game.slug] = await inspectCover(card, game.slug);
-        await expect(card.getByRole("link", { name: `打开${game.name}`, exact: true })).toHaveAttribute("href", game.url);
-        await card.screenshot({ path: path.join(output, `${game.slug}-hero-${viewport.name}.png`) });
-      }
+      // 此批旧游戏不在当前编辑精选池内；保留六个空槽，不能从旧目录补推荐。
+      await expect(featured.locator(".catalog-card")).toHaveCount(0);
+      await expect(featured.locator(".catalog-hero-slot-empty")).toHaveCount(6);
+      await expect(featured.getByText("暂无符合该推荐主题的游戏", { exact: true })).toBeVisible();
       for (const category of categories) {
         const section = page.locator(`[data-category-section="${category.slug}"]`);
         await section.scrollIntoViewIfNeeded();
@@ -201,7 +200,8 @@ for (const viewport of [
         for (const game of expectedGames) {
           const card = section.locator(`[data-project-id="${game.id}"]`);
           await expect(card).toHaveCount(1);
-          await inspectCover(card, game.slug);
+          dimensions[game.slug] = await inspectCover(card, game.slug);
+          await expect(card.getByRole("link", { name: `打开${game.name}`, exact: true })).toHaveAttribute("href", game.url);
           await card.screenshot({ path: path.join(output, `${game.slug}-category-${viewport.name}.png`) });
         }
       }

@@ -30,7 +30,7 @@ import CatalogMicroAccents from "./CatalogMicroAccents.vue";
 import { folkloreArtworkFor } from "./catalogFolkloreArtwork";
 import { categorySectionStyleFor, categorySectionThemeFor } from "./catalogCategoryThemes";
 import CatalogBrandMark from "./CatalogBrandMark.vue";
-import { CATALOG_HERO_TABS, CATALOG_RECOMMENDATION_EVIDENCE, matchesCatalogTopic, selectCatalogRecommendations } from "./catalogTopics";
+import { CATALOG_HERO_TABS, catalogRecommendationSlugs, selectCatalogRecommendations } from "./catalogTopics";
 
 type SortMode = "latest" | "hot";
 type CatalogView = "games" | "authors" | "contributors";
@@ -74,8 +74,8 @@ const heroOffset = ref(0);
 // 发现页只读取公开概览和按需分类页；完整搜索、榜单和个人范围进入后才读旧目录。
 const isDiscovery = computed(() => catalogView.value === "games" && catalogFeed.value === "discovery" && libraryScope.value === "all"
   && selectedCategory.value === "all" && !search.value.trim() && !selectedAuthorKey.value);
-const heroCandidates = computed(() => heroTopic.value === "all" ? undefined
-  : Object.keys(CATALOG_RECOMMENDATION_EVIDENCE).filter((slug) => matchesCatalogTopic({ slug }, heroTopic.value)));
+// 全部推荐也显式传编辑精选候选；API 只返回公开记录，缺项保持空槽而不回退全库。
+const heroCandidates = computed(() => catalogRecommendationSlugs(heroTopic.value));
 const catalogQuery = useCatalog(() => !isDiscovery.value);
 const overviewQuery = useCatalogOverview(heroCandidates, heroOffset, isDiscovery);
 const catalogLoading = computed(() => isDiscovery.value ? overviewQuery.isLoading.value : catalogQuery.isLoading.value);

@@ -72,7 +72,9 @@ async function inspectCover(card: Locator) {
   });
   expect(size).toEqual({ width: cover.width, height: cover.height });
   expect(size.width / size.height).toBeCloseTo(CATALOG_COVER_ASPECTS_BY_PATH[coverPath]!, 8);
-  expect(await image.evaluate((element) => getComputedStyle(element).objectFit)).toBe("cover");
+  // 恋爱横排完整显示封面，完整分类与搜索网格仍沿用 cover。
+  const inRail = await card.evaluate((element) => Boolean(element.closest("[data-category-rail]")));
+  expect(await image.evaluate((element) => getComputedStyle(element).objectFit)).toBe(inRail ? "contain" : "cover");
   const imageBox = await image.boundingBox();
   const coverBox = await card.locator(".catalog-card__cover").boundingBox();
   expect(imageBox).not.toBeNull();
@@ -160,10 +162,11 @@ for (const viewport of [{ name: "desktop", width: 1280, height: 900 }, { name: "
       });
 
       await page.goto("/games");
-      const hero = page.locator(`.catalog-group--featured [data-project-id="${game.id}"]`);
-      await expect(page.locator(".catalog-group--featured .catalog-card")).toHaveCount(6);
-      await inspectCover(hero);
-      await hero.screenshot({ path: path.join(output, `birdland-hero-${viewport.name}.png`) });
+      // BIRDLAND 继续由恋爱分类与搜索进入，不因精选池缺项而补入首页推荐。
+      const featured = page.locator(".catalog-group--featured");
+      await expect(featured.locator(".catalog-card")).toHaveCount(0);
+      await expect(featured.locator(".catalog-hero-slot-empty")).toHaveCount(6);
+      await expect(featured.getByText("暂无符合该推荐主题的游戏", { exact: true })).toBeVisible();
       const romance = page.locator('[data-category-section="romance"]');
       await romance.scrollIntoViewIfNeeded();
       const romanceCard = romance.locator(`[data-project-id="${game.id}"]`);

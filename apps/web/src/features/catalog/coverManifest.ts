@@ -243,6 +243,13 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "exhibit-of-sorrows": "/catalog/2026-11-05-v5/covers/exhibit-of-sorrows.webp",
   "known-unknowns": "/catalog/2026-11-05-v5/covers/known-unknowns.webp",
   "crosscode-demo": "/catalog/2026-11-05-v5/covers/crosscode-demo.webp",
+  // 本批精选仅引用各作者正式宣传缩略图，不把外站口碑写成本站评分。
+  "dragonsweeper": "/catalog/2026-11-10-v1/covers/dragonsweeper.webp",
+  "growmi": "/catalog/2026-11-10-v1/covers/growmi.webp",
+  "sort-the-court": "/catalog/2026-11-10-v1/covers/sort-the-court.webp",
+  "solitomb": "/catalog/2026-11-10-v1/covers/solitomb.webp",
+  "slipways-classic": "/catalog/2026-11-10-v1/covers/slipways-classic.webp",
+  "die-in-the-dungeon-classic": "/catalog/2026-11-10-v1/covers/die-in-the-dungeon-classic.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {

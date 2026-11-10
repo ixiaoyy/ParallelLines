@@ -31,11 +31,10 @@ function fixture(): CatalogCategoryResponse[] {
   ];
 }
 
-/** 分类请求可逐批放行；接口、图片和游戏目标均在本地拦截，不连接数据库或外站。 */
-async function mockCatalog(context: BrowserContext, controlled = false) {
+/** 分类请求可逐批放行；可显式传入当前用例目录，接口与图片均本地隔离。 */
+async function mockCatalog(context: BrowserContext, controlled = false, categories = fixture()) {
   const localOrigin = new URL(baseURL).origin;
   expect(["127.0.0.1", "localhost", "[::1]"].includes(new URL(baseURL).hostname)).toBe(true);
-  const categories = fixture();
   const pending: Array<{ route: Route; url: URL; finish: () => void }> = [];
   const views: string[] = [];
   const navigations: string[] = [];
@@ -192,11 +191,21 @@ test("1440、390、320px 延迟首批、补页及失败重试不改变分类布�
     await expectStable(page, baseline);
     await rail.screenshot({ path: testInfo.outputPath(`rail-loading-${width}.png`) });
     await requests.respond();
+    // 真实像素覆盖可能继续补发小批；最多放行同次覆盖剩余三请求，不把一响应当成整屏完成。
+    for (let step = 0; step < 3; step++) {
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+      if (await rail.getAttribute("data-load-state") === "ready") break;
+      await requests.respond();
+    }
     await expect(rail).toHaveAttribute("data-load-state", "ready");
     await expectStable(page, baseline);
     const appendedIds = await rail.locator(".catalog-card").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-project-id")));
     expect(appendedIds.slice(0, initialIds.length)).toEqual(initialIds);
-    await rail.getByRole("button", { name: "下一组休闲游戏", exact: true }).click();
+    // 上次覆盖已预取的像素范围内可直接横移；到真实待加载尾部再制造一次同游标失败。
+    for (let step = 0; step < 4 && requests.pending.length === 0; step++) {
+      await rail.getByRole("button", { name: "下一组休闲游戏", exact: true }).click();
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    }
     const failedCursor = await requests.respond(undefined, true);
     await expect(rail).toHaveAttribute("data-load-state", "error");
     await expect(rail.getByRole("alert")).toBeVisible();
@@ -242,7 +251,11 @@ test("1440、390、320px 延迟首批、补页及失败重试不改变分类布�
 });
 
 test("横封、窄竖封与推荐大卡的收藏星星和键盘焦点均留在封面内", async ({ page, context }, testInfo) => {
-  const requests = await mockCatalog(context);
+  // 仅此用例将横封测试记录放入当前精选池，保留同 ID 的推荐/分类收藏同步覆盖。
+  // 继续显式使用原横封的上传响应，不把合成测试资料当作真实游戏或改共享布局夹具。
+  const categories = fixture();
+  categories[0]!.projects[0] = { ...categories[0]!.projects[0]!, slug: "dragonsweeper", icon_url: "/uploads/3000/content" };
+  const requests = await mockCatalog(context, false, categories);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/games");

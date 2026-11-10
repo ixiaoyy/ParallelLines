@@ -157,6 +157,13 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-11-05-v5/covers/exhibit-of-sorrows.webp",
     "catalog/2026-11-05-v5/covers/known-unknowns.webp",
     "catalog/2026-11-05-v5/covers/crosscode-demo.webp",
+    # 0110 六款精选的正式封面独立版本发布；获准后先核图片，再发布目录与推荐引用。
+    "catalog/2026-11-10-v1/covers/dragonsweeper.webp",
+    "catalog/2026-11-10-v1/covers/growmi.webp",
+    "catalog/2026-11-10-v1/covers/sort-the-court.webp",
+    "catalog/2026-11-10-v1/covers/solitomb.webp",
+    "catalog/2026-11-10-v1/covers/slipways-classic.webp",
+    "catalog/2026-11-10-v1/covers/die-in-the-dungeon-classic.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 # 压缩后的目录装饰来自 Web public；仍用原版本目录，保留 PNG 和旧对象便于恢复。

@@ -9,6 +9,11 @@ export const CATALOG_HERO_TABS = [
 export type CatalogTopicId = typeof CATALOG_HERO_TABS[number]["id"];
 type MechanicTopic = Exclude<CatalogTopicId, "all">;
 
+// 本批只精选无需注册登录的外站直玩作品；这里只限定标识，真实卡片缺失时不补其他作品。
+const CATALOG_FEATURED_SLUGS: readonly string[] = [
+  "dragonsweeper", "growmi", "sort-the-court", "solitomb", "slipways-classic", "die-in-the-dungeon-classic",
+];
+
 export interface CatalogTopicProject {
   readonly slug: string;
   readonly aiRating?: { readonly score: number | null } | null;
@@ -51,10 +56,15 @@ export function isCatalogTopicId(value: string): value is CatalogTopicId {
   return CATALOG_HERO_TABS.some((tab) => tab.id === value);
 }
 
+/** 返回专题的候选标识，供公开概览与完整目录共用；只筛选真实记录，不补全缺项。 */
+export function catalogRecommendationSlugs(topic: CatalogTopicId): readonly string[] {
+  if (topic === "all") return CATALOG_FEATURED_SLUGS;
+  return Object.keys(CATALOG_RECOMMENDATION_EVIDENCE)
+    .filter((slug) => CATALOG_RECOMMENDATION_EVIDENCE[slug].topics.includes(topic));
+}
+
 export function matchesCatalogTopic(project: CatalogTopicProject, topic: CatalogTopicId): boolean {
-  if (topic === "all") return true;
-  if (!Object.prototype.hasOwnProperty.call(CATALOG_RECOMMENDATION_EVIDENCE, project.slug)) return false;
-  return CATALOG_RECOMMENDATION_EVIDENCE[project.slug].topics.includes(topic);
+  return catalogRecommendationSlugs(topic).includes(project.slug);
 }
 
 function recommendationScore(project: CatalogTopicProject): number | null {

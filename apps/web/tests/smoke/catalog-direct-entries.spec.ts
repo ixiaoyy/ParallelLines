@@ -183,7 +183,11 @@ for (const viewport of [{ name: "desktop", width: 1280, height: 900 }, { name: "
       });
 
       await page.goto("/games");
-      await expect(page.locator(".catalog-group--featured .catalog-card")).toHaveCount(6);
+      // 旧直达作品仍在分类及个人清单中，缺少当前精选成员时推荐六槽保持空白。
+      const featured = page.locator(".catalog-group--featured");
+      await expect(featured.locator(".catalog-card")).toHaveCount(0);
+      await expect(featured.locator(".catalog-hero-slot-empty")).toHaveCount(6);
+      await expect(featured.getByText("暂无符合该推荐主题的游戏", { exact: true })).toBeVisible();
       for (const category of categories) {
         const section = page.locator(`[data-category-section="${category.slug}"]`);
         await section.scrollIntoViewIfNeeded();

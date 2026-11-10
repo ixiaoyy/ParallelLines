@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseCatalogHeroTopic, parseCatalogNavigation } from "./catalogNavigation";
-import { CATALOG_HERO_TABS, matchesCatalogTopic, selectCatalogRecommendations } from "./catalogTopics";
+import { CATALOG_HERO_TABS, catalogRecommendationSlugs, matchesCatalogTopic, selectCatalogRecommendations } from "./catalogTopics";
 
 function rated(slug: string, score: number | null) {
   return { slug, aiRating: { score } };
@@ -19,11 +19,11 @@ describe("catalog hero recommendations", () => {
 
   it("ranks real scores descending with stable ties without mutating the input", () => {
     const projects = [
-      rated("unknown-zero", 0),
-      rated("unknown-highest", 10),
-      rated("unknown-first-tie", 8),
-      rated("unknown-middle", 5),
-      rated("unknown-second-tie", 8),
+      rated("dragonsweeper", 0),
+      rated("growmi", 10),
+      rated("sort-the-court", 8),
+      rated("solitomb", 5),
+      rated("slipways-classic", 8),
     ];
     const originalOrder = [...projects];
     for (const entry of projects) {
@@ -35,26 +35,30 @@ describe("catalog hero recommendations", () => {
     const selected = selectCatalogRecommendations(projects, "all");
 
     expect(selected.map((entry) => entry.slug)).toEqual([
-      "unknown-highest", "unknown-first-tie", "unknown-second-tie", "unknown-middle", "unknown-zero",
+      "growmi", "sort-the-court", "slipways-classic", "solitomb", "dragonsweeper",
     ]);
     expect(selected).not.toBe(projects);
     expect(selected[0]).toBe(projects[1]);
     expect(projects).toEqual(originalOrder);
   });
 
-  it("keeps unknown scores stable after real zero without fabricating scores", () => {
+  it.each([
+    { label: "absent rating", rating: {} },
+    { label: "null rating", rating: { aiRating: null } },
+    { label: "player rating only", rating: { averageScore: 10, score: 10 } },
+    { label: "null score", rating: { aiRating: { score: null } } },
+    { label: "NaN", rating: { aiRating: { score: Number.NaN } } },
+    { label: "positive infinity", rating: { aiRating: { score: Number.POSITIVE_INFINITY } } },
+    { label: "negative infinity", rating: { aiRating: { score: Number.NEGATIVE_INFINITY } } },
+    { label: "below zero", rating: { aiRating: { score: -0.01 } } },
+    { label: "above ten", rating: { aiRating: { score: 10.01 } } },
+  ])("keeps $label unknown after real zero without fabricating scores", ({ rating }) => {
+    const unknown = { slug: "dragonsweeper", ...rating };
     const projects = [
-      { slug: "no-rating" },
-      { slug: "null-rating", aiRating: null },
-      { slug: "user-rating-only", averageScore: 10, score: 10 },
-      rated("null-score", null),
-      rated("nan-score", Number.NaN),
-      rated("positive-infinity", Number.POSITIVE_INFINITY),
-      rated("negative-infinity", Number.NEGATIVE_INFINITY),
-      rated("below-zero", -0.01),
-      rated("above-ten", 10.01),
-      rated("valid-zero", 0),
-      rated("valid-ten", 10),
+      unknown,
+      { slug: "die-in-the-dungeon-classic" },
+      rated("growmi", 0),
+      rated("solitomb", 10),
     ];
 
     const originalOrder = [...projects];
@@ -67,17 +71,11 @@ describe("catalog hero recommendations", () => {
     const selected = selectCatalogRecommendations(projects, "all");
 
     expect(selected.map((entry) => entry.slug)).toEqual([
-      "valid-ten", "valid-zero",
-      "no-rating", "null-rating", "user-rating-only", "null-score", "nan-score",
-      "positive-infinity", "negative-infinity", "below-zero", "above-ten",
+      "solitomb", "growmi", "dragonsweeper", "die-in-the-dungeon-classic",
     ]);
-    expect(selected[2]).toBe(projects[0]);
-    expect(selected.find((entry) => entry.slug === "no-rating")).not.toHaveProperty("aiRating");
-    expect(selected.find((entry) => entry.slug === "null-rating")?.aiRating).toBeNull();
-    expect(selected.find((entry) => entry.slug === "null-score")?.aiRating?.score).toBeNull();
-    expect(selected.find((entry) => entry.slug === "nan-score")?.aiRating?.score).toBeNaN();
-    expect(selected.find((entry) => entry.slug === "below-zero")?.aiRating?.score).toBe(-0.01);
-    expect(selected.find((entry) => entry.slug === "above-ten")?.aiRating?.score).toBe(10.01);
+    expect(selected[2]).toBe(unknown);
+    expect(selected[2]).toEqual({ slug: "dragonsweeper", ...rating });
+    expect(selected[3]).not.toHaveProperty("aiRating");
     expect(projects).toEqual(originalOrder);
     expect(selectCatalogRecommendations([], "all")).toEqual([]);
   });
@@ -92,15 +90,55 @@ describe("catalog hero recommendations", () => {
       viewCount: 999999,
     };
 
-    expect(matchesCatalogTopic(unknown, "all")).toBe(true);
+    expect(matchesCatalogTopic(unknown, "all")).toBe(false);
     const unscored = { slug: "unknown-unscored", aiRating: null };
-    expect(selectCatalogRecommendations([unscored, unknown], "all")).toEqual([unknown, unscored]);
+    expect(selectCatalogRecommendations([unscored, unknown], "all")).toEqual([]);
     for (const topic of CATALOG_HERO_TABS) {
       if (topic.id === "all") continue;
       expect(matchesCatalogTopic(unknown, topic.id)).toBe(false);
       expect(selectCatalogRecommendations([unknown], topic.id)).toEqual([]);
       expect(matchesCatalogTopic(unscored, topic.id)).toBe(false);
     }
+  });
+
+  it("uses exactly the approved editorial pool for all without altering the source catalog", () => {
+    const slugs = ["dragonsweeper", "growmi", "sort-the-court", "solitomb", "slipways-classic", "die-in-the-dungeon-classic"];
+    expect(catalogRecommendationSlugs("all")).toEqual(slugs);
+    const old = rated("astra-d29e74ac15e222629347", 10);
+    const current = slugs.map((slug) => ({ slug, aiRating: null }));
+    const catalog = [old, ...current];
+    expect(selectCatalogRecommendations(catalog, "all")).toEqual(current);
+    expect(catalog).toEqual([old, ...current]);
+    for (const project of current) {
+      expect(matchesCatalogTopic(project, "all")).toBe(true);
+      expect(matchesCatalogTopic(project, "nostalgia")).toBe(false);
+      expect(matchesCatalogTopic(project, "quick")).toBe(false);
+      expect(matchesCatalogTopic(project, "brain")).toBe(false);
+    }
+  });
+
+  it("keeps missing editorial members absent rather than filling from older scored games", () => {
+    const old = rated("astra-d29e74ac15e222629347", 10);
+    const available = { slug: "growmi", aiRating: null };
+    expect(selectCatalogRecommendations([old, available], "all")).toEqual([available]);
+    expect(selectCatalogRecommendations([old], "all")).toEqual([]);
+  });
+
+  it("shares each topic candidate list with full-catalog selection and keeps other topics independent", () => {
+    for (const tab of CATALOG_HERO_TABS) {
+      const candidates = catalogRecommendationSlugs(tab.id);
+      expect(new Set(candidates).size).toBe(candidates.length);
+      for (const slug of candidates) expect(matchesCatalogTopic({ slug }, tab.id)).toBe(true);
+      expect(selectCatalogRecommendations(candidates.map((slug) => ({ slug })), tab.id).map((entry) => entry.slug))
+        .toEqual(candidates);
+    }
+    expect(catalogRecommendationSlugs("nostalgia")).toEqual([
+      "astra-9dbd59a9718b252daedf", "astra-2a8764b03af3aca71817", "super-mario", "csgo-desert",
+    ]);
+    const old = rated("astra-2048-eddy", 8);
+    expect(selectCatalogRecommendations([old], "quick")).toEqual([old]);
+    expect(selectCatalogRecommendations([old], "brain")).toEqual([old]);
+    expect(selectCatalogRecommendations([old], "all")).toEqual([]);
   });
 
   it("parses the hero topic independently from every global catalog filter", () => {

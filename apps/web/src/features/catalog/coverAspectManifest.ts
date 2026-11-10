@@ -254,4 +254,10 @@ export const CATALOG_COVER_ASPECTS_BY_PATH: Readonly<Record<string, number>> = {
   "/catalog/2026-11-05-v5/covers/exhibit-of-sorrows.webp": 1.152046783626,
   "/catalog/2026-11-05-v5/covers/known-unknowns.webp": 0.833333333333,
   "/catalog/2026-11-05-v5/covers/crosscode-demo.webp": 0.741666666667,
+  "/catalog/2026-11-10-v1/covers/dragonsweeper.webp": 1.142857142857,
+  "/catalog/2026-11-10-v1/covers/growmi.webp": 1.259842519685,
+  "/catalog/2026-11-10-v1/covers/sort-the-court.webp": 1.26,
+  "/catalog/2026-11-10-v1/covers/solitomb.webp": 1,
+  "/catalog/2026-11-10-v1/covers/slipways-classic.webp": 1.259842519685,
+  "/catalog/2026-11-10-v1/covers/die-in-the-dungeon-classic.webp": 1.318681318681,
 };

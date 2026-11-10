@@ -12,6 +12,13 @@ const tabs = [
 const nostalgiaSlugs = new Set([
   "super-mario", "csgo-desert", "astra-9dbd59a9718b252daedf", "astra-2a8764b03af3aca71817",
 ]);
+const featuredSlugs = new Set([
+  "dragonsweeper", "growmi", "sort-the-court", "solitomb", "slipways-classic", "die-in-the-dungeon-classic",
+]);
+const quickSlugs = new Set([
+  "astra-7e0d2e37b2e9a32fdd31", "astra-2048-eddy", "astra-e48428f88519b6c8b7a3", "pelican-rider",
+  "astra-427abefc3be5bb52b0f4", "astra-169a094a99f2babbad62", "astra-c3ad2159872d2b53299e",
+]);
 
 interface ApiProject {
   id: string;
@@ -179,6 +186,12 @@ for (const path of ["/", "/games"]) {
           .filter((project) => nostalgiaSlugs.has(project.slug)).map((project) => project.id);
         expect((await heroIds(page)).sort()).toEqual(expected.sort());
         await expectEmptySlots(page, expected.length);
+      } else if (id === "all") {
+        const expected = catalog.data.categories.flatMap((category) => category.projects)
+          .filter((project) => featuredSlugs.has(project.slug)).map((project) => project.id);
+        expect((await heroIds(page)).sort()).toEqual(expected.sort());
+        await expectEmptySlots(page, expected.length);
+        await expect(page.getByRole("button", { name: "下一组推荐游戏", exact: true })).toHaveCount(0);
       } else {
         await expect(page.locator(".catalog-group--featured .catalog-card")).toHaveCount(6);
       }
@@ -214,7 +227,11 @@ test("hero next page changes only its six games and changing topic resets that p
   await readOnlyPreview(context, catalog);
   await page.setViewportSize({ width: 921, height: 1100 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto(new URL("/games", baseURL).href);
+  // 六款编辑精选没有第二页；沿用七款真实候选的即玩专题验证独立推荐分页。
+  const quickProjects = catalog.data.categories.flatMap((category) => category.projects)
+    .filter((project) => quickSlugs.has(project.slug));
+  expect(quickProjects.length).toBeGreaterThan(6);
+  await page.goto(new URL("/games?topic=quick", baseURL).href);
   await ready(page);
   const baseline = await layout(page);
   const initialIds = await heroIds(page);
@@ -225,8 +242,8 @@ test("hero next page changes only its six games and changing topic resets that p
   await page.getByRole("button", { name: "下一组推荐游戏", exact: true }).click();
   await expect.poll(() => heroIds(page)).not.toEqual(initialIds);
   const nextIds = await heroIds(page);
-  expect(nextIds).toHaveLength(6);
-  expect(new Set(nextIds).size).toBe(6);
+  expect(nextIds).toHaveLength(Math.min(6, quickProjects.length - 6));
+  expect(new Set(nextIds).size).toBe(nextIds.length);
   const actualIds = new Set(catalog.data.categories.flatMap((category) => category.projects).map((project) => project.id));
   expect(nextIds.every((id) => actualIds.has(id) && !initialIds.includes(id))).toBe(true);
   await expect.poll(() => layout(page)).toEqual(baseline);
@@ -239,10 +256,43 @@ test("hero next page changes only its six games and changing topic resets that p
   expect((await heroIds(page)).sort()).toEqual(nostalgicIds.sort());
   await expect(page.getByRole("button", { name: "上一组推荐游戏", exact: true })).toHaveCount(0);
   await selectTopic(page, "all");
-  expect(await heroIds(page)).toEqual(initialIds);
+  const featuredIds = catalog.data.categories.flatMap((category) => category.projects)
+    .filter((project) => featuredSlugs.has(project.slug)).map((project) => project.id);
+  expect((await heroIds(page)).sort()).toEqual(featuredIds.sort());
+  await expect(page.getByRole("button", { name: "上一组推荐游戏", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "下一组推荐游戏", exact: true })).toHaveCount(0);
   await expect.poll(() => layout(page)).toEqual(baseline);
   expect(await railPositions()).toEqual(initialRailPositions);
 });
+
+for (const count of [0, 2]) {
+  test(`the editorial pool with ${count} available games never fills from the older catalog`, async ({ page, context }) => {
+    const source = await localCatalog(context);
+    const featured = source.data.categories.flatMap((category) => category.projects)
+      .filter((project) => featuredSlugs.has(project.slug));
+    expect(new Set(featured.map((project) => project.slug))).toEqual(featuredSlugs);
+    const keep = new Set(featured.slice(0, count).map((project) => project.id));
+    const catalog = {
+      ...source,
+      data: { ...source.data, categories: source.data.categories.map((category) => ({
+        ...category, projects: category.projects.filter((project) => !featuredSlugs.has(project.slug) || keep.has(project.id)),
+      })) },
+    };
+    await readOnlyPreview(context, catalog);
+    await page.setViewportSize({ width: 1229, height: 1280 });
+    await page.goto(new URL("/games", baseURL).href);
+    await ready(page);
+    await expectEmptySlots(page, count);
+    expect((await heroIds(page)).sort()).toEqual([...keep].sort());
+    const old = source.data.categories.flatMap((category) => category.projects)
+      .find((project) => !featuredSlugs.has(project.slug))!;
+    const searchURL = new URL("/games", baseURL);
+    searchURL.searchParams.set("q", old.name);
+    await page.goto(searchURL.href);
+    await expect(page.locator(`.catalog-card[data-project-id="${old.id}"]`)).toBeVisible();
+    await expect(page.locator(".catalog-recommendation-tabs")).toHaveCount(0);
+  });
+}
 
 test("global search and category results ignore a hero topic and hide the hero tabs", async ({ page, context }) => {
   const catalog = await localCatalog(context);
