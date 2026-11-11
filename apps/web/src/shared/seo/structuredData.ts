@@ -4,6 +4,8 @@ import type { MaybeRefOrGetter } from "vue";
 export const SEO_SITE_STRUCTURED_DATA_ID = "seo-site-structured-data";
 export const SEO_PAGE_STRUCTURED_DATA_ID = "seo-page-structured-data";
 export const SEO_BRAND_NAME = "ParallelLines";
+export const SEO_PINYIN_NAME = "pingxingxian";
+export const SEO_SITE_TAGLINE = "发现游戏、工具与创意";
 
 const SEO_DEFAULT_PUBLIC_TITLE = "平行线";
 
@@ -146,6 +148,15 @@ export function buildSeoSiteName(publicTitle: string): string {
 }
 
 /**
+ * 生成首页元信息与可见品牌介绍共用的文案，不将主站限定为游戏站。
+ * @param siteName - 已规范化的中英文站名，或路由中的 `{siteName}` 占位符。
+ * @returns 涵盖当前游戏、工具和圈子未开放状态的介绍，无副作用。
+ */
+export function buildSeoSiteDescription(siteName: string): string {
+  return `${siteName}（${SEO_PINYIN_NAME}）是发现游戏、实用工具与创意内容的空间。浏览游戏目录，探索办公与创作工具；兴趣圈子暂未开放。`;
+}
+
+/**
  * Builds legitimate alternate names for the site-name structured-data contract.
  *
  * @param publicTitle - Administrator-visible site title.
@@ -155,7 +166,8 @@ export function buildSeoSiteName(publicTitle: string): string {
 export function buildSeoSiteAlternateNames(publicTitle: string, siteUrl: string): string[] {
   const primaryName = buildSeoSiteName(publicTitle).toLowerCase();
   const hostname = new URL(siteUrl).hostname.toLowerCase();
-  const candidates = [publicTitle.trim(), SEO_DEFAULT_PUBLIC_TITLE, SEO_BRAND_NAME, hostname];
+  // 与服务端使用相同的明确品牌别名，保留可配置主名称和域名的原有语义。
+  const candidates = [publicTitle.trim(), SEO_DEFAULT_PUBLIC_TITLE, SEO_BRAND_NAME, SEO_PINYIN_NAME, hostname];
   const seen = new Set([primaryName]);
   return candidates.filter((candidate) => {
     const normalized = candidate.trim();

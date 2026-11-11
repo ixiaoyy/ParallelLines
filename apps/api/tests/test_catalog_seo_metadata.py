@@ -77,10 +77,10 @@ def catalog_home(monkeypatch):
 )
 def test_home_metadata_and_social_schema_share_confirmed_copy(catalog_home, title, brand):
     service, identity, calls, projects = catalog_home(title)
-    expected_title = f"AI 游戏 · GPT / Claude Code / Kimi · 点开即玩 | {brand}"
+    expected_title = f"{brand}（pingxingxian）· 发现游戏、工具与创意"
     expected_description = (
-        f"{brand} 收录 AI 网页游戏，探索 GPT、Claude Code、Kimi 等工具带来的游戏创意。"
-        "涵盖策略、卡牌、解谜、角色扮演与休闲玩法，按分类和热度发现游戏，点开即玩。"
+        f"{brand}（pingxingxian）是发现游戏、实用工具与创意内容的空间。"
+        "浏览游戏目录，探索办公与创作工具；兴趣圈子暂未开放。"
     )
     meta = asyncio.run(service.meta_for_path("/", "https://pingxingxian.space"))
     assert calls == []
@@ -94,7 +94,7 @@ def test_home_metadata_and_social_schema_share_confirmed_copy(catalog_home, titl
     assert meta.canonical_url == meta.og_url == "https://pingxingxian.space/"
     assert meta.robots == "index,follow"
     assert document.heading == identity.title
-    assert document.intro == ""
+    assert document.intro == expected_description
     assert [link.path for link in document.links] == [project.url for project in projects]
     assert document.page_structured_data is None
 
@@ -132,16 +132,27 @@ def test_home_metadata_and_social_schema_share_confirmed_copy(catalog_home, titl
     assert website["description"] == expected_description
     assert website["alternateName"] == organization["alternateName"]
     assert "ParallelLines" in website["alternateName"]
+    assert "pingxingxian" in website["alternateName"]
     assert organization["logo"]["url"] == "https://pingxingxian.space/logo-lines-mark.png"
 
 
-def test_empty_home_intro_does_not_render_an_extra_paragraph(catalog_home):
+def test_home_intro_renders_visible_site_brand_and_current_scope(catalog_home):
     service, _, _, _ = catalog_home("平行线")
     document = asyncio.run(service.home_page("https://pingxingxian.space"))
     rendered = render_semantic_fallback(replace(document, links=()))
     assert "<h1>平行线</h1>" in rendered
+    assert f"<p>{html.escape(document.intro, quote=True)}</p>" in rendered
+    assert "平行线 ParallelLines（pingxingxian）" in rendered
+    assert "办公与创作工具" in rendered
+    assert "兴趣圈子暂未开放" in rendered
+    assert 'href="/forum"' not in rendered
+
+
+def test_empty_intro_still_omits_extra_paragraph(catalog_home):
+    service, _, _, _ = catalog_home("平行线")
+    document = asyncio.run(service.home_page("https://pingxingxian.space"))
+    rendered = render_semantic_fallback(replace(document, links=(), intro=""))
     assert "<p>" not in rendered
-    assert "收录 AI 网页游戏" not in rendered
 
 
 def test_nonempty_intro_keeps_existing_escaped_rendering(catalog_home):

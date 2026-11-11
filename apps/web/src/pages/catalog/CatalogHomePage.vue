@@ -13,6 +13,7 @@ import { useCatalog, useCatalogOverview, useRecordCatalogProjectView } from "@/f
 import { readPersonalLibrary, recordRecentProject, savePersonalLibrary, toggleWantedProject } from "@/features/catalog/personalLibrary";
 import type { PersonalLibrary } from "@/features/catalog/personalLibrary";
 import { staticAssetUrl } from "@/shared/assets/staticAssets";
+import { buildSeoSiteDescription, buildSeoSiteName, SEO_SITE_TAGLINE } from "@/shared/seo/structuredData";
 import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
 import CatalogSiteNavigation from "./CatalogSiteNavigation.vue";
 import CatalogNavigation from "./CatalogNavigation.vue";
@@ -40,6 +41,7 @@ const PAGE_SIZE = 24;
 const AUTHOR_PAGE_SIZE = 20;
 const HEART_HEAT_WEIGHT = 5;
 const SOURCE_CONTRIBUTOR_URL = "https://github.com/MartinDelophy/awesome-gpt-6-astra";
+const siteDescription = buildSeoSiteDescription(buildSeoSiteName("平行线"));
 const seedOrder = new Map<string, number>(CATALOG_PRIORITY_SLUGS.map((slug, index) => [slug, index]));
 
 const currentUserQuery = useCurrentUser();
@@ -466,7 +468,13 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
 
         </template>
       </section>
-      <footer class="catalog-footer"><div><strong>平行线</strong><span>让好玩的小游戏被更多人发现</span></div><SiteNavigation /><p class="catalog-library__hint">记录保存在当前浏览器，清理浏览器数据后会丢失。</p></footer>
+      <footer class="catalog-footer">
+        <div><strong>平行线</strong><span>{{ SEO_SITE_TAGLINE }}</span></div>
+        <SiteNavigation />
+        <!-- 可见介绍与首个 HTML、首页元信息一致，圈子继续保持未开放。 -->
+        <p class="catalog-footer__about">{{ siteDescription }}</p>
+        <p class="catalog-library__hint">记录保存在当前浏览器，清理浏览器数据后会丢失。</p>
+      </footer>
     </div>
     <CatalogSubmissionDialog v-model:open="submissionOpen" />
     <dialog ref="authorDialog" class="catalog-author-dialog" aria-labelledby="catalog-author-dialog-title" @close="selectedAuthor = null">

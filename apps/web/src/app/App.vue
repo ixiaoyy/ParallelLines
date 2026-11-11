@@ -6,6 +6,7 @@ import { useRoute } from "vue-router";
 
 import { isChatSsoContinuation } from "@/shared/router/authReturn";
 import { resolveRouteSeoMeta, useSeoMeta } from "@/shared/seo/meta";
+import { SEO_SITE_TAGLINE } from "@/shared/seo/structuredData";
 
 const route = useRoute();
 // 论坛外壳按需加载；目录首页及原目录后台不增加论坛导航或初始化请求。
@@ -17,7 +18,7 @@ const usesForumShell = computed(() => {
   const isChatLogin = route.name === "auth" && isChatSsoContinuation(redirect, window.location.origin);
   return route.meta.forumShell === true && !isAdminLogin && !isChatLogin;
 });
-// 论坛的动态品牌和页面 SEO 由旧外壳接管；其他页面继续使用目录文案。
+// 论坛的动态品牌和页面 SEO 由旧外壳接管；其他页面沿用通用主站定位。
 useSeoMeta(
   computed(() => usesForumShell.value ? undefined :
     resolveRouteSeoMeta(route.name === "auth" && !isChatSsoContinuation(route.query.redirect, window.location.origin) ? {
@@ -29,7 +30,7 @@ useSeoMeta(
       routePath: route.path,
       siteTitle: "平行线",
       siteName: "平行线 ParallelLines",
-      siteTagline: "发现有趣的游戏与互动项目",
+      siteTagline: SEO_SITE_TAGLINE,
     }),
   ),
 );

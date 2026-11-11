@@ -22,6 +22,7 @@ from app.services.seo import (
     SeoSiteIdentity,
     site_alternate_names,
     site_brand_name,
+    truncate_text,
 )
 from app.services.seo_renderer import (
     SEO_BODY_MARKER,
@@ -127,6 +128,7 @@ def test_site_schema_uses_unique_bilingual_name_and_legitimate_aliases() -> None
     assert site_alternate_names(identity.title, "https://pingxingxian.space") == [
         "平行线",
         "ParallelLines",
+        "pingxingxian",
         "pingxingxian.space",
     ]
 
@@ -140,8 +142,25 @@ def test_site_schema_uses_unique_bilingual_name_and_legitimate_aliases() -> None
         assert entity["alternateName"] == [
             "平行线",
             "ParallelLines",
+            "pingxingxian",
             "pingxingxian.space",
         ]
+
+
+@pytest.mark.parametrize("title", ["", "平行线 ParallelLines", "平行线 parallellines"])
+def test_brand_aliases_preserve_custom_names_and_case_insensitive_deduplication(title: str) -> None:
+    aliases = site_alternate_names(title, "https://PINGXINGXIAN.space")
+    assert "平行线" in aliases
+    assert "pingxingxian" in aliases
+    assert "pingxingxian.space" in aliases
+    assert len({alias.casefold() for alias in aliases}) == len(aliases)
+    assert site_brand_name(title).casefold() not in {alias.casefold() for alias in aliases}
+    assert site_brand_name(title).casefold().count("parallellines") == 1
+
+
+def test_empty_page_copy_uses_general_site_description_without_changing_existing_text() -> None:
+    assert truncate_text(" \n ", 180) == "发现游戏、实用工具与创意内容。"
+    assert truncate_text("公开简介", 180) == "公开简介"
 
 
 def test_renderer_escapes_optional_baidu_site_verification() -> None:

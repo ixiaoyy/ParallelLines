@@ -29,8 +29,10 @@ MAX_TOPIC_PAGE_POSTS = 51
 MAX_PROFILE_PAGE_TOPICS = 20
 SITE_TITLE_FALLBACK = "平行线"
 SITE_BRAND_NAME = "ParallelLines"
+SITE_PINYIN_NAME = "pingxingxian"
+SITE_DISCOVERY_TAGLINE = "发现游戏、工具与创意"
 SITE_TAGLINE_FALLBACK = "让答案可追溯"
-SITE_DESCRIPTION_FALLBACK = "发现游戏与互动项目的分类目录。"
+SITE_DESCRIPTION_FALLBACK = "发现游戏、实用工具与创意内容。"
 TOOLS_DESCRIPTION = "暂无可用工具。工具开放后会显示在这里。"
 SITE_LOGO_FALLBACK = "/logo-lines-mark.png"
 LEGACY_SITE_LOGO_URLS = {
@@ -150,8 +152,8 @@ class SeoService:
                 base_url,
                 "/",
                 title=(
-                    "AI 游戏 · GPT / Claude Code / Kimi · 点开即玩 | "
-                    f"{site_brand_name(identity.title)}"
+                    f"{site_brand_name(identity.title)}（{SITE_PINYIN_NAME}）"
+                    f"· {SITE_DISCOVERY_TAGLINE}"
                 ),
                 description=site_description(identity),
             )
@@ -301,13 +303,14 @@ class SeoService:
                 base_url,
                 "/",
                 title=(
-                    "AI 游戏 · GPT / Claude Code / Kimi · 点开即玩 | "
-                    f"{site_brand_name(identity.title)}"
+                    f"{site_brand_name(identity.title)}（{SITE_PINYIN_NAME}）"
+                    f"· {SITE_DISCOVERY_TAGLINE}"
                 ),
                 description=site_description(identity),
             ),
             heading=identity.title,
-            intro="",
+            # 品牌说明与 Vue 可见页脚一致，不把主站限定为游戏站或提前开放圈子。
+            intro=site_description(identity),
             links=links,
             site_structured_data=self._site_structured_data(identity, base_url),
         )
@@ -1172,7 +1175,7 @@ class SeoService:
         """Build stable WebSite/Organization JSON-LD for a public document.
 
         ``identity`` contains public branding and ``base_url`` the canonical
-        origin. ``description`` overrides the catalog copy for forum documents
+        origin. ``description`` overrides the general site copy for forum documents
         so their initial graph matches Vue. The returned graph references the
         existing protected logo and has no side effects.
         """
@@ -1184,7 +1187,7 @@ class SeoService:
         )
         name = site_brand_name(identity.title)
         alternate_names = site_alternate_names(identity.title, base_url)
-        # 论坛页面显式沿用旧论坛描述，目录和既有默认调用继续使用目录描述。
+        # 论坛页面沿用独立描述；首页和默认调用使用涵盖游戏、工具的主站介绍。
         public_description = description if description is not None else site_description(identity)
         return {
             "@context": "https://schema.org",
@@ -1483,12 +1486,12 @@ def forum_description(identity: SeoSiteIdentity) -> str:
 
 
 def site_description(identity: SeoSiteIdentity) -> str:
-    """返回聚合目录描述，避免旧论坛副标题进入新首页与结构化数据。"""
+    """按公开站名生成主站介绍，覆盖游戏和工具，并保留圈子未开放的状态。"""
 
     return (
-        f"{site_brand_name(identity.title)} 收录 AI 网页游戏，"
-        "探索 GPT、Claude Code、Kimi 等工具带来的游戏创意。"
-        "涵盖策略、卡牌、解谜、角色扮演与休闲玩法，按分类和热度发现游戏，点开即玩。"
+        f"{site_brand_name(identity.title)}（{SITE_PINYIN_NAME}）"
+        "是发现游戏、实用工具与创意内容的空间。"
+        "浏览游戏目录，探索办公与创作工具；兴趣圈子暂未开放。"
     )
 
 
@@ -1507,7 +1510,7 @@ def site_brand_name(public_title: str) -> str:
 
 
 def site_alternate_names(public_title: str, base_url: str) -> list[str]:
-    """Return deduplicated public-title, brand, and hostname aliases.
+    """Return deduplicated public-title, Latin/pinyin brand, and hostname aliases.
 
     ``public_title`` and canonical ``base_url`` identify legitimate brand names.
     The returned order prefers human-readable aliases before the lowercase host;
@@ -1516,7 +1519,10 @@ def site_alternate_names(public_title: str, base_url: str) -> list[str]:
 
     primary_name = site_brand_name(public_title)
     hostname = (urlsplit(base_url).hostname or "").lower()
-    candidates = (public_title.strip(), SITE_TITLE_FALLBACK, SITE_BRAND_NAME, hostname)
+    # 拼音是明确的品牌别名，不从可配置域名推导，也不改写主名称。
+    candidates = (
+        public_title.strip(), SITE_TITLE_FALLBACK, SITE_BRAND_NAME, SITE_PINYIN_NAME, hostname
+    )
     aliases: list[str] = []
     seen = {primary_name.casefold()}
     for candidate in candidates:
