@@ -135,6 +135,40 @@ export function buildSiteStructuredData(input: SiteStructuredDataInput): JsonLdO
 }
 
 /**
+ * 接续首个 HTML 的站点图谱，保留服务端自定义品牌、规范域名、别名和 Logo。
+ * @returns 已验证的站点 JSON-LD；静态壳没有图谱时返回 undefined，异常内容会告警。
+ */
+export function readServerSiteStructuredData(): JsonLdObject | undefined {
+  const script = document.getElementById(SEO_SITE_STRUCTURED_DATA_ID);
+  if (!(script instanceof HTMLScriptElement) || script.type !== "application/ld+json") {
+    return undefined;
+  }
+  try {
+    const value: unknown = JSON.parse(script.textContent ?? "");
+    if (isJsonLdValue(value) && value !== null && typeof value === "object" && !Array.isArray(value)
+      && value["@context"] === "https://schema.org" && Array.isArray(value["@graph"])
+      && value["@graph"].some((node) => node !== null && typeof node === "object" && !Array.isArray(node)
+        && node["@type"] === "WebSite" && typeof node.name === "string")) {
+      return value;
+    }
+  } catch {
+    console.warn("[seo] Initial site structured data is not valid JSON; using the default site graph.");
+    return undefined;
+  }
+  console.warn("[seo] Initial site structured data has an unexpected shape; using the default site graph.");
+  return undefined;
+}
+
+/** 校验首屏 JSON 的实际值类型，避免将解析结果直接断言为图谱。 */
+function isJsonLdValue(value: unknown): value is JsonLdValue {
+  if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return true;
+  }
+  if (Array.isArray(value)) return value.every(isJsonLdValue);
+  return typeof value === "object" && Object.values(value).every(isJsonLdValue);
+}
+
+/**
  * Builds the unique bilingual SEO name from the configurable public title.
  *
  * @param publicTitle - Administrator-visible site title.

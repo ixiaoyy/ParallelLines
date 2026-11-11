@@ -34,6 +34,21 @@ SITE_DISCOVERY_TAGLINE = "发现游戏、工具与创意"
 SITE_TAGLINE_FALLBACK = "让答案可追溯"
 SITE_DESCRIPTION_FALLBACK = "发现游戏、实用工具与创意内容。"
 TOOLS_DESCRIPTION = "暂无可用工具。工具开放后会显示在这里。"
+# 仅登记当前已开放的三款直达游戏，文案与对应 Vue 路由一致；不扩展旧工具或论坛索引。
+PUBLIC_GAME_PAGES: dict[str, tuple[str, str]] = {
+    "/play/generals-soldiers": (
+        "将军战小兵",
+        "在平行线与电脑进行将军战小兵对弈。",
+    ),
+    "/play/snake-escape": (
+        "蛇蛇出洞",
+        "按顺序放走彩色小蛇，避开阻挡，在倒计时结束前清空棋盘。",
+    ),
+    "/play/flappy-dunk": (
+        "飞翼灌篮",
+        "点按让带翅膀的篮球跳跃，从上方穿过篮圈，挑战连续进球和最高分。",
+    ),
+}
 SITE_LOGO_FALLBACK = "/logo-lines-mark.png"
 LEGACY_SITE_LOGO_URLS = {
     "/logo-lines.png",
@@ -45,7 +60,7 @@ PUBLIC_SITE_SETTING_KEYS = {"site_title", "site_tagline", "brand_logo_url"}
 
 JsonObject = dict[str, object]
 SeoPageKind = Literal[
-    "home", "tools", "boards", "board", "topic", "profile", "restricted", "missing"
+    "home", "game", "tools", "boards", "board", "topic", "profile", "restricted", "missing"
 ]
 
 
@@ -111,10 +126,11 @@ class SeoService:
         self.session = session
 
     async def sitemap_urls(self, base_url: str) -> list[SitemapUrl]:
-        """仅列出游戏目录的规范地址，保留现有论坛索引范围。"""
+        """返回目录与三款已登记游戏的规范地址，不查询内容或编造更新时间。"""
 
         return [
             SitemapUrl(loc=absolute_url(base_url, "/")),
+            *(SitemapUrl(loc=absolute_url(base_url, path)) for path in PUBLIC_GAME_PAGES),
         ]
 
     async def robots_txt(self, base_url: str) -> str:
@@ -146,6 +162,16 @@ class SeoService:
 
         identity = await self._site_identity()
         normalized = normalize_path(path)
+        # 游戏元信息和首屏使用同一登记文案，参数与片段不形成额外规范地址。
+        if normalized in PUBLIC_GAME_PAGES:
+            name, description = PUBLIC_GAME_PAGES[normalized]
+            return self._site_meta(
+                identity,
+                base_url,
+                normalized,
+                title=f"{name} · {identity.title}",
+                description=description,
+            )
         if normalized in {"", "/", "/games"}:
             return self._site_meta(
                 identity,
@@ -312,6 +338,34 @@ class SeoService:
             # 品牌说明与 Vue 可见页脚一致，不把主站限定为游戏站或提前开放圈子。
             intro=site_description(identity),
             links=links,
+            site_structured_data=self._site_structured_data(identity, base_url),
+        )
+
+    async def game_page(self, path: str, base_url: str) -> SeoPageDocument:
+        """返回已登记游戏的只读首屏文档，未知 ``path`` 抛出 NotFoundError。
+
+        ``base_url`` 提供规范域名；只读取站点品牌，不启动游戏、查询目录或写入计数。
+        """
+
+        canonical_path = normalize_path(path)
+        if canonical_path not in PUBLIC_GAME_PAGES:
+            raise NotFoundError("seo_game_not_found", "SEO game page not found")
+        identity = await self._site_identity()
+        name, description = PUBLIC_GAME_PAGES[canonical_path]
+        # 首屏仅呈现现有游戏说明；加载应用后仍由原 Vue 页面拥有全部游戏状态。
+        return SeoPageDocument(
+            kind="game",
+            status_code=200,
+            site=identity,
+            meta=self._site_meta(
+                identity,
+                base_url,
+                canonical_path,
+                title=f"{name} · {identity.title}",
+                description=description,
+            ),
+            heading=name,
+            intro=description,
             site_structured_data=self._site_structured_data(identity, base_url),
         )
 

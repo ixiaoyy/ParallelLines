@@ -76,6 +76,8 @@ async function fixture(page: Page, role?: "user" | "admin") {
       return send({ settings: { site_title: "平行线", site_tagline: "固定数据验证", brand_primary_color: "#d946ef" }, updated_at: null });
     }
     if (path === "/site/visits") return send({ recorded: false });
+    // 目录默认页已使用公开概览；空目录替身仍保留该真实响应结构。
+    if (path === "/catalog/overview") return send({ categories: [], hero: { projects: [], total: 0, next_offset: null } });
     if (path === "/catalog" || path === "/admin/catalog") return send({ categories: [] });
     if (path === "/admin/analytics") return send({ totals: { page_views: 0, unique_visitors: 0, external_referrals: 0 }, traffic_sources: [], entry_pages: [], daily: [] });
     if (path === "/auth/oauth/providers") return send({ providers: [] });
@@ -215,7 +217,9 @@ test("论坛品牌与主题不残留到原目录后台，原后台保持独立�
   await expect(page.locator(".admin-console-shell")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue("--primary"))).toBe("");
   expect(await page.evaluate(() => document.documentElement.getAttribute("data-interface-theme"))).toBeNull();
-  await expect(page.locator("#seo-site-structured-data")).toHaveCount(0);
+  // 站点槽现在由根应用接手；只清理论坛描述，品牌与唯一图谱继续保留。
+  await expect(page.locator("#seo-site-structured-data")).toHaveCount(1);
+  await expect(page.locator("#seo-site-structured-data")).not.toContainText("固定数据验证");
   await page.goto("/admin");
   await expect(page.locator(".admin-console-shell")).toHaveCount(0);
   await expect(page).toHaveTitle(/目录管理与访问统计/);

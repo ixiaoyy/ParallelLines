@@ -128,6 +128,21 @@ async def games_page(request: Request, session: SessionDep) -> Response:
     return await html_page_response(document)
 
 
+@public_seo_router.get(
+    "/play/generals-soldiers", response_class=HTMLResponse, include_in_schema=False
+)
+@public_seo_router.get("/play/snake-escape", response_class=HTMLResponse, include_in_schema=False)
+@public_seo_router.get("/play/flappy-dunk", response_class=HTMLResponse, include_in_schema=False)
+async def game_page(request: Request, session: SessionDep) -> Response:
+    """返回三款已开放游戏的语义首屏，保留原应用接管与游戏入口。
+
+    ``request`` 选择已登记路径及规范域名，``session`` 只读站点品牌；响应不启动游戏或写计数。
+    """
+
+    document = await SeoService(session).game_page(request.url.path, base_url(request))
+    return await html_page_response(document)
+
+
 @public_seo_router.get("/tools", response_class=HTMLResponse, include_in_schema=False)
 async def tools_page(request: Request, session: SessionDep) -> Response:
     """Return the tools landing page with its current empty state.

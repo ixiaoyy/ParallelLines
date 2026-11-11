@@ -30,9 +30,8 @@ import {
   browserSeoOrigin,
   buildSeoSiteName,
   buildSiteStructuredData,
-  SEO_SITE_STRUCTURED_DATA_ID,
-  useStructuredData,
 } from "@/shared/seo/structuredData";
+import type { JsonLdObject } from "@/shared/seo/structuredData";
 import UiButton from "@/shared/ui/Button.vue";
 import { applySiteBranding } from "@/shared/theme/siteBranding";
 import { applyStoredInterfaceTheme, setInterfaceTheme } from "@/shared/theme/interfaceTheme";
@@ -55,6 +54,7 @@ const ForumLeftRail = defineAsyncComponent(() =>
   import("@/features/navigation/components/ForumLeftRail.vue"),
 );
 
+const emit = defineEmits<{ siteStructuredData: [graph: JsonLdObject] }>();
 const router = useRouter();
 const route = useRoute();
 // 论坛运行时样式和偏好仅在外壳存续期间生效，离开时还原目录原有文档状态。
@@ -140,7 +140,7 @@ const brandLogoUrl = computed(() => {
   return LEGACY_BRAND_LOGO_URLS.has(configuredLogo) ? DEFAULT_BRAND_LOGO_URL : configuredLogo;
 });
 const siteStructuredData = computed(() => {
-  // 切回目录时立即移除论坛站点图谱，不让旧外壳短暂保留论坛语义。
+  // 离开论坛不再提供品牌更新；站点图谱由根应用维护，外壳卸载不删除它。
   if (!route.meta.forumShell) {
     return null;
   }
@@ -216,7 +216,9 @@ watchEffect(() => {
   }
 });
 useSeoMeta(routeSeoMeta);
-useStructuredData(SEO_SITE_STRUCTURED_DATA_ID, siteStructuredData);
+watch(siteStructuredData, (graph) => {
+  if (graph) emit("siteStructuredData", graph);
+}, { immediate: true });
 
 watch(
   currentUser,

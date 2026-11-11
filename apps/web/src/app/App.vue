@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { ConfigProvider } from "ant-design-vue";
 import zhCN from "ant-design-vue/es/locale/zh_CN";
-import { computed, defineAsyncComponent } from "vue";
+import { computed, defineAsyncComponent, shallowRef } from "vue";
 import { useRoute } from "vue-router";
 
 import { isChatSsoContinuation } from "@/shared/router/authReturn";
 import { resolveRouteSeoMeta, useSeoMeta } from "@/shared/seo/meta";
-import { SEO_SITE_TAGLINE } from "@/shared/seo/structuredData";
+import {
+  buildSeoSiteDescription,
+  buildSiteStructuredData,
+  readServerSiteStructuredData,
+  SEO_SITE_STRUCTURED_DATA_ID,
+  SEO_SITE_TAGLINE,
+  useStructuredData,
+} from "@/shared/seo/structuredData";
+import type { JsonLdObject } from "@/shared/seo/structuredData";
 
 const route = useRoute();
 // 论坛外壳按需加载；目录首页及原目录后台不增加论坛导航或初始化请求。
@@ -18,6 +26,34 @@ const usesForumShell = computed(() => {
   const isChatLogin = route.name === "auth" && isChatSsoContinuation(redirect, window.location.origin);
   return route.meta.forumShell === true && !isAdminLogin && !isChatLogin;
 });
+// 根应用唯一维护站点图谱；先接续服务端品牌，静态壳才使用既有默认值，不新增初始化请求。
+const siteGraph = shallowRef(readServerSiteStructuredData() ?? buildSiteStructuredData({
+  siteUrl: window.location.origin,
+  title: "平行线",
+  description: buildSeoSiteDescription("平行线 ParallelLines"),
+  logoUrl: "/logo-lines-mark.png",
+}));
+useStructuredData(SEO_SITE_STRUCTURED_DATA_ID, computed(() => {
+  // 登录、后台及其他明确禁止索引的页面不新增公开图谱；品牌快照保留供返回公开页恢复。
+  if (route.meta.seo?.robots?.split(",").includes("noindex")) return null;
+  if (usesForumShell.value) return siteGraph.value;
+  const graph = siteGraph.value["@graph"];
+  if (!Array.isArray(graph)) return siteGraph.value;
+  // 离开论坛只还原整站介绍，不重建自定义品牌、规范地址、别名或 Logo。
+  return {
+    ...siteGraph.value,
+    "@graph": graph.map((node) => node !== null && typeof node === "object" && !Array.isArray(node)
+      && node["@type"] === "WebSite" && typeof node.name === "string"
+      ? { ...node, description: buildSeoSiteDescription(node.name) }
+      : node),
+  };
+}));
+
+/** 接收仍在展示的论坛外壳的公开品牌图谱；离页后的延迟结果不覆盖当前站点状态。 */
+function receiveForumSiteGraph(graph: JsonLdObject): void {
+  if (usesForumShell.value) siteGraph.value = graph;
+}
+
 // 论坛的动态品牌和页面 SEO 由旧外壳接管；其他页面沿用通用主站定位。
 useSeoMeta(
   computed(() => usesForumShell.value ? undefined :
@@ -76,7 +112,7 @@ const theme = {
 <template>
   <ConfigProvider :locale="zhCN" :theme="theme">
     <RouterView v-slot="{ Component }">
-      <AppShell v-if="usesForumShell">
+      <AppShell v-if="usesForumShell" @site-structured-data="receiveForumSiteGraph">
         <component :is="Component" />
       </AppShell>
       <component :is="Component" v-else />

@@ -118,7 +118,12 @@ def test_all_public_forum_graphs_match_forum_shell_copy(forum_home, monkeypatch,
 def test_forum_home_does_not_expand_sitemap_or_openapi(forum_home):
     service, _, calls = forum_home
     urls = asyncio.run(service.sitemap_urls("https://pingxingxian.space"))
-    assert [item.loc for item in urls] == ["https://pingxingxian.space/"]
+    assert [item.loc for item in urls] == [
+        "https://pingxingxian.space/",
+        "https://pingxingxian.space/play/generals-soldiers",
+        "https://pingxingxian.space/play/snake-escape",
+        "https://pingxingxian.space/play/flappy-dunk",
+    ]
     assert calls == []
     route = next(route for route in public_seo_router.routes if route.path == "/forum")
     assert route.include_in_schema is False
@@ -194,4 +199,44 @@ def test_game_entries_render_html_without_redirect(monkeypatch, path, query):
     assert "location" not in response.headers
     assert response.body == "<main>游戏目录</main>".encode()
     read_home.assert_awaited_once_with("https://pingxingxian.space")
+    render.assert_awaited_once_with(document)
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["/play/generals-soldiers", "/play/snake-escape", "/play/flappy-dunk"],
+)
+def test_registered_game_routes_use_read_only_document_and_existing_shell(monkeypatch, path):
+    """只开放三条已登记首屏路由，查询参数不进入游戏识别或规范地址。"""
+
+    route = next(route for route in public_seo_router.routes if route.path == path)
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "scheme": "https",
+            "path": path,
+            "raw_path": path.encode("ascii"),
+            "query_string": b"utm_source=bookmark",
+            "server": ("pingxingxian.space", 443),
+            "headers": [],
+        }
+    )
+    session = object()
+    document = object()
+    read_game = AsyncMock(return_value=document)
+    render = AsyncMock(return_value=HTMLResponse("<main>游戏说明</main>"))
+    monkeypatch.setattr(seo_api, "SeoService", lambda actual: (
+        SimpleNamespace(game_page=read_game) if actual is session else None
+    ))
+    monkeypatch.setattr(seo_api, "base_url", lambda actual: "https://pingxingxian.space")
+    monkeypatch.setattr(seo_api, "html_page_response", render)
+
+    response = asyncio.run(route.endpoint(request, session))
+
+    assert route.include_in_schema is False
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "location" not in response.headers
+    read_game.assert_awaited_once_with(path, "https://pingxingxian.space")
     render.assert_awaited_once_with(document)

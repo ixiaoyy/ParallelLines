@@ -91,7 +91,8 @@ async def test_sitemap_excludes_retired_forum_paths_and_keeps_legacy_api_redirec
         member_id = member["user"]["id"]
         assert public_topic_data["board_visibility"] == "public"
         assert "<loc>http://test/</loc>" in body
-        assert "/play/generals-soldiers" not in body
+        for game in ("generals-soldiers", "snake-escape", "flappy-dunk"):
+            assert f"<loc>http://test/play/{game}</loc>" in body
         assert "/b/seo-public" not in body
         assert f"/topics/{public_topic_data['id']}/{public_topic_data['slug']}" not in body
         assert f"/members/{member_id}" not in body
@@ -176,7 +177,8 @@ async def test_sitemap_excludes_retired_forum_paths_and_keeps_legacy_api_redirec
         assert canonical_sitemap.headers["x-parallellines-cache"] == "miss"
         assert "<loc>http://" not in canonical_sitemap.text
         assert "<loc>https://pingxingxian.space/</loc>" in canonical_sitemap.text
-        assert "/play/generals-soldiers" not in canonical_sitemap.text
+        for game in ("generals-soldiers", "snake-escape", "flappy-dunk"):
+            assert f"<loc>https://pingxingxian.space/play/{game}</loc>" in canonical_sitemap.text
 
         topic_path = f"/topics/{topic_data['id']}/{topic_data['slug']}"
         topic_page = await client.get(topic_path)
