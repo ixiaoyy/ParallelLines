@@ -60,13 +60,27 @@ function applyColor(root: HTMLElement, colorVar: string, rgbVar: string, color: 
 
 function updateFavicon(url: string): void {
   const safeUrl = safeAssetUrl(url) ? url : "/favicon.svg";
-  let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-  if (!link) {
-    link = document.createElement("link");
+  const links = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]'));
+  if (links.length === 0) {
+    const link = document.createElement("link");
     link.rel = "icon";
     document.head.append(link);
+    links.push(link);
   }
-  link.href = safeUrl;
+  // 兼容既有后台默认值，但始终指向正式 Logo 的固定版本，防止论坛切回旧缓存图标。
+  const usesDefault = safeUrl === "/favicon.svg" || safeUrl === "/favicon.svg?v=logo-20261111";
+  for (const [index, link] of links.entries()) {
+    if (usesDefault) {
+      link.href = index === 0 ? "/favicon.svg?v=logo-20261111" : "/favicon.png?v=logo-20261111";
+      link.type = index === 0 ? "image/svg+xml" : "image/png";
+      link.setAttribute("sizes", index === 0 ? "any" : "96x96");
+    } else {
+      // 自定义图标覆盖全部候选，不让默认 PNG 抢占；未知格式不保留 SVG 类型和尺寸提示。
+      link.href = safeUrl;
+      link.removeAttribute("type");
+      link.removeAttribute("sizes");
+    }
+  }
 }
 
 function settingString(settings: PublicSettingMap, key: string, fallback: string): string {

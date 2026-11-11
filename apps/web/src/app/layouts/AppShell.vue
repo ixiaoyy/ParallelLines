@@ -61,7 +61,11 @@ const route = useRoute();
 const documentRoot = document.documentElement;
 const previousRootStyle = documentRoot.getAttribute("style");
 const previousInterfaceTheme = documentRoot.getAttribute("data-interface-theme");
-const previousFavicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.getAttribute("href") ?? "/favicon.svg";
+// 论坛可能预览自定义 PNG/SVG，离页时恢复全部候选及其类型/尺寸，不能只恢复首条地址。
+const previousFavicons = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]'), (link) => ({
+  link,
+  attributes: { href: link.getAttribute("href"), type: link.getAttribute("type"), sizes: link.getAttribute("sizes") },
+}));
 applyStoredInterfaceTheme();
 const globalSearch = ref("");
 const isNavOpen = ref(false);
@@ -262,7 +266,12 @@ onBeforeUnmount(() => {
   } else {
     documentRoot.setAttribute("data-interface-theme", previousInterfaceTheme);
   }
-  document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.setAttribute("href", previousFavicon);
+  for (const { link, attributes } of previousFavicons) {
+    for (const [name, value] of Object.entries(attributes)) {
+      if (value === null) link.removeAttribute(name);
+      else link.setAttribute(name, value);
+    }
+  }
 });
 
 onUnmounted(() => {

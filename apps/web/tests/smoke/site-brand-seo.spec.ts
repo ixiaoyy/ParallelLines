@@ -23,7 +23,7 @@ test.use({ serviceWorkers: "block" });
  * @param page - 本地页面；即便 API 配置指向独立 origin，也只能返回浏览器内替身。
  * @returns 页面错误与未登记接口记录，供调用方确认没有隐藏失败。
  */
-async function isolateBrandPage(page: Page, serverGraph?: JsonLdObject) {
+async function isolateBrandPage(page: Page, serverGraph?: JsonLdObject, faviconUrl = "/favicon.svg") {
   expect(["127.0.0.1", "localhost", "[::1]"].includes(new URL(BASE_URL).hostname)).toBe(true);
   const errors: string[] = [];
   const unexpectedApi: string[] = [];
@@ -50,7 +50,7 @@ async function isolateBrandPage(page: Page, serverGraph?: JsonLdObject) {
       if (method === "GET" && url.pathname === "/api/v1/catalog") return send({ categories: [] });
       if (method === "GET" && url.pathname === "/api/v1/auth/me") return send(null);
       if (method === "GET" && url.pathname === "/api/v1/site/settings") {
-        return send({ settings: { site_title: "云游馆 & 创意", site_tagline: "论坛验证", brand_logo_url: "/custom-logo.svg" }, updated_at: null });
+        return send({ settings: { site_title: "云游馆 & 创意", site_tagline: "论坛验证", brand_logo_url: "/custom-logo.svg", brand_favicon_url: faviconUrl }, updated_at: null });
       }
       if (method === "GET" && ["/api/v1/boards", "/api/v1/tags", "/api/v1/topics", "/api/v1/site/extensions", "/api/v1/auth/oauth/providers"].includes(url.pathname)) {
         return send([]);
@@ -89,6 +89,85 @@ async function expectSiteGraph(page: Page, graph: JsonLdObject): Promise<void> {
   await expect(script).toHaveCount(1);
   await expect.poll(async () => JSON.parse(await script.textContent() ?? "null")).toEqual(graph);
 }
+
+/** 读取全部浏览器图标候选，避免只检查首条 href 而遗漏类型、尺寸和其他默认候选。 */
+async function faviconCandidates(page: Page) {
+  return page.locator('link[rel="icon"]').evaluateAll((links) => links.map((link) => ({
+    href: link.getAttribute("href"), type: link.getAttribute("type"), sizes: link.getAttribute("sizes"),
+  })));
+}
+
+const DEFAULT_FAVICONS = [
+  { href: "/favicon.svg?v=logo-20261111", type: "image/svg+xml", sizes: "any" },
+  { href: "/favicon.png?v=logo-20261111", type: "image/png", sizes: "96x96" },
+];
+
+test("默认图标产物尺寸真实，SVG复用同一PNG，安装声明指向正式Logo", () => {
+  for (const [filename, size] of [["favicon.png", 96], ["apple-touch-icon.png", 180], ["app-icon-192.png", 192], ["logo-lines-mark.png", 512]] as const) {
+    const bytes = readFileSync(new URL(`../../public/${filename}`, import.meta.url));
+    expect(bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))).toBe(true);
+    expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual([size, size]);
+  }
+  const svg = readFileSync(new URL("../../public/favicon.svg", import.meta.url), "utf8");
+  const embedded = svg.match(/href="data:image\/png;base64,([^"]+)"/);
+  expect(embedded).not.toBeNull();
+  expect(Buffer.from(embedded?.[1] ?? "", "base64").equals(readFileSync(new URL("../../public/favicon.png", import.meta.url)))).toBe(true);
+  const manifest: unknown = JSON.parse(readFileSync(new URL("../../public/manifest.webmanifest", import.meta.url), "utf8"));
+  expect(manifest).toMatchObject({ icons: [
+    { src: "/app-icon-192.png?v=logo-20261111", sizes: "192x192", type: "image/png", purpose: "any" },
+    { src: "/logo-lines-mark.png", sizes: "512x512", type: "image/png", purpose: "any" },
+  ] });
+});
+
+test("默认图标在浏览器内完整加载且两种格式一致，论坛仍使用同一固定版本", async ({ page }) => {
+  const state = await isolateBrandPage(page);
+  await page.goto("/");
+  await expectBrandMeta(page);
+  expect(await faviconCandidates(page)).toEqual(DEFAULT_FAVICONS);
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute("href", "/apple-touch-icon.png?v=logo-20261111");
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute("sizes", "180x180");
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/manifest.webmanifest?v=logo-20261111");
+  const rendered = await page.evaluate(async () => {
+    const pixels: string[] = [];
+    const sizes: number[][] = [];
+    for (const link of document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]')) {
+      const image = new Image();
+      image.src = link.href;
+      await image.decode();
+      sizes.push([image.naturalWidth, image.naturalHeight]);
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 96;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Icon canvas unavailable");
+      context.drawImage(image, 0, 0, 96, 96);
+      pixels.push(JSON.stringify(Array.from(context.getImageData(0, 0, 96, 96).data)));
+    }
+    return { sizes, equal: pixels[0] === pixels[1] };
+  });
+  expect(rendered).toEqual({ sizes: [[96, 96], [96, 96]], equal: true });
+  await navigateWithinApp(page, "/forum");
+  await expect(page.locator(".forum-home")).toBeVisible();
+  await expect.poll(() => faviconCandidates(page)).toEqual(DEFAULT_FAVICONS);
+  expect(state.errors).toEqual([]);
+  expect(state.unexpectedApi).toEqual([]);
+});
+
+test("后台自定义PNG图标覆盖全部候选，离开论坛恢复完整默认属性", async ({ page }) => {
+  const state = await isolateBrandPage(page, undefined, "/logo-lines-mark.png");
+  await page.goto("/");
+  expect(await faviconCandidates(page)).toEqual(DEFAULT_FAVICONS);
+  await navigateWithinApp(page, "/forum");
+  await expect(page.locator(".forum-home")).toBeVisible();
+  await expect.poll(() => faviconCandidates(page)).toEqual([
+    { href: "/logo-lines-mark.png", type: null, sizes: null },
+    { href: "/logo-lines-mark.png", type: null, sizes: null },
+  ]);
+  await navigateWithinApp(page, "/");
+  await expectBrandMeta(page);
+  expect(await faviconCandidates(page)).toEqual(DEFAULT_FAVICONS);
+  expect(state.errors).toEqual([]);
+  expect(state.unexpectedApi).toEqual([]);
+});
 
 /**
  * 核对 Vue 接管后的同一首页合同，参数和兼容地址不得污染规范地址。
