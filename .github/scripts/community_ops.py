@@ -1,4 +1,4 @@
-"""圈子首次上线的固定运维事务；只接受已审核应用版本和六种显式操作。"""
+"""圈子首次上线的固定运维事务；只接受已审核应用版本和明确列出的显式操作。"""
 
 import contextlib
 import fcntl
@@ -18,6 +18,8 @@ import subprocess
 import sys
 import time
 import urllib.request
+import urllib.error
+import urllib.parse
 
 
 APP = "93ca819f20f760b142cab9a320110879ff8179df"
@@ -30,6 +32,7 @@ PENDING = ROOT / "pending.json"
 CURRENT = ROOT / "current.json"
 MAIN_CONFIG = MAIN / "deploy/nginx/default.conf"
 MARKER = MAIN / ".deployment/forum-enabled"
+RENEW_CRON = Path("/etc/cron.d/parallellines-community-renew")
 DOMAIN = "forum.pingxingxian.space"
 BASE_FILES = (MAIN / "docker-compose.yml", MAIN / "deploy/docker-compose.migration.yml")
 TOOLS = Path("/opt/parallellines-tools/ops")
@@ -42,14 +45,22 @@ API_BASE_IMAGE = "parallellines-community-api-base:" + APP
 BASE_API_TREE = "593a6c62df1fe2b104468ccdbe2caa86a2d273603fa79d2f2d424555fa8d8ee7"
 API_CHANGED_FILES = ("apps/api/app/api/seo.py", "apps/api/app/core/config.py",
                      "apps/api/app/services/seo.py", "apps/api/app/services/seo_renderer.py")
-OPERATIONS = ("inventory", "prepare", "prepare-tls", "deploy", "health", "rollback")
+OPERATIONS = ("inventory", "prepare", "probe", "prepare-tls", "deploy", "health", "rollback")
 BODY_LIMIT = 2 * 1024 * 1024
 # 按阶段交付；准备与真实切换分别完成现场及恢复审查后才能加入此列表。
-READY_OPERATIONS = ("inventory", "health", "prepare", "prepare-tls")
+READY_OPERATIONS = ("inventory", "health", "prepare", "probe", "prepare-tls")
 
 
 class OperationError(Exception):
     """只携带稳定错误码，不下发环境、配置原文、命令 stderr 或响应正文。"""
+
+
+class ProbeError(OperationError):
+    """保留有界 HTTP 状态/同域跳转诊断，不携带完整 URL、查询串或响应正文。"""
+
+    def __init__(self, code, checks):
+        super().__init__(code)
+        self.checks = checks
 
 
 class Runner:
@@ -415,6 +426,82 @@ def forum_document_valid(body):
             and re.search(rb"<title[^>]*>[^<]*" + "圈子".encode() + rb"[^<]*</title>", body) is not None)
 
 
+def verify_forum_probe(url, expected):
+    """固定 HTTP01 路径最多接受三次同域 HTTP/HTTPS 跳转，总时限内直接核对一次性正文。"""
+    initial = urllib.parse.urlsplit(url)
+    if (initial.scheme != "http" or initial.hostname != DOMAIN or initial.query or initial.fragment
+            or not re.fullmatch(r"/\.well-known/acme-challenge/tools-probe-[0-9a-f]{32}", initial.path)):
+        raise ProbeError("forum_http01_initial_probe_contract", [])
+    checks = []
+    opener = urllib.request.build_opener(NoRedirect())
+    with request_deadline(18):
+        for step in range(4):
+            current = urllib.parse.urlsplit(url)
+            request = urllib.request.Request(url, headers={"User-Agent": "ParallelLinesCommunityHTTP01/1", "Cache-Control": "no-cache"})
+            try:
+                response = opener.open(request, timeout=6)
+            except urllib.error.HTTPError as error:
+                status, location = error.code, error.headers.get("Location")
+                error.close()
+                entry = {"step": step, "scheme": current.scheme, "status": status}
+                checks.append(entry)
+                if status not in (301, 302, 303, 307, 308):
+                    raise ProbeError("forum_http01_status_" + str(status), checks) from None
+                if not location or step == 3:
+                    raise ProbeError("forum_http01_redirect_missing_or_limit", checks) from None
+                destination = urllib.parse.urlsplit(urllib.parse.urljoin(url, location))
+                entry.update(same_host=destination.hostname == DOMAIN, scheme_allowed=destination.scheme in ("http", "https"),
+                             same_probe_path=destination.path == initial.path, has_query=bool(destination.query),
+                             has_fragment=bool(destination.fragment), has_userinfo=destination.username is not None)
+                try:
+                    port_allowed = destination.port in (None, 443 if destination.scheme == "https" else 80)
+                except ValueError:
+                    raise ProbeError("forum_http01_redirect_invalid_port", checks) from None
+                entry["port_allowed"] = port_allowed
+                if (destination.hostname != DOMAIN or destination.scheme not in ("http", "https")
+                        or destination.username is not None or destination.password is not None
+                        or destination.query or destination.fragment or destination.path != initial.path
+                        or not port_allowed):
+                    raise ProbeError("forum_http01_redirect_outside_fixed_contract", checks) from None
+                url = urllib.parse.urlunsplit(destination)
+                continue
+            except urllib.error.URLError as error:
+                raise ProbeError("forum_http01_transport_" + type(error.reason).__name__, checks) from None
+            except OSError as error:
+                raise ProbeError("forum_http01_transport_" + type(error).__name__, checks) from None
+            with response:
+                checks.append({"step": step, "scheme": current.scheme, "status": response.status})
+                if response.status != 200:
+                    raise ProbeError("forum_http01_status_" + str(response.status), checks)
+                if response.read(len(expected) + 1) != expected:
+                    raise ProbeError("community_http01_probe_mismatch", checks)
+            return checks
+    raise ProbeError("forum_http01_redirect_limit", checks)
+
+
+def owned_forum_probe(tls):
+    """复用成熟探针文件的排他创建/精确清理，仅把公开请求落点限定为圈子域。"""
+    with tls.owned_probe() as (url, body):
+        probe = url.replace("http://tools.pingxingxian.space/", "http://" + DOMAIN + "/", 1)
+        if probe == url:
+            raise ProbeError("reviewed_probe_domain_contract_changed", [])
+        return verify_forum_probe(probe, body)
+
+
+def probe_only(runner, expected):
+    """只创建并清理自己的唯一 HTTP01 探针，输出 HTTP 层诊断，不请求证书或改服务。"""
+    actual = inventory(runner)
+    expect_snapshot(actual, expected)
+    baseline(actual)
+    with tools_lock() as tls:
+        if not tls.configuration_may_reload():
+            raise OperationError("installed_configuration_ownership_guard_rejected")
+        tls.context_preflight()
+        checks = owned_forum_probe(tls)
+    return {"complete": True, "probe_only": True, "certificate_requested": False,
+            "services_changed": False, "probe_checks": checks}
+
+
 def prepare_tls(runner, expected):
     """仅新圈子证书：先验证公网 HTTP01 探针，再用既有 Certbot/webroot 签发。"""
     actual = inventory(runner)
@@ -424,14 +511,7 @@ def prepare_tls(runner, expected):
         if not tls.configuration_may_reload():
             raise OperationError("installed_configuration_ownership_guard_rejected")
         context = tls.context_preflight()
-        # 复用探针文件所有权及清理机制；只把固定公开域名改为圈子，不传递任何令牌。
-        with tls.owned_probe() as (url, body):
-            probe = url.replace("http://tools.pingxingxian.space/", "http://" + DOMAIN + "/", 1)
-            if probe == url:
-                raise OperationError("reviewed_probe_domain_contract_changed")
-            with request_deadline(8), urllib.request.build_opener(NoRedirect()).open(probe, timeout=6) as response:
-                if response.status != 200 or response.read(len(body) + 1) != body:
-                    raise OperationError("community_http01_probe_mismatch")
+        checks = owned_forum_probe(tls)
         guard = "import subprocess,sys;p=subprocess.Popen(sys.argv[1:]);\ntry: code=p.wait(timeout=300)\nexcept subprocess.TimeoutExpired:\n p.terminate();\n try: p.wait(timeout=10)\n except subprocess.TimeoutExpired: p.kill();p.wait()\n code=124\nsys.exit(code)"
         runner.run("community_certificate", ["docker", "exec", context["certbot"], "python3", "-c", guard,
                    "certbot", "certonly", "--webroot", "-w", "/var/www/certbot", "--cert-name", DOMAIN,
@@ -442,7 +522,7 @@ def prepare_tls(runner, expected):
     if DOMAIN not in re.findall(r"DNS:([A-Za-z0-9*_.-]+)", output):
         raise OperationError("community_certificate_domain_mismatch")
     return {"complete": True, "new_domain_certificate_ready": True, "gateway_reloaded": False,
-            "old_certificates_and_hooks_unchanged": True}
+            "old_certificates_and_hooks_unchanged": True, "probe_checks": checks}
 
 
 def same_spec(before, after):
@@ -633,6 +713,9 @@ def layer_files(runner, gateway, *, remove=False):
     """只管理两份已审核容器层配置；未来重建必须由论坛 Compose 挂载同内容接续。"""
     pairs = (("deploy/nginx/forum.conf", "/etc/nginx/conf.d/forum.conf"),
              ("deploy/nginx/forum-main-redirects.conf", "/etc/nginx/forum-main/redirects.conf"))
+    for path in ("/etc/nginx/forum-main", "/etc/nginx/conf.d/forum.conf", "/etc/nginx/forum-main/redirects.conf"):
+        if runner.run("layer_symlink_guard", ["docker", "exec", gateway["id"], "test", "-L", path], accepted=(0, 1)).returncode == 0:
+            raise OperationError("community_layer_path_symlink")
     entries = []
     for name, destination in pairs:
         exists = runner.run("layer_file_presence", ["docker", "exec", gateway["id"], "test", "-e", destination], accepted=(0, 1)).returncode == 0
@@ -658,6 +741,160 @@ def guard_gateway(runner, state):
         raise OperationError("gateway_changed_outside_attempt")
 
 
+RENEW_BODY = r'''
+import hashlib,json,os,re,signal,socket,ssl,subprocess,sys,time
+from pathlib import Path
+class RenewalError(Exception): pass
+def command(label,args):
+    try:
+        p=subprocess.run(args,capture_output=True,timeout=8,check=False)
+    except (OSError,subprocess.TimeoutExpired): raise RenewalError(label+':execution_failed') from None
+    if p.returncode or len(p.stdout)+len(p.stderr)>1048576: raise RenewalError(label+':failed')
+    return p.stdout
+def sha(data): return hashlib.sha256(data).hexdigest()
+def owned(path):
+    p=Path(path)
+    for item in (p,*p.parents):
+        if item==ROOT or ROOT in item.parents:
+            if item.is_symlink(): raise RenewalError('renewal_owned_path_symlink')
+    return p
+def record():
+    p=owned(ROOT/'current.json')
+    if not p.is_file() or p.stat().st_size>2097152: raise RenewalError('community_current_missing')
+    s=json.loads(p.read_text())
+    if s.get('source_revision')!=APP or s.get('status')!='committed': raise RenewalError('community_not_committed')
+    return s
+def file_certificate():
+    cert=MAIN/'var/letsencrypt/live'/DOMAIN/'fullchain.pem'
+    meta=command('public_certificate',['openssl','x509','-in',str(cert),'-noout','-ext','subjectAltName','-checkend','86400'])
+    if DOMAIN.encode() not in re.findall(rb'DNS:([A-Za-z0-9*_.-]+)',meta): raise RenewalError('public_certificate_domain')
+    return sha(command('public_certificate_der',['openssl','x509','-in',str(cert),'-outform','DER']))
+def loaded_certificate():
+    with socket.create_connection(('127.0.0.1',443),timeout=5) as raw:
+        with ssl.create_default_context().wrap_socket(raw,server_hostname=DOMAIN) as stream:
+            return sha(stream.getpeercert(binary_form=True))
+def guard(s,tls):
+    before=s['before']; old=before['gateway']; cid=old['id']
+    if not re.fullmatch(r'[0-9a-f]{64}',cid): raise RenewalError('gateway_identity_invalid')
+    raw=command('gateway',['docker','inspect','--format','{"id":{{json .Id}},"image_id":{{json .Image}},"running":{{json .State.Running}},"mounts":{{json .Mounts}}}',cid])
+    live=json.loads(raw)
+    if live['id']!=cid or live['image_id']!=old['image_id'] or live['running'] is not True or live['mounts']!=old['mounts']: raise RenewalError('gateway_identity_or_mounts_changed')
+    networks=command('gateway_networks',['docker','inspect','--format','{{range $n,$v:=.NetworkSettings.Networks}}{{$n}} {{end}}',cid]).decode().split()
+    if sorted(networks)!=old['networks']: raise RenewalError('gateway_networks_changed')
+    st=CONFIG.stat()
+    if CONFIG.is_symlink() or {'device':st.st_dev,'inode':st.st_ino}!=before['config_identity']: raise RenewalError('configuration_inode_changed')
+    inode=command('bound_inode',['docker','exec',cid,'stat','-c','%d:%i','/etc/nginx/conf.d/default.conf']).decode().strip()
+    if inode!=str(st.st_dev)+':'+str(st.st_ino): raise RenewalError('configuration_bind_changed')
+    if sha(CONFIG.read_bytes())!=CONFIG_SHA or not tls.configuration_may_reload(): raise RenewalError('configuration_ownership_changed')
+    renewal=s['renewal']
+    for path,key in ((ROOT/'renew-community.py','script_sha256'),(CRON,'cron_sha256')):
+        if path.is_symlink() or sha(path.read_bytes())!=renewal[key]: raise RenewalError('renewal_consumer_changed')
+    for path,key in (('/etc/nginx/conf.d/forum.conf','forum_sha256'),('/etc/nginx/forum-main/redirects.conf','redirects_sha256')):
+        if command('owned_forum_configuration',['docker','exec',cid,'sha256sum',path]).decode().split()[0]!=renewal[key]: raise RenewalError('forum_configuration_changed')
+    return cid
+def save_report(value):
+    path=owned(ROOT/'renewal-last.json'); temp=owned(ROOT/'renewal-last.json.new')
+    if temp.exists(): raise RenewalError('renewal_report_temporary_exists')
+    fd=os.open(temp,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+    with os.fdopen(fd,'w') as stream:
+        json.dump(value,stream,sort_keys=True);stream.flush();os.fsync(stream.fileno())
+    os.replace(temp,path)
+def main(args):
+    report={'complete':False,'reloaded':False,'errors':[]}
+    if args not in (['check'],['renew']): return 2
+    def expired(_signum,_frame): raise RenewalError('renewal_total_timeout')
+    signal.signal(signal.SIGALRM,expired);signal.setitimer(signal.ITIMER_REAL,75)
+    try:
+        state=record(); public=file_certificate(); loaded=loaded_certificate()
+        sys.path.insert(0,'/opt/parallellines-tools/ops');import tls
+        # check 永不 reload；首次安装也核全部所有权，不能仅以证书一致作为消费者就绪。
+        with tls.tls_lock():
+            cid=guard(state,tls)
+            if public!=file_certificate(): raise RenewalError('public_certificate_changed_during_check')
+            if public!=loaded_certificate():
+                if args==['check']: raise RenewalError('new_certificate_not_loaded')
+                command('nginx_test',['docker','exec',cid,'nginx','-t'])
+                guard(state,tls)
+                command('nginx_reload',['docker','exec',cid,'nginx','-s','reload'])
+                # reload 只投递信号；允许旧 worker 正常退出，最多15秒确认，不重复 reload。
+                until=time.monotonic()+15; matched=False
+                for attempt in range(30):
+                    if time.monotonic()>=until: break
+                    if loaded_certificate()==public:
+                        matched=True;break
+                    time.sleep(0.5)
+                if not matched: raise RenewalError('reloaded_certificate_mismatch')
+                report['reloaded']=True
+            report['complete']=True
+    except Exception as error:
+        report['errors'].append(str(error) if isinstance(error,RenewalError) else type(error).__name__)
+    finally:
+        signal.setitimer(signal.ITIMER_REAL,0)
+    try: save_report(report)
+    except Exception as error:
+        report['complete']=False;report['errors'].append('report:'+type(error).__name__)
+    print(json.dumps(report,sort_keys=True))
+    return 0 if report['complete'] else 2
+if __name__=='__main__': sys.exit(main(sys.argv[1:]))
+'''
+
+
+def renewal_program():
+    """生成固定圈子域证书消费者；没有通用命令、域名、凭据或路径输入。"""
+    prefix = ("APP=" + repr(APP) + "\nfrom pathlib import Path\nROOT=Path(" + repr(str(ROOT))
+              + ")\nMAIN=Path(" + repr(str(MAIN)) + ")\nDOMAIN=" + repr(DOMAIN)
+              + "\nCONFIG=Path(" + repr(str(MAIN_CONFIG)) + ")\nCONFIG_SHA=" + repr(NEW_CONFIG)
+              + "\nCRON=Path(" + repr(str(RENEW_CRON)) + ")\n")
+    return (prefix + RENEW_BODY).encode()
+
+
+def renewal_preflight(state):
+    """安装/恢复只接受本任务新脚本与 cron 的精确前像，不覆盖未知已有消费者。"""
+    paths = ((ROOT / "renew-community.py", "script_sha256"),
+             (RENEW_CRON, "cron_sha256"))
+    if RENEW_CRON.parent.is_symlink() or not RENEW_CRON.parent.is_dir():
+        raise OperationError("renewal_cron_directory_not_regular")
+    if ROOT.stat().st_dev != RENEW_CRON.parent.stat().st_dev:
+        raise OperationError("renewal_atomic_publication_requires_same_filesystem")
+    snapshot = ROOT / "renew-community.cron"
+    if snapshot.exists() and (not state.get("renewal") or digest(safe_path(snapshot).read_bytes()) != state["renewal"]["cron_sha256"]):
+        raise OperationError("renewal_cron_snapshot_preimage_changed")
+    for path, key in paths:
+        if path.is_symlink():
+            raise OperationError("renewal_consumer_symlink")
+        if path.exists():
+            if not state.get("renewal") or digest(path.read_bytes()) != state["renewal"][key]:
+                raise OperationError("renewal_consumer_preimage_changed")
+
+
+def install_renewal(state, tls):
+    """仅新增本任务消费者和六小时调度；保留父 Certbot loop、旧 hooks 与 tools cron。"""
+    scheduler = tls.renewal_environment()
+    if not scheduler["cron_active"] or not scheduler["cron_directory_available"]:
+        raise OperationError("community_renewal_scheduler_not_available")
+    renewal_preflight(state)
+    program = renewal_program()
+    cron = ("# parallellines-community-owned " + APP + "\n17 */6 * * * root /usr/bin/python3 -B "
+            + str(ROOT / "renew-community.py") + " renew >/dev/null 2>&1\n").encode()
+    state["renewal"] = {"script_sha256": digest(program), "cron_sha256": digest(cron),
+                        "forum_sha256": digest((SOURCE / "deploy/nginx/forum.conf").read_bytes()),
+                        "redirects_sha256": digest((SOURCE / "deploy/nginx/forum-main-redirects.conf").read_bytes())}
+    save(PENDING, state)
+    # 完整内容先在任务目录原子落盘，再用同文件系统硬链接排他发布；最终 cron 不会半写。
+    atomic(ROOT / "renew-community.cron", cron)
+    atomic(ROOT / "renew-community.py", program)
+    os.link(ROOT / "renew-community.cron", RENEW_CRON)
+
+
+def remove_renewal(state):
+    """只清理本事务确实安装且仍匹配前像的两个消费者文件，证书和报告保留。"""
+    renewal_preflight(state)
+    if state.get("renewal"):
+        for path in (RENEW_CRON, ROOT / "renew-community.py"):
+            if path.exists():
+                path.unlink()
+
+
 def deploy(runner, expected):
     """完整前像及恢复快照先落盘，仅替换 API、增加论坛并原位接入配置，不重建网关。"""
     before = inventory(runner)
@@ -678,9 +915,9 @@ def deploy(runner, expected):
         path = safe_path(MAIN / name)
         if path.exists():
             atomic(ROOT / "before" / name, path.read_bytes())
-    save(ROOT / "api.override.json", {"services": {"api": {"image": API_IMAGE, "environment": {
+    save(ROOT / "api.override.json", {"services": {"api": {"image": prepared["api_image_id"], "environment": {
          "PUBLIC_FORUM_URL": "https://" + DOMAIN, "FORUM_WEB_APP_SHELL_URL": "http://forum-web/index.html"}},
-         "forum-web": {"image": FORUM_IMAGE, "restart": "unless-stopped", "expose": ["80"],
+         "forum-web": {"image": prepared["forum_image_id"], "restart": "unless-stopped", "expose": ["80"],
                        "networks": ["default"], "healthcheck": {"test": ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"], "interval": "10s", "timeout": "3s", "retries": 20}}}})
     save(ROOT / "restore.override.json", {"services": {"api": {"image": before["api"]["image_id"]}}})
     state["after_api_hash"] = compose_hash(runner, "api", ROOT / "api.override.json")
@@ -694,6 +931,10 @@ def deploy(runner, expected):
         if inventory(runner)["state_sha256"] != before["state_sha256"]:
             raise OperationError("activation_state_changed_before_switch")
         alignment_preflight(runner, state)
+        renewal_preflight(state)
+        scheduler = tls.renewal_environment()
+        if not scheduler["cron_active"] or not scheduler["cron_directory_available"]:
+            raise OperationError("community_renewal_scheduler_not_available")
         # 容器层文件在首次启用前必须不存在，避免把他人的文件当成本事务拥有。
         for destination in ("/etc/nginx/conf.d/forum.conf", "/etc/nginx/forum-main/redirects.conf"):
             if runner.run("layer_file_absent", ["docker", "exec", before["gateway"]["id"], "test", "-e", destination], accepted=(0, 1)).returncode == 0:
@@ -728,13 +969,15 @@ def deploy(runner, expected):
         unaffected = sorted(item["id"] for item in records if item["id"] not in (after_api["id"], state["forum_id"]))
         if unaffected != before["other_container_ids"]:
             raise OperationError("unrelated_container_identity_changed")
+        install_renewal(state, tls)
         atomic(MARKER, (TAG + "\n").encode())
         state["status"] = "committed"
         save(CURRENT, state)
         PENDING.unlink()
+    runner.run("installed_community_renewal_consumer", ["/usr/bin/python3", "-B", str(ROOT / "renew-community.py"), "check"], timeout=90)
     return {"complete": True, "source_revision": APP, "gateway_not_recreated": True,
             "main_web_not_replaced": True, "shared_data_services_unchanged": True,
-            "forum_marker_installed": True, "health": health_report}
+            "forum_marker_installed": True, "installed_renewal_consumer_verified": True, "health": health_report}
 
 
 def restore(runner):
@@ -758,8 +1001,10 @@ def restore(runner):
         if not same_spec(state["before"]["api"], api):
             raise OperationError("api_public_spec_changed_outside_attempt")
         alignment_preflight(runner, state)
+        renewal_preflight(state)
         if MARKER.exists() and MARKER.read_text(encoding="ascii") != TAG + "\n":
             raise OperationError("forum_marker_changed_outside_attempt")
+        remove_renewal(state)
         layer_files(runner, state["before"]["gateway"], remove=True)
         align_source(runner, state, restore=True)
         if api["image_id"] != state["before"]["api"]["image_id"] or not api["running"]:
@@ -777,6 +1022,9 @@ def restore(runner):
         guard_gateway(runner, state)
         runner.run("restored_nginx_test", ["docker", "exec", state["before"]["gateway"]["id"], "nginx", "-t"])
         runner.run("restored_nginx_reload", ["docker", "exec", state["before"]["gateway"]["id"], "nginx", "-s", "reload"])
+        restored_health = health(runner, include_community=False)
+        if not restored_health["complete"]:
+            raise OperationError("restored_independent_baseline_health_failed")
         state["status"] = "rolled_back"
         save(ROOT / "rolled-back.json", state)
         for record in (PENDING, CURRENT):
@@ -798,15 +1046,16 @@ class OriginHTTPS(http.client.HTTPSConnection):
             raise
 
 
-def health(runner):
+def health(runner, *, include_community=True):
     """独立只读健康矩阵，不依赖部署进程；失败记录错误码，继续其余有限检查。"""
     checks = []
-    endpoints = (("main", "https://pingxingxian.space/healthz"),
+    endpoints = [("main", "https://pingxingxian.space/healthz"),
                  ("tools", "https://tools.pingxingxian.space/healthz"),
                  ("chat", "https://chat.pingxingxian.space/health"),
                  ("oidc", "https://pingxingxian.space/auth/oidc/.well-known/openid-configuration"),
-                 ("model_gateway", "https://api.pingxingxian.space/api/status"),
-                 ("community", "https://" + DOMAIN + "/"))
+                 ("model_gateway", "https://api.pingxingxian.space/api/status")]
+    if include_community:
+        endpoints.append(("community", "https://" + DOMAIN + "/"))
     for name, url in endpoints:
         try:
             with request_deadline(8), urllib.request.build_opener(NoRedirect()).open(urllib.request.Request(url, headers={"User-Agent": "ParallelLinesCommunityHealth/1"}), timeout=6) as response:
@@ -818,6 +1067,8 @@ def health(runner):
             checks.append({"name": name, "ok": True})
         except (OSError, ValueError, OperationError) as error:
             checks.append({"name": name, "ok": False, "error": str(error) if isinstance(error, OperationError) else type(error).__name__})
+    if not include_community:
+        return {"complete": all(item["ok"] for item in checks), "read_only": True, "checks": checks}
     try:
         with request_deadline(8):
             connection = OriginHTTPS(DOMAIN, timeout=6, context=ssl.create_default_context())
@@ -855,6 +1106,8 @@ def main(arguments):
             report.update(prepare(runner, arguments[2]))
         elif operation == "prepare-tls":
             report.update(prepare_tls(runner, arguments[2]))
+        elif operation == "probe":
+            report.update(probe_only(runner, arguments[2]))
         elif operation == "deploy":
             report.update(deploy(runner, arguments[2]))
         elif operation == "rollback":
@@ -863,11 +1116,14 @@ def main(arguments):
             report.update(health(runner))
     except OperationError as error:
         report["errors"].append(str(error))
+        if isinstance(error, ProbeError):
+            report["probe_checks"] = error.checks
+            report["certificate_requested"] = False
     except Exception as error:
         report["errors"].append("community_operation:" + type(error).__name__)
     # 切换失败后保留独立 rollback 入口与完整状态；不在错误处理里隐藏或反复重试写操作。
     if operation == "deploy" and not report["complete"]:
-        report["rollback_available"] = PENDING.exists()
+        report["rollback_available"] = PENDING.exists() or CURRENT.exists()
         report["rollback_operation"] = "rollback"
     print(json.dumps(report, ensure_ascii=True, indent=2))
     return 0 if report["complete"] else 2

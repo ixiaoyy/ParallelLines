@@ -291,7 +291,7 @@ class OwnedFilesystemTests(unittest.TestCase):
         file.parent.mkdir(parents=True)
         file.write_bytes(b"candidate")
         runner = mock.Mock()
-        runner.run.side_effect = (result(code=0), result("0" * 64 + " file"))
+        runner.run.side_effect = (result(code=1), result(code=1), result(code=1), result(code=0), result("0" * 64 + " file"))
         with self.assertRaisesRegex(ops.OperationError, "layer_file_changed_outside_attempt"):
             ops.layer_files(runner, {"id": "fixed"}, remove=True)
         self.assertFalse(any("rm" in call.args[1] for call in runner.run.call_args_list))
@@ -394,7 +394,7 @@ class PreparationTests(unittest.TestCase):
         tls.context_preflight.return_value = {"certbot": "fixed-certbot"}
         @contextlib.contextmanager
         def probe():
-            yield "http://tools.pingxingxian.space/.well-known/acme-challenge/fixture", b"fixture-token"
+            yield "http://tools.pingxingxian.space/.well-known/acme-challenge/tools-probe-" + "a" * 32, b"fixture-token"
         tls.owned_probe.side_effect = probe
         response = mock.MagicMock()
         response.__enter__.return_value = response
@@ -416,7 +416,7 @@ class PreparationTests(unittest.TestCase):
 
     def test_tls_only_requests_fixed_new_domain_after_probe(self):
         runner, opener = self.run_tls()
-        url = opener.open.call_args.args[0]
+        url = opener.open.call_args.args[0].full_url
         self.assertTrue(url.startswith("http://forum.pingxingxian.space/.well-known/acme-challenge/"))
         arguments = runner.run.call_args_list[0].args[1]
         self.assertIn("--no-directory-hooks", arguments)
@@ -438,6 +438,222 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertNotIn("inputs.command", source)
         self.assertNotIn("inputs.host", source)
         self.assertIn("script_stop: false", source)
+
+
+class RestoreHealthTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        main = Path(self.directory.name)
+        root = main / ".deployment/community" / ops.APP
+        self.patches = mock.patch.multiple(ops, MAIN=main, ROOT=root, PENDING=root / "pending.json",
+                                           CURRENT=root / "current.json", MARKER=main / ".deployment/forum-enabled")
+        self.patches.start()
+        self.addCleanup(self.patches.stop)
+        api = {"id": "a" * 64, "image_id": "sha256:" + "b" * 64, "running": True,
+               "project": "parallellines", "service": "api", "hash": "c" * 64, "mounts": []}
+        self.api = api
+        self.state = {"schema": 1, "source_revision": ops.APP, "status": "snapshotted",
+                      "before": {"api": api, "gateway": {"id": "g" * 64}},
+                      "prepared": {"api_image_id": "sha256:" + "d" * 64},
+                      "after_api_hash": "e" * 64, "restore_api_hash": "f" * 64}
+        ops.save(ops.PENDING, self.state)
+
+    def run_restore(self, *, running=True, unhealthy=False, bad_preflight=False):
+        live = {**self.api, "running": running}
+        runner = mock.Mock()
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(ops, "tools_lock", return_value=contextlib.nullcontext()))
+            stack.enter_context(mock.patch.object(ops, "guard_gateway"))
+            stack.enter_context(mock.patch.object(ops, "containers", return_value=[live]))
+            preflight = stack.enter_context(mock.patch.object(ops, "alignment_preflight"))
+            if bad_preflight:
+                preflight.side_effect = ops.OperationError("main_branch_changed_outside_attempt")
+            stack.enter_context(mock.patch.object(ops, "renewal_preflight"))
+            remove = stack.enter_context(mock.patch.object(ops, "remove_renewal"))
+            layer = stack.enter_context(mock.patch.object(ops, "layer_files"))
+            align = stack.enter_context(mock.patch.object(ops, "align_source"))
+            compose = stack.enter_context(mock.patch.object(ops, "compose"))
+            wait = stack.enter_context(mock.patch.object(ops, "wait_api", return_value={**live, "running": True}))
+            stack.enter_context(mock.patch.object(ops, "health", return_value={"complete": True}))
+            if unhealthy:
+                wait.side_effect = ops.OperationError("api_health_deadline")
+            if unhealthy or bad_preflight:
+                with self.assertRaises(ops.OperationError):
+                    ops.restore(runner)
+                self.assertTrue(ops.PENDING.exists())
+                self.assertFalse((ops.ROOT / "rolled-back.json").exists())
+            else:
+                self.assertTrue(ops.restore(runner)["complete"])
+            return compose, wait, remove, layer, align
+
+    def test_stopped_old_image_is_started_and_health_checked(self):
+        compose, wait, *_ = self.run_restore(running=False)
+        self.assertEqual(compose.call_args.args[1], ["up", "-d", "--no-deps", "--no-build", "api"])
+        wait.assert_called_once()
+
+    def test_running_but_unhealthy_old_image_never_reports_restored(self):
+        compose, wait, *_ = self.run_restore(unhealthy=True)
+        compose.assert_not_called()
+        wait.assert_called_once()
+
+    def test_restore_unknown_head_stops_before_layer_or_consumer_mutation(self):
+        compose, wait, remove, layer, align = self.run_restore(bad_preflight=True)
+        for method in (compose, wait, remove, layer, align):
+            method.assert_not_called()
+
+
+class RenewalConsumerTests(unittest.TestCase):
+    def program(self):
+        namespace = {"__name__": "community_renewal_fixture"}
+        exec(compile(ops.renewal_program(), "reviewed-community-renewal", "exec"), namespace)
+        return namespace
+
+    def run_consumer(self, mode, *, changed=False, rejected=False, delayed=False):
+        namespace = self.program()
+        state = {"source_revision": ops.APP, "status": "committed"}
+        namespace["record"] = mock.Mock(return_value=state)
+        namespace["file_certificate"] = mock.Mock(return_value="new" if changed else "same")
+        sequence = ["old", "old", "old", "new"] if delayed else ["old", "old", "new"]
+        namespace["loaded_certificate"] = mock.Mock(side_effect=sequence if changed else None,
+                                                     return_value="same")
+        namespace["guard"] = mock.Mock(return_value="fixed-gateway")
+        if rejected:
+            namespace["guard"].side_effect = namespace["RenewalError"]("gateway_identity_or_mounts_changed")
+        namespace["command"] = mock.Mock()
+        namespace["save_report"] = mock.Mock()
+        tls = types.SimpleNamespace(tls_lock=lambda: contextlib.nullcontext())
+        with mock.patch.dict(sys.modules, {"tls": tls}), mock.patch.object(namespace["signal"], "signal"), mock.patch.object(namespace["signal"], "setitimer", create=True), mock.patch.object(namespace["signal"], "SIGALRM", 14, create=True), mock.patch.object(namespace["signal"], "ITIMER_REAL", 0, create=True), mock.patch.object(namespace["time"], "sleep"), contextlib.redirect_stdout(io.StringIO()):
+            code = namespace["main"]([mode])
+        return code, namespace
+
+    def test_fixed_consumer_has_no_key_or_arbitrary_command_input(self):
+        source = ops.renewal_program().decode()
+        compile(source, "consumer", "exec")
+        self.assertIn("fullchain.pem", source)
+        self.assertNotIn("privkey.pem", source)
+        self.assertIn("configuration_may_reload", source)
+        self.assertIn("loaded_certificate()==public", source)
+        self.assertNotIn("shell=True", source)
+
+    def test_unchanged_certificate_never_reloads(self):
+        code, namespace = self.run_consumer("renew")
+        self.assertEqual(code, 0)
+        namespace["command"].assert_not_called()
+
+    def test_changed_certificate_checks_then_reloads_then_confirms_loaded(self):
+        code, namespace = self.run_consumer("renew", changed=True)
+        self.assertEqual(code, 0)
+        calls = namespace["command"].call_args_list
+        self.assertEqual([call.args[0] for call in calls], ["nginx_test", "nginx_reload"])
+        self.assertEqual(namespace["loaded_certificate"].call_count, 3)
+
+    def test_check_mode_never_reloads_changed_certificate(self):
+        code, namespace = self.run_consumer("check", changed=True)
+        self.assertEqual(code, 2)
+        namespace["command"].assert_not_called()
+
+    def test_reload_waits_for_graceful_worker_without_reloading_again(self):
+        code, namespace = self.run_consumer("renew", changed=True, delayed=True)
+        self.assertEqual(code, 0)
+        self.assertEqual(namespace["loaded_certificate"].call_count, 4)
+        self.assertEqual([call.args[0] for call in namespace["command"].call_args_list], ["nginx_test", "nginx_reload"])
+
+    def test_changed_gateway_stops_before_test_or_reload(self):
+        code, namespace = self.run_consumer("renew", changed=True, rejected=True)
+        self.assertEqual(code, 2)
+        namespace["command"].assert_not_called()
+
+    def test_unknown_existing_cron_is_not_overwritten(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            cron = root / "cron.d/community"
+            cron.parent.mkdir()
+            cron.write_bytes(b"existing-foreign-cron")
+            (root / "state").mkdir()
+            with mock.patch.multiple(ops, ROOT=root / "state", RENEW_CRON=cron):
+                with self.assertRaisesRegex(ops.OperationError, "consumer_preimage_changed"):
+                    ops.renewal_preflight({})
+            self.assertEqual(cron.read_bytes(), b"existing-foreign-cron")
+
+    def test_cron_is_atomically_published_and_prepublication_exit_is_recoverable(self):
+        for interrupted in (False, True):
+            with self.subTest(interrupted=interrupted), tempfile.TemporaryDirectory() as directory:
+                main = Path(directory)
+                root = main / ".deployment/community" / ops.APP
+                source = root / "source"
+                cron = main / "cron.d/community"
+                cron.parent.mkdir()
+                for name in ("forum.conf", "forum-main-redirects.conf"):
+                    path = source / "deploy/nginx" / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(b"fixture-owned-nginx")
+                tls = mock.Mock()
+                tls.renewal_environment.return_value = {"cron_active": True, "cron_directory_available": True}
+                state = {}
+                with mock.patch.multiple(ops, MAIN=main, ROOT=root, SOURCE=source, RENEW_CRON=cron, PENDING=root / "pending.json"):
+                    if interrupted:
+                        with mock.patch.object(ops.os, "link", side_effect=RuntimeError("exit-before-publication")), self.assertRaisesRegex(RuntimeError, "before-publication"):
+                            ops.install_renewal(state, tls)
+                        self.assertFalse(cron.exists())
+                    else:
+                        ops.install_renewal(state, tls)
+                        self.assertEqual(cron.read_bytes(), (root / "renew-community.cron").read_bytes())
+                        self.assertEqual(cron.stat().st_ino, (root / "renew-community.cron").stat().st_ino)
+                    ops.remove_renewal(state)
+                    self.assertFalse(cron.exists())
+                    self.assertFalse((root / "renew-community.py").exists())
+                    self.assertTrue((root / "renew-community.cron").is_file())
+
+
+class ProbeProtocolTests(unittest.TestCase):
+    URL = "http://forum.pingxingxian.space/.well-known/acme-challenge/tools-probe-" + "a" * 32
+
+    def verify(self, responses):
+        opener = mock.Mock()
+        opener.open.side_effect = responses
+        with mock.patch.object(ops.urllib.request, "build_opener", return_value=opener), mock.patch.object(ops, "request_deadline", return_value=contextlib.nullcontext()):
+            value = ops.verify_forum_probe(self.URL, b"token")
+        return value, opener
+
+    def response(self):
+        response = mock.MagicMock()
+        response.__enter__.return_value = response
+        response.status = 200
+        response.read.return_value = b"token"
+        return response
+
+    def test_legitimate_same_host_https_redirect_uses_project_headers(self):
+        redirect = ops.urllib.error.HTTPError(self.URL, 301, "fixture", {"Location": self.URL.replace("http:", "https:")}, None)
+        checks, opener = self.verify([redirect, self.response()])
+        self.assertEqual([x["status"] for x in checks], [301, 200])
+        self.assertTrue(checks[0]["same_host"])
+        first = opener.open.call_args_list[0].args[0]
+        second = opener.open.call_args_list[1].args[0]
+        self.assertEqual(first.get_header("User-agent"), "ParallelLinesCommunityHTTP01/1")
+        self.assertEqual(first.get_header("Cache-control"), "no-cache")
+        self.assertEqual(second.full_url, self.URL.replace("http:", "https:"))
+
+    def test_403_is_reported_explicitly_without_reading_body(self):
+        error = ops.urllib.error.HTTPError(self.URL, 403, "fixture", {}, None)
+        with self.assertRaises(ops.ProbeError) as caught:
+            self.verify([error])
+        self.assertEqual(str(caught.exception), "forum_http01_status_403")
+        self.assertEqual(caught.exception.checks[0]["status"], 403)
+
+    def test_cross_host_or_login_path_is_not_followed(self):
+        for destination in ("https://outside.example/", "https://forum.pingxingxian.space/auth", self.URL + "?private=never-log"):
+            with self.subTest(destination=destination):
+                error = ops.urllib.error.HTTPError(self.URL, 302, "fixture", {"Location": destination}, None)
+                with self.assertRaisesRegex(ops.ProbeError, "outside_fixed_contract") as caught:
+                    self.verify([error])
+                self.assertNotIn("never-log", str(caught.exception.checks))
+
+    def test_redirect_chain_is_bounded(self):
+        error = lambda: ops.urllib.error.HTTPError(self.URL, 302, "fixture", {"Location": self.URL}, None)
+        with self.assertRaisesRegex(ops.ProbeError, "redirect_missing_or_limit") as caught:
+            self.verify([error(), error(), error(), error()])
+        self.assertEqual(len(caught.exception.checks), 4)
 
 
 if __name__ == "__main__":
