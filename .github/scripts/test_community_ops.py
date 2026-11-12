@@ -79,10 +79,13 @@ class OperationGuards(unittest.TestCase):
                 runner.assert_not_called()
 
     def test_unreviewed_write_phase_cannot_execute(self):
-        for operation in set(ops.OPERATIONS) - set(ops.READY_OPERATIONS):
-            with self.subTest(operation=operation), mock.patch.object(ops, "Runner") as runner, contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(ops.main([operation, ops.APP, "a" * 64]), 2)
-                runner.assert_not_called()
+        # 真实阶段已开放全部受审操作；收窄阶段的拒绝边界仍须有效，不能随开放而删掉断言。
+        self.assertEqual(set(ops.READY_OPERATIONS), set(ops.OPERATIONS))
+        with mock.patch.object(ops, "READY_OPERATIONS", ("inventory", "health")):
+            for operation in set(ops.OPERATIONS) - set(ops.READY_OPERATIONS):
+                with self.subTest(operation=operation), mock.patch.object(ops, "Runner") as runner, contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(ops.main([operation, ops.APP, "a" * 64]), 2)
+                    runner.assert_not_called()
 
     def test_historical_untracked_are_not_a_tracked_dirty_gate(self):
         outputs = iter((ops.BEFORE, "refs/heads/main", "", "var.pre-data/\nstatic/old-image.png\n"))

@@ -48,7 +48,7 @@ API_CHANGED_FILES = ("apps/api/app/api/seo.py", "apps/api/app/core/config.py",
 OPERATIONS = ("inventory", "prepare", "probe", "prepare-tls", "deploy", "health", "rollback")
 BODY_LIMIT = 2 * 1024 * 1024
 # 按阶段交付；准备与真实切换分别完成现场及恢复审查后才能加入此列表。
-READY_OPERATIONS = ("inventory", "health", "prepare", "probe", "prepare-tls")
+READY_OPERATIONS = ("inventory", "health", "prepare", "probe", "prepare-tls", "deploy", "rollback")
 
 
 class OperationError(Exception):
