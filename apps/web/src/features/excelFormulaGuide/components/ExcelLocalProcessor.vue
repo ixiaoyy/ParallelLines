@@ -199,7 +199,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section id="excel-local-processor" class="excel-local" tabindex="-1" aria-labelledby="excel-local-title">
+  <section id="excel-local-workbook" class="excel-local" tabindex="-1" aria-labelledby="excel-local-title">
     <div class="excel-local__heading">
       <div><h3 id="excel-local-title">用自己的表格试一试</h3><p>选择数据、设置操作，再核对结果并下载。</p></div>
       <UiButton tone="ghost" @click="resetAll">重置</UiButton>

@@ -1,16 +1,24 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { computed, defineAsyncComponent, defineComponent, h, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ArrowLeftOutlined, CheckOutlined, CopyOutlined, DownloadOutlined, SearchOutlined } from "@ant-design/icons-vue";
 
 import { formulaLessons, formulaTaskGroups, practiceSheets } from "@/features/excelFormulaGuide/content";
 import { PRACTICE_WORKBOOK_URL } from "@/features/excelFormulaGuide/model";
-import { matchesLessonSearch } from "@/features/excelFormulaGuide/search";
+import { searchFormulaLessons, searchOnlineOperations } from "@/features/excelFormulaGuide/search";
+import type { OnlineOperationId } from "@/features/excelFormulaGuide/onlineOperations";
 import type { OperationOptions } from "@/features/excelFormulaGuide/localProcessingModel";
 import UiButton from "@/shared/ui/Button.vue";
 import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
 import ExcelLocalProcessor from "./ExcelLocalProcessor.vue";
 import ListCompareOperator from "@/features/listCompare/components/ListCompareOperator.vue";
+
+// 公式试算为新功能独立懒加载，旧教程/复制/文件清理不要求计算模块先加载成功。
+const FormulaTrialPanel = defineAsyncComponent({
+  loader: () => import("./FormulaTrialPanel.vue"), timeout: 15_000,
+  loadingComponent: defineComponent({ setup: () => () => h("p", { class: "formula-preview-note" }, "正在加载本地试算面板…") }),
+  errorComponent: defineComponent({ setup: () => () => h("p", { role: "alert" }, "试算模块未能加载，请刷新页面重试。") }),
+});
 
 const localOpen = ref(false);
 const activeOperationTab = ref<"compare" | "workbook">("compare");
@@ -25,10 +33,10 @@ const lessonOperations: Partial<Record<string, OperationOptions["kind"]>> = {
 const route = useRoute();
 const router = useRouter();
 const search = ref("");
+const hasSearch = computed(() => search.value.trim() !== "");
+const matchedOperations = computed(() => searchOnlineOperations(search.value));
 const category = ref("");
 const taskId = ref("");
-const previewSheetName = ref("数据");
-const previewViewport = ref<HTMLElement | null>(null);
 const lessonHeading = ref<HTMLElement | null>(null);
 const taskResultsHeading = ref<HTMLElement | null>(null);
 const copyState = ref<"idle" | "copying" | "copied" | "failed">("idle");
@@ -79,38 +87,26 @@ const categories = computed(() => [...new Set(formulaLessons.map((lesson) => les
 const selectedTask = computed(() => formulaTaskGroups.find((task) => task.id === taskId.value));
 const taskLessons = computed(() => formulaLessons.filter((lesson) => selectedTask.value?.lessonIds.includes(lesson.id)));
 
-// 日常问句和函数写法共用搜索，任务与分类决定当前检索范围。
-const filteredLessons = computed(() => {
-  return formulaLessons.filter((lesson) => {
-    return (!selectedTask.value || selectedTask.value.lessonIds.includes(lesson.id))
-      && (!category.value || lesson.category === category.value)
-      && matchesLessonSearch(lesson, search.value);
-  });
-});
+// 搜索始终覆盖完整目录；退出旧浏览条件，避免日期等旧分类暗中排除求和结果。
+const filteredLessons = computed(() => searchFormulaLessons(formulaLessons, search.value, {
+  category: category.value, taskLessonIds: selectedTask.value?.lessonIds,
+}));
+watch(search, (value) => { if (value.trim()) { category.value = ""; taskId.value = ""; } });
+
+/** 打开已登记的在线操作；只使用现有浏览器本地工具，不发起文件上传。 */
+async function openOnlineOperation(id: OnlineOperationId): Promise<void> {
+  if (id === "compare") await openCompareOperator();
+  else await openWorkbookProcessor(id);
+}
+
+/** 分类浏览是显式的新选择，退出文本搜索及旧任务，而不更改正在阅读的教程。 */
+function selectCategory(value: string): void {
+  search.value = "";
+  category.value = value;
+  taskId.value = "";
+}
 // 每篇只展示会用到的工作表，旧教程继续使用原来的三张表。
 const availablePracticeSheets = computed(() => practiceSheets.filter((sheet) => (selectedLesson.value?.exampleSheets ?? ["数据", "名单", "练习"]).includes(sheet.name)));
-const previewSheet = computed(() => availablePracticeSheets.value.find((sheet) => sheet.name === previewSheetName.value) ?? availablePracticeSheets.value[0]);
-// 扩充后的练习表较长，预览只显示当前题目附近三行，并保留真实行号。
-const previewRows = computed(() => {
-  const sheet = previewSheet.value;
-  if (!sheet) return [];
-  const rows = sheet.rows.map((cells, index) => ({ cells, rowNumber: index + 2 }));
-  if (sheet.name !== "练习" || rows.length <= 10) return rows;
-  const targetRow = Number(selectedLesson.value?.targetCell.match(/\d+$/)?.[0] ?? 2);
-  const start = Math.max(2, targetRow - 1);
-  return rows.filter((row) => row.rowNumber >= start && row.rowNumber <= start + 2);
-});
-
-// 手机预览只横向定位蓝色目标格，不改变正文的纵向阅读位置。
-watch([() => previewSheet.value?.name, () => selectedLesson.value?.id], async () => {
-  await nextTick();
-  const viewport = previewViewport.value;
-  if (!viewport) return;
-  const target = viewport.querySelector<HTMLElement>(".is-target");
-  viewport.scrollLeft = target
-    ? Math.max(0, viewport.scrollLeft + target.getBoundingClientRect().left - viewport.getBoundingClientRect().left - (viewport.clientWidth - target.offsetWidth) / 2)
-    : 0;
-}, { immediate: true, flush: "post" });
 
 /** 清理复制反馈并使旧异步操作失效，切换教程和离开页面时均适用。 */
 function resetCopyState(): void {
@@ -198,16 +194,6 @@ function resetFilters(): void {
   taskId.value = "";
 }
 
-/** 将固定示例表的零起始列序号转换为表格列名。 */
-function columnName(index: number): string {
-  return String.fromCharCode(65 + index);
-}
-
-/** 标出当前教程要求填写的单元格；这里只展示固定数据，不执行公式。 */
-function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number): boolean {
-  return selectedLesson.value?.sheetName === sheetName
-    && selectedLesson.value.targetCell === `${columnName(columnIndex)}${rowNumber}`;
-}
 </script>
 
 <template>
@@ -225,13 +211,11 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
         <div class="formula-intro__copy">
           <p class="formula-intro__label">办公工具 / 零基础教程</p>
           <h1 id="formula-guide-title">Excel 公式速查</h1>
-          <p class="formula-intro__description">先选你要解决的问题，再跟着步骤操作。<br />从点哪个格开始，直到算出正确结果。</p>
+          <p class="formula-intro__description">搜索你要解决的问题或公式名，直接在线处理，或查看可复制的公式。</p>
         </div>
         <div class="formula-intro__practice">
           <div class="formula-intro__actions">
-            <UiButton tone="ghost" aria-controls="excel-local-processor" :aria-expanded="localOpen && activeOperationTab === 'compare'" @click="openCompareOperator">两列查重比对</UiButton>
-            <UiButton tone="ghost" aria-controls="excel-local-processor" :aria-expanded="localOpen && activeOperationTab === 'workbook'" @click="() => openWorkbookProcessor()">处理表格文件</UiButton>
-            <UiButton :href="PRACTICE_WORKBOOK_URL" download="excel-formula-practice.xlsx" class="formula-download">
+            <UiButton tone="ghost" :href="PRACTICE_WORKBOOK_URL" download="excel-formula-practice.xlsx" class="formula-download">
               <template #icon><DownloadOutlined aria-hidden="true" /></template>
               下载练习表
             </UiButton>
@@ -240,8 +224,48 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
         </div>
       </header>
 
-      <section class="formula-task-picker" aria-labelledby="formula-task-title">
-        <h2 id="formula-task-title" tabindex="-1">不知道用哪个公式？先选你想得到的结果</h2>
+      <section id="formula-discovery" class="formula-search-hub" aria-labelledby="formula-search-title">
+        <h2 id="formula-search-title">查功能、找公式</h2>
+        <label class="formula-search-label" for="formula-search">输入工作需求或公式名</label>
+        <div class="formula-search">
+          <SearchOutlined aria-hidden="true" />
+          <input id="formula-search" v-model="search" type="search" aria-label="搜索功能或公式" placeholder="按人员汇总、查找重复项、核对提交名单" autocomplete="off" />
+        </div>
+        <div class="formula-search-feedback"><p class="formula-search-count" aria-live="polite">{{ matchedOperations.length }} 个在线功能<span v-if="hasSearch"> · {{ filteredLessons.length }} 篇公式教程</span><span v-else> · {{ formulaLessons.length }} 篇公式教程可搜索</span></p><button v-if="hasSearch" type="button" @click="resetFilters">清空搜索</button></div>
+        <section v-if="matchedOperations.length" class="formula-online-results" aria-labelledby="formula-online-title">
+          <h3 id="formula-online-title">直接在线处理</h3>
+          <div class="formula-online-grid">
+            <button v-for="operation in matchedOperations" :key="operation.id" type="button" :aria-label="`在线处理：${operation.title}`" @click="openOnlineOperation(operation.id)">
+              <strong>{{ operation.title }} <span aria-hidden="true">→</span></strong>
+              <span>{{ operation.description }}</span>
+            </button>
+          </div>
+        </section>
+        <nav v-if="hasSearch" class="formula-search-results" aria-label="公式教程目录">
+          <h3>查看公式与用法</h3>
+          <ul v-if="filteredLessons.length" class="formula-search-lessons">
+            <li v-for="lesson in filteredLessons" :key="lesson.id"><button type="button" @click="selectLesson(lesson.id)">
+              <strong>{{ lesson.title }}</strong><span>{{ lesson.summary }}</span>
+              <small>{{ lesson.functions.join(' + ') }} · {{ lesson.version }} · 查看公式 →</small>
+            </button></li>
+          </ul>
+          <div v-else class="formula-search-empty"><p>没有找到相关教程，换个说法试试。</p><button type="button" @click="resetFilters">清空搜索和分类</button></div>
+        </nav>
+      </section>
+
+      <section v-if="localOpen" id="excel-local-processor" class="excel-operations-panel" tabindex="-1" aria-label="本地操作面板">
+        <div class="excel-operations-switch">
+          <div class="excel-operations-tabs" role="tablist" aria-label="操作工具类型">
+            <button type="button" role="tab" :aria-selected="activeOperationTab === 'compare'" class="excel-operations-tab" :class="{ 'is-active': activeOperationTab === 'compare' }" @click="activeOperationTab = 'compare'">两列名单查重比对</button>
+            <button type="button" role="tab" :aria-selected="activeOperationTab === 'workbook'" class="excel-operations-tab" :class="{ 'is-active': activeOperationTab === 'workbook' }" @click="activeOperationTab = 'workbook'">表格文件处理 (.xlsx)</button>
+          </div>
+          <UiButton tone="ghost" class="excel-operations-close" @click="localOpen = false">收起操作</UiButton>
+        </div>
+        <div class="excel-operations-body"><ListCompareOperator v-if="activeOperationTab === 'compare'" /><ExcelLocalProcessor v-else :suggested-operation="localOperation" /></div>
+      </section>
+
+      <details class="formula-task-picker">
+        <summary><h2 id="formula-task-title" tabindex="-1">按用途浏览 {{ formulaLessons.length }} 篇教程</h2><span>也可以从工作任务选起</span></summary>
         <div class="formula-tasks" role="group" aria-label="选择要完成的任务">
           <button v-for="task in formulaTaskGroups" :key="task.id" type="button" :aria-label="task.title" :aria-describedby="`task-description-${task.id}`" :aria-pressed="taskId === task.id" @click="selectTask(task.id)">
             <strong>{{ task.title }}</strong>
@@ -263,21 +287,16 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
             </li>
           </ul>
         </section>
-      </section>
+      </details>
 
-      <div class="formula-workspace">
-        <aside class="formula-directory" aria-labelledby="lesson-directory">
+      <div class="formula-workspace" :class="{ 'is-searching': hasSearch }">
+        <aside v-if="!hasSearch" class="formula-directory" aria-labelledby="lesson-directory">
           <div class="formula-directory__top">
             <h2 id="lesson-directory" tabindex="-1">你想完成什么？</h2>
-            <label class="formula-search-label" for="formula-search">搜索问题或公式名</label>
-            <div class="formula-search">
-              <SearchOutlined aria-hidden="true" />
-              <input id="formula-search" v-model="search" type="search" aria-label="搜索教程" placeholder="按人员汇总、查找重复项、核对提交名单" autocomplete="off" />
-            </div>
             <div class="formula-categories" role="group" aria-label="教程分类">
-              <button type="button" :aria-pressed="category === '' && taskId === ''" @click="category = ''; taskId = ''">全部</button>
+              <button type="button" :aria-pressed="category === '' && taskId === ''" @click="selectCategory('')">全部</button>
               <!-- 手动切换分类时退出任务分组，避免两组分类条件互相排除。 -->
-              <button v-for="item in categories" :key="item" type="button" :aria-pressed="category === item" @click="category = item; taskId = ''">{{ item }}</button>
+              <button v-for="item in categories" :key="item" type="button" :aria-pressed="category === item" @click="selectCategory(item)">{{ item }}</button>
             </div>
             <p class="formula-directory__count" aria-live="polite"><span v-if="selectedTask">{{ selectedTask.title }} · </span>{{ filteredLessons.length }} 篇教程</p>
           </div>
@@ -300,7 +319,7 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
 
         <article v-if="selectedLesson" class="formula-article" aria-labelledby="lesson-title" data-testid="lesson-content">
           <header class="formula-article__header">
-            <div class="formula-article__meta"><span>{{ selectedLesson.category }}</span><a href="#formula-task-title">返回目录</a></div>
+            <div class="formula-article__meta"><span>{{ selectedLesson.category }}</span><a href="#formula-discovery">返回搜索</a></div>
             <h2 id="lesson-title" ref="lessonHeading" tabindex="-1">{{ selectedLesson.title }}</h2>
             <p class="formula-article__summary">{{ selectedLesson.summary }}</p>
             <p class="formula-version">适用范围：{{ selectedLesson.version }} <a v-if="(selectedLesson.minExcelVersion ?? 2016) > 2016" href="#lesson-own-data-title">查看旧版替代方法</a></p>
@@ -319,36 +338,17 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
             </div>
           </section>
 
-          <section v-if="localOpen" id="excel-local-processor" class="excel-operations-panel" tabindex="-1" aria-label="本地操作面板">
-            <div class="excel-operations-switch">
-              <div class="excel-operations-tabs" role="tablist" aria-label="操作工具类型">
-                <button
-                  type="button"
-                  role="tab"
-                  :aria-selected="activeOperationTab === 'compare'"
-                  class="excel-operations-tab"
-                  :class="{ 'is-active': activeOperationTab === 'compare' }"
-                  @click="activeOperationTab = 'compare'"
-                >
-                  两列名单查重比对
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  :aria-selected="activeOperationTab === 'workbook'"
-                  class="excel-operations-tab"
-                  :class="{ 'is-active': activeOperationTab === 'workbook' }"
-                  @click="activeOperationTab = 'workbook'"
-                >
-                  表格文件处理 (.xlsx)
-                </button>
-              </div>
-              <UiButton tone="ghost" class="excel-operations-close" @click="localOpen = false">收起操作</UiButton>
+          <section class="formula-section formula-recipe" aria-labelledby="lesson-formula-title" data-testid="formula-recipe">
+            <div class="formula-section__heading"><h3 id="lesson-formula-title">复制这条公式</h3><span data-testid="paste-target">粘贴位置：{{ selectedLesson.sheetName }}表 {{ selectedLesson.targetCell }}</span></div>
+            <pre class="formula-code" tabindex="0" aria-label="可选中并手动复制的 Excel 公式"><code data-testid="lesson-formula" v-text="selectedLesson.formula"></code></pre>
+            <div class="formula-copy-row">
+              <UiButton :disabled="copyState === 'copying'" :aria-busy="copyState === 'copying'" @click="copyFormula">
+                <template #icon><CheckOutlined v-if="copyState === 'copied'" aria-hidden="true" /><CopyOutlined v-else aria-hidden="true" /></template>
+                {{ copyState === 'copying' ? '复制中…' : copyState === 'copied' ? '已复制' : '复制公式' }}
+              </UiButton>
+              <p class="formula-copy-status" role="status" aria-live="polite">{{ copyState === 'failed' ? '复制失败，请选中公式手动复制。' : copyState === 'copied' ? '已复制' : '' }}</p>
             </div>
-            <div class="excel-operations-body">
-              <ListCompareOperator v-if="activeOperationTab === 'compare'" />
-              <ExcelLocalProcessor v-else :suggested-operation="localOperation" />
-            </div>
+            <div class="formula-expected"><span>原始示例的固定参考答案</span><strong data-testid="expected-result">{{ selectedLesson.expected }}</strong><p>{{ selectedLesson.expectedValues ? '原始示例可和本题工作表 C 列逐行核对。网页修改输入后，请看本次试算结果。' : '原始示例可和练习表 D 列核对。网页修改输入后，请看本次试算结果。' }}</p></div>
           </section>
 
           <details class="formula-first-steps">
@@ -362,48 +362,9 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
             </ol>
           </details>
 
-          <section class="formula-section" aria-labelledby="practice-preview-title">
-            <div class="formula-section__heading"><h3 id="practice-preview-title">先认一下练习表</h3><span>固定示例数据</span></div>
-            <div class="formula-sheet-tabs" role="group" aria-label="示例工作表">
-              <button v-for="sheet in availablePracticeSheets" :key="sheet.name" type="button" :aria-pressed="previewSheet?.name === sheet.name" @click="previewSheetName = sheet.name">{{ sheet.name }}</button>
-            </div>
-            <template v-if="previewSheet">
-              <p class="formula-sheet-description">{{ previewSheet.description }}</p>
-              <div ref="previewViewport" class="formula-sheet-scroll" tabindex="0" :aria-label="`${previewSheet.name}工作表示例，可横向滚动`">
-                <table class="formula-sheet">
-                  <caption class="formula-visually-hidden">{{ previewSheet.name }}工作表，示例数据</caption>
-                  <thead>
-                    <tr class="formula-sheet__letters"><th scope="col" aria-label="行号"></th><th v-for="(_, index) in previewSheet.columns" :key="index" scope="col">{{ columnName(index) }}</th></tr>
-                    <tr><th scope="row" class="formula-sheet__row-number">1</th><th v-for="(heading, index) in previewSheet.columns" :key="index" scope="col">{{ heading }}</th></tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="row in previewRows" :key="row.rowNumber">
-                      <th scope="row" class="formula-sheet__row-number">{{ row.rowNumber }}</th>
-                      <td v-for="(cell, columnIndex) in row.cells" :key="columnIndex" :class="{ 'is-target': isTargetCell(previewSheet.name, row.rowNumber, columnIndex), 'is-number': typeof cell === 'number' }">
-                        <span v-if="isTargetCell(previewSheet.name, row.rowNumber, columnIndex) && cell === ''" class="formula-sheet__placeholder">在此输入公式</span>
-                        <span v-else>{{ cell }}</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p v-if="previewSheet.name === '练习'" class="formula-preview-note">这里只预览当前题目附近的行，完整练习在下载文件中。</p>
-            </template>
-            <p class="formula-preview-note">这里用于对照位置；实际输入公式，请打开下载的 Excel 练习表。</p>
-          </section>
+          <FormulaTrialPanel :key="selectedLesson.id" :lesson="selectedLesson" :source-sheets="availablePracticeSheets" />
 
-          <section class="formula-section formula-recipe" aria-labelledby="lesson-formula-title" data-testid="formula-recipe">
-            <div class="formula-section__heading"><h3 id="lesson-formula-title">复制这条公式</h3><span data-testid="paste-target">粘贴位置：{{ selectedLesson.sheetName }}表 {{ selectedLesson.targetCell }}</span></div>
-            <pre class="formula-code" tabindex="0" aria-label="可选中并手动复制的 Excel 公式"><code data-testid="lesson-formula" v-text="selectedLesson.formula"></code></pre>
-            <div class="formula-copy-row">
-              <UiButton :disabled="copyState === 'copying'" :aria-busy="copyState === 'copying'" @click="copyFormula">
-                <template #icon><CheckOutlined v-if="copyState === 'copied'" aria-hidden="true" /><CopyOutlined v-else aria-hidden="true" /></template>
-                {{ copyState === 'copying' ? '复制中…' : copyState === 'copied' ? '已复制' : '复制公式' }}
-              </UiButton>
-              <p class="formula-copy-status" role="status" aria-live="polite">{{ copyState === 'failed' ? '复制失败，请选中公式手动复制。' : copyState === 'copied' ? '已复制' : '' }}</p>
-            </div>
-            <div class="formula-expected"><span>按回车后应该得到</span><strong data-testid="expected-result">{{ selectedLesson.expected }}</strong><p>{{ selectedLesson.expectedValues ? '和本题工作表 C 列逐行核对，自动展开区域里只输入一次公式。' : '和练习表 D 列的预期结果核对。' }}</p></div>
-          </section>
+
 
           <section class="formula-section" aria-labelledby="lesson-steps-title">
             <h3 id="lesson-steps-title">跟着做</h3>
@@ -435,7 +396,7 @@ function isTargetCell(sheetName: string, rowNumber: number, columnIndex: number)
           <footer class="formula-article__footer">
             <p>继续了解函数用法</p>
             <ul><li v-for="source in selectedLesson.sources" :key="source.url"><a :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title }} <span aria-hidden="true">↗</span><span class="formula-visually-hidden">，在新标签页打开</span></a></li></ul>
-            <a class="formula-return-directory" href="#formula-task-title">回到目录，选择下一个问题</a>
+            <a class="formula-return-directory" href="#formula-discovery">回到搜索，查找下一个功能或公式</a>
           </footer>
         </article>
       </div>

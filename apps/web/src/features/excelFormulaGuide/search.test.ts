@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { formulaLessons } from "./content";
-import { matchesLessonSearch } from "./search";
+import { matchesLessonSearch, searchFormulaLessons, searchOnlineOperations } from "./search";
 
 /** 使用实际教程数据检查搜索结果，预期按办公任务语义独立给出。 */
 function matchingIds(query: string): string[] {
@@ -9,6 +9,20 @@ function matchingIds(query: string): string[] {
 }
 
 describe("Excel 教程搜索", () => {
+  it("文本搜索覆盖全部教程，不受旧日期分类或任务限制", () => {
+    const results = searchFormulaLessons(formulaLessons, "求和", { category: "日期时间", taskLessonIds: ["format-month"] });
+    expect(results.map((lesson) => lesson.id)).toContain("total-amount");
+    expect(searchFormulaLessons(formulaLessons, "", { taskLessonIds: ["format-month"] }).map((lesson) => lesson.id)).toEqual(["format-month"]);
+  });
+
+  it("在线功能可按需求检索，且单条件处理不冒充多条件公式", () => {
+    expect(searchOnlineOperations("").map((item) => item.id)).toEqual(["compare", "clean", "dedupe", "sum", "count"]);
+    expect(searchOnlineOperations("按人员汇总").map((item) => item.id)).toEqual(["sum"]);
+    expect(searchOnlineOperations("去重").map((item) => item.id)).toEqual(["dedupe"]);
+    expect(searchOnlineOperations("核对提交名单").map((item) => item.id)).toEqual(["compare"]);
+    expect(searchOnlineOperations("SUMIFS")).toEqual([]);
+    expect(searchOnlineOperations("隐藏手机号后四位")).toEqual([]);
+  });
   it.each([
     ["按人员汇总", "person-total"],
     ["查找重复项", "duplicate-id"],

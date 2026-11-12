@@ -1,4 +1,5 @@
 import type { FormulaLesson } from "./model";
+import { onlineOperations, type OnlineOperation } from "./onlineOperations";
 
 /** 统一全角字符、大小写及括号问句标点，保留否定词、运算符和关键词间的空格。 */
 function normalizeSearchText(value: string): string {
@@ -60,4 +61,32 @@ export function matchesLessonSearch(lesson: FormulaLesson, query: string): boole
   if (words.every((word) => text.includes(word))) return true;
   return simplified !== "" && simplified !== normalized
     && simplified.split(" ").every((word) => text.includes(word));
+}
+
+/** 全目录检索优先于旧分类/任务；只有空搜索时才按显式浏览条件筛选。 */
+export function searchFormulaLessons(lessons: FormulaLesson[], query: string, filters: {
+  category?: string;
+  taskLessonIds?: string[];
+} = {}): FormulaLesson[] {
+  const searching = normalizeSearchText(query) !== "";
+  return lessons.filter((lesson) => (searching || ((!filters.category || lesson.category === filters.category)
+    && (!filters.taskLessonIds || filters.taskLessonIds.includes(lesson.id))))
+    && matchesLessonSearch(lesson, query));
+}
+
+/** 搜索可直接运行的现有功能，沿用有限问句识别，不把未知需求猜成数据处理操作。 */
+export function searchOnlineOperations(query: string): OnlineOperation[] {
+  const normalized = normalizeSearchText(query);
+  if (!normalized) return onlineOperations;
+  const simplified = simplifyQuestion(normalized);
+  const intent = findQuestionIntent(simplified);
+  const operationForIntent: Record<string, string> = {
+    "person-total": "sum", "duplicate-id": "compare", "unique-employees": "dedupe",
+  };
+  if (intent && operationForIntent[intent]) return onlineOperations.filter((item) => item.id === operationForIntent[intent]);
+  return onlineOperations.filter((item) => {
+    const text = normalizeSearchText([item.title, item.description, ...item.keywords].join(" "));
+    return normalized.split(" ").every((word) => text.includes(word))
+      || simplified !== "" && simplified.split(" ").every((word) => text.includes(word));
+  });
 }

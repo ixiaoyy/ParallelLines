@@ -307,6 +307,49 @@ test.beforeEach(async ({ context }) => {
   await isolateLocalGuide(context);
 });
 
+test("手机首屏可搜索功能，旧日期分类不限制全目录搜索，在线入口直接打开现有工具", async ({ page }) => {
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/tools/excel-formulas");
+    const search = page.getByRole("searchbox", { name: "搜索功能或公式" });
+    await expect(search).toBeInViewport();
+    await expect(page.locator(".formula-task-picker")).not.toHaveAttribute("open", "");
+    await page.getByRole("group", { name: "教程分类" }).getByRole("button", { name: "日期时间", exact: true }).click();
+    await search.fill("求和");
+    const directory = page.getByRole("navigation", { name: "公式教程目录" });
+    await expect(directory).toContainText("把这一列金额全部加起来");
+    await expect(page.getByRole("button", { name: "在线处理：按条件汇总金额", exact: true })).toBeVisible();
+    await search.fill("去重");
+    await page.getByRole("button", { name: "在线处理：按列去重", exact: true }).click();
+    await expect(page.getByLabel("处理方式", { exact: true })).toHaveValue("dedupe");
+    await search.fill("核对提交名单");
+    await page.getByRole("button", { name: "在线处理：两列名单查重比对", exact: true }).click();
+    await expect(page.getByLabel("名单 A", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("名单 B", { exact: true })).toBeVisible();
+  }
+});
+
+test("蓝格与参数都能真实输入，试算随输入变化且错误不会沿用参考答案", async ({ page }) => {
+  await page.goto("/tools/excel-formulas?lesson=person-total");
+  const trial = page.getByRole("region", { name: "直接在网页输入并试算", exact: true });
+  const calculate = trial.getByRole("button", { name: "试算公式", exact: true });
+  await calculate.click();
+  await expect(page.getByTestId("trial-result")).toHaveText("250");
+  await trial.getByLabel("练习!B3", { exact: true }).fill("U002");
+  await expect(page.getByTestId("trial-result")).toHaveCount(0);
+  await calculate.click();
+  await expect(page.getByTestId("trial-result")).toHaveText("200");
+  await trial.locator("#trial-formula").fill("=1/0");
+  await calculate.click();
+  await expect(trial.getByRole("alert")).toContainText("#DIV/0!");
+  await expect(page.getByTestId("trial-result")).toHaveCount(0);
+  const blueCell = trial.locator(".is-target input");
+  await blueCell.fill("=10+5");
+  await blueCell.press("Enter");
+  await expect(page.getByTestId("trial-result")).toHaveText("15");
+  await expect(page.getByTestId("expected-result")).toHaveText("250");
+});
+
 test("手机分享和刷新教程时定位正文，普通入口及后退保留正确阅读位置", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/tools/excel-formulas?lesson=person-total");
@@ -336,7 +379,7 @@ test("手机分享和刷新教程时定位正文，普通入口及后退保留�
 
 test("日常完整问句和函数括号可搜索，保留否定及条件之间的区别", async ({ page }) => {
   await page.goto("/tools/excel-formulas");
-  const search = page.getByRole("searchbox", { name: "搜索教程" });
+  const search = page.getByRole("searchbox", { name: "搜索功能或公式" });
   const directory = page.getByRole("navigation", { name: "公式教程目录" });
   const cases = [
     ["按人员汇总", "同一个人有多笔，算他的总金额", "按工号找到这个人的部门"],
@@ -407,7 +450,7 @@ test("旧工具深链进入完整教程，五十篇教程可定位且保留公�
 
 test("大白话搜索、多词搜索、无结果恢复与教程刷新定位", async ({ page }) => {
   await page.goto("/tools/excel-formulas");
-  const search = page.getByRole("searchbox", { name: "搜索教程" });
+  const search = page.getByRole("searchbox", { name: "搜索功能或公式" });
   const directory = page.getByRole("navigation", { name: "公式教程目录" });
   await search.fill("按人");
   await expect(directory).toContainText("同一个人");
@@ -482,7 +525,8 @@ test("手机和桌面正文可读，长公式不撑宽页面，键盘可选择�
 
 test("按想得到的结果选课，八类任务覆盖五十篇教程并清除旧筛选", async ({ page }) => {
   await page.goto("/tools/excel-formulas");
-  const search = page.getByRole("searchbox", { name: "搜索教程" });
+  await page.locator(".formula-task-picker > summary").click();
+  const search = page.getByRole("searchbox", { name: "搜索功能或公式" });
   const categories = page.getByRole("group", { name: "教程分类" });
   const directory = page.getByRole("navigation", { name: "公式教程目录" });
 
@@ -581,8 +625,8 @@ test("按想得到的结果选课，八类任务覆盖五十篇教程并清除�
 ];
   const observedLessons = new Set<string>();
   for (const task of tasks) {
-    await search.fill("不存在的任务检索");
     await categories.getByRole("button", { name: "文字与数字", exact: true }).click();
+    await search.fill("不存在的任务检索");
     await page.getByRole("button", { name: task.title, exact: true }).click();
     await expect(search).toHaveValue("");
     await expect(categories.getByRole("button", { name: "文字与数字", exact: true })).toHaveAttribute("aria-pressed", "false");
@@ -615,6 +659,7 @@ test("按想得到的结果选课，八类任务覆盖五十篇教程并清除�
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/tools/excel-formulas");
+    await page.locator(".formula-task-picker > summary").click();
     await page.getByRole("button", { name: "查人员资料", exact: true }).click();
     await page.getByTestId("task-recommendations").getByRole("button").filter({ hasText: "按工号找到这个人的部门" }).click();
     await expect(page).toHaveURL(/lesson=employee-lookup/);
@@ -626,8 +671,9 @@ test("按想得到的结果选课，八类任务覆盖五十篇教程并清除�
 
 test("易混用途可互相切换，公式先于步骤且明确标出粘贴位置", async ({ page }) => {
   await page.goto("/tools/excel-formulas");
+  await page.locator(".formula-task-picker > summary").click();
   const directory = page.getByRole("navigation", { name: "公式教程目录" });
-  const search = page.getByRole("searchbox", { name: "搜索教程" });
+  const search = page.getByRole("searchbox", { name: "搜索功能或公式" });
   const categories = page.getByRole("group", { name: "教程分类" });
   await page.getByRole("button", { name: "查人员资料", exact: true }).click();
   await page.getByTestId("task-recommendations").getByRole("button").filter({ hasText: "按工号找到这个人的部门" }).click();
@@ -635,8 +681,8 @@ test("易混用途可互相切换，公式先于步骤且明确标出粘贴位�
   await expect(page.getByTestId("paste-target")).toHaveText("粘贴位置：练习表 C6");
 
   // 关联教程必须清除不兼容的任务、搜索和分类，不能正文切了而目录仍只显示旧任务。
-  await search.fill("这个词不会命中任何教程");
   await categories.getByRole("button", { name: "文字与数字", exact: true }).click();
+  await search.fill("这个词不会命中任何教程");
   await page.getByRole("button", { name: "同一个人有多笔金额？查看按人汇总", exact: true }).click();
   await expect(page).toHaveURL(/lesson=person-total/);
   await expect(page.getByTestId("lesson-selection-tip")).toContainText("把同一个人的多笔金额加在一起，用 SUMIFS。");
@@ -672,10 +718,11 @@ test("直接标明适用范围，全部教程可选且新版教程始终提供�
   const directory = page.getByRole("navigation", { name: "公式教程目录" });
   await expect(page.getByRole("combobox")).toHaveCount(0);
   await expect(page.getByText("按 Excel 版本找教程", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("searchbox", { name: "搜索教程" })).toHaveAttribute("placeholder", "按人员汇总、查找重复项、核对提交名单");
+  await expect(page.getByRole("searchbox", { name: "搜索功能或公式" })).toHaveAttribute("placeholder", "按人员汇总、查找重复项、核对提交名单");
   await expect(directory.getByRole("button")).toHaveCount(50);
 
   // 不要求先选版本，候选教程直接说明兼容范围。
+  await page.locator(".formula-task-picker > summary").click();
   await page.getByRole("button", { name: "查人员资料", exact: true }).click();
   await expect(directory.getByRole("button")).toHaveCount(4);
   await expect(page.getByTestId("task-recommendations").getByRole("button").filter({ hasText: "用新版公式按工号查部门" })).toContainText("Excel 2021 及以上，或 Microsoft 365");
@@ -711,7 +758,7 @@ test("长练习表保留真实行号，新版公式在独立空白区域一次�
   await expect(table.getByRole("rowheader", { name: "48", exact: true })).toBeVisible();
   await expect(table.getByRole("rowheader", { name: "2", exact: true })).toHaveCount(0);
   await expect(table.locator(".is-target")).toHaveCount(1);
-  await expect(table.locator(".is-target")).toHaveText("在此输入公式");
+  await expect(table.locator(".is-target input")).toHaveValue("=LARGE('办公数据'!D2:D7,B48)");
   await expect(page.getByTestId("paste-target")).toHaveText("粘贴位置：练习表 C48");
   // 先检查真实容器内的横向位置，不能让测试框架自动滚动掩盖目标列在屏外的问题。
   await expect.poll(() => table.locator(".is-target").evaluate((cell) => {
@@ -734,7 +781,7 @@ test("长练习表保留真实行号，新版公式在独立空白区域一次�
     await expect(sheetTabs.getByRole("button")).toHaveCount(2);
     await expect(table.locator("tbody tr")).toHaveCount(exercise.rows);
     await expect(table.locator(".is-target")).toHaveCount(1);
-    await expect(table.locator(".is-target")).toHaveText("在此输入公式");
+    expect(await table.locator(".is-target input").inputValue()).toContain(exercise.fn);
     await expect(table.locator("tbody tr").first().getByRole("rowheader")).toHaveText("2");
     await expect(table.locator("tbody tr").first().getByRole("cell").nth(2)).toHaveText(exercise.first);
     await expect(page.getByTestId("paste-target")).toHaveText(`粘贴位置：${exercise.sheet}表 A2`);
