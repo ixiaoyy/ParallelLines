@@ -1,0 +1,89 @@
+name: Community operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Explicit fixed community operation; inventory and health are read-only
+        type: choice
+        required: true
+        default: inventory
+        options: [inventory, prepare, prepare-tls, deploy, health, rollback]
+      source_revision:
+        description: Reviewed application revision; helper commits do not change this candidate
+        type: string
+        required: true
+        default: 93ca819f20f760b142cab9a320110879ff8179df
+      expected_inventory_sha256:
+        description: Fresh complete inventory preimage required for prepare, prepare-tls and deploy
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  # 独立只读健康不等待写阶段，执行通道失败时仍能复核现场。
+  group: ${{ inputs.operation == 'health' && 'community-read-health' || inputs.operation == 'inventory' && 'community-read-inventory' || 'deploy-production' }}
+  cancel-in-progress: false
+
+jobs:
+  community:
+    if: >-
+      github.repository == 'ixiaoyy/ParallelLines' && github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      OPERATION: ${{ inputs.operation }}
+      SOURCE_REVISION: ${{ inputs.source_revision }}
+      EXPECTED_INVENTORY: ${{ inputs.expected_inventory_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Prepare the reviewed fixed operation
+        id: payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          import uuid
+
+          operation = os.environ['OPERATION']
+          revision = os.environ['SOURCE_REVISION']
+          expected = os.environ.get('EXPECTED_INVENTORY', '')
+          if operation not in ('inventory', 'prepare', 'prepare-tls', 'deploy', 'health', 'rollback'):
+              raise SystemExit('Unsupported community operation')
+          if revision != '93ca819f20f760b142cab9a320110879ff8179df':
+              raise SystemExit('Only the reviewed application revision is allowed')
+          if operation in ('prepare', 'prepare-tls', 'deploy') and not re.fullmatch(r'[0-9a-f]{64}', expected):
+              raise SystemExit('A fresh complete inventory preimage is required')
+          if operation in ('inventory', 'health', 'rollback'):
+              expected = '-'
+          source = Path('.github/scripts/community_ops.py').read_text(encoding='utf-8')
+          marker = 'COMMUNITY_OPS_' + uuid.uuid4().hex
+          payload = 'set -eu\nsudo -n python3 -B - ' + operation + ' ' + revision + ' ' + expected + " <<'" + marker + "'\n" + source + '\n' + marker + '\n'
+          if len(payload.encode('utf-8')) > 120000:
+              raise SystemExit('Reviewed operation exceeds bounded SSH transport')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write('script<<' + marker + '_OUTPUT\n' + payload + marker + '_OUTPUT\n')
+          PY
+      - name: Execute only the selected community operation
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
+          timeout: 30s
+          command_timeout: ${{ inputs.operation == 'prepare' && '45m' || '10m' }}
+          script_stop: false
+          script: ${{ steps.payload.outputs.script }}
