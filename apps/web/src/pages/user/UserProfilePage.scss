@@ -2032,6 +2032,8 @@
 
 .profile-sidebar {
   top: 6.5rem;
+  // 侧栏只有一张社区档案卡，覆盖旧双卡布局，避免窄桌面下内容被截断。
+  grid-template-columns: 1fr;
   gap: 0;
 }
 

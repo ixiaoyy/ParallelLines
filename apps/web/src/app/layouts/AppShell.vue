@@ -284,10 +284,17 @@ onUnmounted(() => {
 useOutsidePointerDown(topbarRef, closeNavigation, () => isNavOpen.value);
 useOutsidePointerDown(accountMenuRef, closeAccountMenu, () => Boolean(accountMenuRef.value?.open));
 
+// 注销确认成功后离开受保护页并保留回跳地址；公开页面仍允许匿名停留。
 async function handleLogout() {
   closeAccountMenu();
-  try { await logout(); }
-  catch (failure) { message.error(failure instanceof Error ? failure.message : "远端未注销，请重试。"); }
+  try {
+    await logout();
+    if (route.meta.requiredAccess) {
+      await router.replace({ name: "auth", query: { redirect: route.fullPath } });
+    }
+  } catch (failure) {
+    message.error(failure instanceof Error ? failure.message : "远端未注销，请重试。");
+  }
 }
 
 // Keeps the brand click deterministic: it closes transient menus and scrolls home to the top when already there.

@@ -111,12 +111,15 @@ const canDeleteTopics = computed(() => isAdmin(currentUserQuery.data.value));
 const { deletingTopicId, requestDeleteTopic } = useAdminTopicDelete({
   note: "前台个人主题列表管理员删除主题。",
 });
+// 仅实际查询显示加载；账号缺失属于匿名或错误状态，不能持续等待用户名。
 const isProfileLoading = computed(
   () =>
     activeProfileQuery.value.isLoading.value ||
-    (isAccountRoute.value && (currentUserQuery.isLoading.value || !accountUsername.value)),
+    (isAccountRoute.value && currentUserQuery.isLoading.value),
 );
-const isProfileError = computed(() => activeProfileQuery.value.isError.value);
+const isProfileError = computed(
+  () => activeProfileQuery.value.isError.value || (isAccountRoute.value && currentUserQuery.isError.value),
+);
 const routePanel = computed<ProfilePanel | null>(() => {
   if (route.name === "account-profile") {
     return "profile";
@@ -764,6 +767,11 @@ function socialErrorMessage(error: unknown): string {
       <div v-if="isProfileLoading" class="profile-state">正在加载用户资料…</div>
       <div v-else-if="isProfileError" class="profile-state profile-state--error" role="alert">
         用户资料暂时不可用。请稍后重试，或确认用户是否存在。
+      </div>
+      <!-- 会话失效但尚未离页时提供恢复入口，不影响公开成员页匿名浏览。 -->
+      <div v-else-if="isAccountRoute && !currentUserQuery.data.value" class="profile-state">
+        请先登录后查看个人中心。
+        <RouterLink :to="{ name: 'auth', query: { redirect: route.fullPath } }">登录/注册</RouterLink>
       </div>
       <template v-else-if="profile">
         <div class="profile-identity-card">

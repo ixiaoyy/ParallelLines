@@ -322,7 +322,8 @@
 }
 
 .topic-row--profile {
-  grid-template-columns: auto minmax(0, 1fr) 6rem 4rem 5rem;
+  // 正文跨满头像右侧，状态与统计另起一行，避免侧栏把标题挤成竖排。
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 1.65rem;
   align-items: end;
   min-height: 16.5rem;
@@ -334,7 +335,7 @@
 }
 
 .topic-row--profile.topic-row--with-admin-actions {
-  grid-template-columns: auto minmax(0, 1fr) 6rem 4rem 5rem;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
 }
 
 .topic-profile-avatar {
@@ -353,13 +354,20 @@
 }
 
 .topic-row--profile .topic-main {
+  grid-column: 2 / -1;
   align-self: stretch;
-  padding-right: 1.5rem;
+}
+
+.topic-row--profile.topic-row--with-admin-actions .topic-title-line {
+  // 仅标题避让右上角菜单，摘要仍可使用完整正文宽度。
+  padding-right: 3.2rem;
 }
 
 .topic-row--profile .topic-title {
   font-size: 1.14rem;
   font-weight: 820;
+  // 手机保留普通英文单词，只有超长连续字符才按既有 anywhere 规则断行。
+  word-break: normal;
 }
 
 .topic-row--profile .topic-excerpt {
@@ -376,6 +384,8 @@
 }
 
 .topic-row--profile .answer-state {
+  grid-column: 2;
+  justify-self: start;
   min-width: 0;
   flex-wrap: nowrap;
   gap: 0.45rem;
@@ -475,13 +485,6 @@
   background: transparent;
 }
 
-@media (max-width: 920px) {
-  .topic-row--profile,
-  .topic-row--profile.topic-row--with-admin-actions {
-    grid-template-columns: auto minmax(0, 1fr) 5.4rem 3.5rem 4.5rem;
-  }
-}
-
 @media (max-width: 720px) {
   .topic-row--profile,
   .topic-row--profile.topic-row--with-admin-actions {
@@ -489,10 +492,6 @@
     gap: 0.8rem;
     min-height: 0;
     padding: 1rem;
-  }
-
-  .topic-row--profile .topic-main {
-    padding-right: 2.4rem;
   }
 
   .topic-row--profile .topic-excerpt {
