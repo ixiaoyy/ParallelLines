@@ -8,6 +8,7 @@ apps/api/.venv/
 !.env.example
 *.log
 apps/web/dist/
+apps/web/dist-forum/
 .pytest_cache/
 .ruff_cache/
 *.tsbuildinfo
@@ -31,6 +32,7 @@ var/
 # Local browser, screenshot, and design-QA artifacts
 /.tmp_*
 /.codex-tmp/
+/.deployment/
 /tmp/
 /CURRENT_*.png
 /[0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*.png

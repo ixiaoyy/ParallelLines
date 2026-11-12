@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import replace
+from urllib.parse import urlsplit
+
 from fastapi import APIRouter, Query, Request
 from starlette.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 
@@ -9,7 +12,7 @@ from app.core.exceptions import AppError
 from app.core.response_cache import ResponseHotCache
 from app.schemas.common import ApiResponse
 from app.schemas.seo import SeoMetaResponse
-from app.services.seo import LegacyTopicRedirect, SeoPageDocument, SeoService
+from app.services.seo import LegacyTopicRedirect, SeoPageDocument, SeoService, normalize_path
 from app.services.seo_renderer import load_app_shell, render_seo_document
 
 public_seo_router = APIRouter(tags=["seo"])
@@ -37,7 +40,10 @@ def invalidate_sitemap_response_cache() -> None:
 
 @public_seo_router.get("/sitemap.xml", response_class=Response)
 async def sitemap_xml(request: Request, session: SessionDep) -> Response:
-    cache_key = base_url(request)
+    forum = is_forum_request(request)
+    origin = forum_base_url(request) if forum else base_url(request)
+    # 两站独立缓存，避免论坛公开索引与游戏目录相互覆盖。
+    cache_key = f"forum:{origin}" if forum else origin
     cache_control = (
         f"public, max-age={SITEMAP_CACHE_TTL_SECONDS}, "
         f"stale-while-revalidate={SITEMAP_CACHE_TTL_SECONDS}"
@@ -54,7 +60,8 @@ async def sitemap_xml(request: Request, session: SessionDep) -> Response:
         )
 
     service = SeoService(session)
-    xml = service.build_sitemap_xml(await service.sitemap_urls(cache_key))
+    urls = await service.forum_sitemap_urls(origin) if forum else await service.sitemap_urls(origin)
+    xml = service.build_sitemap_xml(urls)
     _SITEMAP_XML_RESPONSE_CACHE.set(cache_key, xml)
     return Response(
         content=xml,
@@ -68,7 +75,8 @@ async def sitemap_xml(request: Request, session: SessionDep) -> Response:
 
 @public_seo_router.get("/robots.txt", response_class=PlainTextResponse)
 async def robots_txt(request: Request, session: SessionDep) -> PlainTextResponse:
-    content = await SeoService(session).robots_txt(base_url(request))
+    origin = forum_base_url(request) if is_forum_request(request) else base_url(request)
+    content = await SeoService(session).robots_txt(origin)
     return PlainTextResponse(content=content)
 
 
@@ -80,7 +88,7 @@ async def legacy_topic_redirect(
     session: SessionDep,
 ) -> RedirectResponse:
     _ = legacy_slug
-    redirect = await SeoService(session).legacy_topic_redirect(topic_id, base_url(request))
+    redirect = await SeoService(session).legacy_topic_redirect(topic_id, forum_base_url(request))
     return RedirectResponse(url=redirect.location, status_code=redirect.status_code)
 
 
@@ -90,7 +98,7 @@ async def compact_topic_redirect(
     request: Request,
     session: SessionDep,
 ) -> RedirectResponse:
-    redirect = await SeoService(session).legacy_topic_redirect(topic_id, base_url(request))
+    redirect = await SeoService(session).legacy_topic_redirect(topic_id, forum_base_url(request))
     return RedirectResponse(url=redirect.location, status_code=redirect.status_code)
 
 
@@ -100,19 +108,31 @@ async def seo_meta(
     session: SessionDep,
     path: str = Query(default="/"),
 ) -> ApiResponse[SeoMetaResponse]:
-    meta = await SeoService(session).meta_for_path(path, base_url(request))
+    settings = get_settings()
+    normalized = normalize_path(path)
+    forum = is_forum_request(request, settings)
+    forum_path = normalized in {"/forum", "/boards"} or normalized.startswith(
+        ("/b/", "/topics/", "/members/", "/t/", "/p/")
+    )
+    # 仅论坛内容使用固定论坛来源；请求头不能注入任意规范地址。
+    forum_target = forum_path or (forum and normalized == "/")
+    origin = forum_base_url(request, settings) if forum_target else base_url(request)
+    if settings.public_forum_url is not None and forum_target:
+        meta = await SeoService(session).meta_for_path(path, origin, forum_home=True)
+    else:
+        meta = await SeoService(session).meta_for_path(path, origin)
     return ApiResponse(data=meta)
 
 
 @public_seo_router.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def home_page(request: Request, session: SessionDep) -> Response:
-    """Return the game directory at the root without a redirect.
+    """按已配置来源返回论坛或游戏根页；只读公开内容，不改计数、链接或账号状态。"""
 
-    ``request`` resolves the canonical origin and ``session`` reads the public
-    catalog. The response does not record views or change game links.
-    """
-
-    document = await SeoService(session).home_page(base_url(request))
+    if is_forum_request(request):
+        # 独立论坛仅接管其已配置来源的根页，主域目录首页保持原行为。
+        document = await SeoService(session).forum_page(forum_base_url(request), canonical_path="/")
+    else:
+        document = await SeoService(session).home_page(base_url(request))
     return await html_page_response(document)
 
 
@@ -157,13 +177,17 @@ async def tools_page(request: Request, session: SessionDep) -> Response:
 
 @public_seo_router.get("/forum", response_class=HTMLResponse, include_in_schema=False)
 async def forum_page(request: Request, session: SessionDep) -> Response:
-    """返回论坛首页的公开语义文档，不写计数或改变目录首页。
+    """独立论坛启用后规范跳转到其根页；未启用时保留原论坛公开语义文档。
 
-    ``request`` 提供规范域名的本地回退，``session`` 只读公开版块与主题；
-    响应沿用编译后的 SPA 外壳，并从 OpenAPI 中排除。
+    ``request`` 的查询串仅随固定目标保留；``session`` 仅在旧模式读取公开内容，
+    不写计数、账号或权限，也不改变目录首页。
     """
 
-    # 论坛保留独立地址，游戏目录由根路径直接提供。
+    settings = get_settings()
+    if settings.public_forum_url is not None:
+        # 已启用独立论坛时归一化旧入口；原始查询串保留，片段由浏览器继承。
+        suffix = f"?{request.url.query}" if request.url.query else ""
+        return RedirectResponse(f"{settings.public_forum_url}/{suffix}", status_code=301)
     document = await SeoService(session).forum_page(base_url(request))
     return await html_page_response(document)
 
@@ -176,7 +200,7 @@ async def boards_page(request: Request, session: SessionDep) -> Response:
     data. The read-only response is excluded from OpenAPI.
     """
 
-    document = await SeoService(session).boards_page(base_url(request))
+    document = await SeoService(session).boards_page(forum_base_url(request))
     return await html_page_response(document)
 
 
@@ -188,7 +212,7 @@ async def board_page(slug: str, request: Request, session: SessionDep) -> Respon
     anonymous visibility. The response preserves real 404/noindex semantics.
     """
 
-    document = await SeoService(session).board_page(slug, base_url(request))
+    document = await SeoService(session).board_page(slug, forum_base_url(request))
     return await html_page_response(document)
 
 
@@ -210,7 +234,7 @@ async def topic_page_with_slug(
     incrementing views; redirects and real error states are preserved.
     """
 
-    resolution = await SeoService(session).topic_page(topic_id, slug, base_url(request))
+    resolution = await SeoService(session).topic_page(topic_id, slug, forum_base_url(request))
     return await topic_page_response(resolution)
 
 
@@ -231,7 +255,7 @@ async def topic_page_without_slug(
     states retain the designed noindex/404 behavior without counter writes.
     """
 
-    resolution = await SeoService(session).topic_page(topic_id, None, base_url(request))
+    resolution = await SeoService(session).topic_page(topic_id, None, forum_base_url(request))
     return await topic_page_response(resolution)
 
 
@@ -248,7 +272,7 @@ async def profile_page(user_id: str, request: Request, session: SessionDep) -> R
     emitted into the initial HTML.
     """
 
-    document = await SeoService(session).profile_page(user_id, base_url(request))
+    document = await SeoService(session).profile_page(user_id, forum_base_url(request))
     return await html_page_response(document)
 
 
@@ -275,6 +299,14 @@ async def html_page_response(document: SeoPageDocument) -> HTMLResponse:
 
     settings = get_settings()
     shell_url = settings.web_app_shell_url
+    if (
+        settings.public_forum_url is not None
+        and urlsplit(document.meta.canonical_url).netloc.lower()
+        == urlsplit(settings.public_forum_url).netloc.lower()
+    ):
+        # 论坛必须使用独立构建外壳，缺配置明确失败，不静默加载主站目录应用。
+        shell_url = settings.forum_web_app_shell_url
+        document = replace(document, home_path="/")
     if shell_url is None:
         raise AppError(
             "seo_shell_not_configured",
@@ -308,3 +340,21 @@ def base_url(request: Request, settings: Settings | None = None) -> str:
     if configured is not None:
         return configured.rstrip("/")
     return str(request.base_url).rstrip("/")
+
+
+def forum_base_url(request: Request, settings: Settings | None = None) -> str:
+    """返回配置的论坛规范来源；未配置时完整沿用旧主站来源规则，无副作用。"""
+
+    settings = settings or get_settings()
+    return settings.public_forum_url or base_url(request, settings)
+
+
+def is_forum_request(request: Request, settings: Settings | None = None) -> bool:
+    """仅将与已配置论坛主机匹配的请求识别为论坛；不采信转发头选择任意来源。"""
+
+    configured = (settings or get_settings()).public_forum_url
+    if configured is None:
+        return False
+    expected = urlsplit(configured)
+    # TLS 可在受信反代终结，比较主机及显式端口，不用代理内层 HTTP 协议判断站点。
+    return request.url.netloc.lower() == expected.netloc.lower()

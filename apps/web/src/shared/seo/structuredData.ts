@@ -184,10 +184,10 @@ export function buildSeoSiteName(publicTitle: string): string {
 /**
  * 生成首页元信息与可见品牌介绍共用的文案，不将主站限定为游戏站。
  * @param siteName - 已规范化的中英文站名，或路由中的 `{siteName}` 占位符。
- * @returns 涵盖当前游戏、工具和圈子未开放状态的介绍，无副作用。
+ * @returns 涵盖游戏、工具、圈子和聊天入口的介绍，无副作用。
  */
 export function buildSeoSiteDescription(siteName: string): string {
-  return `${siteName}（${SEO_PINYIN_NAME}）是发现游戏、实用工具与创意内容的空间。浏览游戏目录，探索办公与创作工具；兴趣圈子暂未开放。`;
+  return `${siteName}（${SEO_PINYIN_NAME}）是发现游戏、实用工具与创意内容的空间。浏览游戏目录，使用办公与创作工具，参与圈子讨论，或进入聊天。`;
 }
 
 /**

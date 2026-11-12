@@ -6,6 +6,7 @@
   "scripts": {
     "dev:web": "pnpm --dir apps/web dev",
     "build:web": "pnpm --dir apps/web build",
+    "build:forum": "pnpm --dir apps/web build:forum",
     "typecheck:web": "pnpm --dir apps/web typecheck",
     "lint:web": "pnpm --dir apps/web lint",
     "lint:api": "uv --directory apps/api run ruff check app tests",

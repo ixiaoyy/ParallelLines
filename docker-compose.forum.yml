@@ -1,0 +1,35 @@
+# 显式启用论坛站时与原部署文件合并；基础 Compose 不依赖论坛证书或新服务。
+services:
+  api:
+    environment:
+      PUBLIC_FORUM_URL: https://forum.pingxingxian.space
+      FORUM_WEB_APP_SHELL_URL: http://forum-web/index.html
+
+  forum-web:
+    image: parallellines-forum-web:${FORUM_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.forum
+      args:
+        VITE_API_BASE_URL: /api/v1
+        SOURCE_REVISION: ${SOURCE_REVISION:-}
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+
+  nginx:
+    volumes:
+      # 两份挂载同时启用论坛域名和主域旧链接迁移，不覆盖原有 Chat / 网关配置。
+      - ./deploy/nginx/forum.conf:/etc/nginx/conf.d/forum.conf:ro
+      - ./deploy/nginx/forum-main-redirects.conf:/etc/nginx/forum-main/redirects.conf:ro
+    depends_on:
+      forum-web:
+        condition: service_healthy

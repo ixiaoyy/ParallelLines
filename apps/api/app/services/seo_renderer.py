@@ -192,7 +192,7 @@ def render_semantic_fallback(document: SeoPageDocument) -> str:
 
     # 论坛文档保留论坛首页导航；目录与工具入口回游戏目录。
     canonical_path = urlsplit(document.meta.canonical_url).path
-    home_path = (
+    home_path = document.home_path or (
         "/forum"
         if canonical_path in {"/forum", "/boards"}
         or canonical_path.startswith(("/b/", "/topics/", "/members/"))

@@ -21,8 +21,42 @@ function staticAssetPreconnect(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [vue(), staticAssetPreconnect()],
+/** 论坛独立构建使用自己的首个 HTML 元信息，保留服务端注入标记与正式品牌资源。 */
+function forumEntryHtml(): Plugin {
+  return {
+    name: "forum-entry-html",
+    transformIndexHtml(html) {
+      const title = "平行线 ParallelLines · 圈子";
+      const description = "平行线圈子：浏览公开版块，发布主题、回复讨论，与成员交流。";
+      const origin = "https://forum.pingxingxian.space/";
+      return html.replace(
+        /<!-- parallellines-seo-head-start -->[\s\S]*?<!-- parallellines-seo-head-end -->/,
+        `<!-- parallellines-seo-head-start -->
+    <meta name="description" content="${description}" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="${origin}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="${title}" />
+    <meta property="og:site_name" content="平行线 ParallelLines" />
+    <meta property="og:description" content="${description}" />
+    <meta property="og:url" content="${origin}" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="${title}" />
+    <meta name="twitter:description" content="${description}" />
+    <title>${title}</title>
+    <!-- parallellines-seo-head-end -->`,
+      );
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => ({
+  // 游戏与论坛可同时本地预览，不能互相覆盖依赖预构建状态。
+  cacheDir: mode === "forum" ? "node_modules/.vite-forum" : "node_modules/.vite",
+  plugins: [vue(), staticAssetPreconnect(), ...(mode === "forum" ? [forumEntryHtml()] : [])],
+  // 同一业务源码分别发布两个前端，运行时不会按任意 Host 猜测产品或共享浏览器令牌。
+  define: { "import.meta.env.VITE_SITE_MODE": JSON.stringify(mode === "forum" ? "forum" : "games") },
   build: {
     rollupOptions: {
       output: {
@@ -89,6 +123,8 @@ export default defineConfig({
   },
   server: {
     port: 5174,
+    // 两套发布产物都不是开发输入，构建另一站时不触发当前页面热重载。
+    watch: { ignored: ["**/dist/**", "**/dist-forum/**"] },
     proxy: devApiProxyTarget
       ? {
           "/api": {
@@ -99,4 +135,4 @@ export default defineConfig({
         }
       : undefined,
   },
-});
+}));

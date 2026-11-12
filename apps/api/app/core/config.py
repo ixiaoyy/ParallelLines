@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     public_site_url: str | None = None
     web_app_shell_url: str | None = None
+    # 仅显式启用独立论坛时使用；缺省不改变主站与旧论坛行为。
+    public_forum_url: str | None = None
+    forum_web_app_shell_url: str | None = None
     baidu_site_verification: str | None = None
 
     database_url: str = "mysql+asyncmy://root:root@localhost:3306/parallellines?charset=utf8mb4"
@@ -191,6 +194,27 @@ class Settings(BaseSettings):
             raise ValueError("PUBLIC_SITE_URL must be an absolute HTTP(S) origin")
         return normalized
 
+    @field_validator("public_forum_url")
+    @classmethod
+    def validate_public_forum_url(cls, value: str | None) -> str | None:
+        """校验可选论坛规范来源；仅接受无凭据、路径、查询和片段的 HTTP(S) origin。"""
+
+        if value is None:
+            return None
+        normalized = value.strip().rstrip("/")
+        parsed = urlsplit(normalized)
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not parsed.netloc
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("PUBLIC_FORUM_URL must be an absolute HTTP(S) origin")
+        return normalized
+
     @field_validator("daily_reading_publish_times")
     @classmethod
     def validate_daily_reading_publish_times(
@@ -218,7 +242,7 @@ class Settings(BaseSettings):
             raise ValueError("DAILY_READING_PUBLISH_TIMES must be distinct and ascending")
         return (normalized[0], normalized[1])
 
-    @field_validator("web_app_shell_url")
+    @field_validator("web_app_shell_url", "forum_web_app_shell_url")
     @classmethod
     def validate_web_app_shell_url(cls, value: str | None) -> str | None:
         """Validate the trusted internal URL used to load the compiled Web shell.

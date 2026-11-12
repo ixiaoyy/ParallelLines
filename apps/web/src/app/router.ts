@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
-import type { RouteLocationNormalized } from "vue-router";
+import type { RouteLocationGeneric, RouteLocationNormalized } from "vue-router";
 
 import { fetchCurrentUser } from "@/features/auth/api";
 import { CURRENT_USER_STALE_TIME_MS, type UserPublic } from "@/features/auth/model";
@@ -10,6 +10,7 @@ import { queryKeys } from "@/shared/api/queryKeys";
 import { readRouteParam } from "@/shared/router/params";
 import type { RouteSeoMeta } from "@/shared/seo/meta";
 import { buildSeoSiteDescription, SEO_PINYIN_NAME, SEO_SITE_TAGLINE } from "@/shared/seo/structuredData";
+import { IS_FORUM_SITE, SITE_LINKS } from "@/shared/site/links";
 
 type RequiredAccess = "authenticated" | "admin" | "moderation";
 const NOINDEX_ROBOTS = "noindex,nofollow";
@@ -55,8 +56,8 @@ export const router = createRouter({
   },
   routes: [
     {
-      path: "/",
-      alias: "/games",
+      path: IS_FORUM_SITE ? "/games" : "/",
+      alias: IS_FORUM_SITE ? [] : "/games",
       name: "home",
       component: () => import("@/pages/catalog/CatalogHomePage.vue"),
       meta: {
@@ -156,20 +157,25 @@ export const router = createRouter({
       path: "/tools/list-compare",
       redirect: { path: "/tools/excel-formulas", query: { op: "compare" } },
     },
-    // 旧论坛地址继续保留；主导航中的圈子暂未开放。
+    // 独立论坛以根路径承接完整旧主站；游戏构建继续保留旧论坛兼容入口。
     {
-      path: "/forum",
+      path: IS_FORUM_SITE ? "/" : "/forum",
       name: "forum-home",
       component: () => import("@/pages/home/HomePage.vue"),
       meta: {
         forumShell: true,
         seo: {
-          title: "{siteName}",
+          title: IS_FORUM_SITE ? "{siteName} · 圈子" : "{siteName}",
           description: "{siteName}：{siteTagline}。浏览公开版块与可追溯讨论。",
-          canonicalPath: "/forum",
+          canonicalPath: IS_FORUM_SITE ? "/" : "/forum",
         },
       },
     },
+    ...(IS_FORUM_SITE ? [{
+      path: "/forum",
+      // 旧论坛书签保留筛选和楼层片段，只规范首页路径。
+      redirect: (to: RouteLocationGeneric) => ({ path: "/", query: to.query, hash: to.hash }),
+    }] : []),
     {
       path: "/boards",
       name: "board-directory",
@@ -537,16 +543,27 @@ export const router = createRouter({
     },
     {
       path: "/admin/:pathMatch(.*)*",
-      redirect: { name: "admin-dashboard" },
+      redirect: { name: IS_FORUM_SITE ? "forum-admin-dashboard" : "admin-dashboard" },
     },
     {
       path: "/:pathMatch(.*)*",
-      redirect: { name: "home" },
+      redirect: { name: IS_FORUM_SITE ? "forum-home" : "home" },
     },
   ],
 });
 
 router.beforeEach(async (to) => {
+  // 论坛独立构建只承接原论坛业务；目录后台和 Chat 登录桥仍归主站负责。
+  if (IS_FORUM_SITE) {
+    if (to.name === "admin-dashboard") {
+      return { name: "forum-admin-dashboard", query: to.query, hash: to.hash };
+    }
+    if (to.meta.forumShell !== true) {
+      const destination = new URL(to.fullPath, SITE_LINKS.games);
+      window.location.replace(destination.href);
+      return false;
+    }
+  }
   const requiredAccess = to.meta.requiredAccess;
   if (!requiredAccess) {
     return true;

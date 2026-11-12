@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "dev:forum": "vite --mode forum",
+    "build:forum": "vite build --mode forum --outDir dist-forum",
     "build:birdland": "node scripts/build-birdland.mjs",
     "preview": "vite preview",
     "typecheck": "vue-tsc -b --pretty",

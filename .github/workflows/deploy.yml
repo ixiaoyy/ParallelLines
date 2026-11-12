@@ -219,8 +219,7 @@ jobs:
             else
               COMPOSE="sudo docker-compose"
             fi
-            COMPOSE_FILES="-f docker-compose.yml -f deploy/docker-compose.migration.yml"
-            test -f deploy/docker-compose.migration.yml
+            . .github/scripts/select_compose_files.sh
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -295,8 +294,7 @@ jobs:
             else
               COMPOSE="sudo docker-compose"
             fi
-            COMPOSE_FILES="-f docker-compose.yml -f deploy/docker-compose.migration.yml"
-            test -f deploy/docker-compose.migration.yml
+            . .github/scripts/select_compose_files.sh
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -305,7 +303,13 @@ jobs:
             if ! $COMPOSE $COMPOSE_FILES ps --services --status running 2>/dev/null | grep -qx nginx; then
               echo "[deploy] nginx is not running; falling back to full bootstrap"
               FULL_BOOTSTRAP=true
-              $COMPOSE $COMPOSE_FILES up -d --build
+              if [ "$FORUM_ENABLED" = true ]; then
+                # 论坛沿用标记锁定的独立镜像，主站 bootstrap 不重建或覆盖该标签。
+                $COMPOSE $COMPOSE_FILES build api worker web nginx
+                $COMPOSE $COMPOSE_FILES up -d --no-build
+              else
+                $COMPOSE $COMPOSE_FILES up -d --build
+              fi
             else
               $COMPOSE $COMPOSE_FILES up -d --build api worker
               $COMPOSE $COMPOSE_FILES exec -T nginx nginx -s reload
@@ -433,8 +437,7 @@ jobs:
             else
               COMPOSE="sudo docker-compose"
             fi
-            COMPOSE_FILES="-f docker-compose.yml -f deploy/docker-compose.migration.yml"
-            test -f deploy/docker-compose.migration.yml
+            . .github/scripts/select_compose_files.sh
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
@@ -445,6 +448,9 @@ jobs:
               FULL_BOOTSTRAP=true
               $COMPOSE $COMPOSE_FILES up -d --build db redis api worker
               $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build --force-recreate web
+              if [ "$FORUM_ENABLED" = true ]; then
+                $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build forum-web
+              fi
               $COMPOSE $COMPOSE_FILES up -d --no-deps --build nginx
               $COMPOSE $COMPOSE_FILES up -d --no-deps certbot
             else
@@ -531,15 +537,20 @@ jobs:
             else
               COMPOSE="sudo docker-compose"
             fi
-            COMPOSE_FILES="-f docker-compose.yml -f deploy/docker-compose.migration.yml"
-            test -f deploy/docker-compose.migration.yml
+            . .github/scripts/select_compose_files.sh
             STEP_FINISHED_AT=$(date +%s)
             echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
             if ! $COMPOSE $COMPOSE_FILES ps --services --status running 2>/dev/null | grep -qx nginx; then
               echo "[deploy] nginx is not running; falling back to full bootstrap"
-              $COMPOSE $COMPOSE_FILES up -d --build
+              if [ "$FORUM_ENABLED" = true ]; then
+                # 论坛发布节奏独立；这里只恢复已经存在的锁定镜像。
+                $COMPOSE $COMPOSE_FILES build api worker web nginx
+                $COMPOSE $COMPOSE_FILES up -d --no-build
+              else
+                $COMPOSE $COMPOSE_FILES up -d --build
+              fi
             else
               $COMPOSE $COMPOSE_FILES up -d --no-deps --build --force-recreate nginx
             fi

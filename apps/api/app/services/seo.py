@@ -110,6 +110,8 @@ class SeoPageDocument:
     identity_notice: str | None = None
     site_structured_data: JsonObject | None = None
     page_structured_data: JsonObject | None = None
+    # 独立论坛用根路径作为返回入口；缺省由渲染器保留旧路径推断。
+    home_path: str | None = None
 
 
 SeoTopicPageResolution = SeoPageDocument | LegacyTopicRedirect
@@ -133,6 +135,29 @@ class SeoService:
             *(SitemapUrl(loc=absolute_url(base_url, path)) for path in PUBLIC_GAME_PAGES),
         ]
 
+    async def forum_sitemap_urls(self, base_url: str) -> list[SitemapUrl]:
+        """返回独立论坛的有界公开索引；复用既有可见性查询，不写数据或伪造更新时间。"""
+
+        boards = await self._public_boards(MAX_SITEMAP_ITEMS_PER_TYPE)
+        topics = await self._public_topics(MAX_SITEMAP_ITEMS_PER_TYPE)
+        users = await self._public_users(MAX_SITEMAP_ITEMS_PER_TYPE)
+        return [
+            SitemapUrl(loc=absolute_url(base_url, "/")),
+            SitemapUrl(loc=absolute_url(base_url, "/boards")),
+            *(
+                SitemapUrl(loc=absolute_url(base_url, f"/b/{encode_path_segment(board.slug)}"))
+                for board in boards
+            ),
+            *(
+                SitemapUrl(loc=absolute_url(base_url, topic_canonical_path(topic)))
+                for topic in topics
+            ),
+            *(
+                SitemapUrl(loc=absolute_url(base_url, f"/members/{encode_path_segment(user.id)}"))
+                for user in users
+            ),
+        ]
+
     async def robots_txt(self, base_url: str) -> str:
         """Return the public robots policy referencing the canonical sitemap URL.
 
@@ -152,16 +177,25 @@ class SeoService:
             ]
         )
 
-    async def meta_for_path(self, path: str, base_url: str) -> SeoMetaResponse:
+    async def meta_for_path(
+        self, path: str, base_url: str, *, forum_home: bool = False
+    ) -> SeoMetaResponse:
         """Resolve canonical metadata for one supported anonymous public path.
 
         ``path`` may include a query or fragment and ``base_url`` is the canonical
         origin. A metadata object is returned for public targets; unsupported or
         non-public targets raise ``NotFoundError`` without writing data.
+        ``forum_home`` 仅让新论坛根页使用原论坛元信息，默认保留旧行为。
         """
 
         identity = await self._site_identity()
         normalized = normalize_path(path)
+        # 独立论坛根页使用原论坛介绍，不改变游戏站根页和旧调用默认行为。
+        if forum_home and normalized in {"/", "/forum"}:
+            return self._site_meta(
+                identity, base_url, "/", title=f"{site_brand_name(identity.title)} · 圈子",
+                description=forum_description(identity),
+            )
         # 游戏元信息和首屏使用同一登记文案，参数与片段不形成额外规范地址。
         if normalized in PUBLIC_GAME_PAGES:
             name, description = PUBLIC_GAME_PAGES[normalized]
@@ -335,7 +369,7 @@ class SeoService:
                 description=site_description(identity),
             ),
             heading=identity.title,
-            # 品牌说明与 Vue 可见页脚一致，不把主站限定为游戏站或提前开放圈子。
+            # 品牌说明与 Vue 可见页脚一致，覆盖游戏、工具、论坛与聊天入口。
             intro=site_description(identity),
             links=links,
             site_structured_data=self._site_structured_data(identity, base_url),
@@ -394,11 +428,13 @@ class SeoService:
             ),
         )
 
-    async def forum_page(self, base_url: str) -> SeoPageDocument:
-        """生成论坛首页的公开语义文档，规范地址固定为 ``/forum``。
+    async def forum_page(
+        self, base_url: str, *, canonical_path: str = "/forum"
+    ) -> SeoPageDocument:
+        """生成论坛公开首页；新独立站显式传根路径，旧调用仍使用 ``/forum``。
 
         ``base_url`` 是规范域名；返回有数量上限的公开版块和主题链接，
-        沿用原论坛首页文案，不写数据库、不增加 sitemap 入口。
+        沿用原论坛首页文案，不写数据库；独立论坛索引由专用方法生成。
         """
 
         identity = await self._site_identity()
@@ -416,8 +452,12 @@ class SeoService:
             meta=self._site_meta(
                 identity,
                 base_url,
-                "/forum",
-                title=site_brand_name(identity.title),
+                canonical_path,
+                # 仅独立站根页使用圈子产品名称，旧 /forum 标题继续保持兼容。
+                title=(
+                    f"{site_brand_name(identity.title)} · 圈子"
+                    if canonical_path == "/" else site_brand_name(identity.title)
+                ),
                 description=description,
             ),
             heading=identity.title,
@@ -1540,12 +1580,12 @@ def forum_description(identity: SeoSiteIdentity) -> str:
 
 
 def site_description(identity: SeoSiteIdentity) -> str:
-    """按公开站名生成主站介绍，覆盖游戏和工具，并保留圈子未开放的状态。"""
+    """按公开站名生成与四个产品入口一致的事实性介绍。"""
 
     return (
         f"{site_brand_name(identity.title)}（{SITE_PINYIN_NAME}）"
         "是发现游戏、实用工具与创意内容的空间。"
-        "浏览游戏目录，探索办公与创作工具；兴趣圈子暂未开放。"
+        "浏览游戏目录，使用办公与创作工具，参与圈子讨论，或进入聊天。"
     )
 
 

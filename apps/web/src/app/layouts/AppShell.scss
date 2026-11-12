@@ -9,6 +9,13 @@
     linear-gradient(180deg, #ffffff 0%, var(--bg-app) 55%, var(--bg-subtle) 100%);
 }
 
+// 原论坛内容和顶栏保持不变，产品切换统一放在正文后的独立页脚。
+.forum-site-footer {
+  display: flex;
+  justify-content: center;
+  padding: 16px 12px calc(24px + env(safe-area-inset-bottom));
+}
+
 .route-progress {
   position: fixed;
   top: 0;

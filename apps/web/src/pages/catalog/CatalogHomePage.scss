@@ -205,6 +205,10 @@
   .catalog-categories label, .catalog-sort label { display: none; }
 }
 @media (max-width: 359px) {
+  // 四个产品入口保持可触达尺寸，极窄屏另起一行，不能压到正式品牌或账号按钮。
+  .catalog-header__inner { grid-template-areas: "brand brand brand account" "navigation navigation navigation navigation" "search search search submit"; }
+  .catalog-header:has(.catalog-header__actions > :not(.catalog-account):not(.catalog-icon-button)) .catalog-header__inner { grid-template-areas: "brand brand notification account" "navigation navigation navigation navigation" "search search search submit"; }
+  .catalog-site-navigation { justify-self: center; }
   .catalog-brand { --catalog-brand-mark-size: 24px; }
   .catalog-brand > span:not(.catalog-brand-mark) { font-size: 19px; }
 }

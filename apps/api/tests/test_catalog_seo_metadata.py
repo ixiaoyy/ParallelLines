@@ -82,7 +82,7 @@ def test_home_metadata_and_social_schema_share_confirmed_copy(catalog_home, titl
     expected_title = f"{brand}（pingxingxian）· 发现游戏、工具与创意"
     expected_description = (
         f"{brand}（pingxingxian）是发现游戏、实用工具与创意内容的空间。"
-        "浏览游戏目录，探索办公与创作工具；兴趣圈子暂未开放。"
+        "浏览游戏目录，使用办公与创作工具，参与圈子讨论，或进入聊天。"
     )
     meta = asyncio.run(service.meta_for_path("/", "https://pingxingxian.space"))
     assert calls == []
@@ -146,7 +146,8 @@ def test_home_intro_renders_visible_site_brand_and_current_scope(catalog_home):
     assert f"<p>{html.escape(document.intro, quote=True)}</p>" in rendered
     assert "平行线 ParallelLines（pingxingxian）" in rendered
     assert "办公与创作工具" in rendered
-    assert "兴趣圈子暂未开放" in rendered
+    assert "参与圈子讨论，或进入聊天" in rendered
+    assert "兴趣圈子暂未开放" not in rendered
     assert 'href="/forum"' not in rendered
 
 

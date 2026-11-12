@@ -471,7 +471,7 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
       <footer class="catalog-footer">
         <div><strong>平行线</strong><span>{{ SEO_SITE_TAGLINE }}</span></div>
         <SiteNavigation />
-        <!-- 可见介绍与首个 HTML、首页元信息一致，圈子继续保持未开放。 -->
+        <!-- 可见介绍与首个 HTML、首页元信息保持一致。 -->
         <p class="catalog-footer__about">{{ siteDescription }}</p>
         <p class="catalog-library__hint">记录保存在当前浏览器，清理浏览器数据后会丢失。</p>
       </footer>

@@ -10,7 +10,7 @@ import {
 import type { JsonLdObject } from "../../src/shared/seo/structuredData";
 
 const TITLE = "平行线 ParallelLines（pingxingxian）· 发现游戏、工具与创意";
-const DESCRIPTION = "平行线 ParallelLines（pingxingxian）是发现游戏、实用工具与创意内容的空间。浏览游戏目录，探索办公与创作工具；兴趣圈子暂未开放。";
+const DESCRIPTION = "平行线 ParallelLines（pingxingxian）是发现游戏、实用工具与创意内容的空间。浏览游戏目录，使用办公与创作工具，参与圈子讨论，或进入聊天。";
 const SITE_NAME = "平行线 ParallelLines";
 const TOOLS_URL = "https://tools.pingxingxian.space/";
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:5193";
@@ -155,6 +155,8 @@ test("默认图标在浏览器内完整加载且两种格式一致，论坛仍�
 test("后台自定义PNG图标覆盖全部候选，离开论坛恢复完整默认属性", async ({ page }) => {
   const state = await isolateBrandPage(page, undefined, "/logo-lines-mark.png");
   await page.goto("/");
+  // 静态图标先于 Vue 初始化可用，等待目录接管后才能通过历史事件测试同一 SPA 切页。
+  await expect(page.locator(".catalog-page")).toBeVisible();
   expect(await faviconCandidates(page)).toEqual(DEFAULT_FAVICONS);
   await navigateWithinApp(page, "/forum");
   await expect(page.locator(".forum-home")).toBeVisible();
@@ -193,7 +195,8 @@ async function expectBrandMeta(page: Page) {
   await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", `${LOCAL_ORIGIN}/`);
   await expect(page.locator(".catalog-footer__about")).toHaveText(DESCRIPTION);
   const footerNav = page.getByRole("navigation", { name: "页脚导航", exact: true });
-  await expect(footerNav.getByRole("button", { name: "圈子，暂未开放", exact: true })).toBeDisabled();
+  await expect(footerNav.getByRole("link", { name: "圈子", exact: true })).toHaveAttribute("href", "https://forum.pingxingxian.space/");
+  await expect(footerNav.getByRole("link", { name: "聊天", exact: true })).toHaveAttribute("href", "https://chat.pingxingxian.space/");
   await expect(footerNav.getByRole("link", { name: "工具", exact: true })).toHaveAttribute("href", TOOLS_URL);
   await expect(footerNav.getByRole("link", { name: "游戏", exact: true })).toHaveAttribute("href", "/");
   await expect(page.locator('a[href="/forum"]')).toHaveCount(0);

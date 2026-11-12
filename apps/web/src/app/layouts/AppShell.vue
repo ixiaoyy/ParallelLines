@@ -33,6 +33,7 @@ import {
 } from "@/shared/seo/structuredData";
 import type { JsonLdObject } from "@/shared/seo/structuredData";
 import UiButton from "@/shared/ui/Button.vue";
+import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
 import { applySiteBranding } from "@/shared/theme/siteBranding";
 import { applyStoredInterfaceTheme, setInterfaceTheme } from "@/shared/theme/interfaceTheme";
 
@@ -602,6 +603,9 @@ function t(key: string, fallback: string) {
     <main class="shell-main">
       <slot />
     </main>
+    <footer v-if="!isAuthRoute && !isPlayGameRoute" class="forum-site-footer">
+      <SiteNavigation />
+    </footer>
   </div>
 </template>
 
