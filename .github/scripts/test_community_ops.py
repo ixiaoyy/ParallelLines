@@ -10,6 +10,8 @@ import sys
 import tempfile
 import types
 import unittest
+import os
+import subprocess
 from unittest import mock
 
 
@@ -29,13 +31,26 @@ def baseline_fixture():
     files = ",".join(map(str, ops.BASE_FILES))
     service = {"running": True, "working_directory": str(ops.MAIN), "compose_files": files,
                "networks": ["parallellines_default"], "hash": "a" * 64}
-    return {"git": {"head": ops.BEFORE, "clean": True}, "config_sha256": ops.OLD_CONFIG,
+    value = {"git": {"head": ops.BEFORE, "clean": True}, "config_sha256": ops.OLD_CONFIG,
+            "config_identity": {"device": 64769, "inode": 1049133},
             "forum": None, "api": {**service, "id": "b" * 64, "image_id": "sha256:" + "c" * 64},
             "gateway": {**service, "id": "d" * 64},
             "api_compose_hash": "a" * 64, "gateway_compose_hash": "a" * 64,
             "api_public_source_integrity": {"tree_sha256": ops.BASE_API_TREE},
             "database_revision": "0110_add_six_featured_games", "state_sha256": "e" * 64,
             "resources": {"memory": {"MemAvailable": 3 * 1024 ** 3}, "disk": {"free": 50 * 1024 ** 3}}}
+    value["approval_sha256"] = ops.digest(ops.approval_identity(value))
+    return value
+
+
+def alignment_git(head):
+    def invoke(_runner, args, **_kwargs):
+        if args[0] == "rev-parse":
+            return result(head)
+        if args[0] == "symbolic-ref":
+            return result("refs/heads/main")
+        return result("")
+    return invoke
 
 
 class OperationGuards(unittest.TestCase):
@@ -70,6 +85,20 @@ class OperationGuards(unittest.TestCase):
             change(value)
             with self.assertRaises(ops.OperationError):
                 ops.baseline(value)
+
+    def test_transparent_approval_rejects_changed_cid_configuration_or_database(self):
+        value = baseline_fixture()
+        expected = value["approval_sha256"]
+        ops.expect_snapshot(value, expected)
+        for change in (lambda v: v["api"].update(id="f" * 64),
+                       lambda v: v.update(config_sha256="0" * 64),
+                       lambda v: v.update(database_revision="unexpected_revision")):
+            altered = copy.deepcopy(value)
+            change(altered)
+            with self.subTest(change=change), self.assertRaisesRegex(ops.OperationError, "approval_identity_mismatch"):
+                ops.expect_snapshot(altered, expected)
+        with self.assertRaisesRegex(ops.OperationError, "approval_identity_mismatch"):
+            ops.expect_snapshot(value, value["state_sha256"])
 
     def test_api_only_allowed_identity_fields_can_change(self):
         before = {"id": "old", "image_id": "old-image", "image": "old-tag", "hash": "old-hash",
@@ -168,11 +197,11 @@ class OwnedFilesystemTests(unittest.TestCase):
                  "config_identity": {"device": stat.st_dev, "inode": stat.st_ino}}}
         runner = mock.Mock()
         runner.run.side_effect = lambda *_args, **_kwargs: result(ops.digest(self.config.read_bytes()) + "  config")
-        with mock.patch.object(ops, "git", return_value=result(ops.BEFORE)), mock.patch.object(ops, "git_state", return_value={"clean": True}):
+        with mock.patch.object(ops, "git", side_effect=alignment_git(ops.BEFORE)), mock.patch.object(ops, "git_state", return_value={"clean": True}):
             ops.align_source(runner, state)
         self.assertEqual(self.config.stat().st_ino, stat.st_ino)
         self.assertTrue((self.main / "new-file.py").exists())
-        with mock.patch.object(ops, "git", return_value=result(ops.APP)), mock.patch.object(ops, "git_state", return_value={"clean": True}):
+        with mock.patch.object(ops, "git", side_effect=alignment_git(ops.APP)), mock.patch.object(ops, "git_state", return_value={"clean": True}):
             ops.align_source(runner, state, restore=True)
         self.assertEqual(self.config.stat().st_ino, stat.st_ino)
         self.assertEqual(self.config.read_bytes(), b"old-config\n")
@@ -184,9 +213,78 @@ class OwnedFilesystemTests(unittest.TestCase):
         (self.source / "tracked.py").parent.mkdir(parents=True)
         (self.source / "tracked.py").write_bytes(b"candidate")
         ops.atomic(self.root / "before/tracked.py", b"old")
-        with self.assertRaisesRegex(ops.OperationError, "changed_outside_attempt"):
+        with mock.patch.object(ops, "git", side_effect=alignment_git(ops.APP)), self.assertRaisesRegex(ops.OperationError, "changed_outside_attempt"):
             ops.align_source(None, {"paths": ["tracked.py"]}, restore=True)
         self.assertEqual((self.main / "tracked.py").read_bytes(), b"someone-else")
+
+    def test_unknown_head_stops_before_any_source_mutation(self):
+        before = self.config.read_bytes()
+        with mock.patch.object(ops, "git", side_effect=alignment_git("f" * 40)), mock.patch.object(ops, "configuration_write") as write:
+            with self.assertRaisesRegex(ops.OperationError, "main_branch_changed_outside_attempt"):
+                ops.align_source(mock.Mock(), {"paths": ["deploy/nginx/default.conf"]}, restore=True)
+            write.assert_not_called()
+        self.assertEqual(self.config.read_bytes(), before)
+
+    def test_unknown_last_file_stops_before_first_file_mutation(self):
+        names = ("deploy/nginx/default.conf", "last.py")
+        before = self.config.read_bytes()
+        for name in names:
+            candidate = self.source / name
+            candidate.parent.mkdir(parents=True, exist_ok=True)
+            candidate.write_bytes(b"candidate")
+            ops.atomic(self.root / "before" / name, before if name == names[0] else b"old-code")
+        (self.main / "last.py").write_bytes(b"external-edit")
+        with mock.patch.object(ops, "git", side_effect=alignment_git(ops.APP)) as git, mock.patch.object(ops, "configuration_write") as write:
+            with self.assertRaisesRegex(ops.OperationError, "changed_outside_attempt:last.py"):
+                ops.align_source(mock.Mock(), {"paths": names}, restore=True)
+            write.assert_not_called()
+            self.assertFalse(any(call.args[1][0] in ("read-tree", "update-ref") for call in git.call_args_list))
+        self.assertEqual(self.config.read_bytes(), before)
+        self.assertEqual((self.main / "last.py").read_bytes(), b"external-edit")
+
+    def test_interrupted_short_config_restore_uses_durable_known_transition(self):
+        name = "deploy/nginx/default.conf"
+        old, new = b"old\n", b"new-configuration-with-a-long-tail\n"
+        self.config.write_bytes(new)
+        candidate = self.source / name
+        candidate.parent.mkdir(parents=True)
+        candidate.write_bytes(new)
+        ops.atomic(self.root / "before" / name, old)
+        stat = self.config.stat()
+        identity = {"device": stat.st_dev, "inode": stat.st_ino}
+        state = {"paths": [name], "before": {"gateway": {"id": "fixed"}, "config_identity": identity}}
+        original_open = Path.open
+        class InterruptedStream:
+            def __enter__(self):
+                self.stream = original_open(self_path, "r+b")
+                return self
+            def __exit__(self, *_args):
+                self.stream.close()
+            def __getattr__(self, key):
+                return getattr(self.stream, key)
+            def write(self, value):
+                written = self.stream.write(value)
+                self.stream.flush()
+                return written
+            def truncate(self):
+                raise RuntimeError("simulated-exit-before-truncate")
+        self_path = self.config
+        def intercepted(path, *args, **kwargs):
+            if path == self.config and args and args[0] == "r+b":
+                return InterruptedStream()
+            return original_open(path, *args, **kwargs)
+        with mock.patch.object(Path, "open", new=intercepted), self.assertRaisesRegex(RuntimeError, "before-truncate"):
+            ops.configuration_write(mock.Mock(), {"id": "fixed"}, new, old, identity)
+        self.assertEqual(self.config.read_bytes(), old + new[len(old):])
+        self.assertTrue(ops.interrupted_configuration_owned(self.config.read_bytes(), state))
+        self.assertFalse(ops.known_write_transition(b"unknown-external", new, old))
+        runner = mock.Mock()
+        runner.run.side_effect = lambda *_args, **_kwargs: result(ops.digest(self.config.read_bytes()) + " config")
+        with mock.patch.object(ops, "git", side_effect=alignment_git(ops.APP)), mock.patch.object(ops, "git_state", return_value={"clean": True}):
+            ops.align_source(runner, state, restore=True)
+        self.assertEqual(self.config.read_bytes(), old)
+        self.assertEqual(self.config.stat().st_ino, stat.st_ino)
+        self.assertFalse((self.root / "config-write.json").exists())
 
     def test_owned_layer_file_mismatch_stops_before_remove(self):
         file = self.source / "deploy/nginx/forum.conf"
@@ -200,12 +298,61 @@ class OwnedFilesystemTests(unittest.TestCase):
 
 
 class PreparationTests(unittest.TestCase):
+    def test_real_isolated_shallow_repositories_import_candidate_without_switching_main(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            origin, main, source = root / "origin", root / "main", root / "source"
+            environment = {**os.environ, "GIT_AUTHOR_NAME": "fixture", "GIT_AUTHOR_EMAIL": "fixture@example.invalid",
+                           "GIT_COMMITTER_NAME": "fixture", "GIT_COMMITTER_EMAIL": "fixture@example.invalid",
+                           "GIT_TERMINAL_PROMPT": "0", "GIT_ALLOW_PROTOCOL": "file"}
+            def local_git(args, *, cwd=None, accepted=(0,)):
+                value = subprocess.run(["git", *args], cwd=cwd, env=environment, capture_output=True, text=True, timeout=15)
+                self.assertIn(value.returncode, accepted, value.stderr)
+                return value
+            local_git(["init", str(origin)])
+            names = ["deploy/nginx/default.conf"] + [f"files/item-{i}.txt" for i in range(38)]
+            for name in names:
+                path = origin / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("before\n", encoding="utf-8")
+            local_git(["add", "."], cwd=origin)
+            local_git(["commit", "-m", "fixture-before"], cwd=origin)
+            before = local_git(["rev-parse", "HEAD"], cwd=origin).stdout.strip()
+            local_git(["branch", "before"], cwd=origin)
+            for name in names:
+                (origin / name).write_text("candidate\n", encoding="utf-8")
+            local_git(["add", "."], cwd=origin)
+            local_git(["commit", "-m", "fixture-app"], cwd=origin)
+            app = local_git(["rev-parse", "HEAD"], cwd=origin).stdout.strip()
+            local_git(["branch", "app"], cwd=origin)
+            local_git(["clone", "--no-local", "--depth=1", "--branch", "before", origin.as_uri(), str(main)])
+            local_git(["clone", "--no-local", "--depth=1", "--branch", "app", origin.as_uri(), str(source)])
+            self.assertNotEqual(local_git(["cat-file", "-e", app], cwd=main, accepted=(0, 1, 128)).returncode, 0)
+            self.assertNotEqual(local_git(["cat-file", "-e", before], cwd=source, accepted=(0, 1, 128)).returncode, 0)
+            index_before = local_git(["write-tree"], cwd=main).stdout
+            original_run = subprocess.run
+            observed = []
+            def recording_run(*args, **kwargs):
+                value = original_run(*args, **kwargs)
+                observed.append(value)
+                return value
+            with mock.patch.multiple(ops, MAIN=main, SOURCE=source, BEFORE=before, APP=app), mock.patch.dict(os.environ, environment), mock.patch.object(ops.subprocess, "run", side_effect=recording_run):
+                try:
+                    changed = ops.changed_paths(ops.Runner())
+                except ops.OperationError:
+                    self.fail(observed[-1].stderr)
+            self.assertEqual(set(changed), set(names))
+            local_git(["cat-file", "-e", app], cwd=main)
+            self.assertEqual(local_git(["rev-parse", "HEAD"], cwd=main).stdout.strip(), before)
+            self.assertEqual(local_git(["write-tree"], cwd=main).stdout, index_before)
+            self.assertEqual((main / "deploy/nginx/default.conf").read_text(), "before\n")
+
     def test_low_memory_stops_before_source_or_docker_writes(self):
         value = baseline_fixture()
         value["resources"]["memory"]["MemAvailable"] = 1024 ** 3
         with mock.patch.object(ops, "inventory", return_value=value), mock.patch.object(ops, "source_prepare") as source:
             with self.assertRaisesRegex(ops.OperationError, "insufficient_headroom"):
-                ops.prepare(mock.Mock(), value["state_sha256"])
+                ops.prepare(mock.Mock(), value["approval_sha256"])
             source.assert_not_called()
 
     def test_api_layer_recipe_is_fixed_four_files_and_has_no_run(self):
@@ -231,7 +378,7 @@ class PreparationTests(unittest.TestCase):
                 runner = mock.Mock()
                 runner.run.side_effect = lambda label, *_args, **_kwargs: result(value["database_revision"] + " (head)\n" if label == "candidate_migration_heads" else "")
                 with mock.patch.object(ops, "inventory", side_effect=lambda *_args: copy.deepcopy(value)), mock.patch.object(ops, "source_prepare"), mock.patch.object(ops, "target_preimages"), mock.patch.object(ops, "image_id", return_value="sha256:" + "f" * 64):
-                    report = ops.prepare(runner, value["state_sha256"])
+                    report = ops.prepare(runner, value["approval_sha256"])
                 self.assertTrue(report["complete"])
                 labels = [call.args[0] for call in runner.run.call_args_list]
                 self.assertEqual(labels, ["build_forum", "pin_unchanged_api_base", "build_api", "candidate_migration_heads"])
@@ -260,10 +407,10 @@ class PreparationTests(unittest.TestCase):
         with mock.patch.object(ops, "inventory", return_value=value), mock.patch.object(ops, "tools_lock", return_value=contextlib.nullcontext(tls)), mock.patch.object(ops, "request_deadline", return_value=contextlib.nullcontext()), mock.patch.object(ops.urllib.request, "build_opener", return_value=opener):
             if body != b"fixture-token":
                 with self.assertRaisesRegex(ops.OperationError, "http01_probe_mismatch"):
-                    ops.prepare_tls(runner, value["state_sha256"])
+                    ops.prepare_tls(runner, value["approval_sha256"])
                 runner.run.assert_not_called()
             else:
-                report = ops.prepare_tls(runner, value["state_sha256"])
+                report = ops.prepare_tls(runner, value["approval_sha256"])
                 self.assertTrue(report["complete"])
         return runner, opener
 

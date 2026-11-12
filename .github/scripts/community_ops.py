@@ -125,8 +125,9 @@ def read(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def git(runner, args, *, repository=MAIN, binary=False, accepted=(0,)):
+def git(runner, args, *, repository=None, binary=False, accepted=(0,)):
     """只在固定主仓库或本任务源码副本执行 Git，禁用交互和外部 diff。"""
+    repository = MAIN if repository is None else repository
     return runner.run("git_" + args[0], ["git", "--no-optional-locks", "-c", "core.fsmonitor=false",
                       "-c", "credential.helper=", "-C", str(repository), *args],
                       timeout=120 if args[0] == "fetch" else 15, binary=binary, accepted=accepted)
@@ -261,6 +262,8 @@ def inventory(runner):
              "database_revision": current_revision(runner, api) if api["running"] else None,
              "forum_certificate_present": (MAIN / "var/letsencrypt/live" / DOMAIN / "fullchain.pem").is_file(),
              "api_public_source_integrity": integrity}
+    value["approval_identity"] = approval_identity(value)
+    value["approval_sha256"] = digest(value["approval_identity"])
     value["state_sha256"] = digest(value)
     # 容量和负载会自然变化，不把它们混入身份前像；每次只读盘点仍返回最新值供审批。
     value["resources"] = {"cpu_count": os.cpu_count(), "load_average": os.getloadavg(),
@@ -270,10 +273,22 @@ def inventory(runner):
     return value
 
 
+def approval_identity(actual):
+    """外部授权仅使用已独立核实的公开任务身份；完整运行状态另作服务端并发守卫。"""
+    return {"schema": 1, "application_revision": APP,
+            "git": {"head": actual["git"]["head"], "tracked_index_clean": actual["git"]["clean"]},
+            "configuration": {"sha256": actual["config_sha256"], "identity": actual["config_identity"]},
+            "api": {"id": actual["api"]["id"], "image_id": actual["api"]["image_id"],
+                    "compose_hash": actual["api_compose_hash"]},
+            "gateway": {"id": actual["gateway"]["id"], "compose_hash": actual["gateway_compose_hash"]},
+            "database_revision": actual["database_revision"],
+            "api_public_source_tree_sha256": actual["api_public_source_integrity"]["tree_sha256"]}
+
+
 def expect_snapshot(actual, expected):
-    """写操作必须命中独立盘点的完整前像；不能用被遮蔽日志猜值或绕过漂移。"""
-    if not re.fullmatch(r"[0-9a-f]{64}", expected) or actual["state_sha256"] != expected:
-        raise OperationError("fresh_inventory_preimage_mismatch")
+    """只接受新协议的透明授权身份摘要；不猜补或换通道获取被遮蔽的完整状态摘要。"""
+    if not re.fullmatch(r"[0-9a-f]{64}", expected) or digest(approval_identity(actual)) != expected:
+        raise OperationError("fresh_approval_identity_mismatch")
 
 
 def baseline(actual):
@@ -443,6 +458,13 @@ def configuration_write(runner, gateway, expected, replacement, identity):
         stat = os.fstat(stream.fileno())
         if {"device": stat.st_dev, "inode": stat.st_ino} != identity or stream.read() != expected:
             raise OperationError("configuration_preimage_or_inode_changed")
+        # 写前保留完整过渡两端和阶段；进程若在 write/truncate 之间退出，可识别自己的半写。
+        token = secrets.token_hex(8)
+        atomic(ROOT / "config-writes" / (token + ".before"), expected)
+        atomic(ROOT / "config-writes" / (token + ".after"), replacement)
+        save(ROOT / "config-write.json", {"schema": 1, "phase": "writing", "token": token,
+             "gateway_id": gateway["id"], "identity": identity,
+             "before_sha256": digest(expected), "after_sha256": digest(replacement)})
         stream.seek(0)
         stream.write(replacement)
         stream.truncate()
@@ -451,6 +473,68 @@ def configuration_write(runner, gateway, expected, replacement, identity):
     observed = runner.run("bound_configuration_digest", ["docker", "exec", gateway["id"], "sha256sum", "/etc/nginx/conf.d/default.conf"]).stdout.split()[0]
     if observed != digest(replacement):
         raise OperationError("bound_configuration_digest_mismatch")
+    (ROOT / "config-write.json").unlink()
+
+
+def known_write_transition(current, before, after):
+    """只接受顺序前缀写入及未截断尾部；任一不属于两端的字节均视为外部变化。"""
+    if current in (before, after):
+        return True
+    if len(before) < len(current) <= len(after):
+        return current == after[:len(current)]
+    if len(current) != len(before):
+        return False
+    limit = min(len(before), len(after))
+    # 前缀第一次偏离 after 之后必须完整等于原尾部，避免枚举无界位置或宽泛接受未知内容。
+    first = next((i for i in range(limit) if current[i] != after[i]), limit)
+    return current[first:] == before[first:]
+
+
+def interrupted_configuration_owned(current, state):
+    """读取固定写意图及备份，要求同网关/inode且当前字节为严格已知过渡，才允许恢复。"""
+    intent = read(ROOT / "config-write.json")
+    if not intent:
+        return False
+    if (intent.get("schema") != 1 or intent.get("phase") != "writing"
+            or intent.get("gateway_id") != state["before"]["gateway"]["id"]
+            or intent.get("identity") != state["before"]["config_identity"]
+            or not re.fullmatch(r"[0-9a-f]{16}", str(intent.get("token", "")))):
+        return False
+    stat = MAIN_CONFIG.stat()
+    if {"device": stat.st_dev, "inode": stat.st_ino} != intent["identity"]:
+        return False
+    prefix = ROOT / "config-writes" / intent["token"]
+    before, after = safe_path(prefix.with_suffix(".before")).read_bytes(), safe_path(prefix.with_suffix(".after")).read_bytes()
+    if (len(before) > BODY_LIMIT or len(after) > BODY_LIMIT
+            or digest(before) != intent["before_sha256"] or digest(after) != intent["after_sha256"]):
+        return False
+    return known_write_transition(current, before, after)
+
+
+def alignment_preflight(runner, state):
+    """任何源码/配置突变前一次核全 HEAD、索引及全部目标；半恢复只认精确旧/新或写意图。"""
+    head = git(runner, ["rev-parse", "HEAD"]).stdout.strip()
+    branch = git(runner, ["symbolic-ref", "--quiet", "HEAD"]).stdout.strip()
+    if head not in (BEFORE, APP) or branch != "refs/heads/main":
+        raise OperationError("main_branch_changed_outside_attempt")
+    if all(git(runner, ["diff", "--cached", "--quiet", revision], accepted=(0, 1)).returncode
+           for revision in (BEFORE, APP)):
+        raise OperationError("main_index_changed_outside_attempt")
+    outside = git(runner, ["diff", "--name-only", "HEAD", "--"]).stdout.splitlines()
+    if set(outside) - set(state["paths"]):
+        raise OperationError("tracked_files_changed_outside_application_delta")
+    observed = {}
+    for name in state["paths"]:
+        path = safe_path(MAIN / name)
+        backup = ROOT / "before" / name
+        before = safe_path(backup).read_bytes() if backup.exists() else None
+        after = safe_path(SOURCE / name).read_bytes()
+        actual = path.read_bytes() if path.exists() else None
+        if actual not in (before, after):
+            if name != "deploy/nginx/default.conf" or actual is None or not interrupted_configuration_owned(actual, state):
+                raise OperationError("application_file_changed_outside_attempt:" + name)
+        observed[name] = actual
+    return head, observed
 
 
 def changed_paths(runner):
@@ -487,6 +571,7 @@ def target_preimages(runner):
 def align_source(runner, state, *, restore=False):
     """逐文件校验并切换固定公开差异，最后 CAS 更新索引和分支，不用整树 reset。"""
     origin, target = (APP, BEFORE) if restore else (BEFORE, APP)
+    _head, observed = alignment_preflight(runner, state)
     for name in state["paths"]:
         path = safe_path(MAIN / name)
         before = ROOT / "before" / name
@@ -495,7 +580,7 @@ def align_source(runner, state, *, restore=False):
         old = before.read_bytes() if before.exists() else None
         new = (SOURCE / name).read_bytes()
         current = path.read_bytes() if path.exists() else None
-        if current not in (old, new):
+        if current != observed[name]:
             raise OperationError("application_file_changed_outside_attempt:" + name)
         if current == wanted:
             continue
@@ -548,12 +633,16 @@ def layer_files(runner, gateway, *, remove=False):
     """只管理两份已审核容器层配置；未来重建必须由论坛 Compose 挂载同内容接续。"""
     pairs = (("deploy/nginx/forum.conf", "/etc/nginx/conf.d/forum.conf"),
              ("deploy/nginx/forum-main-redirects.conf", "/etc/nginx/forum-main/redirects.conf"))
+    entries = []
     for name, destination in pairs:
         exists = runner.run("layer_file_presence", ["docker", "exec", gateway["id"], "test", "-e", destination], accepted=(0, 1)).returncode == 0
         if exists:
             actual = runner.run("layer_file_digest", ["docker", "exec", gateway["id"], "sha256sum", destination]).stdout.split()[0]
             if actual != digest((SOURCE / name).read_bytes()):
                 raise OperationError("community_layer_file_changed_outside_attempt")
+        entries.append((name, destination, exists))
+    # 全部前像先通过，再改第一份文件，不能先删一份才发现另一份属于他人。
+    for name, destination, exists in entries:
         if remove:
             if exists:
                 runner.run("remove_owned_layer_file", ["docker", "exec", gateway["id"], "rm", "--", destination])
@@ -604,6 +693,7 @@ def deploy(runner, expected):
         guard_gateway(runner, state)
         if inventory(runner)["state_sha256"] != before["state_sha256"]:
             raise OperationError("activation_state_changed_before_switch")
+        alignment_preflight(runner, state)
         # 容器层文件在首次启用前必须不存在，避免把他人的文件当成本事务拥有。
         for destination in ("/etc/nginx/conf.d/forum.conf", "/etc/nginx/forum-main/redirects.conf"):
             if runner.run("layer_file_absent", ["docker", "exec", before["gateway"]["id"], "test", "-e", destination], accepted=(0, 1)).returncode == 0:
@@ -665,13 +755,17 @@ def restore(runner):
         if forum and (forum["image_id"] != state["prepared"]["forum_image_id"] or forum["hash"] != state["forum_hash"]
                       or (state.get("forum_id") and forum["id"] != state["forum_id"])):
             raise OperationError("forum_changed_outside_community_attempt")
+        if not same_spec(state["before"]["api"], api):
+            raise OperationError("api_public_spec_changed_outside_attempt")
+        alignment_preflight(runner, state)
+        if MARKER.exists() and MARKER.read_text(encoding="ascii") != TAG + "\n":
+            raise OperationError("forum_marker_changed_outside_attempt")
         layer_files(runner, state["before"]["gateway"], remove=True)
         align_source(runner, state, restore=True)
-        if api["image_id"] != state["before"]["api"]["image_id"]:
+        if api["image_id"] != state["before"]["api"]["image_id"] or not api["running"]:
             compose(runner, ["up", "-d", "--no-deps", "--no-build", "api"], ROOT / "restore.override.json")
-            restored = wait_api(runner, state["before"]["api"]["image_id"])
-        else:
-            restored = api
+        # 即使镜像已是旧版本也必须确认运行及健康，不能将已停或不健康的旧实例当恢复成功。
+        restored = wait_api(runner, state["before"]["api"]["image_id"])
         if not same_spec(state["before"]["api"], restored):
             raise OperationError("restored_api_public_spec_mismatch")
         if forum:

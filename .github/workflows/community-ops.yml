@@ -14,8 +14,8 @@ on:
         type: string
         required: true
         default: 93ca819f20f760b142cab9a320110879ff8179df
-      expected_inventory_sha256:
-        description: Fresh complete inventory preimage required for prepare, prepare-tls and deploy
+      expected_approval_sha256:
+        description: Transparent approval_identity digest required for prepare, prepare-tls and deploy
         type: string
         required: false
         default: ''
@@ -38,7 +38,7 @@ jobs:
     env:
       OPERATION: ${{ inputs.operation }}
       SOURCE_REVISION: ${{ inputs.source_revision }}
-      EXPECTED_INVENTORY: ${{ inputs.expected_inventory_sha256 }}
+      EXPECTED_APPROVAL: ${{ inputs.expected_approval_sha256 }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,13 +58,13 @@ jobs:
 
           operation = os.environ['OPERATION']
           revision = os.environ['SOURCE_REVISION']
-          expected = os.environ.get('EXPECTED_INVENTORY', '')
+          expected = os.environ.get('EXPECTED_APPROVAL', '')
           if operation not in ('inventory', 'prepare', 'prepare-tls', 'deploy', 'health', 'rollback'):
               raise SystemExit('Unsupported community operation')
           if revision != '93ca819f20f760b142cab9a320110879ff8179df':
               raise SystemExit('Only the reviewed application revision is allowed')
           if operation in ('prepare', 'prepare-tls', 'deploy') and not re.fullmatch(r'[0-9a-f]{64}', expected):
-              raise SystemExit('A fresh complete inventory preimage is required')
+              raise SystemExit('A transparent approval identity digest is required')
           if operation in ('inventory', 'health', 'rollback'):
               expected = '-'
           source = Path('.github/scripts/community_ops.py').read_text(encoding='utf-8')
