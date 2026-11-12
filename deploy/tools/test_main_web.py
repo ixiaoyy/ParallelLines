@@ -79,6 +79,121 @@ class MainWebTests(unittest.TestCase):
                 self.assertFalse(MAIN.PENDING.exists())
                 self.assertEqual((ops / "tls.py").read_bytes(), b"old consumer")
 
+    def _deploy_and_restore_entry_fixture(self, entries, changed):
+        """以完整发布/恢复调用链验证入口计划；Docker、下载及账号网络全部为合成替身。"""
+        with tempfile.TemporaryDirectory() as temp, contextlib.ExitStack() as stack:
+            root = Path(temp)
+            ops, state_dir = root / "ops", root / "ops/main-web"
+            state_dir.mkdir(parents=True)
+            fragment = CONFIG.BEGIN + b"\nserver { listen 443; }\n" + CONFIG.END + b"\n"
+            outside = b"# preserved prefix  \n" + b"\n".join(entries) + b"# preserved suffix\n"
+            before = outside + fragment
+            configuration = root / "default.conf"
+            configuration.write_bytes(before)
+            (ops / "managed-vhost.conf").write_bytes(fragment)
+            sha, old_image, new_image = "d" * 40, "sha256:" + "a" * 64, "sha256:" + "b" * 64
+            old = {"id": "a" * 64, "image_id": old_image, "image": "parallellines-web:latest", "running": True,
+                   "compose_files": "base,production", "memory": 0, "project": "parallellines", "service": "web"}
+            phase = {"web": old, "latest": old_image}
+            labels, writes = [], []
+            gateway = {"id": "9" * 64}
+            artifacts = types.SimpleNamespace(
+                receipt_identity=lambda *_args: {"image_config_digest": "f" * 64},
+                archive_name=lambda revision: "parallellines-web-" + revision + ".tar.gz",
+                verify_web=lambda *_args: None,
+                verify_loaded=lambda *_args: {"native_image_id": new_image},
+            )
+            tls = types.SimpleNamespace(configuration_may_reload=lambda: True, tls_lock=contextlib.nullcontext)
+            health = types.SimpleNamespace(run_health=lambda: {"healthy": True})
+            for name, value in {"APP": root, "OPS": ops, "STATE": state_dir, "PENDING": state_dir / "pending.json",
+                                "CURRENT": state_dir / "current.json", "REDIRECTS": state_dir / "redirects.json",
+                                "MAIN_CONFIG": configuration}.items():
+                stack.enter_context(patch.object(MAIN, name, value))
+            previous_redirects = {"schema": 1, "operation": "main-web-redirects", "revision": "c" * 40,
+                                  "before_outside_sha256": "0" * 64, "after_outside_sha256": "1" * 64}
+            if not changed:
+                MAIN.save(MAIN.REDIRECTS, previous_redirects)
+
+            def directory(path):
+                Path(path).mkdir(parents=True, exist_ok=True)
+                return Path(path)
+
+            def download(_url, target, _limit, *_args, **_kwargs):
+                target.write_text(json.dumps({"archive_sha256": "1" * 64}) if target.name == "web-image.json" else "fixture", encoding="utf-8")
+                return target.stat().st_size
+
+            def command(label, arguments, **_kwargs):
+                labels.append(label)
+                if label == "main_web_load":
+                    phase["latest"] = new_image
+                elif label == "main_web_restore_latest":
+                    phase["latest"] = old_image
+                return subprocess.CompletedProcess(arguments, 0, phase["web"]["id"] if label == "main_web_recovery_presence" else "", "")
+
+            def up(override=None):
+                phase["web"] = ({**old, "id": "c" * 64} if override is None else {
+                    **old, "id": "b" * 64, "image_id": new_image, "image": "parallellines-web:" + sha,
+                    "compose_files": old["compose_files"] + "," + str(override),
+                })
+
+            def wait(expected):
+                self.assertEqual(phase["web"]["image_id"], expected)
+                return phase["web"]
+
+            def identity(reference):
+                if reference == "parallellines-web:latest":
+                    return phase["latest"]
+                return reference if reference.startswith("sha256:") else new_image
+
+            def write_config(expected, replacement, _gateway):
+                self.assertEqual(configuration.read_bytes(), expected)
+                writes.append((expected, replacement))
+                configuration.write_bytes(replacement)
+
+            for name, replacement in {
+                "modules": lambda: (artifacts, health, CONFIG, tls),
+                "anchor": lambda: (gateway, root / "tool-attempt"),
+                "directory": directory, "download": download, "install_sources": lambda *_args: {},
+                "web_metadata": lambda **_kwargs: phase["web"], "approved_web": lambda _value: None,
+                "image_id": identity, "guard": lambda _gateway: None, "command": command,
+                "compose_hash": lambda override=None: ("e" if override is None else "f") * 64,
+                "running_hash": lambda: ("e" if phase["web"]["image_id"] == old_image else "f") * 64,
+                "up": up, "wait_web": wait, "write_config": write_config,
+            }.items():
+                stack.enter_context(patch.object(MAIN, name, replacement))
+            report = {}
+            MAIN.deploy("main-web-" + sha, "1" * 64, "123", hashlib.sha256(before).hexdigest(), report)
+            self.assertTrue(report["complete"])
+            self.assertEqual(report["two_exact_blocks_updated"], changed)
+            self.assertEqual(configuration.read_bytes(), MAIN.tool_entry_target(before, CONFIG))
+            if not changed:
+                self.assertEqual(MAIN.read(MAIN.REDIRECTS), previous_redirects)
+            state = MAIN.read(MAIN.CURRENT)
+            restored = {}
+            MAIN.restore(state, restored)
+            self.assertTrue(restored["recovery"]["complete"])
+            self.assertEqual(configuration.read_bytes(), before)
+            self.assertEqual(len(writes), 2 if changed else 0)
+            self.assertEqual("main_web_nginx_reload" in labels, changed)
+            self.assertEqual("main_web_restore_nginx_reload" in labels, changed)
+            self.assertEqual(MAIN.read(MAIN.REDIRECTS), None if changed else previous_redirects)
+            self.assertFalse(MAIN.PENDING.exists())
+
+    def test_deploy_old_tool_entries_and_restore_return_exact_actual_before(self):
+        self._deploy_and_restore_entry_fixture(CONFIG.OLD_TOOL_ENTRIES, True)
+
+    def test_repeat_deploy_new_tool_entries_and_restore_never_reverse_or_reload(self):
+        self._deploy_and_restore_entry_fixture(CONFIG.NEW_TOOL_ENTRIES, False)
+
+    def test_entry_plan_rejects_mixed_duplicate_and_unknown_versions(self):
+        old = b"\n".join(CONFIG.OLD_TOOL_ENTRIES)
+        new = b"\n".join(CONFIG.NEW_TOOL_ENTRIES)
+        mixed = CONFIG.OLD_TOOL_ENTRIES[0] + CONFIG.NEW_TOOL_ENTRIES[1]
+        unknown = old.replace(b"proxy_pass http://$api_upstream;", b"proxy_pass http://unknown;")
+        for source in (mixed, old + CONFIG.OLD_TOOL_ENTRIES[0], new + CONFIG.NEW_TOOL_ENTRIES[0], unknown):
+            with self.subTest(source=source), self.assertRaises(CONFIG.ManagedConfigError):
+                MAIN.tool_entry_target(source, CONFIG)
+
     def test_recovery_after_snapshot_rejects_successor_id_spec_or_hash(self):
         before = {"id": "a" * 64, "image_id": "sha256:" + "a" * 64, "image": "parallellines-web:latest",
                   "compose_files": "base,production", "running": True, "memory": 0}

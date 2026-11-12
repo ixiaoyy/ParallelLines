@@ -458,6 +458,15 @@ def install_sources(attempt, tool_attempt):
     return result
 
 
+def tool_entry_target(source, managed):
+    """规划两处工具入口；仅接受唯一 OLD 对或已唯一更新的 NEW 对，返回目标原始字节。"""
+    # 重复发布时只认两块 NEW 各一次且 OLD 全无；混合、重复和未知写法仍交原守卫拒绝。
+    if (all(source.count(entry) == 1 for entry in managed.NEW_TOOL_ENTRIES)
+            and all(source.count(entry) == 0 for entry in managed.OLD_TOOL_ENTRIES)):
+        return source
+    return managed.replace_tool_entries(source)
+
+
 def restore(state, report):
     """只恢复原 Web 镜像、两处 exact 与本事务消费者；未知变化保留 pending 停止。"""
     _artifacts, health, managed, _tls = modules()
@@ -468,7 +477,7 @@ def restore(state, report):
     current = MAIN_CONFIG.read_bytes()
     outside, fragment = managed.split(current)
     before_outside, _ = managed.split(before)
-    after_outside = managed.replace_tool_entries(before_outside)
+    after_outside = tool_entry_target(before_outside, managed)
     saved_fragment = owned(OPS / "managed-vhost.conf").read_bytes()
     if outside not in (before_outside, after_outside) or fragment != (saved_fragment or None):
         raise MainWebError("main_web_configuration_changed_outside_two_exact_blocks")
@@ -499,7 +508,9 @@ def restore(state, report):
         save(PENDING, state)
         save(attempt / "transaction.json", state)
         wait_web(old["image_id"])
-    if outside == after_outside:
+    # 只撤销本事务真实发生的 OLD -> NEW；开始时已经 NEW 的发布不能反向改成 OLD。
+    configuration_changed = before_outside != after_outside and outside == after_outside
+    if configuration_changed:
         write_config(current, managed.replace_tool_entries(current, forward=False), state["gateway"])
     if state["before_redirects"] is None:
         if REDIRECTS.exists():
@@ -511,7 +522,8 @@ def restore(state, report):
     guard(state["gateway"])
     command("main_web_restore_nginx_test", ["docker", "exec", state["gateway"]["id"], "nginx", "-t"])
     guard(state["gateway"])
-    command("main_web_restore_nginx_reload", ["docker", "exec", state["gateway"]["id"], "nginx", "-s", "reload"])
+    if configuration_changed:
+        command("main_web_restore_nginx_reload", ["docker", "exec", state["gateway"]["id"], "nginx", "-s", "reload"])
     checked = health.run_health()
     if not checked["healthy"]:
         raise MainWebError("main_web_restore_independent_health_failed")
@@ -541,7 +553,7 @@ def deploy(tag, receipt_sha, run_id, expected, report):
     before = MAIN_CONFIG.read_bytes()
     if hashlib.sha256(before).hexdigest() != expected or not tls.configuration_may_reload():
         raise MainWebError("main_web_trusted_configuration_preimage_mismatch")
-    after = managed.replace_tool_entries(before)
+    after = tool_entry_target(before, managed)
     web = web_metadata()
     approved_web(web)
     if image_id("parallellines-web:latest") != web["image_id"]:
@@ -596,12 +608,14 @@ def deploy(tag, receipt_sha, run_id, expected, report):
                 raise MainWebError("main_web_state_changed_before_switch")
             for name in consumers:
                 atomic(OPS / name, owned(attempt / (name + ".after")).read_bytes())
-            old_outside, _ = managed.split(before)
-            new_outside, _ = managed.split(after)
-            record = {"schema": 1, "operation": "main-web-redirects", "revision": sha, "attempt": str(attempt),
-                      "before_outside_sha256": hashlib.sha256(old_outside).hexdigest(),
-                      "after_outside_sha256": hashlib.sha256(new_outside).hexdigest()}
-            save(REDIRECTS, record)
+            if before != after:
+                # 仅为真实入口变更记新证明；无配置变化时保留此前事务的有效外围差异证明。
+                old_outside, _ = managed.split(before)
+                new_outside, _ = managed.split(after)
+                record = {"schema": 1, "operation": "main-web-redirects", "revision": sha, "attempt": str(attempt),
+                          "before_outside_sha256": hashlib.sha256(old_outside).hexdigest(),
+                          "after_outside_sha256": hashlib.sha256(new_outside).hexdigest()}
+                save(REDIRECTS, record)
             state["status"] = "switching_web"
             save(PENDING, state)
             save(attempt / "transaction.json", state)
@@ -619,10 +633,12 @@ def deploy(tag, receipt_sha, run_id, expected, report):
             if running_hash() != compose_hash(override):
                 raise MainWebError("main_web_new_compose_hash_mismatch")
             guard(gateway)
-            write_config(before, after, gateway)
+            if before != after:
+                write_config(before, after, gateway)
             command("main_web_nginx_test", ["docker", "exec", gateway["id"], "nginx", "-t"])
             guard(gateway)
-            command("main_web_nginx_reload", ["docker", "exec", gateway["id"], "nginx", "-s", "reload"])
+            if before != after:
+                command("main_web_nginx_reload", ["docker", "exec", gateway["id"], "nginx", "-s", "reload"])
             checked = health.run_health()
             report["health"] = checked
             if not checked["healthy"]:
@@ -636,7 +652,7 @@ def deploy(tag, receipt_sha, run_id, expected, report):
             save(CURRENT, state)
             owned(PENDING).unlink()
             report.update(complete=True, revision=sha, only_web_recreated=True, gateway_not_recreated=True,
-                          two_exact_blocks_updated=True, installed_renewal_policy_verified=True)
+                          two_exact_blocks_updated=before != after, installed_renewal_policy_verified=True)
         except Exception:
             try:
                 restore(state, report)
