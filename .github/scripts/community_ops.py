@@ -45,10 +45,10 @@ API_BASE_IMAGE = "parallellines-community-api-base:" + APP
 BASE_API_TREE = "593a6c62df1fe2b104468ccdbe2caa86a2d273603fa79d2f2d424555fa8d8ee7"
 API_CHANGED_FILES = ("apps/api/app/api/seo.py", "apps/api/app/core/config.py",
                      "apps/api/app/services/seo.py", "apps/api/app/services/seo_renderer.py")
-OPERATIONS = ("inventory", "prepare", "probe", "prepare-tls", "deploy", "health", "rollback")
+OPERATIONS = ("inventory", "prepare", "probe", "prepare-tls", "deploy", "health", "rollback", "check-renewal")
 BODY_LIMIT = 2 * 1024 * 1024
 # 按阶段交付；准备与真实切换分别完成现场及恢复审查后才能加入此列表。
-READY_OPERATIONS = ("inventory", "health", "prepare", "probe", "prepare-tls", "deploy", "rollback")
+READY_OPERATIONS = ("inventory", "health", "prepare", "probe", "prepare-tls", "deploy", "rollback", "check-renewal")
 
 
 class OperationError(Exception):
@@ -923,6 +923,25 @@ def remove_renewal(state):
                 path.unlink()
 
 
+def check_renewal(runner):
+    """仅复核已提交事务的固定证书消费者；不 reload/签发，只允许消费者更新自己的检查报告。"""
+    if PENDING.exists() or PENDING.is_symlink():
+        raise OperationError("community_pending_transaction_blocks_renewal_check")
+    state = read(CURRENT)
+    if (not isinstance(state, dict) or state.get("schema") != 1 or state.get("source_revision") != APP
+            or state.get("status") != "committed" or not isinstance(state.get("renewal"), dict)):
+        raise OperationError("committed_community_renewal_state_required")
+    program = safe_path(ROOT / "renew-community.py")
+    if not program.is_file() or not RENEW_CRON.is_file():
+        raise OperationError("installed_community_renewal_files_missing")
+    renewal_preflight(state)
+    output = runner.run("check_installed_community_renewal", ["/usr/bin/python3", "-B", str(program), "check"], timeout=90)
+    result = json.loads(output.stdout)
+    if not isinstance(result, dict) or result.get("complete") is not True or result.get("reloaded") is not False:
+        raise OperationError("installed_community_renewal_check_failed")
+    return {"complete": True, "reloaded": False, "runtime_read_only": True, "writes_owned_report": True}
+
+
 def deploy(runner, expected):
     """完整前像及恢复快照先落盘，仅替换 API、增加论坛并原位接入配置，不重建网关。"""
     before = inventory(runner)
@@ -1140,6 +1159,8 @@ def main(arguments):
             report.update(deploy(runner, arguments[2]))
         elif operation == "rollback":
             report.update(restore(runner))
+        elif operation == "check-renewal":
+            report.update(check_renewal(runner))
         else:
             report.update(health(runner))
     except OperationError as error:

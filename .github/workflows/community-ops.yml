@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Explicit fixed community operation; inventory and health are read-only
+        description: Fixed operation; check-renewal only updates its owned report, not runtime
         type: choice
         required: true
         default: inventory
-        options: [inventory, prepare, probe, prepare-tls, deploy, health, rollback]
+        options: [inventory, prepare, probe, prepare-tls, deploy, health, rollback, check-renewal]
       source_revision:
         description: Reviewed application revision; helper commits do not change this candidate
         type: string
@@ -59,13 +59,13 @@ jobs:
           operation = os.environ['OPERATION']
           revision = os.environ['SOURCE_REVISION']
           expected = os.environ.get('EXPECTED_APPROVAL', '')
-          if operation not in ('inventory', 'prepare', 'probe', 'prepare-tls', 'deploy', 'health', 'rollback'):
+          if operation not in ('inventory', 'prepare', 'probe', 'prepare-tls', 'deploy', 'health', 'rollback', 'check-renewal'):
               raise SystemExit('Unsupported community operation')
           if revision != '93ca819f20f760b142cab9a320110879ff8179df':
               raise SystemExit('Only the reviewed application revision is allowed')
           if operation in ('prepare', 'probe', 'prepare-tls', 'deploy') and not re.fullmatch(r'[0-9a-f]{64}', expected):
               raise SystemExit('A transparent approval identity digest is required')
-          if operation in ('inventory', 'health', 'rollback'):
+          if operation in ('inventory', 'health', 'rollback', 'check-renewal'):
               expected = '-'
           source = Path('.github/scripts/community_ops.py').read_text(encoding='utf-8')
           marker = 'COMMUNITY_OPS_' + uuid.uuid4().hex

@@ -524,6 +524,69 @@ class RestoreHealthTests(unittest.TestCase):
             method.assert_not_called()
 
 
+class CheckRenewalEntryTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        main = Path(self.directory.name)
+        root = main / ".deployment/community" / ops.APP
+        cron = main / "cron.d/community"
+        cron.parent.mkdir()
+        root.mkdir(parents=True)
+        program = root / "renew-community.py"
+        program.write_bytes(b"reviewed-consumer")
+        cron.write_bytes(b"owned-cron")
+        self.program, self.cron, self.root = program, cron, root
+        self.patch = mock.patch.multiple(ops, MAIN=main, ROOT=root, PENDING=root / "pending.json",
+                                        CURRENT=root / "current.json", RENEW_CRON=cron)
+        self.patch.start()
+        self.addCleanup(self.patch.stop)
+        stat = cron.stat()
+        self.state = {"schema": 1, "source_revision": ops.APP, "status": "committed", "renewal": {
+                      "script_sha256": ops.digest(program.read_bytes()), "cron_sha256": ops.digest(cron.read_bytes()),
+                      "cron_identity": {"device": stat.st_dev, "inode": stat.st_ino}}}
+        ops.save(ops.CURRENT, self.state)
+
+    def test_fixed_check_entry_and_result_classification(self):
+        runner = mock.Mock()
+        runner.run.return_value = result('{"complete":true,"reloaded":false,"errors":[]}')
+        output = io.StringIO()
+        with mock.patch.object(ops, "Runner", return_value=runner), contextlib.redirect_stdout(output):
+            self.assertEqual(ops.main(["check-renewal", ops.APP, "-"]), 0)
+        runner.run.assert_called_once_with("check_installed_community_renewal", ["/usr/bin/python3", "-B", str(self.program), "check"], timeout=90)
+        report = json.loads(output.getvalue())
+        self.assertTrue(report["runtime_read_only"])
+        self.assertTrue(report["writes_owned_report"])
+        self.assertFalse(report["reloaded"])
+        self.assertEqual(self.program.read_bytes(), b"reviewed-consumer")
+        self.assertEqual(self.cron.read_bytes(), b"owned-cron")
+        for response in ('{"complete":false,"reloaded":false}', '{"complete":true,"reloaded":true}'):
+            runner.run.return_value = result(response)
+            with self.subTest(response=response), self.assertRaisesRegex(ops.OperationError, "renewal_check_failed"):
+                ops.check_renewal(runner)
+
+    def test_unknown_pending_or_unowned_state_never_executes(self):
+        runner = mock.Mock()
+        changes = (lambda value: value.update(status="switching"),
+                   lambda value: value.update(source_revision="0" * 40),
+                   lambda value: value.pop("renewal"))
+        for change in changes:
+            value = copy.deepcopy(self.state)
+            change(value)
+            ops.save(ops.CURRENT, value)
+            with self.assertRaises(ops.OperationError):
+                ops.check_renewal(runner)
+        ops.save(ops.CURRENT, self.state)
+        ops.save(ops.PENDING, {"status": "unfinished"})
+        with self.assertRaisesRegex(ops.OperationError, "pending_transaction"):
+            ops.check_renewal(runner)
+        ops.PENDING.unlink()
+        self.program.write_bytes(b"outside-change")
+        with self.assertRaisesRegex(ops.OperationError, "consumer_preimage_changed"):
+            ops.check_renewal(runner)
+        runner.run.assert_not_called()
+
+
 class RenewalConsumerTests(unittest.TestCase):
     def program(self):
         namespace = {"__name__": "community_renewal_fixture"}
