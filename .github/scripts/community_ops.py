@@ -234,6 +234,23 @@ def current_revision(runner, api):
     return revisions[0]
 
 
+def ownership_metadata():
+    """只取固定部署/Git目标的数字属主和权限，不解析用户名、不改权限或读取文件内容。"""
+    paths = {"main_directory": MAIN, "git_directory": MAIN / ".git", "git_index": MAIN / ".git/index",
+             "main_ref": MAIN / ".git/refs/heads/main", "default_conf": MAIN_CONFIG,
+             "fetch_head": MAIN / ".git/FETCH_HEAD", "packed_refs": MAIN / ".git/packed-refs"}
+    value = {}
+    for label, path in paths.items():
+        try:
+            metadata = path.lstat()
+        except FileNotFoundError:
+            value[label] = {"exists": False}
+            continue
+        value[label] = {"exists": True, "uid": metadata.st_uid, "gid": metadata.st_gid,
+                        "mode": metadata.st_mode & 0o7777, "symlink": path.is_symlink()}
+    return value
+
+
 def inventory(runner):
     """独立只读盘点：当前身份、Git、挂载、迁移版本及配置完整前像，不建目录。"""
     records = containers(runner)
@@ -272,7 +289,7 @@ def inventory(runner):
              "gateway_compose_hash": compose_hash(runner, "nginx"),
              "database_revision": current_revision(runner, api) if api["running"] else None,
              "forum_certificate_present": (MAIN / "var/letsencrypt/live" / DOMAIN / "fullchain.pem").is_file(),
-             "api_public_source_integrity": integrity}
+             "api_public_source_integrity": integrity, "ownership": ownership_metadata()}
     value["approval_identity"] = approval_identity(value)
     value["approval_sha256"] = digest(value["approval_identity"])
     value["state_sha256"] = digest(value)
@@ -789,6 +806,9 @@ def guard(s,tls):
     renewal=s['renewal']
     for path,key in ((ROOT/'renew-community.py','script_sha256'),(CRON,'cron_sha256')):
         if path.is_symlink() or sha(path.read_bytes())!=renewal[key]: raise RenewalError('renewal_consumer_changed')
+    cron_stat=CRON.stat()
+    if cron_stat.st_nlink!=1 or cron_stat.st_uid!=0 or cron_stat.st_mode&0o022: raise RenewalError('renewal_cron_permissions_or_links')
+    if {'device':cron_stat.st_dev,'inode':cron_stat.st_ino}!=renewal['cron_identity']: raise RenewalError('renewal_cron_identity_changed')
     for path,key in (('/etc/nginx/conf.d/forum.conf','forum_sha256'),('/etc/nginx/forum-main/redirects.conf','redirects_sha256')):
         if command('owned_forum_configuration',['docker','exec',cid,'sha256sum',path]).decode().split()[0]!=renewal[key]: raise RenewalError('forum_configuration_changed')
     return cid
@@ -865,6 +885,10 @@ def renewal_preflight(state):
         if path.exists():
             if not state.get("renewal") or digest(path.read_bytes()) != state["renewal"][key]:
                 raise OperationError("renewal_consumer_preimage_changed")
+            if path == RENEW_CRON:
+                stat = path.stat()
+                if {"device": stat.st_dev, "inode": stat.st_ino} != state["renewal"].get("cron_identity"):
+                    raise OperationError("renewal_cron_identity_changed")
 
 
 def install_renewal(state, tls):
@@ -880,17 +904,21 @@ def install_renewal(state, tls):
                         "forum_sha256": digest((SOURCE / "deploy/nginx/forum.conf").read_bytes()),
                         "redirects_sha256": digest((SOURCE / "deploy/nginx/forum-main-redirects.conf").read_bytes())}
     save(PENDING, state)
-    # 完整内容先在任务目录原子落盘，再用同文件系统硬链接排他发布；最终 cron 不会半写。
+    # 完整内容先在任务目录原子落盘，再排他发布并去掉临时链接；最终 cron 不会半写且单链接。
     atomic(ROOT / "renew-community.cron", cron)
     atomic(ROOT / "renew-community.py", program)
+    snapshot = (ROOT / "renew-community.cron").stat()
+    state["renewal"]["cron_identity"] = {"device": snapshot.st_dev, "inode": snapshot.st_ino}
+    save(PENDING, state)
     os.link(ROOT / "renew-community.cron", RENEW_CRON)
+    (ROOT / "renew-community.cron").unlink()
 
 
 def remove_renewal(state):
-    """只清理本事务确实安装且仍匹配前像的两个消费者文件，证书和报告保留。"""
+    """只清理匹配前像的消费者及发布临时文件，证书和恢复报告保留。"""
     renewal_preflight(state)
     if state.get("renewal"):
-        for path in (RENEW_CRON, ROOT / "renew-community.py"):
+        for path in (RENEW_CRON, ROOT / "renew-community.py", ROOT / "renew-community.cron"):
             if path.exists():
                 path.unlink()
 

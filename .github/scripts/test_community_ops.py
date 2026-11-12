@@ -54,6 +54,24 @@ def alignment_git(head):
 
 
 class OperationGuards(unittest.TestCase):
+    def test_ownership_inventory_reads_only_numeric_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            main = Path(directory)
+            for name in (".git/index", ".git/refs/heads/main", "deploy/nginx/default.conf"):
+                path = main / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"body-must-not-be-read")
+            before = {str(path): path.stat().st_mode for path in main.rglob("*")}
+            with mock.patch.multiple(ops, MAIN=main, MAIN_CONFIG=main / "deploy/nginx/default.conf"), mock.patch.object(Path, "read_bytes", side_effect=AssertionError("unexpected-content-read")):
+                value = ops.ownership_metadata()
+            for entry in value.values():
+                if entry["exists"]:
+                    self.assertIsInstance(entry["uid"], int)
+                    self.assertIsInstance(entry["gid"], int)
+                    self.assertIsInstance(entry["mode"], int)
+            self.assertFalse(value["fetch_head"]["exists"])
+            self.assertEqual({str(path): path.stat().st_mode for path in main.rglob("*")}, before)
+
     def test_unknown_or_other_revision_never_constructs_runner(self):
         for arguments in (("shell", ops.APP, "-"), ("deploy", "0" * 40, "-"), ("health",)):
             with self.subTest(arguments=arguments), mock.patch.object(ops, "Runner") as runner, contextlib.redirect_stdout(io.StringIO()):
@@ -598,12 +616,66 @@ class RenewalConsumerTests(unittest.TestCase):
                         self.assertFalse(cron.exists())
                     else:
                         ops.install_renewal(state, tls)
-                        self.assertEqual(cron.read_bytes(), (root / "renew-community.cron").read_bytes())
-                        self.assertEqual(cron.stat().st_ino, (root / "renew-community.cron").stat().st_ino)
+                        self.assertEqual(ops.digest(cron.read_bytes()), state["renewal"]["cron_sha256"])
+                        self.assertEqual(cron.stat().st_nlink, 1)
+                        self.assertFalse((root / "renew-community.cron").exists())
                     ops.remove_renewal(state)
                     self.assertFalse(cron.exists())
                     self.assertFalse((root / "renew-community.py").exists())
-                    self.assertTrue((root / "renew-community.cron").is_file())
+                    self.assertFalse((root / "renew-community.cron").exists())
+
+    def test_cron_link_window_exit_remains_owned_and_recoverable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            main = Path(directory)
+            root = main / ".deployment/community" / ops.APP
+            source = root / "source"
+            cron = main / "cron.d/community"
+            cron.parent.mkdir()
+            for name in ("forum.conf", "forum-main-redirects.conf"):
+                path = source / "deploy/nginx" / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"owned-nginx")
+            tls = mock.Mock()
+            tls.renewal_environment.return_value = {"cron_active": True, "cron_directory_available": True}
+            state = {}
+            original_unlink = Path.unlink
+            def interrupted(path, *_args, **_kwargs):
+                if path == root / "renew-community.cron":
+                    raise RuntimeError("exit-after-link-before-unlink")
+                return original_unlink(path, *_args, **_kwargs)
+            with mock.patch.multiple(ops, MAIN=main, ROOT=root, SOURCE=source, RENEW_CRON=cron, PENDING=root / "pending.json"):
+                with mock.patch.object(Path, "unlink", new=interrupted), self.assertRaisesRegex(RuntimeError, "after-link"):
+                    ops.install_renewal(state, tls)
+                self.assertEqual(cron.stat().st_nlink, 2)
+                self.assertEqual({"device": cron.stat().st_dev, "inode": cron.stat().st_ino}, state["renewal"]["cron_identity"])
+                ops.remove_renewal(state)
+                self.assertFalse(cron.exists())
+                self.assertFalse((root / "renew-community.py").exists())
+                self.assertFalse((root / "renew-community.cron").exists())
+
+    def test_identical_foreign_cron_collision_is_not_deleted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            main = Path(directory)
+            root = main / ".deployment/community" / ops.APP
+            source = root / "source"
+            cron = main / "cron.d/community"
+            cron.parent.mkdir()
+            for name in ("forum.conf", "forum-main-redirects.conf"):
+                path = source / "deploy/nginx" / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"owned-nginx")
+            tls = mock.Mock()
+            tls.renewal_environment.return_value = {"cron_active": True, "cron_directory_available": True}
+            state = {}
+            def foreign_link(source_path, target):
+                Path(target).write_bytes(Path(source_path).read_bytes())
+                raise FileExistsError("simulated-foreign-identical-collision")
+            with mock.patch.multiple(ops, MAIN=main, ROOT=root, SOURCE=source, RENEW_CRON=cron, PENDING=root / "pending.json"):
+                with mock.patch.object(ops.os, "link", side_effect=foreign_link), self.assertRaises(FileExistsError):
+                    ops.install_renewal(state, tls)
+                with self.assertRaisesRegex(ops.OperationError, "cron_identity_changed"):
+                    ops.remove_renewal(state)
+                self.assertTrue(cron.exists())
 
 
 class ProbeProtocolTests(unittest.TestCase):
@@ -654,6 +726,155 @@ class ProbeProtocolTests(unittest.TestCase):
         with self.assertRaisesRegex(ops.ProbeError, "redirect_missing_or_limit") as caught:
             self.verify([error(), error(), error(), error()])
         self.assertEqual(len(caught.exception.checks), 4)
+
+
+class TransactionModelTests(unittest.TestCase):
+    def test_activation_and_independent_rollback_preserve_unrelated_services(self):
+        for fail_nginx_test in (False, True):
+            with self.subTest(fail_nginx_test=fail_nginx_test), tempfile.TemporaryDirectory() as directory, contextlib.ExitStack() as stack:
+                main = Path(directory)
+                root = main / ".deployment/community" / ops.APP
+                source = root / "source"
+                config = main / "deploy/nginx/default.conf"
+                config.parent.mkdir(parents=True)
+                config.write_bytes(b"old-config\n")
+                cron = main / "cron.d/community"
+                cron.parent.mkdir()
+                paths = ["deploy/nginx/default.conf", "tracked.py", "new-file.py"]
+                (main / "tracked.py").write_bytes(b"old-code")
+                for name in paths:
+                    path = source / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(b"candidate-" + name.encode())
+                for name in ("forum.conf", "forum-main-redirects.conf"):
+                    (source / "deploy/nginx" / name).write_bytes(b"owned-" + name.encode())
+                data = main / "var.pre-data/untouched"
+                data.parent.mkdir()
+                data.write_bytes(b"historical-data")
+                stack.enter_context(mock.patch.multiple(ops, MAIN=main, ROOT=root, SOURCE=source, MAIN_CONFIG=config,
+                                    PENDING=root / "pending.json", CURRENT=root / "current.json",
+                                    MARKER=main / ".deployment/forum-enabled", RENEW_CRON=cron,
+                                    OLD_CONFIG=ops.digest(config.read_bytes()),
+                                    NEW_CONFIG=ops.digest((source / "deploy/nginx/default.conf").read_bytes())))
+                before = baseline_fixture()
+                stat = config.stat()
+                before["config_identity"] = {"device": stat.st_dev, "inode": stat.st_ino}
+                before["config_sha256"] = ops.OLD_CONFIG
+                before["approval_sha256"] = ops.digest(ops.approval_identity(before))
+                before["forum_certificate_present"] = True
+                before["api"].update(project="parallellines", service="api", image="old-api")
+                before["gateway"].update(project="parallellines", service="nginx", image_id="sha256:" + "1" * 64)
+                unrelated = [{"id": "2" * 64, "service": "web", "project": "parallellines"},
+                             {"id": "3" * 64, "service": "db", "project": "parallellines"},
+                             {"id": "4" * 64, "service": "api", "project": "some-other-project"}]
+                before["other_container_ids"] = sorted([before["gateway"]["id"], *[x["id"] for x in unrelated]])
+                prepared = {"source_revision": ops.APP, "candidate_database_revision": before["database_revision"],
+                            "forum_image_id": "sha256:" + "f" * 64, "api_image_id": "sha256:" + "e" * 64}
+                ops.save(root / "prepared.json", prepared)
+                model = {"api": copy.deepcopy(before["api"]), "forum": None, "head": ops.BEFORE,
+                         "index": ops.BEFORE, "layer": {}, "internal_verified": False, "nginx_test_failed": False}
+                trace = []
+                def records(_runner):
+                    value = [copy.deepcopy(model["api"]), copy.deepcopy(before["gateway"]), *copy.deepcopy(unrelated)]
+                    if model["forum"]:
+                        value.append(copy.deepcopy(model["forum"]))
+                    return value
+                def fake_git(_runner, args, **_kwargs):
+                    if args[0] == "rev-parse": return result(model["head"])
+                    if args[0] == "symbolic-ref": return result("refs/heads/main")
+                    if args[:3] == ["diff", "--cached", "--quiet"]: return result(code=0 if model["index"] == args[-1] else 1)
+                    if args[0] == "read-tree": model["index"] = args[1]
+                    if args[0] == "update-ref":
+                        self.assertEqual(model["head"], args[3]); model["head"] = args[2]
+                    return result("")
+                def fake_compose(_runner, args, override=None):
+                    self.assertEqual(args[:4], ["up", "-d", "--no-deps", "--no-build"])
+                    target = args[-1]
+                    self.assertIn(target, ("api", "forum-web"))
+                    trace.append("up:" + target)
+                    if target == "forum-web":
+                        model["forum"] = {"id": "5" * 64, "project": "parallellines", "service": "forum-web",
+                                          "image_id": prepared["forum_image_id"], "hash": "6" * 64, "running": True}
+                    else:
+                        restoring = Path(override).name == "restore.override.json"
+                        model["api"].update(id="7" * 64 if restoring else "8" * 64,
+                                            image_id=before["api"]["image_id"] if restoring else prepared["api_image_id"],
+                                            hash="9" * 64 if restoring else "0" * 64,
+                                            compose_files="owned-override", running=True)
+                    return result()
+                def fake_hash(_runner, name, override=None):
+                    if name == "forum-web": return "6" * 64
+                    return "9" * 64 if Path(override).name == "restore.override.json" else "0" * 64
+                def internal(_runner, api):
+                    self.assertEqual(api["image_id"], prepared["api_image_id"])
+                    self.assertIsNotNone(model["forum"])
+                    model["internal_verified"] = True
+                    trace.append("internal-forum")
+                    return {"forum_root_and_same_origin_api": True}
+                def native(_runner, expected):
+                    self.assertEqual(model["api"]["image_id"], expected)
+                    self.assertTrue(model["api"]["running"])
+                    return copy.deepcopy(model["api"])
+                def command(label, arguments, **_kwargs):
+                    trace.append(label)
+                    if label == "bound_configuration_digest": return result(ops.digest(config.read_bytes()) + " config")
+                    if label == "layer_symlink_guard": return result(code=1)
+                    if label in ("layer_file_presence", "layer_file_absent"):
+                        return result(code=0 if arguments[-1] in model["layer"] else 1)
+                    if label == "layer_file_digest": return result(ops.digest(model["layer"][arguments[-1]]) + " file")
+                    if label == "install_owned_layer_file":
+                        self.assertTrue(model["internal_verified"])
+                        model["layer"][arguments[-1].split(":", 1)[1]] = Path(arguments[-2]).read_bytes()
+                    if label == "remove_owned_layer_file": model["layer"].pop(arguments[-1])
+                    if label == "remove_owned_forum_instance":
+                        self.assertEqual(arguments[-1], model["forum"]["id"]); model["forum"] = None
+                    if label == "community_nginx_test" and fail_nginx_test and not model["nginx_test_failed"]:
+                        model["nginx_test_failed"] = True
+                        raise ops.OperationError("synthetic-nginx-test-failure")
+                    return result("{}")
+                runner = mock.Mock()
+                runner.run.side_effect = command
+                tls = mock.Mock()
+                tls.configuration_may_reload.return_value = True
+                tls.renewal_environment.return_value = {"cron_active": True, "cron_directory_available": True}
+                stack.enter_context(mock.patch.object(ops, "inventory", side_effect=lambda _runner: copy.deepcopy(before)))
+                stack.enter_context(mock.patch.object(ops, "source_prepare"))
+                stack.enter_context(mock.patch.object(ops, "target_preimages", return_value=paths))
+                stack.enter_context(mock.patch.object(ops, "git", side_effect=fake_git))
+                stack.enter_context(mock.patch.object(ops, "compose", side_effect=fake_compose))
+                stack.enter_context(mock.patch.object(ops, "compose_hash", side_effect=fake_hash))
+                stack.enter_context(mock.patch.object(ops, "containers", side_effect=records))
+                stack.enter_context(mock.patch.object(ops, "current_revision", return_value=before["database_revision"]))
+                stack.enter_context(mock.patch.object(ops, "internal_forum", side_effect=internal))
+                stack.enter_context(mock.patch.object(ops, "wait_api", side_effect=native))
+                stack.enter_context(mock.patch.object(ops, "image_id", side_effect=lambda _runner, name: prepared["forum_image_id"] if name == ops.FORUM_IMAGE else prepared["api_image_id"]))
+                stack.enter_context(mock.patch.object(ops, "tools_lock", side_effect=lambda: contextlib.nullcontext(tls)))
+                stack.enter_context(mock.patch.object(ops, "health", return_value={"complete": True}))
+                if fail_nginx_test:
+                    with self.assertRaisesRegex(ops.OperationError, "synthetic-nginx"):
+                        ops.deploy(runner, before["approval_sha256"])
+                    self.assertTrue(ops.PENDING.exists())
+                    self.assertNotIn("community_nginx_reload", trace)
+                else:
+                    report = ops.deploy(runner, before["approval_sha256"])
+                    self.assertTrue(report["complete"])
+                    self.assertTrue(report["gateway_not_recreated"])
+                    self.assertTrue(ops.CURRENT.exists())
+                    self.assertEqual(ops.MARKER.read_text(), ops.TAG + "\n")
+                    self.assertTrue(cron.exists())
+                    self.assertLess(trace.index("internal-forum"), trace.index("community_nginx_reload"))
+                self.assertEqual(config.stat().st_ino, stat.st_ino)
+                self.assertTrue(ops.restore(runner)["complete"])
+                self.assertEqual(model["api"]["image_id"], before["api"]["image_id"])
+                self.assertIsNone(model["forum"])
+                self.assertEqual(model["head"], ops.BEFORE)
+                self.assertEqual(config.read_bytes(), b"old-config\n")
+                self.assertEqual(config.stat().st_ino, stat.st_ino)
+                self.assertEqual((main / "tracked.py").read_bytes(), b"old-code")
+                self.assertFalse((main / "new-file.py").exists())
+                self.assertFalse(ops.MARKER.exists())
+                self.assertFalse(cron.exists())
+                self.assertEqual(data.read_bytes(), b"historical-data")
 
 
 if __name__ == "__main__":
