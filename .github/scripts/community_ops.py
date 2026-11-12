@@ -38,10 +38,14 @@ NEW_CONFIG = "39e83980ff071194e2e0711111bc4e09be28f1cd64c9197b4c13209623f308cf"
 TAG = "community-" + APP
 FORUM_IMAGE = "parallellines-forum-web:" + TAG
 API_IMAGE = "parallellines-community-api:" + APP
+API_BASE_IMAGE = "parallellines-community-api-base:" + APP
+BASE_API_TREE = "593a6c62df1fe2b104468ccdbe2caa86a2d273603fa79d2f2d424555fa8d8ee7"
+API_CHANGED_FILES = ("apps/api/app/api/seo.py", "apps/api/app/core/config.py",
+                     "apps/api/app/services/seo.py", "apps/api/app/services/seo_renderer.py")
 OPERATIONS = ("inventory", "prepare", "prepare-tls", "deploy", "health", "rollback")
 BODY_LIMIT = 2 * 1024 * 1024
-# 首次只交付盘点通道；写阶段在实际规格与恢复回归审查完成后再显式开放。
-WRITE_OPERATIONS_READY = False
+# 按阶段交付；准备与真实切换分别完成现场及恢复审查后才能加入此列表。
+READY_OPERATIONS = ("inventory", "health", "prepare", "prepare-tls")
 
 
 class OperationError(Exception):
@@ -80,8 +84,9 @@ def digest(value):
     return hashlib.sha256(value).hexdigest()
 
 
-def safe_path(path, *, root=MAIN):
+def safe_path(path, *, root=None):
     """限定本次固定目录并拒绝任一级符号链接；不创建或读取目录外对象。"""
+    root = MAIN if root is None else Path(root)
     path = Path(path)
     if path != root and root not in path.parents:
         raise OperationError("path_outside_owned_root")
@@ -120,23 +125,26 @@ def read(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def git(runner, args, *, repository=MAIN, binary=False):
+def git(runner, args, *, repository=MAIN, binary=False, accepted=(0,)):
     """只在固定主仓库或本任务源码副本执行 Git，禁用交互和外部 diff。"""
     return runner.run("git_" + args[0], ["git", "--no-optional-locks", "-c", "core.fsmonitor=false",
                       "-c", "credential.helper=", "-C", str(repository), *args],
-                      timeout=120 if args[0] == "fetch" else 15, binary=binary)
+                      timeout=120 if args[0] == "fetch" else 15, binary=binary, accepted=accepted)
 
 
 def git_state(runner):
     """核全局 tracked/index 与非本任务未跟踪文件；不读取 .env 或工作区文件正文。"""
     head = git(runner, ["rev-parse", "--verify", "HEAD"]).stdout.strip()
     branch = git(runner, ["symbolic-ref", "--quiet", "HEAD"]).stdout.strip()
-    status = git(runner, ["status", "--porcelain=v1", "--untracked-files=all", "--", ".",
+    status = git(runner, ["status", "--porcelain=v1", "--untracked-files=no", "--", ".",
                          ":(exclude).deployment/community/**", ":(exclude).deployment/forum-enabled"]).stdout
+    untracked = git(runner, ["ls-files", "--others", "--exclude-standard", "--directory", "--", ".",
+                            ":(exclude).deployment/community/**", ":(exclude).deployment/forum-enabled"]).stdout
     if not re.fullmatch(r"[0-9a-f]{40}", head) or branch != "refs/heads/main":
         raise OperationError("main_git_identity_invalid")
     return {"head": head, "branch": branch, "clean": not status,
-            "dirty_paths": [line[3:] for line in status.splitlines()][:64]}
+            "tracked_dirty_paths": [line[3:] for line in status.splitlines()][:64],
+            "untracked_directory_entries": len(untracked.splitlines())}
 
 
 def compose(runner, args, override=None):
@@ -240,11 +248,14 @@ def inventory(runner):
                         "h={str(x.relative_to(r)):hashlib.sha256(x.read_bytes()).hexdigest() for x in p};"
                         "print(json.dumps({'file_count':len(h),'tree_sha256':hashlib.sha256(json.dumps(h,sort_keys=True,separators=(',',':')).encode()).hexdigest(),'uv_lock_sha256':h['uv.lock'],'pyproject_sha256':h['pyproject.toml']}))")
     integrity = json.loads(runner.run("api_public_source_integrity", ["docker", "exec", api["id"], "python", "-c", integrity_script], timeout=20).stdout) if api["running"] else None
-    value = {"git": git_state(runner), "config_sha256": digest(config),
+    git_value = git_state(runner)
+    untracked_count = git_value.pop("untracked_directory_entries")
+    value = {"git": git_value, "config_sha256": digest(config),
              "config_identity": {"device": stat.st_dev, "inode": stat.st_ino},
              "api": api, "gateway": gateway,
              "forum": service(records, "forum-web", optional=True),
-             "other_container_ids": sorted(item["id"] for item in records if item["id"] != api["id"] and item.get("service") != "forum-web"),
+             "other_container_ids": sorted(item["id"] for item in records if item["id"] != api["id"]
+                                           and item is not service(records, "forum-web", optional=True)),
              "api_compose_hash": compose_hash(runner, "api"),
              "gateway_compose_hash": compose_hash(runner, "nginx"),
              "database_revision": current_revision(runner, api) if api["running"] else None,
@@ -254,6 +265,8 @@ def inventory(runner):
     # 容量和负载会自然变化，不把它们混入身份前像；每次只读盘点仍返回最新值供审批。
     value["resources"] = {"cpu_count": os.cpu_count(), "load_average": os.getloadavg(),
                           "memory": memory, "disk": {"path": str(MAIN), "total": disk.total, "free": disk.free}}
+    value["worktree_boundaries"] = {"untracked_directory_entries": untracked_count,
+                                   "historical_untracked_not_read_or_modified": True}
     return value
 
 
@@ -276,6 +289,8 @@ def baseline(actual):
             raise OperationError("runtime_compose_or_environment_drift:" + key)
     if "parallellines_default" not in actual["api"]["networks"] or "parallellines_default" not in actual["gateway"]["networks"]:
         raise OperationError("baseline_network_missing")
+    if not actual.get("api_public_source_integrity") or actual["api_public_source_integrity"]["tree_sha256"] != BASE_API_TREE:
+        raise OperationError("running_api_public_source_differs_from_reviewed_base")
 
 
 def source_prepare(runner):
@@ -284,6 +299,10 @@ def source_prepare(runner):
     if not SOURCE.exists():
         SOURCE.mkdir(mode=0o750)
         runner.run("source_init", ["git", "init", str(SOURCE)])
+    head = git(runner, ["rev-parse", "--verify", "HEAD"], repository=SOURCE, accepted=(0, 128))
+    if head.returncode == 128:
+        if git(runner, ["status", "--porcelain=v1", "--untracked-files=all"], repository=SOURCE).stdout:
+            raise OperationError("unfinished_source_contains_unowned_files")
         git(runner, ["fetch", "--no-tags", "--depth=1", REMOTE, APP], repository=SOURCE)
         git(runner, ["checkout", "--detach", "FETCH_HEAD"], repository=SOURCE)
     if git(runner, ["rev-parse", "HEAD"], repository=SOURCE).stdout.strip() != APP:
@@ -307,12 +326,27 @@ def prepare(runner, expected):
     before = inventory(runner)
     expect_snapshot(before, expected)
     baseline(before)
+    if (before["resources"]["memory"].get("MemAvailable", 0) < 2500 * 1024 * 1024
+            or before["resources"]["disk"]["free"] < 8 * 1024 * 1024 * 1024):
+        raise OperationError("insufficient_headroom_for_bounded_serial_prepare")
     if PENDING.exists() or CURRENT.exists() or MARKER.exists():
         raise OperationError("existing_community_state_requires_review")
     source_prepare(runner)
+    target_preimages(runner)
+    forum_recipe = (SOURCE / "apps/web/Dockerfile.forum").read_bytes()
+    old_build = b"RUN pnpm --dir apps/web build:forum"
+    if forum_recipe.count(old_build) != 1:
+        raise OperationError("forum_build_resource_limit_anchor_changed")
+    atomic(ROOT / "forum.build.Dockerfile", forum_recipe.replace(old_build,
+           b"RUN NODE_OPTIONS=--max-old-space-size=1536 pnpm --dir apps/web build:forum", 1))
     runner.run("build_forum", ["docker", "build", "--build-arg", "SOURCE_REVISION=" + APP,
-               "--file", str(SOURCE / "apps/web/Dockerfile.forum"), "--tag", FORUM_IMAGE, str(SOURCE)], timeout=1200)
-    runner.run("build_api", ["docker", "build", "--tag", API_IMAGE, str(SOURCE / "apps/api")], timeout=1200)
+               "--file", str(ROOT / "forum.build.Dockerfile"), "--tag", FORUM_IMAGE, str(SOURCE)], timeout=1200)
+    # 已核旧镜像与公开基线完全一致，只覆本次四个 app 文件；不重装依赖、不公开旧镜像。
+    runner.run("pin_unchanged_api_base", ["docker", "image", "tag", before["api"]["image_id"], API_BASE_IMAGE])
+    recipe = "FROM " + API_BASE_IMAGE + "\nLABEL org.opencontainers.image.revision=" + APP + "\n"
+    recipe += "".join("COPY " + name + " /app/" + name[len("apps/api/"):] + "\n" for name in API_CHANGED_FILES)
+    atomic(ROOT / "api.build.Dockerfile", recipe.encode())
+    runner.run("build_api", ["docker", "build", "--pull=false", "--network", "none", "--file", str(ROOT / "api.build.Dockerfile"), "--tag", API_IMAGE, str(SOURCE)], timeout=120)
     heads = runner.run("candidate_migration_heads", ["docker", "run", "--rm", "--network", "none", "--entrypoint", "alembic", API_IMAGE, "heads"], timeout=30).stdout
     values = re.findall(r"^([a-zA-Z0-9_]+)\s+\(head\)\s*$", heads, flags=re.MULTILINE)
     if values != [before["database_revision"]]:
@@ -335,9 +369,35 @@ def tools_lock():
     sys.path.insert(0, str(TOOLS))
     tls = importlib.import_module("tls")
     with tls.tls_lock():
-        if not tls.configuration_may_reload():
-            raise OperationError("installed_configuration_ownership_guard_rejected")
         yield tls
+
+
+@contextlib.contextmanager
+def request_deadline(seconds):
+    """在已知 Linux 上给 DNS、连接及完整读取加总时限，不给服务或容器发信号。"""
+    def expired(_number, _frame):
+        raise OperationError("public_request_total_timeout")
+    previous = signal.signal(signal.SIGALRM, expired)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """首期验证要求固定目标直接返回，拒绝跳到其它域名掩盖错误入口。"""
+
+    def redirect_request(self, _request, _fp, _code, _message, _headers, _new_url):
+        return None
+
+
+def forum_document_valid(body):
+    """只认可论坛页面自己的规范链接和标题，导航里出现圈子链接不算论坛首屏。"""
+    return (len(body) <= BODY_LIMIT
+            and re.search(rb'<link\s+[^>]*rel=["\']canonical["\'][^>]*href=["\']https://forum\.pingxingxian\.space/["\']', body) is not None
+            and re.search(rb"<title[^>]*>[^<]*" + "圈子".encode() + rb"[^<]*</title>", body) is not None)
 
 
 def prepare_tls(runner, expected):
@@ -346,13 +406,17 @@ def prepare_tls(runner, expected):
     expect_snapshot(actual, expected)
     baseline(actual)
     with tools_lock() as tls:
+        if not tls.configuration_may_reload():
+            raise OperationError("installed_configuration_ownership_guard_rejected")
         context = tls.context_preflight()
         # 复用探针文件所有权及清理机制；只把固定公开域名改为圈子，不传递任何令牌。
         with tls.owned_probe() as (url, body):
             probe = url.replace("http://tools.pingxingxian.space/", "http://" + DOMAIN + "/", 1)
             if probe == url:
                 raise OperationError("reviewed_probe_domain_contract_changed")
-            tls.verify_public_probe(probe, body)
+            with request_deadline(8), urllib.request.build_opener(NoRedirect()).open(probe, timeout=6) as response:
+                if response.status != 200 or response.read(len(body) + 1) != body:
+                    raise OperationError("community_http01_probe_mismatch")
         guard = "import subprocess,sys;p=subprocess.Popen(sys.argv[1:]);\ntry: code=p.wait(timeout=300)\nexcept subprocess.TimeoutExpired:\n p.terminate();\n try: p.wait(timeout=10)\n except subprocess.TimeoutExpired: p.kill();p.wait()\n code=124\nsys.exit(code)"
         runner.run("community_certificate", ["docker", "exec", context["certbot"], "python3", "-c", guard,
                    "certbot", "certonly", "--webroot", "-w", "/var/www/certbot", "--cert-name", DOMAIN,
@@ -391,6 +455,8 @@ def configuration_write(runner, gateway, expected, replacement, identity):
 
 def changed_paths(runner):
     """本次只部署固定应用版本相对已核基线的 39 个普通文件，拒绝迁移和私有路径。"""
+    # 只从已核本地副本取得公开 Git 对象，不改变 origin 或重取任何运行凭据。
+    git(runner, ["fetch", "--no-tags", str(SOURCE), APP])
     paths = git(runner, ["diff", "--name-only", BEFORE, APP]).stdout.splitlines()
     if len(paths) != 39 or "deploy/nginx/default.conf" not in paths:
         raise OperationError("reviewed_application_delta_changed")
@@ -399,6 +465,22 @@ def changed_paths(runner):
                 or name.startswith((".deployment/", "apps/api/alembic/"))
                 or Path(name).name == ".env"):
             raise OperationError("application_delta_path_not_approved")
+    return paths
+
+
+def target_preimages(runner):
+    """逐项验证 39 个目标的原字节/新增碰撞，不读取或清理任何历史未跟踪数据。"""
+    paths = changed_paths(runner)
+    for name in paths:
+        path = safe_path(MAIN / name)
+        previous = git(runner, ["show", BEFORE + ":" + name], binary=True, accepted=(0, 128))
+        if previous.returncode == 128:
+            if path.exists():
+                raise OperationError("new_application_path_collision:" + name)
+        elif not path.is_file() or path.read_bytes() != previous.stdout:
+            raise OperationError("tracked_application_preimage_changed:" + name)
+        if not (SOURCE / name).is_file() or (SOURCE / name).is_symlink():
+            raise OperationError("candidate_application_file_not_regular")
     return paths
 
 
@@ -442,8 +524,8 @@ def internal_forum(runner, api):
               "r=urllib.request.urlopen(urllib.request.Request(u+'/',headers=h),timeout=4);b=r.read(2097153);"
               "a=urllib.request.urlopen(urllib.request.Request(u+'/api/v1/boards',headers=h),timeout=4);"
               "v=json.loads(a.read(2097153));"
-              "ok=r.status==200 and len(b)<=2097152 and b'canonical' in b and b'https://forum.pingxingxian.space/' in b and '圈子'.encode() in b and a.status==200 and 'data' in v;"
-              "print(json.dumps({'forum_root_and_same_origin_api':ok}));raise SystemExit(0 if ok else 2)")
+              "ok=r.status==200 and len(b)<=2097152 and re.search(b'<link[^>]+rel=\"canonical\"[^>]+href=\"https://forum[.]pingxingxian[.]space/\"',b) and re.search(b'<title[^>]*>[^<]*'+'圈子'.encode()+b'[^<]*</title>',b) and a.status==200 and 'data' in v;"
+              "print(json.dumps({'forum_root_and_same_origin_api':bool(ok)}));raise SystemExit(0 if ok else 2)")
     result = runner.run("internal_forum_before_gateway", ["docker", "exec", api["id"], "python", "-c", script], timeout=15)
     return json.loads(result.stdout)
 
@@ -500,7 +582,7 @@ def deploy(runner, expected):
     if not before["forum_certificate_present"] or PENDING.exists() or CURRENT.exists() or MARKER.exists():
         raise OperationError("community_activation_prerequisite_or_transaction_exists")
     source_prepare(runner)
-    paths = changed_paths(runner)
+    paths = target_preimages(runner)
     state = {"schema": 1, "source_revision": APP, "status": "snapshotted", "before": before,
              "paths": paths, "prepared": prepared, "after_api": None, "forum_id": None}
     for name in paths:
@@ -512,8 +594,13 @@ def deploy(runner, expected):
          "forum-web": {"image": FORUM_IMAGE, "restart": "unless-stopped", "expose": ["80"],
                        "networks": ["default"], "healthcheck": {"test": ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"], "interval": "10s", "timeout": "3s", "retries": 20}}}})
     save(ROOT / "restore.override.json", {"services": {"api": {"image": before["api"]["image_id"]}}})
+    state["after_api_hash"] = compose_hash(runner, "api", ROOT / "api.override.json")
+    state["forum_hash"] = compose_hash(runner, "forum-web", ROOT / "api.override.json")
+    state["restore_api_hash"] = compose_hash(runner, "api", ROOT / "restore.override.json")
     save(PENDING, state)
     with tools_lock() as tls:
+        if not tls.configuration_may_reload():
+            raise OperationError("installed_configuration_ownership_guard_rejected")
         guard_gateway(runner, state)
         if inventory(runner)["state_sha256"] != before["state_sha256"]:
             raise OperationError("activation_state_changed_before_switch")
@@ -548,7 +635,7 @@ def deploy(runner, expected):
         if not health_report["complete"]:
             raise OperationError("community_independent_health_failed")
         records = containers(runner)
-        unaffected = sorted(item["id"] for item in records if item.get("service") not in ("api", "forum-web"))
+        unaffected = sorted(item["id"] for item in records if item["id"] not in (after_api["id"], state["forum_id"]))
         if unaffected != before["other_container_ids"]:
             raise OperationError("unrelated_container_identity_changed")
         atomic(MARKER, (TAG + "\n").encode())
@@ -571,13 +658,20 @@ def restore(runner):
         api = service(records, "api")
         if api["image_id"] not in (state["before"]["api"]["image_id"], state["prepared"]["api_image_id"]):
             raise OperationError("api_changed_outside_community_attempt")
+        allowed_api_hashes = (state["before"]["api"]["hash"], state["after_api_hash"], state["restore_api_hash"])
+        if api["hash"] not in allowed_api_hashes:
+            raise OperationError("api_configuration_changed_outside_attempt")
         forum = service(records, "forum-web", optional=True)
-        if forum and (forum["id"] != state.get("forum_id") or forum["image_id"] != state["prepared"]["forum_image_id"]):
+        if forum and (forum["image_id"] != state["prepared"]["forum_image_id"] or forum["hash"] != state["forum_hash"]
+                      or (state.get("forum_id") and forum["id"] != state["forum_id"])):
             raise OperationError("forum_changed_outside_community_attempt")
         layer_files(runner, state["before"]["gateway"], remove=True)
         align_source(runner, state, restore=True)
-        compose(runner, ["up", "-d", "--no-deps", "--no-build", "api"], ROOT / "restore.override.json")
-        restored = wait_api(runner, state["before"]["api"]["image_id"])
+        if api["image_id"] != state["before"]["api"]["image_id"]:
+            compose(runner, ["up", "-d", "--no-deps", "--no-build", "api"], ROOT / "restore.override.json")
+            restored = wait_api(runner, state["before"]["api"]["image_id"])
+        else:
+            restored = api
         if not same_spec(state["before"]["api"], restored):
             raise OperationError("restored_api_public_spec_mismatch")
         if forum:
@@ -621,24 +715,25 @@ def health(runner):
                  ("community", "https://" + DOMAIN + "/"))
     for name, url in endpoints:
         try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "ParallelLinesCommunityHealth/1"}), timeout=6) as response:
+            with request_deadline(8), urllib.request.build_opener(NoRedirect()).open(urllib.request.Request(url, headers={"User-Agent": "ParallelLinesCommunityHealth/1"}), timeout=6) as response:
                 body = response.read(BODY_LIMIT + 1)
                 if response.status != 200 or len(body) > BODY_LIMIT:
                     raise OperationError("http_status_or_size")
-                if name == "community" and (b'https://forum.pingxingxian.space/' not in body or "圈子".encode() not in body):
+                if name == "community" and not forum_document_valid(body):
                     raise OperationError("community_document_mismatch")
             checks.append({"name": name, "ok": True})
         except (OSError, ValueError, OperationError) as error:
             checks.append({"name": name, "ok": False, "error": str(error) if isinstance(error, OperationError) else type(error).__name__})
     try:
-        connection = OriginHTTPS(DOMAIN, timeout=6, context=ssl.create_default_context())
-        try:
-            connection.request("GET", "/", headers={"Host": DOMAIN})
-            response = connection.getresponse()
-            body = response.read(BODY_LIMIT + 1)
-        finally:
-            connection.close()
-        if response.status != 200 or len(body) > BODY_LIMIT or "圈子".encode() not in body:
+        with request_deadline(8):
+            connection = OriginHTTPS(DOMAIN, timeout=6, context=ssl.create_default_context())
+            try:
+                connection.request("GET", "/", headers={"Host": DOMAIN})
+                response = connection.getresponse()
+                body = response.read(BODY_LIMIT + 1)
+            finally:
+                connection.close()
+        if response.status != 200 or not forum_document_valid(body):
             raise OperationError("community_origin_document_mismatch")
         checks.append({"name": "community_origin_tls", "ok": True, "ca_verified": True})
     except (OSError, ValueError, http.client.HTTPException, OperationError) as error:
@@ -654,7 +749,7 @@ def main(arguments):
         report["errors"].append("unsupported_operation_or_application_revision")
         print(json.dumps(report))
         return 2
-    if operation not in ("inventory", "health") and not WRITE_OPERATIONS_READY:
+    if operation not in READY_OPERATIONS:
         report["errors"].append("community_write_operations_pending_review")
         print(json.dumps(report))
         return 2
