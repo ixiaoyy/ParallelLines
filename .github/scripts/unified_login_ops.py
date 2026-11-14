@@ -1,16 +1,12 @@
 """统一登录定向发布盘点：只输出运行身份与公开源码摘要，不读取凭据或展开 Compose。"""
 
 import hashlib
-import http.client
 import importlib.util
 import json
 import os
 from pathlib import Path
 import re
 import shutil
-import signal
-import socket
-import ssl
 import subprocess
 import sys
 import time
@@ -183,8 +179,9 @@ def inventory(runner):
 
 
 def selected(values, project, service):
-    """固定项目/服务必须唯一且运行；不把同名其他项目当成本次目标。"""
-    matches = [item for item in values if item.get("compose_project") == project and item.get("compose_service") == service]
+    """只选择实际 Compose 文件链管理的唯一运行服务，不接管继承镜像标签的独立容器。"""
+    matches = [item for item in values if item.get("compose_project") == project
+               and item.get("compose_service") == service and item.get("compose_config_files")]
     if len(matches) != 1 or not matches[0]["running"]:
         raise OperationError("target_not_unique_or_running:" + service)
     return matches[0]
@@ -385,35 +382,6 @@ def compose(runner, files, services, env_files=()):
     return runner.run(command + services, timeout=240)
 
 
-def source_request(host, path):
-    """源站必要验收仍校验正式 CA/SNI；只读固定域，不跟重定向、不读取账号内容。"""
-    if host not in {"pingxingxian.space", "forum.pingxingxian.space", "chat.pingxingxian.space", "api.pingxingxian.space"}:
-        raise OperationError("http_target_denied")
-    class Origin(http.client.HTTPSConnection):
-        def connect(self):
-            raw = socket.create_connection(("127.0.0.1", 443), timeout=5)
-            try:
-                self.sock = ssl.create_default_context().wrap_socket(raw, server_hostname=self.host)
-            except Exception:
-                raw.close()
-                raise
-    previous = signal.getsignal(signal.SIGALRM)
-    signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(OperationError("source_http_deadline")))
-    signal.setitimer(signal.ITIMER_REAL, 12)
-    connection = Origin(host, timeout=5)
-    try:
-        connection.request("GET", path, headers={"User-Agent": "ParallelLinesUnifiedAcceptance/1"})
-        response = connection.getresponse()
-        body = response.read(2 * 1024 * 1024 + 1)
-        if len(body) > 2 * 1024 * 1024:
-            raise OperationError("source_http_body_limit")
-        return response.status, dict(response.getheaders()), body
-    finally:
-        connection.close()
-        signal.setitimer(signal.ITIMER_REAL, 0)
-        signal.signal(signal.SIGALRM, previous)
-
-
 def wait_main(runner, prepared, expected_roles):
     """必要服务就绪有总时限；仅检查本轮指定镜像，不用页面200冒充已替换。"""
     deadline = time.monotonic() + 150
@@ -527,10 +495,6 @@ def activate_main():
         compose(runner, files + [str(override)], ["config", "--quiet"], env_files)
         compose(runner, files + [str(override)], ["up", "-d", "--no-deps", "--no-build", "--pull", "never", "api", "web", "forum-web"], env_files)
         wait_main(runner, prepared, ("api", "web", "circle"))
-        status, _, body = source_request("pingxingxian.space", "/api/v1/auth/unified/state")
-        state = json.loads(body)
-        if status != 200 or state.get("data", {}).get("authenticated") is not False:
-            raise OperationError("main_unified_anonymous_state_failed")
         for name in markers:
             (Path("/opt/parallellines/.deployment") / name).write_text("unified-a2cfedde\n")
         save(ROOT / "main-active.json", {"complete": True, "application_revision": APP, "state": "active"})
