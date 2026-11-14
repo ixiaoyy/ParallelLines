@@ -618,17 +618,21 @@ def diagnose_chat_startup():
                 "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY": "isolated-oauth-diagnostic-not-a-production-key",
                 "ENABLE_OAUTH": "false", "OPENID_PROVIDER_URL": "", "ENABLE_OPENAI_API": "false",
                 "ENABLE_OLLAMA_API": "false", "RAG_EMBEDDING_MODEL": "", "PYTHONUNBUFFERED": "1"}
-    program = "import os,sys,runpy,gc,threading,time\npath=os.environ.get('PATH','/usr/local/bin:/usr/bin:/bin')\nos.environ.clear()\nos.environ.update(" + repr(settings) + ")\nos.environ['PATH']=path\n"
+    program = "import os,sys,runpy,gc,threading,time,types\npath=os.environ.get('PATH','/usr/local/bin:/usr/bin:/bin')\nos.environ.clear()\nos.environ.update(" + repr(settings) + ")\nos.environ['PATH']=path\n"
     program += """
 def report_waits():
     for _ in range(2):
         time.sleep(12)
+        loaded=sys.modules.get('open_webui.main')
+        print('STARTUP_MODULE '+str(getattr(loaded,'__file__',None)),flush=True)
         for obj in gc.get_objects():
             try:
+                if not isinstance(obj,(types.CoroutineType,types.AsyncGeneratorType)):
+                    continue
                 code=getattr(obj,'cr_code',None) or getattr(obj,'ag_code',None)
                 frame=getattr(obj,'cr_frame',None) or getattr(obj,'ag_frame',None)
                 waiting=getattr(obj,'cr_await',None) or getattr(obj,'ag_await',None)
-                if code and frame and waiting is not None and code.co_filename.startswith('/app/backend/open_webui/'):
+                if code and frame and waiting is not None:
                     print('STARTUP_AWAIT '+code.co_filename+':'+str(frame.f_lineno)+' '+code.co_name,flush=True)
             except Exception:
                 pass
@@ -655,8 +659,10 @@ runpy.run_module('uvicorn',run_name='__main__')
         result = subprocess.run(["docker", "logs", "--tail", "100", cid], capture_output=True, text=True, timeout=10)
         log = result.stdout + result.stderr
         local_status = runner.run(["docker", "exec", cid, "python", "-c",
-            "import urllib.request,urllib.error;op=urllib.request.build_opener(urllib.request.ProxyHandler({}));"
-            "r=op.open('http://127.0.0.1:8080/health',timeout=2);print(r.status)"], accepted=(0, 1), timeout=5).strip()
+            "import http.client\nc=http.client.HTTPConnection('127.0.0.1',8080,timeout=2)\n"
+            "try:\n c.request('GET','/health');print(c.getresponse().status)\n"
+            "except Exception as e:\n print(type(e).__name__)\n"
+            "finally:\n c.close()"], accepted=(0, 1), timeout=5).strip()
         path = ROOT / "chat-startup-diagnostic.log"
         with path.open("w", encoding="utf-8") as stream:
             os.chmod(path, 0o600)
@@ -668,7 +674,7 @@ runpy.run_module('uvicorn',run_name='__main__')
         runner.run(["docker", "rm", "-f", cid], timeout=15)
     symbols = []
     for line in log.splitlines():
-        if line.startswith("STARTUP_AWAIT ") or re.search(r"(?:ImportError:|ModuleNotFoundError:|NameError:|AttributeError:|TypeError:|SyntaxError:|ValueError:|RuntimeError:|FastAPIError:|Error: No such option|invalid option name|option requires an argument)", line):
+        if line.startswith(("STARTUP_AWAIT ", "STARTUP_MODULE ")) or re.search(r"(?:ImportError:|ModuleNotFoundError:|NameError:|AttributeError:|TypeError:|SyntaxError:|ValueError:|RuntimeError:|FastAPIError:|Error: No such option|invalid option name|option requires an argument)", line):
             symbols.append(line[:400])
         elif re.fullmatch(r'\s*File "/(?:app/backend|usr/local/lib)/[A-Za-z0-9_./-]+", line [0-9]+, in [A-Za-z0-9_<>]+', line):
             symbols.append(line.strip())
