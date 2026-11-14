@@ -47,7 +47,7 @@ class OperationError(Exception):
 
 def error_code(error):
     """仅下发自有受控模块的稳定码；库异常只记类型，不展开潜在凭据或配置。"""
-    if isinstance(error, OperationError) or type(error).__module__ in {"unified_nginx_release", "unified_source_alignment"}:
+    if isinstance(error, OperationError) or type(error).__module__ in {"unified_nginx_release", "unified_source_alignment", "unified_services_activate"}:
         value = str(error)
         if re.fullmatch(r"[A-Za-z0-9_:/.-]{1,250}", value):
             return value
@@ -445,6 +445,7 @@ def rollback_main(runner):
     restored = {**prepared, "images": {role: {"image_id": prepared["targets"][role]["image_id"]} for role in ("api", "web", "circle")}}
     wait_main(runner, restored, ("api", "web", "circle"))
     save(ROOT / "main-rolled-back.json", {"complete": True, "restored_images": True, "data_restored": False})
+    save(ROOT / "main-active.json", {"complete": False, "application_revision": APP, "state": "rolled_back"})
     return {"complete": True, "stage": "main_rolled_back"}
 
 
@@ -453,7 +454,7 @@ def activate_main():
     os.umask(0o077)
     runner = Runner(1000)
     prepared = transaction()
-    if (ROOT / "main-active.json").is_file():
+    if (ROOT / "main-active.json").is_file() and json.loads((ROOT / "main-active.json").read_text()).get("state") == "active":
         wait_main(runner, prepared, ("api", "web", "circle"))
         return {"complete": True, "stage": "main_already_active"}
     current = records(runner)
@@ -506,6 +507,47 @@ def activate_main():
         save(ROOT / "main-failure.json", {"error_type": type(error).__name__, "error_code": error_code(error), "rollback": restored})
         raise OperationError("main_activation_failed:rollback_" + str(restored["complete"]).lower()) from None
     return {"complete": True, "stage": "main_active", "application_revision": APP, "gateway_recreated": False}
+
+
+def activate_services():
+    """接续已上线主站，切换同一已制版本的三个下游；失败按本轮私有意图反向恢复。"""
+    active = ROOT / "main-active.json"
+    if not active.is_file() or json.loads(active.read_text()).get("state") != "active":
+        raise OperationError("main_activation_required")
+    transaction()
+    runner = Runner(900)
+    module = load_module("unified_services_activate", Path(__file__).with_name("unified_services_activate.py"))
+    attempted, results = [], []
+    try:
+        for role in ("bridge", "chat", "newapi"):
+            # 当前失败角色也必须进反向恢复，不仅恢复已返回成功的角色。
+            attempted.append(role)
+            print(json.dumps({"stage": "activate", "component": role}), flush=True)
+            results.append(module.activate(ROOT, role, runner))
+        save(ROOT / "all-active.json", {"complete": True, "application_revision": APP, "components": results,
+                                        "additional_validation": False})
+    except Exception as error:
+        recovered = []
+        recovery = Runner(600)
+        for role in reversed(attempted):
+            try:
+                recovered.append(module.rollback(ROOT, role, recovery))
+            except Exception as failure:
+                save(ROOT / "services-failure.json", {"error": error_code(error), "recovered": recovered,
+                                                      "recovery_error": error_code(failure), "recovery_required": True})
+                raise OperationError("services_activation_failed:recovery_required") from None
+        try:
+            main_recovery = rollback_main(recovery)
+        except Exception as failure:
+            save(ROOT / "services-failure.json", {"error": error_code(error), "recovered": recovered,
+                                                  "main_recovery_error": error_code(failure), "recovery_required": True})
+            raise OperationError("services_activation_failed:main_recovery_required") from None
+        save(ROOT / "services-failure.json", {"error": error_code(error), "recovered": recovered,
+                                              "main_recovery": main_recovery, "recovery_required": False})
+        raise OperationError("services_activation_failed:rolled_back") from None
+    return {"complete": True, "stage": "all_services_active", "application_revision": APP,
+            "components": ["main-api", "main-web", "circle", "bridge", "chat", "newapi"],
+            "additional_validation": False, "recompiled": False}
 
 
 def remove_source_archive():
@@ -561,9 +603,9 @@ def remove_source_archive():
 
 def main():
     """固定盘点/候选准备入口；没有任意 shell、路径或真实环境内容输入。"""
-    if len(sys.argv) != 2 or sys.argv[1] not in ("inventory", "prepare", "activate-main", "remove-source-archive"):
+    if len(sys.argv) != 2 or sys.argv[1] not in ("inventory", "prepare", "activate-main", "activate-services", "remove-source-archive"):
         raise OperationError("unsupported_operation")
-    return {"inventory": lambda: inventory(Runner()), "prepare": prepare, "activate-main": activate_main,
+    return {"inventory": lambda: inventory(Runner()), "prepare": prepare, "activate-main": activate_main, "activate-services": activate_services,
             "remove-source-archive": remove_source_archive}[sys.argv[1]]()
 
 

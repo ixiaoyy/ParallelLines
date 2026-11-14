@@ -8,13 +8,13 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, describe, describe-source, prepare, activate-main, remove-source-archive]
+        options: [inventory, describe, describe-source, prepare, activate-main, activate-services, remove-source-archive]
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ (inputs.operation == 'prepare' || inputs.operation == 'activate-main' || inputs.operation == 'remove-source-archive') && 'deploy-production' || format('unified-login-read-{0}', inputs.operation) }}
+  group: ${{ (inputs.operation == 'prepare' || inputs.operation == 'activate-main' || inputs.operation == 'activate-services' || inputs.operation == 'remove-source-archive') && 'deploy-production' || format('unified-login-read-{0}', inputs.operation) }}
   cancel-in-progress: false
 
 jobs:
@@ -42,14 +42,14 @@ jobs:
           operation = os.environ['OPERATION']
           sources = {'inventory': 'unified_login_ops.py', 'describe': 'unified_nginx_release.py',
                      'describe-source': 'unified_nginx_release.py'}
-          if operation not in sources and operation not in ('prepare', 'activate-main', 'remove-source-archive'):
+          if operation not in sources and operation not in ('prepare', 'activate-main', 'activate-services', 'remove-source-archive'):
               raise SystemExit('Unsupported operation')
-          if operation in ('prepare', 'activate-main', 'remove-source-archive'):
+          if operation in ('prepare', 'activate-main', 'activate-services', 'remove-source-archive'):
               revision = os.environ['OPERATOR_REVISION']
               if not re.fullmatch('[0-9a-f]{40}', revision):
                   raise SystemExit('Invalid operator revision')
               names = ['unified_login_ops.py', 'unified_artifact_prepare.py', 'unified-login-release-plan.json',
-                       'unified_nginx_release.py', 'unified_source_alignment.py']
+                       'unified_nginx_release.py', 'unified_source_alignment.py', 'unified_services_activate.py']
               manifest = {name: hashlib.sha256((Path('.github/scripts') / name).read_bytes()).hexdigest() for name in names}
               # 复用服务器现有Git对象通道；只取本仓固定提交公开运维文件，不读取或传输服务器凭据。
               source = "import os,subprocess,hashlib,json\nfrom pathlib import Path\n"
@@ -90,7 +90,7 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           timeout: 30s
-          command_timeout: ${{ inputs.operation == 'prepare' && '40m' || inputs.operation == 'activate-main' && '20m' || '4m' }}
+          command_timeout: ${{ inputs.operation == 'prepare' && '40m' || inputs.operation == 'activate-services' && '30m' || inputs.operation == 'activate-main' && '20m' || '4m' }}
           # 与现有community通道一致；script_stop会把检查语句插入Python heredoc正文。
           script_stop: false
           script: ${{ steps.payload.outputs.script }}
