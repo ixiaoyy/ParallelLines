@@ -670,7 +670,13 @@ def startup_output():
             continue
         line = re.sub(r"\x1b\[[0-9;]*m", "", line)
         lines.append(line[:600])
-    return {"complete": True, "source": "isolated_startup_existing_log", "lines": lines[-45:]}
+    details = {}
+    for role in ("bridge", "chat", "newapi"):
+        record_path = ROOT / "service-activation" / (role + ".json")
+        if record_path.is_file() and not record_path.is_symlink() and record_path.stat().st_size < 2 * 1024 * 1024:
+            record = json.loads(record_path.read_text())
+            details[role] = {key: record.get(key) for key in ("status", "release_stage", "error_type", "recovery_error_type", "restart_intent")}
+    return {"complete": True, "source": "existing_startup_records", "lines": lines[-12:], "service_stages": details}
 
 
 def main():
