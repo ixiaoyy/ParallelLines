@@ -8,13 +8,13 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, describe, describe-source, prepare, activate-main, activate-services, remove-source-archive]
+        options: [inventory, describe, describe-source, prepare, activate-main, activate-services, remove-source-archive, diagnose-chat-startup]
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ (inputs.operation == 'prepare' || inputs.operation == 'activate-main' || inputs.operation == 'activate-services' || inputs.operation == 'remove-source-archive') && 'deploy-production' || format('unified-login-read-{0}', inputs.operation) }}
+  group: ${{ (inputs.operation == 'prepare' || inputs.operation == 'activate-main' || inputs.operation == 'activate-services' || inputs.operation == 'remove-source-archive' || inputs.operation == 'diagnose-chat-startup') && 'deploy-production' || format('unified-login-read-{0}', inputs.operation) }}
   cancel-in-progress: false
 
 jobs:
@@ -42,9 +42,9 @@ jobs:
           operation = os.environ['OPERATION']
           sources = {'inventory': 'unified_login_ops.py', 'describe': 'unified_nginx_release.py',
                      'describe-source': 'unified_nginx_release.py'}
-          if operation not in sources and operation not in ('prepare', 'activate-main', 'activate-services', 'remove-source-archive'):
+          if operation not in sources and operation not in ('prepare', 'activate-main', 'activate-services', 'remove-source-archive', 'diagnose-chat-startup'):
               raise SystemExit('Unsupported operation')
-          if operation in ('prepare', 'activate-main', 'activate-services', 'remove-source-archive'):
+          if operation in ('prepare', 'activate-main', 'activate-services', 'remove-source-archive', 'diagnose-chat-startup'):
               revision = os.environ['OPERATOR_REVISION']
               if not re.fullmatch('[0-9a-f]{40}', revision):
                   raise SystemExit('Invalid operator revision')

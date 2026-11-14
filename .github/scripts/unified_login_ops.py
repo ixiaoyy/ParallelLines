@@ -601,12 +601,70 @@ def remove_source_archive():
             "download_dependency_removed": True, "running_services_changed": False, "application_data_changed": False}
 
 
+def diagnose_chat_startup():
+    """仅取得候选启动错误：无网络、独立tmpfs、清空继承环境，结束后移除本次临时容器。"""
+    runner = Runner(150)
+    prepared = transaction()
+    image = prepared["images"]["chat"]
+    observed = runner.run(["docker", "image", "inspect", "--format", "{{.Id}}", image["tag"]]).strip()
+    if observed != image["image_id"]:
+        raise OperationError("diagnostic_candidate_changed")
+    name = "pl-unified-chat-startup-a2cfedde"
+    if runner.run(["docker", "ps", "-aq", "--filter", "name=^/" + name + "$"]).strip():
+        raise OperationError("diagnostic_container_already_exists")
+    settings = {"HOME": "/tmp", "DATABASE_URL": "sqlite:////app/backend/data/webui.db",
+                "DATA_DIR": "/app/backend/data", "OFFLINE_MODE": "true", "MAIN_UNIFIED_LOGIN_ENABLED": "true",
+                "WEBUI_SECRET_KEY": "isolated-startup-diagnostic-not-a-production-key",
+                "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY": "isolated-oauth-diagnostic-not-a-production-key",
+                "ENABLE_OAUTH": "false", "OPENID_PROVIDER_URL": "", "ENABLE_OPENAI_API": "false",
+                "ENABLE_OLLAMA_API": "false", "RAG_EMBEDDING_MODEL": "", "PYTHONUNBUFFERED": "1"}
+    program = ("import os;path=os.environ.get('PATH','/usr/local/bin:/usr/bin:/bin');os.environ.clear();"
+               "os.environ.update(" + repr(settings) + ");os.environ['PATH']=path;"
+               "os.execv('/bin/bash',['bash','/app/backend/unified-start.sh'])")
+    cid = runner.run(["docker", "run", "-d", "--name", name, "--network", "none", "--memory", "1536m", "--cpus", "1",
+                      "--pids-limit", "256", "--tmpfs", "/app/backend/data:rw,size=128m", "--label", "pl.unified.diagnostic=" + APP,
+                      "--label", "com.docker.compose.project=pl-unified-diagnostic", "--label", "com.docker.compose.service=diagnostic",
+                      "--entrypoint", "python", image["tag"], "-c", program], timeout=20).strip()
+    if not re.fullmatch(r"[a-f0-9]{64}", cid):
+        raise OperationError("diagnostic_container_id_invalid")
+    log = ""
+    state = {}
+    try:
+        until = time.monotonic() + 75
+        while True:
+            state = json.loads(runner.run(["docker", "inspect", "--format", '{"running":{{.State.Running}},"exit_code":{{.State.ExitCode}},"oom":{{.State.OOMKilled}}}', cid]))
+            if not state["running"] or time.monotonic() >= until:
+                break
+            time.sleep(2)
+        # docker logs的Python traceback通常在stderr；不公开完整日志，只留下本地私有记录。
+        result = subprocess.run(["docker", "logs", "--tail", "100", cid], capture_output=True, text=True, timeout=10)
+        log = result.stdout + result.stderr
+        path = ROOT / "chat-startup-diagnostic.log"
+        with path.open("w", encoding="utf-8") as stream:
+            os.chmod(path, 0o600)
+            stream.write(log[:131072])
+    finally:
+        identity = runner.run(["docker", "inspect", "--format", '{{.Name}} {{index .Config.Labels "pl.unified.diagnostic"}}', cid]).strip()
+        if identity != "/" + name + " " + APP:
+            raise OperationError("diagnostic_cleanup_identity_changed")
+        runner.run(["docker", "rm", "-f", cid], timeout=15)
+    symbols = []
+    for line in log.splitlines():
+        if re.search(r"(?:ImportError:|ModuleNotFoundError:|NameError:|AttributeError:|TypeError:|SyntaxError:|ValueError:|RuntimeError:|FastAPIError:|Error: No such option|invalid option name|option requires an argument)", line):
+            symbols.append(line[:400])
+        elif re.fullmatch(r'\s*File "/app/backend/open_webui/[A-Za-z0-9_./-]+", line [0-9]+, in [A-Za-z0-9_<>]+', line):
+            symbols.append(line.strip())
+    return {"complete": True, "stage": "isolated_startup_diagnosis", "production_data_mounted": False,
+            "network_enabled": False, "temporary_container_removed": True, "state": state,
+            "error_symbols": symbols[-15:], "startup_completed": "Application startup complete" in log}
+
+
 def main():
     """固定盘点/候选准备入口；没有任意 shell、路径或真实环境内容输入。"""
-    if len(sys.argv) != 2 or sys.argv[1] not in ("inventory", "prepare", "activate-main", "activate-services", "remove-source-archive"):
+    if len(sys.argv) != 2 or sys.argv[1] not in ("inventory", "prepare", "activate-main", "activate-services", "remove-source-archive", "diagnose-chat-startup"):
         raise OperationError("unsupported_operation")
     return {"inventory": lambda: inventory(Runner()), "prepare": prepare, "activate-main": activate_main, "activate-services": activate_services,
-            "remove-source-archive": remove_source_archive}[sys.argv[1]]()
+            "remove-source-archive": remove_source_archive, "diagnose-chat-startup": diagnose_chat_startup}[sys.argv[1]]()
 
 
 if __name__ == "__main__":
