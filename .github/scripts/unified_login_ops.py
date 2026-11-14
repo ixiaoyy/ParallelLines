@@ -450,7 +450,7 @@ def rollback_main(runner):
 
 
 def activate_main():
-    """同一恢复点内接续Nginx/源，再仅切换API、主站和圈子；失败执行本事务恢复。"""
+    """接续Nginx/源后仅切换三个主站服务；保留手动恢复，不因就绪等待自动回退。"""
     os.umask(0o077)
     runner = Runner(1000)
     prepared = transaction()
@@ -505,7 +505,7 @@ def activate_main():
 
 
 def activate_services():
-    """接续已上线主站，切换同一已制版本的三个下游；失败按本轮私有意图反向恢复。"""
+    """直接切换三个已制下游版本；保留意图与旧版，不执行额外验收或自动回退。"""
     active = ROOT / "main-active.json"
     if not active.is_file() or json.loads(active.read_text()).get("state") not in {"active", "switched"}:
         raise OperationError("main_activation_required")
@@ -523,7 +523,7 @@ def activate_services():
         save(ROOT / "services-failure.json", {"error": error_code(error), "completed": results,
                                               "automatic_rollback": False})
         raise OperationError("services_activation_command_failed:" + error_code(error)) from None
-    return {"complete": True, "stage": "all_services_active", "application_revision": APP,
+    return {"complete": True, "stage": "all_services_switched", "application_revision": APP,
             "components": ["main-api", "main-web", "circle", "bridge", "chat", "newapi"],
             "additional_validation": False, "recompiled": False, "automatic_rollback": False}
 

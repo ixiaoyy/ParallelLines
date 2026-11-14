@@ -13,7 +13,6 @@ import re
 import secrets
 import stat
 import sys
-import time
 
 
 APP = "a2cfeddeec01ca0d5def4b3308103f3d85cc3861"
@@ -225,23 +224,6 @@ def _newapi_update(service, scope, context):
     service["environment"].update({"MAIN_UNIFIED_WEB_LOGIN_ENABLED": "true", "MAIN_WEB_ROOT_RECOVERY_ENABLED": "false"})
 
 
-def _startup(runner, scope, expected_image, *, seconds=120):
-    """只等已制目标容器启动；有原生 Health 等其就绪，没有则不增加 HTTP 或内容验收。"""
-    deadline = time.monotonic() + seconds
-    while True:
-        current = _runtime(runner, scope)
-        if current is not None and current["image_id"] != expected_image:
-            raise OperationError("service_startup_image_changed")
-        if current and (current["dead"] or current["oom"] or current["health"] == "unhealthy"):
-            raise OperationError("service_startup_failed")
-        if current and current["running"] and not current["restarting"]:
-            if current["health"] in {"healthy", "none"}:
-                return
-        if time.monotonic() >= deadline:
-            raise OperationError("service_startup_deadline")
-        time.sleep(2)
-
-
 def _state_path(role):
     return ROOT / "service-activation" / (role + ".json")
 
@@ -267,7 +249,7 @@ def _guard(record, utils, scope, runner, target, image, *, restoring=False):
         raise OperationError("service_compose_drift")
     current = _runtime(runner, scope)
     if current is None:
-        if not record.get("restart_intent") or record["status"] in {"active", "rolled_back"}:
+        if not record.get("restart_intent") or record["status"] in {"active", "switched", "rolled_back"}:
             raise OperationError("service_runtime_missing_without_owned_restart")
     elif current["image_id"] not in {target["image_id"], image["image_id"]}:
         raise OperationError("service_runtime_drift")
@@ -285,7 +267,7 @@ def _load_state(role):
 
 
 def activate(root, role, runner):
-    """激活一个已制角色，先私有保存可恢复写意图；重复 active 只接受同候选实际 ID。"""
+    """直接切换已制角色；switched 只表示命令返回与目标 ID/配置一致，不冒充已启动或业务可用。"""
     module, scope, target, image, context = _inputs(root, role)
     item, utils = scope[role], module.base.utils
     with _lock(role):
@@ -294,11 +276,11 @@ def activate(root, role, runner):
         current = _runtime(runner, item)
         if previous is not None:
             _text, digest, current = _guard(previous, utils, item, runner, target, image)
-            if previous["status"] == "active":
+            if previous["status"] in {"active", "switched"}:
                 if not current or current["image_id"] != image["image_id"] or digest != previous["after_service_hash"]:
                     raise OperationError("service_active_record_runtime_changed")
-                _startup(runner, item, image["image_id"], seconds=240 if role == "chat" else 120)
-                return {"complete": True, "role": role, "already_active": True, "image_id": image["image_id"]}
+                return {"complete": True, "role": role, "already_switched": True,
+                        "status": "switched", "image_id": image["image_id"], "startup_waited": False}
             if previous["status"] != "rolled_back":
                 raise OperationError("service_incomplete_activation_requires_rollback")
         if not current or current["image_id"] != target["image_id"]:
@@ -328,7 +310,6 @@ def activate(root, role, runner):
         try:
             record["status"] = "activating"
             _save(_state_path(role), record)
-            _startup(runner, item, target["image_id"], seconds=240 if role == "chat" else 120)
             _compose(runner, item, "config", "--quiet")
             _text, digest, _current = _guard(record, utils, item, runner, target, image)
             if digest != record["before_service_hash"]:
@@ -342,23 +323,20 @@ def activate(root, role, runner):
             record["restart_intent"], record["release_stage"] = True, "restart"
             _save(_state_path(role), record)
             _compose(runner, item, "up", "-d", "--no-deps", "--no-build", "--pull", "never", item["service"])
-            _startup(runner, item, image["image_id"], seconds=240 if role == "chat" else 120)
             _text, digest, current = _guard(record, utils, item, runner, target, image)
             if digest != record["after_service_hash"] or not current or current["image_id"] != image["image_id"]:
                 raise OperationError("service_activation_not_complete")
-            record["status"] = "active"
+            record["status"], record["startup_waited"] = "switched", False
             _save(_state_path(role), record)
-            return {"complete": True, "role": role, "image_id": image["image_id"], "recompiled": False}
+            return {"complete": True, "role": role, "status": "switched", "image_id": image["image_id"],
+                    "recompiled": False, "startup_waited": False}
         except Exception as error:
             record["status"], record["error_type"] = "failed", type(error).__name__
+            # 只记录稳定错误码，真实命令错误交发布负责人处理，不自动恢复旧版本。
+            if re.fullmatch(r"[A-Za-z0-9_:.-]{1,160}", str(error)):
+                record["error_code"] = str(error)
             _save(_state_path(role), record)
-            try:
-                _restore(module, scope, role, target, image, runner, record)
-            except Exception as recovery:
-                record["status"], record["recovery_error_type"] = "recovery_required", type(recovery).__name__
-                _save(_state_path(role), record)
-                raise OperationError("service_activation_failed:" + role + ":recovery_required") from None
-            raise OperationError("service_activation_failed:" + role + ":rolled_back") from None
+            raise OperationError("service_switch_failed:" + role) from None
 
 
 def _restore(module, scope, role, target, image, runner, record):
@@ -381,7 +359,6 @@ def _restore(module, scope, role, target, image, runner, record):
         if record.get("restart_intent") or not current or current["image_id"] != target["image_id"]:
             _old_image(runner, target)
             _compose(runner, item, "up", "-d", "--no-deps", "--no-build", "--pull", "never", item["service"])
-    _startup(runner, item, target["image_id"], seconds=240 if role == "chat" else 120)
     _text, digest, current = _guard(record, utils, item, runner, target, image, restoring=True)
     if digest not in before_hashes or not current or current["image_id"] != target["image_id"]:
         raise OperationError("service_rollback_not_complete")
