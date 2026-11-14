@@ -1,12 +1,16 @@
 """统一登录定向发布盘点：只输出运行身份与公开源码摘要，不读取凭据或展开 Compose。"""
 
 import hashlib
+import http.client
 import importlib.util
 import json
 import os
 from pathlib import Path
 import re
 import shutil
+import signal
+import socket
+import ssl
 import subprocess
 import sys
 import time
@@ -43,6 +47,15 @@ def load_module(name, path):
 
 class OperationError(Exception):
     """稳定失败标识；不将命令原始 stderr 或环境值写入共享日志。"""
+
+
+def error_code(error):
+    """仅下发自有受控模块的稳定码；库异常只记类型，不展开潜在凭据或配置。"""
+    if isinstance(error, OperationError) or type(error).__module__ in {"unified_nginx_release", "unified_source_alignment"}:
+        value = str(error)
+        if re.fullmatch(r"[A-Za-z0-9_:/.-]{1,250}", value):
+            return value
+    return type(error).__name__
 
 
 class Runner:
@@ -351,16 +364,209 @@ def prepare():
             "images": {key: value["tag"] for key, value in prepared["images"].items()}}
 
 
+def transaction():
+    """只消费本次已完成的候选记录，不从未知运行镜像推断发布成功。"""
+    path = ROOT / "prepared.json"
+    if path.is_symlink() or not path.is_file():
+        raise OperationError("prepared_transaction_required")
+    value = json.loads(path.read_text())
+    if value.get("application_revision") != APP:
+        raise OperationError("prepared_revision_changed")
+    return value
+
+
+def compose(runner, files, services, env_files=()):
+    """沿现有项目和真实文件链运行明确服务，不启动默认栈、不构建其他服务。"""
+    command = ["docker", "compose", "--project-name", "parallellines", "--project-directory", "/opt/parallellines"]
+    for path in env_files:
+        command += ["--env-file", path]
+    for path in files:
+        command += ["-f", path]
+    return runner.run(command + services, timeout=240)
+
+
+def source_request(host, path):
+    """源站必要验收仍校验正式 CA/SNI；只读固定域，不跟重定向、不读取账号内容。"""
+    if host not in {"pingxingxian.space", "forum.pingxingxian.space", "chat.pingxingxian.space", "api.pingxingxian.space"}:
+        raise OperationError("http_target_denied")
+    class Origin(http.client.HTTPSConnection):
+        def connect(self):
+            raw = socket.create_connection(("127.0.0.1", 443), timeout=5)
+            try:
+                self.sock = ssl.create_default_context().wrap_socket(raw, server_hostname=self.host)
+            except Exception:
+                raw.close()
+                raise
+    previous = signal.getsignal(signal.SIGALRM)
+    signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(OperationError("source_http_deadline")))
+    signal.setitimer(signal.ITIMER_REAL, 12)
+    connection = Origin(host, timeout=5)
+    try:
+        connection.request("GET", path, headers={"User-Agent": "ParallelLinesUnifiedAcceptance/1"})
+        response = connection.getresponse()
+        body = response.read(2 * 1024 * 1024 + 1)
+        if len(body) > 2 * 1024 * 1024:
+            raise OperationError("source_http_body_limit")
+        return response.status, dict(response.getheaders()), body
+    finally:
+        connection.close()
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+def wait_main(runner, prepared, expected_roles):
+    """必要服务就绪有总时限；仅检查本轮指定镜像，不用页面200冒充已替换。"""
+    deadline = time.monotonic() + 150
+    while True:
+        current = records(runner)
+        matches = []
+        for role in expected_roles:
+            target = prepared["targets"][role]
+            observed = selected(current, target["compose_project"], target["compose_service"])
+            if observed["image_id"] != prepared["images"][role]["image_id"]:
+                raise OperationError("running_candidate_image_mismatch:" + role)
+            state = json.loads(runner.run(["docker", "inspect", "--format", '{"running":{{.State.Running}},"oom":{{.State.OOMKilled}},"health":{{json .State.Health.Status}}}', observed["id"]]))
+            if state["oom"] or not state["running"]:
+                raise OperationError("main_candidate_failed:" + role)
+            matches.append(state["health"] == "healthy")
+        if all(matches):
+            return
+        if time.monotonic() >= deadline:
+            raise OperationError("main_candidate_health_deadline")
+        time.sleep(2)
+
+
+def rollback_main(runner):
+    """只恢复本轮写意图中的三个应用服务和Nginx/源码；不回灌数据或重建网关。"""
+    prepared = transaction()
+    intent_path = ROOT / "main-intent.json"
+    if not intent_path.is_file():
+        return {"complete": True, "stage": "main_not_started"}
+    intent = json.loads(intent_path.read_text())
+    current = records(runner)
+    for role in ("api", "web", "circle"):
+        target = prepared["targets"][role]
+        item = selected(current, target["compose_project"], target["compose_service"])
+        if item["image_id"] not in (target["image_id"], prepared["images"][role]["image_id"]):
+            raise OperationError("rollback_runtime_drift:" + role)
+    # 原文件链保留原image；先复原应用运行版本，再由Nginx事务恢复原配置和Git索引。
+    for role in ("circle", "web", "api"):
+        target = prepared["targets"][role]
+        observed = selected(records(runner), target["compose_project"], target["compose_service"])
+        if observed["image_id"] == target["image_id"]:
+            continue
+        tag_id = runner.run(["docker", "image", "inspect", "--format", "{{.Id}}", target["image"]]).strip()
+        if tag_id != target["image_id"]:
+            raise OperationError("rollback_original_image_tag_changed:" + role)
+        compose(runner, target["compose_config_files"].split(","),
+                ["up", "-d", "--no-deps", "--no-build", "--pull", "never", target["compose_service"]],
+                [p for p in (target.get("compose_env_files") or "").split(",") if p])
+    alignment = load_module("unified_source_alignment", Path(__file__).with_name("unified_source_alignment.py"))
+    nginx = load_module("unified_nginx_release", Path(__file__).with_name("unified_nginx_release.py"))
+    nginx.rollback(intent["nginx_transaction"], source_restore=lambda: alignment.restore(ROOT, runner))
+    for name, old in intent["markers"].items():
+        path = Path("/opt/parallellines/.deployment") / name
+        expected = "unified-a2cfedde\n"
+        if path.exists() and path.read_text() not in (expected, old):
+            raise OperationError("rollback_marker_drift")
+        if old is None:
+            if path.exists():
+                path.unlink()
+        else:
+            path.write_text(old)
+    restored = {**prepared, "images": {role: {"image_id": prepared["targets"][role]["image_id"]} for role in ("api", "web", "circle")}}
+    wait_main(runner, restored, ("api", "web", "circle"))
+    save(ROOT / "main-rolled-back.json", {"complete": True, "restored_images": True, "data_restored": False})
+    return {"complete": True, "stage": "main_rolled_back"}
+
+
+def activate_main():
+    """同一恢复点内接续Nginx/源，再仅切换API、主站和圈子；失败执行本事务恢复。"""
+    os.umask(0o077)
+    runner = Runner(1000)
+    prepared = transaction()
+    if (ROOT / "main-active.json").is_file():
+        wait_main(runner, prepared, ("api", "web", "circle"))
+        return {"complete": True, "stage": "main_already_active"}
+    current = records(runner)
+    for role in ("api", "web", "circle"):
+        target = prepared["targets"][role]
+        if selected(current, target["compose_project"], target["compose_service"])["image_id"] != target["image_id"]:
+            raise OperationError("main_baseline_changed:" + role)
+    alignment = load_module("unified_source_alignment", Path(__file__).with_name("unified_source_alignment.py"))
+    nginx = load_module("unified_nginx_release", Path(__file__).with_name("unified_nginx_release.py"))
+    alignment.prepare(ROOT, runner)
+    tx = Path("/opt/parallellines/.deployment/unified-login") / APP / "nginx"
+    source = ROOT / "inputs/main-app"
+    nginx.prepare(tx, source / "deploy/nginx/default.conf", source / "deploy/nginx/forum.conf")
+    files = []
+    env_files = []
+    for role in ("api", "web", "circle"):
+        for path in prepared["targets"][role]["compose_config_files"].split(","):
+            if path not in files:
+                files.append(path)
+        for path in (prepared["targets"][role].get("compose_env_files") or "").split(","):
+            if path and path not in env_files:
+                env_files.append(path)
+    override = ROOT / "runtime-main.override.json"
+    service_names = {"api": "api", "web": "web", "circle": "forum-web"}
+    services = {service_names[role]: {"image": prepared["images"][role]["tag"],
+                "build": {"context": prepared["images"][role]["context"], "dockerfile": "Dockerfile"}}
+                for role in service_names}
+    services["api"]["environment"] = {"UNIFIED_AUTH_ENABLED": "true", "UNIFIED_AUTH_ALLOW_LOOPBACK_HTTP": "false"}
+    save(override, {"services": services})
+    markers = {}
+    for name in ("forum-enabled", "unified-auth-enabled"):
+        path = Path("/opt/parallellines/.deployment") / name
+        if path.is_symlink() or (path.exists() and (not path.is_file() or path.stat().st_size > 256)):
+            raise OperationError("main_marker_invalid")
+        markers[name] = path.read_text() if path.exists() else None
+    save(ROOT / "main-intent.json", {"nginx_transaction": str(tx), "files": files, "env_files": env_files, "markers": markers})
+    try:
+        nginx.activate(tx, source_align=lambda: alignment.align(ROOT, runner))
+        compose(runner, files + [str(override)], ["config", "--quiet"], env_files)
+        compose(runner, files + [str(override)], ["up", "-d", "--no-deps", "--no-build", "--pull", "never", "api", "web", "forum-web"], env_files)
+        wait_main(runner, prepared, ("api", "web", "circle"))
+        status, _, body = source_request("pingxingxian.space", "/api/v1/auth/unified/state")
+        state = json.loads(body)
+        if status != 200 or state.get("data", {}).get("authenticated") is not False:
+            raise OperationError("main_unified_anonymous_state_failed")
+        for name in markers:
+            (Path("/opt/parallellines/.deployment") / name).write_text("unified-a2cfedde\n")
+        save(ROOT / "main-active.json", {"complete": True, "application_revision": APP, "state": "active"})
+    except Exception as error:
+        try:
+            restored = rollback_main(runner)
+        except Exception:
+            restored = {"complete": False}
+        save(ROOT / "main-failure.json", {"error_type": type(error).__name__, "error_code": error_code(error), "rollback": restored})
+        raise OperationError("main_activation_failed:rollback_" + str(restored["complete"]).lower()) from None
+    return {"complete": True, "stage": "main_active", "application_revision": APP, "gateway_recreated": False}
+
+
+def public_info():
+    """只读取网关已公开的版本/源码展示配置，不读取账号、模型、密钥或数据库。"""
+    status, _, body = source_request("api.pingxingxian.space", "/api/status")
+    if status != 200:
+        raise OperationError("gateway_public_status_failed")
+    data = json.loads(body).get("data", {})
+    about_status, _, about_body = source_request("api.pingxingxian.space", "/api/about")
+    about = json.loads(about_body).get("data") if about_status == 200 else None
+    return {"complete": True, "read_only": True, "version": data.get("version"),
+            "footer_html": data.get("footer_html"), "about": about}
+
+
 def main():
     """固定盘点/候选准备入口；没有任意 shell、路径或真实环境内容输入。"""
-    if len(sys.argv) != 2 or sys.argv[1] not in ("inventory", "prepare"):
+    if len(sys.argv) != 2 or sys.argv[1] not in ("inventory", "prepare", "activate-main", "public-info"):
         raise OperationError("unsupported_operation")
-    return inventory(Runner()) if sys.argv[1] == "inventory" else prepare()
+    return {"inventory": lambda: inventory(Runner()), "prepare": prepare, "activate-main": activate_main,
+            "public-info": public_info}[sys.argv[1]]()
 
 
 if __name__ == "__main__":
     try:
         print(json.dumps(main(), sort_keys=True, indent=2))
     except Exception as error:
-        print(json.dumps({"complete": False, "error": str(error) if isinstance(error, OperationError) else type(error).__name__}))
+        print(json.dumps({"complete": False, "error": error_code(error)}))
         raise SystemExit(1) from None
