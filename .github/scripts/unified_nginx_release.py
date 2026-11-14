@@ -461,6 +461,14 @@ def prepare(transaction_dir: str | Path, candidate_main: str | Path, candidate_f
         return {"complete": True, "operation": "prepare", "runtime_unchanged": True, "recovery_captured": True}
 
 
+def community_check(commands: Commands, label: str) -> None:
+    """调用方必须先释放 TLS 锁；既有消费者自行取同一锁，只接受真实只读检查成功回执。"""
+    output = commands.run(label, ["/usr/bin/python3", "-B", str(COMMUNITY_PROGRAM), "check"], timeout=90)
+    result = json.loads(output)
+    if not isinstance(result, dict) or result.get("complete") is not True or result.get("reloaded") is not False:
+        raise OperationError("nginx_community_consumer_check_incomplete")
+
+
 def activate(transaction_dir: str | Path, *, source_align: Callable[[], None]) -> dict:
     """同锁激活；source_align 必须是 root 自行限时、排除两配置写入的已审 Git 对齐回调。"""
     if not callable(source_align):
@@ -496,9 +504,16 @@ def activate(transaction_dir: str | Path, *, source_align: Callable[[], None]) -
         commands.run("unified_nginx_reload", ["docker", "exec", state["gateway"]["id"], "nginx", "-s", "reload"])
         state["status"] = "reloaded"
         save_state(state)
-        commands.run("unified_community_consumer_check", ["/usr/bin/python3", "-B", str(COMMUNITY_PROGRAM), "check"], timeout=90)
+
+    # check 自己持有同一把 TLS 锁；父事务必须释放后再启动子进程，失败保留 reloaded 中间态。
+    community_check(commands, "unified_community_consumer_check")
+    with tls.tls_lock():
+        if read_state(transaction_dir) != state:
+            raise OperationError("nginx_transaction_changed_during_consumer_check")
+        source_guard(commands, (APP_REVISION,))
         gateway_guard(commands, state, deploy)
         owner_guard(tls, main_web, state)
+        endpoint_guard(commands, state, "after")
         state["status"] = "activated"
         save_state(state)
         return {"complete": True, "operation": "activate", "gateway_not_recreated": True,
@@ -526,36 +541,48 @@ def rollback(transaction_dir: str | Path, *, source_restore: Callable[[], None])
                 raise OperationError("nginx_restored_files_changed")
             owner_guard(tls, main_web, state)
             return {"complete": True, "operation": "rollback", "already_restored": True}
-        if state.get("status") == "prepared":
+        configuration_unchanged = state.get("status") == "prepared"
+        if configuration_unchanged:
             # 尚未激活的 Nginx 不需要 reload；仍让全局事务幂等恢复其已预写的其他应用源码。
             source_restore()
             source_guard(commands, (BASE_REVISION,))
             owner_guard(tls, main_web, state)
-            state["status"] = "rolled_back"
+            endpoint_guard(commands, state, "before")
+        else:
+            state["status"] = "restoring"
             save_state(state)
-            return {"complete": True, "operation": "rollback", "runtime_configuration_unchanged": True}
-        state["status"] = "restoring"
+            # 先完成当前半写文件的恢复，避免后续文件写意图覆盖其恢复依据。
+            pending = state.get("writing", {}).get("label") if state.get("writing") else None
+            order = ([pending] if pending in LABELS else []) + [label for label in reversed(LABELS) if label != pending]
+            for label in order:
+                write_endpoint(state, label, paths[label], before[label], deploy, "before")
+            source_restore()
+            if git(commands, "rev-parse", "HEAD").decode().strip() != BASE_REVISION:
+                raise OperationError("nginx_controlled_source_restore_incomplete")
+            owner_guard(tls, main_web, state)
+            gateway_guard(commands, state, deploy)
+            endpoint_guard(commands, state, "before")
+            commands.run("unified_restored_nginx_test", ["docker", "exec", state["gateway"]["id"], "nginx", "-t"])
+            commands.run("unified_restored_nginx_reload", ["docker", "exec", state["gateway"]["id"], "nginx", "-s", "reload"])
+        state["status"] = "restore_ready" if configuration_unchanged else "restore_reloaded"
+        state["writing"] = None
         save_state(state)
-        # 先完成当前半写文件的恢复，避免后续文件写意图覆盖其恢复依据。
-        pending = state.get("writing", {}).get("label") if state.get("writing") else None
-        order = ([pending] if pending in LABELS else []) + [label for label in reversed(LABELS) if label != pending]
-        for label in order:
-            write_endpoint(state, label, paths[label], before[label], deploy, "before")
-        source_restore()
-        if git(commands, "rev-parse", "HEAD").decode().strip() != BASE_REVISION:
-            raise OperationError("nginx_controlled_source_restore_incomplete")
+
+    # 恢复检查也由子进程自行持锁；失败时保持可恢复中间态，不先伪标 rolled_back。
+    community_check(commands, "unified_restored_community_check")
+    with tls.tls_lock():
+        if read_state(transaction_dir) != state:
+            raise OperationError("nginx_transaction_changed_during_consumer_check")
+        source_guard(commands, (BASE_REVISION,))
+        gateway_guard(commands, state, deploy)
         owner_guard(tls, main_web, state)
-        gateway_guard(commands, state, deploy)
         endpoint_guard(commands, state, "before")
-        commands.run("unified_restored_nginx_test", ["docker", "exec", state["gateway"]["id"], "nginx", "-t"])
-        commands.run("unified_restored_nginx_reload", ["docker", "exec", state["gateway"]["id"], "nginx", "-s", "reload"])
-        commands.run("unified_restored_community_check", ["/usr/bin/python3", "-B", str(COMMUNITY_PROGRAM), "check"], timeout=90)
-        gateway_guard(commands, state, deploy)
         state["status"] = "rolled_back"
         state["writing"] = None
         save_state(state)
         return {"complete": True, "operation": "rollback", "gateway_not_recreated": True,
-                "same_inode": True, "community_consumer_verified": True}
+                "same_inode": True, "community_consumer_verified": True,
+                "runtime_configuration_unchanged": configuration_unchanged}
 
 
 def owned_source(name: str) -> Path:
