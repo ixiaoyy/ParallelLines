@@ -1,0 +1,59 @@
+name: Unified login operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Fixed reviewed operation; inventory never changes services
+        type: choice
+        required: true
+        default: inventory
+        options: [inventory]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unified-login-read-inventory
+  cancel-in-progress: false
+
+jobs:
+  inventory:
+    if: github.repository == 'ixiaoyy/ParallelLines' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare the fixed read-only operation
+        id: payload
+        env:
+          OPERATION: ${{ inputs.operation }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import uuid
+          if os.environ['OPERATION'] != 'inventory':
+              raise SystemExit('Unsupported operation')
+          source = Path('.github/scripts/unified_login_ops.py').read_text(encoding='utf-8')
+          if len(source.encode()) > 120000:
+              raise SystemExit('Operation exceeds bounded transport')
+          marker = 'PL_UNIFIED_' + uuid.uuid4().hex
+          script = "set -eu\nsudo -n python3 -B - inventory <<'" + marker + "'\n" + source + '\n' + marker + '\n'
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write('script<<' + marker + '_OUTPUT\n' + script + marker + '_OUTPUT\n')
+          PY
+      - name: Inventory current production targets
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
+          timeout: 30s
+          command_timeout: 4m
+          script_stop: true
+          script: ${{ steps.payload.outputs.script }}
