@@ -8,13 +8,13 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory]
+        options: [inventory, describe]
 
 permissions:
   contents: read
 
 concurrency:
-  group: unified-login-read-inventory
+  group: unified-login-read-${{ inputs.operation }}
   cancel-in-progress: false
 
 jobs:
@@ -35,13 +35,15 @@ jobs:
           import os
           from pathlib import Path
           import uuid
-          if os.environ['OPERATION'] != 'inventory':
+          operation = os.environ['OPERATION']
+          sources = {'inventory': 'unified_login_ops.py', 'describe': 'unified_nginx_release.py'}
+          if operation not in sources:
               raise SystemExit('Unsupported operation')
-          source = Path('.github/scripts/unified_login_ops.py').read_text(encoding='utf-8')
+          source = (Path('.github/scripts') / sources[operation]).read_text(encoding='utf-8')
           if len(source.encode()) > 120000:
               raise SystemExit('Operation exceeds bounded transport')
           marker = 'PL_UNIFIED_' + uuid.uuid4().hex
-          script = "set -eu\nsudo -n python3 -B - inventory <<'" + marker + "'\n" + source + '\n' + marker + '\n'
+          script = "set -eu\nsudo -n python3 -B - " + operation + " <<'" + marker + "'\n" + source + '\n' + marker + '\n'
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
               output.write('script<<' + marker + '_OUTPUT\n' + script + marker + '_OUTPUT\n')
           PY
