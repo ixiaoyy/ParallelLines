@@ -55,5 +55,6 @@ jobs:
           fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           timeout: 30s
           command_timeout: 4m
-          script_stop: true
+          # 与现有community通道一致；script_stop会把检查语句插入Python heredoc正文。
+          script_stop: false
           script: ${{ steps.payload.outputs.script }}
