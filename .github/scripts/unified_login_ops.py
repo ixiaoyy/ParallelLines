@@ -618,9 +618,11 @@ def diagnose_chat_startup():
                 "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY": "isolated-oauth-diagnostic-not-a-production-key",
                 "ENABLE_OAUTH": "false", "OPENID_PROVIDER_URL": "", "ENABLE_OPENAI_API": "false",
                 "ENABLE_OLLAMA_API": "false", "RAG_EMBEDDING_MODEL": "", "PYTHONUNBUFFERED": "1"}
-    program = ("import os;path=os.environ.get('PATH','/usr/local/bin:/usr/bin:/bin');os.environ.clear();"
+    program = ("import os,sys,runpy,faulthandler;path=os.environ.get('PATH','/usr/local/bin:/usr/bin:/bin');os.environ.clear();"
                "os.environ.update(" + repr(settings) + ");os.environ['PATH']=path;"
-               "os.execv('/bin/bash',['bash','/app/backend/unified-start.sh'])")
+               "faulthandler.dump_traceback_later(20,repeat=True);"
+               "sys.argv=['uvicorn','open_webui.main:app','--host','0.0.0.0','--port','8080','--no-proxy-headers','--workers','1','--ws-per-message-deflate','true'];"
+               "runpy.run_module('uvicorn',run_name='__main__')")
     cid = runner.run(["docker", "run", "-d", "--name", name, "--network", "none", "--memory", "1536m", "--cpus", "1",
                       "--pids-limit", "256", "--tmpfs", "/app/backend/data:rw,size=128m", "--label", "pl.unified.diagnostic=" + APP,
                       "--label", "com.docker.compose.project=pl-unified-diagnostic", "--label", "com.docker.compose.service=diagnostic",
@@ -652,11 +654,11 @@ def diagnose_chat_startup():
     for line in log.splitlines():
         if re.search(r"(?:ImportError:|ModuleNotFoundError:|NameError:|AttributeError:|TypeError:|SyntaxError:|ValueError:|RuntimeError:|FastAPIError:|Error: No such option|invalid option name|option requires an argument)", line):
             symbols.append(line[:400])
-        elif re.fullmatch(r'\s*File "/app/backend/open_webui/[A-Za-z0-9_./-]+", line [0-9]+, in [A-Za-z0-9_<>]+', line):
+        elif re.fullmatch(r'\s*File "/(?:app/backend|usr/local/lib)/[A-Za-z0-9_./-]+", line [0-9]+, in [A-Za-z0-9_<>]+', line):
             symbols.append(line.strip())
     return {"complete": True, "stage": "isolated_startup_diagnosis", "production_data_mounted": False,
             "network_enabled": False, "temporary_container_removed": True, "state": state,
-            "error_symbols": symbols[-15:], "startup_completed": "Application startup complete" in log}
+            "error_symbols": symbols[-35:], "startup_completed": "Application startup complete" in log}
 
 
 def startup_output():
