@@ -8,7 +8,7 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, describe]
+        options: [inventory, describe, describe-source]
 
 permissions:
   contents: read
@@ -36,7 +36,8 @@ jobs:
           from pathlib import Path
           import uuid
           operation = os.environ['OPERATION']
-          sources = {'inventory': 'unified_login_ops.py', 'describe': 'unified_nginx_release.py'}
+          sources = {'inventory': 'unified_login_ops.py', 'describe': 'unified_nginx_release.py',
+                     'describe-source': 'unified_nginx_release.py'}
           if operation not in sources:
               raise SystemExit('Unsupported operation')
           source = (Path('.github/scripts') / sources[operation]).read_text(encoding='utf-8')
