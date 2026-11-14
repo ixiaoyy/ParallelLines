@@ -205,6 +205,64 @@ def blob(runner, identifier: str) -> bytes:
     return result.stdout
 
 
+def local_object_types(runner, names: list[str]) -> dict[str, str | None]:
+    """禁 lazy-fetch 批量检查固定对象元数据；仅明确 missing 才表示需要网络，不把其他错误降级。"""
+    if not 1 <= len(names) <= PATH_LIMIT * 2 or any(
+        not re.fullmatch(r"[0-9a-f]{40}(?:\^\{(?:commit|tree)\})?", name) for name in names
+    ):
+        raise OperationError("source_alignment_local_object_query_invalid")
+    remaining = runner.deadline - time.monotonic()
+    if remaining <= 0:
+        raise OperationError("source_alignment_deadline")
+    try:
+        result = subprocess.run(
+            [*GIT, "cat-file", "--batch-check"], input=("\n".join(names) + "\n").encode("ascii"),
+            capture_output=True, timeout=min(15, remaining), check=False,
+            env={**os.environ, "GIT_NO_LAZY_FETCH": "1", "GIT_TERMINAL_PROMPT": "0"},
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise OperationError("source_alignment_local_object_" + type(error).__name__) from None
+    if result.returncode or len(result.stdout) > 65536 or len(result.stderr) > 4096:
+        raise OperationError("source_alignment_local_object_query_failed")
+    try:
+        lines = result.stdout.decode("ascii").splitlines()
+    except UnicodeError:
+        raise OperationError("source_alignment_local_object_response_invalid") from None
+    if len(lines) != len(names):
+        raise OperationError("source_alignment_local_object_response_invalid")
+    found = {}
+    for name, line in zip(names, lines, strict=True):
+        if line == name + " missing":
+            found[name] = None
+            continue
+        match = re.fullmatch(r"([0-9a-f]{40}) (blob|tree|commit|tag) ([0-9]+)", line)
+        if match is None:
+            raise OperationError("source_alignment_local_object_response_invalid")
+        found[name] = match.group(2)
+    return found
+
+
+def local_app_delta(runner) -> list[dict] | None:
+    """优先复用已有 APP commit/tree 和差异 blob；全部验证均为本地对象读取，不检查传输配置。"""
+    references = [APP + "^{commit}", APP + "^{tree}"]
+    metadata = local_object_types(runner, references)
+    if any(metadata[name] is None for name in references):
+        return None
+    if metadata[references[0]] != "commit" or metadata[references[1]] != "tree":
+        raise OperationError("source_alignment_local_app_type_invalid")
+    # diff 本身在禁 lazy 的 git() 中读取所需树；解析/权限错误直接终止，不能冒充缺对象而取凭据。
+    delta = path_delta(runner)
+    identifiers = sorted({item["new_blob"] for item in delta} | {
+        item["old_blob"] for item in delta if item["change"] == "M"
+    })
+    objects = local_object_types(runner, identifiers)
+    if any(value is None for value in objects.values()):
+        return None
+    if any(value != "blob" for value in objects.values()):
+        raise OperationError("source_alignment_local_blob_type_invalid")
+    return delta
+
+
 def source_state(runner, record: dict | None = None) -> tuple[str, str]:
     """只接受原 main 分支及两端 HEAD/index；不认第三方提交、额外暂存或冲突 index。"""
     if git(runner, "symbolic-ref", "--quiet", "HEAD").strip() != "refs/heads/main":
@@ -297,16 +355,24 @@ def prepare(root: Path, runner) -> dict:
     source_state(runner)
     if git(runner, "status", "--porcelain=v1", "--untracked-files=no"):
         raise OperationError("source_alignment_tracked_worktree_not_clean")
-    # 仅读配置键名以拒绝 URL 改写/本地认证通道；绝不读取键值或打印这些名字。
-    transport_keys = runner.run([*GIT, "config", "--local", "--name-only", "--get-regexp",
-                                 r"^(url\..*\.insteadof|http\..*extraheader|credential\..*|core\.askpass|remote\..*\.promisor)$"],
-                                accepted=(0, 1))
-    if transport_keys:
-        raise OperationError("source_alignment_local_transport_requires_review")
-    with public_transport():
-        git(runner, "fetch", "--no-tags", "--no-write-fetch-head", "--no-recurse-submodules", REMOTE, APP, timeout=120)
-    delta = path_delta(runner)
+    # workflow 已取得固定 operator 的完整祖先时，直接复用本地 APP 对象；不为本地读取增凭据前置。
+    delta = local_app_delta(runner)
+    object_source = "local"
+    if delta is None:
+        # 只有已确认缺对象才进入网络分支；原 guard 保留，不读取键值或打印这些名字。
+        transport_keys = runner.run([*GIT, "config", "--local", "--name-only", "--get-regexp",
+                                     r"^(url\..*\.insteadof|http\..*extraheader|credential\..*|core\.askpass|remote\..*\.promisor)$"],
+                                    accepted=(0, 1))
+        if transport_keys:
+            raise OperationError("source_alignment_local_transport_requires_review")
+        with public_transport():
+            git(runner, "fetch", "--no-tags", "--no-write-fetch-head", "--no-recurse-submodules", REMOTE, APP, timeout=120)
+        delta = local_app_delta(runner)
+        if delta is None:
+            raise OperationError("source_alignment_objects_missing_after_fetch")
+        object_source = "public_fetch"
     record = {"schema": 1, "before": BEFORE, "app": APP, "status": "prepared", "pending": None,
+              "object_source": object_source,
               "before_tree": git(runner, "rev-parse", BEFORE + "^{tree}").strip(),
               "after_tree": git(runner, "rev-parse", APP + "^{tree}").strip(),
               "git_attributes": git_attributes(), "new_owner": {"uid": MAIN.stat().st_uid, "gid": MAIN.stat().st_gid},
