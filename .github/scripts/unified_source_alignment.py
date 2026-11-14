@@ -342,16 +342,62 @@ def snapshot(record: dict, item: dict, direction: str) -> bytes | None:
     return value
 
 
+def archive_restored(record: dict, runner) -> Path:
+    """只归档已经完成恢复且仍处于全部原端点的事务；中途失败保留 rearming，不自动重置。"""
+    if record.get("status") != "restored" or record.get("pending") is not None:
+        raise OperationError("source_alignment_rearm_requires_completed_restore")
+    source_state(runner)
+    if git(runner, "status", "--porcelain=v1", "--untracked-files=no"):
+        raise OperationError("source_alignment_rearm_baseline_not_clean")
+    preflight(record, runner, restoring=True, preparing=True)
+    current_git = git_attributes()
+    if any(not same_attributes(current_git[name], value) for name, value in record["git_attributes"].items()):
+        raise OperationError("source_alignment_rearm_git_metadata_changed")
+    for item in record["paths"]:
+        if item["delegated_nginx"] and attributes(project_path(item["name"])) != item["original_attributes"]:
+            raise OperationError("source_alignment_rearm_nginx_identity_changed")
+    original = read_bytes(private_file(STATE))
+    if json.loads(original) != record:
+        raise OperationError("source_alignment_rearm_record_changed")
+    attempts = ROOT / "source-alignment/attempts"
+    private_file(attempts / "placeholder")
+    attempts.mkdir(mode=0o700, exist_ok=True)
+    archive = attempts / secrets.token_hex(16)
+    archive.mkdir(mode=0o700, exist_ok=False)
+    fsync_directory(attempts)
+    fsync_directory(attempts.parent)
+    atomic_private(archive / "record.json", original)
+    # 先持久化过渡状态，后续任何归档/准备失败都不能以 restored 名义悄悄重置。
+    record["status"] = "rearming"
+    record["rearm_archive"] = str(archive)
+    save(record)
+    for name in ("before", "after"):
+        source = ROOT / "source-alignment" / name
+        if source.is_symlink() or not source.is_dir():
+            raise OperationError("source_alignment_rearm_snapshot_directory_changed")
+        os.rename(source, archive / name)
+    fsync_directory(ROOT / "source-alignment")
+    fsync_directory(archive)
+    atomic_private(archive / "complete.json", (json.dumps({
+        "schema": 1, "status": "archived", "previous_status": "restored", "record_sha256": digest(original),
+    }, sort_keys=True) + "\n").encode())
+    return archive
+
+
 def prepare(root: Path, runner) -> dict:
     """非激活阶段：核干净原基线、公开 fetch 固定版本，仅在私有根保存逐路径恢复记录。"""
     owned_root(root)
+    previous_attempt = None
     if STATE.exists():
         record = load(root)
-        if record.get("status") != "prepared":
+        if record.get("status") == "restored":
+            previous_attempt = archive_restored(record, runner)
+        elif record.get("status") != "prepared":
             raise OperationError("source_alignment_already_started")
-        source_state(runner)
-        preflight(record, runner, restoring=False, preparing=True)
-        return record
+        else:
+            source_state(runner)
+            preflight(record, runner, restoring=False, preparing=True)
+            return record
     source_state(runner)
     if git(runner, "status", "--porcelain=v1", "--untracked-files=no"):
         raise OperationError("source_alignment_tracked_worktree_not_clean")
@@ -373,6 +419,7 @@ def prepare(root: Path, runner) -> dict:
         object_source = "public_fetch"
     record = {"schema": 1, "before": BEFORE, "app": APP, "status": "prepared", "pending": None,
               "object_source": object_source,
+              "previous_attempt": str(previous_attempt) if previous_attempt is not None else None,
               "before_tree": git(runner, "rev-parse", BEFORE + "^{tree}").strip(),
               "after_tree": git(runner, "rev-parse", APP + "^{tree}").strip(),
               "git_attributes": git_attributes(), "new_owner": {"uid": MAIN.stat().st_uid, "gid": MAIN.stat().st_gid},

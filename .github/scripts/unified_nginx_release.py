@@ -389,21 +389,73 @@ def write_endpoint(state: dict, label: str, path: Path, value: bytes, deploy, di
     save_state(state)
 
 
+def archive_rolled_back(commands: Commands, state: dict, tls, main_web, deploy) -> Path:
+    """同 TLS 锁内只归档已完整回滚、BASE/index/全部原端点和真实 ownership 均仍匹配的事务。"""
+    if state.get("status") != "rolled_back" or state.get("writing") is not None:
+        raise OperationError("nginx_rearm_requires_completed_rollback")
+    source_guard(commands, (BASE_REVISION,))
+    git(commands, "diff", "--cached", "--quiet", BASE_REVISION)
+    gateway_guard(commands, state, deploy)
+    owner_guard(tls, main_web, state)
+    endpoint_guard(commands, state, "before")
+    original = regular(TRANSACTION / "state.json")
+    if json.loads(original) != state:
+        raise OperationError("nginx_rearm_record_changed")
+    attempts = TRANSACTION / "attempts"
+    if attempts.is_symlink():
+        raise OperationError("nginx_rearm_archive_symlink")
+    attempts.mkdir(mode=0o700, exist_ok=True)
+    archive = attempts / secrets.token_hex(16)
+    archive.mkdir(mode=0o700, exist_ok=False)
+    for directory in (attempts, TRANSACTION):
+        descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    atomic(archive / "state.json", original)
+    # 先记录过渡状态；归档或新 prepare 失败时保留现场，不自动放行任何中间态。
+    state["status"] = "rearming"
+    state["rearm_archive"] = str(archive)
+    save_state(state)
+    for name in ("before", "after", "writes", "community-cron.before"):
+        source = TRANSACTION / name
+        if source.is_symlink():
+            raise OperationError("nginx_rearm_snapshot_symlink")
+        if not source.exists() and name == "writes":
+            continue
+        os.rename(source, archive / name)
+    for directory in (TRANSACTION, archive):
+        descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    atomic(archive / "complete.json", (json.dumps({
+        "schema": 1, "status": "archived", "previous_status": "rolled_back", "record_sha256": sha(original),
+    }, sort_keys=True) + "\n").encode())
+    return archive
+
+
 def prepare(transaction_dir: str | Path, candidate_main: str | Path, candidate_forum: str | Path) -> dict:
     """捕获可独立恢复的前像及候选；只写本事务目录，不改运行配置或消费者。"""
     root = transaction_path(transaction_dir)
     commands = Commands()
     tls, managed, main_web, deploy = tools_modules()
     with tls.tls_lock():
+        previous_attempt = None
         if (root / "state.json").exists():
             state = read_state(root)
-            if state.get("status") != "prepared":
+            if state.get("status") == "rolled_back":
+                previous_attempt = archive_rolled_back(commands, state, tls, main_web, deploy)
+            elif state.get("status") != "prepared":
                 raise OperationError("nginx_transaction_already_started")
-            gateway_guard(commands, state, deploy)
-            owner_guard(tls, main_web, state)
-            file_guard(commands, state)
-            return {"complete": True, "operation": "prepare", "already_prepared": True, "runtime_unchanged": True}
-        if root.exists() and any(root.iterdir()):
+            else:
+                gateway_guard(commands, state, deploy)
+                owner_guard(tls, main_web, state)
+                file_guard(commands, state)
+                return {"complete": True, "operation": "prepare", "already_prepared": True, "runtime_unchanged": True}
+        if previous_attempt is None and root.exists() and any(root.iterdir()):
             raise OperationError("nginx_transaction_directory_not_empty")
         source_guard(commands, (BASE_REVISION,))
         git(commands, "diff", "--cached", "--quiet")
@@ -446,6 +498,7 @@ def prepare(transaction_dir: str | Path, candidate_main: str | Path, candidate_f
         renewal["forum_sha256"] = sha(after["forum_layer"])
         after["community_current"] = (json.dumps(community, sort_keys=True, indent=2) + "\n").encode()
         state = {"schema": 1, "revision": APP_REVISION, "status": "prepared", "writing": None,
+                 "previous_attempt": str(previous_attempt) if previous_attempt is not None else None,
                  "gateway": live, "consumers": consumer_snapshot(tls, main_web), "cron_identity": identity(COMMUNITY_CRON),
                  "redirects_sha256": sha(redirects_value),
                  "files": {label: {"before": sha(before[label]), "after": sha(after[label]), "identity": identity(path)} for label, path in paths.items()}}

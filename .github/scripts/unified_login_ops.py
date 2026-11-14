@@ -454,8 +454,7 @@ def activate_main():
     os.umask(0o077)
     runner = Runner(1000)
     prepared = transaction()
-    if (ROOT / "main-active.json").is_file() and json.loads((ROOT / "main-active.json").read_text()).get("state") == "active":
-        wait_main(runner, prepared, ("api", "web", "circle"))
+    if (ROOT / "main-active.json").is_file() and json.loads((ROOT / "main-active.json").read_text()).get("state") in {"active", "switched"}:
         return {"complete": True, "stage": "main_already_active"}
     current = records(runner)
     for role in ("api", "web", "circle"):
@@ -495,59 +494,38 @@ def activate_main():
         nginx.activate(tx, source_align=lambda: alignment.align(ROOT, runner))
         compose(runner, files + [str(override)], ["config", "--quiet"], env_files)
         compose(runner, files + [str(override)], ["up", "-d", "--no-deps", "--no-build", "--pull", "never", "api", "web", "forum-web"], env_files)
-        wait_main(runner, prepared, ("api", "web", "circle"))
         for name in markers:
             (Path("/opt/parallellines/.deployment") / name).write_text("unified-a2cfedde\n")
-        save(ROOT / "main-active.json", {"complete": True, "application_revision": APP, "state": "active"})
+        save(ROOT / "main-active.json", {"complete": True, "application_revision": APP, "state": "switched", "readiness_waited": False})
     except Exception as error:
-        try:
-            restored = rollback_main(runner)
-        except Exception:
-            restored = {"complete": False}
-        save(ROOT / "main-failure.json", {"error_type": type(error).__name__, "error_code": error_code(error), "rollback": restored})
-        raise OperationError("main_activation_failed:rollback_" + str(restored["complete"]).lower()) from None
-    return {"complete": True, "stage": "main_active", "application_revision": APP, "gateway_recreated": False}
+        save(ROOT / "main-failure.json", {"error_type": type(error).__name__, "error_code": error_code(error), "automatic_rollback": False})
+        raise OperationError("main_activation_command_failed:" + error_code(error)) from None
+    return {"complete": True, "stage": "main_switched", "application_revision": APP, "gateway_recreated": False,
+            "readiness_waited": False, "automatic_rollback": False}
 
 
 def activate_services():
     """接续已上线主站，切换同一已制版本的三个下游；失败按本轮私有意图反向恢复。"""
     active = ROOT / "main-active.json"
-    if not active.is_file() or json.loads(active.read_text()).get("state") != "active":
+    if not active.is_file() or json.loads(active.read_text()).get("state") not in {"active", "switched"}:
         raise OperationError("main_activation_required")
     transaction()
     runner = Runner(900)
     module = load_module("unified_services_activate", Path(__file__).with_name("unified_services_activate.py"))
-    attempted, results = [], []
+    results = []
     try:
         for role in ("bridge", "chat", "newapi"):
-            # 当前失败角色也必须进反向恢复，不仅恢复已返回成功的角色。
-            attempted.append(role)
             print(json.dumps({"stage": "activate", "component": role}), flush=True)
             results.append(module.activate(ROOT, role, runner))
         save(ROOT / "all-active.json", {"complete": True, "application_revision": APP, "components": results,
-                                        "additional_validation": False})
+                                        "additional_validation": False, "automatic_rollback": False})
     except Exception as error:
-        recovered = []
-        recovery = Runner(600)
-        for role in reversed(attempted):
-            try:
-                recovered.append(module.rollback(ROOT, role, recovery))
-            except Exception as failure:
-                save(ROOT / "services-failure.json", {"error": error_code(error), "recovered": recovered,
-                                                      "recovery_error": error_code(failure), "recovery_required": True})
-                raise OperationError("services_activation_failed:recovery_required") from None
-        try:
-            main_recovery = rollback_main(recovery)
-        except Exception as failure:
-            save(ROOT / "services-failure.json", {"error": error_code(error), "recovered": recovered,
-                                                  "main_recovery_error": error_code(failure), "recovery_required": True})
-            raise OperationError("services_activation_failed:main_recovery_required") from None
-        save(ROOT / "services-failure.json", {"error": error_code(error), "recovered": recovered,
-                                              "main_recovery": main_recovery, "recovery_required": False})
-        raise OperationError("services_activation_failed:rolled_back") from None
+        save(ROOT / "services-failure.json", {"error": error_code(error), "completed": results,
+                                              "automatic_rollback": False})
+        raise OperationError("services_activation_command_failed:" + error_code(error)) from None
     return {"complete": True, "stage": "all_services_active", "application_revision": APP,
             "components": ["main-api", "main-web", "circle", "bridge", "chat", "newapi"],
-            "additional_validation": False, "recompiled": False}
+            "additional_validation": False, "recompiled": False, "automatic_rollback": False}
 
 
 def remove_source_archive():
