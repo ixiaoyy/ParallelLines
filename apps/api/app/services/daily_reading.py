@@ -17,9 +17,11 @@ from app.models.moderation import AuditLog
 from app.models.user import User
 from app.schemas.forum import TopicCreateRequest
 from app.services.daily_reading_provider import (
+    DAILY_READING_SCHEDULED_TIMES,
     DailyReadingDraft,
     generate_daily_reading_with_fallback,
     parse_daily_reading_drafts,
+    validate_scheduled_reading_time,
 )
 from app.services.forum import ForumService
 
@@ -33,6 +35,9 @@ DAILY_READING_AUDIT_TARGET = "daily_reading_seed"
 DAILY_READING_PLAN_ACTION = "daily_reading_day_planned"
 DAILY_READING_PLAN_TARGET = "daily_reading_plan"
 DAILY_READING_TOPIC_COUNT = 2
+DAILY_READING_AUTOMATION_MARKER = (
+    "> 本帖由专用账号页边有光自动生成，使用创作角色口吻，不代表真人阅读经历。"
+)
 
 
 @dataclass(frozen=True)
@@ -47,11 +52,12 @@ class DailyReadingPlan:
     tags: tuple[str, ...]
     model_name: str
     provider_mode: str
+    scheduled_time: str | None = None
 
     def to_preview(self) -> dict[str, object]:
         """Return a JSON-safe full preview for CLI and background-job results."""
 
-        return {
+        preview = {
             "seed_key": self.seed_key,
             "planned_date": self.planned_date.isoformat(),
             "slot": self.slot,
@@ -63,6 +69,9 @@ class DailyReadingPlan:
             "model_name": self.model_name,
             "provider_mode": self.provider_mode,
         }
+        if self.scheduled_time is not None:
+            preview["scheduled_time"] = self.scheduled_time
+        return preview
 
 
 @dataclass(frozen=True)
@@ -108,21 +117,25 @@ class DailyReadingService:
         planned_date: date | None = None,
         *,
         force_local: bool = False,
+        scheduled_time: str | None = None,
     ) -> list[DailyReadingPlan]:
-        """Build exactly two reading plans without database writes.
-
-        Key parameters choose the Shanghai calendar date and optional local-only
-        generation. Return value is two ordered plans. Side effects are bounded
-        audit-log reads and, when configured, one provider request.
-        """
+        """生成旧日更两篇或指定时段一篇计划；只读有界历史，可能调用一次模型。"""
 
         target_date = planned_date or local_today()
+        validate_scheduled_reading_time(scheduled_time)
         recent_titles = await self._recent_titles()
+        generation_options = {}
+        if scheduled_time is not None:
+            generation_options = {
+                "scheduled_time": scheduled_time,
+                "recent_bodies": await self._planned_day_bodies(target_date),
+            }
         generated = await generate_daily_reading_with_fallback(
             self.settings,
             target_date,
             recent_titles,
             force_local=force_local,
+            **generation_options,
         )
         return [
             self._plan_from_draft(
@@ -131,6 +144,7 @@ class DailyReadingService:
                 draft,
                 model_name=generated.model_name,
                 provider_mode=generated.provider_mode,
+                scheduled_time=scheduled_time,
             )
             for slot, draft in enumerate(generated.drafts, start=1)
         ]
@@ -143,16 +157,21 @@ class DailyReadingService:
         dry_run: bool = False,
         force_local: bool = False,
         slots: Sequence[int] | None = None,
+        scheduled_time: str | None = None,
     ) -> dict[str, object]:
-        """Preview or publish selected daily reading-reflection slots.
+        """预览或发布读书稿；旧slots保留两篇，新scheduled_time每时段一篇。
 
-        Key parameters choose date, mode, dry-run behavior, provider path, and
-        optional slots. Return value includes selected plans and outcomes. In
-        auto mode, side effects create only missing selected topics and audits.
+        参数为真实北京时间日期、模式及二选一的档期；返回计划和结果。
+        auto模式只发布缺失稿，新档期只使用既有人设并按日期/时段幂等。
         """
 
         target_date = planned_date or local_today()
-        selected_slots = normalize_daily_reading_slots(slots)
+        validate_scheduled_reading_time(scheduled_time)
+        if scheduled_time is not None and slots is not None:
+            raise ValueError("scheduled_time cannot be combined with legacy daily reading slots")
+        selected_slots = (
+            (1,) if scheduled_time is not None else normalize_daily_reading_slots(slots)
+        )
         mode = publish_mode or self.settings.daily_reading_publish_mode
         if mode == "off":
             return {
@@ -164,10 +183,20 @@ class DailyReadingService:
                 "plans": [],
                 "results": [],
             }
-        existing = await self._existing_day_results(target_date)
+        # 新三时段与旧日更分开记账，重试只复用同一真实日期/时段的内容。
+        if scheduled_time is not None:
+            existing_result = await self._existing_result(
+                daily_reading_seed_key(target_date, 1, scheduled_time=scheduled_time),
+                fallback_slot=1,
+            )
+            existing = [existing_result] if existing_result is not None else []
+        else:
+            existing = await self._existing_day_results(target_date)
         existing_by_slot = {result.slot: result for result in existing}
-        if not dry_run and mode == "auto" and all(
-            slot in existing_by_slot for slot in selected_slots
+        if (
+            not dry_run
+            and mode == "auto"
+            and all(slot in existing_by_slot for slot in selected_slots)
         ):
             return {
                 "dry_run": False,
@@ -178,10 +207,13 @@ class DailyReadingService:
             }
 
         effective_dry_run = dry_run or mode != "auto"
+        plan_options = {"scheduled_time": scheduled_time} if scheduled_time is not None else {}
         plans = (
-            await self.plan_day(target_date, force_local=force_local)
+            await self.plan_day(target_date, force_local=force_local, **plan_options)
             if effective_dry_run
-            else await self._stored_or_new_plans(target_date, force_local=force_local)
+            else await self._stored_or_new_plans(
+                target_date, force_local=force_local, **plan_options
+            )
         )
         selected_plans = [plan for plan in plans if plan.slot in selected_slots]
         if effective_dry_run:
@@ -211,34 +243,37 @@ class DailyReadingService:
         planned_date: date,
         *,
         force_local: bool,
+        scheduled_time: str | None = None,
     ) -> list[DailyReadingPlan]:
-        """Load the committed daily plan or generate and store it once.
+        """读取当天/时段已选稿或生成并提交一次；写入计划后重试不重新选稿。"""
 
-        Key parameters choose the Shanghai date and provider path. Return value
-        is the exact two plans reused by every write retry. Side effect: on the
-        first auto run, writes one plan audit before any topic is created.
-        """
-
-        stored = await self._stored_plans(planned_date)
+        stored = await self._stored_plans(planned_date, scheduled_time=scheduled_time)
         if stored is not None:
             return stored
-        plans = await self.plan_day(planned_date, force_local=force_local)
+        plans = await self.plan_day(
+            planned_date, force_local=force_local, scheduled_time=scheduled_time
+        )
         first = plans[0]
         self.session.add(
             AuditLog(
                 actor_id=None,
                 action=DAILY_READING_PLAN_ACTION,
                 target_type=DAILY_READING_PLAN_TARGET,
-                target_id=planned_date.isoformat(),
+                target_id=daily_reading_plan_key(planned_date, scheduled_time=scheduled_time),
                 board_id=None,
                 data={
                     "planned_date": planned_date.isoformat(),
                     "model_name": first.model_name,
                     "provider_mode": first.provider_mode,
+                    **({"scheduled_time": scheduled_time} if scheduled_time is not None else {}),
                     "posts": [
                         {
                             "title": plan.title,
-                            "raw_md": plan.raw_md,
+                            "raw_md": (
+                                plan.raw_md.removesuffix(f"\n\n{DAILY_READING_AUTOMATION_MARKER}")
+                                if scheduled_time is not None
+                                else plan.raw_md
+                            ),
                             "tags": list(plan.tags),
                         }
                         for plan in plans
@@ -250,20 +285,21 @@ class DailyReadingService:
         await self.session.commit()
         return plans
 
-    async def _stored_plans(self, planned_date: date) -> list[DailyReadingPlan] | None:
-        """Decode the latest committed plan audit for one local date.
-
-        Key parameter is the Shanghai calendar date. Return value is two plans
-        or none. Side effect: one audit-log read; malformed stored plans fail
-        closed so a retry never silently changes already chosen content.
-        """
+    async def _stored_plans(
+        self,
+        planned_date: date,
+        *,
+        scheduled_time: str | None = None,
+    ) -> list[DailyReadingPlan] | None:
+        """读取真实日期/时段的一份已提交计划；坏数据失败，不偷偷替换已选稿。"""
 
         audit = await self.session.scalar(
             select(AuditLog)
             .where(
                 AuditLog.action == DAILY_READING_PLAN_ACTION,
                 AuditLog.target_type == DAILY_READING_PLAN_TARGET,
-                AuditLog.target_id == planned_date.isoformat(),
+                AuditLog.target_id
+                == daily_reading_plan_key(planned_date, scheduled_time=scheduled_time),
             )
             .order_by(AuditLog.created_at.desc())
             .limit(1)
@@ -271,7 +307,10 @@ class DailyReadingService:
         if audit is None:
             return None
         data = audit.data or {}
-        drafts = parse_daily_reading_drafts({"posts": data.get("posts")})
+        drafts = parse_daily_reading_drafts(
+            {"posts": data.get("posts")},
+            expected_count=1 if scheduled_time is not None else 2,
+        )
         model_name = data.get("model_name")
         provider_mode = data.get("provider_mode")
         return [
@@ -283,6 +322,7 @@ class DailyReadingService:
                 provider_mode=(
                     provider_mode if isinstance(provider_mode, str) else "stored_unknown"
                 )[:64],
+                scheduled_time=scheduled_time,
             )
             for slot, draft in enumerate(drafts, start=1)
         ]
@@ -303,7 +343,11 @@ class DailyReadingService:
                 reason="missing_public_board:reading",
             )
         try:
-            author = await self._ensure_persona()
+            author = (
+                await self._require_scheduled_persona()
+                if plan.scheduled_time is not None
+                else await self._ensure_persona()
+            )
             recovered_topic = await self._matching_untracked_topic(plan, board, author)
             if recovered_topic is None:
                 topic = await ForumService(self.session).create_topic(
@@ -380,9 +424,7 @@ class DailyReadingService:
         return DailyReadingPublishResult(
             seed_key=seed_key,
             slot=(
-                int(slot)
-                if isinstance(slot, int | str) and str(slot).isdigit()
-                else fallback_slot
+                int(slot) if isinstance(slot, int | str) and str(slot).isdigit() else fallback_slot
             ),
             title=title if isinstance(title, str) and title else seed_key,
             status="existing",
@@ -407,6 +449,58 @@ class DailyReadingService:
             for audit in audits
             if isinstance(title := (audit.data or {}).get("title"), str) and title
         ]
+
+    async def _planned_day_bodies(self, planned_date: date) -> list[str]:
+        """读取当日已选稿正文供三时段去重；至多四份计划，不读帖子或私人内容。"""
+
+        if self.session is None:
+            return []
+        plan_keys = [daily_reading_plan_key(planned_date)] + [
+            daily_reading_plan_key(planned_date, scheduled_time=value)
+            for value in DAILY_READING_SCHEDULED_TIMES
+        ]
+        audits = list(
+            await self.session.scalars(
+                select(AuditLog)
+                .where(
+                    AuditLog.action == DAILY_READING_PLAN_ACTION,
+                    AuditLog.target_type == DAILY_READING_PLAN_TARGET,
+                    AuditLog.target_id.in_(plan_keys),
+                )
+                .order_by(AuditLog.created_at.desc())
+                .limit(4)
+            )
+        )
+        return [
+            body
+            for audit in audits
+            for post in (audit.data or {}).get("posts", [])
+            if isinstance(post, dict) and isinstance(body := post.get("raw_md"), str)
+        ]
+
+    async def _require_scheduled_persona(self) -> User:
+        """新定时发布只使用既有专用人设；缺失、身份冲突或禁用时失败，不创建/改写账号。"""
+
+        user = await self.session.scalar(
+            select(User).where(
+                User.username == DAILY_READING_USERNAME,
+                User.email == DAILY_READING_EMAIL,
+            )
+        )
+        if (
+            user is None
+            or user.username != DAILY_READING_USERNAME
+            or user.email != DAILY_READING_EMAIL
+            or user.role != "user"
+            or user.status != "active"
+            or user.is_persona is not True
+        ):
+            raise ValidationError(
+                "daily_reading_scheduled_persona_unavailable",
+                "读书定时发布的专用身份不存在或不可用",
+                {"username": DAILY_READING_USERNAME},
+            )
+        return user
 
     async def _find_public_reading_board(self) -> Board | None:
         """Return the public reading board or none when it is missing or private."""
@@ -435,10 +529,7 @@ class DailyReadingService:
             )
         )
         if existing is not None:
-            if (
-                existing.username != DAILY_READING_USERNAME
-                or existing.email != DAILY_READING_EMAIL
-            ):
+            if existing.username != DAILY_READING_USERNAME or existing.email != DAILY_READING_EMAIL:
                 raise ValidationError(
                     "daily_reading_persona_conflict",
                     "Daily reading persona identity conflicts with an existing user",
@@ -495,7 +586,7 @@ class DailyReadingService:
                     Topic.board_id == board.id,
                     Topic.user_id == author.id,
                     Topic.title == plan.title,
-                    Topic.deleted_at.is_(None),
+                    *([Topic.deleted_at.is_(None)] if plan.scheduled_time is None else []),
                     Topic.id.in_(
                         select(Post.topic_id).where(
                             Post.post_number == 1,
@@ -509,8 +600,7 @@ class DailyReadingService:
             created_at = topic.created_at
             if (
                 created_at is not None
-                and as_utc_datetime(created_at).astimezone(SHANGHAI_TZ).date()
-                == plan.planned_date
+                and as_utc_datetime(created_at).astimezone(SHANGHAI_TZ).date() == plan.planned_date
             ):
                 return topic
         return None
@@ -542,6 +632,11 @@ class DailyReadingService:
                     "tags": list(plan.tags),
                     "model_name": plan.model_name,
                     "provider_mode": plan.provider_mode,
+                    **(
+                        {"scheduled_time": plan.scheduled_time}
+                        if plan.scheduled_time is not None
+                        else {}
+                    ),
                 },
                 created_at=utcnow(),
             )
@@ -556,27 +651,48 @@ class DailyReadingService:
         *,
         model_name: str,
         provider_mode: str,
+        scheduled_time: str | None = None,
     ) -> DailyReadingPlan:
         """Attach stable date/slot and provider metadata to one validated draft."""
 
+        raw_md = draft.raw_md
+        if scheduled_time is not None:
+            if not raw_md.endswith(DAILY_READING_AUTOMATION_MARKER):
+                raw_md = f"{raw_md}\n\n{DAILY_READING_AUTOMATION_MARKER}"
         return DailyReadingPlan(
-            seed_key=daily_reading_seed_key(planned_date, slot),
+            seed_key=daily_reading_seed_key(planned_date, slot, scheduled_time=scheduled_time),
             planned_date=planned_date,
             slot=slot,
             title=draft.title,
-            raw_md=draft.raw_md,
+            raw_md=raw_md,
             tags=draft.tags,
             model_name=model_name,
             provider_mode=provider_mode,
+            scheduled_time=scheduled_time,
         )
 
 
-def daily_reading_seed_key(planned_date: date, slot: int) -> str:
+def daily_reading_seed_key(
+    planned_date: date, slot: int, *, scheduled_time: str | None = None
+) -> str:
     """Return the stable audit idempotency key for one local date and slot."""
 
+    validate_scheduled_reading_time(scheduled_time)
+    if scheduled_time is not None:
+        if slot != 1:
+            raise ValueError("scheduled reading publishes one topic per time slot")
+        return f"daily-reading:{planned_date.isoformat()}:{scheduled_time.replace(':', '')}:01"
     if slot not in range(1, DAILY_READING_TOPIC_COUNT + 1):
         raise ValueError("daily reading slot must be 1 or 2")
     return f"daily-reading:{planned_date.isoformat()}:{slot:02d}"
+
+
+def daily_reading_plan_key(planned_date: date, *, scheduled_time: str | None = None) -> str:
+    """返回旧日更或三时段选稿标识；保留真实日期且不与旧计划混用，无副作用。"""
+
+    validate_scheduled_reading_time(scheduled_time)
+    suffix = f":{scheduled_time.replace(':', '')}" if scheduled_time is not None else ""
+    return f"{planned_date.isoformat()}{suffix}"
 
 
 def normalize_daily_reading_slots(slots: Sequence[int] | None) -> tuple[int, ...]:

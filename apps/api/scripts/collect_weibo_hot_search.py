@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -21,6 +22,7 @@ USER_AGENT = (
 )
 SHANGHAI_TIMEZONE = timezone(timedelta(hours=8), "Asia/Shanghai")
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "var" / "weibo-hot-search"
+MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -74,10 +76,26 @@ def fetch_hot_search_payload(
             "User-Agent": USER_AGENT,
         },
     )
+    if not 0 < timeout <= 30:
+        raise ValueError("timeout must be greater than zero and at most 30 seconds")
+    started = time.monotonic()
     try:
         with urlopen(request, timeout=timeout) as response:
             encoding = response.headers.get_content_charset() or "utf-8"
-            raw_body = response.read().decode(encoding, errors="replace")
+            # 定时采集限制响应体和总耗时，避免慢响应或异常大榜单占满常驻任务。
+            chunks: list[bytes] = []
+            size = 0
+            while True:
+                if time.monotonic() - started > timeout:
+                    raise RuntimeError("Weibo hot-search response exceeded the total time limit")
+                chunk = response.read1(min(65536, MAX_RESPONSE_BYTES + 1 - size))
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > MAX_RESPONSE_BYTES:
+                    raise RuntimeError("Weibo hot-search response exceeded the size limit")
+                chunks.append(chunk)
+            raw_body = b"".join(chunks).decode(encoding, errors="replace")
     except HTTPError as exc:
         raise RuntimeError(f"Weibo hot-search request returned HTTP {exc.code}") from exc
     except URLError as exc:

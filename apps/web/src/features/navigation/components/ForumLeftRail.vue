@@ -163,6 +163,13 @@ function tagAccentStyle(tagName: string): Record<string, string> {
   <div class="forum-left-rail" :class="`forum-left-rail--${variant}`">
     <aside class="forum-left-rail__panel" aria-label="论坛导航">
       <RouterLink class="rail-action" :to="{ name: 'new-topic' }" @click="emit('navigate')">新建主题</RouterLink>
+      <RouterLink class="rail-space-link" :to="{ name: 'personal-space' }" @click="emit('navigate')">
+        <span class="rail-space-link__icon" aria-hidden="true">📖</span>
+        <span class="rail-space-link__copy">
+          <strong>我的空间</strong>
+          <em>手账 · 记账 · 心情日历</em>
+        </span>
+      </RouterLink>
 
       <section class="rail-section" aria-labelledby="rail-boards-title">
         <h2 id="rail-boards-title">公共版块</h2>

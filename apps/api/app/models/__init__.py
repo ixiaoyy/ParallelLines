@@ -62,6 +62,7 @@ from app.models.product_access import ProductAccessGrant
 from app.models.push import PushSubscription
 from app.models.search import SearchDocument, SearchLog
 from app.models.social import PrivateMessageParticipant, UserRelationship
+from app.models.space import SpaceJournalEntry, SpaceLedgerEntry, SpaceSetting
 from app.models.upload import Upload
 from app.models.user import (
     EmailVerificationCode,
@@ -134,6 +135,9 @@ __all__ = [
     "SearchLog",
     "SiteSetting",
     "SiteVisit",
+    "SpaceJournalEntry",
+    "SpaceLedgerEntry",
+    "SpaceSetting",
     "SpamAction",
     "Tag",
     "Topic",

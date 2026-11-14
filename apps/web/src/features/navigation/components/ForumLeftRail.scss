@@ -455,3 +455,56 @@
 .forum-left-rail--mobile .rail-tag {
   min-height: 2.75rem;
 }
+
+/* 个人空间入口：透底卡片，不与主 CTA 争抢。 */
+.rail-space-link {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--theme-soft-border, rgba(64, 158, 255, 0.24));
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.08) 0%, rgba(102, 212, 203, 0.1) 100%);
+  color: var(--title);
+  text-decoration: none;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+
+  &:hover,
+  &:focus-visible,
+  &.router-link-active {
+    outline: none;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(64, 158, 255, 0.14);
+  }
+}
+
+.rail-space-link__icon {
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 6px rgba(51, 65, 85, 0.08);
+}
+
+.rail-space-link__copy {
+  display: grid;
+  min-width: 0;
+
+  strong {
+    font-size: 0.88rem;
+    font-weight: 800;
+  }
+
+  em {
+    font-style: normal;
+    font-size: 0.72rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

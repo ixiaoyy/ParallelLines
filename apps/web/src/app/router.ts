@@ -290,6 +290,21 @@ export const router = createRouter({
       path: "/me",
       redirect: { name: "account-home" },
     },
+    // 个人空间：手账与轻量记账；未登录也可本地体验，登录后同步云端。
+    {
+      path: "/space",
+      name: "personal-space",
+      component: () => import("@/pages/space/SpacePage.vue"),
+      meta: {
+        forumShell: true,
+        seo: {
+          title: "个人空间 · 手账与记账 · {siteTitle}",
+          description: "在圈子里拥有自己的手账角落：心情日签、打卡清单、随手记账与月度小结。",
+          canonicalPath: "/space",
+          robots: NOINDEX_ROBOTS,
+        },
+      },
+    },
     {
       path: "/members/:id",
       name: "user-profile",

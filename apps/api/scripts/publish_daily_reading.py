@@ -36,12 +36,18 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Use the deterministic local content provider even when AI is configured.",
     )
-    parser.add_argument(
+    slots = parser.add_mutually_exclusive_group()
+    slots.add_argument(
         "--slot",
         type=int,
         choices=(1, 2),
         action="append",
         help="Preview or publish only one slot; repeat to select both. Defaults to both.",
+    )
+    slots.add_argument(
+        "--scheduled-time",
+        choices=("10:00", "14:00", "18:00"),
+        help="Preview or publish one distinct topic for this Shanghai time.",
     )
     parser.add_argument(
         "--publish-mode",
@@ -70,6 +76,7 @@ async def async_main(argv: Sequence[str] | None = None) -> None:
             dry_run=not args.run,
             force_local=args.force_local,
             slots=args.slot,
+            **({"scheduled_time": args.scheduled_time} if args.scheduled_time is not None else {}),
         )
     print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
 

@@ -88,4 +88,8 @@ export const queryKeys = {
   dailyReportSession: (sessionId: string) => ["daily-reports", "session", sessionId] as const,
   pdfTranslationCapabilities: ["pdf-translations", "capabilities"] as const,
   topicNotificationLevel: (topicId: string) => ["topics", "notification-level", topicId] as const,
+  spaceRoot: ["space"] as const,
+  spaceWorkspace: (month: string) => ["space", "me", month] as const,
+  spacePublicFeed: (limit = 30) => ["space", "feed", limit] as const,
+  spaceUserPublic: (identifier: string) => ["space", "user", identifier] as const,
 };

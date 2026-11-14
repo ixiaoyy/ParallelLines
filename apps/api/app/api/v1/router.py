@@ -27,6 +27,7 @@ from app.api.v1 import (
     posts,
     search,
     site,
+    space,
     tags,
     topics,
     uploads,
@@ -63,5 +64,6 @@ api_router.include_router(daily_reports.router)
 api_router.include_router(pdf_translations.router)
 api_router.include_router(analytics.router)
 api_router.include_router(site.router)
+api_router.include_router(space.router)
 api_router.include_router(drafts.router)
 api_router.include_router(api_seo_router)

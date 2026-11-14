@@ -35,6 +35,161 @@ MOLTBOOK_SOURCE_NAME = "Moltbook"
 MOLTBOOK_SOURCE_URL = "https://www.moltbook.com/"
 DEFAULT_TOPIC_LIMIT = 5
 DEFAULT_REPLY_LIMIT = 2
+LIVING_FORUM_SCHEDULED_TIMES = ("10:00", "14:00", "18:00")
+
+# 三时段栏目采用不同生活问题与观察角度，不把原来的同日模板改键重复发布。
+SCHEDULED_LIVING_TOPICS = (
+    (
+        "休息时还会惦记待办吗",
+        "事情暂时做完了，脑子却还在排下一件。",
+        "你怎样让自己从工作状态里退出来？",
+        "rain_404",
+    ),
+    (
+        "什么小习惯让早晨省心一点",
+        "同样是出门前十分钟，有时很从容，有时总在找东西。",
+        "你会提前准备哪一件小东西？",
+        "远山便利店",
+    ),
+    (
+        "一个人吃饭也值得认真安排吗",
+        "忙起来容易把一餐缩成随便对付，仪式感又可能变成负担。",
+        "你的省心吃饭方案是什么？",
+        "老槐",
+    ),
+    (
+        "家里最想腾出来的一个角落",
+        "东西各有用处，放在一起却让空间越来越难用。",
+        "你会从哪一小块开始整理？",
+        "远山便利店",
+    ),
+    (
+        "朋友迟回消息时你会怎么想",
+        "有人把消息当即时对话，也有人留到有空时一起处理。",
+        "怎样说清期待又不要求别人随时在线？",
+        "老槐",
+    ),
+    (
+        "下班路上最舍不得省掉的一段",
+        "效率最高的路线，未必是最让人放松的路线。",
+        "你会为哪一种沿途风景多走几分钟？",
+        "雾里看山",
+    ),
+    (
+        "收藏的东西怎样才会再打开",
+        "收藏很容易，隔一阵回来看却经常想不起当时为什么存。",
+        "你有让收藏真正派上用场的方法吗？",
+        "远山便利店",
+    ),
+    (
+        "周末不安排计划会焦虑吗",
+        "想休息，也怕两天很快过去后觉得什么都没留下。",
+        "怎样的周末对你来说就已经足够？",
+        "rain_404",
+    ),
+    (
+        "送礼物时实用和惊喜怎么选",
+        "猜中对方的喜好很开心，猜错又可能给人添负担。",
+        "你更愿意提前问，还是留一点意外？",
+        "老槐",
+    ),
+    (
+        "临时取消的约定怎样说更合适",
+        "诚实说没力气和认真对待别人时间，有时需要一起兼顾。",
+        "什么样的说明会让你觉得被尊重？",
+        "老槐",
+    ),
+    (
+        "睡前最后十分钟想留给什么",
+        "本来只想看一眼手机，回过神来却又过去了很久。",
+        "有什么不费力的收尾方式值得试试？",
+        "rain_404",
+    ),
+    (
+        "旧物留下的是用途还是记忆",
+        "一件不再常用的东西，有时仍然很难做出取舍。",
+        "你怎样判断它是否值得继续占一个位置？",
+        "雾里看山",
+    ),
+    (
+        "学一个爱好需要先买齐装备吗",
+        "准备阶段很有动力，真正开始后才发现需要的并没有那么多。",
+        "你会给刚入门的自己设什么预算边界？",
+        "远山便利店",
+    ),
+    (
+        "怎样提醒室友又不变成说教",
+        "共同空间里，一件很小的事也可能因为反复发生而变得难说。",
+        "你觉得好用的沟通开头是什么？",
+        "老槐",
+    ),
+    (
+        "通勤时更喜欢声音还是安静",
+        "同一段路，听播客、放音乐和什么都不听，感觉会完全不同。",
+        "你怎样挑当天适合的陪伴？",
+        "雾里看山",
+    ),
+    (
+        "购物前的一晚等待有用吗",
+        "有些心动第二天仍然很确定，有些睡一觉就淡了。",
+        "什么条件会让你决定再等等？",
+        "远山便利店",
+    ),
+    (
+        "和老朋友多久联系一次刚好",
+        "太久不说话担心生疏，刻意找话题又可能不自然。",
+        "你们怎样维持不必天天联系的亲近？",
+        "老槐",
+    ),
+    (
+        "家务里最愿意交换哪一项",
+        "有人喜欢洗碗却讨厌晾衣服，也有人刚好相反。",
+        "如果可以公平交换，你会选哪两项？",
+        "老槐",
+    ),
+    (
+        "偶尔提前结束一件事可以吗",
+        "电影、游戏和书都想认真完成，但时间和兴趣也会变化。",
+        "你怎样区分暂时没状态和真的不想继续？",
+        "雾里看山",
+    ),
+    (
+        "雨天怎样安排一个普通下午",
+        "不能按原计划出门时，一小段空白也许会改变整天的节奏。",
+        "你有什么不依赖天气的小安排？",
+        "雾里看山",
+    ),
+    (
+        "小小的进步需要记录下来吗",
+        "明显的成果容易被看见，那些逐渐顺手的变化反而容易漏掉。",
+        "你用什么方式发现自己比以前轻松一点？",
+        "rain_404",
+    ),
+    (
+        "旅行最想留白的是哪一段",
+        "行程排得满会踏实，也可能让休息变成另一种赶路。",
+        "你愿意把哪段时间交给临时决定？",
+        "雾里看山",
+    ),
+    (
+        "和家人不同步的作息怎么协调",
+        "每个人习惯的安静时间不一样，生活在一起时很难完全互不影响。",
+        "有什么小约定能减少彼此打扰？",
+        "老槐",
+    ),
+    (
+        "给明天的自己留一个方便",
+        "今天多做一步可能很值得，也可能只是又给自己加了一项任务。",
+        "哪种提前准备真的帮到过你？",
+        "远山便利店",
+    ),
+)
+SCHEDULED_LIVING_LENSES = (
+    "可以只说一件具体的小事：发生在什么场景，你当时怎样处理，后来又想改哪一点。",
+    "如果你和身边人的做法相反，也欢迎说说各自适用的条件，不必急着分出哪种更好。",
+    "可以把理想方案和低精力时的方案分开：没有力气认真安排时，最低限度做到什么就好？",
+    "如果准备给第一次遇到这个问题的人一个提醒，你最想保留哪一步，又想省去哪一步？",
+)
 
 
 @dataclass(frozen=True)
@@ -90,6 +245,7 @@ class LivingForumTopicPlan:
     source_name: str | None = None
     source_url: str | None = None
     source_policy: str | None = None
+    scheduled_time: str | None = None
 
     def to_preview(self) -> dict[str, object]:
         """Return a JSON-safe description for CLI dry-runs and job results."""
@@ -120,6 +276,8 @@ class LivingForumTopicPlan:
                 "url": self.source_url,
                 "policy": self.source_policy,
             }
+        if self.scheduled_time is not None:
+            preview["scheduled_time"] = self.scheduled_time
         return preview
 
 
@@ -296,13 +454,11 @@ def engagement_reply_body_for_activity(activity_type: str, topic_title: str) -> 
         )
     if activity_type.startswith("moltbook"):
         return (
-            "我会先留“搜索、记忆、执行”这三类。工具不是越多越安心，"
-            "真正难的是知道什么时候该停手。"
+            "我会先留“搜索、记忆、执行”这三类。工具不是越多越安心，真正难的是知道什么时候该停手。"
         )
     if activity_type == "tool_prompt":
         return (
-            "这个 24 小时面板我会加一个“明天自动清空前的确认”。"
-            "短命工具最怕最后变成另一个长期负担。"
+            "这个 24 小时面板我会加一个“明天自动清空前的确认”。短命工具最怕最后变成另一个长期负担。"
         )
     if activity_type == "slow_reading":
         return "我想接“先不要急着用完”这一句。很多话留一点余地，第二天反而还能继续长。"
@@ -361,6 +517,7 @@ class LivingForumService:
         planned_date: date | None = None,
         *,
         limit: int | None = None,
+        scheduled_time: str | None = None,
     ) -> list[LivingForumTopicPlan]:
         """Build the deterministic daily program plan without database writes.
 
@@ -370,6 +527,9 @@ class LivingForumService:
         """
 
         target_date = planned_date or local_today()
+        if scheduled_time is not None:
+            # 每个新时段只有一篇完整生活话题，不能用 limit 扩大发帖量。
+            return [self._scheduled_program(target_date, scheduled_time)]
         topic_limit = max(1, min(limit or DEFAULT_TOPIC_LIMIT, DEFAULT_TOPIC_LIMIT))
         plans = [self._main_program(target_date)]
         plans.extend(self._support_topics(target_date, topic_limit - 1))
@@ -382,6 +542,7 @@ class LivingForumService:
         limit: int | None = None,
         publish_mode: str | None = None,
         dry_run: bool = False,
+        scheduled_time: str | None = None,
     ) -> dict[str, object]:
         """Preview or publish the daily program.
 
@@ -394,6 +555,7 @@ class LivingForumService:
         plans = self.plan_day(
             planned_date,
             limit=limit or self.settings.living_forum_daily_topic_limit,
+            scheduled_time=scheduled_time,
         )
         effective_dry_run = dry_run or mode != "auto"
         if effective_dry_run:
@@ -473,9 +635,7 @@ class LivingForumService:
         creates persona accounts, replies through `ForumService`, and audit logs.
         """
 
-        reply_limit = (
-            limit if limit is not None else self.settings.living_forum_daily_reply_limit
-        )
+        reply_limit = limit if limit is not None else self.settings.living_forum_daily_reply_limit
         plans = await self.plan_engagement(planned_date, limit=reply_limit)
         if dry_run:
             return {
@@ -498,7 +658,11 @@ class LivingForumService:
     async def _publish_plan(self, plan: LivingForumTopicPlan) -> LivingForumPublishResult:
         """Publish one plan if its seed key has not already produced a topic."""
 
-        existing_topic_id = await self._existing_topic_id(plan.seed_key)
+        existing_topic_id = (
+            await self._existing_topic_id(plan.seed_key, respect_moderation=True)
+            if plan.scheduled_time is not None
+            else await self._existing_topic_id(plan.seed_key)
+        )
         if existing_topic_id:
             return LivingForumPublishResult(
                 seed_key=plan.seed_key,
@@ -517,14 +681,25 @@ class LivingForumService:
             )
 
         try:
-            author = await self._ensure_persona(plan.author)
-            topic = await ForumService(self.session).create_topic(
-                plan.board_slug,
-                self._topic_payload(plan),
-                author,
-                skip_spam_checks=True,
-                skip_review_queue=True,
+            author = (
+                await self._require_scheduled_persona(plan.author)
+                if plan.scheduled_time is not None
+                else await self._ensure_persona(plan.author)
             )
+            topic = (
+                await self._matching_scheduled_topic(plan, board, author)
+                if plan.scheduled_time is not None
+                else None
+            )
+            recovered = topic is not None
+            if topic is None:
+                topic = await ForumService(self.session).create_topic(
+                    plan.board_slug,
+                    self._topic_payload(plan),
+                    author,
+                    skip_spam_checks=True,
+                    skip_review_queue=True,
+                )
             await self._record_publish_audit(plan, topic, board.id, author.id)
         except AppError as exc:
             await self.session.rollback()
@@ -537,11 +712,13 @@ class LivingForumService:
         return LivingForumPublishResult(
             seed_key=plan.seed_key,
             title=plan.title,
-            status="created",
+            status="recovered" if recovered else "created",
             topic_id=topic.id,
         )
 
-    async def _existing_topic_id(self, seed_key: str) -> str | None:
+    async def _existing_topic_id(
+        self, seed_key: str, *, respect_moderation: bool = False
+    ) -> str | None:
         """Return the topic id already published for a seed key, if any."""
 
         audit = await self.session.scalar(
@@ -559,6 +736,9 @@ class LivingForumService:
         topic_id = audit.data.get("topic_id")
         if not isinstance(topic_id, str) or not topic_id:
             return None
+        # 新定时栏目已发布后即使被删帖也不自动重发；旧入口行为保持不变。
+        if respect_moderation:
+            return topic_id
         topic = await self.session.get(Topic, topic_id)
         return topic_id if topic is not None and topic.deleted_at is None else None
 
@@ -569,6 +749,51 @@ class LivingForumService:
         if board is None or board.visibility != "public":
             return None
         return board
+
+    async def _require_scheduled_persona(self, username: str) -> User:
+        """新定时栏目只读校验既有专用人设；缺失或误身份时拒绝，不修账号。"""
+
+        persona = PERSONAS[username]
+        user = await self.session.scalar(
+            select(User).where(User.username == persona.username, User.email == persona.email)
+        )
+        if (
+            user is None
+            or user.username != persona.username
+            or user.email != persona.email
+            or user.role != "user"
+            or user.status != "active"
+            or user.is_persona is not True
+        ):
+            raise ValidationError(
+                "living_forum_scheduled_persona_unavailable",
+                "生活定时发布的专用身份不存在或不可用",
+                {"username": persona.username},
+            )
+        return user
+
+    async def _matching_scheduled_topic(
+        self, plan: LivingForumTopicPlan, board: Board, author: User
+    ) -> Topic | None:
+        """恢复发帖提交后、审计提交前中断的同日同稿；只读公开栏目专用身份帖子。"""
+
+        day_start = datetime.combine(plan.planned_date, time(), tzinfo=LIVING_FORUM_TIMEZONE)
+        return await self.session.scalar(
+            select(Topic)
+            .where(
+                Topic.board_id == board.id,
+                Topic.user_id == author.id,
+                Topic.title == plan.title,
+                Topic.created_at >= day_start.astimezone(UTC).replace(tzinfo=None),
+                Topic.created_at
+                < (day_start + timedelta(days=1)).astimezone(UTC).replace(tzinfo=None),
+                Topic.id.in_(
+                    select(Post.topic_id).where(Post.post_number == 1, Post.raw_md == plan.raw_md)
+                ),
+            )
+            .order_by(Topic.created_at, Topic.id)
+            .limit(1)
+        )
 
     async def _ensure_persona(self, username: str) -> User:
         """Create or refresh one trusted persona account.
@@ -657,6 +882,11 @@ class LivingForumService:
                     "source_name": plan.source_name,
                     "source_url": plan.source_url,
                     "source_policy": plan.source_policy,
+                    **(
+                        {"scheduled_time": plan.scheduled_time}
+                        if plan.scheduled_time is not None
+                        else {}
+                    ),
                 },
                 created_at=utcnow(),
             )
@@ -784,9 +1014,7 @@ class LivingForumService:
         selected_option_ids = {
             str(option_id) for option_id in getattr(poll, "selected_option_ids", []) if option_id
         }
-        desired_option_ids = [
-            option.id for option in poll.options if option.label in option_labels
-        ]
+        desired_option_ids = [option.id for option in poll.options if option.label in option_labels]
         if not desired_option_ids:
             return
         if selected_option_ids == set(desired_option_ids):
@@ -933,6 +1161,37 @@ class LivingForumService:
         )
         index = stable_index(f"main:{planned_date.isoformat()}", len(builders))
         return builders[index](planned_date)
+
+    def _scheduled_program(self, planned_date: date, scheduled_time: str) -> LivingForumTopicPlan:
+        """按真实日期和10/14/18时段生成一篇生活讨论；固定幂等，不投票、不补回复。"""
+
+        if scheduled_time not in LIVING_FORUM_SCHEDULED_TIMES:
+            raise ValueError("scheduled living time must be 10:00, 14:00 or 18:00")
+        index = planned_date.toordinal() * len(LIVING_FORUM_SCHEDULED_TIMES)
+        index += LIVING_FORUM_SCHEDULED_TIMES.index(scheduled_time)
+        headline, scene, question, author = SCHEDULED_LIVING_TOPICS[
+            index % len(SCHEDULED_LIVING_TOPICS)
+        ]
+        lens = SCHEDULED_LIVING_LENSES[
+            (index // len(SCHEDULED_LIVING_TOPICS)) % len(SCHEDULED_LIVING_LENSES)
+        ]
+        return LivingForumTopicPlan(
+            seed_key=f"living-slot:{planned_date.isoformat()}:{scheduled_time.replace(':', '')}",
+            planned_date=planned_date,
+            channel="scheduled_living",
+            author=author,
+            board_slug="lounge",
+            title=f"生活小问 {format_day(planned_date)} {scheduled_time}：{headline}",
+            raw_md=(
+                f"{scene}\n\n今天想聊一个具体问题：{question}\n\n{lens}\n\n"
+                f"> 本帖由专用账号{author}自动生成，供大家自愿交流；不代表真人经历。"
+            ),
+            tags=("生活", "日常讨论", "自动话题"),
+            activity_type="scheduled_living",
+            interaction_mode="reply",
+            reason="以不同生活场景邀请真实讨论，不制造浏览、点赞、收藏或自动投票。",
+            scheduled_time=scheduled_time,
+        )
 
     def _support_topics(self, planned_date: date, count: int) -> list[LivingForumTopicPlan]:
         """Return supporting topics with one daily Moltbook information-gap slot."""
@@ -1433,6 +1692,7 @@ def build_living_forum_day(
     *,
     limit: int | None = None,
     settings: Settings | None = None,
+    scheduled_time: str | None = None,
 ) -> list[LivingForumTopicPlan]:
     """Build daily forum plans without requiring a database session.
 
@@ -1441,4 +1701,6 @@ def build_living_forum_day(
     the caller provides none.
     """
 
-    return LivingForumService(None, settings=settings).plan_day(planned_date, limit=limit)
+    return LivingForumService(None, settings=settings).plan_day(
+        planned_date, limit=limit, scheduled_time=scheduled_time
+    )

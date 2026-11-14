@@ -29,6 +29,7 @@ import {
   useUserRelationship,
   useUserRelationshipUsers,
 } from "@/features/social/queries";
+import PublicUserSpacePanel from "@/features/space/components/PublicUserSpacePanel.vue";
 import TopicList from "@/features/topics/components/TopicList.vue";
 import { useAdminTopicDelete } from "@/features/topics/useAdminTopicDelete";
 import { useUploadAvatar } from "@/features/uploads/queries";
@@ -65,7 +66,7 @@ import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
 import PasswordField from "@/shared/ui/PasswordField.vue";
 
-type ProfilePanel = "topics" | "activity" | "social" | "profile" | "account";
+type ProfilePanel = "topics" | "space" | "activity" | "social" | "profile" | "account";
 
 const ACCOUNT_ROUTE_NAMES = new Set(["account-home", "account-profile", "account-settings"]);
 const route = useRoute();
@@ -276,6 +277,7 @@ const relationshipUsers = computed(() => relationshipUsersQuery.data.value ?? []
 const profilePanels = computed<Array<{ key: ProfilePanel; label: string; count?: number }>>(() => {
   const panels: Array<{ key: ProfilePanel; label: string; count?: number }> = [
     { key: "topics", label: "主题", count: profile.value?.topic_count ?? 0 },
+    { key: "space", label: "手账" },
     { key: "activity", label: "活动", count: profile.value?.post_count ?? 0 },
   ];
 
@@ -960,6 +962,13 @@ function socialErrorMessage(error: unknown): string {
         @delete-topic="requestDeleteTopic"
       />
     </section>
+
+    <PublicUserSpacePanel
+      v-else-if="profile && activeProfilePanel === 'space'"
+      :identifier="profile.id"
+      :display-name="displayName"
+      :is-own-profile="isOwnProfile"
+    />
 
     <section v-else-if="profile && activeProfilePanel === 'activity'" class="profile-activity" aria-labelledby="profile-activity-title">
       <header>

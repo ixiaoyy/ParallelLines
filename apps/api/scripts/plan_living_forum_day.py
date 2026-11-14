@@ -39,6 +39,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         dest="planned_date",
         help="Local Asia/Shanghai date in YYYY-MM-DD format; defaults to today.",
     )
+    parser.add_argument(
+        "--scheduled-time",
+        choices=("10:00", "14:00", "18:00"),
+        help="Run one distinct scheduled topic for this Shanghai time; no replies or poll votes.",
+    )
     parser.add_argument("--limit", type=int, default=None, help="Maximum topics to plan/publish.")
     parser.add_argument(
         "--reply-limit",
@@ -52,7 +57,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Override LIVING_FORUM_PUBLISH_MODE for this run.",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.scheduled_time is not None and (args.engage or args.engage_only):
+        parser.error("--scheduled-time cannot be combined with engagement options")
+    return args
 
 
 async def async_main(argv: Sequence[str] | None = None) -> None:
@@ -75,6 +83,11 @@ async def async_main(argv: Sequence[str] | None = None) -> None:
                 limit=args.limit,
                 publish_mode=args.publish_mode,
                 dry_run=not args.run,
+                **(
+                    {"scheduled_time": args.scheduled_time}
+                    if args.scheduled_time is not None
+                    else {}
+                ),
             )
             if args.engage:
                 result = {

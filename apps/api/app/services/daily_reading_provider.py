@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 
@@ -14,6 +15,7 @@ from app.services.openai_chat import (
 )
 
 DAILY_READING_TAGS = ("读书", "原创")
+DAILY_READING_SCHEDULED_TIMES = ("10:00", "14:00", "18:00")
 DAILY_READING_SYSTEM_PROMPT = """
 你为中文小论坛里的普通用户写每日读书感悟。这个账号是戴眼镜、喜欢二次元和游戏的年轻女性，
 但阅读只是她生活的一部分，不要刻意堆游戏梗、宅文化符号或文艺人设。
@@ -46,9 +48,9 @@ class DailyReadingDraft:
 
 @dataclass(frozen=True)
 class DailyReadingProviderResult:
-    """Describe two generated drafts and the provider provenance used for them."""
+    """Describe validated drafts and their provider provenance."""
 
-    drafts: tuple[DailyReadingDraft, DailyReadingDraft]
+    drafts: tuple[DailyReadingDraft, ...]
     model_name: str
     provider_mode: str
 
@@ -60,8 +62,11 @@ class DailyReadingProvider:
         self,
         planned_date: date,
         recent_titles: list[str],
+        *,
+        scheduled_time: str | None = None,
+        recent_bodies: Sequence[str] = (),
     ) -> DailyReadingProviderResult:
-        """Generate exactly two validated drafts for a date without database writes."""
+        """生成日更两篇或指定时段一篇；返回已校验草稿，不写数据库。"""
 
         raise NotImplementedError
 
@@ -79,15 +84,15 @@ class OpenAICompatibleDailyReadingProvider(DailyReadingProvider):
         self,
         planned_date: date,
         recent_titles: list[str],
+        *,
+        scheduled_time: str | None = None,
+        recent_bodies: Sequence[str] = (),
     ) -> DailyReadingProviderResult:
-        """Request two drafts for a date and return validated model output.
+        """请求旧日更两篇或指定时段一篇；返回校验稿，最多进行一次模型调用。"""
 
-        Key parameters are the Shanghai calendar date and recent published titles.
-        The return value contains exactly two drafts. Side effect: performs one
-        outbound model request without logging its credential or response body.
-        """
-
-        messages = build_daily_reading_messages(planned_date, recent_titles)
+        messages = build_daily_reading_messages(
+            planned_date, recent_titles, scheduled_time=scheduled_time
+        )
         payload = await asyncio.to_thread(
             request_openai_chat,
             base_url=self.settings.daily_reading_ai_base_url,
@@ -103,8 +108,9 @@ class OpenAICompatibleDailyReadingProvider(DailyReadingProvider):
         result = parse_daily_reading_provider_result(
             payload,
             fallback_model=self.settings.daily_reading_ai_model,
+            expected_count=1 if scheduled_time is not None else 2,
         )
-        ensure_daily_reading_titles_fresh(result.drafts, recent_titles)
+        ensure_daily_reading_titles_fresh(result.drafts, recent_titles, recent_bodies=recent_bodies)
         return result
 
 
@@ -115,12 +121,24 @@ class LocalDailyReadingProvider(DailyReadingProvider):
         self,
         planned_date: date,
         recent_titles: list[str],
+        *,
+        scheduled_time: str | None = None,
+        recent_bodies: Sequence[str] = (),
     ) -> DailyReadingProviderResult:
-        """Return two date-stable local drafts without network or database writes."""
+        """返回旧日更两篇或指定时段一篇本地稿，不访问网络或数据库。"""
 
-        del recent_titles
+        # 新时段使用真实日期和时段选择不同的书籍/视角，旧日更组合保持不变。
+        drafts = (
+            (
+                build_local_scheduled_reading_draft(
+                    planned_date, scheduled_time, recent_titles, recent_bodies=recent_bodies
+                ),
+            )
+            if scheduled_time is not None
+            else build_local_daily_reading_drafts(planned_date)
+        )
         return DailyReadingProviderResult(
-            drafts=build_local_daily_reading_drafts(planned_date),
+            drafts=drafts,
             model_name="local-daily-reading-v1",
             provider_mode="local_fallback",
         )
@@ -151,42 +169,74 @@ async def generate_daily_reading_with_fallback(
     recent_titles: list[str],
     *,
     force_local: bool = False,
+    scheduled_time: str | None = None,
+    recent_bodies: Sequence[str] = (),
 ) -> DailyReadingProviderResult:
-    """Generate two daily drafts and fall back to deterministic local content.
+    """生成日更两篇或指定时段一篇；模型无效时沿既有策略使用可识别的本地稿。
 
-    Key parameters select settings, date, recent-title avoidance context, and an
-    optional local-only mode. Return value always contains two validated drafts.
-    Side effect may be one outbound model request when configured.
+    日期、时段及近期内容决定去重上下文；返回草稿和来源，最多一次外部模型调用。
     """
 
+    validate_scheduled_reading_time(scheduled_time)
+    generation_options = (
+        {"scheduled_time": scheduled_time, "recent_bodies": recent_bodies}
+        if scheduled_time is not None
+        else {}
+    )
     if force_local:
-        return await LocalDailyReadingProvider().generate(planned_date, recent_titles)
+        return await LocalDailyReadingProvider().generate(
+            planned_date, recent_titles, **generation_options
+        )
     provider, ai_enabled = configured_daily_reading_provider(settings)
     try:
-        return await provider.generate(planned_date, recent_titles)
+        return await provider.generate(planned_date, recent_titles, **generation_options)
     except AppError:
         if not ai_enabled:
             raise
-        return await LocalDailyReadingProvider().generate(planned_date, recent_titles)
+        return await LocalDailyReadingProvider().generate(
+            planned_date, recent_titles, **generation_options
+        )
 
 
 def build_daily_reading_messages(
     planned_date: date,
     recent_titles: list[str],
+    *,
+    scheduled_time: str | None = None,
 ) -> list[dict[str, str]]:
     """Build bounded provider messages for one date without including private data."""
 
+    validate_scheduled_reading_time(scheduled_time)
     context = {
         "planned_date": planned_date.isoformat(),
         "recent_titles_to_avoid": recent_titles[:60],
-        "required_count": 2,
+        "required_count": 1 if scheduled_time is not None else 2,
     }
+    system_prompt = DAILY_READING_SYSTEM_PROMPT
+    request_text = "请按约定生成今天的两篇读书感悟。上下文：\n"
+    if scheduled_time is not None:
+        context["scheduled_time"] = scheduled_time
+        # 三时段每批只需一篇；明示自动创作口吻，不把角色经历当作真人事实。
+        system_prompt = (
+            DAILY_READING_SYSTEM_PROMPT.replace(
+                "一次只生成两篇彼此明显不同的原创帖子", "本次只生成一篇原创帖子"
+            )
+            .replace(
+                "5. 两篇不能写同一本书、同一种阅读方法或同一个结论，也不要使用近期标题的改写。",
+                "5. 不要复用近期标题、阅读角度或结论，也不要只改写近期标题。",
+            )
+            .replace(
+                '{"posts":[{"title":"...","body":"..."},{"title":"...","body":"..."}]}',
+                '{"posts":[{"title":"...","body":"..."}]}',
+            )
+            + "\n这是公开标注的自动创作账号；可以使用角色口吻，不声称真人当天经历。"
+        )
+        request_text = "请为这个真实日期和时段生成一篇新的读书感悟。上下文：\n"
     return [
-        {"role": "system", "content": DAILY_READING_SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {
             "role": "user",
-            "content": "请按约定生成今天的两篇读书感悟。上下文：\n"
-            + json.dumps(context, ensure_ascii=False),
+            "content": request_text + json.dumps(context, ensure_ascii=False),
         },
     ]
 
@@ -195,8 +245,9 @@ def parse_daily_reading_provider_result(
     response: dict[str, object],
     *,
     fallback_model: str,
+    expected_count: int = 2,
 ) -> DailyReadingProviderResult:
-    """Parse and validate two drafts from an OpenAI-compatible response payload."""
+    """校验模型响应并返回指定一篇或默认两篇；数量不符时失败，无外部副作用。"""
 
     content = extract_chat_content(
         response,
@@ -208,7 +259,7 @@ def parse_daily_reading_provider_result(
         error_prefix="daily_reading_provider",
         service_label="每日读书内容模型",
     )
-    drafts = parse_daily_reading_drafts(payload)
+    drafts = parse_daily_reading_drafts(payload, expected_count=expected_count)
     return DailyReadingProviderResult(
         drafts=drafts,
         model_name=str(response.get("model") or fallback_model)[:120],
@@ -218,14 +269,20 @@ def parse_daily_reading_provider_result(
 
 def parse_daily_reading_drafts(
     payload: dict[str, object],
-) -> tuple[DailyReadingDraft, DailyReadingDraft]:
-    """Validate a stored or provider-produced object as exactly two reading drafts."""
+    *,
+    expected_count: int = 2,
+) -> tuple[DailyReadingDraft, ...]:
+    """将存储或模型数据校验为指定一篇或默认两篇；不接受缺稿或多稿。"""
 
     posts = payload.get("posts")
-    if not isinstance(posts, list) or len(posts) != 2:
+    if expected_count not in (1, 2):
+        raise ValueError("daily reading expected count must be 1 or 2")
+    if not isinstance(posts, list) or len(posts) != expected_count:
         raise AppError(
             "daily_reading_provider_invalid_response",
-            "每日读书内容模型没有返回两篇帖子",
+            "每日读书内容模型没有返回两篇帖子"
+            if expected_count == 2
+            else "每日读书内容模型没有返回一篇帖子",
             status_code=503,
         )
     drafts: list[DailyReadingDraft] = []
@@ -248,23 +305,31 @@ def parse_daily_reading_drafts(
             raise _invalid_daily_reading_response("两篇帖子标题重复")
         normalized_titles.add(normalized_title)
         drafts.append(DailyReadingDraft(title=title, raw_md=raw_md))
-    return drafts[0], drafts[1]
+    return tuple(drafts)
 
 
 def ensure_daily_reading_titles_fresh(
-    drafts: tuple[DailyReadingDraft, DailyReadingDraft],
+    drafts: Sequence[DailyReadingDraft],
     recent_titles: list[str],
+    *,
+    recent_bodies: Sequence[str] = (),
 ) -> None:
-    """Reject provider titles that exactly repeat recent published titles.
-
-    Key parameters are the two new drafts and bounded recent-title context.
-    Return value is none. Side effect: raises a safe provider error on a repeat.
-    """
+    """拒绝近期同标题或当日相同正文；输入为草稿和有界历史，重复时明确报错。"""
 
     recent = {"".join(title.lower().split()) for title in recent_titles if title.strip()}
     repeated = [draft.title for draft in drafts if "".join(draft.title.lower().split()) in recent]
     if repeated:
         raise _invalid_daily_reading_response("帖子标题与近期内容重复")
+    normalized_bodies = {"".join(body.split()) for body in recent_bodies}
+    if any("".join(draft.raw_md.split()) in normalized_bodies for draft in drafts):
+        raise _invalid_daily_reading_response("帖子正文与当日内容重复")
+
+
+def validate_scheduled_reading_time(value: str | None) -> None:
+    """校验可选北京时间时段；空值保留旧日更行为，无副作用。"""
+
+    if value is not None and value not in DAILY_READING_SCHEDULED_TIMES:
+        raise ValueError("scheduled reading time must be 10:00, 14:00 or 18:00")
 
 
 def _invalid_daily_reading_response(detail: str) -> AppError:
@@ -541,6 +606,35 @@ def build_local_daily_reading_drafts(
         combination_index = logical_index * 421 % combination_count
         drafts.append(_build_local_daily_reading_draft(combination_index))
     return drafts[0], drafts[1]
+
+
+def build_local_scheduled_reading_draft(
+    planned_date: date,
+    scheduled_time: str,
+    recent_titles: list[str],
+    *,
+    recent_bodies: Sequence[str] = (),
+) -> DailyReadingDraft:
+    """按真实日期和时段生成一篇不同的本地稿，跳过近期标题及当日相同正文。
+
+    参数为北京时间日期、10/14/18 时段和已用内容；返回原始草稿，不访问网络或数据库。
+    组合穷尽时明确失败，不用改标题或改幂等键重复发稿。
+    """
+
+    validate_scheduled_reading_time(scheduled_time)
+    slot_index = DAILY_READING_SCHEDULED_TIMES.index(scheduled_time)
+    combination_count = (
+        len(LOCAL_BOOK_SEEDS) * len(LOCAL_READING_LENSES) * len(LOCAL_READING_CLOSINGS)
+    )
+    start = (planned_date.toordinal() * 3 + slot_index) % combination_count
+    for offset in range(combination_count):
+        draft = _build_local_daily_reading_draft(((start + offset) * 421) % combination_count)
+        try:
+            ensure_daily_reading_titles_fresh((draft,), recent_titles, recent_bodies=recent_bodies)
+        except AppError:
+            continue
+        return draft
+    raise _invalid_daily_reading_response("可用本地读书内容组合已用完")
 
 
 def _build_local_daily_reading_draft(combination_index: int) -> DailyReadingDraft:

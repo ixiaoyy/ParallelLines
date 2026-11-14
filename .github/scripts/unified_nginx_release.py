@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import json
 from pathlib import Path
+import re
 import sys
 
 
@@ -15,6 +16,23 @@ MODULES = (
 )
 SOURCE_LIMIT = 256 * 1024
 FUNCTION_LIMIT = 128
+SOURCE_CONTRACTS = {
+    "tls.py": (
+        "clean_main_configuration", "main_web_redirect_record", "configuration_may_reload",
+        "context_preflight", "tls_lock",
+    ),
+    "managed_config.py": ("span", "split", "replace", "replace_tool_entries", "owned_delta_allowed"),
+    "main_web.py": ("modules", "anchor", "guard", "install_sources", "restore", "deploy"),
+    "deploy.py": (
+        "gateway_binding", "gateway_guard", "known_configuration", "inplace_configuration",
+        "assert_attempt_owner", "restore_state",
+    ),
+}
+DIGEST_LITERAL = re.compile(r"(?<![A-Za-z0-9])[0-9a-fA-F]{32,128}(?![A-Za-z0-9])")
+SENSITIVE_NAME = re.compile(
+    r"secret|password|(?:access|refresh|id)[_-]?token|authorization|credential|private[_-]?key",
+    re.IGNORECASE,
+)
 
 
 class OperationError(Exception):
@@ -123,11 +141,121 @@ def describe() -> dict:
     }
 
 
+class SourceRedactor(ast.NodeTransformer):
+    """仅为语义审阅生成脱敏 AST 文本；不执行源码，也不用源码恢复此前遮蔽摘要。"""
+
+    def visit_Constant(self, node: ast.Constant):
+        if not isinstance(node.value, str):
+            return node
+        value = node.value
+        if "\n" in value or len(value) > 1024:
+            value = "<multiline-or-long-literal-omitted>"
+        elif "-----BEGIN" in value or "Bearer " in value:
+            value = "<sensitive-literal-omitted>"
+        else:
+            value = DIGEST_LITERAL.sub("<digest-redacted>", value)
+        return ast.copy_location(ast.Constant(value=value), node)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        self.generic_visit(node)
+        # 默认参数可能含凭据或配置内容；签名已由 describe 给出，仅保留有无默认值。
+        node.args.defaults = [ast.Constant(value="<default>") for _ in node.args.defaults]
+        node.args.kw_defaults = [
+            ast.Constant(value="<default>") if value is not None else None
+            for value in node.args.kw_defaults
+        ]
+        for argument in [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]:
+            argument.annotation = None
+        node.returns = None
+        return node
+
+    def visit_Assign(self, node: ast.Assign):
+        self.generic_visit(node)
+        names = [part.id for target in node.targets for part in ast.walk(target) if isinstance(part, ast.Name)]
+        if any(SENSITIVE_NAME.search(name) for name in names) and isinstance(node.value, ast.Constant):
+            node.value = ast.Constant(value="<sensitive-assignment-omitted>")
+        return node
+
+    def visit_Dict(self, node: ast.Dict):
+        self.generic_visit(node)
+        for index, key in enumerate(node.keys):
+            if isinstance(key, ast.Constant) and isinstance(key.value, str) and SENSITIVE_NAME.search(key.value):
+                node.values[index] = ast.Constant(value="<sensitive-dict-value-omitted>")
+        return node
+
+
+def public_constant(value: object) -> object:
+    """只公开确切函数引用的固定部署路径、工具路径与 marker；不输出摘要或任意配置字面量。"""
+    if isinstance(value, str):
+        if "\n" not in value and len(value) <= 512 and not DIGEST_LITERAL.search(value):
+            if value.startswith(("/opt/parallellines", "/etc/nginx", "/etc/cron.d/parallellines", "/tools")):
+                return value
+            if value.startswith(("# BEGIN parallellines-tools", "# END parallellines-tools")):
+                return value
+            if re.fullmatch(r"https://(?:tools\.)?pingxingxian[.]space/?", value):
+                return value
+        return "<nonpublic-literal-omitted>"
+    if isinstance(value, (tuple, list)) and len(value) <= 16:
+        return [public_constant(item) for item in value]
+    return "<nonpublic-literal-omitted>"
+
+
+def describe_source() -> dict:
+    """仅读固定模块的固定公开函数 AST 段；所有输出仅供审阅，禁止作为运行源码复用。"""
+    modules = {}
+    for module, requested in SOURCE_CONTRACTS.items():
+        path = owned_source(module)
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=module)
+        except (UnicodeError, SyntaxError):
+            raise OperationError("consumer_module_not_parseable:" + module) from None
+        available = {
+            node.name: node for node in tree.body
+            if isinstance(node, ast.FunctionDef) and not node.name.startswith("_")
+        }
+        if any(name not in available for name in requested):
+            raise OperationError("consumer_public_contract_changed:" + module)
+        referenced = {
+            node.id for name in requested for node in ast.walk(available[name])
+            if isinstance(node, ast.Name) and node.id.isupper()
+        }
+        constants = {}
+        for node in tree.body:
+            if not isinstance(node, ast.Assign):
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id in referenced:
+                    try:
+                        literal = ast.literal_eval(node.value)
+                    except (ValueError, TypeError):
+                        constants[target.id] = "<nonliteral-value-omitted>"
+                    else:
+                        constants[target.id] = public_constant(literal)
+        sources = {}
+        for name in requested:
+            redacted = SourceRedactor().visit(available[name])
+            ast.fix_missing_locations(redacted)
+            sources[name] = ast.unparse(redacted)
+        modules[module] = {
+            "path": str(path), "referenced_public_constants": constants, "public_functions": sources,
+        }
+    result = {
+        "complete": True, "operation": "describe-source", "read_only": True,
+        "transaction_ready": False, "redacted_source_not_executable": True, "modules": modules,
+        "unknown_values": "默认值、摘要及敏感字面量不输出；此前遮蔽内容保持未知",
+    }
+    if len(json.dumps(result, ensure_ascii=True).encode()) > 192 * 1024:
+        raise OperationError("consumer_source_output_limit")
+    return result
+
+
 def main(arguments: list[str]) -> dict:
-    """当前仅开放无副作用 describe；未审核的写阶段明确拒绝，不提供通用执行入口。"""
-    if arguments != ["describe"]:
-        raise OperationError("ownership_contract_not_reviewed:describe_required")
-    return describe()
+    """仅开放两项固定只读审阅；未审核的写阶段明确拒绝，不提供通用执行入口。"""
+    if arguments == ["describe"]:
+        return describe()
+    if arguments == ["describe-source"]:
+        return describe_source()
+    raise OperationError("ownership_contract_not_reviewed:describe_required")
 
 
 if __name__ == "__main__":
