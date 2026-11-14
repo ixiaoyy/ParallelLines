@@ -618,11 +618,24 @@ def diagnose_chat_startup():
                 "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY": "isolated-oauth-diagnostic-not-a-production-key",
                 "ENABLE_OAUTH": "false", "OPENID_PROVIDER_URL": "", "ENABLE_OPENAI_API": "false",
                 "ENABLE_OLLAMA_API": "false", "RAG_EMBEDDING_MODEL": "", "PYTHONUNBUFFERED": "1"}
-    program = ("import os,sys,runpy,faulthandler;path=os.environ.get('PATH','/usr/local/bin:/usr/bin:/bin');os.environ.clear();"
-               "os.environ.update(" + repr(settings) + ");os.environ['PATH']=path;"
-               "faulthandler.dump_traceback_later(20,repeat=True);"
-               "sys.argv=['uvicorn','open_webui.main:app','--host','0.0.0.0','--port','8080','--no-proxy-headers','--workers','1','--ws-per-message-deflate','true'];"
-               "runpy.run_module('uvicorn',run_name='__main__')")
+    program = "import os,sys,runpy,gc,threading,time\npath=os.environ.get('PATH','/usr/local/bin:/usr/bin:/bin')\nos.environ.clear()\nos.environ.update(" + repr(settings) + ")\nos.environ['PATH']=path\n"
+    program += """
+def report_waits():
+    for _ in range(2):
+        time.sleep(12)
+        for obj in gc.get_objects():
+            try:
+                code=getattr(obj,'cr_code',None) or getattr(obj,'ag_code',None)
+                frame=getattr(obj,'cr_frame',None) or getattr(obj,'ag_frame',None)
+                waiting=getattr(obj,'cr_await',None) or getattr(obj,'ag_await',None)
+                if code and frame and waiting is not None and code.co_filename.startswith('/app/backend/open_webui/'):
+                    print('STARTUP_AWAIT '+code.co_filename+':'+str(frame.f_lineno)+' '+code.co_name,flush=True)
+            except Exception:
+                pass
+threading.Thread(target=report_waits,daemon=True).start()
+sys.argv=['uvicorn','open_webui.main:app','--host','0.0.0.0','--port','8080','--no-proxy-headers','--workers','1','--ws-per-message-deflate','true']
+runpy.run_module('uvicorn',run_name='__main__')
+"""
     cid = runner.run(["docker", "run", "-d", "--name", name, "--network", "none", "--memory", "1536m", "--cpus", "1",
                       "--pids-limit", "256", "--tmpfs", "/app/backend/data:rw,size=128m", "--label", "pl.unified.diagnostic=" + APP,
                       "--label", "com.docker.compose.project=pl-unified-diagnostic", "--label", "com.docker.compose.service=diagnostic",
@@ -632,7 +645,7 @@ def diagnose_chat_startup():
     log = ""
     state = {}
     try:
-        until = time.monotonic() + 75
+        until = time.monotonic() + 35
         while True:
             state = json.loads(runner.run(["docker", "inspect", "--format", '{"running":{{.State.Running}},"exit_code":{{.State.ExitCode}},"oom":{{.State.OOMKilled}}}', cid]))
             if not state["running"] or time.monotonic() >= until:
@@ -641,6 +654,9 @@ def diagnose_chat_startup():
         # docker logs的Python traceback通常在stderr；不公开完整日志，只留下本地私有记录。
         result = subprocess.run(["docker", "logs", "--tail", "100", cid], capture_output=True, text=True, timeout=10)
         log = result.stdout + result.stderr
+        local_status = runner.run(["docker", "exec", cid, "python", "-c",
+            "import urllib.request,urllib.error;op=urllib.request.build_opener(urllib.request.ProxyHandler({}));"
+            "r=op.open('http://127.0.0.1:8080/health',timeout=2);print(r.status)"], accepted=(0, 1), timeout=5).strip()
         path = ROOT / "chat-startup-diagnostic.log"
         with path.open("w", encoding="utf-8") as stream:
             os.chmod(path, 0o600)
@@ -652,13 +668,14 @@ def diagnose_chat_startup():
         runner.run(["docker", "rm", "-f", cid], timeout=15)
     symbols = []
     for line in log.splitlines():
-        if re.search(r"(?:ImportError:|ModuleNotFoundError:|NameError:|AttributeError:|TypeError:|SyntaxError:|ValueError:|RuntimeError:|FastAPIError:|Error: No such option|invalid option name|option requires an argument)", line):
+        if line.startswith("STARTUP_AWAIT ") or re.search(r"(?:ImportError:|ModuleNotFoundError:|NameError:|AttributeError:|TypeError:|SyntaxError:|ValueError:|RuntimeError:|FastAPIError:|Error: No such option|invalid option name|option requires an argument)", line):
             symbols.append(line[:400])
         elif re.fullmatch(r'\s*File "/(?:app/backend|usr/local/lib)/[A-Za-z0-9_./-]+", line [0-9]+, in [A-Za-z0-9_<>]+', line):
             symbols.append(line.strip())
     return {"complete": True, "stage": "isolated_startup_diagnosis", "production_data_mounted": False,
             "network_enabled": False, "temporary_container_removed": True, "state": state,
-            "error_symbols": symbols[-35:], "startup_completed": "Application startup complete" in log}
+            "error_symbols": symbols[-35:], "local_health_status": local_status,
+            "startup_completed": "Application startup complete" in log}
 
 
 def startup_output():
