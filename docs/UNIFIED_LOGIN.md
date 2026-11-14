@@ -34,6 +34,8 @@ API：`apps/api/app/api/v1/auth_unified.py`、`services/unified_auth.py`、`sche
 
 ## 下游候选
 
+本次交付只保留部署需要的运行产物和增量材料；修改继续在 GitHub 维护。不额外重打上游完整源码归档，也不新增产品页脚或源码下载提示。
+
 - Chat：同级 `parallellines-chat/openwebui-profile-overlay/unified-login/README.md` 和 `identity-bridge/rp-session.mjs`。
   RP（依赖方）使用各自既有客户端凭据调用发行方，不分发主站桥密钥；只有可信 `pl_unified_browser=true` 绑定可进入新浏览器会话。
 - New API：同级 `parallellines-new-api/releases/v0.13.2-pkce.10/` 的独立候选配方。

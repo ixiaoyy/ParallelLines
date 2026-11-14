@@ -544,24 +544,63 @@ def activate_main():
     return {"complete": True, "stage": "main_active", "application_revision": APP, "gateway_recreated": False}
 
 
-def public_info():
-    """只读取网关已公开的版本/源码展示配置，不读取账号、模型、密钥或数据库。"""
-    status, _, body = source_request("api.pingxingxian.space", "/api/status")
-    if status != 200:
-        raise OperationError("gateway_public_status_failed")
-    data = json.loads(body).get("data", {})
-    about_status, _, about_body = source_request("api.pingxingxian.space", "/api/about")
-    about = json.loads(about_body).get("data") if about_status == 200 else None
-    return {"complete": True, "read_only": True, "version": data.get("version"),
-            "footer_html": data.get("footer_html"), "about": about}
+def remove_source_archive():
+    """按用户纠正仅撤本轮闲置源码专包和下载依赖，不改变镜像、运行材料或业务数据。"""
+    key = "newapi-source"
+    expected_hash = "067c78864b90f6bfaa1f6840728cd86d3150cd204512ad46b521bad64d73118f"
+    expected_size = 14643572
+    target = ROOT / "artifacts/newapi-source--new-api-v0.13.2-pkce.10-corresponding-source.tar.gz"
+    receipt = ROOT / "artifacts/.newapi-source.json"
+    for path in (ROOT, target.parent, ROOT / "inputs"):
+        if path.is_symlink() or not path.is_dir():
+            raise OperationError("archive_cleanup_root_invalid")
+    records_to_update = []
+    for path in (ROOT / "payload.json", ROOT / "prepared.json", ROOT / "inputs/.prepared.json"):
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 2 * 1024 * 1024:
+            raise OperationError("archive_cleanup_record_invalid")
+        value = json.loads(path.read_text())
+        payload = value["payload"] if path.name == "prepared.json" else value
+        old = payload.get("artifacts", {}).get(key)
+        if old is not None and (old.get("path") != str(target) or old.get("kind") != "file"
+                or old.get("sha256") != expected_hash or old.get("bytes") != expected_size):
+            raise OperationError("archive_cleanup_ownership_changed")
+        payload.get("artifacts", {}).pop(key, None)
+        payload.get("inputs", {}).pop(key, None)
+        records_to_update.append((path, value))
+    exists = target.exists()
+    if target.is_symlink() or (exists and (not target.is_file() or target.stat().st_size != expected_size or target.stat().st_nlink != 1)):
+        raise OperationError("archive_cleanup_file_changed")
+    if exists:
+        digest = hashlib.sha256()
+        with target.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(65536), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != expected_hash:
+            raise OperationError("archive_cleanup_content_changed")
+    if receipt.exists():
+        if receipt.is_symlink() or not receipt.is_file() or receipt.stat().st_size > 4096:
+            raise OperationError("archive_cleanup_receipt_changed")
+        old = json.loads(receipt.read_text())
+        if old.get("key") != key or old.get("sha256") != expected_hash or old.get("bytes") != expected_size:
+            raise OperationError("archive_cleanup_receipt_changed")
+    save(ROOT / "source-archive-removal.json", {"state": "removing", "reason": "user_removed_extra_source_archive", "archive_was_present": exists})
+    if exists:
+        target.unlink()
+    if receipt.exists():
+        receipt.unlink()
+    for path, value in records_to_update:
+        save(path, value)
+    save(ROOT / "source-archive-removal.json", {"state": "removed", "reason": "user_removed_extra_source_archive", "archive_was_present": exists})
+    return {"complete": True, "stage": "extra_source_archive_removed", "archive_deleted": exists,
+            "download_dependency_removed": True, "running_services_changed": False, "application_data_changed": False}
 
 
 def main():
     """固定盘点/候选准备入口；没有任意 shell、路径或真实环境内容输入。"""
-    if len(sys.argv) != 2 or sys.argv[1] not in ("inventory", "prepare", "activate-main", "public-info"):
+    if len(sys.argv) != 2 or sys.argv[1] not in ("inventory", "prepare", "activate-main", "remove-source-archive"):
         raise OperationError("unsupported_operation")
     return {"inventory": lambda: inventory(Runner()), "prepare": prepare, "activate-main": activate_main,
-            "public-info": public_info}[sys.argv[1]]()
+            "remove-source-archive": remove_source_archive}[sys.argv[1]]()
 
 
 if __name__ == "__main__":

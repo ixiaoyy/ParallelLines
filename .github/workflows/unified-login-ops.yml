@@ -8,13 +8,13 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, describe, describe-source, public-info, prepare, activate-main]
+        options: [inventory, describe, describe-source, prepare, activate-main, remove-source-archive]
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ (inputs.operation == 'prepare' || inputs.operation == 'activate-main') && 'deploy-production' || format('unified-login-read-{0}', inputs.operation) }}
+  group: ${{ (inputs.operation == 'prepare' || inputs.operation == 'activate-main' || inputs.operation == 'remove-source-archive') && 'deploy-production' || format('unified-login-read-{0}', inputs.operation) }}
   cancel-in-progress: false
 
 jobs:
@@ -41,10 +41,10 @@ jobs:
           import uuid
           operation = os.environ['OPERATION']
           sources = {'inventory': 'unified_login_ops.py', 'describe': 'unified_nginx_release.py',
-                     'describe-source': 'unified_nginx_release.py', 'public-info': 'unified_login_ops.py'}
-          if operation not in sources and operation not in ('prepare', 'activate-main'):
+                     'describe-source': 'unified_nginx_release.py'}
+          if operation not in sources and operation not in ('prepare', 'activate-main', 'remove-source-archive'):
               raise SystemExit('Unsupported operation')
-          if operation in ('prepare', 'activate-main'):
+          if operation in ('prepare', 'activate-main', 'remove-source-archive'):
               revision = os.environ['OPERATOR_REVISION']
               if not re.fullmatch('[0-9a-f]{40}', revision):
                   raise SystemExit('Invalid operator revision')
