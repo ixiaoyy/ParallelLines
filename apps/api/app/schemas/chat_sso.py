@@ -32,6 +32,8 @@ class ChatSsoStateResponse(BaseModel):
     sub: str | None
     binding_id: str
     auth_expires_at: int | None
+    # 缺省假，只接受主站保存的中央浏览器 binding 标记，不由 RP 入参指定。
+    unified_browser: bool = False
     name: str | None = None
     username: str | None = None
     email: str | None = None

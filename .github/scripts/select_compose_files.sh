@@ -43,6 +43,27 @@ select_parallellines_compose_files() {
         COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.forum.yml"
         FORUM_ENABLED=true
     fi
+
+    # 后续主站/API发布必须接续已启用的统一登录，不能因默认关闭而恢复子站密码入口。
+    if test -e .deployment/unified-auth-enabled; then
+        test -f .deployment/unified-auth-enabled && test -s docker-compose.unified.yml || {
+            echo "[deploy] unified login marker or recipe is invalid" >&2
+            return 1
+        }
+        UNIFIED_AUTH_RELEASE=$(cat .deployment/unified-auth-enabled)
+        case "$UNIFIED_AUTH_RELEASE" in
+            ""|*[!A-Za-z0-9_.-]*|[.-]*)
+                echo "[deploy] unified login release marker is invalid" >&2
+                return 1
+                ;;
+        esac
+        if test "${#UNIFIED_AUTH_RELEASE}" -gt 128 || test "$FORUM_ENABLED" != true; then
+            echo "[deploy] unified login requires the existing enabled circle site" >&2
+            return 1
+        fi
+        export VITE_UNIFIED_AUTH_ENABLED=true
+        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.unified.yml"
+    fi
 }
 
 select_parallellines_compose_files

@@ -38,6 +38,9 @@ interface RefreshAccessTokenResponse {
 }
 
 let refreshAccessTokenPromise: Promise<string | null> | null = null;
+let sessionAccessRefresher: (() => Promise<string | null>) | null = null;
+let transientAccessToken: string | null | undefined;
+let apiIdentityContext: string | null | undefined;
 const activeApiRequestCount = ref(0);
 const VISITOR_ID_STORAGE_KEY = "parallellines.visitor_id";
 
@@ -126,6 +129,7 @@ export function resolveApiThumbnailUrl(url: string | null | undefined): string |
 }
 
 export function getAccessToken(): string | null {
+  if (transientAccessToken !== undefined) return transientAccessToken;
   return getStoredToken("parallellines.access_token", "access_token");
 }
 
@@ -141,6 +145,7 @@ export function setAuthTokens(accessToken: string, refreshToken: string): void {
   try {
     window.localStorage.setItem("parallellines.access_token", accessToken);
     window.localStorage.setItem("parallellines.refresh_token", refreshToken);
+    transientAccessToken = undefined;
   } catch {
     // Ignore storage failures; callers will still see API errors if auth cannot persist.
   }
@@ -149,12 +154,14 @@ export function setAuthTokens(accessToken: string, refreshToken: string): void {
 function setAccessToken(accessToken: string): void {
   try {
     window.localStorage.setItem("parallellines.access_token", accessToken);
+    transientAccessToken = undefined;
   } catch {
     // Ignore storage failures; the retry will surface auth errors if persistence fails.
   }
 }
 
 export function clearAuthTokens(): void {
+  transientAccessToken = apiIdentityContext === undefined ? undefined : null;
   try {
     window.localStorage.removeItem("parallellines.access_token");
     window.localStorage.removeItem("parallellines.refresh_token");
@@ -163,6 +170,41 @@ export function clearAuthTokens(): void {
   } catch {
     // Ignore storage failures during logout.
   }
+}
+
+/** 统一浏览器只保存短 access，清除旧刷新令牌；存储失败时仅在本页使用，不退回旧账号。 */
+export function setSessionAccessToken(token: string | null): void {
+  if (token === null) { clearAuthTokens(); return; }
+  transientAccessToken = token;
+  try {
+    window.localStorage.removeItem("parallellines.refresh_token");
+    window.localStorage.removeItem("refresh_token");
+    window.localStorage.removeItem("access_token");
+    window.localStorage.setItem("parallellines.access_token", token);
+    // 各标签只使用自己已核实的身份；其他标签写入磁盘不能在本标签缓存仍属A时换成B的请求头。
+  } catch { /* 本页内存凭据仍绑定当前身份，不声称已持久化。 */ }
+}
+
+/** 中央身份核实前不使用磁盘旧令牌，但不删除尚未迁移的主站旧会话。 */
+export function suspendSessionAccess(): void {
+  transientAccessToken = null;
+}
+
+/** 业务层接入其会话续发；未注册时完整沿用原 refresh 协议，卸载时只撤自己的回调。 */
+export function registerSessionAccessRefresher(refresher: () => Promise<string | null>): () => void {
+  sessionAccessRefresher = refresher;
+  return () => { if (sessionAccessRefresher === refresher) sessionAccessRefresher = null; };
+}
+
+/** 身份切换后迟到的私有响应不得交给新账号消费；同身份的短 token 更新不改变上下文。 */
+export function setApiIdentityContext(identity: string | null): void {
+  apiIdentityContext = identity;
+}
+
+function requireSameIdentity(identity: typeof apiIdentityContext, path: string): void {
+  // 凭据表单本身就是显式登录意图；普通私有请求不能借刷新跨账号自动重放。
+  if (/^\/auth\/(?:login|register|verify-email|2fa\/verify-login|password-reset(?:\/|$))/.test(path)) return;
+  if (identity !== apiIdentityContext) throw new ApiError("identity_changed", "账号已变更，请重新操作。", {}, 409);
 }
 
 export function createApiHeaders(init?: HeadersInit): Headers {
@@ -210,9 +252,11 @@ function createVisitorId(): string {
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const identity = apiIdentityContext;
   activeApiRequestCount.value += 1;
   try {
     const first = await performApiRequest(path, init);
+    requireSameIdentity(identity, path);
     if (first.response.ok) {
       return unwrapApiResponse<T>(first.payload);
     }
@@ -220,8 +264,10 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     const firstError = toApiError(first.response, first.payload);
     if (shouldRefreshAfterFailure(path, first.response)) {
       const refreshedToken = await refreshAccessToken();
+      requireSameIdentity(identity, path);
       if (refreshedToken) {
         const retry = await performApiRequest(path, init);
+        requireSameIdentity(identity, path);
         if (retry.response.ok) {
           return unwrapApiResponse<T>(retry.payload);
         }
@@ -239,9 +285,11 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 // Key parameters are the API path and optional request init. Return value contains the
 // response Blob and headers. Side effect: increments global request activity and may refresh auth.
 export async function apiBlob(path: string, init?: RequestInit): Promise<ApiBlobResponse> {
+  const identity = apiIdentityContext;
   activeApiRequestCount.value += 1;
   try {
     const first = await performApiBlobRequest(path, init);
+    requireSameIdentity(identity, path);
     if (first.response.ok) {
       return { blob: first.blob ?? new Blob(), headers: first.response.headers };
     }
@@ -249,8 +297,10 @@ export async function apiBlob(path: string, init?: RequestInit): Promise<ApiBlob
     const firstError = toApiError(first.response, first.payload);
     if (shouldRefreshAfterFailure(path, first.response)) {
       const refreshedToken = await refreshAccessToken();
+      requireSameIdentity(identity, path);
       if (refreshedToken) {
         const retry = await performApiBlobRequest(path, init);
+        requireSameIdentity(identity, path);
         if (retry.response.ok) {
           return { blob: retry.blob ?? new Blob(), headers: retry.response.headers };
         }
@@ -271,9 +321,11 @@ export async function apiRequestEnvelope<T>(
   path: string,
   init?: RequestInit,
 ): Promise<ApiEnvelope<T>> {
+  const identity = apiIdentityContext;
   activeApiRequestCount.value += 1;
   try {
     const first = await performApiRequest(path, init);
+    requireSameIdentity(identity, path);
     if (first.response.ok) {
       return unwrapApiEnvelope<T>(first.payload);
     }
@@ -281,8 +333,10 @@ export async function apiRequestEnvelope<T>(
     const firstError = toApiError(first.response, first.payload);
     if (shouldRefreshAfterFailure(path, first.response)) {
       const refreshedToken = await refreshAccessToken();
+      requireSameIdentity(identity, path);
       if (refreshedToken) {
         const retry = await performApiRequest(path, init);
+        requireSameIdentity(identity, path);
         if (retry.response.ok) {
           return unwrapApiEnvelope<T>(retry.payload);
         }
@@ -345,6 +399,7 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 async function requestAccessTokenRefresh(): Promise<string | null> {
+  if (sessionAccessRefresher) return sessionAccessRefresher();
   const refreshToken = getRefreshToken();
   if (!refreshToken) {
     return null;
@@ -424,7 +479,7 @@ function toApiError(response: Response, payload: unknown): ApiError {
 }
 
 function shouldRefreshAfterFailure(path: string, response: Response): boolean {
-  return response.status === 401 && Boolean(getRefreshToken()) && !isRefreshExcludedPath(path);
+  return response.status === 401 && Boolean(sessionAccessRefresher || getRefreshToken()) && !isRefreshExcludedPath(path);
 }
 
 function isRefreshExcludedPath(path: string): boolean {

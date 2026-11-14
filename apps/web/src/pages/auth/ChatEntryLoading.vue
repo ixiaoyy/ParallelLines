@@ -1,6 +1,10 @@
+<script setup lang="ts">
+withDefaults(defineProps<{ label?: string }>(), { label: "正在进入聊天…" });
+</script>
+
 <template>
   <main class="chat-entry-loading" role="status" aria-live="polite" aria-busy="true">
-    <p>正在进入聊天…</p>
+    <p>{{ label }}</p>
   </main>
 </template>
 

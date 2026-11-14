@@ -11,6 +11,8 @@ import { readRouteParam } from "@/shared/router/params";
 import type { RouteSeoMeta } from "@/shared/seo/meta";
 import { buildSeoSiteDescription, SEO_PINYIN_NAME, SEO_SITE_TAGLINE } from "@/shared/seo/structuredData";
 import { IS_FORUM_SITE, SITE_LINKS } from "@/shared/site/links";
+import { mainAuthOrigin, UNIFIED_AUTH_ENABLED } from "@/features/auth/unified/protocol";
+import { ensureUnifiedForProtectedRoute } from "@/features/auth/unified/session";
 
 type RequiredAccess = "authenticated" | "admin" | "moderation";
 const NOINDEX_ROBOTS = "noindex,nofollow";
@@ -21,6 +23,7 @@ declare module "vue-router" {
   interface RouteMeta {
     requiredAccess?: RequiredAccess;
     forumShell?: boolean;
+    unifiedFlow?: boolean;
     seo?: RouteSeoMeta;
   }
 }
@@ -55,6 +58,26 @@ export const router = createRouter({
     return { top: 0, left: 0 };
   },
   routes: [
+    {
+      path: "/auth/unified", name: "unified-authorize",
+      component: () => import("@/pages/auth/UnifiedAuthorizePage.vue"),
+      meta: { unifiedFlow: true, seo: { title: "登录", description: "登录平行线。", robots: NOINDEX_ROBOTS } },
+    },
+    {
+      path: "/auth/unified/state", name: "unified-state",
+      component: () => import("@/pages/auth/UnifiedStatePage.vue"),
+      meta: { unifiedFlow: true, seo: { title: "登录状态", description: "平行线登录状态。", robots: NOINDEX_ROBOTS } },
+    },
+    {
+      path: "/auth/unified/callback", name: "unified-callback",
+      component: () => import("@/pages/auth/UnifiedCallbackPage.vue"),
+      meta: { unifiedFlow: true, seo: { title: "登录", description: "登录圈子。", robots: NOINDEX_ROBOTS } },
+    },
+    {
+      path: "/auth/unified/logout", name: "unified-logout",
+      component: () => import("@/pages/auth/UnifiedLogoutPage.vue"),
+      meta: { unifiedFlow: true, seo: { title: "退出登录", description: "退出平行线账号。", robots: NOINDEX_ROBOTS } },
+    },
     {
       path: IS_FORUM_SITE ? "/games" : "/",
       alias: IS_FORUM_SITE ? [] : "/games",
@@ -501,7 +524,8 @@ export const router = createRouter({
     {
       path: "/auth",
       name: "auth",
-      component: () => import("@/pages/auth/AuthPage.vue"),
+      component: IS_FORUM_SITE && UNIFIED_AUTH_ENABLED
+        ? () => import("@/pages/auth/UnifiedCircleLoginPage.vue") : () => import("@/pages/auth/AuthPage.vue"),
       meta: {
         forumShell: true,
         seo: {
@@ -555,10 +579,15 @@ export const router = createRouter({
 router.beforeEach(async (to) => {
   // 论坛独立构建只承接原论坛业务；目录后台和 Chat 登录桥仍归主站负责。
   if (IS_FORUM_SITE) {
+    if (UNIFIED_AUTH_ENABLED && (to.name === "account-settings" || to.name === "unified-state"
+      || to.name === "unified-authorize" || to.name === "unified-logout")) {
+      window.location.assign(new URL(to.fullPath, mainAuthOrigin()).href);
+      return false;
+    }
     if (to.name === "admin-dashboard") {
       return { name: "forum-admin-dashboard", query: to.query, hash: to.hash };
     }
-    if (to.meta.forumShell !== true) {
+    if (to.meta.forumShell !== true && !(UNIFIED_AUTH_ENABLED && to.meta.unifiedFlow)) {
       const destination = new URL(to.fullPath, SITE_LINKS.games);
       window.location.replace(destination.href);
       return false;
@@ -567,6 +596,15 @@ router.beforeEach(async (to) => {
   const requiredAccess = to.meta.requiredAccess;
   if (!requiredAccess) {
     return true;
+  }
+
+  if (UNIFIED_AUTH_ENABLED) {
+    try {
+      if (!await ensureUnifiedForProtectedRoute()) return { name: "auth", query: { redirect: to.fullPath } };
+    } catch {
+      // 无法确认权威状态时不使用旧账号缓存；公开页面仍可进入，登录页提供可恢复的接续。
+      return { name: "auth", query: { redirect: to.fullPath, unified_error: "unavailable" } };
+    }
   }
 
   // 所有受保护论坛入口复用当前账号缓存；未登录时保留完整回跳地址。

@@ -31,7 +31,9 @@ import {
   useVerifyEmail,
 } from "@/features/auth/queries";
 import { ApiError, hasAccessToken } from "@/shared/api/client";
-import { isChatSsoContinuation, needsFullAuthNavigation, resolveAuthReturn } from "@/shared/router/authReturn";
+import { isChatSsoContinuation, isUnifiedSsoContinuation, needsFullAuthNavigation, resolveAuthReturn } from "@/shared/router/authReturn";
+import { UNIFIED_AUTH_ENABLED } from "@/features/auth/unified/protocol";
+import { retryPrimaryLogin, unifiedAvailability } from "@/features/auth/unified/session";
 import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
 import UiButton from "@/shared/ui/Button.vue";
 import ChatEntryLoading from "./ChatEntryLoading.vue";
@@ -131,7 +133,8 @@ const redirectTarget = computed(() => {
 
 const completingAuth = ref(false);
 const chatContinuation = computed(() => isChatSsoContinuation(route.query.redirect, window.location.origin));
-const requiresChatLogin = computed(() => chatContinuation.value && route.query.reauth === "chat");
+const unifiedContinuation = computed(() => UNIFIED_AUTH_ENABLED && isUnifiedSsoContinuation(route.query.redirect, window.location.origin));
+const requiresChatLogin = computed(() => !UNIFIED_AUTH_ENABLED && chatContinuation.value && route.query.reauth === "chat");
 const awaitingCurrentUser = computed(() => chatContinuation.value && hasAccessToken()
   && !requiresChatLogin.value && currentUserQuery.isFetching.value && !currentUserQuery.error.value);
 const enteringChat = computed(() => chatContinuation.value && !formError.value
@@ -165,9 +168,14 @@ async function finishAuthReturn(): Promise<void> {
 }
 
 // Only an explicit SSO resume auto-continues an already authenticated main account.
-watch(() => [currentUserQuery.data.value, chatContinuation.value, requiresChatLogin.value] as const, ([user, continuation, requiresLogin]) => {
+watch(() => [currentUserQuery.data.value, chatContinuation.value || unifiedContinuation.value, requiresChatLogin.value] as const, ([user, continuation, requiresLogin]) => {
   if (user && continuation && !requiresLogin && hasAccessToken()) void finishAuthReturn();
 }, { immediate: true });
+
+async function retryUnifiedContinuation(): Promise<void> {
+  try { if (await retryPrimaryLogin()) await finishAuthReturn(); }
+  catch { formError.value = "登录未完成，请重试。"; }
+}
 onBeforeUnmount(() => window.clearTimeout(authReturnTimer));
 
 watch(
@@ -552,6 +560,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
       </aside>
 
       <main class="auth-panel" aria-label="账号认证">
+        <p v-if="UNIFIED_AUTH_ENABLED && unifiedAvailability === 'unavailable'" class="auth-error" role="alert">暂时无法登录。<button type="button" @click="retryUnifiedContinuation">重试</button></p>
         <div class="auth-card" :class="{ 'auth-card--dense': activeTab !== 'login' || twoFactorChallengeToken }">
           <div class="auth-card__brand">
             <img :src="authMarkUrl" alt="" class="auth-card__mark" />

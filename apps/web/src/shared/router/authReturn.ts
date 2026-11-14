@@ -35,10 +35,16 @@ export function resolveAuthReturn(value: unknown, origin: string, fallback = "/f
   const target = safeReturn(value, origin, fallback);
   try {
     const pathname = decodedPath(target, origin);
-    if (pathname === "/auth" || (pathname.startsWith("/auth/") && pathname !== "/auth/chat")
+    if (pathname === "/auth" || (pathname.startsWith("/auth/") && pathname !== "/auth/chat" && pathname !== "/auth/unified")
       || pathname === "/api" || pathname.startsWith("/api/")) return fallback;
     return target;
   } catch { return fallback; }
+}
+
+/** 仅同域的授权接续页可从主站登录恢复；页面自身再核固定client/PKCE/callback，非退出或出票页。 */
+export function isUnifiedSsoContinuation(value: unknown, origin: string): boolean {
+  const target = resolveAuthReturn(value, origin, "/");
+  return new URL(target, origin).pathname === "/auth/unified";
 }
 
 /** Chat is an independent application; the connect route also needs a fresh page lifecycle. */

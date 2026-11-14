@@ -32,6 +32,9 @@ import {
   verifyTwoFactorLogin,
 } from "./api";
 import { CURRENT_USER_STALE_TIME_MS } from "./model";
+import { resetQueryCacheForAuthChange } from "./sessionCache";
+import { UNIFIED_AUTH_ENABLED } from "./unified/protocol";
+import { beginUnifiedLogout, completePrimaryLogin } from "./unified/session";
 import type {
   ChangePasswordRequest,
   EmailChangeConfirmRequest,
@@ -86,7 +89,7 @@ export function useCurrentUser() {
       } catch (error) {
         if (isAuthenticationError(error)) {
           clearAuthTokens();
-          resetQueryCacheForAuthChange(queryClient, null);
+          await resetQueryCacheForAuthChange(queryClient, null);
           return null;
         }
 
@@ -109,8 +112,9 @@ export function useLogin() {
       }
 
       if (response.access_token && response.refresh_token && response.user) {
+        if (UNIFIED_AUTH_ENABLED) { await completePrimaryLogin(response.access_token); return; }
         setAuthTokens(response.access_token, response.refresh_token);
-        resetQueryCacheForAuthChange(queryClient, response.user);
+        await resetQueryCacheForAuthChange(queryClient, response.user);
         await queryClient.invalidateQueries({ queryKey: queryKeys.auth });
       }
     },
@@ -141,6 +145,7 @@ export function useLogout() {
   const queryClient = useQueryClient();
 
   return async () => {
+    if (UNIFIED_AUTH_ENABLED) { await beginUnifiedLogout(); return; }
     if (hasAccessToken()) {
       try {
         await logout();
@@ -151,7 +156,7 @@ export function useLogout() {
     }
 
     clearAuthTokens();
-    resetQueryCacheForAuthChange(queryClient, null);
+    await resetQueryCacheForAuthChange(queryClient, null);
     await queryClient.invalidateQueries({ queryKey: queryKeys.auth });
   };
 }
@@ -277,23 +282,10 @@ function useTokenPairMutation<TPayload>(
   return useMutation<TokenPair, Error, TPayload>({
     mutationFn,
     onSuccess: async (tokenPair) => {
+      if (UNIFIED_AUTH_ENABLED) { await completePrimaryLogin(tokenPair.access_token); return; }
       setAuthTokens(tokenPair.access_token, tokenPair.refresh_token);
-      resetQueryCacheForAuthChange(queryClient, tokenPair.user);
+      await resetQueryCacheForAuthChange(queryClient, tokenPair.user);
       await queryClient.invalidateQueries({ queryKey: queryKeys.auth });
     },
   });
-}
-
-function resetQueryCacheForAuthChange(
-  queryClient: ReturnType<typeof useQueryClient>,
-  currentUser: UserPublic | null,
-) {
-  queryClient.removeQueries({
-    predicate: (query) => !isCurrentUserQuery(query.queryKey),
-  });
-  queryClient.setQueryData(queryKeys.currentUser, currentUser);
-}
-
-function isCurrentUserQuery(queryKey: readonly unknown[]): boolean {
-  return queryKey.length === 2 && queryKey[0] === "auth" && queryKey[1] === "me";
 }

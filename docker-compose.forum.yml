@@ -12,6 +12,7 @@ services:
       dockerfile: apps/web/Dockerfile.forum
       args:
         VITE_API_BASE_URL: /api/v1
+        VITE_UNIFIED_AUTH_ENABLED: ${VITE_UNIFIED_AUTH_ENABLED:-false}
         SOURCE_REVISION: ${SOURCE_REVISION:-}
     restart: unless-stopped
     expose:

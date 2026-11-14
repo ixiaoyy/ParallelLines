@@ -15,7 +15,9 @@ from app.schemas.chat_sso import (
     ChatSsoStateResponse,
 )
 from app.schemas.common import ApiResponse
+from app.schemas.unified_auth import UnifiedBridgeLogoutRequest, UnifiedLogoutTicketResponse
 from app.services.chat_sso import ChatSsoService
+from app.services.unified_auth import UnifiedAuthService
 
 
 class ChatSsoRoute(APIRoute):
@@ -106,3 +108,23 @@ async def revoke(
     service.require_bridge(bridge_authorization)
     result = await service.revoke(payload.client_id, payload.binding_id)
     return ApiResponse(data=ChatSsoStateResponse(**result))
+
+
+@router.post("/unified-logout-ticket", response_model=ApiResponse[UnifiedLogoutTicketResponse])
+async def unified_logout_ticket(
+    payload: UnifiedBridgeLogoutRequest,
+    response: Response,
+    session: SessionDep,
+    settings: SettingsDep,
+    bridge_authorization: BridgeHeader = None,
+) -> ApiResponse[UnifiedLogoutTicketResponse]:
+    """仅受信发行方可为其已复核 binding 请求退出票据；RP 不获得主站桥共享密钥。"""
+
+    no_store(response)
+    bridge = ChatSsoService(session, settings)
+    bridge.require_bridge(bridge_authorization)
+    binding = await bridge.verified_binding(payload.client_id, payload.binding_id)
+    result = await UnifiedAuthService(session, settings).bridge_logout_ticket(
+        binding, payload.return_uri,
+    )
+    return ApiResponse(data=result)

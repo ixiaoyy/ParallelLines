@@ -94,6 +94,7 @@ jobs:
           file: apps/web/Dockerfile
           build-args: |
             VITE_API_BASE_URL=/api/v1
+            VITE_UNIFIED_AUTH_ENABLED=${{ vars.VITE_UNIFIED_AUTH_ENABLED || 'false' }}
             SOURCE_REVISION=${{ env.DEPLOY_SHA }}
           tags: |
             parallellines-web:${{ env.DEPLOY_SHA }}

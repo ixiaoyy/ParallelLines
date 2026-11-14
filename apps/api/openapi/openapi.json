@@ -1906,6 +1906,26 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "ApiResponse_UnifiedAccessResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_UnifiedAuthorizeResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_UnifiedLogoutResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_UnifiedLogoutTicketResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_UnifiedStateResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ApiResponse_Union_DraftResponse__NoneType__": {
         "additionalProperties": true,
         "type": "object"
@@ -4807,6 +4827,11 @@
             ],
             "title": "Sub"
           },
+          "unified_browser": {
+            "default": false,
+            "title": "Unified Browser",
+            "type": "boolean"
+          },
           "username": {
             "title": "Username",
             "type": "string"
@@ -4921,6 +4946,11 @@
               }
             ],
             "title": "Sub"
+          },
+          "unified_browser": {
+            "default": false,
+            "title": "Unified Browser",
+            "type": "boolean"
           },
           "username": {
             "anyOf": [
@@ -12411,6 +12441,339 @@
         "title": "TwoFactorSetupResponse",
         "type": "object"
       },
+      "UnifiedAccessResponse": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "auth_epoch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Epoch"
+          },
+          "authenticated": {
+            "title": "Authenticated",
+            "type": "boolean"
+          },
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "token_type": {
+            "default": "bearer",
+            "title": "Token Type",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserPublic"
+          }
+        },
+        "required": [
+          "authenticated",
+          "access_token",
+          "expires_in",
+          "session_id",
+          "user"
+        ],
+        "title": "UnifiedAccessResponse",
+        "type": "object"
+      },
+      "UnifiedAuthorizeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "const": "parallellines-circle",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "code_challenge": {
+            "maxLength": 43,
+            "minLength": 43,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Code Challenge",
+            "type": "string"
+          },
+          "code_challenge_method": {
+            "const": "S256",
+            "title": "Code Challenge Method",
+            "type": "string"
+          },
+          "redirect_uri": {
+            "maxLength": 512,
+            "title": "Redirect Uri",
+            "type": "string"
+          },
+          "state": {
+            "maxLength": 128,
+            "minLength": 8,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_id",
+          "redirect_uri",
+          "state",
+          "code_challenge",
+          "code_challenge_method"
+        ],
+        "title": "UnifiedAuthorizeRequest",
+        "type": "object"
+      },
+      "UnifiedAuthorizeResponse": {
+        "properties": {
+          "redirect_url": {
+            "title": "Redirect Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "redirect_url"
+        ],
+        "title": "UnifiedAuthorizeResponse",
+        "type": "object"
+      },
+      "UnifiedBootstrapRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "replace": {
+            "default": false,
+            "title": "Replace",
+            "type": "boolean"
+          }
+        },
+        "title": "UnifiedBootstrapRequest",
+        "type": "object"
+      },
+      "UnifiedBridgeLogoutRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "binding_id": {
+            "maxLength": 128,
+            "minLength": 32,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Binding Id",
+            "type": "string"
+          },
+          "client_id": {
+            "const": "parallellines-chat",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "return_uri": {
+            "maxLength": 512,
+            "title": "Return Uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "return_uri",
+          "client_id",
+          "binding_id"
+        ],
+        "title": "UnifiedBridgeLogoutRequest",
+        "type": "object"
+      },
+      "UnifiedExchangeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "const": "parallellines-circle",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "code": {
+            "maxLength": 128,
+            "minLength": 32,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Code",
+            "type": "string"
+          },
+          "code_verifier": {
+            "maxLength": 128,
+            "minLength": 43,
+            "pattern": "^[A-Za-z0-9._~-]+$",
+            "title": "Code Verifier",
+            "type": "string"
+          },
+          "redirect_uri": {
+            "maxLength": 512,
+            "title": "Redirect Uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_id",
+          "redirect_uri",
+          "code",
+          "code_verifier"
+        ],
+        "title": "UnifiedExchangeRequest",
+        "type": "object"
+      },
+      "UnifiedLogoutRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "ticket": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 32,
+                "pattern": "^[A-Za-z0-9_-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket"
+          }
+        },
+        "title": "UnifiedLogoutRequest",
+        "type": "object"
+      },
+      "UnifiedLogoutResponse": {
+        "properties": {
+          "auth_epoch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Epoch"
+          },
+          "authenticated": {
+            "title": "Authenticated",
+            "type": "boolean"
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "return_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Url"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          }
+        },
+        "required": [
+          "authenticated"
+        ],
+        "title": "UnifiedLogoutResponse",
+        "type": "object"
+      },
+      "UnifiedLogoutTicketRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "return_uri": {
+            "maxLength": 512,
+            "title": "Return Uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "return_uri"
+        ],
+        "title": "UnifiedLogoutTicketRequest",
+        "type": "object"
+      },
+      "UnifiedLogoutTicketResponse": {
+        "properties": {
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "logout_url": {
+            "title": "Logout Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "logout_url",
+          "expires_in"
+        ],
+        "title": "UnifiedLogoutTicketResponse",
+        "type": "object"
+      },
+      "UnifiedStateResponse": {
+        "properties": {
+          "auth_epoch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Epoch"
+          },
+          "authenticated": {
+            "title": "Authenticated",
+            "type": "boolean"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          }
+        },
+        "required": [
+          "authenticated"
+        ],
+        "title": "UnifiedStateResponse",
+        "type": "object"
+      },
       "UploadResponse": {
         "properties": {
           "byte_size": {
@@ -17509,6 +17872,66 @@
         ]
       }
     },
+    "/api/v1/auth/chat-sso/unified-logout-ticket": {
+      "post": {
+        "description": "仅受信发行方可为其已复核 binding 请求退出票据；RP 不获得主站桥共享密钥。",
+        "operationId": "unified_logout_ticket_api_v1_auth_chat_sso_unified_logout_ticket_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnifiedBridgeLogoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UnifiedLogoutTicketResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unified Logout Ticket",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/email-change/confirm": {
       "post": {
         "operationId": "confirm_email_change_api_v1_auth_email_change_confirm_post",
@@ -18229,6 +18652,290 @@
           }
         ],
         "summary": "Revoke Session",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/unified/authorize": {
+      "post": {
+        "description": "仅在主站 Cookie 和 Origin 下给固定 Circle 回调发行 S256 单次授权码。",
+        "operationId": "authorize_api_v1_auth_unified_authorize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnifiedAuthorizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UnifiedAuthorizeResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Authorize",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/unified/bootstrap": {
+      "post": {
+        "description": "主站首次迁移或续发短 access；replace 仅用于用户显式完成登录后的身份切换。",
+        "operationId": "bootstrap_api_v1_auth_unified_bootstrap_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnifiedBootstrapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UnifiedAccessResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Bootstrap",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/unified/chat-approve": {
+      "post": {
+        "description": "中央 Cookie 自动审批现有 OIDC 交互；仍执行原 Chat 产品、会话和角色授权规则。",
+        "operationId": "chat_approve_api_v1_auth_unified_chat_approve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatSsoApproveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ChatSsoApproveResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chat Approve",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/unified/exchange": {
+      "post": {
+        "description": "Circle 本域用 verifier 原子兑换短 JWT；不接受秘密、刷新令牌或自由客户端。",
+        "operationId": "exchange_api_v1_auth_unified_exchange_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnifiedExchangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UnifiedAccessResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Exchange",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/unified/logout": {
+      "post": {
+        "description": "主站完成单个浏览器 sid 的真实撤销；旧退出票据不能覆盖已经换号的新身份。",
+        "operationId": "logout_api_v1_auth_unified_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnifiedLogoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UnifiedLogoutResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/unified/logout-ticket": {
+      "post": {
+        "description": "已登录 Main/Circle 只为自己的 sid 出票；用户随后到主站完成统一退出。",
+        "operationId": "logout_ticket_api_v1_auth_unified_logout_ticket_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnifiedLogoutTicketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UnifiedLogoutTicketResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Logout Ticket",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/unified/state": {
+      "get": {
+        "description": "供主站状态 iframe 读取最小身份状态；匿名也为 200，不返回任何凭据。",
+        "operationId": "state_api_v1_auth_unified_state_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UnifiedStateResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "State",
         "tags": [
           "auth"
         ]

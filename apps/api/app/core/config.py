@@ -91,6 +91,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 360
     refresh_token_days: int = 30
+    # 新统一浏览器会话显式启用；旧登录、刷新及已存在的桥协议不依赖此开关。
+    unified_auth_enabled: bool = False
+    unified_auth_allow_loopback_http: bool = False
 
     # Disabled until the owner approves the separate OP/client trust setup.
     chat_sso_enabled: bool = False

@@ -20,11 +20,16 @@ import type { UserRelationshipUser } from "@/features/social/model";
 import type { CreateTopicRequest, PollResponse, TopicResponse } from "@/features/topics/model";
 import type { UserDirectoryEntry, UserProfile } from "@/features/users/model";
 import type { components } from "@/shared/api/generated";
+import type { UnifiedAccess, UnifiedLogout } from "@/features/auth/unified/api";
+import type { UnifiedState } from "@/features/auth/unified/protocol";
 
 type IsApiCompatible<Manual, Generated> = [Manual] extends [Generated] ? true : false;
 type AssertApiCompatible<Check extends true> = Check;
 
 export type ApiContractChecks = {
+  unifiedState: AssertApiCompatible<IsApiCompatible<UnifiedState, components["schemas"]["UnifiedStateResponse"]>>;
+  unifiedAccess: AssertApiCompatible<IsApiCompatible<UnifiedAccess, components["schemas"]["UnifiedAccessResponse"]>>;
+  unifiedLogout: AssertApiCompatible<IsApiCompatible<UnifiedLogout, components["schemas"]["UnifiedLogoutResponse"]>>;
   catalogCategory: AssertApiCompatible<
     IsApiCompatible<CatalogCategoryResponse, components["schemas"]["CatalogCategoryResponse"]>
   >;

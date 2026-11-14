@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ConfigProvider } from "ant-design-vue";
 import zhCN from "ant-design-vue/es/locale/zh_CN";
-import { computed, defineAsyncComponent, shallowRef } from "vue";
+import { computed, defineAsyncComponent, shallowRef, watch } from "vue";
 import { useRoute } from "vue-router";
 
 import { isChatSsoContinuation } from "@/shared/router/authReturn";
@@ -15,8 +15,13 @@ import {
   useStructuredData,
 } from "@/shared/seo/structuredData";
 import type { JsonLdObject } from "@/shared/seo/structuredData";
+import { UNIFIED_AUTH_ENABLED } from "@/features/auth/unified/protocol";
+import { startUnifiedBrowserSession } from "@/features/auth/unified/session";
 
 const route = useRoute();
+watch(() => route.meta.unifiedFlow, flow => {
+  if (UNIFIED_AUTH_ENABLED && !flow) startUnifiedBrowserSession();
+}, { immediate: true });
 // 论坛外壳按需加载；目录首页及原目录后台不增加论坛导航或初始化请求。
 const AppShell = defineAsyncComponent(() => import("@/app/layouts/AppShell.vue"));
 const usesForumShell = computed(() => {

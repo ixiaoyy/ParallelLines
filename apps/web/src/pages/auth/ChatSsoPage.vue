@@ -6,6 +6,9 @@ import { apiPost, hasAccessToken, isAuthenticationError } from "@/shared/api/cli
 import { trustedChatFinish } from "@/shared/router/authReturn";
 import UiButton from "@/shared/ui/Button.vue";
 import ChatEntryLoading from "./ChatEntryLoading.vue";
+import { approveUnifiedChat, UnifiedApiError } from "@/features/auth/unified/api";
+import { UNIFIED_AUTH_ENABLED } from "@/features/auth/unified/protocol";
+import { ensurePrimarySession } from "@/features/auth/unified/session";
 
 const route = useRoute();
 const router = useRouter();
@@ -30,7 +33,7 @@ async function connectChat(): Promise<void> {
     error.value = "聊天登录请求无效，请从聊天入口重新进入。";
     return;
   }
-  if (!hasAccessToken()) {
+  if (!UNIFIED_AUTH_ENABLED && !hasAccessToken()) {
     try { await openMainLogin(interactionId); }
     catch { error.value = "无法打开主站登录，请重试。"; }
     return;
@@ -39,7 +42,8 @@ async function connectChat(): Promise<void> {
   controller = new AbortController();
   requestTimer = window.setTimeout(() => controller?.abort(), 15_000);
   try {
-    const approval = await apiPost<unknown, { interaction_id: string }>(
+    if (UNIFIED_AUTH_ENABLED && !await ensurePrimarySession()) { pending.value = false; await openMainLogin(interactionId); return; }
+    const approval = UNIFIED_AUTH_ENABLED ? await approveUnifiedChat(interactionId) : await apiPost<unknown, { interaction_id: string }>(
       "/auth/chat-sso/approve", { interaction_id: interactionId }, { signal: controller.signal },
     );
     window.clearTimeout(requestTimer);
@@ -78,11 +82,13 @@ async function connectChat(): Promise<void> {
     submittedForm?.remove();
     submittedForm = null;
     pending.value = false;
-    if (isAuthenticationError(failure)) {
+    if ((!UNIFIED_AUTH_ENABLED && isAuthenticationError(failure))
+      || (failure instanceof UnifiedApiError && failure.code === "unified_login_required")) {
       try { await openMainLogin(interactionId, true); return; }
       catch { /* Fall through to a recoverable error if main login cannot open. */ }
     }
-    error.value = "聊天登录未完成：会话可能已过期或此账号尚未获聊天授权。请重新登录或联系管理员。";
+    error.value = failure instanceof UnifiedApiError && failure.status === 403
+      ? "当前账号暂不能使用聊天。" : "暂时无法进入聊天，请重试。";
   } finally {
     window.clearTimeout(requestTimer);
   }
@@ -111,7 +117,6 @@ onBeforeUnmount(() => {
   <main v-else aria-live="polite">
     <h1>进入聊天</h1>
     <p v-if="error" role="alert">{{ error }}</p>
-    <p v-else>正在验证平行线登录，请稍候。</p>
     <UiButton v-if="error" :disabled="pending" @click="connectChat">重试</UiButton>
     <RouterLink to="/games">返回游戏</RouterLink>
   </main>

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>Unified test fixture</title><body><main>公开测试入口</main>
+<script type="module">
+  import * as session from '/src/features/auth/unified/session.ts';
+  import * as api from '/src/shared/api/client.ts';
+  import { queryClient } from '/src/shared/api/queryClient.ts';
+  let mainStatusSubject;
+  window.addEventListener('message', event => {
+    if (event.origin === 'http://127.0.0.1:4183' && event.data?.type === 'pl:unified-session') mainStatusSubject = event.data.subject;
+  });
+  // 只通过真实会话协调器接线；测试API由Playwright全量拦截，不连接业务服务。
+  window.unifiedTest = {
+    start: session.startUnifiedBrowserSession,
+    snapshot: () => ({ ...session.currentUnifiedState(), mainStatusSubject, availability: session.unifiedAvailability.value,
+      user: queryClient.getQueryData(['auth', 'me']), token: api.getAccessToken(), refresh: api.getRefreshToken() }),
+    privateRequest: () => api.apiRequest('/private-test').then(() => 'delivered', error => error.code),
+    login: () => session.beginCircleLogin('/tests/smoke/unified-fixture.html'),
+  };
+</script></body></html>

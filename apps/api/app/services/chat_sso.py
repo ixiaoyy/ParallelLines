@@ -190,11 +190,17 @@ class ChatSsoService:
             or not isinstance(expiry, int)
         ):
             raise AuthenticationError("invalid_chat_sso", "Chat authentication required")
+        return await self.approve_verified(
+            VerifiedLogin(current_user.id, sid, expiry), interaction_id,
+        )
+
+    async def approve_verified(
+        self, login: VerifiedLogin, interaction_id: str,
+    ) -> dict[str, object]:
+        """已验证中央 Cookie 或旧 bearer 复用同一 Chat 审批边界，不放宽产品授权。"""
+
         try:
-            return await self.core.approve(
-                VerifiedLogin(current_user.id, sid, expiry),
-                interaction_id,
-            )
+            return await self.core.approve(login, interaction_id)
         except SsoDenied as exc:
             raise AuthenticationError("invalid_chat_sso", "Chat authentication required") from exc
 
@@ -206,6 +212,14 @@ class ChatSsoService:
                 interaction_id=interaction_id,
                 approval_code=code,
             )
+        except SsoDenied as exc:
+            raise AuthenticationError("invalid_chat_sso", "Chat authentication required") from exc
+
+    async def verified_binding(self, client_id: str, binding_id: str) -> VerifiedLogin:
+        """受信桥出票前复核原 binding/sid/授权；不扩展客户端、角色或账户合并规则。"""
+
+        try:
+            return await self.core.verified_binding(client_id=client_id, binding_id=binding_id)
         except SsoDenied as exc:
             raise AuthenticationError("invalid_chat_sso", "Chat authentication required") from exc
 

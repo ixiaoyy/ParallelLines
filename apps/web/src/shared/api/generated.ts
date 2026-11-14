@@ -648,6 +648,21 @@ export interface components {
     ApiResponse_TwoFactorSetupResponse_: {
       [key: string]: unknown;
     };
+    ApiResponse_UnifiedAccessResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_UnifiedAuthorizeResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_UnifiedLogoutResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_UnifiedLogoutTicketResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_UnifiedStateResponse_: {
+      [key: string]: unknown;
+    };
     ApiResponse_Union_DraftResponse__NoneType__: {
       [key: string]: unknown;
     };
@@ -1073,6 +1088,7 @@ export interface components {
       name: string;
       role?: "user" | "moderator" | "admin" | null;
       sub: string | null;
+      unified_browser?: boolean;
       username: string;
     };
     ChatSsoStateRequest: {
@@ -1088,6 +1104,7 @@ export interface components {
       name?: string | null;
       role?: "user" | "moderator" | "admin" | null;
       sub: string | null;
+      unified_browser?: boolean;
       username?: string | null;
     };
     DailyReportInput: {
@@ -2309,6 +2326,62 @@ export interface components {
       otpauth_url: string;
       secret: string;
     };
+    UnifiedAccessResponse: {
+      access_token: string;
+      auth_epoch?: string | null;
+      authenticated: boolean;
+      expires_in: number;
+      session_id: string;
+      subject?: string | null;
+      token_type?: string;
+      user: components["schemas"]["UserPublic"];
+    };
+    UnifiedAuthorizeRequest: {
+      client_id: "parallellines-circle";
+      code_challenge: string;
+      code_challenge_method: "S256";
+      redirect_uri: string;
+      state: string;
+    };
+    UnifiedAuthorizeResponse: {
+      redirect_url: string;
+    };
+    UnifiedBootstrapRequest: {
+      replace?: boolean;
+    };
+    UnifiedBridgeLogoutRequest: {
+      binding_id: string;
+      client_id: "parallellines-chat";
+      return_uri: string;
+    };
+    UnifiedExchangeRequest: {
+      client_id: "parallellines-circle";
+      code: string;
+      code_verifier: string;
+      redirect_uri: string;
+    };
+    UnifiedLogoutRequest: {
+      ticket?: string | null;
+    };
+    UnifiedLogoutResponse: {
+      auth_epoch?: string | null;
+      authenticated: boolean;
+      ok?: boolean;
+      return_url?: string | null;
+      subject?: string | null;
+    };
+    UnifiedLogoutTicketRequest: {
+      return_uri: string;
+    };
+    UnifiedLogoutTicketResponse: {
+      expires_in: number;
+      logout_url: string;
+    };
+    UnifiedStateResponse: {
+      auth_epoch?: string | null;
+      authenticated: boolean;
+      subject?: string | null;
+    };
     UploadResponse: {
       byte_size: number;
       created_at: string;
@@ -2725,6 +2798,9 @@ export interface paths {
     "/api/v1/auth/chat-sso/session-state": {
       post: { response: components["schemas"]["ApiResponse_ChatSsoStateResponse_"]; operationId: "session_state_api_v1_auth_chat_sso_session_state_post" };
     };
+    "/api/v1/auth/chat-sso/unified-logout-ticket": {
+      post: { response: components["schemas"]["ApiResponse_UnifiedLogoutTicketResponse_"]; operationId: "unified_logout_ticket_api_v1_auth_chat_sso_unified_logout_ticket_post" };
+    };
     "/api/v1/auth/email-change/confirm": {
       post: { response: components["schemas"]["ApiResponse_UserPublic_"]; operationId: "confirm_email_change_api_v1_auth_email_change_confirm_post" };
     };
@@ -2781,6 +2857,27 @@ export interface paths {
     };
     "/api/v1/auth/sessions/revoke-others": {
       post: { response: components["schemas"]["ApiResponse_dict_str__int__"]; operationId: "revoke_other_sessions_api_v1_auth_sessions_revoke_others_post" };
+    };
+    "/api/v1/auth/unified/authorize": {
+      post: { response: components["schemas"]["ApiResponse_UnifiedAuthorizeResponse_"]; operationId: "authorize_api_v1_auth_unified_authorize_post" };
+    };
+    "/api/v1/auth/unified/bootstrap": {
+      post: { response: components["schemas"]["ApiResponse_UnifiedAccessResponse_"]; operationId: "bootstrap_api_v1_auth_unified_bootstrap_post" };
+    };
+    "/api/v1/auth/unified/chat-approve": {
+      post: { response: components["schemas"]["ApiResponse_ChatSsoApproveResponse_"]; operationId: "chat_approve_api_v1_auth_unified_chat_approve_post" };
+    };
+    "/api/v1/auth/unified/exchange": {
+      post: { response: components["schemas"]["ApiResponse_UnifiedAccessResponse_"]; operationId: "exchange_api_v1_auth_unified_exchange_post" };
+    };
+    "/api/v1/auth/unified/logout": {
+      post: { response: components["schemas"]["ApiResponse_UnifiedLogoutResponse_"]; operationId: "logout_api_v1_auth_unified_logout_post" };
+    };
+    "/api/v1/auth/unified/logout-ticket": {
+      post: { response: components["schemas"]["ApiResponse_UnifiedLogoutTicketResponse_"]; operationId: "logout_ticket_api_v1_auth_unified_logout_ticket_post" };
+    };
+    "/api/v1/auth/unified/state": {
+      get: { response: components["schemas"]["ApiResponse_UnifiedStateResponse_"]; operationId: "state_api_v1_auth_unified_state_get" };
     };
     "/api/v1/auth/verify-email": {
       post: { response: components["schemas"]["ApiResponse_TokenPair_"]; operationId: "verify_email_api_v1_auth_verify_email_post" };

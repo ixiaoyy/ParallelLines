@@ -203,6 +203,7 @@ jobs:
         env:
           VITE_API_BASE_URL: /api/v1
           VITE_STATIC_ASSET_BASE_URL: https://img.pingxingxian.space/static/web
+          VITE_UNIFIED_AUTH_ENABLED: ${{ vars.VITE_UNIFIED_AUTH_ENABLED || 'false' }}
         run: pnpm --dir apps/web build
       # 只有本仓 main push 交付镜像；PR 仅运行检查，不进入生产产物链。
       - name: Prepare checked Web runtime context

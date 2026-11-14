@@ -1,8 +1,12 @@
 from typing import Annotated
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Header, Request, Response, status
+from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 
 from app.api.v1.dependencies import CurrentUserDep, SessionDep, SettingsDep, TokenDep
+from app.core.config import get_settings
 from app.core.security import decode_token
 from app.schemas.auth import (
     ChangePasswordRequest,
@@ -39,8 +43,61 @@ from app.schemas.product_access import FableSpaceAccessStatusResponse
 from app.schemas.users import UserPublic
 from app.services.auth import AuthService
 from app.services.product_access import ProductAccessService
+from app.services.unified_auth import UnifiedAuthService
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+# 按真实路由用途收口凭据入口；刷新、Bearer 业务及 Fable 路由不在本次修改范围。
+CREDENTIAL_ENDPOINTS = frozenset(
+    {
+        "register",
+        "verify_email",
+        "resend_verification",
+        "login",
+        "verify_two_factor_login",
+        "request_password_reset",
+        "confirm_password_reset",
+        "change_password",
+        "request_email_change",
+        "confirm_email_change",
+        "setup_two_factor",
+        "enable_two_factor",
+        "disable_two_factor",
+        "regenerate_recovery_codes",
+    }
+)
+
+
+class MainCredentialsRoute(APIRoute):
+    def get_route_handler(self):
+        """统一模式在解析密码/验证码正文之前拒绝非主站 Host；旧模式完全沿用原处理器。"""
+
+        handler = super().get_route_handler()
+        credential_route = self.endpoint.__name__ in CREDENTIAL_ENDPOINTS
+
+        async def main_credentials(request: Request) -> Response:
+            if credential_route:
+                settings = get_settings()
+                if settings.unified_auth_enabled:
+                    origin = UnifiedAuthService.configured_origin(
+                        settings.public_site_url, settings
+                    )
+                    if request.url.netloc.lower() != urlsplit(origin).netloc.lower():
+                        return JSONResponse(
+                            status_code=403,
+                            content={
+                                "error": {
+                                    "code": "unified_credentials_main_only",
+                                    "message": "请在主站完成登录或账号安全操作",
+                                    "details": {},
+                                }
+                            },
+                            headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"},
+                        )
+            return await handler(request)
+
+        return main_credentials
+
+
+router = APIRouter(prefix="/auth", tags=["auth"], route_class=MainCredentialsRoute)
 
 
 @router.get(

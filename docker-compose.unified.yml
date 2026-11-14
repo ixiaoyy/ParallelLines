@@ -1,0 +1,13 @@
+# 仅在本次统一登录已经启用后由发布选择器接续；不替换镜像、凭据或数据服务。
+services:
+  api:
+    environment:
+      UNIFIED_AUTH_ENABLED: "true"
+  web:
+    build:
+      args:
+        VITE_UNIFIED_AUTH_ENABLED: "true"
+  forum-web:
+    build:
+      args:
+        VITE_UNIFIED_AUTH_ENABLED: "true"

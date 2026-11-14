@@ -28,6 +28,8 @@ class VerifiedLogin:
     user_id: str
     session_id: str
     auth_expires_at: int
+    # 只有中央 HttpOnly 会话审批可置真；旧 bearer 与旧 binding 保持默认假。
+    unified_browser: bool = False
 
 
 @dataclass(frozen=True)
@@ -188,6 +190,7 @@ class ChatSsoCore:
                         "sid": login.session_id,
                         "auth_expires_at": login.auth_expires_at,
                         "client_id": CLIENT_ID,
+                        **({"unified_browser": True} if login.unified_browser else {}),
                     },
                     separators=(",", ":"),
                 ),
@@ -238,7 +241,10 @@ class ChatSsoCore:
                 raise SsoDenied("invalid_binding")
             expiry = min(data["auth_expires_at"], int(utc(record.expires_at).timestamp()))
             epoch_datetime(data["auth_expires_at"])
-            login = VerifiedLogin(record.user_id, data["sid"], expiry)
+            unified = data.get("unified_browser", False)
+            if not isinstance(unified, bool):
+                raise SsoDenied("invalid_binding")
+            login = VerifiedLogin(record.user_id, data["sid"], expiry, unified_browser=unified)
         except (ValueError, TypeError, KeyError) as exc:
             raise SsoDenied("invalid_binding") from exc
         return record, login, await self._identity(login)
@@ -275,8 +281,17 @@ class ChatSsoCore:
             "sub": user.id,
             "binding_id": data["binding_id"],
             "auth_expires_at": login.auth_expires_at,
+            **({"unified_browser": True} if login.unified_browser else {}),
             **profile_claims(user),
         }
+
+    async def verified_binding(self, *, client_id: str, binding_id: str) -> VerifiedLogin:
+        """复核既有桥客户端的单个 binding 并返回原主站会话；仅供受信统一退出出票。"""
+
+        if client_id != CLIENT_ID:
+            raise SsoDenied("invalid_client")
+        _, login, _ = await self._binding(binding_id)
+        return login
 
     async def revoke(self, *, client_id: str, binding_id: str) -> dict[str, object]:
         """Revoke only this chat binding; never alter its original main session."""
@@ -305,6 +320,7 @@ class ChatSsoCore:
                 "sub": user.id,
                 "binding_id": binding_id,
                 "auth_expires_at": login.auth_expires_at,
+                **({"unified_browser": True} if login.unified_browser else {}),
                 **profile_claims(user),
             }
         except SsoDenied:
