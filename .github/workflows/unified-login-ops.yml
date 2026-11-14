@@ -8,20 +8,20 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, describe, describe-source]
+        options: [inventory, describe, describe-source, prepare]
 
 permissions:
   contents: read
 
 concurrency:
-  group: unified-login-read-${{ inputs.operation }}
+  group: ${{ inputs.operation == 'prepare' && 'deploy-production' || format('unified-login-read-{0}', inputs.operation) }}
   cancel-in-progress: false
 
 jobs:
   inventory:
     if: github.repository == 'ixiaoyy/ParallelLines' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,17 +30,49 @@ jobs:
         id: payload
         env:
           OPERATION: ${{ inputs.operation }}
+          OPERATOR_REVISION: ${{ github.sha }}
         run: |
           python3 - <<'PY'
           import os
           from pathlib import Path
+          import hashlib
+          import json
+          import re
           import uuid
           operation = os.environ['OPERATION']
           sources = {'inventory': 'unified_login_ops.py', 'describe': 'unified_nginx_release.py',
                      'describe-source': 'unified_nginx_release.py'}
-          if operation not in sources:
+          if operation not in sources and operation != 'prepare':
               raise SystemExit('Unsupported operation')
-          source = (Path('.github/scripts') / sources[operation]).read_text(encoding='utf-8')
+          if operation == 'prepare':
+              revision = os.environ['OPERATOR_REVISION']
+              if not re.fullmatch('[0-9a-f]{40}', revision):
+                  raise SystemExit('Invalid operator revision')
+              names = ['unified_login_ops.py', 'unified_artifact_prepare.py', 'unified-login-release-plan.json']
+              manifest = {name: hashlib.sha256((Path('.github/scripts') / name).read_bytes()).hexdigest() for name in names}
+              # 复用服务器现有Git对象通道；只取本仓固定提交公开运维文件，不读取或传输服务器凭据。
+              source = "import os,subprocess,hashlib,json\nfrom pathlib import Path\n"
+              source += 'revision=' + repr(revision) + '\nmanifest=' + repr(manifest) + '\n'
+              source += r'''
+          repository=Path('/opt/parallellines')
+          base=['git','--no-optional-locks','-c','safe.directory=/opt/parallellines','-c','credential.helper=','-C',str(repository)]
+          env={**os.environ,'GIT_TERMINAL_PROMPT':'0','GIT_ASKPASS':'/bin/false'}
+          subprocess.run(base+['fetch','--no-tags','https://github.com/ixiaoyy/ParallelLines.git',revision],check=True,timeout=180,env=env)
+          root=Path('/data/deployment/parallellines-unified/operator')/revision
+          if any(p.is_symlink() for p in (root,*root.parents)): raise SystemExit('Unsafe operator path')
+          root.mkdir(parents=True,exist_ok=True,mode=0o700)
+          for name,expected in manifest.items():
+              data=subprocess.check_output(base+['show',revision+':.github/scripts/'+name],timeout=20,env=env)
+              if hashlib.sha256(data).hexdigest()!=expected: raise SystemExit('Operator source changed')
+              target=root/name
+              if target.exists() and (target.is_symlink() or target.read_bytes()!=data): raise SystemExit('Operator collision')
+              if not target.exists():
+                  with target.open('xb') as stream: stream.write(data)
+                  target.chmod(0o600)
+          os.execv('/usr/bin/python3',['/usr/bin/python3','-B',str(root/'unified_login_ops.py'),'prepare'])
+          '''
+          else:
+              source = (Path('.github/scripts') / sources[operation]).read_text(encoding='utf-8')
           if len(source.encode()) > 120000:
               raise SystemExit('Operation exceeds bounded transport')
           marker = 'PL_UNIFIED_' + uuid.uuid4().hex
@@ -57,7 +89,7 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           timeout: 30s
-          command_timeout: 4m
+          command_timeout: ${{ inputs.operation == 'prepare' && '40m' || '4m' }}
           # 与现有community通道一致；script_stop会把检查语句插入Python heredoc正文。
           script_stop: false
           script: ${{ steps.payload.outputs.script }}

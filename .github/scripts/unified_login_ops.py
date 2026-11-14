@@ -1,12 +1,44 @@
 """统一登录定向发布盘点：只输出运行身份与公开源码摘要，不读取凭据或展开 Compose。"""
 
 import hashlib
+import importlib.util
 import json
+import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import time
+
+APP = "a2cfeddeec01ca0d5def4b3308103f3d85cc3861"
+ROOT = Path("/data/deployment/parallellines-unified") / APP
+
+
+def save(path, value):
+    """只保存本轮私有事务记录；不向日志展开 Compose 或会话资料。"""
+    path = Path(path)
+    if ROOT not in path.parents or path.is_symlink():
+        raise OperationError("transaction_path_denied")
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    temporary = path.with_name(path.name + ".new")
+    if temporary.exists():
+        raise OperationError("transaction_temporary_exists")
+    with temporary.open("x", encoding="utf-8") as stream:
+        os.chmod(temporary, 0o600)
+        json.dump(value, stream, sort_keys=True, indent=2)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, path)
+
+
+def load_module(name, path):
+    """加载本次已提交运维模块或公开发布包中的现有部署能力，不执行外部传入源码。"""
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 class OperationError(Exception):
@@ -63,7 +95,8 @@ def records(runner):
     }
     template = "{" + ",".join(json.dumps(key) + ":{{json " + value + "}}" for key, value in fields.items())
     for key, label in {"project": "project", "service": "service", "working_dir": "project.working_dir",
-                       "config_files": "project.config_files", "config-hash": "config-hash"}.items():
+                       "config_files": "project.config_files", "env_files": "project.environment_file",
+                       "config-hash": "config-hash"}.items():
         template += "," + json.dumps("compose_" + key) + ':{{json (index .Config.Labels "com.docker.compose.' + label + '")}}'
     template += "}"
     values = [json.loads(line) for line in runner.run(["docker", "inspect", "--format", template, *ids]).splitlines()]
@@ -136,11 +169,193 @@ def inventory(runner):
             "consumer_metadata": consumers, "host_python": list(sys.version_info[:3])}
 
 
+def selected(values, project, service):
+    """固定项目/服务必须唯一且运行；不把同名其他项目当成本次目标。"""
+    matches = [item for item in values if item.get("compose_project") == project and item.get("compose_service") == service]
+    if len(matches) != 1 or not matches[0]["running"]:
+        raise OperationError("target_not_unique_or_running:" + service)
+    return matches[0]
+
+
+def build_image(runner, role, base_id, context, dockerfile, tag):
+    """仅离线封装已验产物，旧镜像保留；已有候选必须属于本轮记录，不覆盖标签。"""
+    alias = tag + "-base"
+    record_path = ROOT / ("image-" + role + ".json")
+    if runner.run(["docker", "image", "ls", "-q", tag]).strip():
+        if record_path.is_file() and not record_path.is_symlink():
+            previous = json.loads(record_path.read_text())
+            observed = runner.run(["docker", "image", "inspect", "--format", "{{.Id}}", tag]).strip()
+            if previous.get("tag") == tag and previous.get("base_image_id") == base_id and previous.get("image_id") == observed:
+                return previous
+        raise OperationError("candidate_tag_already_exists:" + role)
+    existing = runner.run(["docker", "image", "ls", "-q", alias]).strip()
+    if existing:
+        if runner.run(["docker", "image", "inspect", "--format", "{{.Id}}", alias]).strip() != base_id:
+            raise OperationError("candidate_base_changed:" + role)
+    else:
+        runner.run(["docker", "image", "tag", base_id, alias])
+    (context / "Dockerfile").write_text(dockerfile.replace("__BASE__", alias), encoding="utf-8")
+    print(json.dumps({"stage": "build", "component": role}), flush=True)
+    runner.run(["docker", "build", "--pull=false", "--network=none", "-t", tag, context], timeout=300)
+    image = runner.run(["docker", "image", "inspect", "--format", "{{.Id}}", tag]).strip()
+    if not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
+        raise OperationError("candidate_image_invalid:" + role)
+    result = {"tag": tag, "image_id": image, "context": str(context), "base_image_id": base_id}
+    save(record_path, result)
+    return result
+
+
+def make_chat_scope(chat_root, targets, runner):
+    """从固定发布包预期与当前 Compose 标签生成非敏感范围，原生部署器再核实际源与服务。"""
+    manifest = json.loads((chat_root / "release-input-manifest.json").read_text())
+    plan = json.loads(Path(__file__).with_name("unified-login-release-plan.json").read_text())
+    if manifest["git_commit"] != plan["revisions"]["chat"]:
+        raise OperationError("chat_source_revision_changed")
+    scope = {"source": str(chat_root / "source"), "receipts": str(ROOT / "receipts")}
+    for role in ("bridge", "chat"):
+        target = targets[role]
+        compose_files = (target.get("compose_config_files") or "").split(",")
+        if len(compose_files) != 1 or not Path(compose_files[0]).is_absolute():
+            raise OperationError("chat_compose_chain_requires_review")
+        scope[role] = {
+            "container": target["name"].removeprefix("/"), "project": target["compose_project"],
+            "service": target["compose_service"], "new_image": "parallellines-" + ("identity" if role == "bridge" else "chat") + ":unified-" + manifest["git_commit"][:8],
+            "expected_image_id": target["image_id"], "expected_compose_image": target["image"],
+            "target_compose": compose_files[0], "working_dir": target["compose_working_dir"],
+            "env_files": [path for path in (target.get("compose_env_files") or "").split(",") if path],
+            "compose_files": compose_files, "source_root": "/app", "interpreter": "node" if role == "bridge" else "python",
+            "expected_source": manifest["expected_bridge_before" if role == "bridge" else "expected_backend_before"],
+        }
+        if role == "chat":
+            scope[role].update({"frontend_context": str(chat_root / "contexts/chat"),
+                               "frontend_manifest_sha256": manifest["frontend_manifest_sha256"]})
+    (ROOT / "receipts").mkdir(mode=0o700, exist_ok=True)
+    release_module = load_module("chat_scope_release", chat_root / "source/deploy/deploy-unified-login.py")
+    for role in ("bridge", "chat"):
+        release = release_module.UnifiedRelease(scope, role)
+        observed = release.source_hashes(list(scope[role]["expected_source"]), "/app", scope[role]["interpreter"])
+        if observed != scope[role]["expected_source"]:
+            raise OperationError("chat_component_source_changed:" + role)
+        release.compose("config", "--quiet")
+    return scope
+
+
+def prepare():
+    """下载固定提交产物并构建五个候选镜像；不切换服务、不读取真实环境文件或数据库。"""
+    os.umask(0o077)
+    if ROOT.is_symlink() or any(path.is_symlink() for path in ROOT.parents):
+        raise OperationError("deployment_root_symlink")
+    ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if (ROOT / "prepared.json").exists():
+        raise OperationError("already_prepared_use_recorded_candidate")
+    runner = Runner(2400)
+    if runner.run(["findmnt", "-n", "-o", "TARGET", "/data"]).strip() != "/data" or shutil.disk_usage(ROOT).free < 2 * 1024 ** 3:
+        raise OperationError("deployment_data_disk_not_ready")
+    before = inventory(runner)
+    targets = {
+        "api": selected(before["containers"], "parallellines", "api"),
+        "web": selected(before["containers"], "parallellines", "web"),
+        "circle": selected(before["containers"], "parallellines", "forum-web"),
+        "bridge": selected(before["containers"], "parallellines-chat", "chat-oidc"),
+        "chat": selected(before["containers"], "pl-official-candidate-20261030", "openwebui"),
+        "newapi": selected(before["containers"], "pl-official-candidate-20261030", "newapi"),
+    }
+    expected = {"api": "sha256:4f2e43c0ee4a95c93734b075be7860cf2e4ce1407c1603f8f8689a309e4e00ea",
+                "web": "sha256:db4c12e1ce357f6ec3b63eff368fe0ff46697835c2f4975e1d0b12f66528ffc6",
+                "circle": "sha256:581718a121c5bfd02e63b18da570142b3f358528fbb6b4e0313691f297a30f46",
+                "bridge": "sha256:6837ffcfbef78fe4316155807d17148bd53848c78979743ac08f3970994c7b35",
+                "chat": "sha256:e672d829c3a9a1306f55727c7cf624fade235e4ec65fb00ecdfdf5ae6a0fc42b"}
+    if any(targets[role]["image_id"] != value for role, value in expected.items()):
+        raise OperationError("production_baseline_changed")
+    if targets["newapi"]["image"] != "parallellines-newapi:v0.13.2-pkce.9" or before["source_evidence"].get("gateway_binary") != "26d44a3a75ac9b1c67b3830445378d92415f91ed2bdb8afabe9e6e95f5d62546":
+        raise OperationError("gateway_baseline_changed")
+    save(ROOT / "before.json", before)
+    plan = json.loads(Path(__file__).with_name("unified-login-release-plan.json").read_text())
+    if plan["application_revision"] != APP:
+        raise OperationError("application_revision_changed")
+    downloader = load_module("unified_artifact_prepare", Path(__file__).with_name("unified_artifact_prepare.py"))
+    try:
+        payload = downloader.prepare(plan, ROOT, runner)
+    except downloader.ArtifactPreparationError as error:
+        raise OperationError("artifact:" + str(error)) from None
+    save(ROOT / "payload.json", payload)
+    # 每个下载产物的位置由固定key决定；模块返回记录只作交付证据，不接受任意来源路径。
+    inputs = ROOT / "inputs"
+    app = inputs / "main-app"
+    source = json.loads((app / "main-source-manifest.json").read_text())
+    if source["application_revision"] != APP:
+        raise OperationError("main_source_revision_changed")
+    actual = before["source_evidence"]["main_api"]
+    for name, record in source["files"].items():
+        if hashlib.sha256((app / name).read_bytes()).hexdigest() != record["sha256"]:
+            raise OperationError("main_payload_changed")
+        if name.startswith("apps/api/app/") and actual.get("/app/app/" + name.removeprefix("apps/api/app/")) != record["before_sha256"]:
+            raise OperationError("main_source_before_changed")
+    prepared = {"application_revision": APP, "targets": targets, "images": {}, "payload": payload}
+    builds = ROOT / "builds"
+    builds.mkdir(mode=0o700, exist_ok=True)
+    api_context = builds / "api"
+    api_context.mkdir(mode=0o700, exist_ok=True)
+    for name in source["files"]:
+        if name.startswith("apps/api/app/"):
+            path = api_context / "app" / name.removeprefix("apps/api/app/")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(app / name, path)
+    prepared["images"]["api"] = build_image(runner, "api", targets["api"]["image_id"], api_context,
+        "FROM __BASE__\nCOPY app/ /app/app/\nLABEL org.opencontainers.image.revision=" + APP + "\n", "parallellines-unified-api:a2cfedde")
+    for role, key in (("web", "main-web"), ("circle", "circle-web")):
+        context = builds / role
+        context.mkdir(mode=0o700, exist_ok=True)
+        # 公开静态文件与运维上下文分开，Dockerfile和检查记录不能被复制到可访问目录。
+        shutil.copytree(inputs / key, context / "html", dirs_exist_ok=True)
+        shutil.copyfile(app / "apps/web/nginx.conf", context / "nginx.conf")
+        dockerfile = ("FROM __BASE__\nRUN rm -rf /usr/share/nginx/html && mkdir -p /usr/share/nginx/html\n"
+                      "COPY html/ /usr/share/nginx/html/\nCOPY nginx.conf /etc/nginx/conf.d/default.conf\n"
+                      "LABEL org.opencontainers.image.revision=" + APP + "\n")
+        prepared["images"][role] = build_image(runner, role, targets[role]["image_id"], context, dockerfile,
+            "parallellines-" + ("web" if role == "web" else "forum-web") + ":unified-a2cfedde")
+        runner.run(["docker", "run", "--rm", "--network", "none", "--entrypoint", "nginx", prepared["images"][role]["tag"], "-t"], timeout=30)
+    # Chat/issuer 使用原有服务级部署器制作候选，不调用其包含激活的deploy入口。
+    chat_root = inputs / "chat"
+    module = load_module("chat_unified_release", chat_root / "source/deploy/deploy-unified-login.py")
+    scope = make_chat_scope(chat_root, targets, runner)
+    for role in ("bridge", "chat"):
+        record_path = ROOT / ("image-" + role + ".json")
+        scope_path = ROOT / ("scope-" + role + ".json")
+        if record_path.is_file() and scope_path.is_file():
+            record = json.loads(record_path.read_text())
+            observed = runner.run(["docker", "image", "inspect", "--format", "{{.Id}}", record["tag"]]).strip()
+            if record.get("tag") != scope[role]["new_image"] or record.get("base_image_id") != targets[role]["image_id"] or record["image_id"] != observed:
+                raise OperationError("owned_candidate_changed:" + role)
+            scope[role] = json.loads(scope_path.read_text())
+            prepared["images"][role] = record
+            continue
+        release = module.UnifiedRelease(scope, role)
+        release.run_dir = builds / role
+        release.run_dir.mkdir(mode=0o700, exist_ok=True)
+        context, image = release.build()
+        scope[role] = release.s
+        prepared["images"][role] = {"tag": scope[role]["new_image"], "image_id": image, "context": str(context), "base_image_id": targets[role]["image_id"]}
+        save(record_path, prepared["images"][role])
+        save(scope_path, scope[role])
+    save(ROOT / "chat-scope.json", scope)
+    newapi_context = builds / "newapi"
+    newapi_context.mkdir(mode=0o700, exist_ok=True)
+    shutil.copyfile(payload["inputs"]["newapi-binary"], newapi_context / "new-api")
+    os.chmod(newapi_context / "new-api", 0o755)
+    prepared["images"]["newapi"] = build_image(runner, "newapi", targets["newapi"]["image_id"], newapi_context,
+        "FROM __BASE__\nCOPY --chmod=0755 new-api /new-api\nLABEL org.opencontainers.image.version=v0.13.2-pkce.10\n"
+        "LABEL org.opencontainers.image.revision=" + plan["revisions"]["newapi"] + "\n", "parallellines-newapi:v0.13.2-pkce.10")
+    save(ROOT / "prepared.json", prepared)
+    return {"complete": True, "stage": "prepared", "application_revision": APP, "services_activated": False,
+            "images": {key: value["tag"] for key, value in prepared["images"].items()}}
+
+
 def main():
-    """仅接受固定只读操作；发布激活须另行提供经过盘点的完整事务实现。"""
-    if len(sys.argv) != 2 or sys.argv[1] != "inventory":
+    """固定盘点/候选准备入口；没有任意 shell、路径或真实环境内容输入。"""
+    if len(sys.argv) != 2 or sys.argv[1] not in ("inventory", "prepare"):
         raise OperationError("unsupported_operation")
-    return inventory(Runner())
+    return inventory(Runner()) if sys.argv[1] == "inventory" else prepare()
 
 
 if __name__ == "__main__":

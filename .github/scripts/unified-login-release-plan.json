@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "application_revision": "a2cfeddeec01ca0d5def4b3308103f3d85cc3861",
+  "revisions": {
+    "main": "a2cfeddeec01ca0d5def4b3308103f3d85cc3861",
+    "chat": "e5e67ad2e0a217a79693d0900478a99c836ec946",
+    "newapi": "edffcec34099d5fae861f5cd78466e77bceb410d"
+  },
+  "artifacts": [
+    {"key":"main-app","url":"https://github.com/ixiaoyy/ParallelLines/releases/download/unified-login-a2cfedde/main-application.tar.gz","sha256":"a6f09bd4ff6359ff7b007b2c308e10933471bbac056096b26848990030ee0d6d","bytes":29161,"kind":"tar"},
+    {"key":"main-web","url":"https://github.com/ixiaoyy/ParallelLines/releases/download/unified-login-a2cfedde/main-web.tar.gz","sha256":"95eb5f2f385dba124fd9a95a998c18079bda22f00979127d5fa2f9a34fb0e97c","bytes":56839143,"kind":"tar"},
+    {"key":"circle-web","url":"https://github.com/ixiaoyy/ParallelLines/releases/download/unified-login-a2cfedde/circle-web.tar.gz","sha256":"8ad69d5f4dbfafda6b305b48c059136cd4b0a7e4f6db79ccff5f1b273509d424","bytes":56839975,"kind":"tar"},
+    {"key":"chat","url":"https://github.com/ixiaoyy/parallellines-chat/releases/download/unified-login-20261115-e5e67ad2/parallellines-chat-unified-login-e5e67ad2.tar.gz","sha256":"3bef6476c8d133e951962c127124fa28016e420a93203a660332a214e80ea6da","bytes":28022744,"kind":"tar"},
+    {"key":"newapi-binary","url":"https://github.com/ixiaoyy/parallellines-new-api/releases/download/v0.13.2-pkce.10/new-api-linux-amd64","sha256":"d0f64b597c2d4aeb29c79256fc2f1e434bc4e574512a92c8aefda4ce74b8aa1b","bytes":70664354,"kind":"file"},
+    {"key":"newapi-source","url":"https://github.com/ixiaoyy/parallellines-new-api/releases/download/v0.13.2-pkce.10/new-api-v0.13.2-pkce.10-corresponding-source.tar.gz","sha256":"067c78864b90f6bfaa1f6840728cd86d3150cd204512ad46b521bad64d73118f","bytes":14643572,"kind":"file"}
+  ]
+}
