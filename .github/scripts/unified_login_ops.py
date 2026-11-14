@@ -659,12 +659,27 @@ def diagnose_chat_startup():
             "error_symbols": symbols[-15:], "startup_completed": "Application startup complete" in log}
 
 
+def startup_output():
+    """只读取刚才无网络/空数据启动的既有输出，不再次启动容器或读取生产日志。"""
+    path = ROOT / "chat-startup-diagnostic.log"
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 131072:
+        raise OperationError("startup_output_not_owned")
+    lines = []
+    for line in path.read_text(errors="replace").splitlines():
+        if re.search(r"secret|password|authorization|token|(?:api|private)[_-]?key", line, re.IGNORECASE):
+            continue
+        line = re.sub(r"\x1b\[[0-9;]*m", "", line)
+        lines.append(line[:600])
+    return {"complete": True, "source": "isolated_startup_existing_log", "lines": lines[-45:]}
+
+
 def main():
     """固定盘点/候选准备入口；没有任意 shell、路径或真实环境内容输入。"""
-    if len(sys.argv) != 2 or sys.argv[1] not in ("inventory", "prepare", "activate-main", "activate-services", "remove-source-archive", "diagnose-chat-startup"):
+    if len(sys.argv) != 2 or sys.argv[1] not in ("inventory", "prepare", "activate-main", "activate-services", "remove-source-archive", "diagnose-chat-startup", "startup-output"):
         raise OperationError("unsupported_operation")
     return {"inventory": lambda: inventory(Runner()), "prepare": prepare, "activate-main": activate_main, "activate-services": activate_services,
-            "remove-source-archive": remove_source_archive, "diagnose-chat-startup": diagnose_chat_startup}[sys.argv[1]]()
+            "remove-source-archive": remove_source_archive, "diagnose-chat-startup": diagnose_chat_startup,
+            "startup-output": startup_output}[sys.argv[1]]()
 
 
 if __name__ == "__main__":

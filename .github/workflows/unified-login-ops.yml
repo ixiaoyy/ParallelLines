@@ -8,7 +8,7 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, describe, describe-source, prepare, activate-main, activate-services, remove-source-archive, diagnose-chat-startup]
+        options: [inventory, describe, describe-source, prepare, activate-main, activate-services, remove-source-archive, diagnose-chat-startup, startup-output]
 
 permissions:
   contents: read
@@ -42,9 +42,9 @@ jobs:
           operation = os.environ['OPERATION']
           sources = {'inventory': 'unified_login_ops.py', 'describe': 'unified_nginx_release.py',
                      'describe-source': 'unified_nginx_release.py'}
-          if operation not in sources and operation not in ('prepare', 'activate-main', 'activate-services', 'remove-source-archive', 'diagnose-chat-startup'):
+          if operation not in sources and operation not in ('prepare', 'activate-main', 'activate-services', 'remove-source-archive', 'diagnose-chat-startup', 'startup-output'):
               raise SystemExit('Unsupported operation')
-          if operation in ('prepare', 'activate-main', 'activate-services', 'remove-source-archive', 'diagnose-chat-startup'):
+          if operation in ('prepare', 'activate-main', 'activate-services', 'remove-source-archive', 'diagnose-chat-startup', 'startup-output'):
               revision = os.environ['OPERATOR_REVISION']
               if not re.fullmatch('[0-9a-f]{40}', revision):
                   raise SystemExit('Invalid operator revision')
