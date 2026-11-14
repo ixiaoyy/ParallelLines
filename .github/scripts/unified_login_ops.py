@@ -667,7 +667,11 @@ def startup_output():
     if path.is_symlink() or not path.is_file() or path.stat().st_size > 131072:
         raise OperationError("startup_output_not_owned")
     lines = []
-    for line in path.read_text(errors="replace").splitlines():
+    text = path.read_text(errors="replace")
+    has_stack = "Timeout (" in text
+    if has_stack:
+        text = text.rsplit("Timeout (", 1)[-1]
+    for line in text.splitlines():
         if re.search(r"secret|password|authorization|token|(?:api|private)[_-]?key", line, re.IGNORECASE):
             continue
         line = re.sub(r"\x1b\[[0-9;]*m", "", line)
@@ -678,7 +682,7 @@ def startup_output():
         if record_path.is_file() and not record_path.is_symlink() and record_path.stat().st_size < 2 * 1024 * 1024:
             record = json.loads(record_path.read_text())
             details[role] = {key: record.get(key) for key in ("status", "release_stage", "error_type", "recovery_error_type", "restart_intent")}
-    return {"complete": True, "source": "existing_startup_records", "lines": lines[-12:], "service_stages": details}
+    return {"complete": True, "source": "existing_startup_records", "lines": lines[:45] if has_stack else lines[-12:], "service_stages": details}
 
 
 def main():
