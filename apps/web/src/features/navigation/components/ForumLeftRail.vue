@@ -166,8 +166,8 @@ function tagAccentStyle(tagName: string): Record<string, string> {
       <RouterLink class="rail-space-link" :to="{ name: 'personal-space' }" @click="emit('navigate')">
         <span class="rail-space-link__icon" aria-hidden="true">📖</span>
         <span class="rail-space-link__copy">
-          <strong>我的空间</strong>
-          <em>手账 · 记账 · 心情日历</em>
+          <strong>私密圈</strong>
+          <em>手账 · 记账 · 圈友</em>
         </span>
       </RouterLink>
 

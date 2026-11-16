@@ -34,6 +34,7 @@ import {
 import type { JsonLdObject } from "@/shared/seo/structuredData";
 import UiButton from "@/shared/ui/Button.vue";
 import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
+import { IS_FORUM_SITE } from "@/shared/site/links";
 import { applySiteBranding } from "@/shared/theme/siteBranding";
 import { applyStoredInterfaceTheme, setInterfaceTheme } from "@/shared/theme/interfaceTheme";
 
@@ -300,10 +301,15 @@ async function handleLogout() {
 
 // Keeps the brand click deterministic: it closes transient menus and scrolls home to the top when already there.
 // Key parameters: none. Side effects: closes topbar popovers and may scroll the window.
+const brandHomeTarget = computed<RouteLocationRaw>(() =>
+  IS_FORUM_SITE ? { name: "personal-space" } : { name: "forum-home" },
+);
+
 function handleBrandClick() {
   closeNavigation();
   closeAccountMenu();
-  if (route.name === "forum-home") {
+  const homeRouteName = IS_FORUM_SITE ? "personal-space" : "forum-home";
+  if (route.name === homeRouteName) {
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
   }
 }
@@ -412,7 +418,7 @@ function t(key: string, fallback: string) {
     }"
   >
     <header v-if="!isAuthRoute && !isPlayGameRoute" ref="topbarRef" class="topbar" @keydown.esc="closeNavigation">
-      <RouterLink class="brand" :to="{ name: 'forum-home' }" :aria-label="brandHomeLabel" :title="brandHomeLabel" @click="handleBrandClick">
+      <RouterLink class="brand" :to="brandHomeTarget" :aria-label="brandHomeLabel" :title="brandHomeLabel" @click="handleBrandClick">
         <span class="brand-mark">
           <img class="brand-logo" :src="brandLogoUrl" alt="" aria-hidden="true" />
         </span>

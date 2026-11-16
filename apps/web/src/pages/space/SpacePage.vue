@@ -715,13 +715,39 @@ function scrollToComposer(mode: ComposerMode) {
           <span>{{ mobileCalendarExpanded ? "收起" : "展开" }}</span>
         </button>
         <RouterLink class="space-back-forum" :to="{ name: 'forum-home' }">
-          ← 返回圈子讨论
+          🏛️ 公共论坛 →
         </RouterLink>
       </div>
     </nav>
 
-    <!-- 主体双栏布局 -->
+    <!-- 主体三栏布局：左侧圈子/论坛导航 + 中央手账/记账区 + 右侧心情日历 -->
     <div class="space-workspace-grid">
+      <aside class="space-left-rail" aria-label="圈子与论坛导航">
+        <div class="space-left-rail__panel">
+          <div class="space-left-rail__item is-active">
+            <span class="rail-item-icon" aria-hidden="true">📖</span>
+            <span class="rail-item-copy">
+              <strong>私密圈</strong>
+              <em>手账 · 记账 · 圈友</em>
+            </span>
+          </div>
+
+          <RouterLink class="space-left-rail__item is-forum" :to="{ name: 'forum-home' }">
+            <span class="rail-item-icon" aria-hidden="true">🏛️</span>
+            <span class="rail-item-copy">
+              <strong>公共论坛</strong>
+              <em>版块讨论 · 精华帖</em>
+            </span>
+          </RouterLink>
+
+          <nav class="space-left-rail__links" aria-label="社区快捷入口">
+            <RouterLink :to="{ name: 'board-directory' }">📂 全部版块</RouterLink>
+            <RouterLink :to="{ name: 'user-directory' }">👥 社区成员</RouterLink>
+            <RouterLink :to="{ name: 'new-topic' }">✍️ 发布主题</RouterLink>
+          </nav>
+        </div>
+      </aside>
+
       <main class="space-main-column">
         <!-- Memos + ezBookkeeping 双模极速发布台 -->
         <div ref="composerRef" class="space-composer-anchor" aria-hidden="true"></div>

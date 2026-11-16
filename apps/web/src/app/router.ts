@@ -180,25 +180,20 @@ export const router = createRouter({
       path: "/tools/list-compare",
       redirect: { path: "/tools/excel-formulas", query: { op: "compare" } },
     },
-    // 独立论坛以根路径承接完整旧主站；游戏构建继续保留旧论坛兼容入口。
+    // 公共论坛页（版块讨论流）统一位于 /forum；独立圈子站根路径 / 直接进入个人手账空间。
     {
-      path: IS_FORUM_SITE ? "/" : "/forum",
+      path: "/forum",
       name: "forum-home",
       component: () => import("@/pages/home/HomePage.vue"),
       meta: {
         forumShell: true,
         seo: {
-          title: IS_FORUM_SITE ? "{siteName} · 圈子" : "{siteName}",
+          title: IS_FORUM_SITE ? "公共论坛 · {siteName}" : "{siteName}",
           description: "{siteName}：{siteTagline}。浏览公开版块与可追溯讨论。",
-          canonicalPath: IS_FORUM_SITE ? "/" : "/forum",
+          canonicalPath: "/forum",
         },
       },
     },
-    ...(IS_FORUM_SITE ? [{
-      path: "/forum",
-      // 旧论坛书签保留筛选和楼层片段，只规范首页路径。
-      redirect: (to: RouteLocationGeneric) => ({ path: "/", query: to.query, hash: to.hash }),
-    }] : []),
     {
       path: "/boards",
       name: "board-directory",
@@ -290,21 +285,25 @@ export const router = createRouter({
       path: "/me",
       redirect: { name: "account-home" },
     },
-    // 个人空间：手账与轻量记账；未登录也可本地体验，登录后同步云端。
+    // 个人圈子（手账与轻量记账）；独立圈子站以此作为首页 /，未登录也可本地体验，登录后同步云端。
     {
-      path: "/space",
+      path: IS_FORUM_SITE ? "/" : "/space",
       name: "personal-space",
       component: () => import("@/pages/space/SpacePage.vue"),
       meta: {
         forumShell: true,
         seo: {
-          title: "个人空间 · 手账与记账 · {siteTitle}",
+          title: IS_FORUM_SITE ? "{siteName} · 私密圈" : "私密圈 · 手账与记账 · {siteTitle}",
           description: "在圈子里拥有自己的手账角落：心情日签、打卡清单、随手记账与月度小结。",
-          canonicalPath: "/space",
-          robots: NOINDEX_ROBOTS,
+          canonicalPath: IS_FORUM_SITE ? "/" : "/space",
+          ...(IS_FORUM_SITE ? {} : { robots: NOINDEX_ROBOTS }),
         },
       },
     },
+    ...(IS_FORUM_SITE ? [{
+      path: "/space",
+      redirect: (to: RouteLocationGeneric) => ({ path: "/", query: to.query, hash: to.hash }),
+    }] : []),
     {
       path: "/members/:id",
       name: "user-profile",
@@ -586,7 +585,7 @@ export const router = createRouter({
     },
     {
       path: "/:pathMatch(.*)*",
-      redirect: { name: IS_FORUM_SITE ? "forum-home" : "home" },
+      redirect: { name: IS_FORUM_SITE ? "personal-space" : "home" },
     },
   ],
 });

@@ -398,12 +398,104 @@
   span { color: var(--primary); }
 }
 
-/* ---------- 双栏布局 ---------- */
+/* ---------- 三栏布局（左侧导航 + 主区 + 右侧日历） ---------- */
 .space-workspace-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 19.5rem;
+  grid-template-columns: 13.5rem minmax(0, 1fr) 18.5rem;
   gap: 1rem;
   align-items: start;
+}
+
+.space-left-rail {
+  position: sticky;
+  top: 8.4rem;
+  min-width: 0;
+
+  &__panel {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-soft);
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.95rem;
+    text-decoration: none;
+    color: var(--text);
+    transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
+
+    &.is-active {
+      background: var(--theme-soft-bg, rgba(64, 158, 255, 0.12));
+      border: 1px solid var(--theme-soft-border, rgba(64, 158, 255, 0.32));
+      color: var(--primary);
+    }
+
+    &.is-forum {
+      border: 1px solid var(--border);
+      background: var(--bg-subtle);
+
+      &:hover {
+        border-color: var(--primary);
+        background: var(--theme-soft-bg, rgba(64, 158, 255, 0.08));
+        transform: translateY(-1px);
+      }
+    }
+
+    .rail-item-icon {
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .rail-item-copy {
+      display: grid;
+      gap: 0.1rem;
+      min-width: 0;
+
+      strong {
+        font-size: 0.88rem;
+        font-weight: 800;
+        color: var(--title);
+      }
+
+      em {
+        font-style: normal;
+        font-size: 0.72rem;
+        color: var(--muted);
+      }
+    }
+
+    &.is-active .rail-item-copy strong {
+      color: var(--primary);
+    }
+  }
+
+  &__links {
+    display: grid;
+    gap: 0.2rem;
+    padding-top: 0.35rem;
+    border-top: 1px dashed var(--border);
+
+    a {
+      padding: 0.42rem 0.65rem;
+      border-radius: 0.7rem;
+      color: var(--text);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-decoration: none;
+
+      &:hover {
+        background: var(--bg-subtle);
+        color: var(--primary);
+      }
+    }
+  }
 }
 
 .space-main-column {
@@ -1422,8 +1514,13 @@
 .space-mobile-fab-group { display: none; }
 
 /* ---------- 响应式 ---------- */
-@media (max-width: 1080px) {
+@media (max-width: 1180px) {
+  .space-workspace-grid { grid-template-columns: 12rem minmax(0, 1fr) 17rem; }
+}
+
+@media (max-width: 1020px) {
   .space-workspace-grid { grid-template-columns: minmax(0, 1fr) 17rem; }
+  .space-left-rail { display: none; }
 }
 
 @media (max-width: 920px) {
@@ -1439,7 +1536,6 @@
   }
 
   .space-mobile-cal-toggle { display: inline-flex; }
-  .space-back-forum { display: none; }
   .space-nav-bar { top: 3.6rem; }
 }
 

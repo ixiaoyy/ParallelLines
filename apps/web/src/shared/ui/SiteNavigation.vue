@@ -13,7 +13,7 @@ const route = useRoute();
     <a v-if="IS_FORUM_SITE" :href="SITE_LINKS.games">游戏</a>
     <RouterLink v-else :to="{ name: 'home' }" exact-active-class="is-active">游戏</RouterLink>
     <span aria-hidden="true">|</span>
-    <RouterLink v-if="IS_FORUM_SITE" :to="{ name: 'forum-home' }" class="is-active" :aria-current="route.name === 'forum-home' ? 'page' : undefined">圈子</RouterLink>
+    <RouterLink v-if="IS_FORUM_SITE" :to="{ name: 'personal-space' }" class="is-active" :aria-current="route.name === 'personal-space' ? 'page' : undefined">圈子</RouterLink>
     <a v-else :href="SITE_LINKS.forum">圈子</a>
     <span aria-hidden="true">|</span>
     <a :href="SITE_LINKS.tools" :class="{ 'is-active': route.name === 'tools' }" :aria-current="route.name === 'tools' ? 'page' : undefined">工具</a>
