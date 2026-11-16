@@ -205,10 +205,18 @@ jobs:
           VITE_STATIC_ASSET_BASE_URL: https://img.pingxingxian.space/static/web
           VITE_UNIFIED_AUTH_ENABLED: ${{ vars.VITE_UNIFIED_AUTH_ENABLED || 'false' }}
         run: pnpm --dir apps/web build
+      - name: Build forum
+        env:
+          VITE_API_BASE_URL: /api/v1
+          VITE_STATIC_ASSET_BASE_URL: https://img.pingxingxian.space/static/web
+          VITE_UNIFIED_AUTH_ENABLED: ${{ vars.VITE_UNIFIED_AUTH_ENABLED || 'false' }}
+        run: pnpm --dir apps/web build:forum
       # 只有本仓 main push 交付镜像；PR 仅运行检查，不进入生产产物链。
       - name: Prepare checked Web runtime context
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
-        run: python3 .github/scripts/deploy_artifacts.py context --dist apps/web/dist --nginx apps/web/nginx.conf --output "$RUNNER_TEMP/parallellines-web-context"
+        run: |
+          python3 .github/scripts/deploy_artifacts.py context --dist apps/web/dist --nginx apps/web/nginx.conf --output "$RUNNER_TEMP/parallellines-web-context"
+          python3 .github/scripts/deploy_artifacts.py context --dist apps/web/dist-forum --nginx apps/web/nginx.conf --output "$RUNNER_TEMP/parallellines-forum-web-context"
       - uses: docker/setup-buildx-action@v3
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
       - name: Package the same checked dist without another Vite build
@@ -224,6 +232,19 @@ jobs:
           load: true
           cache-from: type=gha,scope=web-runtime
           cache-to: type=gha,mode=max,scope=web-runtime
+      - name: Package the same checked Forum Web dist without another Vite build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ runner.temp }}/parallellines-forum-web-context
+          file: apps/web/Dockerfile.prebuilt
+          build-args: SOURCE_REVISION=${{ github.sha }}
+          tags: |
+            parallellines-forum-web:${{ github.sha }}
+            parallellines-forum-web:latest
+          load: true
+          cache-from: type=gha,scope=forum-web-runtime
+          cache-to: type=gha,mode=max,scope=forum-web-runtime
       - name: Export commit-bound Web image and receipt
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
         run: |
@@ -234,12 +255,26 @@ jobs:
           python3 .github/scripts/deploy_artifacts.py receipt --directory "$OUT" --sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
             --image-id "$(docker image inspect --format '{{.Id}}' "parallellines-web:$GITHUB_SHA")" \
             --image-revision "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "parallellines-web:$GITHUB_SHA")"
+          FORUM_OUT="$RUNNER_TEMP/parallellines-forum-web-image"
+          mkdir -p "$FORUM_OUT"
+          docker save "parallellines-forum-web:$GITHUB_SHA" parallellines-forum-web:latest | gzip > "$FORUM_OUT/parallellines-forum-web-$GITHUB_SHA.tar.gz"
+          (cd "$FORUM_OUT" && sha256sum "parallellines-forum-web-$GITHUB_SHA.tar.gz" > "parallellines-forum-web-$GITHUB_SHA.tar.gz.sha256")
       - name: Publish the checked Web image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
         uses: actions/upload-artifact@v4
         with:
           name: parallellines-web-${{ github.sha }}
           path: ${{ runner.temp }}/parallellines-web-image/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: true
+      - name: Publish the checked Forum Web image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
+        uses: actions/upload-artifact@v4
+        with:
+          name: parallellines-forum-web-${{ github.sha }}
+          path: ${{ runner.temp }}/parallellines-forum-web-image/
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
