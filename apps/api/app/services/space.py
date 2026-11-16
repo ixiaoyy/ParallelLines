@@ -417,7 +417,7 @@ class SpaceService:
                 )
                 .limit(limit)
             )
-            entries = list(await self.session.scalars(stmt).unique())
+            entries = list((await self.session.scalars(stmt)).unique())
             return [_serialize_journal(item) for item in entries]
         except (OperationalError, ProgrammingError):
             await self.session.rollback()

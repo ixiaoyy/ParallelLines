@@ -55,6 +55,9 @@ type ComposerMode = "journal" | "ledger";
 const currentUserQuery = useCurrentUser();
 const currentUser = computed(() => currentUserQuery.data.value);
 const isLoggedIn = computed(() => Boolean(currentUser.value || hasAccessToken()));
+const workspaceAuthScope = computed(() =>
+  currentUser.value?.id ? `user:${currentUser.value.id}` : hasAccessToken() ? "token" : "guest",
+);
 
 const selectedMonth = ref(currentMonthString());
 const activeTab = ref<SpaceMainTab>("journals");
@@ -71,7 +74,7 @@ const filterMood = ref<string>("");
 const filterTag = ref("");
 const filterVisibility = ref<"all" | "public" | "private">("all");
 
-const workspaceQuery = useMySpaceWorkspace(selectedMonth);
+const workspaceQuery = useMySpaceWorkspace(selectedMonth, workspaceAuthScope);
 const communityFeedQuery = usePublicSpaceFeed(
   30,
   computed(() => activeTab.value === "community"),

@@ -27,10 +27,14 @@ import type {
   SpaceSetting,
 } from "./model";
 
-export function useMySpaceWorkspace(month: MaybeRefOrGetter<string>) {
+export function useMySpaceWorkspace(
+  month: MaybeRefOrGetter<string>,
+  authScope: MaybeRefOrGetter<string> = "default",
+) {
   const monthKey = computed(() => toValue(month));
+  const scopeKey = computed(() => toValue(authScope));
   return useQuery({
-    queryKey: computed(() => queryKeys.spaceWorkspace(monthKey.value)),
+    queryKey: computed(() => [...queryKeys.spaceWorkspace(monthKey.value), scopeKey.value]),
     queryFn: () => fetchMySpaceWorkspace(monthKey.value),
     staleTime: 30_000,
   });
