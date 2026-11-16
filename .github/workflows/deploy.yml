@@ -180,6 +180,12 @@ jobs:
         with:
           name: web-image-ready-${{ env.DEPLOY_SHA }}
           path: ${{ runner.temp }}/parallellines-web-image
+      - name: Download the Forum Web image if available
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: forum-web-image-ready-${{ env.DEPLOY_SHA }}
+          path: ${{ runner.temp }}/parallellines-forum-web-image
       - name: Verify the exact image before transfer
         run: python3 .github/scripts/deploy_artifacts.py verify-web --directory "$RUNNER_TEMP/parallellines-web-image" --sha "$DEPLOY_SHA" --run-id "$SOURCE_RUN_ID"
 
@@ -202,6 +208,10 @@ jobs:
           cp "$RUNNER_TEMP/parallellines-web-image/web-image.json" "${ARTIFACT}.image.json"
           # 本次服务器链路实际约 0.1 MB/s；保留总时限并容纳完整镜像，不额外等待快链路。
           timeout 900 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${ARTIFACT}.tar.gz" "${ARTIFACT}.tar.gz.sha256" "${ARTIFACT}.image-id" "${ARTIFACT}.image-config-digest" "${ARTIFACT}.image.json" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
+          FORUM_ARTIFACT="$RUNNER_TEMP/parallellines-forum-web-image/parallellines-forum-web-$DEPLOY_SHA"
+          if [ -f "${FORUM_ARTIFACT}.tar.gz" ] && [ -f "${FORUM_ARTIFACT}.tar.gz.sha256" ]; then
+            timeout 900 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${FORUM_ARTIFACT}.tar.gz" "${FORUM_ARTIFACT}.tar.gz.sha256" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
+          fi
 
       - name: Deploy all services to server
         uses: appleboy/ssh-action@v1.0.3
@@ -264,6 +274,18 @@ jobs:
             echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
 
             STEP_STARTED_AT=$(date +%s)
+            if [ "$FORUM_ENABLED" = true ]; then
+              FORUM_IMAGE_ARCHIVE="/tmp/parallellines-forum-web-$DEPLOY_REVISION.tar.gz"
+              if [ -f "$FORUM_IMAGE_ARCHIVE" ] && [ -f "${FORUM_IMAGE_ARCHIVE}.sha256" ]; then
+                (cd /tmp && sha256sum -c "${FORUM_IMAGE_ARCHIVE}.sha256")
+                sudo docker load -i "$FORUM_IMAGE_ARCHIVE"
+                sudo docker tag "parallellines-forum-web:$DEPLOY_REVISION" "parallellines-forum-web:$FORUM_IMAGE_TAG"
+                sudo docker tag "parallellines-forum-web:$DEPLOY_REVISION" "parallellines-forum-web:local"
+                rm -f "$FORUM_IMAGE_ARCHIVE" "${FORUM_IMAGE_ARCHIVE}.sha256"
+              else
+                sudo docker tag "parallellines-forum-web:$FORUM_IMAGE_TAG" "parallellines-forum-web:local"
+              fi
+            fi
             $COMPOSE $COMPOSE_FILES build api worker nginx
             $COMPOSE $COMPOSE_FILES up -d --no-build
             STEP_FINISHED_AT=$(date +%s)
@@ -510,6 +532,7 @@ jobs:
                 (cd /tmp && sha256sum -c "${FORUM_IMAGE_ARCHIVE}.sha256")
                 sudo docker load -i "$FORUM_IMAGE_ARCHIVE"
                 sudo docker tag "parallellines-forum-web:$DEPLOY_REVISION" "parallellines-forum-web:$FORUM_IMAGE_TAG"
+                sudo docker tag "parallellines-forum-web:$DEPLOY_REVISION" "parallellines-forum-web:local"
                 rm -f "$FORUM_IMAGE_ARCHIVE" "${FORUM_IMAGE_ARCHIVE}.sha256"
                 $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build --force-recreate forum-web
               fi
