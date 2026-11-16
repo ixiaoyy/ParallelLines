@@ -317,7 +317,14 @@ async function handleImagePick(event: Event) {
 }
 
 async function submitJournal() {
-  if (!journalDraft.content.trim() && !journalDraft.checklist.length) {
+  const trimmedTitle = journalDraft.title.trim();
+  const trimmedContent = journalDraft.content.trim();
+  if (
+    !trimmedContent &&
+    !trimmedTitle &&
+    !journalDraft.checklist.length &&
+    !journalDraft.media_urls.length
+  ) {
     message.warning("写点今天的心情或添加一条打卡清单吧");
     return;
   }
@@ -329,11 +336,18 @@ async function submitJournal() {
     addTagFromInput();
   }
 
+  // 仅填写了第一行短标题时自动作为正文发布，避免用户误填标题框被拦截。
+  const finalTitle = trimmedContent ? trimmedTitle : "";
+  const finalContent =
+    trimmedContent ||
+    trimmedTitle ||
+    (journalDraft.checklist.length ? "今日打卡记录" : "分享日常瞬间");
+
   try {
     await createJournalMutation.mutateAsync({
       entry_date: journalDraft.entry_date || todayDateString(),
-      title: journalDraft.title.trim(),
-      content: journalDraft.content.trim() || "今日打卡记录",
+      title: finalTitle,
+      content: finalContent,
       mood: journalDraft.mood,
       weather: journalDraft.weather,
       location: journalDraft.location.trim(),
@@ -828,7 +842,7 @@ function scrollToComposer(mode: ComposerMode) {
                 type="text"
                 class="composer-title-input"
                 maxlength="120"
-                placeholder="可选短标题（如：周末通关手记 / 今日小确幸）"
+                placeholder="标题（选填，例如：周末通关手记 / 今日小确幸）"
               />
               <textarea
                 v-model="journalDraft.content"
