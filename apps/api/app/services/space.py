@@ -4,9 +4,10 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import contains_eager, noload
 
 from app.core.exceptions import PermissionDeniedError, NotFoundError
 from app.db.base import SHANGHAI_TZ, utcnow
@@ -90,7 +91,9 @@ class SpaceService:
     async def get_or_create_settings(self, user_id: str) -> SpaceSettingResponse:
         try:
             setting = await self.session.scalar(
-                select(SpaceSetting).where(SpaceSetting.user_id == user_id)
+                select(SpaceSetting)
+                .options(noload(SpaceSetting.user))
+                .where(SpaceSetting.user_id == user_id)
             )
             if setting:
                 return SpaceSettingResponse.model_validate(setting)
@@ -135,6 +138,7 @@ class SpaceService:
         try:
             journal_stmt = (
                 select(SpaceJournalEntry)
+                .options(noload(SpaceJournalEntry.user))
                 .where(SpaceJournalEntry.user_id == current_user.id)
                 .order_by(
                     SpaceJournalEntry.is_pinned.desc(),
@@ -147,12 +151,16 @@ class SpaceService:
 
             ledger_stmt = (
                 select(SpaceLedgerEntry)
-                .where(SpaceLedgerEntry.user_id == current_user.id)
+                .options(noload(SpaceLedgerEntry.user))
+                .where(
+                    SpaceLedgerEntry.user_id == current_user.id,
+                    SpaceLedgerEntry.entry_date.like(f"{target_month}-%"),
+                )
                 .order_by(
                     SpaceLedgerEntry.entry_date.desc(),
                     SpaceLedgerEntry.created_at.desc(),
                 )
-                .limit(300)
+                .limit(500)
             )
             ledgers = list(await self.session.scalars(ledger_stmt))
         except (OperationalError, ProgrammingError):
@@ -300,7 +308,12 @@ class SpaceService:
             raise NotFoundError(code="journal_not_found", message="手账记录不存在。")
         if entry.visibility != "public" and (not viewer or str(viewer.id) != str(entry.user_id)):
             raise NotFoundError(code="journal_not_found", message="手账记录不存在。")
-        entry.likes_count = int(entry.likes_count or 0) + 1
+        # 使用 SQL 原子自增，避免并发点赞覆盖增量。
+        await self.session.execute(
+            update(SpaceJournalEntry)
+            .where(SpaceJournalEntry.id == entry.id)
+            .values(likes_count=SpaceJournalEntry.likes_count + 1)
+        )
         await self.session.commit()
         await self.session.refresh(entry)
         # 显式读取作者，避免异步会话中触发关系懒加载。
@@ -356,6 +369,7 @@ class SpaceService:
 
             stmt = (
                 select(SpaceJournalEntry)
+                .options(noload(SpaceJournalEntry.user))
                 .where(*conditions)
                 .order_by(
                     SpaceJournalEntry.is_pinned.desc(),
@@ -393,6 +407,7 @@ class SpaceService:
             stmt = (
                 select(SpaceJournalEntry)
                 .join(User, User.id == SpaceJournalEntry.user_id)
+                .options(contains_eager(SpaceJournalEntry.user))
                 .where(
                     SpaceJournalEntry.visibility == "public",
                     User.status == "active",
@@ -402,7 +417,7 @@ class SpaceService:
                 )
                 .limit(limit)
             )
-            entries = list(await self.session.scalars(stmt))
+            entries = list(await self.session.scalars(stmt).unique())
             return [_serialize_journal(item) for item in entries]
         except (OperationalError, ProgrammingError):
             await self.session.rollback()

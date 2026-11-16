@@ -13,13 +13,17 @@ import {
   fetchPublicSpaceFeed,
   fetchPublicUserSpace,
   likeSpaceJournal,
+  syncLocalSpaceToCloud,
   updateMySpaceSettings,
   updateSpaceJournal,
 } from "./api";
 import type {
   SpaceJournalCreatePayload,
+  SpaceJournalItem,
   SpaceJournalUpdatePayload,
   SpaceLedgerCreatePayload,
+  SpaceMyWorkspace,
+  SpacePublicProfile,
   SpaceSetting,
 } from "./model";
 
@@ -54,11 +58,59 @@ export function usePublicUserSpace(
   });
 }
 
+function patchCachedJournal(updated: SpaceJournalItem) {
+  queryClient.setQueriesData<SpaceMyWorkspace>(
+    { queryKey: ["space", "me"] },
+    (old) => {
+      if (!old) return old;
+      const exists = old.journals.some((j) => j.id === updated.id);
+      if (!exists) return old;
+      return {
+        ...old,
+        journals: old.journals.map((j) => (j.id === updated.id ? updated : j)),
+      };
+    },
+  );
+  queryClient.setQueriesData<SpaceJournalItem[]>(
+    { queryKey: ["space", "feed"] },
+    (old) => {
+      if (!old) return old;
+      return old.map((j) => (j.id === updated.id ? updated : j));
+    },
+  );
+  queryClient.setQueriesData<SpacePublicProfile>(
+    { queryKey: ["space", "user"] },
+    (old) => {
+      if (!old) return old;
+      const exists = old.journals.some((j) => j.id === updated.id);
+      if (!exists) return old;
+      return {
+        ...old,
+        journals: old.journals.map((j) => (j.id === updated.id ? updated : j)),
+      };
+    },
+  );
+}
+
 export function useUpdateSpaceSettings() {
   return useMutation({
     mutationFn: (payload: Omit<SpaceSetting, "user_id">) => updateMySpaceSettings(payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.spaceRoot });
+    onSuccess: (updated) => {
+      queryClient.setQueriesData<SpaceMyWorkspace>(
+        { queryKey: ["space", "me"] },
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            settings: updated,
+            ledger_summary: {
+              ...old.ledger_summary,
+              monthly_budget_cents: updated.monthly_budget_cents,
+            },
+          };
+        },
+      );
+      void queryClient.invalidateQueries({ queryKey: ["space", "user"] });
     },
   });
 }
@@ -66,8 +118,12 @@ export function useUpdateSpaceSettings() {
 export function useCreateSpaceJournal() {
   return useMutation({
     mutationFn: (payload: SpaceJournalCreatePayload) => createSpaceJournal(payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.spaceRoot });
+    onSuccess: (_created, payload) => {
+      void queryClient.invalidateQueries({ queryKey: ["space", "me"] });
+      if (payload.visibility === "public") {
+        void queryClient.invalidateQueries({ queryKey: ["space", "feed"] });
+        void queryClient.invalidateQueries({ queryKey: ["space", "user"] });
+      }
     },
   });
 }
@@ -76,8 +132,17 @@ export function useUpdateSpaceJournal() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: SpaceJournalUpdatePayload }) =>
       updateSpaceJournal(id, payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.spaceRoot });
+    onSuccess: (updated, { payload }) => {
+      if (payload.is_pinned !== undefined) {
+        // 置顶改变排序位置，刷新工作区列表。
+        void queryClient.invalidateQueries({ queryKey: ["space", "me"] });
+      } else {
+        patchCachedJournal(updated);
+      }
+      if (payload.visibility !== undefined || payload.is_pinned !== undefined) {
+        void queryClient.invalidateQueries({ queryKey: ["space", "feed"] });
+        void queryClient.invalidateQueries({ queryKey: ["space", "user"] });
+      }
     },
   });
 }
@@ -94,8 +159,8 @@ export function useDeleteSpaceJournal() {
 export function useLikeSpaceJournal() {
   return useMutation({
     mutationFn: (entryId: string) => likeSpaceJournal(entryId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.spaceRoot });
+    onSuccess: (updated) => {
+      patchCachedJournal(updated);
     },
   });
 }
@@ -104,7 +169,7 @@ export function useCreateSpaceLedgerEntry() {
   return useMutation({
     mutationFn: (payload: SpaceLedgerCreatePayload) => createSpaceLedgerEntry(payload),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.spaceRoot });
+      void queryClient.invalidateQueries({ queryKey: ["space", "me"] });
     },
   });
 }
@@ -112,6 +177,15 @@ export function useCreateSpaceLedgerEntry() {
 export function useDeleteSpaceLedgerEntry() {
   return useMutation({
     mutationFn: (entryId: string) => deleteSpaceLedgerEntry(entryId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["space", "me"] });
+    },
+  });
+}
+
+export function useSyncLocalSpaceToCloud() {
+  return useMutation({
+    mutationFn: () => syncLocalSpaceToCloud(),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.spaceRoot });
     },

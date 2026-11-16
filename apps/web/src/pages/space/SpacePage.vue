@@ -4,6 +4,10 @@ import { message } from "ant-design-vue";
 
 import { useCurrentUser } from "@/features/auth/queries";
 import SpaceJournalCard from "@/features/space/components/SpaceJournalCard.vue";
+import SpaceLedgerPanel from "@/features/space/components/SpaceLedgerPanel.vue";
+import SpaceMoodCalendarCard from "@/features/space/components/SpaceMoodCalendarCard.vue";
+import SpaceSettingsDrawer from "@/features/space/components/SpaceSettingsDrawer.vue";
+import { getPendingLocalSpaceSummary, type LocalSpacePendingSummary } from "@/features/space/api";
 import {
   currentMonthString,
   formatCentsToYuan,
@@ -14,7 +18,6 @@ import {
   JOURNAL_WEATHERS,
   LEDGER_CATEGORIES,
   LEDGER_PAYMENT_METHODS,
-  SPACE_COVER_PRESETS,
   todayDateString,
   type JournalCardTheme,
   type JournalMood,
@@ -36,6 +39,7 @@ import {
   useLikeSpaceJournal,
   useMySpaceWorkspace,
   usePublicSpaceFeed,
+  useSyncLocalSpaceToCloud,
   useUpdateSpaceJournal,
   useUpdateSpaceSettings,
 } from "@/features/space/queries";
@@ -80,6 +84,28 @@ const likeJournalMutation = useLikeSpaceJournal();
 const createLedgerMutation = useCreateSpaceLedgerEntry();
 const deleteLedgerMutation = useDeleteSpaceLedgerEntry();
 const updateSettingsMutation = useUpdateSpaceSettings();
+const syncLocalMutation = useSyncLocalSpaceToCloud();
+
+const pendingLocalSummary = ref<LocalSpacePendingSummary>(getPendingLocalSpaceSummary());
+const localSyncBannerDismissed = ref(false);
+
+watch(isLoggedIn, (loggedIn) => {
+  if (loggedIn) {
+    pendingLocalSummary.value = getPendingLocalSpaceSummary();
+  }
+});
+
+async function handleSyncLocalToCloud() {
+  try {
+    const result = await syncLocalMutation.mutateAsync();
+    pendingLocalSummary.value = getPendingLocalSpaceSummary();
+    message.success(
+      `已同步 ${result.journalsSynced} 篇手账和 ${result.ledgersSynced} 笔账单到云端`,
+    );
+  } catch {
+    message.error("同步本地记录失败，请稍后重试");
+  }
+}
 
 // Journal Composer State
 const journalDraft = reactive({
@@ -119,7 +145,6 @@ const settingsDraft = reactive({
   cover_preset: "aurora" as SpaceCoverPreset,
   monthlyBudgetYuan: "3000",
 });
-const hideExactAmountOnShare = ref(false);
 
 const workspace = computed(() => workspaceQuery.data.value);
 const myJournals = computed(() => workspace.value?.journals ?? []);
@@ -212,68 +237,6 @@ const tagCloud = computed(() => {
     .slice(0, 14);
 });
 
-// Calendar Grid Builder for selectedMonth (YYYY-MM)
-const calendarCells = computed(() => {
-  const [yearStr, monthStr] = selectedMonth.value.split("-");
-  const year = Number(yearStr) || new Date().getFullYear();
-  const month = Number(monthStr) || new Date().getMonth() + 1;
-  const firstDayWeek = new Date(year, month - 1, 1).getDay();
-  const daysInMonth = new Date(year, month, 0).getDate();
-
-  const journalByDate = new Map<string, SpaceJournalItem>();
-  for (const j of myJournals.value) {
-    if (j.entry_date.startsWith(selectedMonth.value) && !journalByDate.has(j.entry_date)) {
-      journalByDate.set(j.entry_date, j);
-    }
-  }
-
-  const ledgerCountByDate = new Map<string, number>();
-  for (const l of myLedgers.value) {
-    if (l.entry_date.startsWith(selectedMonth.value)) {
-      ledgerCountByDate.set(l.entry_date, (ledgerCountByDate.get(l.entry_date) ?? 0) + 1);
-    }
-  }
-
-  const cells: Array<{
-    key: string;
-    dayNumber: number | null;
-    dateStr: string;
-    moodEmoji: string | null;
-    moodColor: string | null;
-    hasLedger: boolean;
-    isToday: boolean;
-  }> = [];
-
-  for (let i = 0; i < firstDayWeek; i += 1) {
-    cells.push({
-      key: `pad-${i}`,
-      dayNumber: null,
-      dateStr: "",
-      moodEmoji: null,
-      moodColor: null,
-      hasLedger: false,
-      isToday: false,
-    });
-  }
-
-  const today = todayDateString();
-  for (let d = 1; d <= daysInMonth; d += 1) {
-    const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    const journal = journalByDate.get(dateStr);
-    const moodMeta = journal ? getMoodMeta(journal.mood) : null;
-    cells.push({
-      key: dateStr,
-      dayNumber: d,
-      dateStr,
-      moodEmoji: moodMeta ? moodMeta.emoji : null,
-      moodColor: moodMeta ? moodMeta.softBg : null,
-      hasLedger: (ledgerCountByDate.get(dateStr) ?? 0) > 0,
-      isToday: dateStr === today,
-    });
-  }
-  return cells;
-});
-
 function shiftMonth(delta: number) {
   const [yStr, mStr] = selectedMonth.value.split("-");
   const date = new Date(Number(yStr), Number(mStr) - 1 + delta, 1);
@@ -296,31 +259,6 @@ const remainingBudgetCents = computed(() => {
   const summary = ledgerSummary.value;
   if (!summary) return 0;
   return summary.monthly_budget_cents - summary.total_expense_cents;
-});
-
-const monthLedgersGrouped = computed(() => {
-  const prefix = `${selectedMonth.value}-`;
-  const list = myLedgers.value.filter((item) => item.entry_date.startsWith(prefix));
-  const groups = new Map<
-    string,
-    { date: string; items: SpaceLedgerItem[]; dayExpense: number; dayIncome: number }
-  >();
-  for (const item of list) {
-    const group = groups.get(item.entry_date) ?? {
-      date: item.entry_date,
-      items: [],
-      dayExpense: 0,
-      dayIncome: 0,
-    };
-    group.items.push(item);
-    if (item.kind === "income") {
-      group.dayIncome += item.amount_cents;
-    } else {
-      group.dayExpense += item.amount_cents;
-    }
-    groups.set(item.entry_date, group);
-  }
-  return Array.from(groups.values());
 });
 
 // Composer helpers
@@ -479,7 +417,10 @@ async function submitLedgerEntry() {
   }
 }
 
-async function shareMonthlyBillToJournal(visibility: JournalVisibility) {
+async function shareMonthlyBillToJournal(
+  visibility: JournalVisibility,
+  hideExactAmount = false,
+) {
   const summary = ledgerSummary.value;
   if (!summary || summary.entry_count === 0) {
     message.warning("本月还没有记账记录，先记一笔吧");
@@ -490,7 +431,7 @@ async function shareMonthlyBillToJournal(visibility: JournalVisibility) {
     await createJournalMutation.mutateAsync({
       entry_date: todayDateString(),
       title: `${summary.month} 月度生活账单小结`,
-      content: hideExactAmountOnShare.value
+      content: hideExactAmount
         ? `整理了 ${summary.month} 的消费结构，共记录 ${summary.entry_count} 笔生活收支，保持有节奏的生活方式。`
         : `${summary.month} 共记录 ${summary.entry_count} 笔收支，把钱花在真正带来快乐和成长的地方。`,
       mood: "focused",
@@ -507,7 +448,7 @@ async function shareMonthlyBillToJournal(visibility: JournalVisibility) {
         total_expense_cents: summary.total_expense_cents,
         total_income_cents: summary.total_income_cents,
         entry_count: summary.entry_count,
-        hide_exact_amount: hideExactAmountOnShare.value,
+        hide_exact_amount: hideExactAmount,
         top_categories: summary.category_breakdown.slice(0, 4).map((c) => ({
           category: c.category,
           ratio_percent: c.ratio_percent,
@@ -526,18 +467,14 @@ async function shareMonthlyBillToJournal(visibility: JournalVisibility) {
   }
 }
 
-async function saveSpaceSettings() {
-  const budgetYuan = Number.parseFloat(settingsDraft.monthlyBudgetYuan);
-  const budgetCents =
-    Number.isFinite(budgetYuan) && budgetYuan >= 0 ? Math.round(budgetYuan * 100) : 300000;
-
+async function saveSpaceSettings(payload: {
+  space_title: string;
+  space_subtitle: string;
+  cover_preset: SpaceCoverPreset;
+  monthly_budget_cents: number;
+}) {
   try {
-    await updateSettingsMutation.mutateAsync({
-      space_title: settingsDraft.space_title.trim(),
-      space_subtitle: settingsDraft.space_subtitle.trim(),
-      cover_preset: settingsDraft.cover_preset,
-      monthly_budget_cents: budgetCents,
-    });
+    await updateSettingsMutation.mutateAsync(payload);
     settingsOpen.value = false;
     message.success("空间装扮与预算设置已保存");
   } catch {
@@ -545,45 +482,71 @@ async function saveSpaceSettings() {
   }
 }
 
-function handleTogglePin(entry: SpaceJournalItem) {
-  updateJournalMutation.mutate({
-    id: entry.id,
-    payload: { is_pinned: !entry.is_pinned },
-  });
+async function handleTogglePin(entry: SpaceJournalItem) {
+  try {
+    await updateJournalMutation.mutateAsync({
+      id: entry.id,
+      payload: { is_pinned: !entry.is_pinned },
+    });
+  } catch {
+    message.error("更新置顶状态失败");
+  }
 }
 
-function handleToggleVisibility(entry: SpaceJournalItem) {
+async function handleToggleVisibility(entry: SpaceJournalItem) {
   const nextVis = entry.visibility === "private" ? "public" : "private";
-  updateJournalMutation.mutate({
-    id: entry.id,
-    payload: { visibility: nextVis },
-  });
-  message.success(nextVis === "public" ? "已设为公开到个人主页" : "已设为仅自己可见");
+  try {
+    await updateJournalMutation.mutateAsync({
+      id: entry.id,
+      payload: { visibility: nextVis },
+    });
+    message.success(nextVis === "public" ? "已设为公开到个人主页" : "已设为仅自己可见");
+  } catch {
+    message.error("切换可见性失败，请稍后重试");
+  }
 }
 
-function handleToggleChecklist(entry: SpaceJournalItem, itemId: string) {
+async function handleToggleChecklist(entry: SpaceJournalItem, itemId: string) {
   const nextChecklist = (entry.checklist ?? []).map((item) =>
     item.id === itemId ? { ...item, done: !item.done } : item,
   );
-  updateJournalMutation.mutate({
-    id: entry.id,
-    payload: { checklist: nextChecklist },
-  });
+  try {
+    await updateJournalMutation.mutateAsync({
+      id: entry.id,
+      payload: { checklist: nextChecklist },
+    });
+  } catch {
+    message.error("更新打卡状态失败");
+  }
 }
 
-function handleRemoveJournal(entry: SpaceJournalItem) {
+async function handleRemoveJournal(entry: SpaceJournalItem) {
   if (typeof window !== "undefined" && !window.confirm("确定要删除这篇手账吗？")) {
     return;
   }
-  deleteJournalMutation.mutate(entry.id);
+  try {
+    await deleteJournalMutation.mutateAsync(entry.id);
+    message.success("手账已删除");
+  } catch {
+    message.error("删除手账失败，请稍后重试");
+  }
 }
 
-function handleLikeJournal(entry: SpaceJournalItem) {
-  likeJournalMutation.mutate(entry.id);
+async function handleLikeJournal(entry: SpaceJournalItem) {
+  try {
+    await likeJournalMutation.mutateAsync(entry.id);
+  } catch {
+    message.error("点赞失败，请稍后重试");
+  }
 }
 
-function handleDeleteLedger(item: SpaceLedgerItem) {
-  deleteLedgerMutation.mutate(item.id);
+async function handleDeleteLedger(item: SpaceLedgerItem) {
+  try {
+    await deleteLedgerMutation.mutateAsync(item.id);
+    message.success("账单记录已删除");
+  } catch {
+    message.error("删除账单失败，请稍后重试");
+  }
 }
 
 function scrollToComposer(mode: ComposerMode) {
@@ -654,63 +617,65 @@ function scrollToComposer(mode: ComposerMode) {
       </div>
 
       <!-- 空间装扮与月度预算抽屉面板 -->
-      <div v-if="settingsOpen" class="space-settings-drawer">
-        <div class="space-settings-drawer__grid">
-          <label>
-            <span>空间名称</span>
-            <input
-              v-model="settingsDraft.space_title"
-              type="text"
-              maxlength="80"
-              placeholder="例如：阿星的光年手账本"
-            />
-          </label>
-          <label>
-            <span>空间签名 / 寄语</span>
-            <input
-              v-model="settingsDraft.space_subtitle"
-              type="text"
-              maxlength="200"
-              placeholder="写一句展示在空间顶部的生活寄语…"
-            />
-          </label>
-          <label>
-            <span>每月记账预算（元，仅自己可见）</span>
-            <input
-              v-model="settingsDraft.monthlyBudgetYuan"
-              type="number"
-              min="0"
-              step="100"
-              placeholder="3000"
-            />
-          </label>
-        </div>
-
-        <div class="space-settings-drawer__presets">
-          <span>封面视觉主题：</span>
-          <div class="preset-pills">
-            <button
-              v-for="preset in SPACE_COVER_PRESETS"
-              :key="preset.key"
-              type="button"
-              :class="{ active: settingsDraft.cover_preset === preset.key }"
-              @click="settingsDraft.cover_preset = preset.key"
-            >
-              {{ preset.label }}
-            </button>
-          </div>
-        </div>
-
-        <div class="space-settings-drawer__footer">
-          <UiButton type="button" tone="primary" @click="saveSpaceSettings">
-            保存空间设置
-          </UiButton>
-          <UiButton type="button" tone="ghost" @click="settingsOpen = false">
-            收起
-          </UiButton>
-        </div>
-      </div>
+      <SpaceSettingsDrawer
+        v-if="settingsOpen"
+        :space-title="settingsDraft.space_title"
+        :space-subtitle="settingsDraft.space_subtitle"
+        :cover-preset="settingsDraft.cover_preset"
+        :monthly-budget-yuan="settingsDraft.monthlyBudgetYuan"
+        :saving="updateSettingsMutation.isPending.value"
+        @save="saveSpaceSettings"
+        @close="settingsOpen = false"
+      />
     </section>
+
+    <!-- 登录后本地草稿一键同步提示 -->
+    <div
+      v-if="isLoggedIn && !localSyncBannerDismissed && pendingLocalSummary.totalCount > 0"
+      class="space-sync-banner"
+      role="status"
+    >
+      <span>
+        检测到本地保存了
+        <template v-if="pendingLocalSummary.journalCount > 0">
+          {{ pendingLocalSummary.journalCount }} 篇手账
+        </template>
+        <template v-if="pendingLocalSummary.journalCount > 0 && pendingLocalSummary.ledgerCount > 0">
+          和
+        </template>
+        <template v-if="pendingLocalSummary.ledgerCount > 0">
+          {{ pendingLocalSummary.ledgerCount }} 笔账单
+        </template>
+        ，是否合并到云端空间？
+      </span>
+      <div class="space-sync-banner__actions">
+        <UiButton
+          type="button"
+          tone="primary"
+          size="sm"
+          :loading="syncLocalMutation.isPending.value"
+          @click="handleSyncLocalToCloud"
+        >
+          同步到云端
+        </UiButton>
+        <UiButton
+          type="button"
+          tone="ghost"
+          size="sm"
+          @click="localSyncBannerDismissed = true"
+        >
+          暂不同步
+        </UiButton>
+      </div>
+    </div>
+
+    <!-- 云端加载失败提示 -->
+    <UiCard v-if="isLoggedIn && workspaceQuery.isError.value" class="space-error-banner">
+      <span>云端个人空间加载失败，请检查网络或重新登录后再试。</span>
+      <UiButton type="button" tone="subtle" size="sm" @click="workspaceQuery.refetch()">
+        重新加载
+      </UiButton>
+    </UiCard>
 
     <!-- 顶部主视图切换栏（移动端与桌面端自适应） -->
     <nav class="space-nav-bar" aria-label="个人空间模块切换">
@@ -1153,151 +1118,17 @@ function scrollToComposer(mode: ComposerMode) {
         </section>
 
         <!-- Tab 2: 随手记账与月度报表 -->
-        <section v-else-if="activeTab === 'ledger'" class="space-ledger-section" aria-label="私人记账本">
-          <UiCard v-if="ledgerSummary" class="ledger-overview-card">
-            <div class="ledger-overview-card__head">
-              <div>
-                <span class="kicker">🔒 私人月度账本（仅自己可见）</span>
-                <h2>{{ selectedMonth }} 收支总览</h2>
-              </div>
-              <div class="ledger-share-box">
-                <label class="hide-amount-check">
-                  <input v-model="hideExactAmountOnShare" type="checkbox" />
-                  <span>仅晒比例（隐藏金额）</span>
-                </label>
-                <UiButton
-                  type="button"
-                  tone="subtle"
-                  @click="shareMonthlyBillToJournal('public')"
-                >
-                  📊 生成月度小结手账卡
-                </UiButton>
-              </div>
-            </div>
-
-            <div class="ledger-metrics-grid">
-              <div class="metric-item">
-                <span>本月支出</span>
-                <strong class="is-expense">
-                  {{ formatCentsToYuan(ledgerSummary.total_expense_cents) }}
-                </strong>
-              </div>
-              <div class="metric-item">
-                <span>本月收入</span>
-                <strong class="is-income">
-                  {{ formatCentsToYuan(ledgerSummary.total_income_cents, true) }}
-                </strong>
-              </div>
-              <div class="metric-item">
-                <span>预算剩余</span>
-                <strong :class="{ 'is-over': remainingBudgetCents < 0 }">
-                  {{ formatCentsToYuan(remainingBudgetCents) }}
-                </strong>
-              </div>
-            </div>
-
-            <div class="budget-progress-wrap">
-              <div class="budget-progress-labels">
-                <span>
-                  月度预算进度（预算 {{ formatCentsToYuan(ledgerSummary.monthly_budget_cents) }}）
-                </span>
-                <b>已用 {{ budgetUsagePercent }}%</b>
-              </div>
-              <div class="budget-progress-bar">
-                <i
-                  :style="{ width: `${budgetUsagePercent}%` }"
-                  :class="{ 'is-warn': budgetUsagePercent >= 85 }"
-                ></i>
-              </div>
-            </div>
-
-            <div v-if="ledgerSummary.category_breakdown.length" class="ledger-breakdown-list">
-              <h3>支出分类占比</h3>
-              <div
-                v-for="cat in ledgerSummary.category_breakdown"
-                :key="cat.category"
-                class="breakdown-row"
-              >
-                <span class="cat-badge">
-                  <em>{{ getLedgerCategoryMeta(cat.category).emoji }}</em>
-                  <b>{{ getLedgerCategoryMeta(cat.category).label }}</b>
-                  <small>{{ cat.count }} 笔</small>
-                </span>
-                <div class="cat-track">
-                  <i
-                    :style="{
-                      width: `${Math.max(5, cat.ratio_percent)}%`,
-                      backgroundColor: getLedgerCategoryMeta(cat.category).color,
-                    }"
-                  ></i>
-                </div>
-                <span class="cat-amount">
-                  {{ formatCentsToYuan(cat.amount_cents) }} ({{ cat.ratio_percent }}%)
-                </span>
-              </div>
-            </div>
-          </UiCard>
-
-          <!-- 按日分组账单流水 -->
-          <div v-if="monthLedgersGrouped.length" class="ledger-day-groups">
-            <UiCard v-for="group in monthLedgersGrouped" :key="group.date" class="ledger-day-card">
-              <header class="ledger-day-card__head">
-                <strong>📅 {{ group.date }}</strong>
-                <div class="day-sums">
-                  <span v-if="group.dayExpense">支 {{ formatCentsToYuan(group.dayExpense) }}</span>
-                  <span v-if="group.dayIncome" class="is-income">
-                    收 {{ formatCentsToYuan(group.dayIncome, true) }}
-                  </span>
-                </div>
-              </header>
-
-              <ul class="ledger-entry-list">
-                <li v-for="item in group.items" :key="item.id" class="ledger-entry-row">
-                  <span
-                    class="entry-cat-icon"
-                    :style="{
-                      backgroundColor: getLedgerCategoryMeta(item.category).softBg,
-                      color: getLedgerCategoryMeta(item.category).color,
-                    }"
-                  >
-                    {{ getLedgerCategoryMeta(item.category).emoji }}
-                  </span>
-                  <div class="entry-info">
-                    <strong>{{ getLedgerCategoryMeta(item.category).label }}</strong>
-                    <p>{{ item.note || "无备注" }}</p>
-                  </div>
-                  <div class="entry-right">
-                    <b :class="item.kind === 'income' ? 'is-income' : 'is-expense'">
-                      {{
-                        formatCentsToYuan(
-                          item.kind === "income" ? item.amount_cents : -item.amount_cents,
-                          true,
-                        )
-                      }}
-                    </b>
-                    <button
-                      type="button"
-                      class="entry-del-btn"
-                      title="删除此笔记录"
-                      @click="handleDeleteLedger(item)"
-                    >
-                      删除
-                    </button>
-                  </div>
-                </li>
-              </ul>
-            </UiCard>
-          </div>
-
-          <UiCard v-else class="space-empty-card">
-            <span class="empty-emoji">🪙</span>
-            <strong>{{ selectedMonth }} 还没有记账流水</strong>
-            <p>使用上方「随手记一笔账」记录日常咖啡、餐饮或游戏开销，月底可一键生成漂亮的手账小结卡。</p>
-            <UiButton type="button" tone="primary" @click="scrollToComposer('ledger')">
-              记第一笔账
-            </UiButton>
-          </UiCard>
-        </section>
+        <SpaceLedgerPanel
+          v-else-if="activeTab === 'ledger'"
+          :selected-month="selectedMonth"
+          :ledger-summary="ledgerSummary"
+          :ledgers="myLedgers"
+          :budget-usage-percent="budgetUsagePercent"
+          :remaining-budget-cents="remainingBudgetCents"
+          @share-monthly-bill="shareMonthlyBillToJournal"
+          @delete-ledger="handleDeleteLedger"
+          @compose-ledger="scrollToComposer('ledger')"
+        />
 
         <!-- Tab 3: 圈友手账墙（公共公开流） -->
         <section v-else class="space-community-section" aria-label="圈友公开手账墙">
@@ -1349,64 +1180,26 @@ function scrollToComposer(mode: ComposerMode) {
         aria-label="心情日历与账本速览"
       >
         <!-- 月度心情与打卡日历 (Daylio / Memos 风格) -->
-        <UiCard class="space-side-card space-calendar-card">
-          <header class="calendar-header">
-            <button type="button" aria-label="上个月" @click="shiftMonth(-1)">‹</button>
-            <strong>🗓️ {{ selectedMonth }} 心情日历</strong>
-            <button type="button" aria-label="下个月" @click="shiftMonth(1)">›</button>
-          </header>
-
-          <div class="calendar-weekdays" aria-hidden="true">
-            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
-          </div>
-
-          <div class="calendar-grid">
-            <button
-              v-for="cell in calendarCells"
-              :key="cell.key"
-              type="button"
-              class="calendar-cell"
-              :disabled="!cell.dayNumber"
-              :class="{
-                'is-empty': !cell.dayNumber,
-                'is-today': cell.isToday,
-                'is-selected': cell.dateStr && filterDate === cell.dateStr,
-                'has-mood': Boolean(cell.moodEmoji),
-              }"
-              :style="cell.moodColor ? { '--cell-bg': cell.moodColor } : undefined"
-              @click="
-                cell.dateStr &&
-                (filterDate = filterDate === cell.dateStr ? '' : cell.dateStr,
-                (activeTab = 'journals'))
-              "
-            >
-              <template v-if="cell.dayNumber">
-                <em v-if="cell.moodEmoji" class="cell-mood">{{ cell.moodEmoji }}</em>
-                <span class="cell-num">{{ cell.dayNumber }}</span>
-                <i v-if="cell.hasLedger" class="cell-ledger-dot" title="当日有记账"></i>
-              </template>
-            </button>
-          </div>
-
-          <div class="calendar-mood-filter">
-            <span>按心情筛选：</span>
-            <div class="mood-mini-list">
-              <button
-                v-for="m in JOURNAL_MOODS"
-                :key="m.key"
-                type="button"
-                :class="{ active: filterMood === m.key }"
-                :title="m.label"
-                @click="
-                  filterMood = filterMood === m.key ? '' : m.key;
-                  activeTab = 'journals';
-                "
-              >
-                {{ m.emoji }}
-              </button>
-            </div>
-          </div>
-        </UiCard>
+        <SpaceMoodCalendarCard
+          :selected-month="selectedMonth"
+          :journals="myJournals"
+          :ledgers="myLedgers"
+          :filter-date="filterDate"
+          :filter-mood="filterMood"
+          @shift-month="shiftMonth"
+          @select-date="
+            (dateStr) => {
+              filterDate = filterDate === dateStr ? '' : dateStr;
+              activeTab = 'journals';
+            }
+          "
+          @select-mood="
+            (moodKey) => {
+              filterMood = filterMood === moodKey ? '' : moodKey;
+              activeTab = 'journals';
+            }
+          "
+        />
 
         <!-- 侧栏月度记账速览卡 -->
         <UiCard v-if="ledgerSummary" class="space-side-card space-mini-ledger">

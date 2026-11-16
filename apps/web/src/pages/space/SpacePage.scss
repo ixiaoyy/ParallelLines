@@ -247,6 +247,36 @@
   }
 }
 
+.space-sync-banner,
+.space-error-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: 1rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.space-sync-banner {
+  border: 1px solid color-mix(in srgb, var(--primary) 26%, var(--border));
+  background: var(--theme-soft-bg, rgba(64, 158, 255, 0.08));
+  color: var(--title);
+
+  &__actions {
+    display: flex;
+    gap: 0.45rem;
+  }
+}
+
+.space-error-banner {
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.06);
+  color: #b91c1c;
+}
+
 /* 通用输入框 */
 .space-page input[type="text"],
 .space-page input[type="number"],

@@ -244,55 +244,137 @@ function buildWorkspaceFromLocal(month: string): SpaceMyWorkspace {
   };
 }
 
+const LOCAL_SEED_JOURNAL_ID = "local-journal-welcome";
+const LOCAL_SEED_LEDGER_ID = "local-ledger-demo-1";
+
+export interface LocalSpacePendingSummary {
+  journalCount: number;
+  ledgerCount: number;
+  totalCount: number;
+}
+
+export function getPendingLocalSpaceSummary(): LocalSpacePendingSummary {
+  if (typeof window === "undefined") {
+    return { journalCount: 0, ledgerCount: 0, totalCount: 0 };
+  }
+  const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (!raw) {
+    return { journalCount: 0, ledgerCount: 0, totalCount: 0 };
+  }
+  const store = readLocalStore();
+  const journals = store.journals.filter((item) => item.id !== LOCAL_SEED_JOURNAL_ID);
+  const ledgers = store.ledgers.filter((item) => item.id !== LOCAL_SEED_LEDGER_ID);
+  return {
+    journalCount: journals.length,
+    ledgerCount: ledgers.length,
+    totalCount: journals.length + ledgers.length,
+  };
+}
+
+export async function syncLocalSpaceToCloud(): Promise<{
+  journalsSynced: number;
+  ledgersSynced: number;
+}> {
+  if (!hasAccessToken()) {
+    throw new Error("请先登录后再同步到云端");
+  }
+  const store = readLocalStore();
+  const pendingJournals = store.journals.filter((item) => item.id !== LOCAL_SEED_JOURNAL_ID);
+  const pendingLedgers = store.ledgers.filter((item) => item.id !== LOCAL_SEED_LEDGER_ID);
+
+  let journalsSynced = 0;
+  let ledgersSynced = 0;
+  const remainingJournals = [...store.journals];
+  const remainingLedgers = [...store.ledgers];
+
+  for (const item of pendingJournals) {
+    await apiRequest<SpaceJournalItem>("/space/journals", {
+      method: "POST",
+      body: JSON.stringify({
+        entry_date: item.entry_date,
+        title: item.title,
+        content: item.content,
+        mood: item.mood,
+        weather: item.weather,
+        location: item.location,
+        visibility: item.visibility,
+        is_pinned: item.is_pinned,
+        card_theme: item.card_theme,
+        tags: item.tags,
+        media_urls: (item.media_urls ?? []).filter((url) => !url.startsWith("blob:")),
+        checklist: item.checklist,
+        ledger_snapshot: item.ledger_snapshot ?? undefined,
+      }),
+    });
+    journalsSynced += 1;
+    const idx = remainingJournals.findIndex((j) => j.id === item.id);
+    if (idx >= 0) remainingJournals.splice(idx, 1);
+  }
+
+  for (const item of pendingLedgers) {
+    await apiRequest<SpaceLedgerItem>("/space/ledger", {
+      method: "POST",
+      body: JSON.stringify({
+        entry_date: item.entry_date,
+        kind: item.kind,
+        amount_cents: item.amount_cents,
+        category: item.category,
+        note: item.note,
+        payment_method: item.payment_method,
+      }),
+    });
+    ledgersSynced += 1;
+    const idx = remainingLedgers.findIndex((l) => l.id === item.id);
+    if (idx >= 0) remainingLedgers.splice(idx, 1);
+  }
+
+  if (remainingJournals.length <= 1 && remainingLedgers.length <= 1 && typeof window !== "undefined") {
+    window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+  } else {
+    writeLocalStore({
+      ...store,
+      journals: remainingJournals,
+      ledgers: remainingLedgers,
+    });
+  }
+
+  return { journalsSynced, ledgersSynced };
+}
+
 export async function fetchMySpaceWorkspace(month = currentMonthString()): Promise<SpaceMyWorkspace> {
   if (!hasAccessToken()) {
     return buildWorkspaceFromLocal(month);
   }
-  try {
-    const query = month ? `?month=${encodeURIComponent(month)}` : "";
-    const remote = await apiRequest<SpaceMyWorkspace>(`/space/me${query}`);
-    // If remote has 0 journals and 0 ledgers, also sync local store settings so user has a smooth start.
-    return remote;
-  } catch {
-    return buildWorkspaceFromLocal(month);
-  }
+  const query = month ? `?month=${encodeURIComponent(month)}` : "";
+  return apiRequest<SpaceMyWorkspace>(`/space/me${query}`);
 }
 
 export async function updateMySpaceSettings(
   payload: Omit<SpaceSetting, "user_id">,
 ): Promise<SpaceSetting> {
+  if (hasAccessToken()) {
+    return apiRequest<SpaceSetting>("/space/settings", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  }
   const store = readLocalStore();
   store.settings = {
     ...store.settings,
     ...payload,
   };
   writeLocalStore(store);
-
-  if (!hasAccessToken()) {
-    return store.settings;
-  }
-  try {
-    return await apiRequest<SpaceSetting>("/space/settings", {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    return store.settings;
-  }
+  return store.settings;
 }
 
 export async function createSpaceJournal(
   payload: SpaceJournalCreatePayload,
 ): Promise<SpaceJournalItem> {
   if (hasAccessToken()) {
-    try {
-      return await apiRequest<SpaceJournalItem>("/space/journals", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      // Fall through to local store so user never loses their writing.
-    }
+    return apiRequest<SpaceJournalItem>("/space/journals", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   }
 
   const store = readLocalStore();
@@ -327,17 +409,13 @@ export async function updateSpaceJournal(
   payload: SpaceJournalUpdatePayload,
 ): Promise<SpaceJournalItem> {
   if (hasAccessToken() && !entryId.startsWith("local-")) {
-    try {
-      return await apiRequest<SpaceJournalItem>(
-        `/space/journals/${encodeURIComponent(entryId)}`,
-        {
-          method: "PATCH",
-          body: JSON.stringify(payload),
-        },
-      );
-    } catch {
-      // Fall through to local update if applicable.
-    }
+    return apiRequest<SpaceJournalItem>(
+      `/space/journals/${encodeURIComponent(entryId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      },
+    );
   }
 
   const store = readLocalStore();
@@ -358,13 +436,9 @@ export async function updateSpaceJournal(
 
 export async function deleteSpaceJournal(entryId: string): Promise<boolean> {
   if (hasAccessToken() && !entryId.startsWith("local-")) {
-    try {
-      return await apiRequest<boolean>(`/space/journals/${encodeURIComponent(entryId)}`, {
-        method: "DELETE",
-      });
-    } catch {
-      // Fall through to local removal.
-    }
+    return apiRequest<boolean>(`/space/journals/${encodeURIComponent(entryId)}`, {
+      method: "DELETE",
+    });
   }
 
   const store = readLocalStore();
@@ -375,16 +449,12 @@ export async function deleteSpaceJournal(entryId: string): Promise<boolean> {
 
 export async function likeSpaceJournal(entryId: string): Promise<SpaceJournalItem> {
   if (!entryId.startsWith("local-")) {
-    try {
-      return await apiRequest<SpaceJournalItem>(
-        `/space/journals/${encodeURIComponent(entryId)}/like`,
-        {
-          method: "POST",
-        },
-      );
-    } catch {
-      // Fall through to local increment.
-    }
+    return apiRequest<SpaceJournalItem>(
+      `/space/journals/${encodeURIComponent(entryId)}/like`,
+      {
+        method: "POST",
+      },
+    );
   }
 
   const store = readLocalStore();
@@ -401,14 +471,10 @@ export async function createSpaceLedgerEntry(
   payload: SpaceLedgerCreatePayload,
 ): Promise<SpaceLedgerItem> {
   if (hasAccessToken()) {
-    try {
-      return await apiRequest<SpaceLedgerItem>("/space/ledger", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      // Fall through to local persistence.
-    }
+    return apiRequest<SpaceLedgerItem>("/space/ledger", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   }
 
   const store = readLocalStore();
@@ -432,13 +498,9 @@ export async function createSpaceLedgerEntry(
 
 export async function deleteSpaceLedgerEntry(entryId: string): Promise<boolean> {
   if (hasAccessToken() && !entryId.startsWith("local-")) {
-    try {
-      return await apiRequest<boolean>(`/space/ledger/${encodeURIComponent(entryId)}`, {
-        method: "DELETE",
-      });
-    } catch {
-      // Fall through to local deletion.
-    }
+    return apiRequest<boolean>(`/space/ledger/${encodeURIComponent(entryId)}`, {
+      method: "DELETE",
+    });
   }
 
   const store = readLocalStore();
@@ -448,16 +510,7 @@ export async function deleteSpaceLedgerEntry(entryId: string): Promise<boolean> 
 }
 
 export async function fetchPublicSpaceFeed(limit = 30): Promise<SpaceJournalItem[]> {
-  try {
-    const remote = await apiRequest<SpaceJournalItem[]>(`/space/feed?limit=${limit}`);
-    if (remote.length > 0) {
-      return remote;
-    }
-  } catch {
-    // Fallback to local public items when offline.
-  }
-  const store = readLocalStore();
-  return store.journals.filter((item) => item.visibility === "public");
+  return apiRequest<SpaceJournalItem[]>(`/space/feed?limit=${limit}`);
 }
 
 export async function fetchPublicUserSpace(identifier: string): Promise<SpacePublicProfile> {
