@@ -72,14 +72,22 @@ def containers(runner):
         return []
     template = ('{"id":{{json .Id}},"name":{{json .Name}},"image":{{json .Config.Image}},'
                 '"image_id":{{json .Image}},"running":{{json .State.Running}},'
-                '"health":{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}},'
-                '"project":{{json (index .Config.Labels "com.docker.compose.project")}},'
-                '"service":{{json (index .Config.Labels "com.docker.compose.service")}},'
-                '"working_dir":{{json (index .Config.Labels "com.docker.compose.project.working_dir")}},'
-                '"compose_files":{{json (index .Config.Labels "com.docker.compose.project.config_files")}},'
+                # 原生非健康检查/非 Compose 容器可缺少这些字段，不能令整机盘点失败。
+                '"health":{{with (index .State "Health")}}{{json (index . "Status")}}{{else}}null{{end}},'
+                '"project":{{with .Config.Labels}}{{json (index . "com.docker.compose.project")}}{{else}}null{{end}},'
+                '"service":{{with .Config.Labels}}{{json (index . "com.docker.compose.service")}}{{else}}null{{end}},'
+                '"working_dir":{{with .Config.Labels}}{{json (index . "com.docker.compose.project.working_dir")}}{{else}}null{{end}},'
+                '"compose_files":{{with .Config.Labels}}{{json (index . "com.docker.compose.project.config_files")}}{{else}}null{{end}},'
                 '"mounts":{{json .Mounts}},"networks":{{json .NetworkSettings.Networks}},'
                 '"ports":{{json .HostConfig.PortBindings}}}')
-    raw = runner.run('container_metadata', ['docker', 'inspect', '--format', template, *ids]).stdout
+    result = runner.run('container_metadata', ['docker', 'inspect', '--format', template, *ids],
+                        accepted=(0, 1))
+    if result.returncode:
+        # 仅暴露固定模板缺失字段，不将未知 stderr 或 inspect 内容带进公共日志。
+        match = re.search(r'map has no entry for key "([A-Za-z_]{1,32})"', result.stderr)
+        suffix = ':missing_' + match.group(1) if match else ':template_or_inspect_failed'
+        raise OperationError('container_metadata' + suffix)
+    raw = result.stdout
     values = [json.loads(line) for line in raw.splitlines() if line.strip()]
     check(len(values) == len(ids), 'container_inventory_incomplete')
     return values
