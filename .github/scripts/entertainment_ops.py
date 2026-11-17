@@ -29,7 +29,8 @@ DOMAINS = ('tavern.pingxingxian.space', 'matrix.pingxingxian.space')
 SERVICES = ('element', 'synapse', 'postgres')
 PORTS = (13101, 13102)
 MAX_OUTPUT = 4 * 1024 * 1024
-OPERATIONS = ('inventory', 'prepare', 'deploy', 'bootstrap', 'prepare-tls', 'publish', 'retract', 'health', 'stop')
+OPERATIONS = ('inventory', 'prepare', 'deploy', 'bootstrap', 'prepare-tls', 'publish', 'retract',
+              'install-renewal', 'renew', 'renewal-status', 'scheduled-renew', 'health', 'stop')
 SOURCE_REVISION = '5b96163a00f7c4877150cd5185fc510436ed6697'
 SOURCE_BASE = 'https://raw.githubusercontent.com/ixiaoyy/parallellines-entertainment/' + SOURCE_REVISION + '/'
 PREPARED = ROOT / 'prepared.json'
@@ -39,6 +40,10 @@ HTTP01_ROOT = Path('/opt/parallellines/var/certbot')
 CERTIFICATE_NAME = 'parallellines-entertainment'
 TLS_PREPARED = ROOT / 'tls-prepared.json'
 PUBLIC_STATE = ROOT / 'public-entry.json'
+RENEWAL_STATE = ROOT / 'renewal.json'
+RENEWAL_LAST = ROOT / 'renewal-last.json'
+RUNTIME_PROGRAM = ROOT / 'operations.py'
+RENEWAL_CRON = Path('/etc/cron.d/parallellines-entertainment-renew')
 EDGE_NETWORK = 'pl-official-candidate-20261030_default'
 GATEWAY_LAYER = '/etc/nginx/conf.d/parallellines-entertainment.conf'
 TOOLS_DIRECTORY = Path('/opt/parallellines-tools/ops')
@@ -47,6 +52,14 @@ TOOLS_SOURCE_DIGESTS = {
     'managed_config.py': '7a4ed86ebb241261029c11becbd40cfad37ca0cdc9e3226fb352b80ebd4d1807',
 }
 _TOOLS_MODULE = None
+CERTBOT_PROCESS_GUARD = ("import subprocess,sys;p=subprocess.Popen(sys.argv[1:]);\n"
+                        "try: code=p.wait(timeout=240)\n"
+                        "except subprocess.TimeoutExpired:\n"
+                        " p.terminate()\n"
+                        " try: p.wait(timeout=10)\n"
+                        " except subprocess.TimeoutExpired: p.kill();p.wait(timeout=5)\n"
+                        " code=124\n"
+                        "sys.exit(code)")
 IMAGES = {
     'element': 'ghcr.io/element-hq/element-web:v1.12.35@sha256:406b48b80153818284a235fa3600b2a5b5b6b0aa0e4ef4896b36d8d3461352f3',
     'synapse': 'ghcr.io/element-hq/synapse:v1.165.0@sha256:673b4223c81a7634fd07d832b939a58f97081cfdaae7cdd2d1664cdcf7611b62',
@@ -911,20 +924,12 @@ def prepare_tls(runner):
         meta = certificate_metadata(runner)
         if meta is None or not meta['valid_for_at_least_one_day']:
             # 进程终止在容器内完成，避免仅杀 Docker CLI 而遗留后台发证进程。
-            guard = ("import subprocess,sys;p=subprocess.Popen(sys.argv[1:]);\n"
-                     "try: code=p.wait(timeout=240)\n"
-                     "except subprocess.TimeoutExpired:\n"
-                     " p.terminate()\n"
-                     " try: p.wait(timeout=10)\n"
-                     " except subprocess.TimeoutExpired: p.kill();p.wait(timeout=5)\n"
-                     " code=124\n"
-                     "sys.exit(code)")
             invoked = True
             receipt.update(status='certificate_command_started', certificate_command_invoked=True,
                            last_attempt_certificate_command_invoked=True, http01_checks=checks)
             private_record(TLS_PREPARED, receipt)
             result = runner.run('new_module_certificate', [
-                'docker', 'exec', certbot['id'], 'python3', '-c', guard,
+                'docker', 'exec', certbot['id'], 'python3', '-c', CERTBOT_PROCESS_GUARD,
                 'certbot', 'certonly', '--webroot', '-w', '/var/www/certbot',
                 '--cert-name', CERTIFICATE_NAME, '--non-interactive', '--keep-until-expiring',
                 '--no-directory-hooks', '--preferred-challenges', 'http',
@@ -1542,6 +1547,266 @@ def retract(runner):
             'other_services_changed': False, 'data_preserved': True}
 
 
+def renewal_record():
+    """只读本证书消费者私有身份；不接管旧 cron、其它证书或未知脚本。"""
+    value = read_record(RENEWAL_STATE)
+    check(value.get('schema') == 1 and value.get('project') == PROJECT and
+          value.get('source_revision') == SOURCE_REVISION and
+          value.get('certificate_name') == CERTIFICATE_NAME and value.get('domains') == list(DOMAINS),
+          'renewal_consumer_identity_changed')
+    check(value.get('status') in ('installing', 'installed', 'ready'), 'renewal_consumer_status_invalid')
+    return value
+
+
+def renewal_artifact(path, expected, mode):
+    """校验仅本项目程序/cron 的常规文件、root 所有权、精确权限和完整来源身份。"""
+    check(path in (RUNTIME_PROGRAM, RENEWAL_CRON), 'renewal_artifact_outside_scope')
+    check(not path.is_symlink(), 'renewal_artifact_symlink')
+    check(path.is_file(), 'renewal_artifact_missing')
+    stat = path.stat()
+    check(stat.st_uid == 0 and stat.st_mode & 0o777 == mode, 'renewal_artifact_permissions_changed')
+    check(0 < stat.st_size <= 160 * 1024 and digest(path.read_bytes()) == expected,
+          'renewal_artifact_source_changed')
+    return True
+
+
+def verify_runtime_program():
+    """服务器本地直接运行恢复命令时，先核已审私有程序；不依赖 GitHub 或部署凭据。"""
+    record = renewal_record()
+    renewal_artifact(RUNTIME_PROGRAM, record.get('program_sha256'), 0o600)
+    check(record.get('operation_revision') == globals().get('OPS_REVISION'),
+          'runtime_operation_revision_changed')
+    return record
+
+
+def verify_renewal_installation():
+    """核完整消费者与 cron 安装，Actions 调用还要求与当前已审 source 字节一致。"""
+    record = renewal_record()
+    renewal_artifact(RUNTIME_PROGRAM, record.get('program_sha256'), 0o600)
+    renewal_artifact(RENEWAL_CRON, record.get('cron_sha256'), 0o644)
+    source = globals().get('OPS_SOURCE')
+    if isinstance(source, str):
+        check(digest(source.encode('utf-8')) == record.get('source_sha256'),
+              'installed_renewal_program_requires_reviewed_update')
+    return record
+
+
+def scheduler_active(runner):
+    """只查现有 cron 调度进程是否活跃；不启动服务、不读取旧命令或环境。"""
+    if shutil.which('systemctl'):
+        for name in ('cron', 'crond'):
+            result = runner.run('existing_cron_active', ['systemctl', 'is-active', name],
+                                timeout=5, accepted=(0, 1, 3, 4))
+            if result.stdout.strip() == 'active':
+                return True
+    if shutil.which('pgrep'):
+        for name in ('cron', 'crond'):
+            if runner.run('existing_cron_process', ['pgrep', '-x', name], timeout=5,
+                          accepted=(0, 1)).returncode == 0:
+                return True
+    return False
+
+
+def renewal_context(runner):
+    """消费者只接受已发布的同一网关/自有 conf；重建或丢层必须人工 publish 恢复。"""
+    preparation_record()
+    saved, own = live_module_record(runner)
+    receipt = public_record()
+    check(saved.get('public_entry') is True and receipt.get('status') == 'published' and
+          receipt.get('public_entry') is True and receipt.get('loaded_state_uncertain') is not True,
+          'published_module_required_for_renewal')
+    values = containers(runner)
+    gateway = select(values, 'parallellines', 'nginx')
+    check(gateway['id'] == receipt.get('gateway_id') and gateway['image_id'] == receipt.get('gateway_image_id'),
+          'gateway_recreated_requires_publish')
+    check(gateway_layer_digest(runner, gateway) == receipt.get('conf_sha256'),
+          'owned_gateway_layer_missing_or_changed_requires_publish')
+    baseline = default_identity(runner, gateway)
+    check(baseline == receipt.get('default_identity'), 'gateway_default_changed_requires_publish')
+    return gateway, baseline, protected_snapshot(values), receipt
+
+
+def write_renewal_artifact(path, content, expected, mode):
+    """仅排他安装已登记的本项目程序或 cron，重试只能接受原拟安装的相同字节。"""
+    check(path in (RUNTIME_PROGRAM, RENEWAL_CRON), 'renewal_artifact_outside_scope')
+    check(path.parent.is_dir() and not path.parent.is_symlink(), 'renewal_artifact_parent_invalid')
+    if path.exists() or path.is_symlink():
+        renewal_artifact(path, expected, mode)
+        return
+    temporary = path.with_name(path.name + '.new-' + secrets.token_hex(8))
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
+    with os.fdopen(fd, 'wb') as stream:
+        os.fchmod(stream.fileno(), mode)
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
+    # 链接排他发布，不覆盖两次检查之间出现的文件，也不会暴露半写 cron。
+    try:
+        os.link(temporary, path)
+    finally:
+        temporary.unlink()
+    renewal_artifact(path, expected, mode)
+
+
+def install_renewal(runner):
+    """安装私有固定恢复脚本和仅本项目 cron；真实 native renew 验证前不宣布 ready。"""
+    source = globals().get('OPS_SOURCE')
+    revision = globals().get('OPS_REVISION')
+    check(isinstance(source, str) and isinstance(revision, str) and
+          re.fullmatch('[0-9a-f]{40}', revision), 'reviewed_runtime_source_required')
+    program = ('OPS_REVISION=' + repr(revision) + '\n' + source).encode('utf-8')
+    check(len(program) <= 160 * 1024, 'fixed_runtime_program_bound')
+    cron = ('# parallellines-entertainment-owned ' + SOURCE_REVISION + '\n'
+            '37 */6 * * * root /usr/bin/python3 -B ' + str(RUNTIME_PROGRAM) +
+            ' scheduled-renew >/dev/null 2>&1\n').encode()
+    with approved_reload_scope():
+        gateway, baseline, protected, public = renewal_context(runner)
+        check(scheduler_active(runner), 'existing_cron_scheduler_not_active')
+        public_health(runner)
+        runner.run('renewal_reload_path_configuration_test', ['docker', 'exec', gateway['id'], 'nginx', '-t'])
+        require_approved_reload()
+        assert_gateway_unchanged(runner, gateway, baseline, protected)
+        if RENEWAL_STATE.exists():
+            record = renewal_record()
+            check(record.get('source_sha256') == digest(source.encode('utf-8')),
+                  'renewal_program_update_requires_explicit_review')
+            # 相同 source 的重复调用保留已安装 producer 身份，不因其它 Main commit 漂移而重写。
+            if record.get('status') != 'installing' and record.get('runtime_health_verified') is True:
+                verify_renewal_installation()
+                latest = read_record(RENEWAL_LAST) if RENEWAL_LAST.exists() else {}
+                ready = (record.get('status') == 'ready' and latest.get('complete') is True and
+                         certificate_leaf_identity(runner) == public.get('loaded_certificate_identity'))
+                return {'complete': True, 'read_only': True, 'already_installed': True,
+                        'renewal_ready': ready, 'native_renewal_verification_required': not ready}
+            program = ('OPS_REVISION=' + repr(record['operation_revision']) + '\n' + source).encode('utf-8')
+        else:
+            check(not RUNTIME_PROGRAM.exists() and not RUNTIME_PROGRAM.is_symlink() and
+                  not RENEWAL_CRON.exists() and not RENEWAL_CRON.is_symlink(),
+                  'unknown_existing_renewal_program_or_cron')
+            record = {'schema': 1, 'project': PROJECT, 'source_revision': SOURCE_REVISION,
+                      'certificate_name': CERTIFICATE_NAME, 'domains': list(DOMAINS),
+                      'operation_revision': revision, 'source_sha256': digest(source.encode('utf-8')),
+                      'program_sha256': digest(program), 'cron_sha256': digest(cron),
+                      'status': 'installing', 'native_renewal_command_verified': False}
+            private_record(RENEWAL_STATE, record)
+        check(digest(program) == record.get('program_sha256') and digest(cron) == record.get('cron_sha256'),
+              'renewal_install_intent_changed')
+        write_renewal_artifact(RUNTIME_PROGRAM, program, record['program_sha256'], 0o600)
+        write_renewal_artifact(RENEWAL_CRON, cron, record['cron_sha256'], 0o644)
+        verify_renewal_installation()
+        assert_gateway_unchanged(runner, gateway, baseline, protected)
+        record['status'] = 'installed'
+        private_record(RENEWAL_STATE, record)
+        # 真正从私有文件走一次独立只读 health，证明恢复入口不依赖 Actions 注入或 Secrets。
+        probe = runner.run('installed_manual_health_entrypoint', [
+            '/usr/bin/python3', '-B', str(RUNTIME_PROGRAM), 'health'], timeout=80)
+        observed = response_json(probe.stdout)
+        check(observed.get('complete') is True and observed.get('public_entry') is True,
+              'installed_manual_health_not_verified')
+        record['runtime_health_verified'] = True
+        private_record(RENEWAL_STATE, record)
+        assert_gateway_unchanged(runner, gateway, baseline, protected)
+    return {'complete': True, 'read_only': False, 'installed': True, 'renewal_ready': False,
+            'native_renewal_verification_required': True, 'scheduler_active': True,
+            'manual_runtime_program': str(RUNTIME_PROGRAM), 'runtime_program_private': True,
+            'manual_health_entrypoint_verified': True,
+            'other_services_changed': False}
+
+
+def renew(runner, *, scheduled=False):
+    """仅 native renew 本证书；变化或旧 loaded 身份落后时才合法 reload，不强制轮换。"""
+    record = verify_renewal_installation()
+    check(record.get('status') != 'installing', 'renewal_installation_not_complete')
+    check(record.get('runtime_health_verified') is True, 'manual_runtime_health_verification_required')
+    if scheduled:
+        check(record.get('native_renewal_command_verified') is True, 'initial_native_renewal_verification_required')
+    with approved_reload_scope():
+        gateway, baseline, protected, public = renewal_context(runner)
+        check(scheduler_active(runner), 'existing_cron_scheduler_not_active')
+        native_health(runner)
+        meta = certificate_metadata(runner)
+        check(meta is not None, 'owned_certificate_missing')
+        before = certificate_leaf_identity(runner)
+        values = containers(runner)
+        certbot = select(values, 'parallellines', 'certbot')
+        check(certbot['running'], 'existing_certbot_not_running')
+        mounts = {(item.get('Source'), item.get('Destination')) for item in certbot['mounts']}
+        check((str(CERTIFICATE_ROOT), '/etc/letsencrypt') in mounts and
+              (str(HTTP01_ROOT), '/var/www/certbot') in mounts, 'existing_certbot_webroot_mounts_changed')
+        result = runner.run('renew_only_module_certificate', [
+            'docker', 'exec', certbot['id'], 'python3', '-c', CERTBOT_PROCESS_GUARD,
+            'certbot', 'renew', '--cert-name', CERTIFICATE_NAME, '--non-interactive',
+            '--no-directory-hooks', '--pre-hook', '', '--post-hook', '', '--deploy-hook', '',
+            '--webroot', '-w', '/var/www/certbot', '--no-random-sleep-on-renew',
+            '--server', 'https://acme-v02.api.letsencrypt.org/directory'],
+            timeout=275, accepted=(0, 1, 2, 124))
+        latest_meta = certificate_metadata(runner)
+        latest = certificate_leaf_identity(runner)
+        changed = latest != before
+        pending = latest != public.get('loaded_certificate_identity')
+        report = {'complete': False, 'read_only': False, 'certificate_changed': changed,
+                  'certificate_reload_pending': pending, 'gateway_reloaded': False}
+        private_record(RENEWAL_LAST, report)
+        if result.returncode:
+            reason = 'native_module_renew_exit_' + str(result.returncode)
+            diagnostic = (result.stdout + result.stderr).lower()
+            if 'another instance of certbot is already running' in diagnostic:
+                reason = 'native_certbot_busy_no_automatic_retry'
+            raise OperationError(reason)
+        check(latest_meta is not None and latest_meta['valid_for_at_least_one_day'], 'renewed_module_certificate_not_ready')
+        if pending:
+            approved_gateway_reload(runner, gateway, baseline, protected)
+        else:
+            # 本轮未到期跳过时不无故 HUP，但仍实核未来 reload 的来源、权限与全局配置。
+            runner.run('renewal_reload_path_configuration_test', ['docker', 'exec', gateway['id'], 'nginx', '-t'])
+            require_approved_reload()
+            assert_gateway_unchanged(runner, gateway, baseline, protected)
+        effective = None
+        for attempt in range(5 if pending else 1):
+            try:
+                effective = public_health(runner)
+                break
+            except OperationError as error:
+                transition = str(error) == 'origin_certificate_not_loaded' or str(error).startswith('module_origin_probe:')
+                check(pending and transition and attempt < 4, str(error))
+                time.sleep(0.4)
+        check(effective is not None, 'renewal_effective_route_unconfirmed')
+        assert_gateway_unchanged(runner, gateway, baseline, protected)
+        text = (result.stdout + result.stderr).lower()
+        skipped = not changed and ('not due for renewal' in text or 'no renewals were attempted' in text)
+        public.update(loaded_certificate_identity=latest, renewal_ready=True)
+        private_record(PUBLIC_STATE, public)
+        record.update(status='ready', native_renewal_command_verified=True,
+                      last_verified_at=int(time.time()), last_native_result='not_due' if skipped else 'rotated' if changed else 'unchanged')
+        private_record(RENEWAL_STATE, record)
+        report.update(complete=True, renewal_ready=True, native_renewal_command_verified=True,
+                      certificate_reload_pending=False, gateway_reloaded=pending,
+                      renewal_not_due=skipped, actual_certificate_rotation_verified=changed,
+                      reload_path_validated=True, current_public_route_verified=True,
+                      other_services_changed=False, **effective)
+        private_record(RENEWAL_LAST, report)
+    return report
+
+
+def renewal_status(runner):
+    """只读当前消费者来源/权限/调度与 pending；timer 存在本身不等于 ready。"""
+    if not RENEWAL_STATE.exists():
+        return {'complete': True, 'read_only': True, 'installed': False, 'renewal_ready': False}
+    record = verify_renewal_installation()
+    gateway, baseline, protected, public = renewal_context(runner)
+    require_approved_reload()
+    active = scheduler_active(runner)
+    pending = certificate_leaf_identity(runner) != public.get('loaded_certificate_identity')
+    latest = read_record(RENEWAL_LAST) if RENEWAL_LAST.exists() else {}
+    return {'complete': True, 'read_only': True, 'installed': record.get('status') != 'installing',
+            'renewal_ready': record.get('status') == 'ready' and latest.get('complete') is True and active and not pending,
+            'scheduler_active': active, 'installed_source_and_permissions_verified': True,
+            'certificate_reload_pending': pending, 'last_run_complete': latest.get('complete'),
+            'native_renewal_command_verified': record.get('native_renewal_command_verified') is True,
+            'last_native_result': record.get('last_native_result'),
+            'manual_runtime_program': str(RUNTIME_PROGRAM)}
+
+
 def stop(runner):
     """先撤回本模块入口，再只停止已登记新容器；保留卷、密钥和所有旧站。"""
     if PUBLIC_STATE.exists():
@@ -1567,12 +1832,23 @@ def stop(runner):
 
 def main(arguments):
     report = {'operation': arguments[0] if arguments else 'rejected', 'complete': False, 'errors': []}
+    renewal_attempt = False
     try:
         check(len(arguments) == 1 and arguments[0] in OPERATIONS, 'unsupported_fixed_operation')
-        runner = Runner(850 if arguments[0] == 'prepare' else 420 if arguments[0] in ('deploy', 'prepare-tls', 'publish') else 180)
+        # 私有本地恢复脚本可独立执行，但须保持安装时已审 source 与 root 权限。
+        if Path(globals().get('__file__', '')).absolute() == RUNTIME_PROGRAM:
+            verify_runtime_program()
+        runner = Runner(850 if arguments[0] == 'prepare' else 420 if arguments[0] in ('deploy', 'prepare-tls', 'publish', 'renew', 'scheduled-renew') else 240 if arguments[0] == 'install-renewal' else 180)
+        if arguments[0] in ('renew', 'scheduled-renew'):
+            renewal_record()
+            private_record(RENEWAL_LAST, {'operation': arguments[0], 'complete': False,
+                                         'stage': 'running', 'started_at': int(time.time())})
+            renewal_attempt = True
         report.update({'inventory': inventory, 'prepare': prepare, 'deploy': deploy,
                        'bootstrap': bootstrap, 'prepare-tls': prepare_tls,
-                       'publish': publish, 'retract': retract, 'health': health, 'stop': stop}[arguments[0]](runner))
+                       'publish': publish, 'retract': retract, 'install-renewal': install_renewal,
+                       'renew': renew, 'scheduled-renew': lambda value: renew(value, scheduled=True),
+                       'renewal-status': renewal_status, 'health': health, 'stop': stop}[arguments[0]](runner))
     except OperationError as error:
         report['errors'].append(str(error))
         if isinstance(error, TLSPreparationError):
@@ -1580,6 +1856,15 @@ def main(arguments):
                           gateway_configuration_changed=False, gateway_reloaded=False)
     except Exception as error:
         report['errors'].append('entertainment_operation:' + type(error).__name__)
+    if renewal_attempt and not report['complete']:
+        # 失败也记录 pending，保留本轮已观察到的证书变更，不把 timer 或旧成功当本轮成功。
+        try:
+            last = read_record(RENEWAL_LAST)
+            last.update(complete=False, pending=True, operation=arguments[0], errors=report['errors'],
+                        finished_at=int(time.time()))
+            private_record(RENEWAL_LAST, last)
+        except (OperationError, OSError, ValueError) as error:
+            report['errors'].append('renewal_failure_record:' + type(error).__name__)
     print(json.dumps(report, ensure_ascii=True, sort_keys=True))
     return 0 if report['complete'] else 2
 

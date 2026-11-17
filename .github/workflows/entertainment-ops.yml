@@ -8,14 +8,14 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, prepare, deploy, bootstrap, prepare-tls, publish, retract, health, stop]
+        options: [inventory, prepare, deploy, bootstrap, prepare-tls, publish, retract, install-renewal, renew, renewal-status, health, stop]
 
 permissions:
   contents: read
 
 concurrency:
   # 独立读取不等待发布；写操作与现有生产发布共用互斥组。
-  group: ${{ (inputs.operation == 'inventory' || inputs.operation == 'health') && format('entertainment-read-{0}', inputs.operation) || 'deploy-production' }}
+  group: ${{ (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'renewal-status') && format('entertainment-read-{0}', inputs.operation) || 'deploy-production' }}
   cancel-in-progress: false
 
 jobs:
@@ -33,15 +33,23 @@ jobs:
         id: payload
         env:
           OPERATION: ${{ inputs.operation }}
+          OPERATION_REVISION: ${{ github.sha }}
         run: |
           python3 - <<'PY'
-          import os,uuid
+          import base64,hashlib,os,re,uuid,zlib
           from pathlib import Path
           operation=os.environ['OPERATION']
-          if operation not in ('inventory','prepare','deploy','bootstrap','prepare-tls','publish','retract','health','stop'): raise SystemExit('Unsupported entertainment operation')
+          if operation not in ('inventory','prepare','deploy','bootstrap','prepare-tls','publish','retract','install-renewal','renew','renewal-status','health','stop'): raise SystemExit('Unsupported entertainment operation')
+          revision=os.environ['OPERATION_REVISION']
+          if not re.fullmatch('[a-f0-9]{40}',revision): raise SystemExit('Reviewed operation identity required')
           source=Path('.github/scripts/entertainment_ops.py').read_text(encoding='utf-8')
           marker='PL_ENTERTAINMENT_'+uuid.uuid4().hex
-          payload="set -eu\nsudo -n python3 -B - "+operation+" <<'"+marker+"'\n"+source+'\n'+marker+'\n'
+          # 只压缩当前 checkout 的公开固定 source 适配 SSH exec 长度；绝不编码生产响应或凭据。
+          encoded=base64.b64encode(zlib.compress(source.encode('utf-8'),9)).decode('ascii')
+          source_digest=hashlib.sha256(source.encode('utf-8')).hexdigest()
+          program="import base64,hashlib,zlib\nOPS_REVISION="+repr(revision)+"\nOPS_SOURCE=zlib.decompress(base64.b64decode("+repr(encoded)+")).decode('utf-8')\n"
+          program+="assert hashlib.sha256(OPS_SOURCE.encode('utf-8')).hexdigest()=="+repr(source_digest)+"\nexec(compile(OPS_SOURCE, '<fixed-entertainment-ops>', 'exec'))\n"
+          payload="set -eu\nsudo -n python3 -B - "+operation+" <<'"+marker+"'\n"+program+marker+'\n'
           if len(payload.encode())>120000: raise SystemExit('Fixed operation exceeds SSH transport bound')
           with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as output:
               output.write('script<<'+marker+'_OUTPUT\n'+payload+marker+'_OUTPUT\n')
@@ -55,6 +63,6 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           timeout: 30s
-          command_timeout: ${{ inputs.operation == 'prepare' && '15m' || (inputs.operation == 'deploy' || inputs.operation == 'prepare-tls' || inputs.operation == 'publish') && '8m' || '5m' }}
+          command_timeout: ${{ inputs.operation == 'prepare' && '15m' || (inputs.operation == 'deploy' || inputs.operation == 'prepare-tls' || inputs.operation == 'publish' || inputs.operation == 'renew') && '8m' || '5m' }}
           script_stop: false
           script: ${{ steps.payload.outputs.script }}
