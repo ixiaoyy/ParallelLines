@@ -9,8 +9,10 @@ import {
   getLedgerCategoryMeta,
   getMoodMeta,
   getWeatherMeta,
+  SPACE_REACTIONS,
   type SpaceChecklistItem,
   type SpaceJournalItem,
+  type SpaceReactionKind,
 } from "../model";
 
 const props = withDefaults(
@@ -37,6 +39,7 @@ const emit = defineEmits<{
   toggleChecklist: [entry: SpaceJournalItem, itemId: string];
   toggleFollow: [entry: SpaceJournalItem];
   like: [entry: SpaceJournalItem];
+  react: [entry: SpaceJournalItem, kind: SpaceReactionKind];
   remove: [entry: SpaceJournalItem];
   selectTag: [tag: string];
 }>();
@@ -110,6 +113,9 @@ function handleChecklistClick(item: SpaceChecklistItem) {
             />
             <strong>{{ entry.author.display_name || entry.author.username }}</strong>
             <span>@{{ entry.author.username }}</span>
+            <em v-if="entry.author.current_status" class="space-journal-card__author-status">
+              {{ entry.author.current_status }}
+            </em>
           </RouterLink>
           <button
             v-if="showFollow"
@@ -151,14 +157,27 @@ function handleChecklistClick(item: SpaceChecklistItem) {
             class="space-sticker space-sticker--vis"
             :class="entry.visibility === 'private' ? 'is-private' : 'is-public'"
           >
-            <em>{{ entry.visibility === "private" ? "🔒" : "🌐" }}</em>
-            <b>{{ entry.visibility === "private" ? "仅自己" : "公开" }}</b>
+            <em>{{ entry.visibility === "private" ? "🔒" : entry.visibility === "friends" ? "👥" : "🌐" }}</em>
+            <b>{{ entry.visibility === "private" ? "仅自己" : entry.visibility === "friends" ? "互关好友" : "公开" }}</b>
+          </span>
+
+          <span v-if="entry.unlock_at" class="space-sticker space-sticker--capsule">
+            <em>⏳</em>
+            <b>{{ entry.is_locked ? `${entry.unlock_at} 拆封` : `已拆封` }}</b>
           </span>
         </div>
       </div>
     </header>
 
-    <div class="space-journal-card__body">
+    <div v-if="entry.is_locked" class="space-journal-card__capsule-seal">
+      <span class="capsule-wax" aria-hidden="true">💌</span>
+      <div>
+        <strong>封存中的时间胶囊</strong>
+        <p>写给未来自己的信，将于 <b>{{ entry.unlock_at }}</b> 自动拆封展示。</p>
+      </div>
+    </div>
+
+    <div v-else class="space-journal-card__body">
       <h3 v-if="entry.title" class="space-journal-card__title">{{ entry.title }}</h3>
       <p class="space-journal-card__content">{{ entry.content }}</p>
 
@@ -295,10 +314,21 @@ function handleChecklistClick(item: SpaceChecklistItem) {
     </div>
 
     <footer class="space-journal-card__footer">
-      <button type="button" class="space-card-action space-card-action--like" @click="emit('like', entry)">
-        <span aria-hidden="true">❤️</span>
-        <b>{{ entry.likes_count || 0 }}</b>
-      </button>
+      <div class="space-journal-card__reactions">
+        <button
+          v-for="r in SPACE_REACTIONS"
+          :key="r.key"
+          type="button"
+          class="space-card-action space-card-action--reaction"
+          :class="{ 'has-count': (entry.reactions?.[r.key] ?? 0) > 0 }"
+          :title="r.label"
+          @click="emit('react', entry, r.key)"
+        >
+          <span aria-hidden="true">{{ r.emoji }}</span>
+          <small>{{ r.label }}</small>
+          <b v-if="(entry.reactions?.[r.key] ?? 0) > 0">{{ entry.reactions?.[r.key] }}</b>
+        </button>
+      </div>
 
       <div v-if="editable" class="space-journal-card__owner-actions">
         <button
@@ -383,6 +413,72 @@ function handleChecklistClick(item: SpaceChecklistItem) {
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+}
+
+.space-journal-card__author-status {
+  font-style: normal;
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--theme-soft-bg, rgba(64, 158, 255, 0.1));
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.space-sticker--capsule {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+.space-journal-card__capsule-seal {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.1rem 1rem;
+  border-radius: 1rem;
+  border: 1px dashed rgba(245, 158, 11, 0.45);
+  background: linear-gradient(135deg, rgba(255, 251, 235, 0.9), rgba(254, 243, 199, 0.45));
+
+  .capsule-wax {
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  strong {
+    font-size: 0.92rem;
+    color: #92400e;
+  }
+
+  p {
+    margin: 0.2rem 0 0;
+    font-size: 0.8rem;
+    color: #b45309;
+  }
+}
+
+.space-journal-card__reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.space-card-action--reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.24rem 0.58rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.74rem;
+
+  small { font-size: 0.72rem; color: var(--text); font-weight: 700; }
+  b { color: var(--primary); font-weight: 900; }
+
+  &.has-count {
+    border-color: var(--theme-soft-border, rgba(64, 158, 255, 0.35));
+    background: var(--theme-soft-bg, rgba(64, 158, 255, 0.08));
   }
 }
 

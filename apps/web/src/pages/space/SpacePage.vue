@@ -5,6 +5,7 @@ import { message } from "ant-design-vue";
 import { useCurrentUser } from "@/features/auth/queries";
 import { setUserRelationship } from "@/features/social/api";
 import { useUserRelationshipUsers } from "@/features/social/queries";
+import SpaceDaySliceModal from "@/features/space/components/SpaceDaySliceModal.vue";
 import SpaceJournalCard from "@/features/space/components/SpaceJournalCard.vue";
 import SpaceLedgerPanel from "@/features/space/components/SpaceLedgerPanel.vue";
 import SpaceMoodCalendarCard from "@/features/space/components/SpaceMoodCalendarCard.vue";
@@ -20,6 +21,7 @@ import {
   JOURNAL_WEATHERS,
   LEDGER_CATEGORIES,
   LEDGER_PAYMENT_METHODS,
+  SPACE_STATUS_PRESETS,
   todayDateString,
   type JournalCardTheme,
   type JournalMood,
@@ -32,6 +34,7 @@ import {
   type SpaceCoverPreset,
   type SpaceJournalItem,
   type SpaceLedgerItem,
+  type SpaceReactionKind,
 } from "@/features/space/model";
 import {
   useCreateSpaceJournal,
@@ -41,6 +44,7 @@ import {
   useLikeSpaceJournal,
   useMySpaceWorkspace,
   usePublicSpaceFeed,
+  useReactSpaceJournal,
   useSyncLocalSpaceToCloud,
   useUpdateSpaceJournal,
   useUpdateSpaceSettings,
@@ -70,6 +74,8 @@ const composerRef = ref<HTMLElement | null>(null);
 const imageInputRef = ref<HTMLInputElement | null>(null);
 const uploadingImage = ref(false);
 const settingsOpen = ref(false);
+const statusPickerOpen = ref(false);
+const daySliceDate = ref<string | null>(null);
 const mobileCalendarExpanded = ref(false);
 
 // Filters for My Journals
@@ -133,6 +139,7 @@ const createJournalMutation = useCreateSpaceJournal();
 const updateJournalMutation = useUpdateSpaceJournal();
 const deleteJournalMutation = useDeleteSpaceJournal();
 const likeJournalMutation = useLikeSpaceJournal();
+const reactJournalMutation = useReactSpaceJournal();
 const createLedgerMutation = useCreateSpaceLedgerEntry();
 const deleteLedgerMutation = useDeleteSpaceLedgerEntry();
 const updateSettingsMutation = useUpdateSpaceSettings();
@@ -175,6 +182,7 @@ const journalDraft = reactive({
   media_urls: [] as string[],
   checklist: [] as SpaceChecklistItem[],
   newCheckItem: "",
+  unlock_at: "",
   showTools: false,
 });
 
@@ -423,6 +431,7 @@ async function submitJournal() {
       tags: mergedTags,
       media_urls: [...journalDraft.media_urls],
       checklist: [...journalDraft.checklist],
+      unlock_at: journalDraft.unlock_at || null,
     });
     journalDraft.title = "";
     journalDraft.content = "";
@@ -430,6 +439,7 @@ async function submitJournal() {
     journalDraft.is_pinned = false;
     journalDraft.media_urls = [];
     journalDraft.checklist = [];
+    journalDraft.unlock_at = "";
     message.success("手账已保存到你的空间");
     activeTab.value = "journals";
   } catch {
@@ -552,6 +562,7 @@ async function saveSpaceSettings(payload: {
   space_subtitle: string;
   cover_preset: SpaceCoverPreset;
   monthly_budget_cents: number;
+  current_status: string;
 }) {
   try {
     await updateSettingsMutation.mutateAsync(payload);
@@ -559,6 +570,23 @@ async function saveSpaceSettings(payload: {
     message.success("空间装扮与预算设置已保存");
   } catch {
     message.error("保存失败，请稍后重试");
+  }
+}
+
+async function selectQuickStatus(statusText: string) {
+  statusPickerOpen.value = false;
+  const current = spaceSettings.value;
+  try {
+    await updateSettingsMutation.mutateAsync({
+      space_title: current?.space_title ?? settingsDraft.space_title.trim(),
+      space_subtitle: current?.space_subtitle ?? settingsDraft.space_subtitle.trim(),
+      cover_preset: current?.cover_preset ?? settingsDraft.cover_preset,
+      monthly_budget_cents: current?.monthly_budget_cents ?? 300000,
+      current_status: statusText,
+    });
+    message.success(statusText ? `当前状态已设为 ${statusText}` : "已清除当前状态");
+  } catch {
+    message.error("状态更新失败，请稍后重试");
   }
 }
 
@@ -620,6 +648,14 @@ async function handleLikeJournal(entry: SpaceJournalItem) {
   }
 }
 
+async function handleReactJournal(entry: SpaceJournalItem, kind: SpaceReactionKind) {
+  try {
+    await reactJournalMutation.mutateAsync({ entryId: entry.id, kind });
+  } catch {
+    message.error("回应失败，请稍后重试");
+  }
+}
+
 async function handleDeleteLedger(item: SpaceLedgerItem) {
   try {
     await deleteLedgerMutation.mutateAsync(item.id);
@@ -652,12 +688,46 @@ function scrollToComposer(mode: ComposerMode) {
               :src="resolveApiAssetUrl(currentUser?.avatar_url)"
               size="lg"
             />
-            <span class="space-hero__mood-badge" title="今日状态">✨</span>
+            <button
+              type="button"
+              class="space-hero__mood-badge"
+              :title="spaceSettings?.current_status ? `此刻：${spaceSettings.current_status}（点击切换）` : '设置此刻状态'"
+              @click="statusPickerOpen = !statusPickerOpen"
+            >
+              {{ spaceSettings?.current_status ? spaceSettings.current_status.split(" ")[0] : "✨" }}
+            </button>
+            <div v-if="statusPickerOpen" class="space-status-popover" role="menu">
+              <button
+                v-for="preset in SPACE_STATUS_PRESETS"
+                :key="preset"
+                type="button"
+                :class="{ active: spaceSettings?.current_status === preset }"
+                @click="selectQuickStatus(preset)"
+              >
+                {{ preset }}
+              </button>
+              <button
+                v-if="spaceSettings?.current_status"
+                type="button"
+                class="is-clear"
+                @click="selectQuickStatus('')"
+              >
+                清除状态
+              </button>
+            </div>
           </div>
           <div class="space-hero__copy">
             <div class="space-hero__title-row">
               <h1>{{ displaySpaceTitle }}</h1>
-              <span class="space-hero__pill">圈子 · 个人空间</span>
+              <span class="space-hero__pill">圈子 · 私密圈</span>
+              <button
+                v-if="spaceSettings?.current_status"
+                type="button"
+                class="space-hero__live-status"
+                @click="statusPickerOpen = !statusPickerOpen"
+              >
+                {{ spaceSettings.current_status }}
+              </button>
             </div>
             <p class="space-hero__subtitle">{{ displaySpaceSubtitle }}</p>
             <div class="space-hero__stats">
@@ -703,6 +773,7 @@ function scrollToComposer(mode: ComposerMode) {
         :space-subtitle="settingsDraft.space_subtitle"
         :cover-preset="settingsDraft.cover_preset"
         :monthly-budget-yuan="settingsDraft.monthlyBudgetYuan"
+        :current-status="spaceSettings?.current_status"
         :saving="updateSettingsMutation.isPending.value"
         @save="saveSpaceSettings"
         @close="settingsOpen = false"
@@ -1018,6 +1089,15 @@ function scrollToComposer(mode: ComposerMode) {
                   <input v-model="journalDraft.is_pinned" type="checkbox" />
                   <span>📌 置顶</span>
                 </label>
+                <label class="capsule-date-picker" title="可选：设为未来某天再拆封的时间胶囊">
+                  <span>⏳ 拆封日</span>
+                  <input
+                    v-model="journalDraft.unlock_at"
+                    type="date"
+                    :min="todayDateString()"
+                    aria-label="时间胶囊拆封日期"
+                  />
+                </label>
               </div>
 
               <div class="composer-submit-group">
@@ -1026,7 +1106,8 @@ function scrollToComposer(mode: ComposerMode) {
                   class="visibility-select"
                   aria-label="手账可见性"
                 >
-                  <option value="public">🌐 公开到个人空间</option>
+                  <option value="public">🌐 公开到圈友墙</option>
+                  <option value="friends">👥 仅互关好友可见</option>
                   <option value="private">🔒 仅自己可见</option>
                 </select>
                 <UiButton
@@ -1202,6 +1283,7 @@ function scrollToComposer(mode: ComposerMode) {
               :entry="item"
               :editable="true"
               @like="handleLikeJournal"
+              @react="handleReactJournal"
               @toggle-pin="handleTogglePin"
               @toggle-visibility="handleToggleVisibility"
               @toggle-checklist="handleToggleChecklist"
@@ -1286,6 +1368,7 @@ function scrollToComposer(mode: ComposerMode) {
               :is-following="Boolean(item.author?.username && followingUsernames.has(item.author.username))"
               :follow-busy="Boolean(item.author?.username && followBusyUsername === item.author.username)"
               @like="handleLikeJournal"
+              @react="handleReactJournal"
               @toggle-pin="handleTogglePin"
               @toggle-visibility="handleToggleVisibility"
               @toggle-checklist="handleToggleChecklist"
@@ -1329,8 +1412,7 @@ function scrollToComposer(mode: ComposerMode) {
           @shift-month="shiftMonth"
           @select-date="
             (dateStr) => {
-              filterDate = filterDate === dateStr ? '' : dateStr;
-              activeTab = 'journals';
+              daySliceDate = dateStr;
             }
           "
           @select-mood="
@@ -1423,6 +1505,28 @@ function scrollToComposer(mode: ComposerMode) {
         💸 记一笔
       </button>
     </div>
+    <!-- 一日生活切片弹窗 -->
+    <SpaceDaySliceModal
+      v-if="daySliceDate"
+      :date="daySliceDate"
+      :journals="myJournals"
+      :ledgers="myLedgers"
+      @close="daySliceDate = null"
+      @filter-by-date="
+        (d) => {
+          filterDate = d;
+          activeTab = 'journals';
+          daySliceDate = null;
+        }
+      "
+      @write-for-date="
+        (d) => {
+          journalDraft.entry_date = d;
+          daySliceDate = null;
+          scrollToComposer('journal');
+        }
+      "
+    />
   </div>
 </template>
 

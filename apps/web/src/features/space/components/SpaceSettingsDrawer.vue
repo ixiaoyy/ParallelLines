@@ -10,9 +10,11 @@ const props = withDefaults(
     spaceSubtitle: string;
     coverPreset: SpaceCoverPreset;
     monthlyBudgetYuan: string;
+    currentStatus?: string;
     saving?: boolean;
   }>(),
   {
+    currentStatus: "",
     saving: false,
   },
 );
@@ -24,6 +26,7 @@ const emit = defineEmits<{
       space_subtitle: string;
       cover_preset: SpaceCoverPreset;
       monthly_budget_cents: number;
+      current_status: string;
     },
   ];
   close: [];
@@ -55,6 +58,7 @@ function handleSave() {
     space_subtitle: draft.space_subtitle.trim(),
     cover_preset: draft.cover_preset,
     monthly_budget_cents: budgetCents,
+    current_status: props.currentStatus ?? "",
   });
 }
 </script>

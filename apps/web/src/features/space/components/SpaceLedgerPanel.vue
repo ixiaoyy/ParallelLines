@@ -51,6 +51,27 @@ const monthLedgersGrouped = computed(() => {
   }
   return Array.from(groups.values());
 });
+
+const monthlyLifestylePortrait = computed(() => {
+  const summary = props.ledgerSummary;
+  if (!summary || summary.entry_count === 0) return "";
+  const parts: string[] = [];
+  const top = summary.category_breakdown[0];
+  if (top) {
+    const meta = getLedgerCategoryMeta(top.category);
+    parts.push(`${meta.emoji} ${meta.label}占 ${top.ratio_percent}%`);
+  }
+  const coffee = summary.category_breakdown.find((c) => c.category === "coffee");
+  if (coffee && coffee.count > 0) {
+    parts.push(`☕ 咖啡续命 ${coffee.count} 次`);
+  }
+  parts.push(`共记 ${summary.entry_count} 笔`);
+  if (summary.monthly_budget_cents > 0) {
+    const remain = summary.monthly_budget_cents - summary.total_expense_cents;
+    parts.push(remain >= 0 ? "预算控制稳健" : "已超出本月预算");
+  }
+  return parts.join(" · ");
+});
 </script>
 
 <template>
@@ -60,6 +81,9 @@ const monthLedgersGrouped = computed(() => {
         <div>
           <span class="kicker">🔒 私人月度账本（仅自己可见）</span>
           <h2>{{ selectedMonth }} 收支总览</h2>
+          <p v-if="monthlyLifestylePortrait" class="ledger-portrait-line">
+            ✨ {{ monthlyLifestylePortrait }}
+          </p>
         </div>
         <div class="ledger-share-box">
           <label class="hide-amount-check">
@@ -242,6 +266,12 @@ const monthLedgersGrouped = computed(() => {
 
     .kicker { font-size: 0.74rem; font-weight: 800; color: var(--muted); }
     h2 { margin: 0.15rem 0 0; font-size: 1.15rem; font-weight: 900; color: var(--title); }
+    .ledger-portrait-line {
+      margin: 0.3rem 0 0;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
   }
 }
 

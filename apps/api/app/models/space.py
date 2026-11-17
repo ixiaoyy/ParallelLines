@@ -47,6 +47,12 @@ class SpaceSetting(IntegerPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         comment="个人账本月度预算金额（单位：分），仅用户本人可见。",
     )
+    current_status: Mapped[str] = mapped_column(
+        String(48),
+        default="",
+        nullable=False,
+        comment="当前此刻状态胶囊文案，如 🎧 听歌中、🎮 开黑中。",
+    )
 
     user: Mapped[User] = relationship("User", lazy="selectin")
 
@@ -144,6 +150,16 @@ class SpaceJournalEntry(IntegerPrimaryKeyMixin, TimestampMixin, Base):
         default=0,
         nullable=False,
         comment="手账收到的暖心点赞互动次数。",
+    )
+    unlock_at: Mapped[str | None] = mapped_column(
+        String(10),
+        nullable=True,
+        comment="时间胶囊拆封日期（YYYY-MM-DD）；为空表示普通即时可见手账。",
+    )
+    reactions: Mapped[dict[str, int] | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="情绪共鸣贴纸计数字典，如 hug、spark、toast、party。",
     )
 
     user: Mapped[User] = relationship("User", lazy="selectin")

@@ -4,13 +4,14 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager, noload
 
-from app.core.exceptions import PermissionDeniedError, NotFoundError
+from app.core.exceptions import NotFoundError, PermissionDeniedError
 from app.db.base import SHANGHAI_TZ, utcnow
+from app.models.social import UserRelationship
 from app.models.space import SpaceJournalEntry, SpaceLedgerEntry, SpaceSetting
 from app.models.user import User
 from app.schemas.space import (
@@ -24,6 +25,7 @@ from app.schemas.space import (
     SpaceLedgerMonthlySummary,
     SpaceMyWorkspaceResponse,
     SpacePublicProfileResponse,
+    SpaceReactionKind,
     SpaceSettingResponse,
     SpaceSettingUpdateRequest,
 )
@@ -31,6 +33,10 @@ from app.schemas.space import (
 
 def _current_month_str() -> str:
     return datetime.now(SHANGHAI_TZ).strftime("%Y-%m")
+
+
+def _today_date_str() -> str:
+    return datetime.now(SHANGHAI_TZ).strftime("%Y-%m-%d")
 
 
 def _clean_tags(raw_tags: list[str]) -> list[str]:
@@ -47,7 +53,9 @@ def _clean_tags(raw_tags: list[str]) -> list[str]:
     return cleaned
 
 
-def _author_brief(user: User | None) -> SpaceJournalAuthorBrief | None:
+def _author_brief(
+    user: User | None, current_status: str = ""
+) -> SpaceJournalAuthorBrief | None:
     if not user:
         return None
     return SpaceJournalAuthorBrief(
@@ -56,17 +64,27 @@ def _author_brief(user: User | None) -> SpaceJournalAuthorBrief | None:
         display_name=getattr(user, "display_name", None),
         avatar_url=user.avatar_url,
         level=user.level,
+        current_status=current_status,
     )
 
 
-def _serialize_journal(entry: SpaceJournalEntry, author: User | None = None) -> SpaceJournalItemResponse:
+def _serialize_journal(
+    entry: SpaceJournalEntry,
+    author: User | None = None,
+    *,
+    current_status: str = "",
+) -> SpaceJournalItemResponse:
     resolved_author = author or getattr(entry, "user", None)
+    unlock_at = getattr(entry, "unlock_at", None)
+    is_locked = bool(unlock_at and unlock_at > _today_date_str())
+    raw_reactions = getattr(entry, "reactions", None) or {}
+    reactions = {str(k): int(v) for k, v in raw_reactions.items() if int(v) > 0}
     return SpaceJournalItemResponse(
         id=str(entry.id),
         user_id=str(entry.user_id),
         entry_date=entry.entry_date,
-        title=entry.title or "",
-        content=entry.content,
+        title="" if is_locked else (entry.title or ""),
+        content="" if is_locked else entry.content,
         mood=entry.mood or "happy",
         weather=entry.weather or "sunny",
         location=entry.location or "",
@@ -74,13 +92,16 @@ def _serialize_journal(entry: SpaceJournalEntry, author: User | None = None) -> 
         is_pinned=bool(entry.is_pinned),
         card_theme=entry.card_theme or "paper",
         tags=list(entry.tags or []),
-        media_urls=list(entry.media_urls or []),
-        checklist=list(entry.checklist or []),
-        ledger_snapshot=entry.ledger_snapshot,
+        media_urls=[] if is_locked else list(entry.media_urls or []),
+        checklist=[] if is_locked else list(entry.checklist or []),
+        ledger_snapshot=None if is_locked else entry.ledger_snapshot,
         likes_count=int(entry.likes_count or 0),
+        reactions=reactions,
+        unlock_at=unlock_at,
+        is_locked=is_locked,
         created_at=entry.created_at,
         updated_at=entry.updated_at,
-        author=_author_brief(resolved_author),
+        author=_author_brief(resolved_author, current_status=current_status),
     )
 
 
@@ -116,6 +137,7 @@ class SpaceService:
                 space_subtitle=payload.space_subtitle.strip(),
                 cover_preset=payload.cover_preset,
                 monthly_budget_cents=payload.monthly_budget_cents,
+                current_status=payload.current_status.strip(),
             )
             self.session.add(setting)
         else:
@@ -123,6 +145,7 @@ class SpaceService:
             setting.space_subtitle = payload.space_subtitle.strip()
             setting.cover_preset = payload.cover_preset
             setting.monthly_budget_cents = payload.monthly_budget_cents
+            setting.current_status = payload.current_status.strip()
             setting.updated_at = utcnow()
 
         await self.session.commit()
@@ -168,7 +191,10 @@ class SpaceService:
             journals = []
             ledgers = []
 
-        serialized_journals = [_serialize_journal(item, current_user) for item in journals]
+        serialized_journals = [
+            _serialize_journal(item, current_user, current_status=settings.current_status)
+            for item in journals
+        ]
         serialized_ledgers = [SpaceLedgerItemResponse.model_validate(item) for item in ledgers]
         summary = self._compute_monthly_summary(
             ledgers=ledgers,
@@ -243,6 +269,7 @@ class SpaceService:
             media_urls=[url.strip() for url in payload.media_urls if url.strip()][:9],
             checklist=[item.model_dump() for item in payload.checklist],
             ledger_snapshot=payload.ledger_snapshot,
+            unlock_at=payload.unlock_at,
         )
         self.session.add(entry)
         await self.session.commit()
@@ -284,6 +311,8 @@ class SpaceService:
             entry.checklist = [item.model_dump() for item in payload.checklist]
         if payload.ledger_snapshot is not None:
             entry.ledger_snapshot = payload.ledger_snapshot
+        if "unlock_at" in payload.model_fields_set:
+            entry.unlock_at = payload.unlock_at
 
         entry.updated_at = utcnow()
         await self.session.commit()
@@ -300,14 +329,65 @@ class SpaceService:
         await self.session.commit()
         return True
 
+    async def _mutual_friend_ids(self, viewer_id: str) -> set[str]:
+        following_stmt = select(UserRelationship.target_user_id).where(
+            UserRelationship.actor_user_id == viewer_id,
+            UserRelationship.relationship_type == "follow",
+        )
+        following_ids = set(str(uid) for uid in await self.session.scalars(following_stmt))
+        if not following_ids:
+            return set()
+        mutual_stmt = select(UserRelationship.actor_user_id).where(
+            UserRelationship.target_user_id == viewer_id,
+            UserRelationship.relationship_type == "follow",
+            UserRelationship.actor_user_id.in_(following_ids),
+        )
+        return {str(uid) for uid in await self.session.scalars(mutual_stmt)}
+
+    async def _is_mutual_friend(self, viewer_id: str, target_user_id: str) -> bool:
+        if str(viewer_id) == str(target_user_id):
+            return True
+        stmt = select(func.count(UserRelationship.id)).where(
+            UserRelationship.relationship_type == "follow",
+            or_(
+                and_(
+                    UserRelationship.actor_user_id == viewer_id,
+                    UserRelationship.target_user_id == target_user_id,
+                ),
+                and_(
+                    UserRelationship.actor_user_id == target_user_id,
+                    UserRelationship.target_user_id == viewer_id,
+                ),
+            ),
+        )
+        return int((await self.session.scalar(stmt)) or 0) >= 2
+
+    async def _ensure_entry_readable(
+        self, entry: SpaceJournalEntry, viewer: User | None
+    ) -> None:
+        is_owner = bool(viewer and str(viewer.id) == str(entry.user_id))
+        if is_owner:
+            return
+        unlock_at = getattr(entry, "unlock_at", None)
+        if unlock_at and unlock_at > _today_date_str():
+            raise NotFoundError(code="journal_not_found", message="手账记录不存在。")
+        if entry.visibility == "public":
+            return
+        if (
+            entry.visibility == "friends"
+            and viewer
+            and await self._is_mutual_friend(str(viewer.id), str(entry.user_id))
+        ):
+            return
+        raise NotFoundError(code="journal_not_found", message="手账记录不存在。")
+
     async def like_journal(
         self, entry_id: str, viewer: User | None = None
     ) -> SpaceJournalItemResponse:
         entry = await self.session.get(SpaceJournalEntry, entry_id)
         if not entry:
             raise NotFoundError(code="journal_not_found", message="手账记录不存在。")
-        if entry.visibility != "public" and (not viewer or str(viewer.id) != str(entry.user_id)):
-            raise NotFoundError(code="journal_not_found", message="手账记录不存在。")
+        await self._ensure_entry_readable(entry, viewer)
         # 使用 SQL 原子自增，避免并发点赞覆盖增量。
         await self.session.execute(
             update(SpaceJournalEntry)
@@ -318,7 +398,25 @@ class SpaceService:
         await self.session.refresh(entry)
         # 显式读取作者，避免异步会话中触发关系懒加载。
         author = await self.session.get(User, entry.user_id)
-        return _serialize_journal(entry, author)
+        author_setting = await self.get_or_create_settings(entry.user_id)
+        return _serialize_journal(entry, author, current_status=author_setting.current_status)
+
+    async def react_journal(
+        self, entry_id: str, kind: SpaceReactionKind, viewer: User | None = None
+    ) -> SpaceJournalItemResponse:
+        entry = await self.session.get(SpaceJournalEntry, entry_id)
+        if not entry:
+            raise NotFoundError(code="journal_not_found", message="手账记录不存在。")
+        await self._ensure_entry_readable(entry, viewer)
+        next_reactions = dict(getattr(entry, "reactions", None) or {})
+        next_reactions[kind] = int(next_reactions.get(kind, 0)) + 1
+        entry.reactions = next_reactions
+        entry.likes_count = int(entry.likes_count or 0) + 1
+        await self.session.commit()
+        await self.session.refresh(entry)
+        author = await self.session.get(User, entry.user_id)
+        author_setting = await self.get_or_create_settings(entry.user_id)
+        return _serialize_journal(entry, author, current_status=author_setting.current_status)
 
     async def create_ledger_entry(
         self, current_user: User, payload: SpaceLedgerCreateRequest
@@ -360,12 +458,25 @@ class SpaceService:
             raise NotFoundError(code="user_not_found", message="成员不存在。")
 
         is_owner = bool(viewer and str(viewer.id) == str(user.id))
+        is_friend = bool(
+            viewer and not is_owner and await self._is_mutual_friend(str(viewer.id), str(user.id))
+        )
         settings = await self.get_or_create_settings(user.id)
+        today_str = _today_date_str()
 
         try:
             conditions: list[Any] = [SpaceJournalEntry.user_id == user.id]
             if not is_owner:
-                conditions.append(SpaceJournalEntry.visibility == "public")
+                conditions.append(
+                    or_(
+                        SpaceJournalEntry.unlock_at.is_(None),
+                        SpaceJournalEntry.unlock_at <= today_str,
+                    )
+                )
+                if is_friend:
+                    conditions.append(SpaceJournalEntry.visibility.in_(["public", "friends"]))
+                else:
+                    conditions.append(SpaceJournalEntry.visibility == "public")
 
             stmt = (
                 select(SpaceJournalEntry)
@@ -382,6 +493,10 @@ class SpaceService:
             public_count_stmt = select(func.count(SpaceJournalEntry.id)).where(
                 SpaceJournalEntry.user_id == user.id,
                 SpaceJournalEntry.visibility == "public",
+                or_(
+                    SpaceJournalEntry.unlock_at.is_(None),
+                    SpaceJournalEntry.unlock_at <= today_str,
+                ),
             )
             public_count = int((await self.session.scalar(public_count_stmt)) or 0)
         except (OperationalError, ProgrammingError):
@@ -398,19 +513,42 @@ class SpaceService:
             space_title=settings.space_title,
             space_subtitle=settings.space_subtitle,
             cover_preset=settings.cover_preset,
+            current_status=settings.current_status,
             public_journal_count=public_count,
-            journals=[_serialize_journal(item, user) for item in entries],
+            journals=[
+                _serialize_journal(item, user, current_status=settings.current_status)
+                for item in entries
+            ],
         )
 
-    async def list_public_feed(self, limit: int = 40) -> list[SpaceJournalItemResponse]:
+    async def list_public_feed(
+        self, limit: int = 40, viewer: User | None = None
+    ) -> list[SpaceJournalItemResponse]:
+        today_str = _today_date_str()
         try:
+            visibility_filter: Any = SpaceJournalEntry.visibility == "public"
+            if viewer:
+                friend_ids = await self._mutual_friend_ids(str(viewer.id))
+                friend_ids.add(str(viewer.id))
+                visibility_filter = or_(
+                    SpaceJournalEntry.visibility == "public",
+                    and_(
+                        SpaceJournalEntry.visibility == "friends",
+                        SpaceJournalEntry.user_id.in_(friend_ids),
+                    ),
+                )
+
             stmt = (
                 select(SpaceJournalEntry)
                 .join(User, User.id == SpaceJournalEntry.user_id)
                 .options(contains_eager(SpaceJournalEntry.user))
                 .where(
-                    SpaceJournalEntry.visibility == "public",
+                    visibility_filter,
                     User.status == "active",
+                    or_(
+                        SpaceJournalEntry.unlock_at.is_(None),
+                        SpaceJournalEntry.unlock_at <= today_str,
+                    ),
                 )
                 .order_by(
                     SpaceJournalEntry.created_at.desc(),
@@ -418,7 +556,18 @@ class SpaceService:
                 .limit(limit)
             )
             entries = list((await self.session.scalars(stmt)).unique())
-            return [_serialize_journal(item) for item in entries]
+            author_ids = {str(item.user_id) for item in entries}
+            status_map: dict[str, str] = {}
+            if author_ids:
+                status_stmt = select(SpaceSetting.user_id, SpaceSetting.current_status).where(
+                    SpaceSetting.user_id.in_(author_ids)
+                )
+                for uid, status in (await self.session.execute(status_stmt)).all():
+                    status_map[str(uid)] = status or ""
+            return [
+                _serialize_journal(item, current_status=status_map.get(str(item.user_id), ""))
+                for item in entries
+            ]
         except (OperationalError, ProgrammingError):
             await self.session.rollback()
             return []

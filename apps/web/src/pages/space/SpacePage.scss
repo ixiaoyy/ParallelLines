@@ -99,12 +99,88 @@
   bottom: -2px;
   display: grid;
   place-items: center;
-  width: 1.7rem;
-  height: 1.7rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 2px solid #ffffff;
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.15);
   font-size: 0.9rem;
+  cursor: pointer;
+  transition: transform 140ms ease;
+
+  &:hover { transform: scale(1.1); }
+}
+
+.space-status-popover {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  width: 15.5rem;
+  padding: 0.65rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+
+  button {
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--bg-surface);
+    color: var(--title);
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &.active {
+      border-color: var(--primary);
+      background: var(--theme-soft-bg, rgba(64, 158, 255, 0.12));
+      color: var(--primary);
+    }
+
+    &.is-clear {
+      color: var(--muted);
+    }
+  }
+}
+
+.space-hero__live-status {
+  padding: 0.16rem 0.65rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--title);
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.capsule-date-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: rgba(255, 251, 235, 0.85);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #b45309;
+
+  input[type="date"] {
+    border: 0;
+    background: transparent;
+    font-size: 0.74rem;
+    color: #92400e;
+    outline: none;
+  }
 }
 
 .space-hero__copy {

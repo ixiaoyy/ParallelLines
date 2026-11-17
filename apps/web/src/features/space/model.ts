@@ -10,7 +10,25 @@ export type JournalMood =
 
 export type JournalWeather = "sunny" | "cloudy" | "breezy" | "rainy" | "snowy" | "night";
 
-export type JournalVisibility = "public" | "private";
+export type JournalVisibility = "public" | "friends" | "private";
+
+export type SpaceReactionKind = "hug" | "spark" | "toast" | "party";
+
+export const SPACE_REACTIONS: Array<{ key: SpaceReactionKind; emoji: string; label: string }> = [
+  { key: "hug", emoji: "🫂", label: "抱抱" },
+  { key: "spark", emoji: "✨", label: "同感" },
+  { key: "toast", emoji: "☕", label: "干杯" },
+  { key: "party", emoji: "🎉", label: "恭喜" },
+];
+
+export const SPACE_STATUS_PRESETS = [
+  "🎧 听歌中",
+  "🎮 开黑中",
+  "☕ 摸鱼中",
+  "📖 阅读中",
+  "💻 搬砖中",
+  "🌙 准备睡了",
+] as const;
 
 export type JournalCardTheme = "paper" | "sky" | "mint" | "sunset" | "lavender" | "grid";
 
@@ -62,6 +80,7 @@ export interface SpaceJournalAuthorBrief {
   display_name?: string | null;
   avatar_url?: string | null;
   level: number;
+  current_status?: string;
 }
 
 export interface SpaceJournalItem {
@@ -81,6 +100,9 @@ export interface SpaceJournalItem {
   checklist: SpaceChecklistItem[];
   ledger_snapshot?: SpaceLedgerSnapshot | null;
   likes_count: number;
+  reactions?: Record<string, number>;
+  unlock_at?: string | null;
+  is_locked?: boolean;
   created_at: string;
   updated_at: string;
   author?: SpaceJournalAuthorBrief | null;
@@ -121,6 +143,7 @@ export interface SpaceSetting {
   space_subtitle: string;
   cover_preset: SpaceCoverPreset;
   monthly_budget_cents: number;
+  current_status?: string;
 }
 
 export interface SpaceMyWorkspace {
@@ -139,6 +162,7 @@ export interface SpacePublicProfile {
   space_title: string;
   space_subtitle: string;
   cover_preset: SpaceCoverPreset | string;
+  current_status?: string;
   public_journal_count: number;
   journals: SpaceJournalItem[];
 }
@@ -157,6 +181,7 @@ export interface SpaceJournalCreatePayload {
   media_urls: string[];
   checklist: SpaceChecklistItem[];
   ledger_snapshot?: SpaceLedgerSnapshot | null;
+  unlock_at?: string | null;
 }
 
 export interface SpaceJournalUpdatePayload {
@@ -173,6 +198,7 @@ export interface SpaceJournalUpdatePayload {
   media_urls?: string[];
   checklist?: SpaceChecklistItem[];
   ledger_snapshot?: SpaceLedgerSnapshot | null;
+  unlock_at?: string | null;
 }
 
 export interface SpaceLedgerCreatePayload {

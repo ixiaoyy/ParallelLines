@@ -2,6 +2,7 @@ import { apiRequest, hasAccessToken } from "@/shared/api/client";
 
 import {
   currentMonthString,
+  todayDateString,
   type SpaceJournalCreatePayload,
   type SpaceJournalItem,
   type SpaceJournalUpdatePayload,
@@ -11,6 +12,7 @@ import {
   type SpaceLedgerMonthlySummary,
   type SpaceMyWorkspace,
   type SpacePublicProfile,
+  type SpaceReactionKind,
   type SpaceSetting,
 } from "./model";
 
@@ -298,6 +300,9 @@ export async function createSpaceJournal(
     checklist: payload.checklist,
     ledger_snapshot: payload.ledger_snapshot ?? null,
     likes_count: 0,
+    reactions: {},
+    unlock_at: payload.unlock_at ?? null,
+    is_locked: Boolean(payload.unlock_at && payload.unlock_at > todayDateString()),
     created_at: nowIso,
     updated_at: nowIso,
   };
@@ -367,6 +372,33 @@ export async function likeSpaceJournal(entryId: string): Promise<SpaceJournalIte
     return { ...found };
   }
   throw new Error("点赞失败");
+}
+
+export async function reactSpaceJournal(
+  entryId: string,
+  kind: SpaceReactionKind,
+): Promise<SpaceJournalItem> {
+  if (!entryId.startsWith("local-")) {
+    return apiRequest<SpaceJournalItem>(
+      `/space/journals/${encodeURIComponent(entryId)}/react`,
+      {
+        method: "POST",
+        body: JSON.stringify({ kind }),
+      },
+    );
+  }
+
+  const store = readLocalStore();
+  const found = store.journals.find((item) => item.id === entryId);
+  if (found) {
+    const reactions = { ...(found.reactions ?? {}) };
+    reactions[kind] = (reactions[kind] ?? 0) + 1;
+    found.reactions = reactions;
+    found.likes_count = (found.likes_count || 0) + 1;
+    writeLocalStore(store);
+    return { ...found };
+  }
+  throw new Error("回应失败");
 }
 
 export async function createSpaceLedgerEntry(

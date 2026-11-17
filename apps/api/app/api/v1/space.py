@@ -7,6 +7,7 @@ from app.schemas.common import ApiResponse
 from app.schemas.space import (
     SpaceJournalCreateRequest,
     SpaceJournalItemResponse,
+    SpaceJournalReactRequest,
     SpaceJournalUpdateRequest,
     SpaceLedgerCreateRequest,
     SpaceLedgerItemResponse,
@@ -81,6 +82,17 @@ async def like_journal_entry(
     return ApiResponse(data=entry)
 
 
+@router.post("/journals/{entry_id}/react", response_model=ApiResponse[SpaceJournalItemResponse])
+async def react_journal_entry(
+    entry_id: str,
+    payload: SpaceJournalReactRequest,
+    session: SessionDep,
+    viewer: OptionalCurrentUserDep = None,
+) -> ApiResponse[SpaceJournalItemResponse]:
+    entry = await SpaceService(session).react_journal(entry_id, payload.kind, viewer=viewer)
+    return ApiResponse(data=entry)
+
+
 @router.post("/ledger", response_model=ApiResponse[SpaceLedgerItemResponse], status_code=201)
 async def create_ledger_entry(
     payload: SpaceLedgerCreateRequest,
@@ -105,8 +117,9 @@ async def delete_ledger_entry(
 async def list_public_space_feed(
     session: SessionDep,
     limit: Annotated[int, Query(ge=1, le=80)] = 30,
+    viewer: OptionalCurrentUserDep = None,
 ) -> ApiResponse[list[SpaceJournalItemResponse]]:
-    feed = await SpaceService(session).list_public_feed(limit=limit)
+    feed = await SpaceService(session).list_public_feed(limit=limit, viewer=viewer)
     return ApiResponse(data=feed)
 
 

@@ -13,6 +13,7 @@ import {
   fetchPublicSpaceFeed,
   fetchPublicUserSpace,
   likeSpaceJournal,
+  reactSpaceJournal,
   syncLocalSpaceToCloud,
   updateMySpaceSettings,
   updateSpaceJournal,
@@ -24,6 +25,7 @@ import type {
   SpaceLedgerCreatePayload,
   SpaceMyWorkspace,
   SpacePublicProfile,
+  SpaceReactionKind,
   SpaceSetting,
 } from "./model";
 
@@ -163,6 +165,16 @@ export function useDeleteSpaceJournal() {
 export function useLikeSpaceJournal() {
   return useMutation({
     mutationFn: (entryId: string) => likeSpaceJournal(entryId),
+    onSuccess: (updated) => {
+      patchCachedJournal(updated);
+    },
+  });
+}
+
+export function useReactSpaceJournal() {
+  return useMutation({
+    mutationFn: ({ entryId, kind }: { entryId: string; kind: SpaceReactionKind }) =>
+      reactSpaceJournal(entryId, kind),
     onSuccess: (updated) => {
       patchCachedJournal(updated);
     },

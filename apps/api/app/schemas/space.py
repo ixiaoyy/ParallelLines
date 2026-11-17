@@ -18,7 +18,8 @@ JournalMood = Literal[
     "celebrate",
 ]
 JournalWeather = Literal["sunny", "cloudy", "breezy", "rainy", "snowy", "night"]
-JournalVisibility = Literal["public", "private"]
+JournalVisibility = Literal["public", "friends", "private"]
+SpaceReactionKind = Literal["hug", "spark", "toast", "party"]
 JournalCardTheme = Literal["paper", "sky", "mint", "sunset", "lavender", "grid"]
 SpaceCoverPreset = Literal["aurora", "sunset", "meadow", "paper", "starlight"]
 LedgerKind = Literal["expense", "income"]
@@ -48,6 +49,7 @@ class SpaceSettingResponse(ORMModel):
     space_subtitle: str = ""
     cover_preset: SpaceCoverPreset = "aurora"
     monthly_budget_cents: int = 300000
+    current_status: str = ""
 
 
 class SpaceSettingUpdateRequest(BaseModel):
@@ -55,6 +57,7 @@ class SpaceSettingUpdateRequest(BaseModel):
     space_subtitle: str = Field(default="", max_length=200)
     cover_preset: SpaceCoverPreset = "aurora"
     monthly_budget_cents: int = Field(default=300000, ge=0, le=100_000_000)
+    current_status: str = Field(default="", max_length=48)
 
 
 class SpaceJournalCreateRequest(BaseModel):
@@ -71,6 +74,7 @@ class SpaceJournalCreateRequest(BaseModel):
     media_urls: list[str] = Field(default_factory=list, max_length=9)
     checklist: list[SpaceChecklistItem] = Field(default_factory=list, max_length=20)
     ledger_snapshot: dict[str, Any] | None = None
+    unlock_at: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
 
 
 class SpaceJournalUpdateRequest(BaseModel):
@@ -87,6 +91,11 @@ class SpaceJournalUpdateRequest(BaseModel):
     media_urls: list[str] | None = Field(default=None, max_length=9)
     checklist: list[SpaceChecklistItem] | None = Field(default=None, max_length=20)
     ledger_snapshot: dict[str, Any] | None = None
+    unlock_at: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+
+
+class SpaceJournalReactRequest(BaseModel):
+    kind: SpaceReactionKind
 
 
 class SpaceJournalAuthorBrief(BaseModel):
@@ -95,6 +104,7 @@ class SpaceJournalAuthorBrief(BaseModel):
     display_name: str | None = None
     avatar_url: str | None = None
     level: int = 0
+    current_status: str = ""
 
 
 class SpaceJournalItemResponse(ORMModel):
@@ -114,6 +124,9 @@ class SpaceJournalItemResponse(ORMModel):
     checklist: list[dict[str, Any]]
     ledger_snapshot: dict[str, Any] | None = None
     likes_count: int = 0
+    reactions: dict[str, int] = Field(default_factory=dict)
+    unlock_at: str | None = None
+    is_locked: bool = False
     created_at: datetime
     updated_at: datetime
     author: SpaceJournalAuthorBrief | None = None
@@ -173,5 +186,6 @@ class SpacePublicProfileResponse(BaseModel):
     space_title: str = ""
     space_subtitle: str = ""
     cover_preset: str = "aurora"
+    current_status: str = ""
     public_journal_count: int = 0
     journals: list[SpaceJournalItemResponse] = Field(default_factory=list)
