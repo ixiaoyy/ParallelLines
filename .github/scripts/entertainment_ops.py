@@ -23,7 +23,7 @@ DOMAINS = ('tavern.pingxingxian.space', 'matrix.pingxingxian.space')
 SERVICES = ('element', 'synapse', 'postgres')
 PORTS = (13101, 13102)
 MAX_OUTPUT = 4 * 1024 * 1024
-OPERATIONS = ('inventory', 'prepare', 'deploy', 'health', 'stop')
+OPERATIONS = ('inventory', 'prepare', 'deploy', 'bootstrap', 'health', 'stop')
 SOURCE_REVISION = '5b96163a00f7c4877150cd5185fc510436ed6697'
 SOURCE_BASE = 'https://raw.githubusercontent.com/ixiaoyy/parallellines-entertainment/' + SOURCE_REVISION + '/'
 PREPARED = ROOT / 'prepared.json'
@@ -58,6 +58,171 @@ target.write_text(yaml.safe_dump(actual,sort_keys=False))
 os.chown(target,991,991)
 os.chmod(target,0o600)
 print(json.dumps({'complete':True,'native_configuration_merged':True}))
+'''
+
+# 凭据仅在本模块容器内生成并落私有文件；命令参数和共享报告不携带真实值。
+BOOTSTRAP_PROGRAM = r'''
+import hashlib,hmac,json,os,re,secrets,signal,time,urllib.error,urllib.request
+from pathlib import Path
+import yaml
+ROOT=Path('/data')
+RECORD=ROOT/'bootstrap-private.json'
+SOURCE='5b96163a00f7c4877150cd5185fc510436ed6697'
+SERVER='matrix.pingxingxian.space'
+USER='pl_admin'
+BASE='http://127.0.0.1:8008'
+class BootstrapError(Exception): pass
+def need(value,code):
+ if not value: raise BootstrapError(code)
+def save(value):
+ need(not RECORD.is_symlink(),'bootstrap_record_symlink')
+ temp=ROOT/('bootstrap-private.new-'+secrets.token_hex(8))
+ fd=os.open(temp,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+ with os.fdopen(fd,'w') as stream:
+  json.dump(value,stream,sort_keys=True,indent=2);stream.write('\n');stream.flush();os.fsync(stream.fileno())
+ os.replace(temp,RECORD)
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+ def redirect_request(self,*args): return None
+opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
+def request(method,path,body=None,token=None):
+ headers={'Content-Type':'application/json'}
+ if token: headers['Authorization']='Bearer '+token
+ value=json.dumps(body).encode() if body is not None else None
+ req=urllib.request.Request(BASE+path,data=value,headers=headers,method=method)
+ try:
+  response=opener.open(req,timeout=6)
+ except urllib.error.HTTPError as error:
+  response=error
+ except (OSError,urllib.error.URLError):
+  return 0,{'errcode':'BOOTSTRAP_TRANSPORT'}
+ with response:
+  raw=response.read(65537)
+  if len(raw)>65536: return 0,{'errcode':'BOOTSTRAP_RESPONSE_BOUND'}
+  try: parsed=json.loads(raw)
+  except (ValueError,UnicodeError): return 0,{'errcode':'BOOTSTRAP_RESPONSE_JSON'}
+  if not isinstance(parsed,dict): return 0,{'errcode':'BOOTSTRAP_RESPONSE_TYPE'}
+  return response.code,parsed
+def available():
+ status,value=request('GET','/_matrix/client/v3/register/available?username='+USER)
+ if status==200 and value.get('available') is True: return True
+ if value.get('errcode')=='M_USER_IN_USE': return False
+ raise BootstrapError('native_username_availability_unconfirmed')
+def login(password):
+ return request('POST','/_matrix/client/v3/login',{
+  'type':'m.login.password','identifier':{'type':'m.id.user','user':USER},
+  'password':password,'device_id':'PL_BOOTSTRAP','initial_device_display_name':'Initial server bootstrap'})
+def register(password,shared):
+ status,nonce=request('GET','/_synapse/admin/v1/register')
+ need(status==200 and isinstance(nonce.get('nonce'),str),'native_registration_nonce_failed')
+ mac=hmac.new(shared.encode(),digestmod=hashlib.sha1)
+ mac.update(('\0'.join((nonce['nonce'],USER,password,'admin'))).encode())
+ status,value=request('POST','/_synapse/admin/v1/register',{
+  'nonce':nonce['nonce'],'username':USER,'password':password,'admin':True,
+  'mac':mac.hexdigest(),'inhibit_login':True})
+ need(status==200 and value.get('user_id')=='@'+USER+':'+SERVER,
+      'native_admin_registration_failed_or_existing_user')
+def matching_invite(token,access):
+ status,value=request('GET','/_synapse/admin/v1/registration_tokens',token=access)
+ need(status==200 and isinstance(value.get('registration_tokens'),list),'native_invite_listing_failed')
+ need(len(value['registration_tokens'])<=256,'native_invite_listing_bound')
+ matches=[item for item in value['registration_tokens'] if item.get('token')==token]
+ need(len(matches)<=1,'duplicate_native_invite')
+ return matches[0] if matches else None
+def deadline(*args): raise BootstrapError('bootstrap_deadline')
+report={'complete':False,'errors':[]}
+access=None
+record=None
+owned_record=False
+signal.signal(signal.SIGALRM,deadline);signal.alarm(70)
+try:
+ cfg=yaml.safe_load((ROOT/'homeserver.yaml').read_text())
+ need(cfg.get('server_name')==SERVER,'bootstrap_server_name_changed')
+ need(cfg.get('enable_registration') is True and cfg.get('registration_requires_token') is True,
+      'native_invitation_mode_required')
+ shared=cfg.get('registration_shared_secret')
+ need(isinstance(shared,str) and len(shared)>=16,'native_registration_secret_missing')
+ if RECORD.exists():
+  need(not RECORD.is_symlink() and RECORD.is_file() and RECORD.stat().st_size<=16384,
+       'bootstrap_record_not_regular')
+  need(RECORD.stat().st_uid==0 and RECORD.stat().st_mode&0o077==0,'bootstrap_record_not_private')
+  record=json.loads(RECORD.read_text())
+  need(record.get('schema')==1 and record.get('source_revision')==SOURCE and
+       record.get('server_name')==SERVER and record.get('username')==USER,'bootstrap_record_identity_changed')
+  need(isinstance(record.get('password'),str) and len(record['password'])>=48,'bootstrap_password_record_invalid')
+  need(isinstance(record.get('invite_token'),str) and
+       re.fullmatch('[A-Za-z0-9._~-]{32,64}',record['invite_token']),'bootstrap_invite_record_invalid')
+  owned_record=True
+ else:
+  need(not RECORD.is_symlink(),'bootstrap_record_symlink')
+  need(available(),'bootstrap_admin_already_exists_not_owned')
+  record={'schema':1,'source_revision':SOURCE,'server_name':SERVER,'username':USER,
+          'password':secrets.token_urlsafe(48),'invite_token':secrets.token_urlsafe(32),
+          'uses_allowed':10,'expiry_time':int((time.time()+7*86400)*1000),
+          'registration_attempted':False,'admin_created':False,'invite_attempted':False,
+          'invite_created':False,'status':'pending'}
+  owned_record=True
+  save(record)
+ if not record.get('admin_created'):
+  if record.get('registration_attempted'):
+   # 上次注册可能已提交而响应丢失；只用本次私有口令复核，不接管或重置未知用户。
+   status,value=login(record['password'])
+   if status==200:
+    need(value.get('user_id')=='@'+USER+':'+SERVER,'bootstrap_login_identity_changed')
+    access=value.get('access_token');record['admin_created']=True;save(record)
+   else:
+    need(available(),'pending_admin_registration_unresolved_no_reset')
+  else:
+   need(available(),'bootstrap_admin_became_existing_not_owned')
+  if not record.get('admin_created'):
+   record['registration_attempted']=True;save(record)
+   register(record['password'],shared)
+   record['admin_created']=True;save(record)
+ if access is None:
+  status,value=login(record['password'])
+  need(status==200 and value.get('user_id')=='@'+USER+':'+SERVER,'native_admin_login_failed_no_reset')
+  access=value.get('access_token')
+ need(isinstance(access,str) and access,'native_admin_access_missing')
+ record['admin_login_verified']=True;save(record)
+ need(record.get('uses_allowed')==10 and isinstance(record.get('expiry_time'),int),
+      'bootstrap_invite_policy_changed')
+ need(record['expiry_time']>int(time.time()*1000),'bootstrap_invite_expired_no_automatic_replacement')
+ invite=matching_invite(record['invite_token'],access)
+ if invite is None:
+  need(not record.get('invite_created'),'bootstrap_invite_missing_no_recreation')
+  record['invite_attempted']=True;save(record)
+  status,created=request('POST','/_synapse/admin/v1/registration_tokens/new',{
+   'token':record['invite_token'],'uses_allowed':10,'expiry_time':record['expiry_time']},token=access)
+  if status==200:
+   invite=created
+  else:
+   # 原生 token 唯一约束处理响应丢失后的同码重试，不另发第二个邀请码。
+   invite=matching_invite(record['invite_token'],access)
+   need(invite is not None,'native_invite_creation_failed')
+ else:
+  need(record.get('invite_attempted') or record.get('invite_created'),'unexpected_existing_native_invite')
+ need(invite.get('token')==record['invite_token'] and invite.get('uses_allowed')==10 and
+      invite.get('expiry_time')==record['expiry_time'],'native_invite_policy_mismatch')
+ record['invite_created']=True;record['status']='complete';record.pop('last_error_codes',None);save(record)
+ report.update(complete=True,native_admin_login_verified=True,native_invite_created=True,
+               invite_uses_allowed=10,invite_expiry_time_ms=record['expiry_time'],
+               private_handoff_path='/data/services/parallellines-entertainment/data/synapse/bootstrap-private.json')
+except BootstrapError as error:
+ report['errors'].append(str(error));report['pending']=True
+except Exception as error:
+ report['errors'].append('native_bootstrap:'+type(error).__name__);report['pending']=True
+finally:
+ signal.alarm(0)
+ if isinstance(access,str) and access:
+  status,_=request('POST','/_matrix/client/v3/logout',{},token=access)
+  report['bootstrap_session_logged_out']=status==200
+  if status!=200:
+   report['complete']=False;report['pending']=True;report['errors'].append('bootstrap_session_logout_unconfirmed')
+if not report['complete'] and owned_record:
+ record['status']='pending';record['last_error_codes']=report['errors']
+ try: save(record)
+ except Exception as error: report['errors'].append('private_pending_record:'+type(error).__name__)
+print(json.dumps(report,sort_keys=True))
+raise SystemExit(0 if report['complete'] else 2)
 '''
 
 
@@ -489,7 +654,7 @@ def deploy(runner):
         raise OperationError('matrix_deploy:' + failure +
                              (':stop_failed:' + recovery_error if recovery_error else ':owned_services_stopped'))
     deployment_state(runner, status='running')
-    return {**result, 'deployed': True, 'source_revision': SOURCE_REVISION,
+    return {**result, 'read_only': False, 'deployed': True, 'source_revision': SOURCE_REVISION,
             'other_services_changed': False, 'public_entry': False,
             'native_admin_and_registration_invite_created': False}
 
@@ -539,6 +704,38 @@ def health(runner):
             'native_account_and_message_flow_verified': False}
 
 
+def bootstrap(runner):
+    """以新实例原生 API 创建初始管理员和有限邀请码；值仅留私有文件，不返回凭据。"""
+    preparation_record()
+    health(runner)
+    saved = read_record(STATE)
+    check(saved.get('source_revision') == SOURCE_REVISION and saved.get('stack') == 'matrix',
+          'bootstrap_deployment_identity_changed')
+    values = module_containers(runner)
+    check(all(saved.get('container_ids', {}).get(item['service']) == item['id'] for item in values),
+          'bootstrap_container_identity_changed')
+    synapse = select(values, PROJECT, 'synapse')
+    before = protected_snapshot(containers(runner))
+    result = runner.run('native_private_bootstrap', ['docker', 'exec', '--user', '0:0',
+                        synapse['id'], 'python', '-c', BOOTSTRAP_PROGRAM], timeout=100, accepted=(0, 2))
+    value = json.loads(result.stdout)
+    check(isinstance(value, dict), 'native_bootstrap_report_invalid')
+    if not value.get('complete'):
+        errors = value.get('errors', [])
+        safe = [error for error in errors if isinstance(error, str) and
+                re.fullmatch('[A-Za-z0-9_:]{1,120}', error)]
+        raise OperationError('native_bootstrap_pending:' + (':'.join(safe) if safe else 'report_error'))
+    assert_protected(runner, before)
+    return {'complete': True, 'read_only': False,
+            'native_admin_login_verified': value.get('native_admin_login_verified') is True,
+            'native_invite_created': value.get('native_invite_created') is True,
+            'invite_uses_allowed': value.get('invite_uses_allowed'),
+            'invite_expiry_time_ms': value.get('invite_expiry_time_ms'),
+            'private_handoff_path': str(ROOT / 'data/synapse/bootstrap-private.json'),
+            'bootstrap_session_logged_out': value.get('bootstrap_session_logged_out') is True,
+            'other_services_changed': False}
+
+
 def stop(runner):
     """只停止本项目已登记容器，保留卷与密钥；不修改网关或其他服务。"""
     values = module_containers(runner)
@@ -564,7 +761,7 @@ def main(arguments):
         check(len(arguments) == 1 and arguments[0] in OPERATIONS, 'unsupported_fixed_operation')
         runner = Runner(850 if arguments[0] == 'prepare' else 420 if arguments[0] == 'deploy' else 180)
         report.update({'inventory': inventory, 'prepare': prepare, 'deploy': deploy,
-                       'health': health, 'stop': stop}[arguments[0]](runner))
+                       'bootstrap': bootstrap, 'health': health, 'stop': stop}[arguments[0]](runner))
     except OperationError as error:
         report['errors'].append(str(error))
     except Exception as error:

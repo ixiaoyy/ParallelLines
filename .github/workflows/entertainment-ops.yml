@@ -8,7 +8,7 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, prepare, deploy, health, stop]
+        options: [inventory, prepare, deploy, bootstrap, health, stop]
 
 permissions:
   contents: read
@@ -38,7 +38,7 @@ jobs:
           import os,uuid
           from pathlib import Path
           operation=os.environ['OPERATION']
-          if operation not in ('inventory','prepare','deploy','health','stop'): raise SystemExit('Unsupported entertainment operation')
+          if operation not in ('inventory','prepare','deploy','bootstrap','health','stop'): raise SystemExit('Unsupported entertainment operation')
           source=Path('.github/scripts/entertainment_ops.py').read_text(encoding='utf-8')
           marker='PL_ENTERTAINMENT_'+uuid.uuid4().hex
           payload="set -eu\nsudo -n python3 -B - "+operation+" <<'"+marker+"'\n"+source+'\n'+marker+'\n'
