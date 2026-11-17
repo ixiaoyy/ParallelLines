@@ -1,0 +1,76 @@
+name: Chat personal connection operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Fixed Chat-only operation; read operations never change services
+        type: choice
+        required: true
+        default: inventory
+        options: [inventory, preflight, prepare, deploy]
+      chat_revision:
+        description: Reviewed full Chat commit SHA; required except inventory
+        type: string
+        required: false
+        default: ''
+      artifact_sha256:
+        description: Trusted public release archive SHA256; required for prepare/deploy
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  # 独立健康通道不等待发布锁；写操作沿现有生产发布互斥组串行。
+  group: ${{ (inputs.operation == 'inventory' || inputs.operation == 'preflight') && format('chat-read-{0}', inputs.operation) || 'deploy-production' }}
+  cancel-in-progress: false
+
+jobs:
+  chat:
+    if: github.repository == 'ixiaoyy/ParallelLines' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare only the fixed reviewed Chat operation
+        id: payload
+        env:
+          OPERATION: ${{ inputs.operation }}
+          CHAT_REVISION: ${{ inputs.chat_revision }}
+          ARTIFACT_SHA256: ${{ inputs.artifact_sha256 }}
+        run: |
+          python3 - <<'PY'
+          import os,re,uuid
+          from pathlib import Path
+          operation=os.environ['OPERATION']
+          revision=os.environ.get('CHAT_REVISION','')
+          digest=os.environ.get('ARTIFACT_SHA256','')
+          if operation not in ('inventory','preflight','prepare','deploy'): raise SystemExit('Unsupported Chat operation')
+          if operation!='inventory' and not re.fullmatch('[a-f0-9]{40}',revision): raise SystemExit('Reviewed Chat revision required')
+          if operation in ('prepare','deploy') and not re.fullmatch('[a-f0-9]{64}',digest): raise SystemExit('Trusted artifact digest required')
+          source=Path('.github/scripts/chat_ops.py').read_text(encoding='utf-8')
+          if len(source.encode())>120000: raise SystemExit('Fixed operation exceeds transport bound')
+          marker='PL_CHAT_'+uuid.uuid4().hex
+          args=[operation]+([revision] if operation!='inventory' else [])+([digest] if operation in ('prepare','deploy') else [])
+          # 所有 argv 均经过固定枚举/hex 校验，不拼接任意 shell 或外部响应。
+          script="set -eu\nsudo -n python3 -B - "+' '.join(args)+" <<'"+marker+"'\n"+source+'\n'+marker+'\n'
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as output:
+              output.write('script<<'+marker+'_OUTPUT\n'+script+marker+'_OUTPUT\n')
+          PY
+      - name: Execute only the selected Chat operation
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
+          timeout: 30s
+          command_timeout: ${{ inputs.operation == 'prepare' && '15m' || inputs.operation == 'deploy' && '20m' || '4m' }}
+          script_stop: false
+          script: ${{ steps.payload.outputs.script }}
