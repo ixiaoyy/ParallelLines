@@ -1,0 +1,60 @@
+name: Entertainment module operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Fixed Matrix module operation; inventory never changes services
+        type: choice
+        required: true
+        default: inventory
+        options: [inventory, health, stop]
+
+permissions:
+  contents: read
+
+concurrency:
+  # 独立读取不等待发布；写操作与现有生产发布共用互斥组。
+  group: ${{ (inputs.operation == 'inventory' || inputs.operation == 'health') && format('entertainment-read-{0}', inputs.operation) || 'deploy-production' }}
+  cancel-in-progress: false
+
+jobs:
+  entertainment:
+    if: github.repository == 'ixiaoyy/ParallelLines' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Prepare only the reviewed fixed operation
+        id: payload
+        env:
+          OPERATION: ${{ inputs.operation }}
+        run: |
+          python3 - <<'PY'
+          import os,uuid
+          from pathlib import Path
+          operation=os.environ['OPERATION']
+          if operation not in ('inventory','health','stop'): raise SystemExit('Unsupported entertainment operation')
+          source=Path('.github/scripts/entertainment_ops.py').read_text(encoding='utf-8')
+          marker='PL_ENTERTAINMENT_'+uuid.uuid4().hex
+          payload="set -eu\nsudo -n python3 -B - "+operation+" <<'"+marker+"'\n"+source+'\n'+marker+'\n'
+          if len(payload.encode())>120000: raise SystemExit('Fixed operation exceeds SSH transport bound')
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as output:
+              output.write('script<<'+marker+'_OUTPUT\n'+payload+marker+'_OUTPUT\n')
+          PY
+      - name: Execute only the selected entertainment operation
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
+          timeout: 30s
+          command_timeout: 5m
+          script_stop: false
+          script: ${{ steps.payload.outputs.script }}
