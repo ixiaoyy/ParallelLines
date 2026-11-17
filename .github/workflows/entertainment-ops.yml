@@ -8,7 +8,7 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, prepare, deploy, bootstrap, health, stop]
+        options: [inventory, prepare, deploy, bootstrap, prepare-tls, health, stop]
 
 permissions:
   contents: read
@@ -38,7 +38,7 @@ jobs:
           import os,uuid
           from pathlib import Path
           operation=os.environ['OPERATION']
-          if operation not in ('inventory','prepare','deploy','bootstrap','health','stop'): raise SystemExit('Unsupported entertainment operation')
+          if operation not in ('inventory','prepare','deploy','bootstrap','prepare-tls','health','stop'): raise SystemExit('Unsupported entertainment operation')
           source=Path('.github/scripts/entertainment_ops.py').read_text(encoding='utf-8')
           marker='PL_ENTERTAINMENT_'+uuid.uuid4().hex
           payload="set -eu\nsudo -n python3 -B - "+operation+" <<'"+marker+"'\n"+source+'\n'+marker+'\n'
@@ -55,6 +55,6 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           timeout: 30s
-          command_timeout: ${{ inputs.operation == 'prepare' && '15m' || inputs.operation == 'deploy' && '8m' || '5m' }}
+          command_timeout: ${{ inputs.operation == 'prepare' && '15m' || (inputs.operation == 'deploy' || inputs.operation == 'prepare-tls') && '8m' || '5m' }}
           script_stop: false
           script: ${{ steps.payload.outputs.script }}

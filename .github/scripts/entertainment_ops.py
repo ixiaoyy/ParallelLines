@@ -7,11 +7,14 @@ import platform
 import re
 import secrets
 import shutil
+import signal
 import socket
+import ssl
 import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 
@@ -23,11 +26,15 @@ DOMAINS = ('tavern.pingxingxian.space', 'matrix.pingxingxian.space')
 SERVICES = ('element', 'synapse', 'postgres')
 PORTS = (13101, 13102)
 MAX_OUTPUT = 4 * 1024 * 1024
-OPERATIONS = ('inventory', 'prepare', 'deploy', 'bootstrap', 'health', 'stop')
+OPERATIONS = ('inventory', 'prepare', 'deploy', 'bootstrap', 'prepare-tls', 'health', 'stop')
 SOURCE_REVISION = '5b96163a00f7c4877150cd5185fc510436ed6697'
 SOURCE_BASE = 'https://raw.githubusercontent.com/ixiaoyy/parallellines-entertainment/' + SOURCE_REVISION + '/'
 PREPARED = ROOT / 'prepared.json'
 SOURCE_FILES = ('compose.yaml', 'upstream.lock.json', 'config/element.json', 'config/synapse-public.yaml')
+CERTIFICATE_ROOT = Path('/opt/parallellines/var/letsencrypt')
+HTTP01_ROOT = Path('/opt/parallellines/var/certbot')
+CERTIFICATE_NAME = 'parallellines-entertainment'
+TLS_PREPARED = ROOT / 'tls-prepared.json'
 IMAGES = {
     'element': 'ghcr.io/element-hq/element-web:v1.12.35@sha256:406b48b80153818284a235fa3600b2a5b5b6b0aa0e4ef4896b36d8d3461352f3',
     'synapse': 'ghcr.io/element-hq/synapse:v1.165.0@sha256:673b4223c81a7634fd07d832b939a58f97081cfdaae7cdd2d1664cdcf7611b62',
@@ -228,6 +235,15 @@ raise SystemExit(0 if report['complete'] else 2)
 
 class OperationError(RuntimeError):
     """只输出稳定错误码，不展开命令输出、运行环境或用户数据。"""
+
+
+class TLSPreparationError(OperationError):
+    """携带非秘密 HTTP01 结果和是否已调用 Certbot，不包含验证值或原始日志。"""
+
+    def __init__(self, code, checks, command_invoked=False):
+        super().__init__(code)
+        self.checks = checks
+        self.command_invoked = command_invoked
 
 
 def check(value, code):
@@ -736,6 +752,205 @@ def bootstrap(runner):
             'other_services_changed': False}
 
 
+def certificate_metadata(runner):
+    """只读取本次固定证书的公开 SAN/期限；不读取或输出私钥。缺失返回 None。"""
+    path = CERTIFICATE_ROOT / 'live' / CERTIFICATE_NAME / 'fullchain.pem'
+    if not path.exists():
+        check(not path.is_symlink(), 'new_certificate_dangling_link')
+        return None
+    check(path.is_file() and CERTIFICATE_ROOT.resolve() in path.resolve().parents,
+          'new_certificate_outside_expected_storage')
+    result = runner.run('new_certificate_public_metadata', [
+        'openssl', 'x509', '-in', str(path), '-noout', '-enddate', '-ext', 'subjectAltName',
+        '-checkend', '86400'], accepted=(0, 1))
+    names = sorted(set(re.findall(r'DNS:([A-Za-z0-9*_.-]+)', result.stdout)))
+    check(names == sorted(DOMAINS), 'new_certificate_san_not_exact_module_domains')
+    match = re.search(r'^notAfter=(.+)$', result.stdout, re.M)
+    check(match is not None, 'new_certificate_expiry_missing')
+    try:
+        expiry = int(ssl.cert_time_to_seconds(match.group(1).strip()))
+    except ValueError:
+        raise OperationError('new_certificate_expiry_invalid') from None
+    return {'certificate_name': CERTIFICATE_NAME, 'domains': names,
+            'not_after': match.group(1).strip(),
+            'expiry_time': expiry,
+            'valid_for_at_least_one_day': result.returncode == 0}
+
+
+def http01_roundtrip(domain, filename, expected):
+    """只请求固定域名/新验证路径；最多两次同域重定向，18 秒总时限，不返回正文。"""
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *arguments):
+            return None
+    def timeout(*arguments):
+        raise OperationError('http01_total_timeout')
+    previous = signal.signal(signal.SIGALRM, timeout)
+    signal.alarm(18)
+    trace = []
+    target = 'http://' + domain + '/.well-known/acme-challenge/' + filename
+    opener = urllib.request.build_opener(NoRedirect())
+    try:
+        for _ in range(3):
+            request = urllib.request.Request(target, headers={
+                'User-Agent': 'ParallelLines-Matrix-HTTP01', 'Cache-Control': 'no-cache'})
+            try:
+                response = opener.open(request, timeout=6)
+            except urllib.error.HTTPError as error:
+                response = error
+            except (OSError, urllib.error.URLError) as error:
+                return {'domain': domain, 'matched': False, 'statuses': trace,
+                        'failure': 'http01_transport:' + type(error).__name__}
+            with response:
+                trace.append(response.code)
+                if response.code in (301, 302, 303, 307, 308):
+                    try:
+                        next_url = urllib.parse.urljoin(target, response.headers.get('Location', ''))
+                        parsed = urllib.parse.urlsplit(next_url)
+                        port = parsed.port
+                    except ValueError:
+                        return {'domain': domain, 'matched': False, 'statuses': trace,
+                                'failure': 'http01_invalid_redirect'}
+                    safe = (parsed.scheme in ('http', 'https') and parsed.hostname == domain and
+                            parsed.path == '/.well-known/acme-challenge/' + filename and
+                            not parsed.query and not parsed.fragment and not parsed.username and
+                            not parsed.password and port in (None, 80, 443))
+                    if not safe:
+                        return {'domain': domain, 'matched': False, 'statuses': trace,
+                                'failure': 'http01_redirect_outside_contract'}
+                    target = next_url
+                    continue
+                body = response.read(1025)
+                matched = response.code == 200 and body == expected
+                return {'domain': domain, 'matched': matched, 'statuses': trace,
+                        'failure': None if matched else 'http01_status_or_body_mismatch'}
+        return {'domain': domain, 'matched': False, 'statuses': trace,
+                'failure': 'http01_redirect_limit'}
+    except OperationError as error:
+        return {'domain': domain, 'matched': False, 'statuses': trace, 'failure': str(error)}
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+def prepare_tls(runner):
+    """先证明两域 HTTP01 到既有 webroot，再只申请本模块新证书；不改配置或 reload。"""
+    preparation_record()
+    health(runner)
+    values = containers(runner)
+    gateway = select(values, 'parallellines', 'nginx')
+    certbot = select(values, 'parallellines', 'certbot')
+    check(gateway['running'] and certbot['running'], 'existing_gateway_and_certbot_required')
+    for item in (gateway, certbot):
+        mounted = {(mount.get('Source'), mount.get('Destination')) for mount in item['mounts']}
+        check((str(CERTIFICATE_ROOT), '/etc/letsencrypt') in mounted and
+              (str(HTTP01_ROOT), '/var/www/certbot') in mounted,
+              'existing_certbot_webroot_mounts_changed')
+    check(MAIN_CONFIG.is_file() and not MAIN_CONFIG.is_symlink(), 'gateway_default_not_regular')
+    default_identity = (MAIN_CONFIG.stat().st_dev, MAIN_CONFIG.stat().st_ino, digest(MAIN_CONFIG.read_bytes()))
+    before = protected_snapshot(values)
+    accounts = CERTIFICATE_ROOT / 'accounts/acme-v02.api.letsencrypt.org/directory'
+    check(accounts.is_dir() and not accounts.is_symlink(), 'existing_production_acme_account_required')
+    account_dirs = [path for path in accounts.iterdir() if path.is_dir() and not path.is_symlink()]
+    check(len(account_dirs) == 1, 'single_existing_acme_account_required')
+    previous = read_record(TLS_PREPARED) if TLS_PREPARED.exists() else None
+    if previous is not None:
+        check(previous.get('project') == PROJECT and previous.get('source_revision') == SOURCE_REVISION and
+              previous.get('certificate_name') == CERTIFICATE_NAME and previous.get('domains') == list(DOMAINS),
+              'tls_receipt_identity_changed')
+    live = CERTIFICATE_ROOT / 'live' / CERTIFICATE_NAME
+    renewal = CERTIFICATE_ROOT / 'renewal' / (CERTIFICATE_NAME + '.conf')
+    if live.exists() or renewal.exists():
+        check(previous is not None and previous.get('certificate_command_invoked') is True,
+              'new_certificate_name_already_present_not_owned')
+    check(HTTP01_ROOT.is_dir() and not HTTP01_ROOT.is_symlink(), 'existing_http01_webroot_required')
+    directory = HTTP01_ROOT / '.well-known/acme-challenge'
+    for path in (directory, *directory.parents):
+        check(not path.is_symlink(), 'http01_path_symlink')
+    directory.mkdir(mode=0o755, parents=True, exist_ok=True)
+    check(directory.is_dir(), 'http01_directory_not_regular')
+    filename = 'pl-entertainment-http01-' + secrets.token_hex(16)
+    probe = directory / filename
+    expected = secrets.token_urlsafe(32).encode()
+    fd = os.open(probe, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(expected)
+    os.chmod(probe, 0o644)
+    identity = (probe.stat().st_dev, probe.stat().st_ino)
+    checks = []
+    prior_invocation = bool(previous and previous.get('certificate_command_invoked'))
+    invoked = False
+    receipt = {'schema': 1, 'project': PROJECT, 'source_revision': SOURCE_REVISION,
+               'certificate_name': CERTIFICATE_NAME, 'domains': list(DOMAINS),
+               'status': 'probing', 'certificate_command_invoked': prior_invocation,
+               'last_attempt_certificate_command_invoked': False}
+    failure = None
+    try:
+        private_record(TLS_PREPARED, receipt)
+        checks = [http01_roundtrip(domain, filename, expected) for domain in DOMAINS]
+        check(all(item['matched'] for item in checks), 'public_http01_roundtrip_failed')
+        assert_protected(runner, before)
+        meta = certificate_metadata(runner)
+        if meta is None or not meta['valid_for_at_least_one_day']:
+            # 进程终止在容器内完成，避免仅杀 Docker CLI 而遗留后台发证进程。
+            guard = ("import subprocess,sys;p=subprocess.Popen(sys.argv[1:]);\n"
+                     "try: code=p.wait(timeout=240)\n"
+                     "except subprocess.TimeoutExpired:\n"
+                     " p.terminate()\n"
+                     " try: p.wait(timeout=10)\n"
+                     " except subprocess.TimeoutExpired: p.kill();p.wait(timeout=5)\n"
+                     " code=124\n"
+                     "sys.exit(code)")
+            invoked = True
+            receipt.update(status='certificate_command_started', certificate_command_invoked=True,
+                           last_attempt_certificate_command_invoked=True, http01_checks=checks)
+            private_record(TLS_PREPARED, receipt)
+            result = runner.run('new_module_certificate', [
+                'docker', 'exec', certbot['id'], 'python3', '-c', guard,
+                'certbot', 'certonly', '--webroot', '-w', '/var/www/certbot',
+                '--cert-name', CERTIFICATE_NAME, '--non-interactive', '--keep-until-expiring',
+                '--no-directory-hooks', '--preferred-challenges', 'http',
+                '--pre-hook', '', '--post-hook', '', '--deploy-hook', '',
+                '--server', 'https://acme-v02.api.letsencrypt.org/directory',
+                '-d', DOMAINS[0], '-d', DOMAINS[1]], timeout=275, accepted=(0, 1, 2, 124))
+            if result.returncode:
+                reason = 'native_certbot_exit_' + str(result.returncode)
+                diagnostic = result.stderr.lower()
+                if 'another instance of certbot is already running' in diagnostic:
+                    reason = 'native_certbot_busy_no_automatic_retry'
+                elif 'rate limit' in diagnostic or 'ratelimited' in diagnostic:
+                    reason = 'native_acme_rate_limited_no_automatic_retry'
+                raise OperationError(reason)
+            meta = certificate_metadata(runner)
+        check(meta is not None and meta['valid_for_at_least_one_day'], 'module_certificate_not_ready')
+        assert_protected(runner, before)
+        current_identity = (MAIN_CONFIG.stat().st_dev, MAIN_CONFIG.stat().st_ino,
+                            digest(MAIN_CONFIG.read_bytes()))
+        check(current_identity == default_identity, 'gateway_default_changed_during_tls')
+        receipt.update(status='prepared', http01_checks=checks, certificate=meta,
+                       certificate_command_invoked=prior_invocation or invoked,
+                       last_attempt_certificate_command_invoked=invoked, gateway_unchanged=True)
+        private_record(TLS_PREPARED, receipt)
+    except OperationError as error:
+        failure = str(error)
+        receipt.update(status='pending', http01_checks=checks,
+                       certificate_command_invoked=prior_invocation or invoked,
+                       last_attempt_certificate_command_invoked=invoked, error=failure)
+        private_record(TLS_PREPARED, receipt)
+    finally:
+        if probe.exists():
+            check(not probe.is_symlink() and probe.is_file() and
+                  (probe.stat().st_dev, probe.stat().st_ino) == identity and
+                  probe.stat().st_size == len(expected) and probe.read_bytes() == expected,
+                  'http01_owned_probe_changed_before_cleanup')
+            probe.unlink()
+    if failure:
+        raise TLSPreparationError(failure, checks, invoked)
+    return {'complete': True, 'read_only': False, 'tls_prepared': True, 'http01_checks': checks,
+            'certificate': meta, 'certificate_command_invoked': invoked,
+            'gateway_configuration_changed': False, 'gateway_reloaded': False,
+            'other_services_changed': False, 'public_entry': False}
+
+
 def stop(runner):
     """只停止本项目已登记容器，保留卷与密钥；不修改网关或其他服务。"""
     values = module_containers(runner)
@@ -759,11 +974,15 @@ def main(arguments):
     report = {'operation': arguments[0] if arguments else 'rejected', 'complete': False, 'errors': []}
     try:
         check(len(arguments) == 1 and arguments[0] in OPERATIONS, 'unsupported_fixed_operation')
-        runner = Runner(850 if arguments[0] == 'prepare' else 420 if arguments[0] == 'deploy' else 180)
+        runner = Runner(850 if arguments[0] == 'prepare' else 420 if arguments[0] in ('deploy', 'prepare-tls') else 180)
         report.update({'inventory': inventory, 'prepare': prepare, 'deploy': deploy,
-                       'bootstrap': bootstrap, 'health': health, 'stop': stop}[arguments[0]](runner))
+                       'bootstrap': bootstrap, 'prepare-tls': prepare_tls,
+                       'health': health, 'stop': stop}[arguments[0]](runner))
     except OperationError as error:
         report['errors'].append(str(error))
+        if isinstance(error, TLSPreparationError):
+            report.update(http01_checks=error.checks, certificate_command_invoked=error.command_invoked,
+                          gateway_configuration_changed=False, gateway_reloaded=False)
     except Exception as error:
         report['errors'].append('entertainment_operation:' + type(error).__name__)
     print(json.dumps(report, ensure_ascii=True, sort_keys=True))
