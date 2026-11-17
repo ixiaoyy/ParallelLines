@@ -68,6 +68,32 @@ def _author_brief(
     )
 
 
+def _project_ledger_snapshot(snapshot: dict[str, Any] | None) -> dict[str, Any] | None:
+    """返回账单快照的接口投影；隐藏金额时只保留展示字段，不修改原始快照。"""
+    if snapshot is None or not snapshot.get("hide_exact_amount"):
+        return snapshot
+
+    # 快照是自由 JSON；仅返回已知的非金额字段，让旧快照也遵守隐藏金额的约定。
+    projected = {
+        key: snapshot[key]
+        for key in ("month", "entry_count", "hide_exact_amount")
+        if key in snapshot
+    }
+    categories = snapshot.get("top_categories")
+    if isinstance(categories, list):
+        projected["top_categories"] = [
+            {key: item[key] for key in ("category", "ratio_percent") if key in item}
+            for item in categories
+            if isinstance(item, dict)
+        ]
+    single_entry = snapshot.get("single_entry")
+    if isinstance(single_entry, dict):
+        projected["single_entry"] = {
+            key: single_entry[key] for key in ("kind", "category", "note") if key in single_entry
+        }
+    return projected
+
+
 def _serialize_journal(
     entry: SpaceJournalEntry,
     author: User | None = None,
@@ -85,8 +111,9 @@ def _serialize_journal(
         entry_date=entry.entry_date,
         title="" if is_locked else (entry.title or ""),
         content="" if is_locked else entry.content,
-        mood=entry.mood or "happy",
-        weather=entry.weather or "sunny",
+        # 显式空值表示未记录，仅 None 沿用历史兼容默认值。
+        mood=entry.mood if entry.mood is not None else "happy",
+        weather=entry.weather if entry.weather is not None else "sunny",
         location=entry.location or "",
         visibility=entry.visibility or "public",
         is_pinned=bool(entry.is_pinned),
@@ -94,7 +121,7 @@ def _serialize_journal(
         tags=list(entry.tags or []),
         media_urls=[] if is_locked else list(entry.media_urls or []),
         checklist=[] if is_locked else list(entry.checklist or []),
-        ledger_snapshot=None if is_locked else entry.ledger_snapshot,
+        ledger_snapshot=None if is_locked else _project_ledger_snapshot(entry.ledger_snapshot),
         likes_count=int(entry.likes_count or 0),
         reactions=reactions,
         unlock_at=unlock_at,

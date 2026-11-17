@@ -7,7 +7,9 @@ from pydantic import BaseModel, Field
 
 from app.schemas.common import ORMModel
 
+# 自动账单未记录心情或天气时使用空字符串，不替用户编造状态。
 JournalMood = Literal[
+    "",
     "happy",
     "focused",
     "calm",
@@ -17,7 +19,7 @@ JournalMood = Literal[
     "rainy",
     "celebrate",
 ]
-JournalWeather = Literal["sunny", "cloudy", "breezy", "rainy", "snowy", "night"]
+JournalWeather = Literal["", "sunny", "cloudy", "breezy", "rainy", "snowy", "night"]
 JournalVisibility = Literal["public", "friends", "private"]
 SpaceReactionKind = Literal["hug", "spark", "toast", "party"]
 JournalCardTheme = Literal["paper", "sky", "mint", "sunset", "lavender", "grid"]
@@ -48,7 +50,8 @@ class SpaceSettingResponse(ORMModel):
     space_title: str = ""
     space_subtitle: str = ""
     cover_preset: SpaceCoverPreset = "aurora"
-    monthly_budget_cents: int = 300000
+    # 0 表示尚未设置预算，不替用户预填金额。
+    monthly_budget_cents: int = 0
     current_status: str = ""
 
 
@@ -56,7 +59,7 @@ class SpaceSettingUpdateRequest(BaseModel):
     space_title: str = Field(default="", max_length=80)
     space_subtitle: str = Field(default="", max_length=200)
     cover_preset: SpaceCoverPreset = "aurora"
-    monthly_budget_cents: int = Field(default=300000, ge=0, le=100_000_000)
+    monthly_budget_cents: int = Field(default=0, ge=0, le=100_000_000)
     current_status: str = Field(default="", max_length=48)
 
 
@@ -165,7 +168,7 @@ class SpaceLedgerMonthlySummary(BaseModel):
     month: str
     total_expense_cents: int = 0
     total_income_cents: int = 0
-    monthly_budget_cents: int = 300000
+    monthly_budget_cents: int = 0
     entry_count: int = 0
     category_breakdown: list[SpaceLedgerCategoryBreakdown] = Field(default_factory=list)
 

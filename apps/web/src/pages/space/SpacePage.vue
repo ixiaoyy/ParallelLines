@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import { message } from "ant-design-vue";
+import { message, Modal as AModal } from "ant-design-vue";
 
 import { useCurrentUser } from "@/features/auth/queries";
 import { setUserRelationship } from "@/features/social/api";
@@ -10,7 +10,7 @@ import SpaceJournalCard from "@/features/space/components/SpaceJournalCard.vue";
 import SpaceLedgerPanel from "@/features/space/components/SpaceLedgerPanel.vue";
 import SpaceMoodCalendarCard from "@/features/space/components/SpaceMoodCalendarCard.vue";
 import SpaceSettingsDrawer from "@/features/space/components/SpaceSettingsDrawer.vue";
-import { getPendingLocalSpaceSummary, type LocalSpacePendingSummary } from "@/features/space/api";
+import { getPendingLocalSpaceSummary, SpaceLocalSyncError, type LocalSpacePendingSummary } from "@/features/space/api";
 import {
   currentMonthString,
   formatCentsToYuan,
@@ -33,6 +33,9 @@ import {
   type SpaceChecklistItem,
   type SpaceCoverPreset,
   type SpaceJournalItem,
+  type SpaceJournalCreatePayload,
+  type SpaceJournalUpdatePayload,
+  type SpaceLedgerMonthlySummary,
   type SpaceLedgerItem,
   type SpaceReactionKind,
 } from "@/features/space/model";
@@ -145,46 +148,105 @@ const deleteLedgerMutation = useDeleteSpaceLedgerEntry();
 const updateSettingsMutation = useUpdateSpaceSettings();
 const syncLocalMutation = useSyncLocalSpaceToCloud();
 
-const pendingLocalSummary = ref<LocalSpacePendingSummary>(getPendingLocalSpaceSummary());
+const pendingLocalSummary = ref<LocalSpacePendingSummary>({ journalCount: 0, ledgerCount: 0, totalCount: 0 });
 const localSyncBannerDismissed = ref(false);
+const localDataError = ref("");
+const localSyncError = ref("");
+const syncNeedsReview = ref(false);
+
+/** 读取待同步计数；存储不可用时保留错误，不让页面初始化失败或伪装空数据。 */
+function refreshPendingLocalSummary() {
+  try {
+    pendingLocalSummary.value = getPendingLocalSpaceSummary();
+    localDataError.value = "";
+  } catch (error) {
+    localDataError.value = error instanceof Error ? error.message : "无法读取本机记录，请勿清空浏览器数据";
+  }
+}
+refreshPendingLocalSummary();
 
 watch(isLoggedIn, (loggedIn) => {
   if (loggedIn) {
-    pendingLocalSummary.value = getPendingLocalSpaceSummary();
+    refreshPendingLocalSummary();
   }
 });
 
 async function handleSyncLocalToCloud() {
+  if (syncNeedsReview.value || syncLocalMutation.isPending.value) return;
+  localSyncError.value = "";
   try {
     const result = await syncLocalMutation.mutateAsync();
-    pendingLocalSummary.value = getPendingLocalSpaceSummary();
+    refreshPendingLocalSummary();
     message.success(
       `已同步 ${result.journalsSynced} 篇手账和 ${result.ledgersSynced} 笔账单到云端`,
     );
-  } catch {
-    message.error("同步本地记录失败，请稍后重试");
+  } catch (error) {
+    refreshPendingLocalSummary();
+    void queryClient.invalidateQueries({ queryKey: queryKeys.spaceRoot });
+    localSyncError.value = error instanceof Error ? error.message : "同步未完成，请先核对云端记录";
+    syncNeedsReview.value = error instanceof SpaceLocalSyncError && error.needsCloudReview;
   }
 }
 
 // Journal Composer State
-const journalDraft = reactive({
+/** 新建手账只带技术默认值，不预填用户心情、天气、标签或公开范围。 */
+function buildJournalDraft() { return {
   entry_date: todayDateString(),
   title: "",
   content: "",
-  mood: "happy" as JournalMood,
-  weather: "sunny" as JournalWeather,
+  mood: "" as JournalMood,
+  weather: "" as JournalWeather,
   location: "",
-  visibility: "public" as JournalVisibility,
+  visibility: "private" as JournalVisibility,
   is_pinned: false,
   card_theme: "paper" as JournalCardTheme,
   tagInput: "",
-  tags: ["日常"] as string[],
+  tags: [] as string[],
   media_urls: [] as string[],
   checklist: [] as SpaceChecklistItem[],
   newCheckItem: "",
   unlock_at: "",
   showTools: false,
-});
+}; }
+const journalDraft = reactive(buildJournalDraft());
+const journalSaving = ref(false);
+const journalError = ref("");
+const editingEntry = ref<SpaceJournalItem | null>(null);
+let savedNewDraft: ReturnType<typeof buildJournalDraft> | null = null;
+let editingInitialDraft: ReturnType<typeof buildJournalDraft> | null = null;
+
+/** 拷贝编辑表单的数组，取消编辑时恢复此前尚未发布的新手账。 */
+function copyJournalDraft() {
+  return { ...journalDraft, tags: [...journalDraft.tags], media_urls: [...journalDraft.media_urls],
+    checklist: journalDraft.checklist.map((item) => ({ ...item })) };
+}
+
+/** 将已拆封记录载入同一编辑器；账单快照不进入表单，也不会随正文编辑被覆盖。 */
+function editJournal(entry: SpaceJournalItem) {
+  if (journalSaving.value || entry.is_locked) return;
+  if (editingEntry.value && !window.confirm("切换记录会放弃当前编辑，确定继续吗？")) return;
+  if (!editingEntry.value) savedNewDraft = copyJournalDraft();
+  Object.assign(journalDraft, {
+    ...buildJournalDraft(), entry_date: entry.entry_date, title: entry.title, content: entry.content,
+    mood: JOURNAL_MOODS.find((m) => m.key === entry.mood)?.key ?? "",
+    weather: JOURNAL_WEATHERS.find((w) => w.key === entry.weather)?.key ?? "",
+    location: entry.location, visibility: entry.visibility === "public" ? "public" : entry.visibility === "friends" ? "friends" : "private",
+    is_pinned: entry.is_pinned, card_theme: JOURNAL_CARD_THEMES.find((t) => t.key === entry.card_theme)?.key ?? "paper",
+    tags: [...entry.tags], media_urls: [...entry.media_urls], checklist: entry.checklist.map((item) => ({ ...item })),
+    unlock_at: entry.unlock_at ?? "",
+  });
+  editingEntry.value = entry;
+  editingInitialDraft = copyJournalDraft();
+  journalError.value = "";
+  scrollToComposer("journal");
+}
+
+/** 退出编辑只恢复新建草稿，不写入或删除任何记录。 */
+function cancelJournalEdit() {
+  Object.assign(journalDraft, savedNewDraft ?? buildJournalDraft());
+  editingEntry.value = null; editingInitialDraft = null; savedNewDraft = null;
+  journalError.value = "";
+}
 
 // Ledger Composer State
 const ledgerDraft = reactive({
@@ -197,13 +259,21 @@ const ledgerDraft = reactive({
   syncToJournal: false,
   journalVisibility: "private" as JournalVisibility,
 });
+const ledgerSaving = ref(false);
+const pendingLedgerJournal = ref<SpaceJournalCreatePayload | null>(null);
+const ledgerCardError = ref("");
+const monthlyPreview = ref<SpaceLedgerMonthlySummary | null>(null);
+const monthlyVisibility = ref<JournalVisibility>("private");
+const monthlyHideAmount = ref(true);
+const monthlySaving = ref(false);
+const monthlyError = ref("");
 
 // Space Settings Modal State
 const settingsDraft = reactive({
   space_title: "",
   space_subtitle: "",
   cover_preset: "aurora" as SpaceCoverPreset,
-  monthlyBudgetYuan: "3000",
+  monthlyBudgetYuan: "",
 });
 
 const workspace = computed(() => workspaceQuery.data.value);
@@ -219,9 +289,10 @@ watch(
     settingsDraft.space_title = next.space_title || "";
     settingsDraft.space_subtitle = next.space_subtitle || "";
     settingsDraft.cover_preset = (next.cover_preset as SpaceCoverPreset) || "aurora";
-    settingsDraft.monthlyBudgetYuan = String(
-      Math.round((next.monthly_budget_cents || 300000) / 100),
-    );
+    // 0 沿用未设置预算的语义；真实预算保留到分，避免保存装扮时改变金额。
+    settingsDraft.monthlyBudgetYuan = next.monthly_budget_cents > 0
+      ? String(next.monthly_budget_cents / 100)
+      : "";
   },
   { immediate: true },
 );
@@ -374,76 +445,69 @@ async function handleImagePick(event: Event) {
     journalDraft.media_urls.push(uploaded.url);
     message.success("配图已添加");
   } catch {
-    // Fallback to local object URL in offline preview mode
-    const localUrl = URL.createObjectURL(file);
-    journalDraft.media_urls.push(localUrl);
-    message.info("已添加本地预览图");
+    // 上传失败不添加刷新后会失效的 blob 地址，也不伪装为已保存的配图。
+    message.error("配图上传失败，未添加图片；文字草稿已保留");
   } finally {
     uploadingImage.value = false;
   }
 }
 
 async function submitJournal() {
-  const trimmedTitle = journalDraft.title.trim();
-  const trimmedContent = journalDraft.content.trim();
-  if (
-    !trimmedContent &&
-    !trimmedTitle &&
-    !journalDraft.checklist.length &&
-    !journalDraft.media_urls.length
-  ) {
-    message.warning("写点今天的心情或添加一条打卡清单吧");
+  if (journalSaving.value || uploadingImage.value) return;
+  if (journalDraft.newCheckItem.trim()) addDraftChecklistItem();
+  if (journalDraft.tagInput.trim()) addTagFromInput();
+  const title = journalDraft.title.trim();
+  const content = journalDraft.content.trim();
+  if (!content && !title && !journalDraft.checklist.length && !journalDraft.media_urls.length) {
+    journalError.value = "写点内容、添加图片或清单后再保存";
     return;
   }
-
-  if (journalDraft.newCheckItem.trim()) {
-    addDraftChecklistItem();
-  }
-  if (journalDraft.tagInput.trim()) {
-    addTagFromInput();
-  }
-
-  // 仅填写了第一行短标题时自动作为正文发布，避免用户误填标题框被拦截。
-  const finalTitle = trimmedContent ? trimmedTitle : "";
-  const finalContent =
-    trimmedContent ||
-    trimmedTitle ||
-    (journalDraft.checklist.length ? "今日打卡记录" : "分享日常瞬间");
-
-  // 自动提取正文中的 #标签 并合并到标签列表。
-  const inlineTags = Array.from(
-    finalContent.matchAll(/#([\p{L}\p{N}_-]{1,24})/gu),
-    (match) => match[1]!.trim(),
-  ).filter(Boolean);
-  const mergedTags = Array.from(new Set([...journalDraft.tags, ...inlineTags])).slice(0, 12);
-
+  if (journalDraft.visibility === "public" && !window.confirm("这篇手账将公开给所有访客，确定保存并公开吗？")) return;
+  // 新建沿用仅标题可作正文的入口；编辑保持标题和正文的独立含义。
+  const finalTitle = editingEntry.value ? title : content ? title : "";
+  const finalContent = content || (!editingEntry.value ? title : "") || (journalDraft.checklist.length ? "打卡清单" : "图片记录");
+  const inlineTags = Array.from(finalContent.matchAll(/#([\p{L}\p{N}_-]{1,24})/gu), (match) => match[1]!).filter(Boolean);
+  const tags = editingEntry.value ? [...journalDraft.tags] : Array.from(new Set([...journalDraft.tags, ...inlineTags])).slice(0, 12);
+  const payload: SpaceJournalCreatePayload = {
+    entry_date: journalDraft.entry_date || todayDateString(), title: finalTitle, content: finalContent,
+    mood: journalDraft.mood, weather: journalDraft.weather, location: journalDraft.location.trim(),
+    visibility: journalDraft.visibility, is_pinned: journalDraft.is_pinned, card_theme: journalDraft.card_theme,
+    tags, media_urls: [...journalDraft.media_urls], checklist: journalDraft.checklist.map((item) => ({ ...item })),
+    unlock_at: journalDraft.unlock_at || null,
+  };
+  journalSaving.value = true;
+  journalError.value = "";
+  const saveToCloud = hasAccessToken();
   try {
-    await createJournalMutation.mutateAsync({
-      entry_date: journalDraft.entry_date || todayDateString(),
-      title: finalTitle,
-      content: finalContent,
-      mood: journalDraft.mood,
-      weather: journalDraft.weather,
-      location: journalDraft.location.trim(),
-      visibility: journalDraft.visibility,
-      is_pinned: journalDraft.is_pinned,
-      card_theme: journalDraft.card_theme,
-      tags: mergedTags,
-      media_urls: [...journalDraft.media_urls],
-      checklist: [...journalDraft.checklist],
-      unlock_at: journalDraft.unlock_at || null,
-    });
-    journalDraft.title = "";
-    journalDraft.content = "";
-    journalDraft.location = "";
-    journalDraft.is_pinned = false;
-    journalDraft.media_urls = [];
-    journalDraft.checklist = [];
-    journalDraft.unlock_at = "";
-    message.success("手账已保存到你的空间");
+    if (editingEntry.value && editingInitialDraft) {
+      // 只提交实际改过的字段；不重写账单快照、历史未知枚举或未修改的个人资料。
+      const base = editingInitialDraft;
+      const patch: SpaceJournalUpdatePayload = {};
+      if (finalTitle !== base.title) patch.title = finalTitle;
+      if (finalContent !== base.content) patch.content = finalContent;
+      if (journalDraft.entry_date !== base.entry_date) patch.entry_date = payload.entry_date;
+      if (journalDraft.mood !== base.mood) patch.mood = payload.mood;
+      if (journalDraft.weather !== base.weather) patch.weather = payload.weather;
+      if (journalDraft.location !== base.location) patch.location = payload.location;
+      if (journalDraft.visibility !== base.visibility) patch.visibility = payload.visibility;
+      if (journalDraft.is_pinned !== base.is_pinned) patch.is_pinned = payload.is_pinned;
+      if (journalDraft.card_theme !== base.card_theme) patch.card_theme = payload.card_theme;
+      if (JSON.stringify(tags) !== JSON.stringify(base.tags)) patch.tags = tags;
+      if (JSON.stringify(payload.media_urls) !== JSON.stringify(base.media_urls)) patch.media_urls = payload.media_urls;
+      if (JSON.stringify(payload.checklist) !== JSON.stringify(base.checklist)) patch.checklist = payload.checklist;
+      if (journalDraft.unlock_at !== base.unlock_at) patch.unlock_at = payload.unlock_at;
+      await updateJournalMutation.mutateAsync({ id: editingEntry.value.id, payload: patch });
+      cancelJournalEdit();
+    } else {
+      await createJournalMutation.mutateAsync(payload);
+      Object.assign(journalDraft, buildJournalDraft());
+    }
+    message.success(saveToCloud ? "已保存到云端" : "已保存到本机浏览器，尚未同步云端");
     activeTab.value = "journals";
-  } catch {
-    message.error("保存手账失败，请稍后重试");
+  } catch (error) {
+    journalError.value = error instanceof Error ? error.message : "保存失败，草稿已保留，请重试";
+  } finally {
+    journalSaving.value = false;
   }
 }
 
@@ -454,107 +518,87 @@ function selectLedgerCategory(catKey: LedgerCategory) {
 }
 
 async function submitLedgerEntry() {
+  if (ledgerSaving.value || pendingLedgerJournal.value) return;
   const parsedYuan = Number.parseFloat(ledgerDraft.amountYuan);
   if (!Number.isFinite(parsedYuan) || parsedYuan <= 0) {
-    message.warning("请输入有效的记账金额");
-    return;
+    message.warning("请输入有效的记账金额"); return;
   }
+  if (ledgerDraft.syncToJournal && ledgerDraft.journalVisibility === "public" && !window.confirm("同时生成的手账将公开，包含本笔金额和备注，确定继续吗？")) return;
   const amountCents = Math.round(parsedYuan * 100);
   const catMeta = getLedgerCategoryMeta(ledgerDraft.category);
-
+  const ledgerPayload = {
+    entry_date: ledgerDraft.entry_date || todayDateString(), kind: ledgerDraft.kind, amount_cents: amountCents,
+    category: ledgerDraft.category, note: ledgerDraft.note.trim() || catMeta.label, payment_method: ledgerDraft.payment_method,
+  };
+  const card: SpaceJournalCreatePayload | null = ledgerDraft.syncToJournal ? {
+    entry_date: ledgerPayload.entry_date, title: "",
+    content: ledgerDraft.note.trim() || `记录一笔${catMeta.label}${ledgerDraft.kind === "income" ? "收入" : "支出"}`,
+    mood: "", weather: "", location: "", visibility: ledgerDraft.journalVisibility,
+    is_pinned: false, card_theme: "paper", tags: ["随手记账", catMeta.label], media_urls: [], checklist: [],
+    ledger_snapshot: { single_entry: { kind: ledgerDraft.kind, category: ledgerDraft.category, amount_cents: amountCents, note: ledgerPayload.note } },
+  } : null;
+  ledgerSaving.value = true;
+  ledgerCardError.value = "";
+  // 账目和卡片有各自的提交结果，卡片失败时绝不重新创建账目。
   try {
-    await createLedgerMutation.mutateAsync({
-      entry_date: ledgerDraft.entry_date || todayDateString(),
-      kind: ledgerDraft.kind,
-      amount_cents: amountCents,
-      category: ledgerDraft.category,
-      note: ledgerDraft.note.trim() || catMeta.label,
-      payment_method: ledgerDraft.payment_method,
-    });
+    await createLedgerMutation.mutateAsync(ledgerPayload);
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : "记账失败，输入已保留");
+    ledgerSaving.value = false; return;
+  }
+  ledgerDraft.amountYuan = ""; ledgerDraft.note = "";
+  pendingLedgerJournal.value = card;
+  ledgerSaving.value = false;
+  if (card) await retryLedgerJournal();
+  else message.success(hasAccessToken() ? "已记入云端私人账本" : "已记入本机私人账本");
+}
 
-    if (ledgerDraft.syncToJournal) {
-      await createJournalMutation.mutateAsync({
-        entry_date: ledgerDraft.entry_date || todayDateString(),
-        title: "",
-        content: ledgerDraft.note.trim() || `记一笔${catMeta.label}开销`,
-        mood: ledgerDraft.kind === "income" ? "celebrate" : "cozy",
-        weather: "sunny",
-        location: "",
-        visibility: ledgerDraft.journalVisibility,
-        is_pinned: false,
-        card_theme: "paper",
-        tags: ["随手记账", catMeta.label],
-        media_urls: [],
-        checklist: [],
-        ledger_snapshot: {
-          single_entry: {
-            kind: ledgerDraft.kind,
-            category: ledgerDraft.category,
-            amount_cents: amountCents,
-            note: ledgerDraft.note.trim() || catMeta.label,
-          },
-        },
-      });
-    }
-
-    ledgerDraft.amountYuan = "";
-    ledgerDraft.note = "";
-    message.success(
-      ledgerDraft.syncToJournal ? "已记入账本并生成手账卡片" : "已记入私人账本",
-    );
-  } catch {
-    message.error("记账失败，请稍后重试");
+/** 仅重试已保存账目对应的手账卡片，不再次写入账本。 */
+async function retryLedgerJournal() {
+  if (!pendingLedgerJournal.value || ledgerSaving.value) return;
+  ledgerSaving.value = true;
+  try {
+    await createJournalMutation.mutateAsync(pendingLedgerJournal.value);
+    pendingLedgerJournal.value = null; ledgerCardError.value = "";
+    message.success(hasAccessToken() ? "账目和手账卡片已保存到云端" : "账目和手账卡片已保存到本机");
+  } catch (error) {
+    ledgerCardError.value = `账目已保存，手账卡片尚未确认保存。${error instanceof Error ? error.message : "请先核对手账列表，再决定是否重试卡片"}`;
+  } finally {
+    ledgerSaving.value = false;
   }
 }
 
-async function shareMonthlyBillToJournal(
-  visibility: JournalVisibility,
-  hideExactAmount = false,
-) {
+/** 预览冻结当前月真实统计；打开预览不创建记录，默认仅自己可见。 */
+function shareMonthlyBillToJournal(_visibility: JournalVisibility, hideExactAmount = true) {
   const summary = ledgerSummary.value;
-  if (!summary || summary.entry_count === 0) {
-    message.warning("本月还没有记账记录，先记一笔吧");
-    return;
-  }
+  if (!summary || summary.entry_count === 0) return;
+  monthlyPreview.value = { ...summary, category_breakdown: summary.category_breakdown.map((item) => ({ ...item })) };
+  monthlyVisibility.value = "private"; monthlyHideAmount.value = hideExactAmount; monthlyError.value = "";
+}
 
+/** 确认后才创建月度卡；隐藏金额时请求本身就不携带结构化精确金额。 */
+async function saveMonthlyBill() {
+  const summary = monthlyPreview.value;
+  if (!summary || monthlySaving.value) return;
+  monthlySaving.value = true;
   try {
     await createJournalMutation.mutateAsync({
-      entry_date: todayDateString(),
-      title: `${summary.month} 月度生活账单小结`,
-      content: hideExactAmount
-        ? `整理了 ${summary.month} 的消费结构，共记录 ${summary.entry_count} 笔生活收支，保持有节奏的生活方式。`
-        : `${summary.month} 共记录 ${summary.entry_count} 笔收支，把钱花在真正带来快乐和成长的地方。`,
-      mood: "focused",
-      weather: "sunny",
-      location: "月度复盘",
-      visibility,
-      is_pinned: false,
-      card_theme: "sky",
-      tags: ["月度账单", "生活复盘"],
-      media_urls: [],
-      checklist: [],
+      entry_date: todayDateString(), title: `${summary.month} 月度生活账单小结`,
+      content: `${summary.month} 共记录 ${summary.entry_count} 笔收支。`,
+      mood: "", weather: "", location: "", visibility: monthlyVisibility.value,
+      is_pinned: false, card_theme: "sky", tags: ["月度账单", "生活复盘"], media_urls: [], checklist: [],
       ledger_snapshot: {
-        month: summary.month,
-        total_expense_cents: summary.total_expense_cents,
-        total_income_cents: summary.total_income_cents,
-        entry_count: summary.entry_count,
-        hide_exact_amount: hideExactAmount,
-        top_categories: summary.category_breakdown.slice(0, 4).map((c) => ({
-          category: c.category,
-          ratio_percent: c.ratio_percent,
-          amount_cents: c.amount_cents,
-        })),
+        month: summary.month, entry_count: summary.entry_count, hide_exact_amount: monthlyHideAmount.value,
+        ...(monthlyHideAmount.value ? {} : { total_expense_cents: summary.total_expense_cents, total_income_cents: summary.total_income_cents }),
+        top_categories: summary.category_breakdown.slice(0, 4).map((c) => ({ category: c.category, ratio_percent: c.ratio_percent,
+          ...(monthlyHideAmount.value ? {} : { amount_cents: c.amount_cents }) })),
       },
     });
-    message.success(
-      visibility === "public"
-        ? "已生成月度账单手账卡并公开到个人空间"
-        : "已生成私密月度账单手账卡",
-    );
-    activeTab.value = "journals";
-  } catch {
-    message.error("生成账单手账卡失败");
-  }
+    monthlyPreview.value = null; activeTab.value = "journals";
+    message.success(hasAccessToken() ? "月度小结已按所选范围保存到云端" : "月度小结已保存到本机，尚未同步云端");
+  } catch (error) {
+    monthlyError.value = error instanceof Error ? error.message : "保存失败，预览已保留，请重试";
+  } finally { monthlySaving.value = false; }
 }
 
 async function saveSpaceSettings(payload: {
@@ -581,7 +625,7 @@ async function selectQuickStatus(statusText: string) {
       space_title: current?.space_title ?? settingsDraft.space_title.trim(),
       space_subtitle: current?.space_subtitle ?? settingsDraft.space_subtitle.trim(),
       cover_preset: current?.cover_preset ?? settingsDraft.cover_preset,
-      monthly_budget_cents: current?.monthly_budget_cents ?? 300000,
+      monthly_budget_cents: current?.monthly_budget_cents ?? 0,
       current_status: statusText,
     });
     message.success(statusText ? `当前状态已设为 ${statusText}` : "已清除当前状态");
@@ -603,6 +647,7 @@ async function handleTogglePin(entry: SpaceJournalItem) {
 
 async function handleToggleVisibility(entry: SpaceJournalItem) {
   const nextVis = entry.visibility === "private" ? "public" : "private";
+  if (nextVis === "public" && !window.confirm("这篇手账将公开给所有访客，包含其中的正文和账单信息，确定公开吗？")) return;
   try {
     await updateJournalMutation.mutateAsync({
       id: entry.id,
@@ -780,6 +825,16 @@ function scrollToComposer(mode: ComposerMode) {
       />
     </section>
 
+    <div v-if="workspaceQuery.isError.value || localDataError" class="space-data-error" role="alert">
+      <strong>记录暂时无法读取</strong>
+      <p>{{ localDataError || (workspaceQuery.error.value instanceof Error ? workspaceQuery.error.value.message : '请重试，不要清空浏览器数据') }}</p>
+      <UiButton tone="subtle" @click="refreshPendingLocalSummary(); workspaceQuery.refetch()">重新读取</UiButton>
+    </div>
+
+    <div v-if="localSyncError" class="space-data-error" role="alert">
+      <p>{{ localSyncError }}</p>
+      <UiButton tone="subtle" @click="activeTab = 'journals'; workspaceQuery.refetch()">查看云端记录</UiButton>
+    </div>
     <!-- 登录后本地草稿一键同步提示 -->
     <div
       v-if="isLoggedIn && !localSyncBannerDismissed && pendingLocalSummary.totalCount > 0"
@@ -805,6 +860,7 @@ function scrollToComposer(mode: ComposerMode) {
           tone="primary"
           size="sm"
           :loading="syncLocalMutation.isPending.value"
+          :disabled="syncNeedsReview"
           @click="handleSyncLocalToCloud"
         >
           同步到云端
@@ -920,210 +976,88 @@ function scrollToComposer(mode: ComposerMode) {
             </button>
           </div>
 
-          <!-- 模式 A：写手账 -->
-          <div v-if="composerMode === 'journal'" class="space-composer__journal">
-            <!-- 心情贴纸横向选择条 -->
-            <div class="composer-picker-row">
-              <span class="picker-label">今日心情</span>
-              <div class="mood-scroll-strip" role="radiogroup" aria-label="选择心情贴纸">
-                <button
-                  v-for="m in JOURNAL_MOODS"
-                  :key="m.key"
-                  type="button"
-                  class="mood-pill"
-                  :class="{ active: journalDraft.mood === m.key }"
-                  :style="{ '--mood-color': m.color, '--mood-bg': m.softBg }"
-                  @click="journalDraft.mood = m.key"
-                >
-                  <em>{{ m.emoji }}</em>
-                  <span>{{ m.label }}</span>
-                </button>
-              </div>
+          <!-- 常用记录只展示正文、图片、范围与保存，其他能力按需展开。 -->
+          <fieldset v-if="composerMode === 'journal'" class="space-composer__journal composer-fieldset" :disabled="journalSaving">
+            <div v-if="editingEntry" class="composer-edit-notice" role="status">
+              <strong>正在编辑 {{ editingEntry.entry_date }} 的手账</strong>
+              <button type="button" class="link-btn" @click="cancelJournalEdit">取消编辑</button>
             </div>
-
-            <!-- 天气与信纸底纹选择 -->
-            <div class="composer-sub-pickers">
-              <div class="weather-strip" aria-label="选择天气">
-                <button
-                  v-for="w in JOURNAL_WEATHERS"
-                  :key="w.key"
-                  type="button"
-                  class="weather-chip"
-                  :class="{ active: journalDraft.weather === w.key }"
-                  :title="w.label"
-                  @click="journalDraft.weather = w.key"
-                >
-                  {{ w.emoji }} {{ w.label }}
-                </button>
-              </div>
-
-              <div class="theme-strip" aria-label="选择信纸底纹">
-                <button
-                  v-for="t in JOURNAL_CARD_THEMES"
-                  :key="t.key"
-                  type="button"
-                  class="theme-dot"
-                  :class="{ active: journalDraft.card_theme === t.key }"
-                  :style="{ backgroundColor: t.swatch }"
-                  :title="`信纸：${t.label}`"
-                  @click="journalDraft.card_theme = t.key"
-                >
-                  <span>{{ t.label }}</span>
-                </button>
-              </div>
-            </div>
-
             <div class="composer-inputs" :class="`composer-inputs--${journalDraft.card_theme}`">
-              <input
-                v-model="journalDraft.title"
-                type="text"
-                class="composer-title-input"
-                maxlength="120"
-                placeholder="标题（选填，例如：周末通关手记 / 今日小确幸）"
-              />
-              <textarea
-                v-model="journalDraft.content"
-                rows="3"
-                class="composer-body-input"
-                maxlength="4000"
-                placeholder="记下此刻的闪念、读到的一句话或日常碎片…"
-              ></textarea>
-
-              <!-- 打卡清单编辑区 -->
-              <div v-if="journalDraft.checklist.length || journalDraft.showTools" class="composer-checklist-box">
-                <div
-                  v-for="item in journalDraft.checklist"
-                  :key="item.id"
-                  class="composer-check-item"
-                >
-                  <input v-model="item.done" type="checkbox" />
-                  <span>{{ item.text }}</span>
-                  <button type="button" @click="removeDraftChecklistItem(item.id)">×</button>
-                </div>
-                <div class="composer-check-add">
-                  <input
-                    v-model="journalDraft.newCheckItem"
-                    type="text"
-                    maxlength="120"
-                    placeholder="添加一条今日小目标/打卡项，回车添加…"
-                    @keydown.enter.prevent="addDraftChecklistItem"
-                  />
-                  <button type="button" @click="addDraftChecklistItem">+ 添加</button>
+              <textarea v-model="journalDraft.content" rows="3" class="composer-body-input" maxlength="4000"
+                aria-label="手账正文" placeholder="写下想记录的事…"></textarea>
+              <div v-if="journalDraft.media_urls.length" class="composer-media-preview">
+                <div v-for="(url, idx) in journalDraft.media_urls" :key="`${url}-${idx}`" class="composer-media-thumb">
+                  <img :src="resolveApiAssetUrl(url)" alt="手账配图" />
+                  <button type="button" aria-label="移除配图" @click="journalDraft.media_urls.splice(idx, 1)">×</button>
                 </div>
               </div>
-
-              <!-- 已选配图预览 -->
-              <div v-if="journalDraft.media_urls.length" class="composer-media-preview">
-                <div
-                  v-for="(url, idx) in journalDraft.media_urls"
-                  :key="`${url}-${idx}`"
-                  class="composer-media-thumb"
-                >
-                  <img :src="resolveApiAssetUrl(url)" alt="已上传配图" />
-                  <button
-                    type="button"
-                    aria-label="移除配图"
-                    @click="journalDraft.media_urls.splice(idx, 1)"
-                  >
-                    ×
+            </div>
+            <div v-show="journalDraft.showTools" id="journal-more-options" class="composer-more-options">
+              <label>标题（选填）<input v-model="journalDraft.title" type="text" class="composer-title-input" maxlength="120" /></label>
+              <div class="composer-picker-row">
+                <span class="picker-label">心情（选填）</span>
+                <div class="mood-scroll-strip" aria-label="选择心情贴纸">
+                  <button type="button" class="tool-btn" :aria-pressed="journalDraft.mood === ''" @click="journalDraft.mood = ''">不记录</button>
+                  <button v-for="m in JOURNAL_MOODS" :key="m.key" type="button" class="mood-pill"
+                    :class="{ active: journalDraft.mood === m.key }" :aria-pressed="journalDraft.mood === m.key"
+                    :style="{ '--mood-color': m.color, '--mood-bg': m.softBg }" @click="journalDraft.mood = m.key">
+                    <em>{{ m.emoji }}</em><span>{{ m.label }}</span>
                   </button>
                 </div>
               </div>
-
-              <!-- 标签与地点扩展栏 -->
+              <div class="weather-strip" aria-label="选择天气">
+                <button type="button" class="weather-chip" :aria-pressed="journalDraft.weather === ''" @click="journalDraft.weather = ''">不记录天气</button>
+                <button v-for="w in JOURNAL_WEATHERS" :key="w.key" type="button" class="weather-chip"
+                  :class="{ active: journalDraft.weather === w.key }" :aria-pressed="journalDraft.weather === w.key" @click="journalDraft.weather = w.key">{{ w.emoji }} {{ w.label }}</button>
+              </div>
+              <div class="theme-strip" aria-label="选择信纸底纹">
+                <button v-for="t in JOURNAL_CARD_THEMES" :key="t.key" type="button" class="theme-dot"
+                  :class="{ active: journalDraft.card_theme === t.key }" :aria-pressed="journalDraft.card_theme === t.key"
+                  :style="{ backgroundColor: t.swatch }" :title="`信纸：${t.label}`" @click="journalDraft.card_theme = t.key"><span>{{ t.label }}</span></button>
+              </div>
               <div class="composer-tags-bar">
-                <span v-for="tag in journalDraft.tags" :key="tag" class="draft-tag">
-                  #{{ tag }}
-                  <i @click="removeDraftTag(tag)">×</i>
+                <span v-for="tag in journalDraft.tags" :key="tag" class="draft-tag">#{{ tag }}
+                  <button type="button" :aria-label="`移除标签 ${tag}`" @click="removeDraftTag(tag)">×</button>
                 </span>
-                <input
-                  v-model="journalDraft.tagInput"
-                  type="text"
-                  maxlength="24"
-                  placeholder="+ 标签 (回车)"
-                  @keydown.enter.prevent="addTagFromInput"
-                  @blur="addTagFromInput"
-                />
-                <input
-                  v-model="journalDraft.location"
-                  type="text"
-                  maxlength="40"
-                  class="composer-location-input"
-                  placeholder="📍 地点/场景（如：书桌前）"
-                />
-                <input
-                  v-model="journalDraft.entry_date"
-                  type="date"
-                  class="composer-date-input"
-                  aria-label="手账日期"
-                />
+                <input v-model="journalDraft.tagInput" type="text" aria-label="添加标签" maxlength="24" placeholder="标签，回车添加" @keydown.enter.prevent="addTagFromInput" @blur="addTagFromInput" />
+                <input v-model="journalDraft.location" type="text" aria-label="地点或场景" maxlength="40" class="composer-location-input" placeholder="地点或场景（选填）" />
+                <input v-model="journalDraft.entry_date" type="date" class="composer-date-input" aria-label="手账日期" />
+              </div>
+              <div class="composer-checklist-box">
+                <strong class="picker-label">打卡清单</strong>
+                <div v-for="item in journalDraft.checklist" :key="item.id" class="composer-check-item">
+                  <input v-model="item.done" type="checkbox" :aria-label="item.text" /><span>{{ item.text }}</span>
+                  <button type="button" :aria-label="`移除清单 ${item.text}`" @click="removeDraftChecklistItem(item.id)">×</button>
+                </div>
+                <div class="composer-check-add">
+                  <input v-model="journalDraft.newCheckItem" type="text" maxlength="120" placeholder="添加打卡事项，回车添加" @keydown.enter.prevent="addDraftChecklistItem" />
+                  <button type="button" @click="addDraftChecklistItem">添加</button>
+                </div>
+              </div>
+              <div class="composer-tools">
+                <label class="pin-check"><input v-model="journalDraft.is_pinned" type="checkbox" /><span>置顶手账</span></label>
+                <label class="capsule-date-picker"><span>拆封日（选填）</span><input v-model="journalDraft.unlock_at" type="date" :min="todayDateString()" aria-label="时间胶囊拆封日期" /></label>
               </div>
             </div>
-
+            <p v-if="journalError" class="space-form-error" role="alert">{{ journalError }}；当前草稿未清空。</p>
             <div class="space-composer__footer">
               <div class="composer-tools">
-                <input
-                  ref="imageInputRef"
-                  type="file"
-                  accept="image/png,image/jpeg,image/gif,image/webp"
-                  class="sr-only-file"
-                  @change="handleImagePick"
-                />
-                <button
-                  type="button"
-                  class="tool-btn"
-                  :disabled="uploadingImage"
-                  @click="imageInputRef?.click()"
-                >
-                  🖼️ {{ uploadingImage ? "上传中…" : "配图" }}
-                </button>
-                <button
-                  type="button"
-                  class="tool-btn"
-                  :class="{ active: journalDraft.showTools }"
-                  @click="journalDraft.showTools = !journalDraft.showTools"
-                >
-                  ☑️ 打卡清单
-                </button>
-                <label class="pin-check">
-                  <input v-model="journalDraft.is_pinned" type="checkbox" />
-                  <span>📌 置顶</span>
-                </label>
-                <label class="capsule-date-picker" title="可选：设为未来某天再拆封的时间胶囊">
-                  <span>⏳ 拆封日</span>
-                  <input
-                    v-model="journalDraft.unlock_at"
-                    type="date"
-                    :min="todayDateString()"
-                    aria-label="时间胶囊拆封日期"
-                  />
-                </label>
+                <input ref="imageInputRef" type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="sr-only-file" @change="handleImagePick" />
+                <button type="button" class="tool-btn" :disabled="uploadingImage" @click="imageInputRef?.click()">{{ uploadingImage ? '上传中…' : '添加图片' }}</button>
+                <button type="button" class="tool-btn" :aria-expanded="journalDraft.showTools" aria-controls="journal-more-options" @click="journalDraft.showTools = !journalDraft.showTools">{{ journalDraft.showTools ? '收起选项' : '更多选项' }}</button>
               </div>
-
               <div class="composer-submit-group">
-                <select
-                  v-model="journalDraft.visibility"
-                  class="visibility-select"
-                  aria-label="手账可见性"
-                >
-                  <option value="public">🌐 公开到圈友墙</option>
-                  <option value="friends">👥 仅互关好友可见</option>
-                  <option value="private">🔒 仅自己可见</option>
+                <select v-model="journalDraft.visibility" class="visibility-select" aria-label="手账可见性">
+                  <option value="private">仅自己可见</option><option value="friends">仅互关好友可见</option><option value="public">公开到圈友墙</option>
                 </select>
-                <UiButton
-                  type="button"
-                  tone="primary"
-                  :disabled="createJournalMutation.isPending.value"
-                  @click="submitJournal"
-                >
-                  {{ createJournalMutation.isPending.value ? "保存中…" : "发布手账" }}
-                </UiButton>
+                <UiButton type="button" tone="primary" :disabled="journalSaving || uploadingImage" @click="submitJournal">{{ journalSaving ? '保存中…' : editingEntry ? '保存修改' : journalDraft.visibility === 'public' ? '保存并公开' : '保存手账' }}</UiButton>
               </div>
             </div>
-          </div>
+            <span class="private-hint">{{ isLoggedIn ? '保存到当前账号的云端空间' : '保存到本机浏览器；登录后可选择同步云端' }}</span>
+          </fieldset>
 
           <!-- 模式 B：随手记一笔账 -->
-          <div v-else class="space-composer__ledger">
+          <fieldset v-else class="space-composer__ledger composer-fieldset" :disabled="ledgerSaving">
             <div class="ledger-top-row">
               <div class="ledger-kind-switch">
                 <button
@@ -1211,13 +1145,18 @@ function scrollToComposer(mode: ComposerMode) {
                 <UiButton
                   type="button"
                   tone="primary"
-                  :disabled="createLedgerMutation.isPending.value"
+                  :disabled="ledgerSaving || Boolean(pendingLedgerJournal)"
                   @click="submitLedgerEntry"
                 >
-                  {{ createLedgerMutation.isPending.value ? "记录中…" : "记入账本" }}
+                  {{ ledgerSaving ? "保存中…" : "记入账本" }}
                 </UiButton>
               </div>
             </div>
+          </fieldset>
+          <div v-if="ledgerCardError" class="space-form-error" role="alert">
+            <p>{{ ledgerCardError }}</p>
+            <UiButton tone="subtle" :disabled="ledgerSaving" @click="retryLedgerJournal">只重试手账卡片</UiButton>
+            <UiButton tone="ghost" :disabled="ledgerSaving" @click="pendingLedgerJournal = null; ledgerCardError = ''">仅保留账目</UiButton>
           </div>
         </UiCard>
 
@@ -1288,18 +1227,19 @@ function scrollToComposer(mode: ComposerMode) {
               @toggle-visibility="handleToggleVisibility"
               @toggle-checklist="handleToggleChecklist"
               @remove="handleRemoveJournal"
+              @edit="editJournal"
               @select-tag="(t) => (filterTag = filterTag === t ? '' : t)"
             />
           </div>
 
           <UiCard v-else class="space-empty-card">
             <span class="empty-emoji">📒</span>
-            <strong>没有匹配的手账记录</strong>
+            <strong>{{ hasActiveJournalFilters ? '没有匹配的手账记录' : '还没有手账记录' }}</strong>
             <p>
               {{
                 hasActiveJournalFilters
                   ? "尝试清除日期或标签筛选，查看更多历史手账。"
-                  : "在上方挑选一个今日心情贴纸，写下第一篇属于你的手账吧！"
+                  : "直接写下第一条记录，默认仅自己可见。"
               }}
             </p>
             <UiButton
@@ -1374,6 +1314,7 @@ function scrollToComposer(mode: ComposerMode) {
               @toggle-checklist="handleToggleChecklist"
               @toggle-follow="handleToggleFollowAuthor"
               @remove="handleRemoveJournal"
+              @edit="editJournal"
               @select-tag="
                 (t) => {
                   activeTab = 'journals';
@@ -1439,13 +1380,14 @@ function scrollToComposer(mode: ComposerMode) {
             </div>
             <div>
               <span>预算剩余</span>
-              <b :class="{ 'is-over': remainingBudgetCents < 0 }">
-                {{ formatCentsToYuan(remainingBudgetCents) }}
+              <b :class="{ 'is-over': ledgerSummary.monthly_budget_cents > 0 && remainingBudgetCents < 0 }">
+                {{ ledgerSummary.monthly_budget_cents > 0 ? formatCentsToYuan(remainingBudgetCents) : "未设置" }}
               </b>
             </div>
           </div>
 
-          <div class="budget-progress-bar budget-progress-bar--sm">
+          <!-- 未设置预算时不展示剩余额度或使用进度。 -->
+          <div v-if="ledgerSummary.monthly_budget_cents > 0" class="budget-progress-bar budget-progress-bar--sm">
             <i
               :style="{ width: `${budgetUsagePercent}%` }"
               :class="{ 'is-warn': budgetUsagePercent >= 85 }"
@@ -1505,6 +1447,22 @@ function scrollToComposer(mode: ComposerMode) {
         💸 记一笔
       </button>
     </div>
+    <AModal :open="Boolean(monthlyPreview)" title="预览月度小结" :footer="null" :mask-closable="!monthlySaving" :closable="!monthlySaving" @cancel="!monthlySaving && (monthlyPreview = null)">
+      <div v-if="monthlyPreview" class="monthly-preview">
+        <h3>{{ monthlyPreview.month }} 月度生活账单小结</h3>
+        <p>共记录 {{ monthlyPreview.entry_count }} 笔收支。</p>
+        <div v-if="!monthlyHideAmount" class="monthly-preview__amounts">
+          <span>支出 {{ formatCentsToYuan(monthlyPreview.total_expense_cents) }}</span>
+          <span>收入 {{ formatCentsToYuan(monthlyPreview.total_income_cents) }}</span>
+        </div>
+        <p v-for="cat in monthlyPreview.category_breakdown.slice(0, 4)" :key="cat.category">{{ getLedgerCategoryMeta(cat.category).label }} {{ cat.ratio_percent }}%</p>
+        <label><input v-model="monthlyHideAmount" type="checkbox" :disabled="monthlySaving" /> 仅晒比例（隐藏金额）</label>
+        <label>可见范围<select v-model="monthlyVisibility" aria-label="月度小结可见范围" :disabled="monthlySaving"><option value="private">仅自己可见</option><option value="friends">仅互关好友可见</option><option value="public">公开到圈友墙</option></select></label>
+        <p class="monthly-preview__notice">{{ monthlyVisibility === 'public' ? monthlyHideAmount ? '确认后将公开笔数和分类比例，不包含精确金额。' : '确认后将公开精确收支金额，请确认愿意分享。' : '保存为私人记录，不会发布到公开圈友墙。' }}</p>
+        <p v-if="monthlyError" class="space-form-error" role="alert">{{ monthlyError }}</p>
+        <div class="monthly-preview__actions"><UiButton tone="ghost" :disabled="monthlySaving" @click="monthlyPreview = null">取消</UiButton><UiButton :disabled="monthlySaving" @click="saveMonthlyBill">{{ monthlySaving ? '保存中…' : monthlyVisibility === 'public' ? '确认公开发布' : monthlyVisibility === 'friends' ? '确认分享给互关好友' : '保存为私密手账' }}</UiButton></div>
+      </div>
+    </AModal>
     <!-- 一日生活切片弹窗 -->
     <SpaceDaySliceModal
       v-if="daySliceDate"

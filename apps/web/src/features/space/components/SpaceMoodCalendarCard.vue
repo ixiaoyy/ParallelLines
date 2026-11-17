@@ -33,7 +33,8 @@ const calendarCells = computed(() => {
 
   const journalByDate = new Map<string, SpaceJournalItem>();
   for (const j of props.journals) {
-    if (j.entry_date.startsWith(props.selectedMonth) && !journalByDate.has(j.entry_date)) {
+    // 只从实际填写了心情的手账选取日签，账单卡不覆盖当天真实心情。
+    if (j.mood && j.entry_date.startsWith(props.selectedMonth) && !journalByDate.has(j.entry_date)) {
       journalByDate.set(j.entry_date, j);
     }
   }
@@ -111,7 +112,8 @@ const monthlyMoodBreakdown = computed(() => {
   const counts = new Map<string, number>();
   let total = 0;
   for (const j of props.journals) {
-    if (!j.entry_date.startsWith(prefix)) continue;
+    // 无心情的账单卡仍计入记录天数，但不参与心情分布。
+    if (!j.mood || !j.entry_date.startsWith(prefix)) continue;
     counts.set(j.mood, (counts.get(j.mood) ?? 0) + 1);
     total += 1;
   }

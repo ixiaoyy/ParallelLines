@@ -139,8 +139,8 @@ export function useUpdateSpaceJournal() {
     mutationFn: ({ id, payload }: { id: string; payload: SpaceJournalUpdatePayload }) =>
       updateSpaceJournal(id, payload),
     onSuccess: (updated, { payload }) => {
-      if (payload.is_pinned !== undefined) {
-        // 置顶改变排序位置，刷新工作区列表。
+      if (payload.is_pinned !== undefined || payload.entry_date !== undefined) {
+        // 置顶或日期编辑改变排序位置，刷新工作区列表。
         void queryClient.invalidateQueries({ queryKey: ["space", "me"] });
       } else {
         patchCachedJournal(updated);

@@ -17,6 +17,11 @@ import type { PostResponse } from "@/features/posts/model";
 import type { PdfTranslationCapabilities } from "@/features/pdfTranslations/model";
 import type { MigrationUserRecord } from "@/features/migrations/model";
 import type { UserRelationshipUser } from "@/features/social/model";
+import type {
+  SpaceJournalCreatePayload,
+  SpaceJournalUpdatePayload,
+  SpaceSetting,
+} from "@/features/space/model";
 import type { CreateTopicRequest, PollResponse, TopicResponse } from "@/features/topics/model";
 import type { UserDirectoryEntry, UserProfile } from "@/features/users/model";
 import type { components } from "@/shared/api/generated";
@@ -77,6 +82,16 @@ export type ApiContractChecks = {
   >;
   userRelationshipUser: AssertApiCompatible<
     IsApiCompatible<UserRelationshipUser, components["schemas"]["UserRelationshipUserResponse"]>
+  >;
+  // 保证手账未记录状态与预算设置仍符合后端请求合同。
+  spaceJournalCreateRequest: AssertApiCompatible<
+    IsApiCompatible<SpaceJournalCreatePayload, components["schemas"]["SpaceJournalCreateRequest"]>
+  >;
+  spaceJournalUpdateRequest: AssertApiCompatible<
+    IsApiCompatible<SpaceJournalUpdatePayload, components["schemas"]["SpaceJournalUpdateRequest"]>
+  >;
+  spaceSettingUpdateRequest: AssertApiCompatible<
+    IsApiCompatible<Omit<SpaceSetting, "user_id">, components["schemas"]["SpaceSettingUpdateRequest"]>
   >;
   migrationUserRecord: AssertApiCompatible<
     IsApiCompatible<MigrationUserRecord, components["schemas"]["MigrationUserRecord"]>

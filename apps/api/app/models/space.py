@@ -41,9 +41,10 @@ class SpaceSetting(IntegerPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         comment="个人空间封面主题预设标识，如 aurora、sunset、meadow、paper、starlight。",
     )
+    # 0 表示尚未设置预算，仅影响新记录，不改已有预算。
     monthly_budget_cents: Mapped[int] = mapped_column(
         BigInteger,
-        default=300000,
+        default=0,
         nullable=False,
         comment="个人账本月度预算金额（单位：分），仅用户本人可见。",
     )

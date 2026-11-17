@@ -1,4 +1,5 @@
 export type JournalMood =
+  | ""
   | "happy"
   | "focused"
   | "calm"
@@ -8,7 +9,8 @@ export type JournalMood =
   | "rainy"
   | "celebrate";
 
-export type JournalWeather = "sunny" | "cloudy" | "breezy" | "rainy" | "snowy" | "night";
+// 自动账单卡没有用户填写的心情和天气，空字符串明确表示未记录。
+export type JournalWeather = "" | "sunny" | "cloudy" | "breezy" | "rainy" | "snowy" | "night";
 
 export type JournalVisibility = "public" | "friends" | "private";
 
@@ -55,7 +57,7 @@ export interface SpaceChecklistItem {
   done: boolean;
 }
 
-export interface SpaceLedgerSnapshot {
+export type SpaceLedgerSnapshot = {
   month?: string;
   total_expense_cents?: number;
   total_income_cents?: number;
@@ -69,10 +71,10 @@ export interface SpaceLedgerSnapshot {
   single_entry?: {
     kind: LedgerKind;
     category: LedgerCategory;
-    amount_cents: number;
+    amount_cents?: number;
     note: string;
   };
-}
+};
 
 export interface SpaceJournalAuthorBrief {
   id: string;

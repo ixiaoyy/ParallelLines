@@ -513,6 +513,9 @@ export interface components {
     ApiResponse_list_SiteSettingResponse__: {
       [key: string]: unknown;
     };
+    ApiResponse_list_SpaceJournalItemResponse__: {
+      [key: string]: unknown;
+    };
     ApiResponse_list_SpamActionResponse__: {
       [key: string]: unknown;
     };
@@ -619,6 +622,21 @@ export interface components {
       [key: string]: unknown;
     };
     ApiResponse_SiteVisitRecordResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_SpaceJournalItemResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_SpaceLedgerItemResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_SpaceMyWorkspaceResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_SpacePublicProfileResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_SpaceSettingResponse_: {
       [key: string]: unknown;
     };
     ApiResponse_TokenPair_: {
@@ -2146,6 +2164,156 @@ export interface components {
     SiteVisitRecordResponse: {
       recorded: boolean;
     };
+    SpaceChecklistItem: {
+      done?: boolean;
+      id: string;
+      text: string;
+    };
+    SpaceJournalAuthorBrief: {
+      avatar_url?: string | null;
+      current_status?: string;
+      display_name?: string | null;
+      id: string;
+      level?: number;
+      username: string;
+    };
+    SpaceJournalCreateRequest: {
+      card_theme?: "paper" | "sky" | "mint" | "sunset" | "lavender" | "grid";
+      checklist?: Array<components["schemas"]["SpaceChecklistItem"]>;
+      content: string;
+      entry_date: string;
+      is_pinned?: boolean;
+      ledger_snapshot?: {
+      [key: string]: unknown;
+    } | null;
+      location?: string;
+      media_urls?: Array<string>;
+      mood?: "" | "happy" | "focused" | "calm" | "cozy" | "inspired" | "tired" | "rainy" | "celebrate";
+      tags?: Array<string>;
+      title?: string;
+      unlock_at?: string | null;
+      visibility?: "public" | "friends" | "private";
+      weather?: "" | "sunny" | "cloudy" | "breezy" | "rainy" | "snowy" | "night";
+    };
+    SpaceJournalItemResponse: {
+      author?: components["schemas"]["SpaceJournalAuthorBrief"] | null;
+      card_theme: string;
+      checklist: Array<{
+      [key: string]: unknown;
+    }>;
+      content: string;
+      created_at: string;
+      entry_date: string;
+      id: string;
+      is_locked?: boolean;
+      is_pinned: boolean;
+      ledger_snapshot?: {
+      [key: string]: unknown;
+    } | null;
+      likes_count?: number;
+      location: string;
+      media_urls: Array<string>;
+      mood: string;
+      reactions?: {
+      [key: string]: number;
+    };
+      tags: Array<string>;
+      title: string;
+      unlock_at?: string | null;
+      updated_at: string;
+      user_id: string;
+      visibility: string;
+      weather: string;
+    };
+    SpaceJournalReactRequest: {
+      kind: "hug" | "spark" | "toast" | "party";
+    };
+    SpaceJournalUpdateRequest: {
+      card_theme?: "paper" | "sky" | "mint" | "sunset" | "lavender" | "grid" | null;
+      checklist?: Array<components["schemas"]["SpaceChecklistItem"]> | null;
+      content?: string | null;
+      entry_date?: string | null;
+      is_pinned?: boolean | null;
+      ledger_snapshot?: {
+      [key: string]: unknown;
+    } | null;
+      location?: string | null;
+      media_urls?: Array<string> | null;
+      mood?: "" | "happy" | "focused" | "calm" | "cozy" | "inspired" | "tired" | "rainy" | "celebrate" | null;
+      tags?: Array<string> | null;
+      title?: string | null;
+      unlock_at?: string | null;
+      visibility?: "public" | "friends" | "private" | null;
+      weather?: "" | "sunny" | "cloudy" | "breezy" | "rainy" | "snowy" | "night" | null;
+    };
+    SpaceLedgerCategoryBreakdown: {
+      amount_cents: number;
+      category: string;
+      count: number;
+      ratio_percent: number;
+    };
+    SpaceLedgerCreateRequest: {
+      amount_cents: number;
+      category?: "dining" | "coffee" | "gaming" | "shopping" | "transit" | "entertainment" | "housing" | "salary" | "other";
+      entry_date: string;
+      kind?: "expense" | "income";
+      note?: string;
+      payment_method?: "wechat" | "alipay" | "card" | "cash";
+    };
+    SpaceLedgerItemResponse: {
+      amount_cents: number;
+      category: string;
+      created_at: string;
+      entry_date: string;
+      id: string;
+      kind: string;
+      note: string;
+      payment_method: string;
+      updated_at: string;
+      user_id: string;
+    };
+    SpaceLedgerMonthlySummary: {
+      category_breakdown?: Array<components["schemas"]["SpaceLedgerCategoryBreakdown"]>;
+      entry_count?: number;
+      month: string;
+      monthly_budget_cents?: number;
+      total_expense_cents?: number;
+      total_income_cents?: number;
+    };
+    SpaceMyWorkspaceResponse: {
+      journals: Array<components["schemas"]["SpaceJournalItemResponse"]>;
+      ledger_entries: Array<components["schemas"]["SpaceLedgerItemResponse"]>;
+      ledger_summary: components["schemas"]["SpaceLedgerMonthlySummary"];
+      settings: components["schemas"]["SpaceSettingResponse"];
+    };
+    SpacePublicProfileResponse: {
+      avatar_url?: string | null;
+      bio?: string | null;
+      cover_preset?: string;
+      current_status?: string;
+      display_name?: string | null;
+      journals?: Array<components["schemas"]["SpaceJournalItemResponse"]>;
+      public_journal_count?: number;
+      space_subtitle?: string;
+      space_title?: string;
+      user_id: string;
+      username: string;
+    };
+    SpaceSettingResponse: {
+      cover_preset?: "aurora" | "sunset" | "meadow" | "paper" | "starlight";
+      current_status?: string;
+      monthly_budget_cents?: number;
+      space_subtitle?: string;
+      space_title?: string;
+      user_id: string;
+    };
+    SpaceSettingUpdateRequest: {
+      cover_preset?: "aurora" | "sunset" | "meadow" | "paper" | "starlight";
+      current_status?: string;
+      monthly_budget_cents?: number;
+      space_subtitle?: string;
+      space_title?: string;
+    };
     SpamActionResponse: {
       action: string;
       created_at: string;
@@ -3134,6 +3302,37 @@ export interface paths {
     };
     "/api/v1/site/visits": {
       post: { response: unknown; operationId: "record_site_visit_api_v1_site_visits_post" };
+    };
+    "/api/v1/space/feed": {
+      get: { response: components["schemas"]["ApiResponse_list_SpaceJournalItemResponse__"]; operationId: "list_public_space_feed_api_v1_space_feed_get" };
+    };
+    "/api/v1/space/journals": {
+      post: { response: components["schemas"]["ApiResponse_SpaceJournalItemResponse_"]; operationId: "create_journal_entry_api_v1_space_journals_post" };
+    };
+    "/api/v1/space/journals/{entry_id}": {
+      delete: { response: components["schemas"]["ApiResponse_bool_"]; operationId: "delete_journal_entry_api_v1_space_journals__entry_id__delete" };
+      patch: { response: components["schemas"]["ApiResponse_SpaceJournalItemResponse_"]; operationId: "update_journal_entry_api_v1_space_journals__entry_id__patch" };
+    };
+    "/api/v1/space/journals/{entry_id}/like": {
+      post: { response: components["schemas"]["ApiResponse_SpaceJournalItemResponse_"]; operationId: "like_journal_entry_api_v1_space_journals__entry_id__like_post" };
+    };
+    "/api/v1/space/journals/{entry_id}/react": {
+      post: { response: components["schemas"]["ApiResponse_SpaceJournalItemResponse_"]; operationId: "react_journal_entry_api_v1_space_journals__entry_id__react_post" };
+    };
+    "/api/v1/space/ledger": {
+      post: { response: components["schemas"]["ApiResponse_SpaceLedgerItemResponse_"]; operationId: "create_ledger_entry_api_v1_space_ledger_post" };
+    };
+    "/api/v1/space/ledger/{entry_id}": {
+      delete: { response: components["schemas"]["ApiResponse_bool_"]; operationId: "delete_ledger_entry_api_v1_space_ledger__entry_id__delete" };
+    };
+    "/api/v1/space/me": {
+      get: { response: components["schemas"]["ApiResponse_SpaceMyWorkspaceResponse_"]; operationId: "get_my_space_workspace_api_v1_space_me_get" };
+    };
+    "/api/v1/space/settings": {
+      put: { response: components["schemas"]["ApiResponse_SpaceSettingResponse_"]; operationId: "update_my_space_settings_api_v1_space_settings_put" };
+    };
+    "/api/v1/space/users/{identifier}": {
+      get: { response: components["schemas"]["ApiResponse_SpacePublicProfileResponse_"]; operationId: "get_public_user_space_api_v1_space_users__identifier__get" };
     };
     "/api/v1/tags": {
       get: { response: components["schemas"]["ApiResponse_list_TagResponse__"]; operationId: "list_tags_api_v1_tags_get" };

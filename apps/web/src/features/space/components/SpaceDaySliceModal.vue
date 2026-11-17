@@ -56,8 +56,8 @@ const dayTotals = computed(() => {
           <div v-if="dayJournals.length" class="slice-journal-list">
             <article v-for="j in dayJournals" :key="j.id" class="slice-journal-item">
               <div class="slice-journal-meta">
-                <span>{{ getMoodMeta(j.mood).emoji }} {{ getMoodMeta(j.mood).label }}</span>
-                <span>{{ getWeatherMeta(j.weather).emoji }} {{ getWeatherMeta(j.weather).label }}</span>
+                <span v-if="j.mood">{{ getMoodMeta(j.mood).emoji }} {{ getMoodMeta(j.mood).label }}</span>
+                <span v-if="j.weather">{{ getWeatherMeta(j.weather).emoji }} {{ getWeatherMeta(j.weather).label }}</span>
                 <span v-if="j.location">📍 {{ j.location }}</span>
               </div>
               <p v-if="j.is_locked" class="slice-locked-note">

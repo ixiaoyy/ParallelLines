@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, watch } from "vue";
+import { reactive, ref, watch } from "vue";
 
 import { SPACE_COVER_PRESETS, type SpaceCoverPreset } from "@/features/space/model";
 import UiButton from "@/shared/ui/Button.vue";
@@ -38,6 +38,7 @@ const draft = reactive({
   cover_preset: props.coverPreset,
   monthlyBudgetYuan: props.monthlyBudgetYuan,
 });
+const budgetError = ref("");
 
 watch(
   () => [props.spaceTitle, props.spaceSubtitle, props.coverPreset, props.monthlyBudgetYuan] as const,
@@ -50,9 +51,14 @@ watch(
 );
 
 function handleSave() {
-  const budgetYuan = Number.parseFloat(draft.monthlyBudgetYuan);
-  const budgetCents =
-    Number.isFinite(budgetYuan) && budgetYuan >= 0 ? Math.round(budgetYuan * 100) : 300000;
+  // 留空或填 0 表示未设置；非法输入明确报错，不能悄悄换成示例预算。
+  const budgetYuan = Number(draft.monthlyBudgetYuan);
+  if (!Number.isFinite(budgetYuan) || budgetYuan < 0 || budgetYuan > 1_000_000) {
+    budgetError.value = "请输入 0 至 1000000 元的预算，或留空不设置";
+    return;
+  }
+  budgetError.value = "";
+  const budgetCents = Math.round(budgetYuan * 100);
   emit("save", {
     space_title: draft.space_title.trim(),
     space_subtitle: draft.space_subtitle.trim(),
@@ -90,9 +96,13 @@ function handleSave() {
           v-model="draft.monthlyBudgetYuan"
           type="number"
           min="0"
-          step="100"
-          placeholder="3000"
+          max="1000000"
+          step="0.01"
+          placeholder="留空则不设置预算"
+          :aria-invalid="Boolean(budgetError)"
+          :aria-describedby="budgetError ? 'space-budget-error' : undefined"
         />
+        <small v-if="budgetError" id="space-budget-error" role="alert">{{ budgetError }}</small>
       </label>
     </div>
 

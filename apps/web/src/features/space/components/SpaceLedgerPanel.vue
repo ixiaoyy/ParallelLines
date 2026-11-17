@@ -25,7 +25,7 @@ const emit = defineEmits<{
   composeLedger: [];
 }>();
 
-const hideExactAmountOnShare = ref(false);
+const hideExactAmountOnShare = ref(true);
 
 const monthLedgersGrouped = computed(() => {
   const prefix = `${props.selectedMonth}-`;
@@ -63,12 +63,12 @@ const monthlyLifestylePortrait = computed(() => {
   }
   const coffee = summary.category_breakdown.find((c) => c.category === "coffee");
   if (coffee && coffee.count > 0) {
-    parts.push(`☕ 咖啡续命 ${coffee.count} 次`);
+    parts.push(`☕ 咖啡饮品 ${coffee.count} 笔`);
   }
   parts.push(`共记 ${summary.entry_count} 笔`);
   if (summary.monthly_budget_cents > 0) {
     const remain = summary.monthly_budget_cents - summary.total_expense_cents;
-    parts.push(remain >= 0 ? "预算控制稳健" : "已超出本月预算");
+    parts.push(remain >= 0 ? "未超出本月预算" : "已超出本月预算");
   }
   return parts.join(" · ");
 });
@@ -93,9 +93,10 @@ const monthlyLifestylePortrait = computed(() => {
           <UiButton
             type="button"
             tone="subtle"
-            @click="emit('shareMonthlyBill', 'public', hideExactAmountOnShare)"
+            :disabled="ledgerSummary.entry_count === 0"
+            @click="emit('shareMonthlyBill', 'private', hideExactAmountOnShare)"
           >
-            📊 生成月度小结手账卡
+            预览月度小结
           </UiButton>
         </div>
       </div>
@@ -115,13 +116,14 @@ const monthlyLifestylePortrait = computed(() => {
         </div>
         <div class="metric-item">
           <span>预算剩余</span>
-          <strong :class="{ 'is-over': remainingBudgetCents < 0 }">
-            {{ formatCentsToYuan(remainingBudgetCents) }}
+          <strong :class="{ 'is-over': ledgerSummary.monthly_budget_cents > 0 && remainingBudgetCents < 0 }">
+            {{ ledgerSummary.monthly_budget_cents > 0 ? formatCentsToYuan(remainingBudgetCents) : "未设置" }}
           </strong>
         </div>
       </div>
 
-      <div class="budget-progress-wrap">
+      <!-- 预算为 0 时表示未设置，不把真实支出展示成超支。 -->
+      <div v-if="ledgerSummary.monthly_budget_cents > 0" class="budget-progress-wrap">
         <div class="budget-progress-labels">
           <span>
             月度预算进度（预算 {{ formatCentsToYuan(ledgerSummary.monthly_budget_cents) }}）

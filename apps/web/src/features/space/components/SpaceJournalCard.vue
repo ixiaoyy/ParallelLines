@@ -41,6 +41,7 @@ const emit = defineEmits<{
   like: [entry: SpaceJournalItem];
   react: [entry: SpaceJournalItem, kind: SpaceReactionKind];
   remove: [entry: SpaceJournalItem];
+  edit: [entry: SpaceJournalItem];
   selectTag: [tag: string];
 }>();
 
@@ -92,7 +93,6 @@ function handleChecklistClick(item: SpaceChecklistItem) {
       { 'is-pinned': entry.is_pinned },
     ]"
   >
-    <div class="space-journal-card__tape" aria-hidden="true"></div>
 
     <header class="space-journal-card__header">
       <div class="space-journal-card__date-stamp" :title="formattedDayParts.full">
@@ -130,7 +130,9 @@ function handleChecklistClick(item: SpaceChecklistItem) {
         </div>
 
         <div class="space-journal-card__stickers">
+          <!-- 未记录的心情和天气不显示默认贴纸。 -->
           <span
+            v-if="entry.mood"
             class="space-sticker space-sticker--mood"
             :style="{ '--sticker-fg': moodMeta.color, '--sticker-bg': moodMeta.softBg }"
           >
@@ -138,7 +140,7 @@ function handleChecklistClick(item: SpaceChecklistItem) {
             <b>{{ moodMeta.label }}</b>
           </span>
 
-          <span class="space-sticker space-sticker--weather">
+          <span v-if="entry.weather" class="space-sticker space-sticker--weather">
             <em>{{ weatherMeta.emoji }}</em>
             <b>{{ weatherMeta.label }}</b>
           </span>
@@ -215,6 +217,7 @@ function handleChecklistClick(item: SpaceChecklistItem) {
           <span v-if="singleLedgerMeta.note">{{ singleLedgerMeta.note }}</span>
         </div>
         <b
+          v-if="!entry.ledger_snapshot?.hide_exact_amount && typeof singleLedgerMeta.amount_cents === 'number'"
           class="space-ledger-pill__amount"
           :class="singleLedgerMeta.kind === 'income' ? 'is-income' : 'is-expense'"
         >
@@ -227,6 +230,7 @@ function handleChecklistClick(item: SpaceChecklistItem) {
             )
           }}
         </b>
+        <span v-else class="space-ledger-pill__hidden">金额已隐藏</span>
       </div>
 
       <!-- 内嵌月度收支小结卡 -->
@@ -314,46 +318,25 @@ function handleChecklistClick(item: SpaceChecklistItem) {
     </div>
 
     <footer class="space-journal-card__footer">
-      <div class="space-journal-card__reactions">
-        <button
-          v-for="r in SPACE_REACTIONS"
-          :key="r.key"
-          type="button"
-          class="space-card-action space-card-action--reaction"
-          :class="{ 'has-count': (entry.reactions?.[r.key] ?? 0) > 0 }"
-          :title="r.label"
-          @click="emit('react', entry, r.key)"
-        >
-          <span aria-hidden="true">{{ r.emoji }}</span>
-          <small>{{ r.label }}</small>
-          <b v-if="(entry.reactions?.[r.key] ?? 0) > 0">{{ entry.reactions?.[r.key] }}</b>
+      <div v-if="!editable" class="space-journal-card__reactions">
+        <button v-for="r in SPACE_REACTIONS" :key="r.key" type="button" class="space-card-action space-card-action--reaction"
+          :class="{ 'has-count': (entry.reactions?.[r.key] ?? 0) > 0 }" :title="r.label" @click="emit('react', entry, r.key)">
+          <span aria-hidden="true">{{ r.emoji }}</span><small>{{ r.label }}</small><b v-if="(entry.reactions?.[r.key] ?? 0) > 0">{{ entry.reactions?.[r.key] }}</b>
         </button>
       </div>
-
+      <!-- 自己的记录以编辑为主；低频操作与互动保留在可展开区域。 -->
       <div v-if="editable" class="space-journal-card__owner-actions">
-        <button
-          type="button"
-          class="space-card-action"
-          :title="entry.is_pinned ? '取消置顶' : '置顶此篇手账'"
-          @click="emit('togglePin', entry)"
-        >
-          {{ entry.is_pinned ? "取消置顶" : "📌 置顶" }}
-        </button>
-        <button
-          type="button"
-          class="space-card-action"
-          :title="entry.visibility === 'private' ? '设为公开到空间' : '设为仅自己可见'"
-          @click="emit('toggleVisibility', entry)"
-        >
-          {{ entry.visibility === "private" ? "🌐 设为公开" : "🔒 设为私密" }}
-        </button>
-        <button
-          type="button"
-          class="space-card-action space-card-action--danger"
-          @click="emit('remove', entry)"
-        >
-          删除
-        </button>
+        <button type="button" class="space-card-action space-card-action--edit" :disabled="entry.is_locked"
+          :title="entry.is_locked ? '拆封后可编辑' : '编辑手账'" @click="emit('edit', entry)">编辑</button>
+        <details class="space-card-more">
+          <summary class="space-card-action">更多操作</summary>
+          <div class="space-card-more__items">
+            <button type="button" class="space-card-action" @click="emit('togglePin', entry)">{{ entry.is_pinned ? '取消置顶' : '置顶' }}</button>
+            <button type="button" class="space-card-action" @click="emit('toggleVisibility', entry)">{{ entry.visibility === 'private' ? '设为公开' : '设为私密' }}</button>
+            <button type="button" class="space-card-action space-card-action--danger" @click="emit('remove', entry)">删除</button>
+            <button v-for="r in SPACE_REACTIONS" :key="r.key" type="button" class="space-card-action space-card-action--reaction" @click="emit('react', entry, r.key)">{{ r.emoji }} {{ r.label }}<b v-if="(entry.reactions?.[r.key] ?? 0) > 0">{{ entry.reactions?.[r.key] }}</b></button>
+          </div>
+        </details>
       </div>
     </footer>
   </article>
@@ -363,9 +346,9 @@ function handleChecklistClick(item: SpaceChecklistItem) {
 .space-journal-card {
   position: relative;
   display: grid;
-  gap: 0.9rem;
-  padding: 1.25rem 1.25rem 1.05rem;
-  border-radius: 1.25rem;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
   border: 1px solid var(--border);
   background: #fffdf9;
   box-shadow: 0 8px 24px rgba(51, 65, 85, 0.06);
@@ -376,8 +359,7 @@ function handleChecklistClick(item: SpaceChecklistItem) {
   overflow: hidden;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 14px 32px rgba(51, 65, 85, 0.09);
+    border-color: var(--border-strong);
   }
 
   &.is-pinned {
@@ -514,18 +496,6 @@ function handleChecklistClick(item: SpaceChecklistItem) {
   border-color: #ddd6fe;
 }
 
-.space-journal-card__tape {
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-1.5deg);
-  width: 4.6rem;
-  height: 1.15rem;
-  border-radius: 3px;
-  background: rgba(64, 158, 255, 0.14);
-  border: 1px dashed rgba(64, 158, 255, 0.28);
-  pointer-events: none;
-}
 
 .space-journal-card__header {
   display: grid;
@@ -536,11 +506,12 @@ function handleChecklistClick(item: SpaceChecklistItem) {
 
 .space-journal-card__date-stamp {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  gap: 0.3rem;
+  align-items: baseline;
   justify-content: center;
   min-width: 3.1rem;
-  height: 3.1rem;
+  padding: 0.35rem 0.45rem;
   border-radius: 0.9rem;
   background: var(--bg-surface);
   border: 1px solid var(--border);
@@ -636,7 +607,7 @@ function handleChecklistClick(item: SpaceChecklistItem) {
 
 .space-journal-card__body {
   display: grid;
-  gap: 0.72rem;
+  gap: 0.45rem;
 }
 
 .space-journal-card__title {
@@ -922,19 +893,28 @@ function handleChecklistClick(item: SpaceChecklistItem) {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding-top: 0.65rem;
+  padding-top: 0.35rem;
   border-top: 1px dashed rgba(148, 163, 184, 0.28);
 }
 
 .space-journal-card__owner-actions {
   display: flex;
   flex-wrap: wrap;
+  width: 100%;
+  align-items: flex-start;
   gap: 0.35rem;
 }
+
+.space-card-more { flex: 1; min-width: 0; }
+.space-card-more summary { width: fit-content; list-style-position: inside; }
+.space-card-more__items { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.3rem; }
+.space-ledger-pill__hidden { color: var(--muted); font-size: 0.8rem; }
+.space-card-action--edit { color: var(--primary); }
 
 .space-card-action {
   display: inline-flex;
   align-items: center;
+  min-height: 44px;
   gap: 0.28rem;
   padding: 0.26rem 0.62rem;
   border-radius: var(--radius-pill);
@@ -948,6 +928,8 @@ function handleChecklistClick(item: SpaceChecklistItem) {
     background 150ms ease,
     color 150ms ease;
 
+  &:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
   &:hover {
     background: var(--bg-selected);
     color: var(--primary);

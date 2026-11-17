@@ -1870,6 +1870,26 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "ApiResponse_SpaceJournalItemResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_SpaceLedgerItemResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_SpaceMyWorkspaceResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_SpacePublicProfileResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_SpaceSettingResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ApiResponse_TokenPair_": {
         "additionalProperties": true,
         "type": "object"
@@ -2099,6 +2119,10 @@
         "type": "object"
       },
       "ApiResponse_list_SiteSettingResponse__": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_list_SpaceJournalItemResponse__": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -11352,6 +11376,997 @@
           "recorded"
         ],
         "title": "SiteVisitRecordResponse",
+        "type": "object"
+      },
+      "SpaceChecklistItem": {
+        "properties": {
+          "done": {
+            "default": false,
+            "title": "Done",
+            "type": "boolean"
+          },
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "SpaceChecklistItem",
+        "type": "object"
+      },
+      "SpaceJournalAuthorBrief": {
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "current_status": {
+            "default": "",
+            "title": "Current Status",
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "default": 0,
+            "title": "Level",
+            "type": "integer"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username"
+        ],
+        "title": "SpaceJournalAuthorBrief",
+        "type": "object"
+      },
+      "SpaceJournalCreateRequest": {
+        "properties": {
+          "card_theme": {
+            "default": "paper",
+            "enum": [
+              "paper",
+              "sky",
+              "mint",
+              "sunset",
+              "lavender",
+              "grid"
+            ],
+            "title": "Card Theme",
+            "type": "string"
+          },
+          "checklist": {
+            "items": {
+              "$ref": "#/components/schemas/SpaceChecklistItem"
+            },
+            "maxItems": 20,
+            "title": "Checklist",
+            "type": "array"
+          },
+          "content": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "entry_date": {
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "Entry Date",
+            "type": "string"
+          },
+          "is_pinned": {
+            "default": false,
+            "title": "Is Pinned",
+            "type": "boolean"
+          },
+          "ledger_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Snapshot"
+          },
+          "location": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Location",
+            "type": "string"
+          },
+          "media_urls": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 9,
+            "title": "Media Urls",
+            "type": "array"
+          },
+          "mood": {
+            "default": "happy",
+            "enum": [
+              "",
+              "happy",
+              "focused",
+              "calm",
+              "cozy",
+              "inspired",
+              "tired",
+              "rainy",
+              "celebrate"
+            ],
+            "title": "Mood",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 12,
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "default": "",
+            "maxLength": 160,
+            "title": "Title",
+            "type": "string"
+          },
+          "unlock_at": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unlock At"
+          },
+          "visibility": {
+            "default": "public",
+            "enum": [
+              "public",
+              "friends",
+              "private"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          },
+          "weather": {
+            "default": "sunny",
+            "enum": [
+              "",
+              "sunny",
+              "cloudy",
+              "breezy",
+              "rainy",
+              "snowy",
+              "night"
+            ],
+            "title": "Weather",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entry_date",
+          "content"
+        ],
+        "title": "SpaceJournalCreateRequest",
+        "type": "object"
+      },
+      "SpaceJournalItemResponse": {
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpaceJournalAuthorBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "card_theme": {
+            "title": "Card Theme",
+            "type": "string"
+          },
+          "checklist": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Checklist",
+            "type": "array"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "entry_date": {
+            "title": "Entry Date",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_locked": {
+            "default": false,
+            "title": "Is Locked",
+            "type": "boolean"
+          },
+          "is_pinned": {
+            "title": "Is Pinned",
+            "type": "boolean"
+          },
+          "ledger_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Snapshot"
+          },
+          "likes_count": {
+            "default": 0,
+            "title": "Likes Count",
+            "type": "integer"
+          },
+          "location": {
+            "title": "Location",
+            "type": "string"
+          },
+          "media_urls": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Media Urls",
+            "type": "array"
+          },
+          "mood": {
+            "title": "Mood",
+            "type": "string"
+          },
+          "reactions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Reactions",
+            "type": "object"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "unlock_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unlock At"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "visibility": {
+            "title": "Visibility",
+            "type": "string"
+          },
+          "weather": {
+            "title": "Weather",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "entry_date",
+          "title",
+          "content",
+          "mood",
+          "weather",
+          "location",
+          "visibility",
+          "is_pinned",
+          "card_theme",
+          "tags",
+          "media_urls",
+          "checklist",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SpaceJournalItemResponse",
+        "type": "object"
+      },
+      "SpaceJournalReactRequest": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "hug",
+              "spark",
+              "toast",
+              "party"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "SpaceJournalReactRequest",
+        "type": "object"
+      },
+      "SpaceJournalUpdateRequest": {
+        "properties": {
+          "card_theme": {
+            "anyOf": [
+              {
+                "enum": [
+                  "paper",
+                  "sky",
+                  "mint",
+                  "sunset",
+                  "lavender",
+                  "grid"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Theme"
+          },
+          "checklist": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SpaceChecklistItem"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "entry_date": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Date"
+          },
+          "is_pinned": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Pinned"
+          },
+          "ledger_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Snapshot"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "media_urls": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 9,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Urls"
+          },
+          "mood": {
+            "anyOf": [
+              {
+                "enum": [
+                  "",
+                  "happy",
+                  "focused",
+                  "calm",
+                  "cozy",
+                  "inspired",
+                  "tired",
+                  "rainy",
+                  "celebrate"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mood"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "unlock_at": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unlock At"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "enum": [
+                  "public",
+                  "friends",
+                  "private"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visibility"
+          },
+          "weather": {
+            "anyOf": [
+              {
+                "enum": [
+                  "",
+                  "sunny",
+                  "cloudy",
+                  "breezy",
+                  "rainy",
+                  "snowy",
+                  "night"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weather"
+          }
+        },
+        "title": "SpaceJournalUpdateRequest",
+        "type": "object"
+      },
+      "SpaceLedgerCategoryBreakdown": {
+        "properties": {
+          "amount_cents": {
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "ratio_percent": {
+            "title": "Ratio Percent",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "category",
+          "amount_cents",
+          "count",
+          "ratio_percent"
+        ],
+        "title": "SpaceLedgerCategoryBreakdown",
+        "type": "object"
+      },
+      "SpaceLedgerCreateRequest": {
+        "properties": {
+          "amount_cents": {
+            "maximum": 100000000.0,
+            "minimum": 1.0,
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "category": {
+            "default": "dining",
+            "enum": [
+              "dining",
+              "coffee",
+              "gaming",
+              "shopping",
+              "transit",
+              "entertainment",
+              "housing",
+              "salary",
+              "other"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "entry_date": {
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "Entry Date",
+            "type": "string"
+          },
+          "kind": {
+            "default": "expense",
+            "enum": [
+              "expense",
+              "income"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Note",
+            "type": "string"
+          },
+          "payment_method": {
+            "default": "wechat",
+            "enum": [
+              "wechat",
+              "alipay",
+              "card",
+              "cash"
+            ],
+            "title": "Payment Method",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entry_date",
+          "amount_cents"
+        ],
+        "title": "SpaceLedgerCreateRequest",
+        "type": "object"
+      },
+      "SpaceLedgerItemResponse": {
+        "properties": {
+          "amount_cents": {
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "entry_date": {
+            "title": "Entry Date",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "payment_method": {
+            "title": "Payment Method",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "entry_date",
+          "kind",
+          "amount_cents",
+          "category",
+          "note",
+          "payment_method",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SpaceLedgerItemResponse",
+        "type": "object"
+      },
+      "SpaceLedgerMonthlySummary": {
+        "properties": {
+          "category_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/SpaceLedgerCategoryBreakdown"
+            },
+            "title": "Category Breakdown",
+            "type": "array"
+          },
+          "entry_count": {
+            "default": 0,
+            "title": "Entry Count",
+            "type": "integer"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "monthly_budget_cents": {
+            "default": 0,
+            "title": "Monthly Budget Cents",
+            "type": "integer"
+          },
+          "total_expense_cents": {
+            "default": 0,
+            "title": "Total Expense Cents",
+            "type": "integer"
+          },
+          "total_income_cents": {
+            "default": 0,
+            "title": "Total Income Cents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "month"
+        ],
+        "title": "SpaceLedgerMonthlySummary",
+        "type": "object"
+      },
+      "SpaceMyWorkspaceResponse": {
+        "properties": {
+          "journals": {
+            "items": {
+              "$ref": "#/components/schemas/SpaceJournalItemResponse"
+            },
+            "title": "Journals",
+            "type": "array"
+          },
+          "ledger_entries": {
+            "items": {
+              "$ref": "#/components/schemas/SpaceLedgerItemResponse"
+            },
+            "title": "Ledger Entries",
+            "type": "array"
+          },
+          "ledger_summary": {
+            "$ref": "#/components/schemas/SpaceLedgerMonthlySummary"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/SpaceSettingResponse"
+          }
+        },
+        "required": [
+          "settings",
+          "journals",
+          "ledger_entries",
+          "ledger_summary"
+        ],
+        "title": "SpaceMyWorkspaceResponse",
+        "type": "object"
+      },
+      "SpacePublicProfileResponse": {
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "bio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bio"
+          },
+          "cover_preset": {
+            "default": "aurora",
+            "title": "Cover Preset",
+            "type": "string"
+          },
+          "current_status": {
+            "default": "",
+            "title": "Current Status",
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "journals": {
+            "items": {
+              "$ref": "#/components/schemas/SpaceJournalItemResponse"
+            },
+            "title": "Journals",
+            "type": "array"
+          },
+          "public_journal_count": {
+            "default": 0,
+            "title": "Public Journal Count",
+            "type": "integer"
+          },
+          "space_subtitle": {
+            "default": "",
+            "title": "Space Subtitle",
+            "type": "string"
+          },
+          "space_title": {
+            "default": "",
+            "title": "Space Title",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "username"
+        ],
+        "title": "SpacePublicProfileResponse",
+        "type": "object"
+      },
+      "SpaceSettingResponse": {
+        "properties": {
+          "cover_preset": {
+            "default": "aurora",
+            "enum": [
+              "aurora",
+              "sunset",
+              "meadow",
+              "paper",
+              "starlight"
+            ],
+            "title": "Cover Preset",
+            "type": "string"
+          },
+          "current_status": {
+            "default": "",
+            "title": "Current Status",
+            "type": "string"
+          },
+          "monthly_budget_cents": {
+            "default": 0,
+            "title": "Monthly Budget Cents",
+            "type": "integer"
+          },
+          "space_subtitle": {
+            "default": "",
+            "title": "Space Subtitle",
+            "type": "string"
+          },
+          "space_title": {
+            "default": "",
+            "title": "Space Title",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "SpaceSettingResponse",
+        "type": "object"
+      },
+      "SpaceSettingUpdateRequest": {
+        "properties": {
+          "cover_preset": {
+            "default": "aurora",
+            "enum": [
+              "aurora",
+              "sunset",
+              "meadow",
+              "paper",
+              "starlight"
+            ],
+            "title": "Cover Preset",
+            "type": "string"
+          },
+          "current_status": {
+            "default": "",
+            "maxLength": 48,
+            "title": "Current Status",
+            "type": "string"
+          },
+          "monthly_budget_cents": {
+            "default": 0,
+            "maximum": 100000000.0,
+            "minimum": 0.0,
+            "title": "Monthly Budget Cents",
+            "type": "integer"
+          },
+          "space_subtitle": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Space Subtitle",
+            "type": "string"
+          },
+          "space_title": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Space Title",
+            "type": "string"
+          }
+        },
+        "title": "SpaceSettingUpdateRequest",
         "type": "object"
       },
       "SpamActionResponse": {
@@ -23858,6 +24873,549 @@
         "summary": "Record Site Visit",
         "tags": [
           "site"
+        ]
+      }
+    },
+    "/api/v1/space/feed": {
+      "get": {
+        "operationId": "list_public_space_feed_api_v1_space_feed_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 80,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_list_SpaceJournalItemResponse__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Public Space Feed",
+        "tags": [
+          "space"
+        ]
+      }
+    },
+    "/api/v1/space/journals": {
+      "post": {
+        "operationId": "create_journal_entry_api_v1_space_journals_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpaceJournalCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SpaceJournalItemResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Journal Entry",
+        "tags": [
+          "space"
+        ]
+      }
+    },
+    "/api/v1/space/journals/{entry_id}": {
+      "delete": {
+        "operationId": "delete_journal_entry_api_v1_space_journals__entry_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_bool_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Journal Entry",
+        "tags": [
+          "space"
+        ]
+      },
+      "patch": {
+        "operationId": "update_journal_entry_api_v1_space_journals__entry_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpaceJournalUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SpaceJournalItemResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Journal Entry",
+        "tags": [
+          "space"
+        ]
+      }
+    },
+    "/api/v1/space/journals/{entry_id}/like": {
+      "post": {
+        "operationId": "like_journal_entry_api_v1_space_journals__entry_id__like_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SpaceJournalItemResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Like Journal Entry",
+        "tags": [
+          "space"
+        ]
+      }
+    },
+    "/api/v1/space/journals/{entry_id}/react": {
+      "post": {
+        "operationId": "react_journal_entry_api_v1_space_journals__entry_id__react_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpaceJournalReactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SpaceJournalItemResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "React Journal Entry",
+        "tags": [
+          "space"
+        ]
+      }
+    },
+    "/api/v1/space/ledger": {
+      "post": {
+        "operationId": "create_ledger_entry_api_v1_space_ledger_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpaceLedgerCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SpaceLedgerItemResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create Ledger Entry",
+        "tags": [
+          "space"
+        ]
+      }
+    },
+    "/api/v1/space/ledger/{entry_id}": {
+      "delete": {
+        "operationId": "delete_ledger_entry_api_v1_space_ledger__entry_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_bool_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Ledger Entry",
+        "tags": [
+          "space"
+        ]
+      }
+    },
+    "/api/v1/space/me": {
+      "get": {
+        "operationId": "get_my_space_workspace_api_v1_space_me_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{4}-\\d{2}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SpaceMyWorkspaceResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get My Space Workspace",
+        "tags": [
+          "space"
+        ]
+      }
+    },
+    "/api/v1/space/settings": {
+      "put": {
+        "operationId": "update_my_space_settings_api_v1_space_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpaceSettingUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SpaceSettingResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update My Space Settings",
+        "tags": [
+          "space"
+        ]
+      }
+    },
+    "/api/v1/space/users/{identifier}": {
+      "get": {
+        "operationId": "get_public_user_space_api_v1_space_users__identifier__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "identifier",
+            "required": true,
+            "schema": {
+              "title": "Identifier",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SpacePublicProfileResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Public User Space",
+        "tags": [
+          "space"
         ]
       }
     },

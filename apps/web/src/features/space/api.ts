@@ -1,7 +1,12 @@
-import { apiRequest, hasAccessToken } from "@/shared/api/client";
+import { ApiError, apiRequest, getAccessToken, hasAccessToken } from "@/shared/api/client";
 
 import {
   currentMonthString,
+  JOURNAL_CARD_THEMES,
+  JOURNAL_MOODS,
+  JOURNAL_WEATHERS,
+  LEDGER_CATEGORIES,
+  LEDGER_PAYMENT_METHODS,
   todayDateString,
   type SpaceJournalCreatePayload,
   type SpaceJournalItem,
@@ -30,9 +35,97 @@ const LEGACY_SEED_LEDGER_IDS = new Set([
 ]);
 
 interface LocalSpaceStore {
+  [key: string]: unknown;
   settings: SpaceSetting;
   journals: SpaceJournalItem[];
   ledgers: SpaceLedgerItem[];
+}
+
+/** 本机记录读取、格式或写入失败；调用方应保留输入并直接展示 message。 */
+export class SpaceLocalStorageError extends Error {
+  constructor(public readonly reason: "read" | "invalid" | "write", message: string) {
+    super(message);
+    this.name = "SpaceLocalStorageError";
+  }
+}
+
+/** 同步中断时返回已确认完成及待处理数量；needsCloudReview 表示不能直接重发。 */
+export class SpaceLocalSyncError extends Error {
+  constructor(
+    message: string,
+    public readonly journalsSynced: number,
+    public readonly ledgersSynced: number,
+    public readonly pendingJournalCount: number,
+    public readonly pendingLedgerCount: number,
+    public readonly needsCloudReview: boolean,
+  ) {
+    super(message);
+    this.name = "SpaceLocalSyncError";
+  }
+}
+
+type StoredLocalSpace = {
+  [key: string]: unknown;
+  settings?: Partial<SpaceSetting>;
+  journals?: SpaceJournalItem[];
+  ledgers?: SpaceLedgerItem[];
+};
+
+let syncingLocalSpace = false;
+let uncertainSyncProgress: SpaceLocalSyncError | null = null;
+
+/** JSON 对象边界；数组和 null 不能当作存储快照或记录。 */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+/** 从现有选项表确认请求枚举；旧记录的未知值保留在本机，不擅自替换成默认值。 */
+function isOptionKey<Key extends string>(value: string, options: ReadonlyArray<{ key: Key }>): value is Key {
+  return options.some((option) => option.key === value);
+}
+
+/** 校验持久化记录实际使用的字段；未知扩展字段保留，不按内容或金额删除记录。 */
+function isLocalJournal(value: unknown): value is SpaceJournalItem {
+  if (!isRecord(value)) return false;
+  const stringFields = ["id", "user_id", "entry_date", "title", "content", "mood", "weather", "location", "visibility", "card_theme", "created_at", "updated_at"];
+  return stringFields.every((key) => typeof value[key] === "string")
+    && typeof value.is_pinned === "boolean"
+    && typeof value.likes_count === "number" && Number.isFinite(value.likes_count)
+    && Array.isArray(value.tags) && value.tags.every((tag) => typeof tag === "string")
+    && Array.isArray(value.media_urls) && value.media_urls.every((url) => typeof url === "string")
+    && Array.isArray(value.checklist) && value.checklist.every((item) => isRecord(item)
+      && typeof item.id === "string" && typeof item.text === "string" && typeof item.done === "boolean")
+    && (value.ledger_snapshot === undefined || value.ledger_snapshot === null || isRecord(value.ledger_snapshot))
+    && (value.reactions === undefined || (isRecord(value.reactions)
+      && Object.values(value.reactions).every((count) => typeof count === "number" && Number.isFinite(count))))
+    && (value.unlock_at === undefined || value.unlock_at === null || typeof value.unlock_at === "string")
+    && (value.is_locked === undefined || typeof value.is_locked === "boolean");
+}
+
+/** 记账原值必须能安全读取和汇总；校验失败时保留整个原始存储，不丢弃单条记录。 */
+function isLocalLedger(value: unknown): value is SpaceLedgerItem {
+  if (!isRecord(value)) return false;
+  return ["id", "user_id", "entry_date", "kind", "category", "note", "payment_method", "created_at", "updated_at"]
+    .every((key) => typeof value[key] === "string")
+    && typeof value.amount_cents === "number" && Number.isSafeInteger(value.amount_cents)
+    && value.amount_cents > 0;
+}
+
+/** 接受旧快照缺省的区段，拒绝错类型区段；后续写入保留未知字段。 */
+function isStoredLocalSpace(value: unknown): value is StoredLocalSpace {
+  if (!isRecord(value)) return false;
+  if (value.version !== undefined && value.version !== 1) return false;
+  if (value.settings !== undefined) {
+    if (!isRecord(value.settings)) return false;
+    const setting = value.settings;
+    if (!["user_id", "space_title", "space_subtitle", "cover_preset", "current_status"]
+      .every((key) => setting[key] === undefined || typeof setting[key] === "string")) return false;
+    if (setting.monthly_budget_cents !== undefined
+      && (typeof setting.monthly_budget_cents !== "number" || !Number.isSafeInteger(setting.monthly_budget_cents)
+        || setting.monthly_budget_cents < 0)) return false;
+  }
+  return (value.journals === undefined || (Array.isArray(value.journals) && value.journals.every(isLocalJournal)))
+    && (value.ledgers === undefined || (Array.isArray(value.ledgers) && value.ledgers.every(isLocalLedger)));
 }
 
 function buildDefaultLocalStore(): LocalSpaceStore {
@@ -42,7 +135,8 @@ function buildDefaultLocalStore(): LocalSpaceStore {
       space_title: "",
       space_subtitle: "",
       cover_preset: "aurora",
-      monthly_budget_cents: 300000,
+      // 未主动设置预算时保持 0，不用示例金额填充个人账本。
+      monthly_budget_cents: 0,
     },
     journals: [],
     ledgers: [],
@@ -53,37 +147,52 @@ function readLocalStore(): LocalSpaceStore {
   if (typeof window === "undefined") {
     return buildDefaultLocalStore();
   }
+  let raw: string | null;
   try {
-    const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) {
-      return buildDefaultLocalStore();
-    }
-    const parsed = JSON.parse(raw) as Partial<LocalSpaceStore>;
-    const fallback = buildDefaultLocalStore();
-    const journals = Array.isArray(parsed.journals)
-      ? parsed.journals.filter((item) => !LEGACY_SEED_JOURNAL_IDS.has(item.id))
-      : [];
-    const ledgers = Array.isArray(parsed.ledgers)
-      ? parsed.ledgers.filter((item) => !LEGACY_SEED_LEDGER_IDS.has(item.id))
-      : [];
-    return {
-      settings: parsed.settings ?? fallback.settings,
-      journals,
-      ledgers,
-    };
+    raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
   } catch {
-    return buildDefaultLocalStore();
+    throw new SpaceLocalStorageError("read", "无法读取本机记录，请检查浏览器存储权限后重试；原数据未改动");
   }
+  if (raw === null) return buildDefaultLocalStore();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new SpaceLocalStorageError("invalid", "本机记录格式异常，已停止写入以保护原数据；请先备份并检查原记录");
+  }
+  if (!isRecord(parsed)) {
+    throw new SpaceLocalStorageError("invalid", "本机记录格式异常，已停止写入以保护原数据；请先备份并检查原记录");
+  }
+  // 旧示例仅按既有固定 ID 排除；其余坏记录阻止写入，不能被当空数据覆盖。
+  const snapshot: Record<string, unknown> = { ...parsed };
+  if (Array.isArray(snapshot.journals)) {
+    snapshot.journals = snapshot.journals.filter((item) => !isRecord(item)
+      || typeof item.id !== "string" || !LEGACY_SEED_JOURNAL_IDS.has(item.id));
+  }
+  if (Array.isArray(snapshot.ledgers)) {
+    snapshot.ledgers = snapshot.ledgers.filter((item) => !isRecord(item)
+      || typeof item.id !== "string" || !LEGACY_SEED_LEDGER_IDS.has(item.id));
+  }
+  if (!isStoredLocalSpace(snapshot)) {
+    throw new SpaceLocalStorageError("invalid", "本机记录格式异常，已停止写入以保护原数据；请先备份并检查原记录");
+  }
+  const fallback = buildDefaultLocalStore();
+  return {
+    ...snapshot,
+    settings: { ...fallback.settings, ...snapshot.settings },
+    journals: snapshot.journals ?? [],
+    ledgers: snapshot.ledgers ?? [],
+  };
 }
 
 function writeLocalStore(store: LocalSpaceStore): void {
   if (typeof window === "undefined") {
-    return;
+    throw new SpaceLocalStorageError("write", "当前环境不能保存到本机，请保留内容后在浏览器中重试");
   }
   try {
     window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(store));
   } catch {
-    // Ignore storage quota errors.
+    throw new SpaceLocalStorageError("write", "未能保存到本机，请保留当前内容并检查浏览器存储空间或权限后重试");
   }
 }
 
@@ -163,10 +272,6 @@ export function getPendingLocalSpaceSummary(): LocalSpacePendingSummary {
   if (typeof window === "undefined") {
     return { journalCount: 0, ledgerCount: 0, totalCount: 0 };
   }
-  const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-  if (!raw) {
-    return { journalCount: 0, ledgerCount: 0, totalCount: 0 };
-  }
   const store = readLocalStore();
   return {
     journalCount: store.journals.length,
@@ -175,26 +280,90 @@ export function getPendingLocalSpaceSummary(): LocalSpacePendingSummary {
   };
 }
 
+/** 个人记录保存最多等待 30 秒；超时结果未确认，调用方保留输入并先核对云端，不自动重试。 */
+async function requestSpaceSave<Result>(
+  path: string,
+  payload: SpaceJournalCreatePayload | SpaceJournalUpdatePayload | SpaceLedgerCreatePayload | Omit<SpaceSetting, "user_id">,
+  method: "POST" | "PUT" | "PATCH" = "POST",
+): Promise<Result> {
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout>;
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timeout = setTimeout(() => {
+      reject(new ApiError("space_save_outcome_unconfirmed", "保存结果尚未确认，请保留当前输入，先核对云端记录，确认未保存后再重试，避免重复保存", {}, 0));
+      controller.abort();
+    }, 30_000);
+  });
+  try {
+    // 同时约束鉴权刷新的总等待时间；共享请求内部的刷新不一定接收此信号。
+    return await Promise.race([deadline, apiRequest<Result>(path, {
+      method, body: JSON.stringify(payload), signal: controller.signal,
+    })]);
+  } finally {
+    clearTimeout(timeout!);
+  }
+}
+
+/** 单条云端确认成功后更新最新本机快照；保留同步期间新增的记录和装扮设置。 */
+function checkpointLocalSyncEntry(
+  kind: "journals" | "ledgers",
+  item: SpaceJournalItem | SpaceLedgerItem,
+): LocalSpacePendingSummary {
+  const latest = readLocalStore();
+  const current = latest[kind].find((entry) => entry.id === item.id);
+  if (!current || current.updated_at !== item.updated_at) {
+    throw new SpaceLocalStorageError("write", "同步期间本机记录发生改动，已暂停；请先核对云端与本机记录");
+  }
+  const next = kind === "journals"
+    ? { ...latest, journals: latest.journals.filter((entry) => entry.id !== item.id) }
+    : { ...latest, ledgers: latest.ledgers.filter((entry) => entry.id !== item.id) };
+  writeLocalStore(next);
+  return {
+    journalCount: next.journals.length,
+    ledgerCount: next.ledgers.length,
+    totalCount: next.journals.length + next.ledgers.length,
+  };
+}
+
 export async function syncLocalSpaceToCloud(): Promise<{
   journalsSynced: number;
   ledgersSynced: number;
 }> {
-  if (!hasAccessToken()) {
+  const syncToken = getAccessToken();
+  if (!syncToken) {
     throw new Error("请先登录后再同步到云端");
   }
+  if (uncertainSyncProgress) throw uncertainSyncProgress;
+  if (syncingLocalSpace) throw new Error("正在同步本机记录，请等待本次同步完成");
   const store = readLocalStore();
   const pendingJournals = [...store.journals];
   const pendingLedgers = [...store.ledgers];
 
   let journalsSynced = 0;
   let ledgersSynced = 0;
-  const remainingJournals = [...store.journals];
-  const remainingLedgers = [...store.ledgers];
+  let savedPending: LocalSpacePendingSummary = {
+    journalCount: pendingJournals.length,
+    ledgerCount: pendingLedgers.length,
+    totalCount: pendingJournals.length + pendingLedgers.length,
+  };
+  let awaitingLocalCheckpoint = false;
+  syncingLocalSpace = true;
 
-  for (const item of pendingJournals) {
-    await apiRequest<SpaceJournalItem>("/space/journals", {
-      method: "POST",
-      body: JSON.stringify({
+  try {
+    // 固定本批登录边界；换号或令牌更新后暂停，不能让后续记录进入另一个账号。
+    for (const item of pendingJournals) {
+      if (getAccessToken() !== syncToken) throw new ApiError("identity_changed", "登录状态已变更，请重新核对同步目标账号", {}, 409);
+      if (!(item.mood === "" || isOptionKey(item.mood, JOURNAL_MOODS))
+        || !(item.weather === "" || isOptionKey(item.weather, JOURNAL_WEATHERS))
+        || !isOptionKey(item.card_theme, JOURNAL_CARD_THEMES)
+        || (item.visibility !== "public" && item.visibility !== "friends" && item.visibility !== "private")) {
+        throw new ApiError("invalid_local_record", "手账包含云端不支持的状态，请先编辑此记录；原记录仍保留在本机", {}, 422);
+      }
+      // 旧本地预览图不具备云端可用地址，不能丢掉图片后宣称整条同步成功。
+      if (item.media_urls.some((url) => url.startsWith("blob:"))) {
+        throw new ApiError("local_image_upload_required", "手账含有仅当前浏览器可用的配图，请先重新上传配图再同步；原记录仍保留在本机", {}, 422);
+      }
+      await requestSpaceSave<SpaceJournalItem>("/space/journals", {
         entry_date: item.entry_date,
         title: item.title,
         content: item.content,
@@ -205,44 +374,55 @@ export async function syncLocalSpaceToCloud(): Promise<{
         is_pinned: item.is_pinned,
         card_theme: item.card_theme,
         tags: item.tags,
-        media_urls: (item.media_urls ?? []).filter((url) => !url.startsWith("blob:")),
+        media_urls: item.media_urls,
         checklist: item.checklist,
         ledger_snapshot: item.ledger_snapshot ?? undefined,
-      }),
-    });
-    journalsSynced += 1;
-    const idx = remainingJournals.findIndex((j) => j.id === item.id);
-    if (idx >= 0) remainingJournals.splice(idx, 1);
-  }
+        unlock_at: item.unlock_at ?? null,
+      });
+      journalsSynced += 1;
+      awaitingLocalCheckpoint = true;
+      savedPending = checkpointLocalSyncEntry("journals", item);
+      awaitingLocalCheckpoint = false;
+    }
 
-  for (const item of pendingLedgers) {
-    await apiRequest<SpaceLedgerItem>("/space/ledger", {
-      method: "POST",
-      body: JSON.stringify({
+    for (const item of pendingLedgers) {
+      if (getAccessToken() !== syncToken) throw new ApiError("identity_changed", "登录状态已变更，请重新核对同步目标账号", {}, 409);
+      if ((item.kind !== "expense" && item.kind !== "income")
+        || !isOptionKey(item.category, LEDGER_CATEGORIES)
+        || !isOptionKey(item.payment_method, LEDGER_PAYMENT_METHODS)) {
+        throw new ApiError("invalid_local_record", "账单包含云端不支持的分类或支付方式，请先核对；原记录仍保留在本机", {}, 422);
+      }
+      await requestSpaceSave<SpaceLedgerItem>("/space/ledger", {
         entry_date: item.entry_date,
         kind: item.kind,
         amount_cents: item.amount_cents,
         category: item.category,
         note: item.note,
         payment_method: item.payment_method,
-      }),
-    });
-    ledgersSynced += 1;
-    const idx = remainingLedgers.findIndex((l) => l.id === item.id);
-    if (idx >= 0) remainingLedgers.splice(idx, 1);
+      });
+      ledgersSynced += 1;
+      awaitingLocalCheckpoint = true;
+      savedPending = checkpointLocalSyncEntry("ledgers", item);
+      awaitingLocalCheckpoint = false;
+    }
+    return { journalsSynced, ledgersSynced };
+  } catch (error) {
+    // 网络、服务端异常或写进度失败时可能已有云端副作用，停止自动重发并保留原记录。
+    const needsCloudReview = awaitingLocalCheckpoint || !(error instanceof ApiError)
+      || error.status === 0 || error.status >= 500 || error.code === "identity_changed";
+    const progress = `已确认同步 ${journalsSynced} 篇手账、${ledgersSynced} 笔账单；本机仍有 ${savedPending.journalCount} 篇手账、${savedPending.ledgerCount} 笔账单待处理。`;
+    const reason = needsCloudReview
+      ? "本次结果或本机同步进度未能确认，请先核对云端和本机记录，不要直接重试；刷新页面也不能消除重复风险。"
+      : `同步已停止，未完成记录仍保留在本机。${error instanceof Error ? error.message : "请检查后重试"}`;
+    const failure = new SpaceLocalSyncError(
+      progress + reason, journalsSynced, ledgersSynced,
+      savedPending.journalCount, savedPending.ledgerCount, needsCloudReview,
+    );
+    if (needsCloudReview) uncertainSyncProgress = failure;
+    throw failure;
+  } finally {
+    syncingLocalSpace = false;
   }
-
-  if (remainingJournals.length === 0 && remainingLedgers.length === 0 && typeof window !== "undefined") {
-    window.localStorage.removeItem(LOCAL_STORAGE_KEY);
-  } else {
-    writeLocalStore({
-      ...store,
-      journals: remainingJournals,
-      ledgers: remainingLedgers,
-    });
-  }
-
-  return { journalsSynced, ledgersSynced };
 }
 
 export async function fetchMySpaceWorkspace(month = currentMonthString()): Promise<SpaceMyWorkspace> {
@@ -257,10 +437,7 @@ export async function updateMySpaceSettings(
   payload: Omit<SpaceSetting, "user_id">,
 ): Promise<SpaceSetting> {
   if (hasAccessToken()) {
-    return apiRequest<SpaceSetting>("/space/settings", {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    });
+    return requestSpaceSave<SpaceSetting>("/space/settings", payload, "PUT");
   }
   const store = readLocalStore();
   store.settings = {
@@ -275,10 +452,7 @@ export async function createSpaceJournal(
   payload: SpaceJournalCreatePayload,
 ): Promise<SpaceJournalItem> {
   if (hasAccessToken()) {
-    return apiRequest<SpaceJournalItem>("/space/journals", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    return requestSpaceSave<SpaceJournalItem>("/space/journals", payload);
   }
 
   const store = readLocalStore();
@@ -316,12 +490,10 @@ export async function updateSpaceJournal(
   payload: SpaceJournalUpdatePayload,
 ): Promise<SpaceJournalItem> {
   if (hasAccessToken() && !entryId.startsWith("local-")) {
-    return apiRequest<SpaceJournalItem>(
+    return requestSpaceSave<SpaceJournalItem>(
       `/space/journals/${encodeURIComponent(entryId)}`,
-      {
-        method: "PATCH",
-        body: JSON.stringify(payload),
-      },
+      payload,
+      "PATCH",
     );
   }
 
@@ -329,9 +501,12 @@ export async function updateSpaceJournal(
   const index = store.journals.findIndex((item) => item.id === entryId);
   if (index >= 0) {
     const existing = store.journals[index]!;
+    const unlockAt = payload.unlock_at !== undefined ? payload.unlock_at : existing.unlock_at;
     const updated: SpaceJournalItem = {
       ...existing,
       ...payload,
+      // 编辑拆封日期后同步本地展示状态，显式 null 仍表示取消定时。
+      is_locked: Boolean(unlockAt && unlockAt > todayDateString()),
       updated_at: new Date().toISOString(),
     };
     store.journals[index] = updated;
@@ -405,10 +580,7 @@ export async function createSpaceLedgerEntry(
   payload: SpaceLedgerCreatePayload,
 ): Promise<SpaceLedgerItem> {
   if (hasAccessToken()) {
-    return apiRequest<SpaceLedgerItem>("/space/ledger", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    return requestSpaceSave<SpaceLedgerItem>("/space/ledger", payload);
   }
 
   const store = readLocalStore();
