@@ -20,6 +20,49 @@ MAX_EXPANDED = 512 * 1024 * 1024
 MAX_FILES = 12000
 ALLOWED_DOWNLOAD_HOSTS = {'github.com', 'release-assets.githubusercontent.com', 'objects.githubusercontent.com'}
 
+# 只导入原生配置模型，不导入 main/config 的启动迁移、默认值播种或修复入口。
+ENABLE_PERSONAL_PROGRAM = r'''
+import asyncio,json,os,sys
+from pathlib import Path
+mode=sys.argv[1]
+if mode not in ('read','enable'): raise RuntimeError('unsupported_flag_operation')
+for item in Path('/proc/1/environ').read_bytes().split(b'\0'):
+ name,sep,value=item.partition(b'=')
+ name=name.decode(errors='ignore')
+ if sep and (name.startswith('DATABASE_') or name in {'WEBUI_SECRET_KEY','WEBUI_JWT_SECRET_KEY','DATA_DIR','ENABLE_PERSISTENT_CONFIG'}):
+  os.environ[name]=value.decode()
+os.environ['ENABLE_DB_MIGRATIONS']='false'
+os.environ['FROM_INIT_PY']='false'
+os.environ['DATABASE_SQLITE_PRAGMA_BUSY_TIMEOUT']='5000'
+if os.environ.get('ENABLE_PERSISTENT_CONFIG','true').lower()!='true': raise RuntimeError('persistent_config_required')
+data=Path(os.environ.get('DATA_DIR') or '/app/backend/data')
+if (data/'ollama.db').exists(): raise RuntimeError('legacy_database_rename_path_present')
+if not os.environ.get('DATABASE_URL','sqlite:///').startswith('sqlite:///'): raise RuntimeError('sqlite_config_required')
+from open_webui.models.config import Config
+from open_webui.internal.db import get_async_db,async_engine,engine
+KEY='direct.enable'
+async def action():
+ try:
+  if mode=='read':
+   value=await Config.get(KEY)
+   if type(value) is not bool: raise RuntimeError('native_direct_flag_not_boolean')
+   return {'value':value}
+  async with get_async_db() as db:
+   row=await db.get(Config,KEY)
+   if row is None or type(row.value) is not bool: raise RuntimeError('native_direct_flag_not_boolean')
+   before=row.value
+   if before is False:
+    await Config.upsert({KEY:True},db=db)
+    await db.commit()
+  after=await Config.get(KEY)
+  if after is not True: raise RuntimeError('native_direct_flag_readback_failed')
+  return {'before':before,'after':after,'changed':before is False}
+ finally:
+  await async_engine.dispose()
+  engine.dispose()
+print(json.dumps(asyncio.run(asyncio.wait_for(action(),timeout=20))))
+'''
+
 
 class OperationError(RuntimeError):
     """稳定错误码，不在共享日志展开命令输出、配置或用户数据。"""
@@ -54,9 +97,10 @@ def target():
     ids = run(['docker', 'ps', '-aq', '--filter', 'label=com.docker.compose.project=' + PROJECT,
                '--filter', 'label=com.docker.compose.service=' + SERVICE]).split()
     check(len(ids) == 1 and re.fullmatch(r'[a-f0-9]{12,64}', ids[0]), 'unique_chat_container_required')
-    template = '{"name":{{json .Name}},"image_id":{{json .Image}},"image":{{json .Config.Image}},"running":{{json .State.Running}},"health":{{json .State.Health.Status}},"config_files":{{json (index .Config.Labels "com.docker.compose.project.config_files")}},"working_dir":{{json (index .Config.Labels "com.docker.compose.project.working_dir")}},"env_files":{{json (index .Config.Labels "com.docker.compose.project.environment_file")}}}'
+    template = '{"id":{{json .Id}},"name":{{json .Name}},"image_id":{{json .Image}},"image":{{json .Config.Image}},"running":{{json .State.Running}},"health":{{json .State.Health.Status}},"config_files":{{json (index .Config.Labels "com.docker.compose.project.config_files")}},"working_dir":{{json (index .Config.Labels "com.docker.compose.project.working_dir")}},"env_files":{{json (index .Config.Labels "com.docker.compose.project.environment_file")}}}'
     value = json.loads(run(['docker', 'inspect', '--format', template, ids[0]]))
     check(value['name'] == CONTAINER and value['running'] and value['health'] == 'healthy', 'chat_identity_or_health_changed')
+    check(re.fullmatch(r'[a-f0-9]{64}', value.get('id', '')), 'chat_container_identity_invalid')
     check(re.fullmatch(r'sha256:[a-f0-9]{64}', value['image_id']), 'chat_image_identity_invalid')
     for name in ('config_files', 'working_dir'):
         check(isinstance(value.get(name), str) and value[name], 'chat_compose_metadata_missing')
@@ -190,6 +234,7 @@ def write_record(path, value):
     check(path.is_relative_to(ROOT) and not path.exists(), 'private_record_collision')
     with path.open('x', encoding='utf-8') as stream:
         os.chmod(path, 0o600); json.dump(value, stream, indent=2)
+        stream.flush(); os.fsync(stream.fileno())
 
 
 def payload_files(root):
@@ -203,9 +248,49 @@ def payload_files(root):
     return {path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest() for path in sorted(files)}
 
 
+def native_personal_flag(container_id, mode):
+    """固定模型 API 只读/启用 direct.enable；仅接收布尔元数据，不返回任何配置对象。"""
+    check(re.fullmatch('[a-f0-9]{64}', container_id or '') and mode in ('read', 'enable'), 'native_flag_scope_invalid')
+    output = run(['docker', 'exec', '-e', 'ENABLE_DB_MIGRATIONS=false', '-e', 'FROM_INIT_PY=false',
+                  container_id, 'python', '-B', '-c', ENABLE_PERSONAL_PROGRAM, mode], timeout=45)
+    result = json.loads(output.splitlines()[-1])
+    expected = {'value'} if mode == 'read' else {'before', 'after', 'changed'}
+    check(set(result) == expected and all(type(value) is bool for value in result.values()), 'native_flag_metadata_invalid')
+    return result
+
+
+def enable_personal(root, revision, observed, scope):
+    """仅成功发布的当前候选可开启唯一原生开关；已为 true 时完全只读。"""
+    records = sorted((root / 'receipts').glob('chat-*/receipt.json'))
+    check(0 < len(records) <= 64, 'successful_chat_receipt_required')
+    successful = [read_json(path) for path in records]
+    successful = [record for record in successful if record.get('success') is True
+                  and record.get('image') == scope['chat']['new_image'] and record.get('image_id') == observed['image_id']]
+    check(successful and observed['image'] == scope['chat']['new_image'], 'deployed_chat_image_required')
+    receipt = successful[-1]
+    expected = receipt.get('source_sha256')
+    check(isinstance(expected, dict) and 0 < len(expected) <= 64
+          and all(isinstance(path, str) and not Path(path).is_absolute() and '..' not in Path(path).parts for path in expected), 'successful_chat_source_required')
+    check(source_hashes(observed['id'], list(expected)) == expected, 'deployed_chat_source_changed')
+    before = native_personal_flag(observed['id'], 'read')['value']
+    if before is True:
+        return {'complete': True, 'enabled': True, 'changed': False, 'previous': True}
+    backup = root / 'enable-personal-before.json'
+    value = {'schema': 1, 'chat_revision': revision, 'key': 'direct.enable', 'before': False}
+    if backup.exists(): check(read_json(backup) == value, 'native_flag_backup_changed')
+    else: write_record(backup, value)
+    # 副本/备份完成后重核实际容器和源，exec 绑定不可变 ID，不能误写后来的替代服务。
+    current = target()
+    check(current['id'] == observed['id'] and current['image_id'] == observed['image_id'], 'chat_changed_before_flag_write')
+    check(source_hashes(current['id'], list(expected)) == expected, 'chat_source_changed_before_flag_write')
+    result = native_personal_flag(current['id'], 'enable')
+    check(result['after'] is True, 'native_flag_enable_failed')
+    return {'complete': True, 'enabled': True, 'changed': result['changed'], 'previous': result['before']}
+
+
 def main(operation, revision='', artifact_sha256=''):
-    """固定四种操作；写操作依赖已确认的 revision 和公开资产完整哈希。"""
-    check(operation in ('inventory', 'preflight', 'prepare', 'deploy'), 'unsupported_operation')
+    """固定发布/单字段启用操作；写操作依赖已确认的 revision 和公开资产完整哈希。"""
+    check(operation in ('inventory', 'preflight', 'prepare', 'deploy', 'enable-personal'), 'unsupported_operation')
     observed = target()
     summary = {'container': observed['name'], 'project': PROJECT, 'service': SERVICE, 'image': observed['image'], 'health': observed['health']}
     if operation == 'inventory':
@@ -236,13 +321,16 @@ def main(operation, revision='', artifact_sha256=''):
     check(prepared.get('scope_sha256') == hashlib.sha256((root / 'scope.json').read_bytes()).hexdigest(), 'prepared_scope_changed')
     scope = read_json(root / 'scope.json')
     check(scope.get('source') == str(root / 'source') and scope['chat']['container'] == CONTAINER.lstrip('/'), 'prepared_target_changed')
+    if operation == 'enable-personal':
+        check(re.fullmatch('[a-f0-9]{64}', artifact_sha256 or '') and artifact_sha256 == prepared.get('artifact_sha256'), 'prepared_artifact_digest_changed')
+        return enable_personal(root, revision, observed, scope)
     release = load_deployer(root / 'source').PersonalConnectionsRelease(scope, 'chat')
     if operation == 'preflight':
         release.preflight()
         return {'complete': True, 'read_only': True, 'payload_prepared': True, 'stable_key_confirmed': True, 'native_direct_connections': release.database_snapshot['direct_connections_persisted'], **summary}
     check(re.fullmatch('[a-f0-9]{64}', artifact_sha256 or '') and artifact_sha256 == prepared.get('artifact_sha256'), 'prepared_artifact_digest_changed')
     release.deploy()
-    return {'complete': True, 'deployed': True, 'configuration_changed': False, 'data_changed_by_operator': False, 'model_requests': 0, **summary}
+    return {'complete': True, 'deployed': True, 'configuration_changed': False, 'data_changed_by_operator': False, 'model_requests': 0, **{**summary, 'image': scope['chat']['new_image']}}
 
 
 if __name__ == '__main__':

@@ -8,14 +8,14 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, preflight, prepare, deploy]
+        options: [inventory, preflight, prepare, deploy, enable-personal]
       chat_revision:
         description: Reviewed full Chat commit SHA; required except inventory
         type: string
         required: false
         default: ''
       artifact_sha256:
-        description: Trusted public release archive SHA256; required for prepare/deploy
+        description: Trusted public release archive SHA256; required for prepare/deploy/enable-personal
         type: string
         required: false
         default: ''
@@ -50,13 +50,13 @@ jobs:
           operation=os.environ['OPERATION']
           revision=os.environ.get('CHAT_REVISION','')
           digest=os.environ.get('ARTIFACT_SHA256','')
-          if operation not in ('inventory','preflight','prepare','deploy'): raise SystemExit('Unsupported Chat operation')
+          if operation not in ('inventory','preflight','prepare','deploy','enable-personal'): raise SystemExit('Unsupported Chat operation')
           if operation!='inventory' and not re.fullmatch('[a-f0-9]{40}',revision): raise SystemExit('Reviewed Chat revision required')
-          if operation in ('prepare','deploy') and not re.fullmatch('[a-f0-9]{64}',digest): raise SystemExit('Trusted artifact digest required')
+          if operation in ('prepare','deploy','enable-personal') and not re.fullmatch('[a-f0-9]{64}',digest): raise SystemExit('Trusted artifact digest required')
           source=Path('.github/scripts/chat_ops.py').read_text(encoding='utf-8')
           if len(source.encode())>120000: raise SystemExit('Fixed operation exceeds transport bound')
           marker='PL_CHAT_'+uuid.uuid4().hex
-          args=[operation]+([revision] if operation!='inventory' else [])+([digest] if operation in ('prepare','deploy') else [])
+          args=[operation]+([revision] if operation!='inventory' else [])+([digest] if operation in ('prepare','deploy','enable-personal') else [])
           # 所有 argv 均经过固定枚举/hex 校验，不拼接任意 shell 或外部响应。
           script="set -eu\nsudo -n python3 -B - "+' '.join(args)+" <<'"+marker+"'\n"+source+'\n'+marker+'\n'
           with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as output:
