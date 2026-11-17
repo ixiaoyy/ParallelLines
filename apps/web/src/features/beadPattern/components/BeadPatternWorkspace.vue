@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { builtinSiteText, currentLocale, uiText } from "@/shared/i18n/locale";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
 import { ArrowLeftOutlined, DownloadOutlined, PictureOutlined, ScissorOutlined, UndoOutlined } from "@ant-design/icons-vue";
 import UiButton from "@/shared/ui/Button.vue";
 import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
+import LanguageSwitcher from "@/shared/ui/LanguageSwitcher.vue";
 import { ARTKAL_S_COLORS } from "../palette";
 import { BEAD_MESSAGES, getMaterialCounts } from "../model";
 import type { BeadPattern, CropRegion } from "../model";
@@ -58,7 +60,7 @@ const hasEdits = computed(() => !!pattern.value && pattern.value.cells.some((cod
 const cellDescription = computed(() => {
   if (!pattern.value) return "";
   const index = Math.min(focusedCell.value, pattern.value.cells.length - 1);
-  return `第 ${Math.floor(index / pattern.value.width) + 1} 行，第 ${index % pattern.value.width + 1} 列 · ${pattern.value.cells[index] ?? "空格"}`;
+  return uiText("第 {row} 行，第 {column} 列 · {color}", { row: Math.floor(index / pattern.value.width) + 1, column: index % pattern.value.width + 1, color: pattern.value.cells[index] ?? uiText("空格") });
 });
 const selectedHex = computed(() => palette.find((color) => color.code === selectedColor.value)?.hex ?? "#000000");
 // 缩放只改变显示尺寸；焦点使用轻量矢量覆盖层，不重绘或复制图纸像素。
@@ -115,7 +117,7 @@ async function onDrop(event: DragEvent) {
 /** 每次生成创建有时限的本地 Worker，成功后整体替换图纸，失败则保留现有成果。 */
 async function generate(reveal = true) {
   if (!source.value || busy.value || disposed) return;
-  if (hasEdits.value && !window.confirm(BEAD_MESSAGES.replace)) return;
+  if (hasEdits.value && !window.confirm(uiText(BEAD_MESSAGES.replace))) return;
   generating.value = true;
   error.value = "";
   try {
@@ -293,58 +295,58 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="bead-shell">
-    <header class="bead-header"><a href="https://tools.pingxingxian.space/" class="bead-brand"><img src="/logo-lines-mark.png" alt="" width="40" height="36" /><strong>平行线</strong></a><a href="https://tools.pingxingxian.space/" class="bead-back"><ArrowLeftOutlined /> 返回工具</a></header>
+    <header class="bead-header"><a href="https://tools.pingxingxian.space/" class="bead-brand"><img src="/logo-lines-mark.png" alt="" width="40" height="36" /><strong>{{ uiText('平行线') }}</strong></a><div class="bead-header-actions"><LanguageSwitcher /><a href="https://tools.pingxingxian.space/" class="bead-back"><ArrowLeftOutlined /> {{ uiText('返回工具') }}</a></div></header>
     <main class="bead-page">
-      <div class="bead-intro"><div><span class="bead-kicker">创作工具</span><h1>拼豆图纸生成器</h1><p>将图片转换为拼豆图纸，查看色号和用量。</p></div><span class="bead-local">图片仅在你的设备上处理</span></div>
+      <div class="bead-intro"><div><span class="bead-kicker">{{ uiText('创作工具') }}</span><h1>{{ uiText('拼豆图纸生成器') }}</h1><p>{{ uiText('将图片转换为拼豆图纸，查看色号和用量。') }}</p></div><span class="bead-local">{{ uiText('图片仅在你的设备上处理') }}</span></div>
       <div class="bead-workspace">
-        <aside class="bead-settings" aria-label="图片与生成设置">
+        <aside class="bead-settings" :aria-label="uiText('图片与生成设置')">
           <section class="bead-section">
-            <h2><span>1</span> 选择图片</h2>
+            <h2><span>1</span> {{ uiText('选择图片') }}</h2>
             <div class="bead-upload" @dragover.prevent @drop.prevent="onDrop">
-              <input ref="fileInput" class="bead-file" type="file" accept="image/png,image/jpeg,image/webp" aria-label="选择图片" :disabled="busy" @change="onFile" />
-              <UiButton tone="subtle" :disabled="busy" @click="fileInput?.click()"><PictureOutlined /> 选择图片</UiButton>
-              <p>或将图片拖到这里</p><small>JPG / PNG / WebP · 最大 10 MB</small>
+              <input ref="fileInput" class="bead-file" type="file" accept="image/png,image/jpeg,image/webp" :aria-label="uiText('选择图片')" :disabled="busy" @change="onFile" />
+              <UiButton tone="subtle" :disabled="busy" @click="fileInput?.click()"><PictureOutlined /> {{ uiText('选择图片') }}</UiButton>
+              <p>{{ uiText('或将图片拖到这里') }}</p><small>{{ uiText('JPG / PNG / WebP · 最大 10 MB') }}</small>
             </div>
-            <div class="bead-examples"><button type="button" :disabled="busy" @click="useExample('pixel')"><img src="/tools/bead-pattern/pixel-example.svg" alt="" loading="lazy" decoding="async" /><span>体验简单图案</span></button><button type="button" :disabled="busy" @click="useExample('portrait')"><img src="/tools/bead-pattern/portrait-example.webp" alt="" loading="lazy" decoding="async" /><span>体验人像</span></button></div>
-            <div v-if="source" class="bead-source"><p class="bead-source__name" :title="sourceName">{{ sourceName }} <span>{{ source.image.naturalWidth }} × {{ source.image.naturalHeight }}</span></p><details class="bead-crop-panel"><summary>裁剪图片（可选）</summary><CropSelector v-model="crop" :src="source.url" :image-width="source.image.naturalWidth" :image-height="source.image.naturalHeight" :disabled="busy" /></details></div>
+            <div class="bead-examples"><button type="button" :disabled="busy" @click="useExample('pixel')"><img src="/tools/bead-pattern/pixel-example.svg" alt="" loading="lazy" decoding="async" /><span>{{ uiText('体验简单图案') }}</span></button><button type="button" :disabled="busy" @click="useExample('portrait')"><img src="/tools/bead-pattern/portrait-example.webp" alt="" loading="lazy" decoding="async" /><span>{{ uiText('体验人像') }}</span></button></div>
+            <div v-if="source" class="bead-source"><p class="bead-source__name" :title="sourceName">{{ sourceName }} <span>{{ source.image.naturalWidth }} × {{ source.image.naturalHeight }}</span></p><details class="bead-crop-panel"><summary>{{ uiText('裁剪图片（可选）') }}</summary><CropSelector v-model="crop" :src="source.url" :image-width="source.image.naturalWidth" :image-height="source.image.naturalHeight" :disabled="busy" /></details></div>
           </section>
-          <section class="bead-section"><h2><span>2</span> 设置图纸</h2>
-            <label class="bead-field-label" for="bead-edge">图纸长边 <span>一格对应一颗豆</span></label>
-            <div class="bead-presets"><button v-for="size in [32, 48, 64]" :key="size" type="button" :aria-pressed="edge === size" :disabled="busy" @click="edge = size">{{ size }} 格</button><input id="bead-edge" v-model.number="edge" type="number" min="8" max="128" step="1" aria-label="图纸长边格数" :disabled="busy" @change="clampEdge" /></div>
-            <p class="bead-help">格子越多，细节越丰富，也需要更多豆子。</p>
-            <label class="bead-field-label" for="bead-colors">最多使用几种颜色</label><select id="bead-colors" v-model.number="maxColors" aria-label="最多颜色数" :disabled="busy"><option v-for="count in [8, 16, 24]" :key="count" :value="count">{{ count }} 种{{ count === 8 ? ' · 简单图案' : count === 16 ? ' · 日常使用' : ' · 丰富细节' }}</option></select>
-            <p class="bead-help">自动选色会控制在此数量内，手动改色可增加颜色。</p>
-            <div class="bead-palette-note"><strong>Artkal S 系列配色</strong><p>采用官方色号。屏幕颜色供参考，请用同一系列的实物豆子核对。</p></div>
-            <UiButton class="bead-generate" :disabled="!source || busy" :loading="generating" @click="generate()">{{ loading ? '正在读取图片' : generating ? '正在生成图纸' : '生成图纸' }}</UiButton>
-            <p v-if="dimensions" class="bead-target">预计 {{ dimensions.width }} × {{ dimensions.height }} 格 · 透明区域留空</p>
+          <section class="bead-section"><h2><span>2</span> {{ uiText('设置图纸') }}</h2>
+            <label class="bead-field-label" for="bead-edge">{{ uiText('图纸长边') }} <span>{{ uiText('一格对应一颗豆') }}</span></label>
+            <div class="bead-presets"><button v-for="size in [32, 48, 64]" :key="size" type="button" :aria-pressed="edge === size" :disabled="busy" @click="edge = size">{{ size }} {{ uiText('格') }}</button><input id="bead-edge" v-model.number="edge" type="number" min="8" max="128" step="1" :aria-label="uiText('图纸长边格数')" :disabled="busy" @change="clampEdge" /></div>
+            <p class="bead-help">{{ uiText('格子越多，细节越丰富，也需要更多豆子。') }}</p>
+            <label class="bead-field-label" for="bead-colors">{{ uiText('最多使用几种颜色') }}</label><select id="bead-colors" v-model.number="maxColors" :aria-label="uiText('最多颜色数')" :disabled="busy"><option v-for="count in [8, 16, 24]" :key="count" :value="count">{{ uiText('{count} 种{purpose}', { count, purpose: uiText(count === 8 ? ' · 简单图案' : count === 16 ? ' · 日常使用' : ' · 丰富细节') }) }}</option></select>
+            <p class="bead-help">{{ uiText('自动选色会控制在此数量内，手动改色可增加颜色。') }}</p>
+            <div class="bead-palette-note"><strong>{{ uiText('Artkal S 系列配色') }}</strong><p>{{ uiText('采用官方色号。屏幕颜色供参考，请用同一系列的实物豆子核对。') }}</p></div>
+            <UiButton class="bead-generate" :disabled="!source || busy" :loading="generating" @click="generate()">{{ loading ? uiText('正在读取图片') : generating ? uiText('正在生成图纸') : uiText('生成图纸') }}</UiButton>
+            <p v-if="dimensions" class="bead-target">{{ uiText('预计 {width} × {height} 格 · 透明区域留空', { width: dimensions.width, height: dimensions.height }) }}</p>
           </section>
         </aside>
-        <section class="bead-result" aria-label="图纸结果">
-          <div ref="resultHeading" class="bead-result__top"><div><span class="bead-kicker">你的图纸</span><h2>{{ sourceName || '从一张图片开始' }}</h2></div><div v-if="pattern" class="bead-stats" aria-label="图纸统计" aria-live="polite"><span><strong>{{ pattern.width }} × {{ pattern.height }}</strong> 格</span><span><strong>{{ total.toLocaleString('zh-CN') }}</strong> 颗</span><span><strong>{{ counts.length }}</strong> 色</span></div></div>
-          <p v-if="error" role="alert" class="bead-alert">{{ error }}</p>
-          <p v-if="stale" class="bead-stale" role="status">图片或参数已调整，点击生成图纸更新结果。当前显示和导出仍为上一次图纸。</p>
-          <div class="bead-viewbar"><div class="bead-tabs" role="group" aria-label="查看方式"><button type="button" :aria-pressed="view === 'preview'" @click="view = 'preview'">效果图</button><button type="button" :aria-pressed="view === 'chart'" @click="view = 'chart'">编号图纸</button><button type="button" :aria-pressed="view === 'original'" @click="view = 'original'">原图</button></div><label v-if="view !== 'original'" class="bead-zoom">缩放<select v-model.number="zoom" aria-label="图纸缩放"><option v-for="value in [100, 150, 200, 300]" :key="value" :value="value">{{ value }}%</option></select></label></div>
-          <div ref="stage" class="bead-stage" :class="{ 'is-editing': tool !== 'inspect' }" aria-label="图纸工作区" :aria-busy="busy">
-            <img v-if="view === 'original' && source" :src="source.url" alt="当前选择的原图" class="bead-original" />
+        <section class="bead-result" :aria-label="uiText('图纸结果')">
+          <div ref="resultHeading" class="bead-result__top"><div><span class="bead-kicker">{{ uiText('你的图纸') }}</span><h2>{{ sourceName || uiText('从一张图片开始') }}</h2></div><div v-if="pattern" class="bead-stats" :aria-label="uiText('图纸统计')" aria-live="polite"><span><strong>{{ pattern.width }} × {{ pattern.height }}</strong> {{ uiText('格') }}</span><span><strong>{{ total.toLocaleString(currentLocale) }}</strong> {{ uiText('颗') }}</span><span><strong>{{ counts.length }}</strong> {{ uiText('色') }}</span></div></div>
+          <p v-if="error" role="alert" class="bead-alert">{{ uiText(error) }}</p>
+          <p v-if="stale" class="bead-stale" role="status">{{ uiText('图片或参数已调整，点击生成图纸更新结果。当前显示和导出仍为上一次图纸。') }}</p>
+          <div class="bead-viewbar"><div class="bead-tabs" role="group" :aria-label="uiText('查看方式')"><button type="button" :aria-pressed="view === 'preview'" @click="view = 'preview'">{{ uiText('效果图') }}</button><button type="button" :aria-pressed="view === 'chart'" @click="view = 'chart'">{{ uiText('编号图纸') }}</button><button type="button" :aria-pressed="view === 'original'" @click="view = 'original'">{{ uiText('原图') }}</button></div><label v-if="view !== 'original'" class="bead-zoom">{{ uiText('缩放') }}<select v-model.number="zoom" :aria-label="uiText('图纸缩放')"><option v-for="value in [100, 150, 200, 300]" :key="value" :value="value">{{ value }}%</option></select></label></div>
+          <div ref="stage" class="bead-stage" :class="{ 'is-editing': tool !== 'inspect' }" :aria-label="uiText('图纸工作区')" :aria-busy="busy">
+            <img v-if="view === 'original' && source" :src="source.url" :alt="uiText('当前选择的原图')" class="bead-original" />
             <div v-show="pattern && view !== 'original'" class="bead-canvas" :style="canvasSize">
-              <canvas ref="canvas" role="img" aria-label="拼豆图案画布" aria-describedby="bead-canvas-help" tabindex="0" @pointerdown="beginStroke" @pointermove="moveStroke" @pointerup="finishStroke" @pointercancel="finishStroke" @lostpointercapture="finishStroke" @keydown="onCanvasKey" @focus="canvasFocused = true" @blur="canvasFocused = false" />
+              <canvas ref="canvas" role="img" :aria-label="uiText('拼豆图案画布')" aria-describedby="bead-canvas-help" tabindex="0" @pointerdown="beginStroke" @pointermove="moveStroke" @pointerup="finishStroke" @pointercancel="finishStroke" @lostpointercapture="finishStroke" @keydown="onCanvasKey" @focus="canvasFocused = true" @blur="canvasFocused = false" />
               <svg v-if="canvasFocused" class="bead-cell-focus" :viewBox="`0 0 ${layout.width} ${layout.height}`" aria-hidden="true">
                 <rect :x="focusCell.x" :y="focusCell.y" :width="focusCell.size" :height="focusCell.size" fill="none" stroke="#ffffff" stroke-width="3" />
                 <rect :x="focusCell.x" :y="focusCell.y" :width="focusCell.size" :height="focusCell.size" fill="none" stroke="#17202b" stroke-width="1" />
               </svg>
             </div>
-            <div v-if="!pattern" class="bead-empty"><PictureOutlined /><p>{{ busy ? '正在准备示例图纸…' : '选择图片，或使用示例体验' }}</p></div>
-            <div v-if="busy && pattern" class="bead-busy" role="status">{{ loading ? '正在读取图片…' : '正在生成图纸…' }}</div>
+            <div v-if="!pattern" class="bead-empty"><PictureOutlined /><p>{{ busy ? uiText('正在准备示例图纸…') : uiText('选择图片，或使用示例体验') }}</p></div>
+            <div v-if="busy && pattern" class="bead-busy" role="status">{{ loading ? uiText('正在读取图片…') : uiText('正在生成图纸…') }}</div>
           </div>
-          <div class="bead-editor"><div class="bead-toolbuttons" role="group" aria-label="编辑工具"><button type="button" :aria-pressed="tool === 'inspect'" :disabled="!pattern || busy" @click="selectTool('inspect')">查看</button><button type="button" :aria-pressed="tool === 'paint'" :disabled="!pattern || busy" @click="selectTool('paint')">画笔</button><button type="button" :aria-pressed="tool === 'erase'" :disabled="!pattern || busy" @click="selectTool('erase')"><ScissorOutlined /> 橡皮</button><button type="button" :disabled="!history.length || busy" @click="undo"><UndoOutlined /> 撤销</button></div><label v-if="tool === 'paint'" class="bead-brush"><span :style="{ backgroundColor: selectedHex }"></span><select v-model="selectedColor" aria-label="画笔色号"><option v-for="color in palette" :key="color.code" :value="color.code">{{ color.code }}</option></select></label><span v-else class="bead-cursor">{{ cellDescription }}</span></div>
-          <p id="bead-canvas-help" class="bead-help bead-canvas-help">{{ tool === 'inspect' ? '点击格子或下方色块，查看同色位置。画布可局部滚动。' : tool === 'paint' ? '选择色号后点按或拖动涂色，可撤销最近 30 次操作。' : '点按或拖动擦除，擦除后的格子不再计入用量。' }}<span>键盘：方向键移动，回车操作。</span></p>
-          <div v-if="counts.length" class="bead-swatches" aria-label="图纸用色"><button v-for="item in counts" :key="item.color.code" type="button" :title="`${item.color.code} · ${item.count} 颗`" :aria-label="`突出 ${item.color.code}，${item.count} 颗`" :aria-pressed="highlight === item.color.code" @click="selectColor(item.color.code)"><span :style="{ backgroundColor: item.color.hex }"></span>{{ item.color.code }}</button><button v-if="highlight" type="button" class="bead-clear-highlight" @click="highlight = null">取消突出</button></div>
-          <div class="bead-downloads"><UiButton :disabled="!pattern || busy || exporting" @click="exportResult('chart')"><DownloadOutlined /> 下载图纸</UiButton><UiButton tone="subtle" :disabled="!pattern || busy || exporting" @click="exportResult('preview')">下载效果图</UiButton><UiButton tone="ghost" :disabled="!pattern || busy || exporting" @click="exportResult('csv')">导出材料清单</UiButton><UiButton tone="ghost" :disabled="!pattern || busy || exporting" @click="exportResult('print')">打印 / 另存 PDF</UiButton></div>
-          <details class="bead-materials"><summary>材料清单 <span>{{ counts.length }} 种颜色，共 {{ total.toLocaleString('zh-CN') }} 颗</span></summary><div class="bead-materials__scroll"><table aria-label="材料清单"><thead><tr><th>颜色</th><th>Artkal S 色号</th><th>所需颗数</th></tr></thead><tbody><tr v-for="item in counts" :key="item.color.code"><td><span class="bead-table-color" :style="{ backgroundColor: item.color.hex }"></span></td><td>{{ item.color.code }}</td><td>{{ item.count }}</td></tr></tbody><tfoot><tr><th colspan="2">合计（不含空格）</th><td>{{ total }}</td></tr></tfoot></table></div><p class="bead-help">用量以当前图纸为准，不额外计入备用豆。</p></details>
+          <div class="bead-editor"><div class="bead-toolbuttons" role="group" :aria-label="uiText('编辑工具')"><button type="button" :aria-pressed="tool === 'inspect'" :disabled="!pattern || busy" @click="selectTool('inspect')">{{ uiText('查看') }}</button><button type="button" :aria-pressed="tool === 'paint'" :disabled="!pattern || busy" @click="selectTool('paint')">{{ uiText('画笔') }}</button><button type="button" :aria-pressed="tool === 'erase'" :disabled="!pattern || busy" @click="selectTool('erase')"><ScissorOutlined /> {{ uiText('橡皮') }}</button><button type="button" :disabled="!history.length || busy" @click="undo"><UndoOutlined /> {{ builtinSiteText('tools.undo', '撤销', currentLocale) }}</button></div><label v-if="tool === 'paint'" class="bead-brush"><span :style="{ backgroundColor: selectedHex }"></span><select v-model="selectedColor" :aria-label="uiText('画笔色号')"><option v-for="color in palette" :key="color.code" :value="color.code">{{ color.code }}</option></select></label><span v-else class="bead-cursor">{{ cellDescription }}</span></div>
+          <p id="bead-canvas-help" class="bead-help bead-canvas-help">{{ tool === 'inspect' ? uiText('点击格子或下方色块，查看同色位置。画布可局部滚动。') : tool === 'paint' ? uiText('选择色号后点按或拖动涂色，可撤销最近 30 次操作。') : uiText('点按或拖动擦除，擦除后的格子不再计入用量。') }}<span>{{ uiText('键盘：方向键移动，回车操作。') }}</span></p>
+          <div v-if="counts.length" class="bead-swatches" :aria-label="uiText('图纸用色')"><button v-for="item in counts" :key="item.color.code" type="button" :title="uiText('{code} · {count} 颗', { code: item.color.code, count: item.count })" :aria-label="uiText('突出 {code}，{count} 颗', { code: item.color.code, count: item.count })" :aria-pressed="highlight === item.color.code" @click="selectColor(item.color.code)"><span :style="{ backgroundColor: item.color.hex }"></span>{{ item.color.code }}</button><button v-if="highlight" type="button" class="bead-clear-highlight" @click="highlight = null">{{ uiText('取消突出') }}</button></div>
+          <div class="bead-downloads"><UiButton :disabled="!pattern || busy || exporting" @click="exportResult('chart')"><DownloadOutlined /> {{ uiText('下载图纸') }}</UiButton><UiButton tone="subtle" :disabled="!pattern || busy || exporting" @click="exportResult('preview')">{{ uiText('下载效果图') }}</UiButton><UiButton tone="ghost" :disabled="!pattern || busy || exporting" @click="exportResult('csv')">{{ uiText('导出材料清单') }}</UiButton><UiButton tone="ghost" :disabled="!pattern || busy || exporting" @click="exportResult('print')">{{ uiText('打印 / 另存 PDF') }}</UiButton></div>
+          <details class="bead-materials"><summary>{{ uiText('材料清单') }} <span>{{ uiText('{colors} 种颜色，共 {count} 颗', { colors: counts.length, count: total.toLocaleString(currentLocale) }) }}</span></summary><div class="bead-materials__scroll"><table :aria-label="uiText('材料清单')"><thead><tr><th>{{ uiText('颜色') }}</th><th>{{ uiText('Artkal S 色号') }}</th><th>{{ uiText('所需颗数') }}</th></tr></thead><tbody><tr v-for="item in counts" :key="item.color.code"><td><span class="bead-table-color" :style="{ backgroundColor: item.color.hex }"></span></td><td>{{ item.color.code }}</td><td>{{ item.count }}</td></tr></tbody><tfoot><tr><th colspan="2">{{ uiText('合计（不含空格）') }}</th><td>{{ total }}</td></tr></tfoot></table></div><p class="bead-help">{{ uiText('用量以当前图纸为准，不额外计入备用豆。') }}</p></details>
         </section>
       </div>
       <section class="bead-guide" aria-labelledby="bead-guide-title"><h2 id="bead-guide-title">第一次接触拼豆？</h2><div><p><strong>一格，一颗豆</strong>拼豆是把彩色小塑料珠排列成图案。编号图纸告诉你每个位置放哪一种颜色，空格表示不用放。</p><p><strong>从简单图案开始</strong>轮廓清楚、背景简单的图片更容易辨认。真人照片建议先裁近人物，再增加格数和颜色。</p><p><strong>按图纸准备材料</strong>材料清单写明 Artkal S 色号和数量。打印图用于对照坐标摆豆，未校准为拼板的等比例垫图。</p></div></section>
-      <details class="bead-about"><summary>色卡、示例与开源说明</summary><p>色卡来自 <a href="https://www.artkalfusebeads.com/pages/s-color-chart" target="_blank" rel="noopener noreferrer">Artkal 官方 RGB 色卡</a>，不包含缺少 RGB 数据的金属色。屏幕、打印和实物颜色可能存在差异。</p><p>盆栽示例为本站手绘；人像示例为 NASA / Eileen Collins，由 scikit-image 提供，仅用于图像转换演示，不代表本人或 NASA 为本站背书。</p><p>颜色算法参考并局部复用 <a href="https://github.com/Jett-Wu/Perler_Beads_Generator" target="_blank" rel="noopener noreferrer">Jett-Wu / Perler Beads Generator</a>（MIT）。<a href="/tools/bead-pattern/OPEN_SOURCE.md" target="_blank">开源归属</a> · <a href="/tools/bead-pattern/SOURCES.md" target="_blank">素材来源</a></p></details>
+      <details class="bead-about"><summary>{{ uiText('色卡、示例与开源说明') }}</summary><p>色卡来自 <a href="https://www.artkalfusebeads.com/pages/s-color-chart" target="_blank" rel="noopener noreferrer">Artkal 官方 RGB 色卡</a>，不包含缺少 RGB 数据的金属色。屏幕、打印和实物颜色可能存在差异。</p><p>盆栽示例为本站手绘；人像示例为 NASA / Eileen Collins，由 scikit-image 提供，仅用于图像转换演示，不代表本人或 NASA 为本站背书。</p><p>颜色算法参考并局部复用 <a href="https://github.com/Jett-Wu/Perler_Beads_Generator" target="_blank" rel="noopener noreferrer">Jett-Wu / Perler Beads Generator</a>（MIT）。<a href="/tools/bead-pattern/OPEN_SOURCE.md" target="_blank">开源归属</a> · <a href="/tools/bead-pattern/SOURCES.md" target="_blank">素材来源</a></p></details>
     </main><footer class="bead-footer"><SiteNavigation /></footer>
   </div>
 </template>

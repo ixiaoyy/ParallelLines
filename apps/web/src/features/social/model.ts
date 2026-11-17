@@ -1,3 +1,4 @@
+import { uiText } from "@/shared/i18n/locale";
 import type { PersonaKind } from "@/entities/user/model";
 import type { TopicResponse } from "@/features/topics/model";
 
@@ -51,24 +52,24 @@ export interface PrivateMessageCreateRequest {
 
 export function relationshipSummary(state: UserRelationshipState | null): string {
   if (!state) {
-    return "登录后可以关注、忽略或屏蔽该成员。";
+    return uiText("登录后可以关注、忽略或屏蔽该成员。");
   }
 
   if (state.blocked) {
-    return "已屏蔽该成员：不会收到对方通知，也不能互发私信。";
+    return uiText("已屏蔽该成员：不会收到对方通知，也不能互发私信。");
   }
 
   if (state.ignored) {
-    return "已忽略该成员：动态流会减少来自对方的打扰。";
+    return uiText("已忽略该成员：动态流会减少来自对方的打扰。");
   }
 
   if (state.following) {
-    return state.followed_by ? "你们正在互相关注。" : "已关注，对方发布新主题时会提醒你。";
+    return state.followed_by ? uiText("你们正在互相关注。") : uiText("已关注，对方发布新主题时会提醒你。");
   }
 
   if (state.followed_by) {
-    return "对方已关注你，你也可以关注回来。";
+    return uiText("对方已关注你，你也可以关注回来。");
   }
 
-  return "关注后，对方发布新主题时会进入你的通知中心。";
+  return uiText("关注后，对方发布新主题时会进入你的通知中心。");
 }

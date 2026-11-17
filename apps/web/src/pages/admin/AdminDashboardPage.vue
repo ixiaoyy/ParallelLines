@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed } from "vue";
 
 import AdminAccessState from "@/features/admin/components/AdminAccessState.vue";
@@ -15,7 +16,7 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
   <AdminAccessState v-if="currentUserQuery.isLoading.value" kind="loading" />
   <AdminAccessState v-else-if="currentUserQuery.isError.value" kind="error">
     <template #actions>
-      <UiButton tone="subtle" @click="currentUserQuery.refetch()">重新检查</UiButton>
+      <UiButton tone="subtle" @click="currentUserQuery.refetch()">{{ uiText("重新检查") }}</UiButton>
     </template>
   </AdminAccessState>
   <AdminAccessState
@@ -27,7 +28,7 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
   <AdminAccessState
     v-else-if="!canAccessAdmin"
     kind="forbidden"
-    description="后台数据和用户管理仅限管理员；版主可继续使用审核台。"
+    :description="uiText('后台数据和用户管理仅限管理员；版主可继续使用审核台。')"
     :action-to="{ name: 'admin-moderation' }"
     action-label="前往审核台"
   />

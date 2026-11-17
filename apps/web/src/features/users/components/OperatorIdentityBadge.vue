@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed } from "vue";
 
 import type { PersonaKind } from "@/entities/user/model";
@@ -17,10 +18,10 @@ const identity = computed(() => operatorIdentity(props.isPersona, props.kind));
     v-if="identity"
     class="operator-identity"
     tone="gray"
-    :title="identity.description"
+    :title="uiText(identity.description)"
     :data-persona-kind="identity.kind ?? 'managed'"
   >
-    {{ identity.label }}
+    {{ uiText(identity.label) }}
   </UiBadge>
 </template>
 

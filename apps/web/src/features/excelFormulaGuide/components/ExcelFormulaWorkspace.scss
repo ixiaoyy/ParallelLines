@@ -1,6 +1,7 @@
 .formula-guide-shell { min-height: 100vh; background: var(--bg-app); color: var(--text); }
 .formula-site-header, .formula-guide, .formula-site-footer { width: min(1240px, calc(100% - 48px)); margin-inline: auto; }
-.formula-site-header { display: flex; min-height: 84px; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--border); }
+.formula-site-header { display: flex; flex-wrap: wrap; padding-block: 10px; min-height: 84px; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--border); }
+.formula-header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; margin-left: auto; }
 .formula-site-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--title); font-size: 22px; text-decoration: none; white-space: nowrap; }
 .formula-site-brand img { display: block; width: 48px; height: 42px; object-fit: contain; }
 .formula-back-link { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; color: var(--text); font-size: 14px; text-decoration: none; }

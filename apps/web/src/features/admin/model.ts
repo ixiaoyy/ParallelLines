@@ -297,7 +297,8 @@ export function adminRoleLabel(role: string): string {
     moderator: "版主",
     user: "用户",
   };
-  return labels[role] ?? role;
+  // 展示角色使用独立语义键；未知后端值保留原文，不参与界面词表的同名翻译。
+  return labels[role] ? builtinSiteText(`account.role.${role}`, labels[role], currentLocale.value) : role;
 }
 
 export function adminStatusLabel(status: string): string {
@@ -308,7 +309,8 @@ export function adminStatusLabel(status: string): string {
     silenced: "禁言",
     suspended: "停用",
   };
-  return labels[status] ?? status;
+  // 状态与禁言/停用操作使用不同词条，避免英文把状态显示成动作。
+  return labels[status] ? builtinSiteText(`account.status.${status}`, labels[status], currentLocale.value) : status;
 }
 
 export type FrontierNewsSourceKind =

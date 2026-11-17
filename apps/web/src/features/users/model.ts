@@ -1,6 +1,7 @@
 import type { PersonaKind } from "@/entities/user/model";
 import type { UserBadgeResponse } from "@/features/badges/model";
 import type { UserRole, UserStatus } from "@/features/auth/model";
+import { builtinSiteText, currentLocale } from "@/shared/i18n/locale";
 
 export interface UserProfile {
   is_persona: boolean;
@@ -89,6 +90,20 @@ export function profileVisibilityLabel(value: string): string {
   return labels[value] ?? value;
 }
 
+/** 仅翻译后端明确定义的五个内置信任标签；label为原展示值，未知或自定义标签逐字保留。 */
+export function builtinTrustLabel(label: string): string {
+  const keys: Record<string, string> = {
+    新成员: "new",
+    基础成员: "basic",
+    常驻成员: "regular",
+    可信成员: "trusted",
+    核心成员: "core",
+  };
+  if (!Object.hasOwn(keys, label)) return label;
+  return builtinSiteText(`account.trust_label.${keys[label]}`, label, currentLocale.value);
+}
+
+/** 展示个人历史的事件类型；保留原类型值和中文标签，未知类型直接原样返回。 */
 export function activityTypeLabel(value: UserActivityItem["type"]): string {
   const labels: Record<UserActivityItem["type"], string> = {
     bookmarked_post: "收藏回复",
@@ -97,5 +112,6 @@ export function activityTypeLabel(value: UserActivityItem["type"]): string {
     liked_topic: "点赞主题",
     post: "发布回复",
   };
-  return labels[value];
+  if (!Object.hasOwn(labels, value)) return value;
+  return builtinSiteText(`profile.activity_type.${value}`, labels[value], currentLocale.value);
 }

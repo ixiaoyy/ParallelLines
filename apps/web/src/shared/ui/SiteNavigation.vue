@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { useRoute } from "vue-router";
 
 import { IS_FORUM_SITE, SITE_LINKS } from "@/shared/site/links";
@@ -9,16 +10,16 @@ const route = useRoute();
 </script>
 
 <template>
-  <nav class="site-navigation" :class="`site-navigation--${tone}`" aria-label="页脚导航">
-    <a v-if="IS_FORUM_SITE" :href="SITE_LINKS.games">游戏</a>
-    <RouterLink v-else :to="{ name: 'home' }" exact-active-class="is-active">游戏</RouterLink>
+  <nav class="site-navigation" :class="`site-navigation--${tone}`" :aria-label="uiText('页脚导航')">
+    <a v-if="IS_FORUM_SITE" :href="SITE_LINKS.games">{{ uiText("游戏") }}</a>
+    <RouterLink v-else :to="{ name: 'home' }" exact-active-class="is-active">{{ uiText("游戏") }}</RouterLink>
     <span aria-hidden="true">|</span>
-    <RouterLink v-if="IS_FORUM_SITE" :to="{ name: 'personal-space' }" class="is-active" :aria-current="route.name === 'personal-space' ? 'page' : undefined">圈子</RouterLink>
-    <a v-else :href="SITE_LINKS.forum">圈子</a>
+    <RouterLink v-if="IS_FORUM_SITE" :to="{ name: 'personal-space' }" class="is-active" :aria-current="route.name === 'personal-space' ? 'page' : undefined">{{ uiText("圈子") }}</RouterLink>
+    <a v-else :href="SITE_LINKS.forum">{{ uiText("圈子") }}</a>
     <span aria-hidden="true">|</span>
-    <a :href="SITE_LINKS.tools" :class="{ 'is-active': route.name === 'tools' }" :aria-current="route.name === 'tools' ? 'page' : undefined">工具</a>
+    <a :href="SITE_LINKS.tools" :class="{ 'is-active': route.name === 'tools' }" :aria-current="route.name === 'tools' ? 'page' : undefined">{{ uiText("工具") }}</a>
     <span aria-hidden="true">|</span>
-    <a :href="SITE_LINKS.chat">聊天</a>
+    <a :href="SITE_LINKS.chat">{{ uiText("聊天") }}</a>
   </nav>
 </template>
 

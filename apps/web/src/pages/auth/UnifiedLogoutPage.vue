@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
+import LanguageSwitcher from "@/shared/ui/LanguageSwitcher.vue";
 import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 
@@ -43,8 +45,8 @@ onMounted(() => { void finish(); });
 </script>
 
 <template>
-  <ChatEntryLoading v-if="pending" label="正在退出…" />
-  <main v-else class="unified-auth-error" aria-live="polite"><h1>退出登录</h1><p v-if="changedAccount">账号已切换，请返回后重新操作。</p><p v-if="error" role="alert">{{ error }}</p><UiButton v-if="error" @click="finish">重试</UiButton><RouterLink to="/">返回首页</RouterLink></main>
+  <ChatEntryLoading v-if="pending" :label="uiText('正在退出…')" />
+  <main v-else class="unified-auth-error" aria-live="polite"><LanguageSwitcher style="position: fixed; top: 12px; right: 16px; z-index: 40" /><h1>{{ uiText("退出登录") }}</h1><p v-if="changedAccount">{{ uiText("账号已切换，请返回后重新操作。") }}</p><p v-if="error" role="alert">{{ uiText(error) }}</p><UiButton v-if="error" @click="finish">{{ uiText("重试") }}</UiButton><RouterLink to="/">{{ uiText("返回首页") }}</RouterLink></main>
 </template>
 
 <style scoped>.unified-auth-error { max-width: 640px; margin: 64px auto; padding: 24px; }.unified-auth-error a { margin-left: 20px; }</style>

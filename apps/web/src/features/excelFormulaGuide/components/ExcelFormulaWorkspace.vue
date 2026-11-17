@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed, defineAsyncComponent, defineComponent, h, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ArrowLeftOutlined, CheckOutlined, CopyOutlined, DownloadOutlined, SearchOutlined } from "@ant-design/icons-vue";
@@ -10,14 +11,15 @@ import type { OnlineOperationId } from "@/features/excelFormulaGuide/onlineOpera
 import type { OperationOptions } from "@/features/excelFormulaGuide/localProcessingModel";
 import UiButton from "@/shared/ui/Button.vue";
 import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
+import LanguageSwitcher from "@/shared/ui/LanguageSwitcher.vue";
 import ExcelLocalProcessor from "./ExcelLocalProcessor.vue";
 import ListCompareOperator from "@/features/listCompare/components/ListCompareOperator.vue";
 
 // 公式试算为新功能独立懒加载，旧教程/复制/文件清理不要求计算模块先加载成功。
 const FormulaTrialPanel = defineAsyncComponent({
   loader: () => import("./FormulaTrialPanel.vue"), timeout: 15_000,
-  loadingComponent: defineComponent({ setup: () => () => h("p", { class: "formula-preview-note" }, "正在加载本地试算面板…") }),
-  errorComponent: defineComponent({ setup: () => () => h("p", { role: "alert" }, "试算模块未能加载，请刷新页面重试。") }),
+  loadingComponent: defineComponent({ setup: () => () => h("p", { class: "formula-preview-note" }, uiText("正在加载本地试算面板…")) }),
+  errorComponent: defineComponent({ setup: () => () => h("p", { role: "alert" }, uiText("试算模块未能加载，请刷新页面重试。")) }),
 });
 
 const localOpen = ref(false);
@@ -199,90 +201,91 @@ function resetFilters(): void {
 <template>
   <div class="formula-guide-shell">
     <header class="formula-site-header">
-      <RouterLink class="formula-site-brand" :to="{ name: 'home' }" aria-label="平行线首页">
+      <RouterLink class="formula-site-brand" :to="{ name: 'home' }" :aria-label="uiText('平行线首页')">
         <img src="/logo-lines-mark.png" alt="" width="48" height="42" />
-        <strong>平行线</strong>
+        <strong>{{ uiText('平行线') }}</strong>
       </RouterLink>
-      <a class="formula-back-link" href="https://tools.pingxingxian.space/"><ArrowLeftOutlined aria-hidden="true" /> 返回工具列表</a>
+      <div class="formula-header-actions"><LanguageSwitcher />
+      <a class="formula-back-link" href="https://tools.pingxingxian.space/"><ArrowLeftOutlined aria-hidden="true" /> {{ uiText('返回工具列表') }}</a></div>
     </header>
 
     <main class="formula-guide" aria-labelledby="formula-guide-title">
       <header class="formula-intro">
         <div class="formula-intro__copy">
-          <p class="formula-intro__label">办公工具 / 零基础教程</p>
-          <h1 id="formula-guide-title">Excel 公式速查</h1>
-          <p class="formula-intro__description">搜索你要解决的问题或公式名，直接在线处理，或查看可复制的公式。</p>
+          <p class="formula-intro__label">{{ uiText('办公工具 / 零基础教程') }}</p>
+          <h1 id="formula-guide-title">{{ uiText('Excel 公式速查') }}</h1>
+          <p class="formula-intro__description">{{ uiText('搜索你要解决的问题或公式名，直接在线处理，或查看可复制的公式。') }}</p>
         </div>
         <div class="formula-intro__practice">
           <div class="formula-intro__actions">
             <UiButton tone="ghost" :href="PRACTICE_WORKBOOK_URL" download="excel-formula-practice.xlsx" class="formula-download">
               <template #icon><DownloadOutlined aria-hidden="true" /></template>
-              下载练习表
+              {{ uiText('下载练习表') }}
             </UiButton>
           </div>
-          <p>{{ formulaLessons.length }} 篇教程共用一份 Excel<br />示例数据已填好，公式留给你练习。</p>
+          <p>{{ uiText('{count} 篇教程共用一份 Excel', { count: formulaLessons.length }) }}<br />{{ uiText('示例数据已填好，公式留给你练习。') }}</p>
         </div>
       </header>
 
       <section id="formula-discovery" class="formula-search-hub" aria-labelledby="formula-search-title">
-        <h2 id="formula-search-title">查功能、找公式</h2>
-        <label class="formula-search-label" for="formula-search">输入工作需求或公式名</label>
+        <h2 id="formula-search-title">{{ uiText('查功能、找公式') }}</h2>
+        <label class="formula-search-label" for="formula-search">{{ uiText('输入工作需求或公式名') }}</label>
         <div class="formula-search">
           <SearchOutlined aria-hidden="true" />
-          <input id="formula-search" v-model="search" type="search" aria-label="搜索功能或公式" placeholder="按人员汇总、查找重复项、核对提交名单" autocomplete="off" />
+          <input id="formula-search" v-model="search" type="search" :aria-label="uiText('搜索功能或公式')" :placeholder="uiText('按人员汇总、查找重复项、核对提交名单')" autocomplete="off" />
         </div>
-        <div class="formula-search-feedback"><p class="formula-search-count" aria-live="polite">{{ matchedOperations.length }} 个在线功能<span v-if="hasSearch"> · {{ filteredLessons.length }} 篇公式教程</span><span v-else> · {{ formulaLessons.length }} 篇公式教程可搜索</span></p><button v-if="hasSearch" type="button" @click="resetFilters">清空搜索</button></div>
+        <div class="formula-search-feedback"><p class="formula-search-count" aria-live="polite">{{ uiText('{count} 个在线功能', { count: matchedOperations.length }) }}<span v-if="hasSearch"> · {{ uiText('{count} 篇公式教程', { count: filteredLessons.length }) }}</span><span v-else> · {{ uiText('{count} 篇公式教程可搜索', { count: formulaLessons.length }) }}</span></p><button v-if="hasSearch" type="button" @click="resetFilters">{{ uiText('清空搜索') }}</button></div>
         <section v-if="matchedOperations.length" class="formula-online-results" aria-labelledby="formula-online-title">
-          <h3 id="formula-online-title">直接在线处理</h3>
+          <h3 id="formula-online-title">{{ uiText('直接在线处理') }}</h3>
           <div class="formula-online-grid">
-            <button v-for="operation in matchedOperations" :key="operation.id" type="button" :aria-label="`在线处理：${operation.title}`" @click="openOnlineOperation(operation.id)">
-              <strong>{{ operation.title }} <span aria-hidden="true">→</span></strong>
-              <span>{{ operation.description }}</span>
+            <button v-for="operation in matchedOperations" :key="operation.id" type="button" :aria-label="uiText('在线处理：{operation}', { operation: uiText(operation.title) })" @click="openOnlineOperation(operation.id)">
+              <strong>{{ uiText(operation.title) }} <span aria-hidden="true">→</span></strong>
+              <span>{{ uiText(operation.description) }}</span>
             </button>
           </div>
         </section>
-        <nav v-if="hasSearch" class="formula-search-results" aria-label="公式教程目录">
-          <h3>查看公式与用法</h3>
+        <nav v-if="hasSearch" class="formula-search-results" :aria-label="uiText('公式教程目录')">
+          <h3>{{ uiText('查看公式与用法') }}</h3>
           <ul v-if="filteredLessons.length" class="formula-search-lessons">
             <li v-for="lesson in filteredLessons" :key="lesson.id"><button type="button" @click="selectLesson(lesson.id)">
               <strong>{{ lesson.title }}</strong><span>{{ lesson.summary }}</span>
-              <small>{{ lesson.functions.join(' + ') }} · {{ lesson.version }} · 查看公式 →</small>
+              <small>{{ lesson.functions.join(' + ') }} · {{ uiText(lesson.version) }} {{ uiText('· 查看公式 →') }}</small>
             </button></li>
           </ul>
-          <div v-else class="formula-search-empty"><p>没有找到相关教程，换个说法试试。</p><button type="button" @click="resetFilters">清空搜索和分类</button></div>
+          <div v-else class="formula-search-empty"><p>{{ uiText('没有找到相关教程，换个说法试试。') }}</p><button type="button" @click="resetFilters">{{ uiText('清空搜索和分类') }}</button></div>
         </nav>
       </section>
 
-      <section v-if="localOpen" id="excel-local-processor" class="excel-operations-panel" tabindex="-1" aria-label="本地操作面板">
+      <section v-if="localOpen" id="excel-local-processor" class="excel-operations-panel" tabindex="-1" :aria-label="uiText('本地操作面板')">
         <div class="excel-operations-switch">
-          <div class="excel-operations-tabs" role="tablist" aria-label="操作工具类型">
-            <button type="button" role="tab" :aria-selected="activeOperationTab === 'compare'" class="excel-operations-tab" :class="{ 'is-active': activeOperationTab === 'compare' }" @click="activeOperationTab = 'compare'">两列名单查重比对</button>
-            <button type="button" role="tab" :aria-selected="activeOperationTab === 'workbook'" class="excel-operations-tab" :class="{ 'is-active': activeOperationTab === 'workbook' }" @click="activeOperationTab = 'workbook'">表格文件处理 (.xlsx)</button>
+          <div class="excel-operations-tabs" role="tablist" :aria-label="uiText('操作工具类型')">
+            <button type="button" role="tab" :aria-selected="activeOperationTab === 'compare'" class="excel-operations-tab" :class="{ 'is-active': activeOperationTab === 'compare' }" @click="activeOperationTab = 'compare'">{{ uiText('两列名单查重比对') }}</button>
+            <button type="button" role="tab" :aria-selected="activeOperationTab === 'workbook'" class="excel-operations-tab" :class="{ 'is-active': activeOperationTab === 'workbook' }" @click="activeOperationTab = 'workbook'">{{ uiText('表格文件处理 (.xlsx)') }}</button>
           </div>
-          <UiButton tone="ghost" class="excel-operations-close" @click="localOpen = false">收起操作</UiButton>
+          <UiButton tone="ghost" class="excel-operations-close" @click="localOpen = false">{{ uiText('收起操作') }}</UiButton>
         </div>
         <div class="excel-operations-body"><ListCompareOperator v-if="activeOperationTab === 'compare'" /><ExcelLocalProcessor v-else :suggested-operation="localOperation" /></div>
       </section>
 
       <details class="formula-task-picker">
-        <summary><h2 id="formula-task-title" tabindex="-1">按用途浏览 {{ formulaLessons.length }} 篇教程</h2><span>也可以从工作任务选起</span></summary>
-        <div class="formula-tasks" role="group" aria-label="选择要完成的任务">
-          <button v-for="task in formulaTaskGroups" :key="task.id" type="button" :aria-label="task.title" :aria-describedby="`task-description-${task.id}`" :aria-pressed="taskId === task.id" @click="selectTask(task.id)">
-            <strong>{{ task.title }}</strong>
-            <span :id="`task-description-${task.id}`">{{ task.description }}</span>
+        <summary><h2 id="formula-task-title" tabindex="-1">{{ uiText('按用途浏览 {count} 篇教程', { count: formulaLessons.length }) }}</h2><span>{{ uiText('也可以从工作任务选起') }}</span></summary>
+        <div class="formula-tasks" role="group" :aria-label="uiText('选择要完成的任务')">
+          <button v-for="task in formulaTaskGroups" :key="task.id" type="button" :aria-label="uiText(task.title)" :aria-describedby="`task-description-${task.id}`" :aria-pressed="taskId === task.id" @click="selectTask(task.id)">
+            <strong>{{ uiText(task.title) }}</strong>
+            <span :id="`task-description-${task.id}`">{{ uiText(task.description) }}</span>
           </button>
         </div>
         <section v-if="selectedTask && taskLessons.length > 1" class="formula-task-results" :aria-labelledby="`task-results-${selectedTask.id}`" data-testid="task-recommendations">
           <div class="formula-task-results__heading">
-            <h3 :id="`task-results-${selectedTask.id}`" ref="taskResultsHeading" tabindex="-1">{{ selectedTask.title }}</h3>
-            <span>{{ taskLessons.length }} 篇教程</span>
+            <h3 :id="`task-results-${selectedTask.id}`" ref="taskResultsHeading" tabindex="-1">{{ uiText(selectedTask.title) }}</h3>
+            <span>{{ uiText('{count} 篇教程', { count: taskLessons.length }) }}</span>
           </div>
           <ul>
             <li v-for="lesson in taskLessons" :key="lesson.id">
               <button type="button" @click="selectLesson(lesson.id)">
                 <strong>{{ lesson.title }} <span aria-hidden="true">→</span></strong>
                 <span>{{ lesson.summary }}</span>
-                <small>{{ lesson.version }}</small>
+                <small>{{ uiText(lesson.version) }}</small>
               </button>
             </li>
           </ul>
@@ -292,67 +295,67 @@ function resetFilters(): void {
       <div class="formula-workspace" :class="{ 'is-searching': hasSearch }">
         <aside v-if="!hasSearch" class="formula-directory" aria-labelledby="lesson-directory">
           <div class="formula-directory__top">
-            <h2 id="lesson-directory" tabindex="-1">你想完成什么？</h2>
-            <div class="formula-categories" role="group" aria-label="教程分类">
-              <button type="button" :aria-pressed="category === '' && taskId === ''" @click="selectCategory('')">全部</button>
+            <h2 id="lesson-directory" tabindex="-1">{{ uiText('你想完成什么？') }}</h2>
+            <div class="formula-categories" role="group" :aria-label="uiText('教程分类')">
+              <button type="button" :aria-pressed="category === '' && taskId === ''" @click="selectCategory('')">{{ uiText('全部') }}</button>
               <!-- 手动切换分类时退出任务分组，避免两组分类条件互相排除。 -->
-              <button v-for="item in categories" :key="item" type="button" :aria-pressed="category === item" @click="selectCategory(item)">{{ item }}</button>
+              <button v-for="item in categories" :key="item" type="button" :aria-pressed="category === item" @click="selectCategory(item)">{{ uiText(item) }}</button>
             </div>
-            <p class="formula-directory__count" aria-live="polite"><span v-if="selectedTask">{{ selectedTask.title }} · </span>{{ filteredLessons.length }} 篇教程</p>
+            <p class="formula-directory__count" aria-live="polite"><span v-if="selectedTask">{{ uiText(selectedTask.title) }} · </span>{{ uiText('{count} 篇教程', { count: filteredLessons.length }) }}</p>
           </div>
-          <nav aria-label="公式教程目录">
+          <nav :aria-label="uiText('公式教程目录')">
           <ul v-if="filteredLessons.length" class="formula-lessons">
             <li v-for="lesson in filteredLessons" :key="lesson.id">
               <button type="button" class="formula-lesson-link" :class="{ 'is-selected': lesson.id === selectedLesson?.id }" :aria-current="lesson.id === selectedLesson?.id ? 'true' : undefined" @click="selectLesson(lesson.id)">
                 <span class="formula-lesson-link__title">{{ lesson.title }}</span>
                 <span class="formula-lesson-link__summary">{{ lesson.summary }}</span>
-                <span class="formula-lesson-link__functions"><span v-if="lesson.functions.length">{{ lesson.functions.join(' + ') }} · </span>{{ lesson.version }}</span>
+                <span class="formula-lesson-link__functions"><span v-if="lesson.functions.length">{{ lesson.functions.join(' + ') }} · </span>{{ uiText(lesson.version) }}</span>
               </button>
             </li>
           </ul>
           <div v-else class="formula-search-empty">
-            <p>没有找到相关教程，换个说法试试。</p>
-            <button type="button" @click="resetFilters">清空搜索和分类</button>
+            <p>{{ uiText('没有找到相关教程，换个说法试试。') }}</p>
+            <button type="button" @click="resetFilters">{{ uiText('清空搜索和分类') }}</button>
           </div>
           </nav>
         </aside>
 
         <article v-if="selectedLesson" class="formula-article" aria-labelledby="lesson-title" data-testid="lesson-content">
           <header class="formula-article__header">
-            <div class="formula-article__meta"><span>{{ selectedLesson.category }}</span><a href="#formula-discovery">返回搜索</a></div>
+            <div class="formula-article__meta"><span>{{ uiText(selectedLesson.category) }}</span><a href="#formula-discovery">{{ uiText('返回搜索') }}</a></div>
             <h2 id="lesson-title" ref="lessonHeading" tabindex="-1">{{ selectedLesson.title }}</h2>
             <p class="formula-article__summary">{{ selectedLesson.summary }}</p>
-            <p class="formula-version">适用范围：{{ selectedLesson.version }} <a v-if="(selectedLesson.minExcelVersion ?? 2016) > 2016" href="#lesson-own-data-title">查看旧版替代方法</a></p>
+            <p class="formula-version">{{ uiText('适用范围：') }}{{ uiText(selectedLesson.version) }} <a v-if="(selectedLesson.minExcelVersion ?? 2016) > 2016" href="#lesson-own-data-title">{{ uiText('查看旧版替代方法') }}</a></p>
             <div v-if="selectedLesson.selectionTip" class="formula-selection-tip" data-testid="lesson-selection-tip">
               <p>{{ selectedLesson.selectionTip }}</p>
-              <button v-if="selectedLesson.relatedLesson" type="button" @click="openRelatedLesson">{{ selectedLesson.relatedLesson.label }} <span aria-hidden="true">→</span></button>
+              <button v-if="selectedLesson.relatedLesson" type="button" @click="openRelatedLesson">{{ uiText(selectedLesson.relatedLesson.label) }} <span aria-hidden="true">→</span></button>
             </div>
           </header>
 
           <section class="formula-section" aria-labelledby="lesson-scenario-title">
-            <h3 id="lesson-scenario-title">什么时候用</h3>
+            <h3 id="lesson-scenario-title">{{ uiText('什么时候用') }}</h3>
             <p>{{ selectedLesson.scenario }}</p>
             <div v-if="!localOpen" class="formula-scenario-actions">
-              <UiButton v-if="isCompareRelatedLesson" tone="ghost" class="formula-local-entry" @click="openCompareOperator">直接在线查重比对两列</UiButton>
-              <UiButton v-if="relatedLocalOperation" tone="ghost" class="formula-local-entry" @click="openWorkbookProcessor(relatedLocalOperation)">跟着教程处理自己的表格文件</UiButton>
+              <UiButton v-if="isCompareRelatedLesson" tone="ghost" class="formula-local-entry" @click="openCompareOperator">{{ uiText('直接在线查重比对两列') }}</UiButton>
+              <UiButton v-if="relatedLocalOperation" tone="ghost" class="formula-local-entry" @click="openWorkbookProcessor(relatedLocalOperation)">{{ uiText('跟着教程处理自己的表格文件') }}</UiButton>
             </div>
           </section>
 
           <section class="formula-section formula-recipe" aria-labelledby="lesson-formula-title" data-testid="formula-recipe">
-            <div class="formula-section__heading"><h3 id="lesson-formula-title">复制这条公式</h3><span data-testid="paste-target">粘贴位置：{{ selectedLesson.sheetName }}表 {{ selectedLesson.targetCell }}</span></div>
-            <pre class="formula-code" tabindex="0" aria-label="可选中并手动复制的 Excel 公式"><code data-testid="lesson-formula" v-text="selectedLesson.formula"></code></pre>
+            <div class="formula-section__heading"><h3 id="lesson-formula-title">{{ uiText('复制这条公式') }}</h3><span data-testid="paste-target">{{ uiText('粘贴位置：{sheet}表 {cell}', { sheet: selectedLesson.sheetName, cell: selectedLesson.targetCell }) }}</span></div>
+            <pre class="formula-code" tabindex="0" :aria-label="uiText('可选中并手动复制的 Excel 公式')"><code data-testid="lesson-formula" v-text="selectedLesson.formula"></code></pre>
             <div class="formula-copy-row">
               <UiButton :disabled="copyState === 'copying'" :aria-busy="copyState === 'copying'" @click="copyFormula">
                 <template #icon><CheckOutlined v-if="copyState === 'copied'" aria-hidden="true" /><CopyOutlined v-else aria-hidden="true" /></template>
-                {{ copyState === 'copying' ? '复制中…' : copyState === 'copied' ? '已复制' : '复制公式' }}
+                {{ copyState === 'copying' ? uiText('复制中…') : copyState === 'copied' ? uiText('已复制') : uiText('复制公式') }}
               </UiButton>
-              <p class="formula-copy-status" role="status" aria-live="polite">{{ copyState === 'failed' ? '复制失败，请选中公式手动复制。' : copyState === 'copied' ? '已复制' : '' }}</p>
+              <p class="formula-copy-status" role="status" aria-live="polite">{{ copyState === 'failed' ? uiText('复制失败，请选中公式手动复制。') : copyState === 'copied' ? uiText('已复制') : '' }}</p>
             </div>
-            <div class="formula-expected"><span>原始示例的固定参考答案</span><strong data-testid="expected-result">{{ selectedLesson.expected }}</strong><p>{{ selectedLesson.expectedValues ? '原始示例可和本题工作表 C 列逐行核对。网页修改输入后，请看本次试算结果。' : '原始示例可和练习表 D 列核对。网页修改输入后，请看本次试算结果。' }}</p></div>
+            <div class="formula-expected"><span>{{ uiText('原始示例的固定参考答案') }}</span><strong data-testid="expected-result">{{ selectedLesson.expected }}</strong><p>{{ selectedLesson.expectedValues ? '原始示例可和本题工作表 C 列逐行核对。网页修改输入后，请看本次试算结果。' : '原始示例可和练习表 D 列核对。网页修改输入后，请看本次试算结果。' }}</p></div>
           </section>
 
           <details class="formula-first-steps">
-            <summary>第一次用 Excel？先看这几步</summary>
+            <summary>{{ uiText('第一次用 Excel？先看这几步') }}</summary>
             <ol>
               <li>先下载上面的练习表，用 Excel 打开。底部的标签是不同工作表，点击本篇步骤指定的工作表名称即可切换。</li>
               <li>上方的 A、B、C 是列，左边的 1、2、3 是行。例如 <strong>C2</strong> 就是 C 列和第 2 行交叉的那一格。</li>
@@ -367,36 +370,36 @@ function resetFilters(): void {
 
 
           <section class="formula-section" aria-labelledby="lesson-steps-title">
-            <h3 id="lesson-steps-title">跟着做</h3>
+            <h3 id="lesson-steps-title">{{ uiText('跟着做') }}</h3>
             <ol class="formula-steps" data-testid="lesson-steps">
               <li v-for="(step, index) in selectedLesson.steps" :key="index"><h4>{{ step.title }}</h4><p>{{ step.detail }}</p></li>
             </ol>
           </section>
 
           <section class="formula-section" aria-labelledby="lesson-parts-title">
-            <h3 id="lesson-parts-title">公式里每一部分是什么意思</h3>
+            <h3 id="lesson-parts-title">{{ uiText('公式里每一部分是什么意思') }}</h3>
             <dl class="formula-parts"><div v-for="(part, index) in selectedLesson.parts" :key="index"><dt><code>{{ part.fragment }}</code></dt><dd>{{ part.meaning }}</dd></div></dl>
           </section>
 
           <section class="formula-section" aria-labelledby="lesson-checks-title">
-            <h3 id="lesson-checks-title">算完再核对一下</h3>
+            <h3 id="lesson-checks-title">{{ uiText('算完再核对一下') }}</h3>
             <ul class="formula-checks"><li v-for="(check, index) in selectedLesson.checks" :key="index">{{ check }}</li></ul>
           </section>
 
           <section class="formula-section" aria-labelledby="lesson-own-data-title">
-            <h3 id="lesson-own-data-title">换成你自己的表格</h3>
+            <h3 id="lesson-own-data-title">{{ uiText('换成你自己的表格') }}</h3>
             <p>{{ selectedLesson.extension }}</p>
           </section>
 
           <section class="formula-section" aria-labelledby="lesson-pitfalls-title">
-            <h3 id="lesson-pitfalls-title">结果不对，先查这里</h3>
+            <h3 id="lesson-pitfalls-title">{{ uiText('结果不对，先查这里') }}</h3>
             <div class="formula-pitfalls"><div v-for="(pitfall, index) in selectedLesson.pitfalls" :key="index"><h4>{{ pitfall.problem }}</h4><p>{{ pitfall.solution }}</p></div></div>
           </section>
 
           <footer class="formula-article__footer">
-            <p>继续了解函数用法</p>
-            <ul><li v-for="source in selectedLesson.sources" :key="source.url"><a :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title }} <span aria-hidden="true">↗</span><span class="formula-visually-hidden">，在新标签页打开</span></a></li></ul>
-            <a class="formula-return-directory" href="#formula-discovery">回到搜索，查找下一个功能或公式</a>
+            <p>{{ uiText('继续了解函数用法') }}</p>
+            <ul><li v-for="source in selectedLesson.sources" :key="source.url"><a :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title }} <span aria-hidden="true">↗</span><span class="formula-visually-hidden">{{ uiText('，在新标签页打开') }}</span></a></li></ul>
+            <a class="formula-return-directory" href="#formula-discovery">{{ uiText('回到搜索，查找下一个功能或公式') }}</a>
           </footer>
         </article>
       </div>

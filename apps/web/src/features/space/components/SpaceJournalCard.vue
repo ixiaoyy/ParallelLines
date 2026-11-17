@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { currentLocale, uiText } from "@/shared/i18n/locale";
 import { computed } from "vue";
 
 import { resolveApiAssetUrl } from "@/shared/api/client";
@@ -54,7 +55,9 @@ const formattedDayParts = computed(() => {
   const day = parts[2] ?? "01";
   return {
     day,
-    monthLabel: `${Number(month)}月`,
+    monthLabel: currentLocale.value === "zh-CN"
+      ? `${Number(month)}月`
+      : new Intl.DateTimeFormat(currentLocale.value, { month: "short" }).format(new Date(2000, (Number(month) || 1) - 1, 1)),
     full: props.entry.entry_date,
   };
 });
@@ -125,7 +128,7 @@ function handleChecklistClick(item: SpaceChecklistItem) {
             :disabled="followBusy"
             @click="emit('toggleFollow', entry)"
           >
-            {{ isFollowing ? "已关注" : "+ 关注" }}
+            {{ isFollowing ? uiText('已关注') : uiText('+ 关注') }}
           </button>
         </div>
 
@@ -137,12 +140,12 @@ function handleChecklistClick(item: SpaceChecklistItem) {
             :style="{ '--sticker-fg': moodMeta.color, '--sticker-bg': moodMeta.softBg }"
           >
             <em>{{ moodMeta.emoji }}</em>
-            <b>{{ moodMeta.label }}</b>
+            <b>{{ uiText(moodMeta.label) }}</b>
           </span>
 
           <span v-if="entry.weather" class="space-sticker space-sticker--weather">
             <em>{{ weatherMeta.emoji }}</em>
-            <b>{{ weatherMeta.label }}</b>
+            <b>{{ uiText(weatherMeta.label) }}</b>
           </span>
 
           <span v-if="entry.location" class="space-sticker space-sticker--location">
@@ -152,7 +155,7 @@ function handleChecklistClick(item: SpaceChecklistItem) {
 
           <span v-if="entry.is_pinned" class="space-sticker space-sticker--pin">
             <em>📌</em>
-            <b>置顶手账</b>
+            <b>{{ uiText('置顶手账') }}</b>
           </span>
 
           <span
@@ -160,12 +163,12 @@ function handleChecklistClick(item: SpaceChecklistItem) {
             :class="entry.visibility === 'private' ? 'is-private' : 'is-public'"
           >
             <em>{{ entry.visibility === "private" ? "🔒" : entry.visibility === "friends" ? "👥" : "🌐" }}</em>
-            <b>{{ entry.visibility === "private" ? "仅自己" : entry.visibility === "friends" ? "互关好友" : "公开" }}</b>
+            <b>{{ entry.visibility === "private" ? uiText('仅自己') : entry.visibility === "friends" ? uiText('互关好友') : uiText('公开') }}</b>
           </span>
 
           <span v-if="entry.unlock_at" class="space-sticker space-sticker--capsule">
             <em>⏳</em>
-            <b>{{ entry.is_locked ? `${entry.unlock_at} 拆封` : `已拆封` }}</b>
+            <b>{{ entry.is_locked ? uiText('{date} 拆封', { date: entry.unlock_at ?? '' }) : uiText('已拆封') }}</b>
           </span>
         </div>
       </div>
@@ -174,8 +177,8 @@ function handleChecklistClick(item: SpaceChecklistItem) {
     <div v-if="entry.is_locked" class="space-journal-card__capsule-seal">
       <span class="capsule-wax" aria-hidden="true">💌</span>
       <div>
-        <strong>封存中的时间胶囊</strong>
-        <p>写给未来自己的信，将于 <b>{{ entry.unlock_at }}</b> 自动拆封展示。</p>
+        <strong>{{ uiText('封存中的时间胶囊') }}</strong>
+        <p>{{ uiText('写给未来自己的信，将于 {date} 自动拆封展示。', { date: entry.unlock_at ?? '' }) }}</p>
       </div>
     </div>
 
@@ -186,7 +189,7 @@ function handleChecklistClick(item: SpaceChecklistItem) {
       <!-- 内嵌打卡/待办清单 -->
       <div v-if="entry.checklist && entry.checklist.length" class="space-journal-card__checklist">
         <div class="space-journal-card__checklist-head">
-          <span>小目标打卡</span>
+          <span>{{ uiText('小目标打卡') }}</span>
           <em v-if="checklistProgress">
             {{ checklistProgress.doneCount }} / {{ checklistProgress.total }}（{{ checklistProgress.percent }}%）
           </em>
@@ -213,7 +216,7 @@ function handleChecklistClick(item: SpaceChecklistItem) {
           {{ singleLedgerMeta.meta.emoji }}
         </span>
         <div class="space-ledger-pill__info">
-          <strong>{{ singleLedgerMeta.meta.label }}</strong>
+          <strong>{{ uiText(singleLedgerMeta.meta.label) }}</strong>
           <span v-if="singleLedgerMeta.note">{{ singleLedgerMeta.note }}</span>
         </div>
         <b
@@ -230,7 +233,7 @@ function handleChecklistClick(item: SpaceChecklistItem) {
             )
           }}
         </b>
-        <span v-else class="space-ledger-pill__hidden">金额已隐藏</span>
+        <span v-else class="space-ledger-pill__hidden">{{ uiText('金额已隐藏') }}</span>
       </div>
 
       <!-- 内嵌月度收支小结卡 -->
@@ -239,16 +242,16 @@ function handleChecklistClick(item: SpaceChecklistItem) {
         class="space-journal-card__monthly-bill"
       >
         <div class="space-monthly-bill__head">
-          <span>📊 {{ entry.ledger_snapshot.month }} 账单小结卡</span>
-          <em>共 {{ entry.ledger_snapshot.entry_count ?? 0 }} 笔记录</em>
+          <span>{{ uiText('📊 {month} 账单小结卡', { month: entry.ledger_snapshot.month }) }}</span>
+          <em>{{ uiText('共 {count} 笔记录', { count: entry.ledger_snapshot.entry_count ?? 0 }) }}</em>
         </div>
         <div v-if="!entry.ledger_snapshot.hide_exact_amount" class="space-monthly-bill__totals">
           <div>
-            <span>当月支出</span>
+            <span>{{ uiText('当月支出') }}</span>
             <strong>{{ formatCentsToYuan(entry.ledger_snapshot.total_expense_cents ?? 0) }}</strong>
           </div>
           <div v-if="entry.ledger_snapshot.total_income_cents">
-            <span>当月收入</span>
+            <span>{{ uiText('当月收入') }}</span>
             <strong class="is-income">
               {{ formatCentsToYuan(entry.ledger_snapshot.total_income_cents ?? 0, true) }}
             </strong>
@@ -265,7 +268,7 @@ function handleChecklistClick(item: SpaceChecklistItem) {
           >
             <span class="bar-label">
               {{ getLedgerCategoryMeta(cat.category).emoji }}
-              {{ getLedgerCategoryMeta(cat.category).label }}
+              {{ uiText(getLedgerCategoryMeta(cat.category).label) }}
             </span>
             <div class="bar-track">
               <i
@@ -296,7 +299,7 @@ function handleChecklistClick(item: SpaceChecklistItem) {
         >
           <img
             :src="resolveApiAssetUrl(imgUrl)"
-            alt="手账配图"
+            :alt="uiText('手账配图')"
             loading="lazy"
             decoding="async"
           />
@@ -320,21 +323,21 @@ function handleChecklistClick(item: SpaceChecklistItem) {
     <footer class="space-journal-card__footer">
       <div v-if="!editable" class="space-journal-card__reactions">
         <button v-for="r in SPACE_REACTIONS" :key="r.key" type="button" class="space-card-action space-card-action--reaction"
-          :class="{ 'has-count': (entry.reactions?.[r.key] ?? 0) > 0 }" :title="r.label" @click="emit('react', entry, r.key)">
-          <span aria-hidden="true">{{ r.emoji }}</span><small>{{ r.label }}</small><b v-if="(entry.reactions?.[r.key] ?? 0) > 0">{{ entry.reactions?.[r.key] }}</b>
+          :class="{ 'has-count': (entry.reactions?.[r.key] ?? 0) > 0 }" :title="uiText(r.label)" @click="emit('react', entry, r.key)">
+          <span aria-hidden="true">{{ r.emoji }}</span><small>{{ uiText(r.label) }}</small><b v-if="(entry.reactions?.[r.key] ?? 0) > 0">{{ entry.reactions?.[r.key] }}</b>
         </button>
       </div>
       <!-- 自己的记录以编辑为主；低频操作与互动保留在可展开区域。 -->
       <div v-if="editable" class="space-journal-card__owner-actions">
         <button type="button" class="space-card-action space-card-action--edit" :disabled="entry.is_locked"
-          :title="entry.is_locked ? '拆封后可编辑' : '编辑手账'" @click="emit('edit', entry)">编辑</button>
+          :title="entry.is_locked ? uiText('拆封后可编辑') : uiText('编辑手账')" @click="emit('edit', entry)">{{ uiText('编辑') }}</button>
         <details class="space-card-more">
-          <summary class="space-card-action">更多操作</summary>
+          <summary class="space-card-action">{{ uiText('更多操作') }}</summary>
           <div class="space-card-more__items">
-            <button type="button" class="space-card-action" @click="emit('togglePin', entry)">{{ entry.is_pinned ? '取消置顶' : '置顶' }}</button>
-            <button type="button" class="space-card-action" @click="emit('toggleVisibility', entry)">{{ entry.visibility === 'private' ? '设为公开' : '设为私密' }}</button>
-            <button type="button" class="space-card-action space-card-action--danger" @click="emit('remove', entry)">删除</button>
-            <button v-for="r in SPACE_REACTIONS" :key="r.key" type="button" class="space-card-action space-card-action--reaction" @click="emit('react', entry, r.key)">{{ r.emoji }} {{ r.label }}<b v-if="(entry.reactions?.[r.key] ?? 0) > 0">{{ entry.reactions?.[r.key] }}</b></button>
+            <button type="button" class="space-card-action" @click="emit('togglePin', entry)">{{ entry.is_pinned ? uiText('取消置顶') : uiText('置顶') }}</button>
+            <button type="button" class="space-card-action" @click="emit('toggleVisibility', entry)">{{ entry.visibility === 'private' ? uiText('设为公开') : uiText('设为私密') }}</button>
+            <button type="button" class="space-card-action space-card-action--danger" @click="emit('remove', entry)">{{ uiText('删除') }}</button>
+            <button v-for="r in SPACE_REACTIONS" :key="r.key" type="button" class="space-card-action space-card-action--reaction" @click="emit('react', entry, r.key)">{{ r.emoji }} {{ uiText(r.label) }}<b v-if="(entry.reactions?.[r.key] ?? 0) > 0">{{ entry.reactions?.[r.key] }}</b></button>
           </div>
         </details>
       </div>

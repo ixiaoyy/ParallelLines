@@ -66,6 +66,9 @@
   box-shadow: var(--shadow-card);
 }
 
+.auth-copy--compact { display: none; }
+.auth-link--guest { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; }
+
 .app-shell--profile-screen {
   background:
     linear-gradient(180deg, var(--bg-surface) 0 5.5rem, var(--bg-app) 5.5rem 100%);
@@ -693,6 +696,18 @@
     display: none;
   }
 
+  // 窄屏英文保留正式Logo与完整可访问名称，避免语言和登录入口挤压品牌文字。
+  .app-shell--english .brand {
+    min-width: 2.9rem;
+    width: 2.9rem;
+    gap: 0;
+  }
+  .app-shell--english .brand > span:not(.brand-mark),
+  .app-shell--english .auth-copy--full { display: none; }
+  .app-shell--english .auth-copy--compact { display: inline; }
+  .app-shell--english .topbar,
+  .app-shell--english .topbar-actions { gap: 0.25rem; }
+
   .search-box {
     display: none !important;
   }
@@ -715,7 +730,7 @@
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    min-height: 2.2rem;
+    min-height: 2.75rem;
     border: 1px solid var(--btn-primary-border);
     padding: 0.48rem 0.75rem;
     color: var(--btn-primary-fg);
@@ -797,6 +812,12 @@
     width: 2.25rem;
     height: 2.25rem;
   }
+}
+
+@media (max-width: 359px) {
+  // 中文极窄屏也只显示正式Logo，给语言、菜单和登录三个入口保留空间。
+  .brand { min-width: 2.9rem; width: 2.9rem; gap: 0; }
+  .brand > span:not(.brand-mark) { display: none; }
 }
 
 @keyframes route-progress-slide {

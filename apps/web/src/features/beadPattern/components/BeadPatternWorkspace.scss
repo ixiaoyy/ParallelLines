@@ -1,6 +1,7 @@
 .bead-shell { min-height: 100vh; background: var(--bg-app); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
 .bead-header, .bead-page, .bead-footer { width: min(1400px, calc(100% - 48px)); margin-inline: auto; }
-.bead-header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+.bead-header { min-height: 76px; padding-block: 10px; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+.bead-header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; margin-left: auto; }
 .bead-brand { display: inline-flex; gap: 10px; align-items: center; color: var(--title); font-size: 21px; text-decoration: none; }
 .bead-brand img { object-fit: contain; }
 .bead-back { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; color: var(--text); }

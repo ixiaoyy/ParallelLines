@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed, ref, watch } from "vue";
 import {
   DownOutlined,
@@ -525,12 +526,12 @@ function textField(value: unknown) {
 }
 
 function reviewableTitle(reviewable: ReviewableResponse) {
-  return textField(reviewable.data.title) || reviewable.source_summary || "待审核内容";
+  return textField(reviewable.data.title) || reviewable.source_summary || uiText("待审核内容");
 }
 
 function reviewableReason(reviewable: ReviewableResponse) {
   if (reviewable.source === "frontier_news") {
-    return "小小资讯自动采集并整理；审核通过后会直接发布到热点资讯版块。";
+    return uiText("小小资讯自动采集并整理；审核通过后会直接发布到热点资讯版块。");
   }
 
   if (
@@ -539,18 +540,18 @@ function reviewableReason(reviewable: ReviewableResponse) {
     reviewable.data.seed_author === true ||
     reviewable.data.persona_seed === true
   ) {
-    return "新用户发帖，发布前需要审核通过。";
+    return uiText("新用户发帖，发布前需要审核通过。");
   }
 
   if (reviewable.source === "content_safety") {
-    return "命中内容安全规则，需要人工确认。";
+    return uiText("命中内容安全规则，需要人工确认。");
   }
 
   if (String(reviewable.type).startsWith("queued_")) {
-    return "内容需要审核通过后才会公开。";
+    return uiText("内容需要审核通过后才会公开。");
   }
 
-  return reviewable.source_summary || "需要人工审核。";
+  return reviewable.source_summary || uiText("需要人工审核。");
 }
 
 function reviewablePreview(reviewable: ReviewableResponse) {
@@ -724,10 +725,10 @@ function deleteReviewable(reviewable: ReviewableResponse) {
     return;
   }
   Modal.confirm({
-    title: "删除这条已发布内容？",
-    content: "删除后会从公开页面隐藏，并在审核记录中留下操作痕迹。",
-    okText: "删除",
-    cancelText: "取消",
+    title: uiText("删除这条已发布内容？"),
+    content: uiText("删除后会从公开页面隐藏，并在审核记录中留下操作痕迹。"),
+    okText: uiText("删除"),
+    cancelText: uiText("取消"),
     okType: "danger",
     onOk: () => decideReviewable(reviewable, "delete", "审核删除已发布内容。"),
   });
@@ -750,7 +751,7 @@ function submitBulkReviewableDecision(action: ReviewableDecisionAction, note: st
     },
     {
       onSuccess: (response) => {
-        actionNotice.value = `${bulkDecisionLabel(action)}：已处理 ${response.processed_count} 条。`;
+        actionNotice.value = uiText("{value0}：已处理 {value1} 条。", { value0: bulkDecisionLabel(action), value1: response.processed_count });
         clearReviewableSelection();
       },
       onError: (error) => {
@@ -769,10 +770,10 @@ function submitBulkDeleteReviewables() {
     return;
   }
   Modal.confirm({
-    title: `删除已选 ${selectedReviewableCount.value} 条内容？`,
-    content: "这些已发布内容会从公开页面隐藏，并按批量审核删除记录处理。",
-    okText: "批量删除",
-    cancelText: "取消",
+    title: uiText("删除已选 {value0} 条内容？", { value0: selectedReviewableCount.value }),
+    content: uiText("这些已发布内容会从公开页面隐藏，并按批量审核删除记录处理。"),
+    okText: uiText("批量删除"),
+    cancelText: uiText("取消"),
     okType: "danger",
     onOk: () => submitBulkReviewableDecision("delete", "批量审核删除已发布内容。"),
   });
@@ -790,7 +791,7 @@ function bulkDecisionLabel(action: ReviewableDecisionAction) {
     silence: "批量禁言",
     escalate: "人工复核",
   };
-  return labels[action];
+  return uiText(labels[action]);
 }
 
 function resolveFlag(flag: FlagResponse) {
@@ -801,7 +802,7 @@ function resolveFlag(flag: FlagResponse) {
     payload: { status: "resolved", resolution_note: "已由审核台处理。" },
   }, {
     onSuccess: () => {
-      actionNotice.value = `${flag.target.title}：已标记处理。`;
+      actionNotice.value = uiText("{value0}：已标记处理。", { value0: flag.target.title });
     },
     onError: (error) => {
       actionError.value = mutationErrorMessage(error);
@@ -820,7 +821,7 @@ function rejectFlag(flag: FlagResponse) {
     payload: { status: "rejected", resolution_note: "未发现违规或证据不足。" },
   }, {
     onSuccess: () => {
-      actionNotice.value = `${flag.target.title}：已驳回举报。`;
+      actionNotice.value = uiText("{value0}：已驳回举报。", { value0: flag.target.title });
     },
     onError: (error) => {
       actionError.value = mutationErrorMessage(error);
@@ -841,7 +842,7 @@ function toggleHidden(flag: FlagResponse) {
     note: flag.target.hidden ? "审核台恢复内容。" : "审核台隐藏内容。",
   }, {
     onSuccess: (response) => {
-      actionNotice.value = `${flag.target.title}：${response.hidden ? "已隐藏" : "已恢复"}。`;
+      actionNotice.value = uiText("{value0}：{value1}。", { value0: flag.target.title, value1: response.hidden ? uiText("已隐藏") : uiText("已恢复") });
     },
     onError: (error) => {
       actionError.value = mutationErrorMessage(error);
@@ -857,10 +858,10 @@ function toggleHidden(flag: FlagResponse) {
 // Return value is none; side effect: hides topics or erases post bodies.
 function deleteFlagTarget(flag: FlagResponse) {
   Modal.confirm({
-    title: "删除这条被举报内容？",
-    content: "删除后会从公开页面隐藏，举报队列会在接口完成后刷新。",
-    okText: "删除",
-    cancelText: "取消",
+    title: uiText("删除这条被举报内容？"),
+    content: uiText("删除后会从公开页面隐藏，举报队列会在接口完成后刷新。"),
+    okText: uiText("删除"),
+    cancelText: uiText("取消"),
     okType: "danger",
     onOk: () => {
       resetActionFeedback();
@@ -871,7 +872,7 @@ function deleteFlagTarget(flag: FlagResponse) {
         note: "审核台删除内容。",
       }, {
         onSuccess: () => {
-          actionNotice.value = `${flag.target.title}：已删除内容。`;
+          actionNotice.value = uiText("{value0}：已删除内容。", { value0: flag.target.title });
         },
         onError: (error) => {
           actionError.value = mutationErrorMessage(error);
@@ -899,7 +900,7 @@ function updateUser() {
     },
     {
       onSuccess: (response) => {
-        actionNotice.value = `${response.username}：状态已更新为 ${response.status}。`;
+        actionNotice.value = uiText("{value0}：状态已更新为 {value1}。", { value0: response.username, value1: response.status });
       },
       onError: (error) => {
         actionError.value = mutationErrorMessage(error);
@@ -922,11 +923,11 @@ function targetRoute(flag: FlagResponse) {
 }
 
 function flagDetail(flag: FlagResponse) {
-  return flag.detail?.trim() || "举报人未填写补充说明。";
+  return flag.detail?.trim() || uiText("举报人未填写补充说明。");
 }
 
 function flagTargetExcerpt(flag: FlagResponse) {
-  return flag.target.excerpt?.trim() || "暂无内容摘要，请打开上下文查看原帖。";
+  return flag.target.excerpt?.trim() || uiText("暂无内容摘要，请打开上下文查看原帖。");
 }
 
 /**
@@ -946,7 +947,7 @@ function resetActionFeedback() {
  * @returns Human-readable error message that can be displayed in the moderation console.
  */
 function mutationErrorMessage(error: unknown) {
-  return error instanceof Error && error.message ? error.message : "接口请求失败，请稍后重试。";
+  return error instanceof Error && error.message ? error.message : uiText("接口请求失败，请稍后重试。");
 }
 </script>
 
@@ -954,53 +955,53 @@ function mutationErrorMessage(error: unknown) {
   <div class="moderation-page">
     <section class="moderation-hero" aria-labelledby="moderation-title">
       <div>
-        <span class="panel-kicker">社区治理</span>
-        <h1 id="moderation-title">内容审核</h1>
-        <p>按提交顺序处理待发布内容、用户举报和审计记录。</p>
+        <span class="panel-kicker">{{ uiText('社区治理') }}</span>
+        <h1 id="moderation-title">{{ uiText('内容审核') }}</h1>
+        <p>{{ uiText('按提交顺序处理待发布内容、用户举报和审计记录。') }}</p>
       </div>
       <div class="moderation-hero__stat" aria-live="polite">
-        <span>{{ visibleQueueLabel }}</span>
+        <span>{{ uiText(visibleQueueLabel) }}</span>
         <strong>{{ visibleQueueCount }}</strong>
-        <small>{{ queueError ? "当前不可用" : "当前视图" }}</small>
+        <small>{{ queueError ? uiText('当前不可用') : uiText('当前视图') }}</small>
       </div>
     </section>
 
     <UiCard v-if="!hasToken" class="moderation-empty">
-      <strong>需要登录后才能查看审核台</strong>
-      <span>请使用拥有版主、版主所有者或管理员权限的账号访问。</span>
+      <strong>{{ uiText('需要登录后才能查看审核台') }}</strong>
+      <span>{{ uiText('请使用拥有版主、版主所有者或管理员权限的账号访问。') }}</span>
     </UiCard>
 
     <UiCard v-else-if="queueError" class="moderation-empty">
-      <strong>没有审核权限或服务暂不可用</strong>
-      <span>普通用户可以举报内容，但不能查看审核队列或审计日志。</span>
+      <strong>{{ uiText('没有审核权限或服务暂不可用') }}</strong>
+      <span>{{ uiText('普通用户可以举报内容，但不能查看审核队列或审计日志。') }}</span>
     </UiCard>
 
     <template v-else>
-      <div class="reviewable-mobile-appbar" aria-label="内容审核移动端工具栏">
-        <RouterLink class="reviewable-mobile-appbar__icon" :to="moderationReturnPath" aria-label="返回后台">
+      <div class="reviewable-mobile-appbar" :aria-label="uiText('内容审核移动端工具栏')">
+        <RouterLink class="reviewable-mobile-appbar__icon" :to="moderationReturnPath" :aria-label="uiText('返回后台')">
           <LeftOutlined />
         </RouterLink>
-        <strong>发布审核</strong>
+        <strong>{{ uiText('发布审核') }}</strong>
         <div class="reviewable-mobile-appbar__actions">
-          <button type="button" class="reviewable-mobile-appbar__icon" aria-label="搜索审核内容">
+          <button type="button" class="reviewable-mobile-appbar__icon" :aria-label="uiText('搜索审核内容')">
             <SearchOutlined />
           </button>
-          <button type="button" class="reviewable-mobile-appbar__filter" aria-label="筛选审核内容">
-            <span>筛选</span>
+          <button type="button" class="reviewable-mobile-appbar__filter" :aria-label="uiText('筛选审核内容')">
+            <span>{{ uiText('筛选') }}</span>
             <FilterOutlined />
           </button>
         </div>
       </div>
 
       <!-- Navigation Tabs -->
-      <nav class="moderation-tabs" aria-label="审核台导航">
+      <nav class="moderation-tabs" :aria-label="uiText('审核台导航')">
         <button
           type="button"
           :class="{ active: activeTab === 'reviewables' }"
           :aria-pressed="activeTab === 'reviewables'"
           @click="activeTab = 'reviewables'"
         >
-          <EyeOutlined /> 内容发布审核
+          <EyeOutlined /> {{ uiText('内容发布审核') }}
         </button>
         <button
           type="button"
@@ -1008,7 +1009,7 @@ function mutationErrorMessage(error: unknown) {
           :aria-pressed="activeTab === 'flags'"
           @click="activeTab = 'flags'"
         >
-          <FlagOutlined /> 用户举报审核
+          <FlagOutlined /> {{ uiText('用户举报审核') }}
         </button>
         <button
           type="button"
@@ -1016,7 +1017,7 @@ function mutationErrorMessage(error: unknown) {
           :aria-pressed="activeTab === 'audit'"
           @click="activeTab = 'audit'"
         >
-          <HistoryOutlined /> 日志
+          <HistoryOutlined /> {{ uiText('日志') }}
         </button>
       </nav>
 
@@ -1028,8 +1029,8 @@ function mutationErrorMessage(error: unknown) {
         aria-live="polite"
       >
         <span v-if="activeFeedback.tone === 'working'" class="moderation-feedback__spinner" aria-hidden="true"></span>
-        <strong>{{ activeFeedback.title }}</strong>
-        <span>{{ activeFeedback.detail }}</span>
+        <strong>{{ uiText(activeFeedback.title) }}</strong>
+        <span>{{ uiText(activeFeedback.detail) }}</span>
       </div>
 
       <section class="moderation-layout" :class="{ 'moderation-layout--single': activeTab !== 'audit' }">
@@ -1037,7 +1038,7 @@ function mutationErrorMessage(error: unknown) {
         <div class="queue-column">
           <!-- Tab 1: Reviewables -->
           <div v-if="activeTab === 'reviewables'">
-            <div class="reviewable-mobile-reviewbar" aria-label="内容审核状态">
+            <div class="reviewable-mobile-reviewbar" :aria-label="uiText('内容审核状态')">
               <button
                 type="button"
                 class="reviewable-mobile-reviewbar__tab"
@@ -1045,7 +1046,7 @@ function mutationErrorMessage(error: unknown) {
                 :aria-pressed="reviewableStatusFilter === 'pending'"
                 @click="reviewableStatusFilter = 'pending'"
               >
-                <span>待处理</span>
+                <span>{{ uiText('待处理') }}</span>
                 <b>{{ reviewableStatusFilter === 'pending' ? reviewables.length : "·" }}</b>
               </button>
               <output
@@ -1053,7 +1054,7 @@ function mutationErrorMessage(error: unknown) {
                 :class="{ active: bulkSelectionActive }"
                 aria-live="polite"
               >
-                <span>已选</span>
+                <span>{{ uiText('已选') }}</span>
                 <b>{{ selectedReviewableCount }}</b>
               </output>
               <button
@@ -1063,50 +1064,50 @@ function mutationErrorMessage(error: unknown) {
                 :aria-pressed="reviewableStatusFilter === 'approved'"
                 @click="reviewableStatusFilter = 'approved'"
               >
-                <span>已通过</span>
+                <span>{{ uiText('已通过') }}</span>
                 <b>{{ reviewableStatusFilter === 'approved' ? reviewables.length : "" }}</b>
               </button>
             </div>
 
-            <div class="reviewable-mobile-filterbar" aria-label="内容审核筛选">
+            <div class="reviewable-mobile-filterbar" :aria-label="uiText('内容审核筛选')">
               <button type="button">
                 <FilterOutlined />
-                <span>筛选</span>
+                <span>{{ uiText('筛选') }}</span>
               </button>
               <button type="button">
-                <span>排序：最新发布</span>
+                <span>{{ uiText('排序：最新发布') }}</span>
                 <DownOutlined />
               </button>
-              <button type="button" aria-label="刷新审核队列" @click="reviewablesQuery.refetch()">
+              <button type="button" :aria-label="uiText('刷新审核队列')" @click="reviewablesQuery.refetch()">
                 <ReloadOutlined />
               </button>
             </div>
 
             <div class="section-toolbar">
               <div>
-                <span class="panel-kicker">内容发布审核</span>
-                <h2>审核待发布的内容</h2>
+                <span class="panel-kicker">{{ uiText('内容发布审核') }}</span>
+                <h2>{{ uiText('审核待发布的内容') }}</h2>
               </div>
               <label>
-                <span>查看状态</span>
+                <span>{{ uiText('查看状态') }}</span>
                 <select v-model="reviewableStatusFilter">
-                  <option value="pending">待处理</option>
-                  <option value="claimed">处理中</option>
-                  <option value="approved">已通过</option>
-                  <option value="rejected">已拒绝</option>
-                  <option value="hidden">已隐藏</option>
-                  <option value="deleted">已删除</option>
-                  <option value="silenced">已禁言</option>
-                  <option value="escalated">已升级</option>
-                  <option value="appealed">复核中</option>
-                  <option value="all">全部</option>
+                  <option value="pending">{{ uiText('待处理') }}</option>
+                  <option value="claimed">{{ uiText('处理中') }}</option>
+                  <option value="approved">{{ uiText('已通过') }}</option>
+                  <option value="rejected">{{ uiText('已拒绝') }}</option>
+                  <option value="hidden">{{ uiText('已隐藏') }}</option>
+                  <option value="deleted">{{ uiText('已删除') }}</option>
+                  <option value="silenced">{{ uiText('已禁言') }}</option>
+                  <option value="escalated">{{ uiText('已升级') }}</option>
+                  <option value="appealed">{{ uiText('复核中') }}</option>
+                  <option value="all">{{ uiText('全部') }}</option>
                 </select>
               </label>
             </div>
 
             <UiCard v-if="reviewablesQuery.isPending.value" class="moderation-empty moderation-empty--loading">
-              <strong>正在加载审核队列</strong>
-              <span>请稍候，待发布内容加载完成后会显示在这里。</span>
+              <strong>{{ uiText('正在加载审核队列') }}</strong>
+              <span>{{ uiText('请稍候，待发布内容加载完成后会显示在这里。') }}</span>
             </UiCard>
 
             <template v-else-if="reviewables.length">
@@ -1118,7 +1119,7 @@ function mutationErrorMessage(error: unknown) {
                     :indeterminate="isSomeSelected && !isAllSelected"
                     @change="toggleSelectAll"
                   />
-                  <span>全选当前页 (已选 {{ selectedReviewableCount }} / {{ selectableReviewables.length }} 条可处理)</span>
+                  <span>{{ uiText("全选当前页 (已选 {selected} / {total} 条可处理)", { selected: selectedReviewableCount, total: selectableReviewables.length }) }}</span>
                 </label>
                 <button
                   v-if="bulkSelectionActive"
@@ -1126,7 +1127,7 @@ function mutationErrorMessage(error: unknown) {
                   class="clear-selection-btn"
                   @click="clearReviewableSelection"
                 >
-                  取消选择
+                  {{ uiText('取消选择') }}
                 </button>
               </div>
 
@@ -1151,7 +1152,7 @@ function mutationErrorMessage(error: unknown) {
                     class="reviewable-list-item__selector"
                     :class="{ 'reviewable-list-item__selector--active': isReviewableSelected(rev) }"
                     :disabled="!canSelectReviewable(rev)"
-                    :aria-label="isReviewableSelected(rev) ? '取消选择审核项' : '选择审核项'"
+                    :aria-label="isReviewableSelected(rev) ? uiText('取消选择审核项') : uiText('选择审核项')"
                     data-selection-ignore="true"
                     @pointerdown.stop
                     @click.stop="toggleReviewableSelection(rev)"
@@ -1161,7 +1162,7 @@ function mutationErrorMessage(error: unknown) {
                   <button
                     type="button"
                     class="reviewable-list-item__menu"
-                    aria-label="打开审核项操作"
+                    :aria-label="uiText('打开审核项操作')"
                     data-selection-ignore="true"
                     @pointerdown.stop
                     @click.stop="openReviewableDetails(rev)"
@@ -1171,8 +1172,8 @@ function mutationErrorMessage(error: unknown) {
                   <div class="reviewable-list-item__main">
                     <span class="reviewable-list-item__meta">
                       {{ reviewableStatusLabel(rev.status) }} ·
-                      {{ rev.board_name || '全局' }} ·
-                      {{ rev.target_user_name || rev.created_by_name || '系统' }} ·
+                      {{ rev.board_name || uiText('全局') }} ·
+                      {{ rev.target_user_name || rev.created_by_name || uiText('系统') }} ·
                       {{ relativeTime(rev.created_at) }}
                     </span>
                     <h3>{{ reviewableTitle(rev) }}</h3>
@@ -1188,7 +1189,7 @@ function mutationErrorMessage(error: unknown) {
                         @pointerdown.stop
                         @click.stop="rejectReviewable(rev)"
                       >
-                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "驳回" }}
+                        {{ activeReviewablePendingId === rev.id ? uiText('处理中…') : uiText('驳回') }}
                       </UiButton>
                       <UiButton
                         v-if="canDeleteReviewableTarget(rev)"
@@ -1198,7 +1199,7 @@ function mutationErrorMessage(error: unknown) {
                         @pointerdown.stop
                         @click.stop="deleteReviewable(rev)"
                       >
-                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "删除" }}
+                        {{ activeReviewablePendingId === rev.id ? uiText('处理中…') : uiText('删除') }}
                       </UiButton>
                       <UiButton
                         tone="success"
@@ -1207,7 +1208,7 @@ function mutationErrorMessage(error: unknown) {
                         @pointerdown.stop
                         @click.stop="approveReviewable(rev)"
                       >
-                        {{ activeReviewablePendingId === rev.id ? "处理中…" : "通过" }}
+                        {{ activeReviewablePendingId === rev.id ? uiText('处理中…') : uiText('通过') }}
                       </UiButton>
                       <UiButton
                         tone="subtle"
@@ -1216,11 +1217,11 @@ function mutationErrorMessage(error: unknown) {
                         @pointerdown.stop
                         @click.stop="openReviewableDetails(rev)"
                       >
-                        详情
+                        {{ uiText('详情') }}
                       </UiButton>
                     </template>
                     <template v-else-if="isClaimedByOther(rev)">
-                      <span class="assignee-warn">处理中：{{ rev.assigned_to_name }}</span>
+                      <span class="assignee-warn">{{ uiText('处理中：') }}{{ rev.assigned_to_name }}</span>
                       <UiButton
                         tone="subtle"
                         :disabled="pendingAction"
@@ -1228,11 +1229,11 @@ function mutationErrorMessage(error: unknown) {
                         @pointerdown.stop
                         @click.stop="openReviewableDetails(rev)"
                       >
-                        详情
+                        {{ uiText('详情') }}
                       </UiButton>
                     </template>
                     <template v-else>
-                      <span class="resolved-note">已处理：{{ rev.resolved_by_name || '系统' }}</span>
+                      <span class="resolved-note">{{ uiText('已处理：') }}{{ rev.resolved_by_name || uiText('系统') }}</span>
                       <UiButton
                         tone="subtle"
                         :disabled="pendingAction"
@@ -1240,7 +1241,7 @@ function mutationErrorMessage(error: unknown) {
                         @pointerdown.stop
                         @click.stop="openReviewableDetails(rev)"
                       >
-                        详情
+                        {{ uiText('详情') }}
                       </UiButton>
                     </template>
                   </div>
@@ -1251,7 +1252,7 @@ function mutationErrorMessage(error: unknown) {
             <Transition name="bulk-bar">
               <div v-if="bulkSelectionActive" class="reviewable-bulk-bar" role="status" aria-live="polite">
                 <div class="reviewable-bulk-bar__summary">
-                  <strong>已选 {{ selectedReviewableCount }} 条</strong>
+                  <strong>{{ uiText("已选 {count} 条", { count: selectedReviewableCount }) }}</strong>
                   <span>{{ reviewableStatusLabel(reviewableStatusFilter === 'all' ? 'pending' : reviewableStatusFilter) }}</span>
                 </div>
                 <div class="reviewable-bulk-bar__actions">
@@ -1260,40 +1261,40 @@ function mutationErrorMessage(error: unknown) {
                     :disabled="bulkDecisionPending"
                     @click="submitBulkReviewableDecision('approve', '批量审核通过，允许发布。')"
                   >
-                    {{ bulkDecisionPending ? "处理中…" : "通过" }}
+                    {{ bulkDecisionPending ? uiText('处理中…') : uiText('通过') }}
                   </UiButton>
                   <UiButton
                     tone="ghost"
                     :disabled="bulkDecisionPending"
                     @click="submitBulkReviewableDecision('reject', '批量审核拒绝，不予发布。')"
                   >
-                    驳回
+                    {{ uiText('驳回') }}
                   </UiButton>
                   <UiButton
                     tone="subtle"
                     :disabled="bulkDecisionPending"
                     @click="submitBulkReviewableDecision('escalate', '批量升级为人工复核。')"
                   >
-                    人工复核
+                    {{ uiText('人工复核') }}
                   </UiButton>
                   <UiButton
                     tone="danger"
                     :disabled="bulkDecisionPending || !selectedReviewablesCanDelete"
-                    title="只支持删除已发布内容；待审新帖请使用驳回"
+                    :title="uiText('只支持删除已发布内容；待审新帖请使用驳回')"
                     @click="submitBulkDeleteReviewables"
                   >
-                    删除
+                    {{ uiText('删除') }}
                   </UiButton>
                   <UiButton tone="ghost" :disabled="bulkDecisionPending" @click="clearReviewableSelection">
-                    取消
+                    {{ uiText('取消') }}
                   </UiButton>
                 </div>
               </div>
             </Transition>
 
             <UiCard v-if="!reviewablesQuery.isPending.value && !reviewables.length" class="moderation-empty">
-              <strong>当前筛选下没有审核任务</strong>
-              <span>需要人工确认的主题、回复或编辑会出现在这里。</span>
+              <strong>{{ uiText('当前筛选下没有审核任务') }}</strong>
+              <span>{{ uiText('需要人工确认的主题、回复或编辑会出现在这里。') }}</span>
             </UiCard>
           </div>
 
@@ -1301,23 +1302,23 @@ function mutationErrorMessage(error: unknown) {
           <div v-if="activeTab === 'flags'">
             <div class="section-toolbar">
               <div>
-                <span class="panel-kicker">用户举报审核</span>
-                <h2>查看举报原因并处理内容</h2>
+                <span class="panel-kicker">{{ uiText('用户举报审核') }}</span>
+                <h2>{{ uiText('查看举报原因并处理内容') }}</h2>
               </div>
               <label>
-                <span>状态</span>
+                <span>{{ uiText('状态') }}</span>
                 <select v-model="statusFilter">
-                  <option value="pending">待处理</option>
-                  <option value="resolved">已处理</option>
-                  <option value="rejected">已驳回</option>
-                  <option value="all">全部</option>
+                  <option value="pending">{{ uiText('待处理') }}</option>
+                  <option value="resolved">{{ uiText('已处理') }}</option>
+                  <option value="rejected">{{ uiText('已驳回') }}</option>
+                  <option value="all">{{ uiText('全部') }}</option>
                 </select>
               </label>
             </div>
 
             <UiCard v-if="queueQuery.isPending.value" class="moderation-empty moderation-empty--loading">
-              <strong>正在加载举报队列</strong>
-              <span>请稍候，用户举报加载完成后会显示在这里。</span>
+              <strong>{{ uiText('正在加载举报队列') }}</strong>
+              <span>{{ uiText('请稍候，用户举报加载完成后会显示在这里。') }}</span>
             </UiCard>
 
             <div v-else-if="flags.length" class="flag-list">
@@ -1331,34 +1332,34 @@ function mutationErrorMessage(error: unknown) {
                     <h3>{{ flag.target.title }}</h3>
                   </div>
                   <RouterLink :to="targetRoute(flag)">
-                    查看上下文
+                    {{ uiText('查看上下文') }}
                   </RouterLink>
                 </header>
 
                 <div class="report-reason-box">
-                  <strong>举报原因：{{ flagReasonLabel(flag.reason) }}</strong>
-                  <span>补充说明：{{ flagDetail(flag) }}</span>
+                  <strong>{{ uiText('举报原因：') }}{{ flagReasonLabel(flag.reason) }}</strong>
+                  <span>{{ uiText('补充说明：') }}{{ flagDetail(flag) }}</span>
                 </div>
                 <div class="reported-content-box">
-                  <strong>被举报内容摘要</strong>
+                  <strong>{{ uiText('被举报内容摘要') }}</strong>
                   <p>{{ flagTargetExcerpt(flag) }}</p>
                 </div>
                 <dl>
                   <div>
-                    <dt>举报人</dt>
+                    <dt>{{ uiText('举报人') }}</dt>
                     <dd>{{ flag.reporter_name }}</dd>
                   </div>
                   <div>
-                    <dt>作者</dt>
+                    <dt>{{ uiText('作者') }}</dt>
                     <dd>{{ flag.target.author_name }}</dd>
                   </div>
                   <div>
-                    <dt>版块</dt>
+                    <dt>{{ uiText('版块') }}</dt>
                     <dd>{{ flag.target.board_name }}</dd>
                   </div>
                   <div>
-                    <dt>可见性</dt>
-                    <dd>{{ flag.target.hidden ? "已隐藏" : "公开" }}</dd>
+                    <dt>{{ uiText('可见性') }}</dt>
+                    <dd>{{ flag.target.hidden ? uiText('已隐藏') : uiText('公开') }}</dd>
                   </div>
                 </dl>
 
@@ -1366,28 +1367,28 @@ function mutationErrorMessage(error: unknown) {
                   <UiButton tone="subtle" :disabled="pendingAction" @click="toggleHidden(flag)">
                     {{
                       activeContentPendingFlagId === flag.id
-                        ? "处理中…"
+                        ? uiText('处理中…')
                         : flag.target.hidden
-                          ? "恢复内容"
-                          : "隐藏内容"
+                          ? uiText('恢复内容')
+                          : uiText('隐藏内容')
                     }}
                   </UiButton>
                   <UiButton tone="danger" :disabled="pendingAction" @click="deleteFlagTarget(flag)">
-                    {{ activeContentPendingFlagId === flag.id ? "处理中…" : "删除内容" }}
+                    {{ activeContentPendingFlagId === flag.id ? uiText('处理中…') : uiText('删除内容') }}
                   </UiButton>
                   <UiButton tone="success" :disabled="pendingAction" @click="resolveFlag(flag)">
-                    {{ activeFlagPendingId === flag.id ? "处理中…" : "标记已处理" }}
+                    {{ activeFlagPendingId === flag.id ? uiText('处理中…') : uiText('标记已处理') }}
                   </UiButton>
                   <UiButton tone="ghost" :disabled="pendingAction" @click="rejectFlag(flag)">
-                    {{ activeFlagPendingId === flag.id ? "处理中…" : "驳回举报" }}
+                    {{ activeFlagPendingId === flag.id ? uiText('处理中…') : uiText('驳回举报') }}
                   </UiButton>
                 </footer>
               </article>
             </div>
 
             <UiCard v-else class="moderation-empty">
-              <strong>当前筛选下没有举报</strong>
-              <span>用户举报主题或回复后，会在这里显示举报原因、说明和被举报内容。</span>
+              <strong>{{ uiText('当前筛选下没有举报') }}</strong>
+              <span>{{ uiText('用户举报主题或回复后，会在这里显示举报原因、说明和被举报内容。') }}</span>
             </UiCard>
           </div>
 
@@ -1396,13 +1397,13 @@ function mutationErrorMessage(error: unknown) {
             <div class="section-toolbar">
               <div>
                 <span class="panel-kicker">Audit log</span>
-                <h2>全站审计日志</h2>
+                <h2>{{ uiText('全站审计日志') }}</h2>
               </div>
             </div>
 
             <UiCard v-if="auditQuery.isPending.value" class="moderation-empty moderation-empty--loading">
-              <strong>正在加载审计日志</strong>
-              <span>请稍候，日志同步完成后会显示在这里。</span>
+              <strong>{{ uiText('正在加载审计日志') }}</strong>
+              <span>{{ uiText('请稍候，日志同步完成后会显示在这里。') }}</span>
             </UiCard>
 
             <UiCard v-else class="audit-panel main-audit-panel">
@@ -1413,50 +1414,48 @@ function mutationErrorMessage(error: unknown) {
                     <span class="log-time">{{ relativeTime(log.created_at) }}</span>
                   </div>
                   <div class="log-desc">
-                    操作人: <span>{{ log.actor_name || "系统" }}</span> ·
-                    目标类型: <span>{{ log.target_type }}</span> ·
-                    目标 ID: <span>{{ log.target_id }}</span>
+                    {{ uiText('操作人:') }} <span>{{ log.actor_name || uiText('系统') }}</span> {{ uiText('· 目标类型:') }} <span>{{ log.target_type }}</span> {{ uiText('· 目标 ID:') }} <span>{{ log.target_id }}</span>
                     <span v-if="log.data && Object.keys(log.data).length" class="log-details-block">
-                      <br />详情: <code class="log-data-code">{{ JSON.stringify(log.data) }}</code>
+                      <br />{{ uiText('详情:') }} <code class="log-data-code">{{ JSON.stringify(log.data) }}</code>
                     </span>
                   </div>
                 </li>
               </ol>
-              <p v-else>暂无审计记录。</p>
+              <p v-else>{{ uiText('暂无审计记录。') }}</p>
             </UiCard>
           </div>
         </div>
 
         <!-- Sidebar Column (User Management, quick stats) -->
-        <aside v-if="activeTab === 'audit'" class="side-column" aria-label="管理工具">
+        <aside v-if="activeTab === 'audit'" class="side-column" :aria-label="uiText('管理工具')">
           <UiCard v-if="canUpdateUserStatus" class="user-tool">
-            <span class="panel-kicker">管理员操作</span>
-            <h2>用户状态调整</h2>
+            <span class="panel-kicker">{{ uiText('管理员操作') }}</span>
+            <h2>{{ uiText('用户状态调整') }}</h2>
             <label>
-              <span>用户 ID</span>
-              <input v-model="userId" type="text" placeholder="粘贴 user_id" />
+              <span>{{ uiText('用户 ID') }}</span>
+              <input v-model="userId" type="text" :placeholder="uiText('粘贴 user_id')" />
             </label>
             <label>
-              <span>状态</span>
+              <span>{{ uiText('状态') }}</span>
               <select v-model="userStatus">
-                <option value="silenced">禁言</option>
-                <option value="suspended">停用</option>
-                <option value="active">恢复 active</option>
+                <option value="silenced">{{ uiText('禁言') }}</option>
+                <option value="suspended">{{ uiText('停用') }}</option>
+                <option value="active">{{ uiText('恢复 active') }}</option>
               </select>
             </label>
             <label>
-              <span>备注</span>
-              <textarea v-model="userNote" rows="3" placeholder="记录调整原因" />
+              <span>{{ uiText('备注') }}</span>
+              <textarea v-model="userNote" rows="3" :placeholder="uiText('记录调整原因')" />
             </label>
             <UiButton :disabled="pendingAction || !userId.trim()" @click="updateUser">
-              {{ userStatusUpdating ? "更新中…" : "更新用户状态" }}
+              {{ userStatusUpdating ? uiText('更新中…') : uiText('更新用户状态') }}
             </UiButton>
           </UiCard>
 
           <UiCard v-else class="user-tool">
-            <span class="panel-kicker">管理员操作</span>
-            <h2>用户状态</h2>
-            <p>只有全站管理员可以调整用户状态；版主可以处理内容发布审核、用户举报和内容可见性。</p>
+            <span class="panel-kicker">{{ uiText('管理员操作') }}</span>
+            <h2>{{ uiText('用户状态') }}</h2>
+            <p>{{ uiText('只有全站管理员可以调整用户状态；版主可以处理内容发布审核、用户举报和内容可见性。') }}</p>
           </UiCard>
         </aside>
       </section>
@@ -1467,26 +1466,26 @@ function mutationErrorMessage(error: unknown) {
       <div class="drawer-panel" :class="{ 'drawer-panel--open': isDrawerOpen }" @click.stop>
         <!-- Header -->
         <header class="drawer-header">
-          <h3>审核详情</h3>
+          <h3>{{ uiText('审核详情') }}</h3>
           <button class="close-btn" @click="closeDrawer">&times;</button>
         </header>
 
         <!-- Body -->
         <div class="drawer-body" v-if="selectedReviewable">
           <div class="drawer-section">
-            <span class="panel-kicker">基本信息</span>
+            <span class="panel-kicker">{{ uiText('基本信息') }}</span>
             <div class="meta-grid">
-              <div><strong>类型:</strong> {{ reviewableTypeLabel(selectedReviewable.type) }}</div>
-              <div><strong>状态:</strong> {{ reviewableStatusLabel(selectedReviewable.status) }}</div>
-              <div><strong>时间:</strong> {{ relativeTime(selectedReviewable.created_at) }}</div>
-              <div><strong>版块:</strong> {{ selectedReviewable.board_name || '全局' }}</div>
-              <div><strong>创建者:</strong> {{ selectedReviewable.created_by_name || '系统' }}</div>
-              <div><strong>处理人:</strong> {{ selectedReviewable.assigned_to_name || selectedReviewable.resolved_by_name || '暂无' }}</div>
+              <div><strong>{{ uiText('类型:') }}</strong> {{ reviewableTypeLabel(selectedReviewable.type) }}</div>
+              <div><strong>{{ uiText('状态:') }}</strong> {{ reviewableStatusLabel(selectedReviewable.status) }}</div>
+              <div><strong>{{ uiText('时间:') }}</strong> {{ relativeTime(selectedReviewable.created_at) }}</div>
+              <div><strong>{{ uiText('版块:') }}</strong> {{ selectedReviewable.board_name || uiText('全局') }}</div>
+              <div><strong>{{ uiText('创建者:') }}</strong> {{ selectedReviewable.created_by_name || uiText('系统') }}</div>
+              <div><strong>{{ uiText('处理人:') }}</strong> {{ selectedReviewable.assigned_to_name || selectedReviewable.resolved_by_name || uiText('暂无') }}</div>
             </div>
           </div>
 
           <div class="drawer-section content-preview">
-            <span class="panel-kicker">内容预览</span>
+            <span class="panel-kicker">{{ uiText('内容预览') }}</span>
             <h4 class="preview-title">{{ reviewableTitle(selectedReviewable) }}</h4>
             <div class="preview-body-box">
               <article v-if="selectedFrontierPreviewCard" class="frontier-preview-card">
@@ -1515,13 +1514,13 @@ function mutationErrorMessage(error: unknown) {
               <p v-else class="raw-markdown-view">{{ reviewablePreview(selectedReviewable) }}</p>
             </div>
             <div class="content-appeal-note" v-if="selectedReviewable.data.appeal_reason || selectedReviewable.data.note">
-              <strong>复核理由 / 备注:</strong> {{ selectedReviewable.data.appeal_reason || selectedReviewable.data.note }}
+              <strong>{{ uiText('复核理由 / 备注:') }}</strong> {{ selectedReviewable.data.appeal_reason || selectedReviewable.data.note }}
             </div>
           </div>
 
           <!-- History Events -->
           <div class="drawer-section event-history-section">
-            <span class="panel-kicker">处理记录</span>
+            <span class="panel-kicker">{{ uiText('处理记录') }}</span>
             <div v-if="selectedReviewable.events && selectedReviewable.events.length" class="drawer-events-list">
               <div v-for="event in selectedReviewable.events" :key="event.id" class="drawer-event-item">
                 <div class="event-meta">
@@ -1529,7 +1528,7 @@ function mutationErrorMessage(error: unknown) {
                   <span class="event-time">{{ relativeTime(event.created_at) }}</span>
                 </div>
                 <div class="event-desc">
-                  执行人: <span>{{ event.actor_name || '系统' }}</span>
+                  {{ uiText('执行人:') }} <span>{{ event.actor_name || uiText('系统') }}</span>
                   <span v-if="event.from_status || event.to_status">
                     （{{ reviewableStatusLabel(event.from_status || '') }} &rarr; {{ reviewableStatusLabel(event.to_status || '') }}）
                   </span>
@@ -1537,36 +1536,36 @@ function mutationErrorMessage(error: unknown) {
                 <div v-if="event.note" class="event-note-quote">“{{ event.note }}”</div>
               </div>
             </div>
-            <p v-else class="no-events-desc">暂无处理记录。</p>
+            <p v-else class="no-events-desc">{{ uiText('暂无处理记录。') }}</p>
           </div>
 
           <div class="drawer-section operations-form" v-if="canDecideReviewable(selectedReviewable)">
-            <span class="panel-kicker">处理决定</span>
+            <span class="panel-kicker">{{ uiText('处理决定') }}</span>
             <label class="form-label">
-              <span>处理动作</span>
+              <span>{{ uiText('处理动作') }}</span>
               <select v-model="decisionAction">
-                <option value="approve">通过发布</option>
-                <option value="reject">拒绝，不发布</option>
-                <option value="hide" :disabled="!hasReviewableTarget(selectedReviewable)">隐藏已发布内容</option>
-                <option value="delete" :disabled="!hasReviewableTarget(selectedReviewable)">删除已发布内容</option>
-                <option value="silence" :disabled="!canSilenceReviewable(selectedReviewable)">禁言作者</option>
-                <option value="escalate">暂不处理，升级审核</option>
+                <option value="approve">{{ uiText('通过发布') }}</option>
+                <option value="reject">{{ uiText('拒绝，不发布') }}</option>
+                <option value="hide" :disabled="!hasReviewableTarget(selectedReviewable)">{{ uiText('隐藏已发布内容') }}</option>
+                <option value="delete" :disabled="!hasReviewableTarget(selectedReviewable)">{{ uiText('删除已发布内容') }}</option>
+                <option value="silence" :disabled="!canSilenceReviewable(selectedReviewable)">{{ uiText('禁言作者') }}</option>
+                <option value="escalate">{{ uiText('暂不处理，升级审核') }}</option>
               </select>
             </label>
             <label class="form-label">
-              <span>处理备注 / 决议理由</span>
-              <textarea v-model="decisionNote" rows="3" placeholder="可选：写下处理原因，会进入审计记录" />
+              <span>{{ uiText('处理备注 / 决议理由') }}</span>
+              <textarea v-model="decisionNote" rows="3" :placeholder="uiText('可选：写下处理原因，会进入审计记录')" />
             </label>
             <div class="form-actions">
               <UiButton tone="success" :disabled="pendingAction" @click="submitDecision">
-                {{ activeReviewablePendingId === selectedReviewable.id ? "提交中…" : "提交处理" }}
+                {{ activeReviewablePendingId === selectedReviewable.id ? uiText('提交中…') : uiText('提交处理') }}
               </UiButton>
-              <UiButton tone="subtle" :disabled="pendingAction" @click="closeDrawer">先不处理</UiButton>
+              <UiButton tone="subtle" :disabled="pendingAction" @click="closeDrawer">{{ uiText('先不处理') }}</UiButton>
             </div>
           </div>
           <div class="drawer-section operations-form-readonly" v-else-if="isClaimedByOther(selectedReviewable)">
-            <span class="panel-kicker">处理决定</span>
-            <p class="action-locked-desc">这条内容正在由 <strong>{{ selectedReviewable.assigned_to_name }}</strong> 处理。</p>
+            <span class="panel-kicker">{{ uiText('处理决定') }}</span>
+            <p class="action-locked-desc">{{ uiText("这条内容正在由 {name} 处理。", { name: selectedReviewable.assigned_to_name || uiText("系统") }) }}</p>
           </div>
         </div>
       </div>

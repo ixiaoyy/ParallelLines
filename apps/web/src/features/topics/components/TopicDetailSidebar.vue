@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed } from "vue";
 
 import type { PostItemVM } from "@/entities/post/model";
@@ -69,11 +70,11 @@ function toPlainText(value: string) {
 </script>
 
 <template>
-  <aside class="topic-detail-sidebar" aria-label="主题侧边栏">
+  <aside class="topic-detail-sidebar" :aria-label="uiText('主题侧边栏')">
     <UiCard class="sidebar-panel progress-panel">
-      <span class="panel-kicker">楼层</span>
-      <h2>快速跳转</h2>
-      <nav v-if="tocHeadings.length" class="toc-nav" aria-label="正文目录">
+      <span class="panel-kicker">{{ uiText("楼层") }}</span>
+      <h2>{{ uiText("快速跳转") }}</h2>
+      <nav v-if="tocHeadings.length" class="toc-nav" :aria-label="uiText('正文目录')">
         <a
           v-for="heading in tocHeadings"
           :key="heading.id"
@@ -83,21 +84,21 @@ function toPlainText(value: string) {
           {{ heading.text }}
         </a>
       </nav>
-      <nav v-else class="floor-nav" aria-label="楼层跳转">
+      <nav v-else class="floor-nav" :aria-label="uiText('楼层跳转')">
         <a v-for="post in fallbackFloors" :key="post.id" :href="`#post-${post.floor}`">
           #{{ post.floor }}
           <span>{{ post.authorName }}</span>
         </a>
       </nav>
       <div class="sidebar-jumps">
-        <a href="#replies">看回复</a>
-        <a href="#topic-end">到结尾</a>
+        <a href="#replies">{{ uiText("看回复") }}</a>
+        <a href="#topic-end">{{ uiText("到结尾") }}</a>
       </div>
     </UiCard>
 
     <UiCard class="sidebar-panel">
-      <span class="panel-kicker">参与者</span>
-      <h2>正在讨论</h2>
+      <span class="panel-kicker">{{ uiText("参与者") }}</span>
+      <h2>{{ uiText("正在讨论") }}</h2>
       <div class="participant-stack">
         <UiAvatar
           v-for="poster in topic.posterNames"
@@ -115,8 +116,8 @@ function toPlainText(value: string) {
     </UiCard>
 
     <UiCard class="sidebar-panel">
-      <span class="panel-kicker">标签</span>
-      <h2>主题标签</h2>
+      <span class="panel-kicker">{{ uiText("标签") }}</span>
+      <h2>{{ uiText("主题标签") }}</h2>
       <div class="tag-list">
         <RouterLink
           v-for="tag in topic.tags"
@@ -131,8 +132,8 @@ function toPlainText(value: string) {
     </UiCard>
 
     <UiCard v-if="relatedTopics.length" class="sidebar-panel">
-      <span class="panel-kicker">同版块</span>
-      <h2>相关主题</h2>
+      <span class="panel-kicker">{{ uiText("同版块") }}</span>
+      <h2>{{ uiText("相关主题") }}</h2>
       <RouterLink
         v-for="related in relatedTopics"
         :key="related.id"
@@ -140,7 +141,7 @@ function toPlainText(value: string) {
         :to="topicDetailRoute(related)"
       >
         <strong>{{ related.title }}</strong>
-        <span>{{ compactNumber(related.replyCount) }} 回复 · {{ relativeTime(related.lastPostedAt) }}</span>
+        <span>{{ uiText("回复数：{count}", { count: compactNumber(related.replyCount) }) }} · {{ relativeTime(related.lastPostedAt) }}</span>
       </RouterLink>
     </UiCard>
   </aside>

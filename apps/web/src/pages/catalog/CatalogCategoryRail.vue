@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed, nextTick, onMounted, onUnmounted, onUpdated, ref, watch } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons-vue";
@@ -190,13 +191,13 @@ onUnmounted(() => {
 <template>
   <div ref="root" class="catalog-category-rail" :data-category-rail="slug" :data-load-state="state" :data-composition="composition" :class="{ 'catalog-category-rail--single': total === 1 }">
     <div ref="widthProbe" class="catalog-category-rail__width-probe" aria-hidden="true"></div>
-    <div ref="viewport" class="catalog-category-rail__viewport" :aria-label="`${name}游戏`" :aria-busy="query.isFetching.value" role="group" tabindex="0" @scroll.passive="handleScroll" @keydown="handleKey">
+    <div ref="viewport" class="catalog-category-rail__viewport" :aria-label="uiText('{value0}游戏', { value0: name })" :aria-busy="query.isFetching.value" role="group" tabindex="0" @scroll.passive="handleScroll" @keydown="handleKey">
       <slot :projects="projects" />
     </div>
-    <div v-if="state === 'loading' || state === 'loading-more'" class="catalog-category-rail__status" role="status">正在加载{{ name }}游戏…</div>
-    <div v-if="localError" class="catalog-category-rail__status catalog-category-rail__status--error" role="alert"><span>{{ localError }}</span><button type="button" :aria-label="`重新加载${name}游戏`" @click="retry">重试</button></div>
-    <button v-if="canPrevious" class="catalog-category-rail__arrow catalog-category-rail__arrow--previous" type="button" :aria-label="`上一组${name}游戏`" @click="move(-1)"><LeftOutlined aria-hidden="true" /></button>
-    <button v-if="canNext" class="catalog-category-rail__arrow catalog-category-rail__arrow--next" type="button" :aria-label="`下一组${name}游戏`" @click="move(1)"><RightOutlined aria-hidden="true" /></button>
+    <div v-if="state === 'loading' || state === 'loading-more'" class="catalog-category-rail__status" role="status">{{ uiText("正在加载{name}游戏…", { name }) }}</div>
+    <div v-if="localError" class="catalog-category-rail__status catalog-category-rail__status--error" role="alert"><span>{{ uiText(localError) }}</span><button type="button" :aria-label="uiText('重新加载{value0}游戏', { value0: name })" @click="retry">{{ uiText("重试") }}</button></div>
+    <button v-if="canPrevious" class="catalog-category-rail__arrow catalog-category-rail__arrow--previous" type="button" :aria-label="uiText('上一组{value0}游戏', { value0: name })" @click="move(-1)"><LeftOutlined aria-hidden="true" /></button>
+    <button v-if="canNext" class="catalog-category-rail__arrow catalog-category-rail__arrow--next" type="button" :aria-label="uiText('下一组{value0}游戏', { value0: name })" @click="move(1)"><RightOutlined aria-hidden="true" /></button>
   </div>
 </template>
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { CheckCircleFilled, CloseOutlined, UploadOutlined } from "@ant-design/icons-vue";
 import { nextTick, onUnmounted, ref, watch } from "vue";
 
@@ -133,57 +134,57 @@ async function submit(): Promise<void> {
 <template>
   <dialog ref="dialog" class="catalog-submission-dialog" aria-labelledby="catalog-submission-title" @close="onClosed" @cancel="onCancel">
     <div class="catalog-submission-dialog__header">
-      <h2 id="catalog-submission-title"><UploadOutlined aria-hidden="true" /> 投稿游戏</h2>
-      <button type="button" class="catalog-submission-dialog__close" aria-label="关闭投稿窗口" :disabled="isSubmitting" @click="closeDialog"><CloseOutlined aria-hidden="true" /></button>
+      <h2 id="catalog-submission-title"><UploadOutlined aria-hidden="true" /> {{ uiText("投稿游戏") }}</h2>
+      <button type="button" class="catalog-submission-dialog__close" :aria-label="uiText('关闭投稿窗口')" :disabled="isSubmitting" @click="closeDialog"><CloseOutlined aria-hidden="true" /></button>
     </div>
 
     <div v-if="isSubmitted" class="catalog-submission-dialog__success" role="status">
       <CheckCircleFilled aria-hidden="true" />
-      <p>待审核</p>
-      <button type="button" @click="closeDialog">完成</button>
+      <p>{{ uiText("待审核") }}</p>
+      <button type="button" @click="closeDialog">{{ uiText("完成") }}</button>
     </div>
 
     <form v-else class="catalog-submission-dialog__form" @submit.prevent="submit">
       <div class="catalog-submission-dialog__names">
       <label>
-        <span>分类名称 <strong>*</strong></span>
-        <input v-model="categoryName" name="category_name" type="text" maxlength="120" required autocomplete="off" autofocus placeholder="例如：休闲" />
+        <span>{{ uiText("分类名称") }} <strong>*</strong></span>
+        <input v-model="categoryName" name="category_name" type="text" maxlength="120" required autocomplete="off" autofocus :placeholder="uiText('例如：休闲')" />
       </label>
       <label>
-        <span>游戏名称 <strong>*</strong></span>
-        <input v-model="projectName" name="project_name" type="text" maxlength="120" required autocomplete="off" placeholder="输入游戏名称" />
+        <span>{{ uiText("游戏名称") }} <strong>*</strong></span>
+        <input v-model="projectName" name="project_name" type="text" maxlength="120" required autocomplete="off" :placeholder="uiText('输入游戏名称')" />
       </label>
       </div>
       <label>
-        <span>游戏链接 <strong>*</strong></span>
+        <span>{{ uiText("游戏链接") }} <strong>*</strong></span>
         <input v-model="url" name="url" type="url" maxlength="2048" required inputmode="url" placeholder="https://" />
       </label>
       <div class="catalog-submission-dialog__optional">
         <label>
-          <span>作者名 <small>选填</small></span>
-          <input v-model="authorName" name="author_name" type="text" maxlength="120" autocomplete="name" placeholder="作者或团队名称" />
+          <span>{{ uiText("作者名") }} <small>{{ uiText("选填") }}</small></span>
+          <input v-model="authorName" name="author_name" type="text" maxlength="120" autocomplete="name" :placeholder="uiText('作者或团队名称')" />
         </label>
         <label>
-          <span>联系方式 <small>选填，仅管理员可见</small></span>
-          <input v-model="contact" name="contact" type="text" maxlength="200" autocomplete="email" placeholder="邮箱或其他联系方式" />
+          <span>{{ uiText("联系方式") }} <small>{{ uiText("选填，仅管理员可见") }}</small></span>
+          <input v-model="contact" name="contact" type="text" maxlength="200" autocomplete="email" :placeholder="uiText('邮箱或其他联系方式')" />
         </label>
       </div>
       <div class="catalog-submission-dialog__cover">
-        <label id="catalog-submission-cover-label" for="catalog-submission-cover">封面图 <small>选填，最大 2 MB</small></label>
-        <!-- 中文按钮触发现有文件选择与校验，避免原生控件受浏览器语言影响。 -->
+        <label id="catalog-submission-cover-label" for="catalog-submission-cover">{{ uiText("封面图") }} <small>{{ uiText("选填，最大 2 MB") }}</small></label>
+        <!-- 自定义按钮复用原文件校验，同时让按钮文字跟随本站界面语言。 -->
         <input id="catalog-submission-cover" ref="coverInput" name="cover" type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden @change="selectCover" />
         <div class="catalog-submission-dialog__cover-picker">
-          <button type="button" class="catalog-submission-dialog__choose-cover" aria-describedby="catalog-submission-cover-label" @click="coverInput?.click()">{{ cover ? '更换封面' : '选择封面' }}</button>
+          <button type="button" class="catalog-submission-dialog__choose-cover" aria-describedby="catalog-submission-cover-label" @click="coverInput?.click()">{{ cover ? uiText("更换封面") : uiText("选择封面") }}</button>
           <span v-if="cover" class="catalog-submission-dialog__filename" :title="cover.name">{{ cover.name }}</span>
         </div>
-        <img v-if="coverPreview" :src="coverPreview" alt="已选封面预览" />
-        <button v-if="coverPreview || coverError" type="button" class="catalog-submission-dialog__clear-cover" @click="clearCover">移除封面</button>
-        <p v-if="coverError" role="alert" class="catalog-submission-dialog__error">{{ coverError }}</p>
+        <img v-if="coverPreview" :src="coverPreview" :alt="uiText('已选封面预览')" />
+        <button v-if="coverPreview || coverError" type="button" class="catalog-submission-dialog__clear-cover" @click="clearCover">{{ uiText("移除封面") }}</button>
+        <p v-if="coverError" role="alert" class="catalog-submission-dialog__error">{{ uiText(coverError) }}</p>
       </div>
-      <p v-if="formError" role="alert" class="catalog-submission-dialog__error">{{ formError }}</p>
+      <p v-if="formError" role="alert" class="catalog-submission-dialog__error">{{ uiText(formError) }}</p>
       <div class="catalog-submission-dialog__actions">
-        <button type="button" :disabled="isSubmitting" @click="closeDialog">取消</button>
-        <UiButton type="submit" :disabled="isSubmitting">{{ isSubmitting ? "提交中…" : "提交审核" }}</UiButton>
+        <button type="button" :disabled="isSubmitting" @click="closeDialog">{{ uiText("取消") }}</button>
+        <UiButton type="submit" :disabled="isSubmitting">{{ isSubmitting ? uiText("提交中…") : uiText("提交审核") }}</UiButton>
       </div>
     </form>
   </dialog>

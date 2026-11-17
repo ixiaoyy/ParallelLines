@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { StarFilled, StarOutlined } from "@ant-design/icons-vue";
 import { onMounted, onUnmounted, ref } from "vue";
 
@@ -102,18 +103,18 @@ onUnmounted(() => {
 
 <template>
   <article ref="card" class="catalog-card" :class="{ 'catalog-card--featured': featured, 'catalog-card--touch-actions': touchActionsOpen, 'catalog-card--keyboard-actions': keyboardActionsOpen }" tabindex="-1" @pointerdown="startHold" @pointermove="moveHold" @pointerup="cancelHold" @pointercancel="cancelHold" @contextmenu="handleContextMenu" @focusin="revealKeyboardFocus" @focusout="releaseKeyboardFocus" @keydown.esc="touchActionsOpen = false">
-    <a class="catalog-card__open" :href="href" target="_blank" rel="noopener noreferrer" :aria-label="`打开${title}`" @click="open" @auxclick="open">
+    <a class="catalog-card__open" :href="href" target="_blank" rel="noopener noreferrer" :aria-label="uiText('打开{value0}', { value0: title })" @click="open" @auxclick="open">
       <span class="catalog-card__cover">
         <img v-if="cover" :src="cover" alt="" :loading="eager ? 'eager' : 'lazy'" :fetchpriority="highPriority ? 'high' : undefined" decoding="async" @load="measureCover" />
         <span v-else class="catalog-card__missing">{{ title }}</span>
       </span>
       <span class="catalog-card__mobile-name" :title="title">{{ title }}</span>
-      <span v-if="featured" class="catalog-card__play" aria-hidden="true">开始游戏</span>
+      <span v-if="featured" class="catalog-card__play" aria-hidden="true">{{ uiText("开始游戏") }}</span>
     </a>
     <div class="catalog-card__details">
       <h3>{{ title }}</h3>
     </div>
-    <button type="button" class="catalog-card__wanted" :class="{ 'is-active': wanted }" :aria-pressed="wanted" :aria-label="`${wanted ? '移除想玩' : '加入想玩'}：${title}`" :title="wanted ? '移除想玩' : '加入想玩'" @click.stop="emit('toggleWanted')"><StarFilled v-if="wanted" aria-hidden="true" /><StarOutlined v-else aria-hidden="true" /></button>
+    <button type="button" class="catalog-card__wanted" :class="{ 'is-active': wanted }" :aria-pressed="wanted" :aria-label="uiText('{value0}：{value1}', { value0: wanted ? uiText('移除想玩') : uiText('加入想玩'), value1: title })" :title="wanted ? uiText('移除想玩') : uiText('加入想玩')" @click.stop="emit('toggleWanted')"><StarFilled v-if="wanted" aria-hidden="true" /><StarOutlined v-else aria-hidden="true" /></button>
   </article>
 </template>
 

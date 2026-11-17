@@ -1,4 +1,5 @@
 import { relativeTime } from "@/shared/lib/format";
+import { uiText } from "@/shared/i18n/locale";
 import { topicDetailPath } from "@/shared/router/topicRoutes";
 
 export type NotificationType =
@@ -64,7 +65,7 @@ const typeMeta: Record<
 export function toNotificationItem(notification: NotificationResponse): NotificationItemVM {
   const knownType = isKnownNotificationType(notification.type) ? notification.type : "moderation";
   const meta = typeMeta[knownType];
-  const topicTitle = readString(notification.data.topic_title) ?? "未命名主题";
+  const topicTitle = readString(notification.data.topic_title) ?? uiText("未命名主题");
   const boardName = readString(notification.data.board_name);
   const actorName = notification.actor_name ?? readString(notification.data.actor_name);
   const postNumber = readNumber(notification.data.post_number);
@@ -74,8 +75,9 @@ export function toNotificationItem(notification: NotificationResponse): Notifica
     type: notification.type,
     tone: notification.read_at ? "gray" : meta.tone,
     unread: notification.read_at === null,
-    title: meta.title,
-    description: buildDescription(meta.description, topicTitle, boardName, actorName, postNumber),
+    // 只翻译本站通知类型及空标题；主题、版块和发起人内容原样展示。
+    title: uiText(meta.title),
+    description: buildDescription(uiText(meta.description), topicTitle, boardName, actorName, postNumber),
     actorName,
     relativeCreatedAt: relativeTime(notification.created_at),
     targetUrl: buildNotificationUrl(notification),

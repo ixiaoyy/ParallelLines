@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import LanguageSwitcher from "@/shared/ui/LanguageSwitcher.vue";
+import { currentLocale, uiText } from "@/shared/i18n/locale";
 import { useQuery, useQueryClient } from "@tanstack/vue-query";
 import { computed, onUnmounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
@@ -134,7 +136,7 @@ async function leaveAdmin(): Promise<void> {
     await logout();
     await router.replace({ name: "home" });
   } catch (failure) {
-    message.error(failure instanceof Error ? failure.message : "远端未注销，请重试。");
+    message.error(uiText(failure instanceof Error ? failure.message : "远端未注销，请重试。"));
   }
 }
 
@@ -371,66 +373,67 @@ async function reviewSubmission(submission: AdminCatalogSubmission, decision: "a
   <main class="catalog-admin">
     <header class="catalog-admin__header">
       <div>
-        <p class="catalog-admin__eyebrow">平行线后台</p>
-        <h1>站点管理</h1>
-        <p>查看访问情况，审核投稿，维护公开目录的分类和项目。</p>
+        <p class="catalog-admin__eyebrow">{{ uiText("平行线后台") }}</p>
+        <h1>{{ uiText("站点管理") }}</h1>
+        <p>{{ uiText("查看访问情况，审核投稿，维护公开目录的分类和项目。") }}</p>
       </div>
       <div class="catalog-admin__header-actions">
-        <RouterLink class="catalog-admin__visit" to="/">查看网站<span aria-hidden="true">↗</span></RouterLink>
-        <button type="button" class="catalog-admin__logout" @click="leaveAdmin">退出登录</button>
+        <LanguageSwitcher />
+        <RouterLink class="catalog-admin__visit" to="/">{{ uiText("查看网站") }}<span aria-hidden="true">↗</span></RouterLink>
+        <button type="button" class="catalog-admin__logout" @click="leaveAdmin">{{ uiText("退出登录") }}</button>
       </div>
     </header>
 
-    <nav class="catalog-admin__tabs" aria-label="后台功能">
-      <button type="button" :class="{ 'is-active': activeTab === 'traffic' }" :aria-pressed="activeTab === 'traffic'" @click="activeTab = 'traffic'">流量统计</button>
-      <button type="button" :class="{ 'is-active': activeTab === 'review' }" :aria-pressed="activeTab === 'review'" @click="activeTab = 'review'">投稿审核</button>
-      <button type="button" :class="{ 'is-active': activeTab === 'catalog' }" :aria-pressed="activeTab === 'catalog'" @click="activeTab = 'catalog'">目录管理</button>
+    <nav class="catalog-admin__tabs" :aria-label="uiText('后台功能')">
+      <button type="button" :class="{ 'is-active': activeTab === 'traffic' }" :aria-pressed="activeTab === 'traffic'" @click="activeTab = 'traffic'">{{ uiText("流量统计") }}</button>
+      <button type="button" :class="{ 'is-active': activeTab === 'review' }" :aria-pressed="activeTab === 'review'" @click="activeTab = 'review'">{{ uiText("投稿审核") }}</button>
+      <button type="button" :class="{ 'is-active': activeTab === 'catalog' }" :aria-pressed="activeTab === 'catalog'" @click="activeTab = 'catalog'">{{ uiText("目录管理") }}</button>
     </nav>
 
     <section v-if="activeTab === 'traffic'" class="catalog-admin__section" aria-labelledby="traffic-heading">
       <div class="catalog-admin__section-head">
-        <div><h2 id="traffic-heading">流量统计</h2><p>按日期查看公开站的访问量、来源和入口页。</p></div>
-        <div class="catalog-admin__presets" aria-label="常用时间范围">
-          <button v-for="days in [7, 30, 90]" :key="days" type="button" @click="selectRecentDays(days)">最近 {{ days }} 天</button>
+        <div><h2 id="traffic-heading">{{ uiText("流量统计") }}</h2><p>{{ uiText("按日期查看公开站的访问量、来源和入口页。") }}</p></div>
+        <div class="catalog-admin__presets" :aria-label="uiText('常用时间范围')">
+          <button v-for="days in [7, 30, 90]" :key="days" type="button" @click="selectRecentDays(days)">{{ uiText("最近 {days} 天", { days }) }}</button>
         </div>
       </div>
       <div class="catalog-admin__filters">
-        <label>开始日期<input v-model="startDate" type="date" :max="endDate" required /></label>
-        <label>结束日期<input v-model="endDate" type="date" :min="startDate" required /></label>
-        <UiButton tone="subtle" :disabled="trafficQuery.isFetching.value || !rangeIsValid" @click="trafficQuery.refetch()">刷新</UiButton>
+        <label>{{ uiText("开始日期") }}<input v-model="startDate" type="date" :max="endDate" required /></label>
+        <label>{{ uiText("结束日期") }}<input v-model="endDate" type="date" :min="startDate" required /></label>
+        <UiButton tone="subtle" :disabled="trafficQuery.isFetching.value || !rangeIsValid" @click="trafficQuery.refetch()">{{ uiText("刷新") }}</UiButton>
       </div>
-      <div v-if="trafficQuery.isPending.value" class="catalog-admin__state" role="status">正在读取统计数据…</div>
+      <div v-if="trafficQuery.isPending.value" class="catalog-admin__state" role="status">{{ uiText("正在读取统计数据…") }}</div>
       <div v-else-if="trafficQuery.isError.value" class="catalog-admin__state">
-        <UiButton tone="subtle" @click="trafficQuery.refetch()">重新加载</UiButton>
+        <UiButton tone="subtle" @click="trafficQuery.refetch()">{{ uiText("重新加载") }}</UiButton>
       </div>
       <template v-else-if="trafficQuery.data.value">
         <dl class="catalog-admin__metrics">
-          <div><dt>访问量 PV</dt><dd>{{ formatMetric(trafficQuery.data.value.totals.page_views) }}</dd></div>
-          <div><dt>独立访客 UV</dt><dd>{{ formatMetric(trafficQuery.data.value.totals.unique_visitors) }}</dd></div>
-          <div><dt>外部引流</dt><dd>{{ formatMetric(trafficQuery.data.value.totals.external_referrals) }}</dd></div>
+          <div><dt>{{ uiText("访问量 PV") }}</dt><dd>{{ formatMetric(trafficQuery.data.value.totals.page_views) }}</dd></div>
+          <div><dt>{{ uiText("独立访客 UV") }}</dt><dd>{{ formatMetric(trafficQuery.data.value.totals.unique_visitors) }}</dd></div>
+          <div><dt>{{ uiText("外部引流") }}</dt><dd>{{ formatMetric(trafficQuery.data.value.totals.external_referrals) }}</dd></div>
         </dl>
         <div class="catalog-admin__tables">
           <section aria-labelledby="sources-heading">
-            <h3 id="sources-heading">访问来源</h3>
+            <h3 id="sources-heading">{{ uiText("访问来源") }}</h3>
             <div class="catalog-admin__table-scroll"><table>
-              <thead><tr><th scope="col">来源</th><th scope="col">访问次数</th><th scope="col">访客</th></tr></thead>
+              <thead><tr><th scope="col">{{ uiText("来源") }}</th><th scope="col">{{ uiText("访问次数") }}</th><th scope="col">{{ uiText("访客") }}</th></tr></thead>
               <tbody><tr v-for="source in sourceRows" :key="`${source.source_type}:${source.source_name}`">
                 <td><strong>{{ sourceNameLabel(source.source_name) }}</strong><small>{{ sourceTypeLabel(source.source_type) }}</small></td>
                 <td>{{ formatMetric(source.visit_count) }}</td><td>{{ formatMetric(source.unique_visitors) }}</td>
               </tr></tbody>
             </table></div>
-            <p v-if="!sourceRows.length" class="catalog-admin__empty">当前范围内暂无访问来源。</p>
+            <p v-if="!sourceRows.length" class="catalog-admin__empty">{{ uiText("当前范围内暂无访问来源。") }}</p>
           </section>
           <section aria-labelledby="entries-heading">
-            <h3 id="entries-heading">入口页面</h3>
+            <h3 id="entries-heading">{{ uiText("入口页面") }}</h3>
             <div class="catalog-admin__table-scroll"><table>
-              <thead><tr><th scope="col">页面</th><th scope="col">访问次数</th><th scope="col">访客</th></tr></thead>
+              <thead><tr><th scope="col">{{ uiText("页面") }}</th><th scope="col">{{ uiText("访问次数") }}</th><th scope="col">{{ uiText("访客") }}</th></tr></thead>
               <tbody><tr v-for="entry in entryRows" :key="entry.path">
                 <td><strong>{{ entry.title || entry.path }}</strong><small>{{ entry.path }}</small></td>
                 <td>{{ formatMetric(entry.visit_count) }}</td><td>{{ formatMetric(entry.unique_visitors) }}</td>
               </tr></tbody>
             </table></div>
-            <p v-if="!entryRows.length" class="catalog-admin__empty">当前范围内暂无入口页数据。</p>
+            <p v-if="!entryRows.length" class="catalog-admin__empty">{{ uiText("当前范围内暂无入口页数据。") }}</p>
           </section>
         </div>
       </template>
@@ -438,37 +441,37 @@ async function reviewSubmission(submission: AdminCatalogSubmission, decision: "a
 
     <section v-else-if="activeTab === 'review'" class="catalog-admin__section" aria-labelledby="review-heading">
       <div class="catalog-admin__section-head">
-        <div><h2 id="review-heading">投稿审核</h2><p>查看游客提交的项目，审核通过后加入公开目录。</p></div>
-        <UiButton tone="subtle" :disabled="submissionsQuery.isFetching.value || Boolean(reviewPendingId)" @click="submissionsQuery.refetch()">刷新</UiButton>
+        <div><h2 id="review-heading">{{ uiText("投稿审核") }}</h2><p>{{ uiText("查看游客提交的项目，审核通过后加入公开目录。") }}</p></div>
+        <UiButton tone="subtle" :disabled="submissionsQuery.isFetching.value || Boolean(reviewPendingId)" @click="submissionsQuery.refetch()">{{ uiText("刷新") }}</UiButton>
       </div>
-      <p v-if="reviewError" class="catalog-admin__error" role="alert">{{ reviewError }}</p>
-      <div v-if="submissionsQuery.isPending.value" class="catalog-admin__state" role="status">正在读取投稿…</div>
+      <p v-if="reviewError" class="catalog-admin__error" role="alert">{{ uiText(reviewError) }}</p>
+      <div v-if="submissionsQuery.isPending.value" class="catalog-admin__state" role="status">{{ uiText("正在读取投稿…") }}</div>
       <div v-else-if="submissionsQuery.isError.value" class="catalog-admin__state">
-        <UiButton tone="subtle" @click="submissionsQuery.refetch()">重新加载</UiButton>
+        <UiButton tone="subtle" @click="submissionsQuery.refetch()">{{ uiText("重新加载") }}</UiButton>
       </div>
-      <p v-else-if="!pendingSubmissions.length" class="catalog-admin__state">暂无待审投稿。</p>
+      <p v-else-if="!pendingSubmissions.length" class="catalog-admin__state">{{ uiText("暂无待审投稿。") }}</p>
       <div v-else class="catalog-admin__submissions">
         <article v-for="submission in pendingSubmissions" :key="submission.id" class="catalog-admin__submission">
           <div class="catalog-admin__submission-head">
-            <div><h3>{{ submission.project_name }}</h3><p>分类：{{ submission.category_name }}</p></div>
-            <span>待审核</span>
+            <div><h3>{{ submission.project_name }}</h3><p>{{ uiText("分类：") }}{{ submission.category_name }}</p></div>
+            <span>{{ uiText("待审核") }}</span>
           </div>
           <dl class="catalog-admin__submission-details">
-            <div><dt>项目地址</dt><dd><a :href="submission.url" target="_blank" rel="noopener noreferrer">{{ submission.url }}</a></dd></div>
-            <div v-if="submission.author_name"><dt>作者</dt><dd>{{ submission.author_name }}</dd></div>
-            <div v-if="submission.contact"><dt>联系方式</dt><dd>{{ submission.contact }}</dd></div>
-            <div><dt>提交时间</dt><dd>{{ new Date(submission.created_at).toLocaleString('zh-CN') }}</dd></div>
+            <div><dt>{{ uiText("项目地址") }}</dt><dd><a :href="submission.url" target="_blank" rel="noopener noreferrer">{{ submission.url }}</a></dd></div>
+            <div v-if="submission.author_name"><dt>{{ uiText("作者") }}</dt><dd>{{ submission.author_name }}</dd></div>
+            <div v-if="submission.contact"><dt>{{ uiText("联系方式") }}</dt><dd>{{ submission.contact }}</dd></div>
+            <div><dt>{{ uiText("提交时间") }}</dt><dd>{{ new Date(submission.created_at).toLocaleString(currentLocale) }}</dd></div>
           </dl>
           <div v-if="submission.cover_url" class="catalog-admin__submission-cover">
             <button v-if="!coverPreviewUrls[submission.id]" type="button" :disabled="Boolean(coverPreviewLoadingId)" @click="previewSubmissionCover(submission)">
-              {{ coverPreviewLoadingId === submission.id ? '正在读取封面…' : '查看投稿封面' }}
+              {{ coverPreviewLoadingId === submission.id ? uiText("正在读取封面…") : uiText("查看投稿封面") }}
             </button>
-            <img v-else :src="coverPreviewUrls[submission.id]" :alt="`${submission.project_name} 的投稿封面`" decoding="async" />
-            <p v-if="coverPreviewErrorId === submission.id" role="alert">封面加载失败，请稍后重试。</p>
+            <img v-else :src="coverPreviewUrls[submission.id]" :alt="uiText('{value0} 的投稿封面', { value0: submission.project_name })" decoding="async" />
+            <p v-if="coverPreviewErrorId === submission.id" role="alert">{{ uiText("封面加载失败，请稍后重试。") }}</p>
           </div>
           <div class="catalog-admin__submission-actions">
-            <UiButton :disabled="Boolean(reviewPendingId)" :aria-label="`通过 ${submission.project_name} 的投稿`" @click="reviewSubmission(submission, 'approve')">{{ reviewPendingId === submission.id ? '处理中…' : '通过' }}</UiButton>
-            <UiButton tone="danger" :disabled="Boolean(reviewPendingId)" :aria-label="`拒绝 ${submission.project_name} 的投稿`" @click="reviewSubmission(submission, 'reject')">拒绝</UiButton>
+            <UiButton :disabled="Boolean(reviewPendingId)" :aria-label="uiText('通过 {value0} 的投稿', { value0: submission.project_name })" @click="reviewSubmission(submission, 'approve')">{{ reviewPendingId === submission.id ? uiText("处理中…") : uiText("通过") }}</UiButton>
+            <UiButton tone="danger" :disabled="Boolean(reviewPendingId)" :aria-label="uiText('拒绝 {value0} 的投稿', { value0: submission.project_name })" @click="reviewSubmission(submission, 'reject')">{{ uiText("拒绝") }}</UiButton>
           </div>
         </article>
       </div>
@@ -476,74 +479,74 @@ async function reviewSubmission(submission: AdminCatalogSubmission, decision: "a
 
     <section v-else class="catalog-admin__section" aria-labelledby="catalog-heading">
       <div class="catalog-admin__section-head">
-        <div><h2 id="catalog-heading">目录管理</h2><p>分类与项目可编辑或隐藏；评分和历史记录会保留。</p></div>
+        <div><h2 id="catalog-heading">{{ uiText("目录管理") }}</h2><p>{{ uiText("分类与项目可编辑或隐藏；评分和历史记录会保留。") }}</p></div>
         <div class="catalog-admin__actions">
-          <UiButton tone="subtle" :disabled="isSaving" @click="newCategory">新增分类</UiButton>
-          <UiButton :disabled="!categories.length || isSaving" @click="newProject">新增项目</UiButton>
+          <UiButton tone="subtle" :disabled="isSaving" @click="newCategory">{{ uiText("新增分类") }}</UiButton>
+          <UiButton :disabled="!categories.length || isSaving" @click="newProject">{{ uiText("新增项目") }}</UiButton>
         </div>
       </div>
-      <p class="catalog-admin__rule">最新：创建 7 天内。最热门：至少 10 人评分且平均分达到 4.5。</p>
-      <div v-if="catalogQuery.isPending.value" class="catalog-admin__state" role="status">正在读取目录…</div>
+      <p class="catalog-admin__rule">{{ uiText("最新：创建 7 天内。最热门：至少 10 人评分且平均分达到 4.5。") }}</p>
+      <div v-if="catalogQuery.isPending.value" class="catalog-admin__state" role="status">{{ uiText("正在读取目录…") }}</div>
       <div v-else-if="catalogQuery.isError.value" class="catalog-admin__state">
-        <UiButton tone="subtle" @click="catalogQuery.refetch()">重新加载</UiButton>
+        <UiButton tone="subtle" @click="catalogQuery.refetch()">{{ uiText("重新加载") }}</UiButton>
       </div>
       <template v-else>
         <div class="catalog-admin__workspace">
           <div class="catalog-admin__lists">
             <section class="catalog-admin__list" aria-labelledby="categories-heading">
-              <div class="catalog-admin__list-head"><h3 id="categories-heading">分类</h3><span>{{ categories.length }}</span></div>
-              <p v-if="!categories.length" class="catalog-admin__empty">暂无分类。</p>
+              <div class="catalog-admin__list-head"><h3 id="categories-heading">{{ uiText("分类") }}</h3><span>{{ categories.length }}</span></div>
+              <p v-if="!categories.length" class="catalog-admin__empty">{{ uiText("暂无分类。") }}</p>
               <div v-for="category in categories" :key="category.id" class="catalog-admin__row">
                 <img v-if="category.icon_url" :src="resolveApiAssetUrl(category.icon_url)" alt="" loading="lazy" decoding="async" />
                 <span v-else class="catalog-admin__icon-fallback" aria-hidden="true">#</span>
-                <div class="catalog-admin__row-main"><strong>{{ category.name }}</strong><small>{{ category.slug }} · {{ category.projects.length }} 个项目</small></div>
-                <span v-if="!category.is_visible" class="catalog-admin__hidden">已隐藏</span>
+                <div class="catalog-admin__row-main"><strong>{{ category.name }}</strong><small>{{ category.slug }} · {{ uiText("{count} 个项目", { count: category.projects.length }) }}</small></div>
+                <span v-if="!category.is_visible" class="catalog-admin__hidden">{{ uiText("已隐藏") }}</span>
                 <div class="catalog-admin__row-actions">
-                  <button type="button" :disabled="isSaving" @click="editCategory(category)">编辑</button>
-                  <button type="button" :disabled="Boolean(visibilityPendingKey)" @click="setCategoryVisible(category, !category.is_visible)">{{ category.is_visible ? '隐藏' : '显示' }}</button>
+                  <button type="button" :disabled="isSaving" @click="editCategory(category)">{{ uiText("编辑") }}</button>
+                  <button type="button" :disabled="Boolean(visibilityPendingKey)" @click="setCategoryVisible(category, !category.is_visible)">{{ category.is_visible ? uiText("隐藏") : uiText("显示") }}</button>
                 </div>
               </div>
             </section>
             <section class="catalog-admin__list" aria-labelledby="projects-heading">
-              <div class="catalog-admin__list-head"><h3 id="projects-heading">项目</h3><span>{{ projects.length }}</span></div>
-              <label class="catalog-admin__filter">按分类查看
-                <select v-model="filterCategoryId"><option value="">全部分类</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select>
+              <div class="catalog-admin__list-head"><h3 id="projects-heading">{{ uiText("项目") }}</h3><span>{{ projects.length }}</span></div>
+              <label class="catalog-admin__filter">{{ uiText("按分类查看") }}
+                <select v-model="filterCategoryId"><option value="">{{ uiText("全部分类") }}</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select>
               </label>
-              <p v-if="!filteredProjects.length" class="catalog-admin__empty">当前分类暂无项目。</p>
+              <p v-if="!filteredProjects.length" class="catalog-admin__empty">{{ uiText("当前分类暂无项目。") }}</p>
               <div v-for="project in filteredProjects" :key="project.id" class="catalog-admin__row">
                 <img v-if="project.icon_url" :src="resolveApiAssetUrl(project.icon_url)" alt="" loading="lazy" decoding="async" />
                 <span v-else class="catalog-admin__icon-fallback" aria-hidden="true">↗</span>
-                <div class="catalog-admin__row-main"><strong>{{ project.name }}</strong><small>{{ categories.find((item) => item.id === project.category_id)?.name }}<span v-if="project.author_name"> · 作者：{{ project.author_name }}</span> · {{ project.rating_count }} 人评分<span v-if="project.average_score !== null"> · {{ project.average_score.toFixed(1) }} 分</span></small></div>
-                <span v-if="!project.is_visible" class="catalog-admin__hidden">已隐藏</span>
+                <div class="catalog-admin__row-main"><strong>{{ project.name }}</strong><small>{{ categories.find((item) => item.id === project.category_id)?.name }}<span v-if="project.author_name"> {{ uiText("· 作者：") }}{{ project.author_name }}</span> · {{ uiText("{count} 人评分", { count: project.rating_count }) }}<span v-if="project.average_score !== null"> · {{ uiText("{score} 分", { score: project.average_score.toFixed(1) }) }}</span></small></div>
+                <span v-if="!project.is_visible" class="catalog-admin__hidden">{{ uiText("已隐藏") }}</span>
                 <div class="catalog-admin__row-actions">
-                  <button type="button" :disabled="isSaving" @click="editProject(project)">编辑</button>
-                  <button type="button" :disabled="Boolean(visibilityPendingKey)" @click="setProjectVisible(project, !project.is_visible)">{{ project.is_visible ? '隐藏' : '显示' }}</button>
+                  <button type="button" :disabled="isSaving" @click="editProject(project)">{{ uiText("编辑") }}</button>
+                  <button type="button" :disabled="Boolean(visibilityPendingKey)" @click="setProjectVisible(project, !project.is_visible)">{{ project.is_visible ? uiText("隐藏") : uiText("显示") }}</button>
                 </div>
               </div>
             </section>
-            <p v-if="saveError && !editorKind" class="catalog-admin__error" role="alert">{{ saveError }}</p>
+            <p v-if="saveError && !editorKind" class="catalog-admin__error" role="alert">{{ uiText(saveError) }}</p>
           </div>
 
           <section v-if="editorKind" class="catalog-admin__editor" aria-labelledby="editor-heading">
-            <div class="catalog-admin__editor-head"><h3 id="editor-heading">{{ editorTitle }}</h3><button type="button" aria-label="关闭编辑" :disabled="isSaving" @click="editorKind = null">×</button></div>
+            <div class="catalog-admin__editor-head"><h3 id="editor-heading">{{ uiText(editorTitle) }}</h3><button type="button" :aria-label="uiText('关闭编辑')" :disabled="isSaving" @click="editorKind = null">×</button></div>
             <form @submit.prevent="saveEditor">
-              <label>名称<input v-if="editorKind === 'category'" v-model="categoryDraft.name" type="text" maxlength="120" required /><input v-else v-model="projectDraft.name" type="text" maxlength="120" required /></label>
-              <label>固定标识<input v-if="editorKind === 'category'" v-model="categoryDraft.slug" type="text" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="80" required :readonly="Boolean(editingId)" /><input v-else v-model="projectDraft.slug" type="text" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="80" required :readonly="Boolean(editingId)" /></label>
+              <label>{{ uiText("名称") }}<input v-if="editorKind === 'category'" v-model="categoryDraft.name" type="text" maxlength="120" required /><input v-else v-model="projectDraft.name" type="text" maxlength="120" required /></label>
+              <label>{{ uiText("固定标识") }}<input v-if="editorKind === 'category'" v-model="categoryDraft.slug" type="text" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="80" required :readonly="Boolean(editingId)" /><input v-else v-model="projectDraft.slug" type="text" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="80" required :readonly="Boolean(editingId)" /></label>
               <template v-if="editorKind === 'project'">
-                <label>所属分类<select v-model="projectDraft.category_id" required><option value="" disabled>选择分类</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></label>
-                <label>项目地址<input v-model="projectDraft.url" :type="projectDraft.kind === 'external' ? 'url' : 'text'" :pattern="projectDraft.kind === 'external' ? 'https://.+' : undefined" required :readonly="projectDraft.kind === 'internal'" /></label>
-                <label>作者（可选）<input v-model="projectDraft.author_name" type="text" maxlength="120" /></label>
-                <label>简介（可选）<textarea v-model="projectDraft.description" maxlength="300" rows="3"></textarea></label>
+                <label>{{ uiText("所属分类") }}<select v-model="projectDraft.category_id" required><option value="" disabled>{{ uiText("选择分类") }}</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select></label>
+                <label>{{ uiText("项目地址") }}<input v-model="projectDraft.url" :type="projectDraft.kind === 'external' ? 'url' : 'text'" :pattern="projectDraft.kind === 'external' ? 'https://.+' : undefined" required :readonly="projectDraft.kind === 'internal'" /></label>
+                <label>{{ uiText("作者（可选）") }}<input v-model="projectDraft.author_name" type="text" maxlength="120" /></label>
+                <label>{{ uiText("简介（可选）") }}<textarea v-model="projectDraft.description" maxlength="300" rows="3"></textarea></label>
               </template>
-              <label>排序<input v-if="editorKind === 'category'" v-model.number="categoryDraft.sort_order" type="number" min="0" step="1" required /><input v-else v-model.number="projectDraft.sort_order" type="number" min="0" step="1" required /></label>
+              <label>{{ uiText("排序") }}<input v-if="editorKind === 'category'" v-model.number="categoryDraft.sort_order" type="number" min="0" step="1" required /><input v-else v-model.number="projectDraft.sort_order" type="number" min="0" step="1" required /></label>
               <div class="catalog-admin__icon-field">
-                <label for="catalog-icon-upload">图标（可选）</label>
-                <div class="catalog-admin__icon-controls"><img v-if="existingIconUrl" :src="resolveApiAssetUrl(existingIconUrl)" alt="当前图标" decoding="async" /><input id="catalog-icon-upload" ref="fileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" @change="selectIcon" /><button v-if="existingIconUrl || selectedIconFile" type="button" @click="clearIcon">清除图标</button></div>
-                <p v-if="iconError" class="catalog-admin__error" role="alert">{{ iconError }}</p>
+                <label for="catalog-icon-upload">{{ uiText("图标（可选）") }}</label>
+                <div class="catalog-admin__icon-controls"><img v-if="existingIconUrl" :src="resolveApiAssetUrl(existingIconUrl)" :alt="uiText('当前图标')" decoding="async" /><input id="catalog-icon-upload" ref="fileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" @change="selectIcon" /><button v-if="existingIconUrl || selectedIconFile" type="button" @click="clearIcon">{{ uiText("清除图标") }}</button></div>
+                <p v-if="iconError" class="catalog-admin__error" role="alert">{{ uiText(iconError) }}</p>
               </div>
-              <label class="catalog-admin__check"><input v-if="editorKind === 'category'" v-model="categoryDraft.is_visible" type="checkbox" /><input v-else v-model="projectDraft.is_visible" type="checkbox" />公开显示</label>
-              <p v-if="saveError" class="catalog-admin__error" role="alert">{{ saveError }}</p>
-              <div class="catalog-admin__form-actions"><UiButton type="submit" :disabled="isSaving || Boolean(iconError)">{{ isSaving ? '保存中…' : '保存' }}</UiButton><UiButton tone="ghost" :disabled="isSaving" @click="editorKind = null">取消</UiButton></div>
+              <label class="catalog-admin__check"><input v-if="editorKind === 'category'" v-model="categoryDraft.is_visible" type="checkbox" /><input v-else v-model="projectDraft.is_visible" type="checkbox" />{{ uiText("公开显示") }}</label>
+              <p v-if="saveError" class="catalog-admin__error" role="alert">{{ uiText(saveError) }}</p>
+              <div class="catalog-admin__form-actions"><UiButton type="submit" :disabled="isSaving || Boolean(iconError)">{{ isSaving ? uiText("保存中…") : uiText("保存") }}</UiButton><UiButton tone="ghost" :disabled="isSaving" @click="editorKind = null">{{ uiText("取消") }}</UiButton></div>
             </form>
           </section>
         </div>

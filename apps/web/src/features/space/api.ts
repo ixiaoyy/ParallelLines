@@ -1,3 +1,4 @@
+import { uiText } from "@/shared/i18n/locale";
 import { ApiError, apiRequest, getAccessToken, hasAccessToken } from "@/shared/api/client";
 
 import {
@@ -151,17 +152,17 @@ function readLocalStore(): LocalSpaceStore {
   try {
     raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
   } catch {
-    throw new SpaceLocalStorageError("read", "无法读取本机记录，请检查浏览器存储权限后重试；原数据未改动");
+    throw new SpaceLocalStorageError("read", uiText("无法读取本机记录，请检查浏览器存储权限后重试；原数据未改动"));
   }
   if (raw === null) return buildDefaultLocalStore();
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new SpaceLocalStorageError("invalid", "本机记录格式异常，已停止写入以保护原数据；请先备份并检查原记录");
+    throw new SpaceLocalStorageError("invalid", uiText("本机记录格式异常，已停止写入以保护原数据；请先备份并检查原记录"));
   }
   if (!isRecord(parsed)) {
-    throw new SpaceLocalStorageError("invalid", "本机记录格式异常，已停止写入以保护原数据；请先备份并检查原记录");
+    throw new SpaceLocalStorageError("invalid", uiText("本机记录格式异常，已停止写入以保护原数据；请先备份并检查原记录"));
   }
   // 旧示例仅按既有固定 ID 排除；其余坏记录阻止写入，不能被当空数据覆盖。
   const snapshot: Record<string, unknown> = { ...parsed };
@@ -174,7 +175,7 @@ function readLocalStore(): LocalSpaceStore {
       || typeof item.id !== "string" || !LEGACY_SEED_LEDGER_IDS.has(item.id));
   }
   if (!isStoredLocalSpace(snapshot)) {
-    throw new SpaceLocalStorageError("invalid", "本机记录格式异常，已停止写入以保护原数据；请先备份并检查原记录");
+    throw new SpaceLocalStorageError("invalid", uiText("本机记录格式异常，已停止写入以保护原数据；请先备份并检查原记录"));
   }
   const fallback = buildDefaultLocalStore();
   return {
@@ -187,12 +188,12 @@ function readLocalStore(): LocalSpaceStore {
 
 function writeLocalStore(store: LocalSpaceStore): void {
   if (typeof window === "undefined") {
-    throw new SpaceLocalStorageError("write", "当前环境不能保存到本机，请保留内容后在浏览器中重试");
+    throw new SpaceLocalStorageError("write", uiText("当前环境不能保存到本机，请保留内容后在浏览器中重试"));
   }
   try {
     window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(store));
   } catch {
-    throw new SpaceLocalStorageError("write", "未能保存到本机，请保留当前内容并检查浏览器存储空间或权限后重试");
+    throw new SpaceLocalStorageError("write", uiText("未能保存到本机，请保留当前内容并检查浏览器存储空间或权限后重试"));
   }
 }
 
@@ -290,7 +291,7 @@ async function requestSpaceSave<Result>(
   let timeout: ReturnType<typeof setTimeout>;
   const deadline = new Promise<never>((_resolve, reject) => {
     timeout = setTimeout(() => {
-      reject(new ApiError("space_save_outcome_unconfirmed", "保存结果尚未确认，请保留当前输入，先核对云端记录，确认未保存后再重试，避免重复保存", {}, 0));
+      reject(new ApiError("space_save_outcome_unconfirmed", uiText("保存结果尚未确认，请保留当前输入，先核对云端记录，确认未保存后再重试，避免重复保存"), {}, 0));
       controller.abort();
     }, 30_000);
   });
@@ -312,7 +313,7 @@ function checkpointLocalSyncEntry(
   const latest = readLocalStore();
   const current = latest[kind].find((entry) => entry.id === item.id);
   if (!current || current.updated_at !== item.updated_at) {
-    throw new SpaceLocalStorageError("write", "同步期间本机记录发生改动，已暂停；请先核对云端与本机记录");
+    throw new SpaceLocalStorageError("write", uiText("同步期间本机记录发生改动，已暂停；请先核对云端与本机记录"));
   }
   const next = kind === "journals"
     ? { ...latest, journals: latest.journals.filter((entry) => entry.id !== item.id) }
@@ -331,10 +332,10 @@ export async function syncLocalSpaceToCloud(): Promise<{
 }> {
   const syncToken = getAccessToken();
   if (!syncToken) {
-    throw new Error("请先登录后再同步到云端");
+    throw new Error(uiText("请先登录后再同步到云端"));
   }
   if (uncertainSyncProgress) throw uncertainSyncProgress;
-  if (syncingLocalSpace) throw new Error("正在同步本机记录，请等待本次同步完成");
+  if (syncingLocalSpace) throw new Error(uiText("正在同步本机记录，请等待本次同步完成"));
   const store = readLocalStore();
   const pendingJournals = [...store.journals];
   const pendingLedgers = [...store.ledgers];
@@ -352,16 +353,16 @@ export async function syncLocalSpaceToCloud(): Promise<{
   try {
     // 固定本批登录边界；换号或令牌更新后暂停，不能让后续记录进入另一个账号。
     for (const item of pendingJournals) {
-      if (getAccessToken() !== syncToken) throw new ApiError("identity_changed", "登录状态已变更，请重新核对同步目标账号", {}, 409);
+      if (getAccessToken() !== syncToken) throw new ApiError("identity_changed", uiText("登录状态已变更，请重新核对同步目标账号"), {}, 409);
       if (!(item.mood === "" || isOptionKey(item.mood, JOURNAL_MOODS))
         || !(item.weather === "" || isOptionKey(item.weather, JOURNAL_WEATHERS))
         || !isOptionKey(item.card_theme, JOURNAL_CARD_THEMES)
         || (item.visibility !== "public" && item.visibility !== "friends" && item.visibility !== "private")) {
-        throw new ApiError("invalid_local_record", "手账包含云端不支持的状态，请先编辑此记录；原记录仍保留在本机", {}, 422);
+        throw new ApiError("invalid_local_record", uiText("手账包含云端不支持的状态，请先编辑此记录；原记录仍保留在本机"), {}, 422);
       }
       // 旧本地预览图不具备云端可用地址，不能丢掉图片后宣称整条同步成功。
       if (item.media_urls.some((url) => url.startsWith("blob:"))) {
-        throw new ApiError("local_image_upload_required", "手账含有仅当前浏览器可用的配图，请先重新上传配图再同步；原记录仍保留在本机", {}, 422);
+        throw new ApiError("local_image_upload_required", uiText("手账含有仅当前浏览器可用的配图，请先重新上传配图再同步；原记录仍保留在本机"), {}, 422);
       }
       await requestSpaceSave<SpaceJournalItem>("/space/journals", {
         entry_date: item.entry_date,
@@ -386,11 +387,11 @@ export async function syncLocalSpaceToCloud(): Promise<{
     }
 
     for (const item of pendingLedgers) {
-      if (getAccessToken() !== syncToken) throw new ApiError("identity_changed", "登录状态已变更，请重新核对同步目标账号", {}, 409);
+      if (getAccessToken() !== syncToken) throw new ApiError("identity_changed", uiText("登录状态已变更，请重新核对同步目标账号"), {}, 409);
       if ((item.kind !== "expense" && item.kind !== "income")
         || !isOptionKey(item.category, LEDGER_CATEGORIES)
         || !isOptionKey(item.payment_method, LEDGER_PAYMENT_METHODS)) {
-        throw new ApiError("invalid_local_record", "账单包含云端不支持的分类或支付方式，请先核对；原记录仍保留在本机", {}, 422);
+        throw new ApiError("invalid_local_record", uiText("账单包含云端不支持的分类或支付方式，请先核对；原记录仍保留在本机"), {}, 422);
       }
       await requestSpaceSave<SpaceLedgerItem>("/space/ledger", {
         entry_date: item.entry_date,
@@ -410,10 +411,10 @@ export async function syncLocalSpaceToCloud(): Promise<{
     // 网络、服务端异常或写进度失败时可能已有云端副作用，停止自动重发并保留原记录。
     const needsCloudReview = awaitingLocalCheckpoint || !(error instanceof ApiError)
       || error.status === 0 || error.status >= 500 || error.code === "identity_changed";
-    const progress = `已确认同步 ${journalsSynced} 篇手账、${ledgersSynced} 笔账单；本机仍有 ${savedPending.journalCount} 篇手账、${savedPending.ledgerCount} 笔账单待处理。`;
+    const progress = uiText("已确认同步 {journals} 篇手账、{ledgers} 笔账单；本机仍有 {pendingJournals} 篇手账、{pendingLedgers} 笔账单待处理。", { journals: journalsSynced, ledgers: ledgersSynced, pendingJournals: savedPending.journalCount, pendingLedgers: savedPending.ledgerCount });
     const reason = needsCloudReview
-      ? "本次结果或本机同步进度未能确认，请先核对云端和本机记录，不要直接重试；刷新页面也不能消除重复风险。"
-      : `同步已停止，未完成记录仍保留在本机。${error instanceof Error ? error.message : "请检查后重试"}`;
+      ? uiText("本次结果或本机同步进度未能确认，请先核对云端和本机记录，不要直接重试；刷新页面也不能消除重复风险。")
+      : uiText("同步已停止，未完成记录仍保留在本机。{reason}", { reason: error instanceof Error ? uiText(error.message) : uiText("请检查后重试") });
     const failure = new SpaceLocalSyncError(
       progress + reason, journalsSynced, ledgersSynced,
       savedPending.journalCount, savedPending.ledgerCount, needsCloudReview,
@@ -513,7 +514,7 @@ export async function updateSpaceJournal(
     writeLocalStore(store);
     return updated;
   }
-  throw new Error("未找到对应的手账记录");
+  throw new Error(uiText("未找到对应的手账记录"));
 }
 
 export async function deleteSpaceJournal(entryId: string): Promise<boolean> {
@@ -546,7 +547,7 @@ export async function likeSpaceJournal(entryId: string): Promise<SpaceJournalIte
     writeLocalStore(store);
     return { ...found };
   }
-  throw new Error("点赞失败");
+  throw new Error(uiText("点赞失败"));
 }
 
 export async function reactSpaceJournal(
@@ -573,7 +574,7 @@ export async function reactSpaceJournal(
     writeLocalStore(store);
     return { ...found };
   }
-  throw new Error("回应失败");
+  throw new Error(uiText("回应失败"));
 }
 
 export async function createSpaceLedgerEntry(

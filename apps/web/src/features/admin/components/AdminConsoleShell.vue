@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import LanguageSwitcher from "@/shared/ui/LanguageSwitcher.vue";
+import { uiText } from "@/shared/i18n/locale";
 import {
   AppstoreOutlined,
   BarChartOutlined,
@@ -111,7 +113,7 @@ const consoleTitle = computed(() => t("admin.console.title", "运营控制台"))
 const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
 );
-const backendBrandLabel = computed(() => `${siteTitle.value}后台`);
+const backendBrandLabel = computed(() => uiText("{site}后台", { site: siteTitle.value }));
 // Keeps the console aligned with runtime branding while preserving the protected official logo fallback.
 // No parameters; return value is a safe configured logo URL. Side effect: none.
 const brandLogoUrl = computed(() => {
@@ -184,7 +186,7 @@ watch(
       :inert="isCompactViewport && !isDrawerOpen"
       @keydown="trapDrawerFocus"
     >
-      <RouterLink class="admin-console-shell__brand" to="/forum" :aria-label="`返回${siteTitle}首页`">
+      <RouterLink class="admin-console-shell__brand" to="/forum" :aria-label="uiText('返回{value0}首页', { value0: siteTitle })">
         <img :src="brandLogoUrl" alt="" />
         <strong>{{ backendBrandLabel }}</strong>
       </RouterLink>
@@ -193,13 +195,13 @@ watch(
         ref="drawerCloseButtonElement"
         class="admin-console-shell__drawer-close"
         type="button"
-        aria-label="关闭后台导航"
+        :aria-label="uiText('关闭后台导航')"
         @click="closeDrawer()"
       >
         <CloseOutlined />
       </button>
 
-      <nav class="admin-console-shell__nav" aria-label="后台主导航">
+      <nav class="admin-console-shell__nav" :aria-label="uiText('后台主导航')">
         <RouterLink
           v-for="item in visibleNavigationItems"
           :key="item.id"
@@ -217,7 +219,7 @@ watch(
       <div class="admin-console-shell__sidebar-footer">
         <RouterLink class="admin-console-shell__return" to="/forum">
           <ExportOutlined aria-hidden="true" />
-          <span>返回站点</span>
+          <span>{{ uiText("返回站点") }}</span>
         </RouterLink>
 
         <RouterLink class="admin-console-shell__admin-card" :to="{ name: 'account-home' }">
@@ -236,7 +238,7 @@ watch(
     <button
       class="admin-console-shell__scrim"
       type="button"
-      aria-label="关闭后台导航"
+      :aria-label="uiText('关闭后台导航')"
       :tabindex="isDrawerOpen ? 0 : -1"
       @click="closeDrawer()"
     />
@@ -252,7 +254,7 @@ watch(
             ref="menuButtonElement"
             class="admin-console-shell__menu-button"
             type="button"
-            aria-label="打开后台导航"
+            :aria-label="uiText('打开后台导航')"
             aria-controls="admin-console-navigation"
             :aria-expanded="isDrawerOpen"
             @click="openDrawer"
@@ -265,7 +267,7 @@ watch(
             <strong>{{ backendBrandLabel }}</strong>
           </div>
 
-          <div class="admin-console-shell__breadcrumb" aria-label="当前位置">
+          <div class="admin-console-shell__breadcrumb" :aria-label="uiText('当前位置')">
             <span>{{ consoleTitle }}</span>
             <span aria-hidden="true">/</span>
             <strong>{{ activeItem.label }}</strong>
@@ -273,6 +275,7 @@ watch(
         </div>
 
         <div class="admin-console-shell__topbar-actions">
+          <LanguageSwitcher />
           <NotificationBell />
           <RouterLink class="admin-console-shell__topbar-user" :to="{ name: 'account-home' }">
             <span class="admin-console-shell__avatar admin-console-shell__avatar--small" aria-hidden="true">
@@ -291,7 +294,7 @@ watch(
 
     <nav
       class="admin-console-shell__bottom-nav"
-      aria-label="移动端后台主导航"
+      :aria-label="uiText('移动端后台主导航')"
       :aria-hidden="isCompactViewport && isDrawerOpen ? 'true' : undefined"
       :inert="isCompactViewport && isDrawerOpen"
       :style="{ '--admin-navigation-count': visibleNavigationItems.length }"

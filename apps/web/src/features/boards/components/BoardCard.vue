@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import type { BoardSummary } from "@/entities/board/model";
 import { compactNumber } from "@/shared/lib/format";
 import { boardToneClass } from "@/shared/theme/boardPalette";
@@ -16,16 +17,16 @@ defineProps<{ board: BoardSummary }>();
     <div class="board-body">
       <div class="board-heading">
         <h3>{{ board.name }}</h3>
-        <UiBadge tone="blue">开放版块</UiBadge>
+        <UiBadge tone="blue">{{ uiText("开放版块") }}</UiBadge>
       </div>
       <p>{{ board.description }}</p>
       <dl>
         <div>
-          <dt>主题</dt>
+          <dt>{{ uiText("主题") }}</dt>
           <dd>{{ compactNumber(board.topicCount) }}</dd>
         </div>
         <div>
-          <dt>回复</dt>
+          <dt>{{ uiText("回复") }}</dt>
           <dd>{{ compactNumber(board.postCount) }}</dd>
         </div>
       </dl>

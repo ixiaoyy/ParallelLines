@@ -1,3 +1,5 @@
+import { currentLocale, uiText } from "@/shared/i18n/locale";
+
 import type { components } from "@/shared/api/generated";
 
 export type AnalyticsOverview = components["schemas"]["AnalyticsOverviewResponse"];
@@ -22,7 +24,7 @@ const SOURCE_NAME_LABELS: Record<string, string> = {
 // Formats a metric with the product's Chinese numeric grouping.
 // Key parameter `value` is an optional metric number. Return value is display text. Side effect: none.
 export function formatMetric(value: number | undefined): string {
-  return new Intl.NumberFormat("zh-CN").format(value ?? 0);
+  return new Intl.NumberFormat(currentLocale.value).format(value ?? 0);
 }
 
 // Converts a backend-supplied Data Explorer cell into safe display text.
@@ -40,11 +42,13 @@ export function reportCell(value: unknown): string {
 // Converts backend traffic source types into Chinese labels for dashboards and reports.
 // Key parameter `sourceType` is the backend enum-like source value. Return value is display text. Side effect: none.
 export function sourceTypeLabel(sourceType: string): string {
-  return SOURCE_TYPE_LABELS[sourceType] ?? sourceType;
+  return Object.prototype.hasOwnProperty.call(SOURCE_TYPE_LABELS, sourceType)
+    ? uiText(SOURCE_TYPE_LABELS[sourceType]) : sourceType;
 }
 
 // Converts backend traffic source names into Chinese labels where the backend stores English defaults.
 // Key parameter `sourceName` is the stored source display name. Return value is localized text. Side effect: none.
 export function sourceNameLabel(sourceName: string): string {
-  return SOURCE_NAME_LABELS[sourceName] ?? sourceName;
+  return Object.prototype.hasOwnProperty.call(SOURCE_NAME_LABELS, sourceName)
+    ? uiText(SOURCE_NAME_LABELS[sourceName]) : sourceName;
 }

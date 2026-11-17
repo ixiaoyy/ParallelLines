@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import {
   SearchOutlined,
   CheckCircleOutlined,
@@ -117,8 +118,8 @@ useSeoMeta(
     if (!current) {
       return boardQuery.isError.value
         ? {
-            title: `页面不存在 · ${siteTitle.value}`,
-            description: "请求的版块不存在、已被移除或不可公开访问。",
+            title: uiText("页面不存在 · {value0}", { value0: siteTitle.value }),
+            description: uiText("请求的版块不存在、已被移除或不可公开访问。"),
             canonicalPath: route.path,
             robots: "noindex,nofollow",
             siteName: siteTitle.value,
@@ -127,8 +128,8 @@ useSeoMeta(
     }
     if (current.visibility !== "public") {
       return {
-        title: `受限内容 · ${siteTitle.value}`,
-        description: "该版块需要相应访问权限。",
+        title: uiText("受限内容 · {value0}", { value0: siteTitle.value }),
+        description: uiText("该版块需要相应访问权限。"),
         canonicalPath: route.path,
         robots: "noindex,nofollow",
         siteName: siteTitle.value,
@@ -136,7 +137,7 @@ useSeoMeta(
     }
     return {
       title: `${current.name} · ${siteTitle.value}`,
-      description: current.description || `浏览${current.name}版块的公开主题。`,
+      description: current.description || uiText("浏览{value0}版块的公开主题。", { value0: current.name }),
       canonicalPath: `/b/${current.slug}`,
       siteName: siteTitle.value,
     };
@@ -265,15 +266,15 @@ function updateQuery(patch: Record<string, string | undefined>) {
 <template>
   <div class="board-page">
     <UiCard v-if="boardQuery.isLoading.value" class="board-state" role="status">
-      正在加载版块…
+      {{ uiText("正在加载版块…") }}
     </UiCard>
 
     <UiEmptyState
       v-else-if="boardQuery.isError.value"
-      title="无法加载这个版块"
-      description="这个版块暂时无法访问，请稍后重试或返回版块目录。"
+      :title="uiText('无法加载这个版块')"
+      :description="uiText('这个版块暂时无法访问，请稍后重试或返回版块目录。')"
     >
-      <RouterLink class="empty-link" to="/boards">返回版块目录</RouterLink>
+      <RouterLink class="empty-link" to="/boards">{{ uiText("返回版块目录") }}</RouterLink>
     </UiEmptyState>
 
     <template v-else-if="board">
@@ -288,7 +289,7 @@ function updateQuery(patch: Record<string, string | undefined>) {
           ></span>
           <div class="board-hero__copy">
             <div class="board-title-row">
-              <RouterLink class="board-title-row__parent" to="/boards">全部版块</RouterLink>
+              <RouterLink class="board-title-row__parent" to="/boards">{{ uiText("全部版块") }}</RouterLink>
               <span class="board-title-row__separator">/</span>
               <h1 id="board-title">{{ board.name }}</h1>
             </div>
@@ -298,9 +299,9 @@ function updateQuery(patch: Record<string, string | undefined>) {
       </section>
 
       <div class="board-layout" :class="[boardToneClass(board.slug), { 'board-layout--single': !hasSidebar }]">
-        <main class="board-main" aria-label="版块主题列表">
-          <section class="board-toolbar" aria-label="主题筛选">
-            <div class="board-tabs" aria-label="排序方式">
+        <main class="board-main" :aria-label="uiText('版块主题列表')">
+          <section class="board-toolbar" :aria-label="uiText('主题筛选')">
+            <div class="board-tabs" :aria-label="uiText('排序方式')">
               <button
                 v-for="tab in sortTabs"
                 :key="tab.key"
@@ -311,7 +312,7 @@ function updateQuery(patch: Record<string, string | undefined>) {
                 <div class="tab-content">
                   <component :is="getSortIcon(tab.key)" class="tab-icon" />
                   <div class="tab-text">
-                    <strong>{{ tab.label }}</strong>
+                    <strong>{{ uiText(tab.label) }}</strong>
                   </div>
                 </div>
               </button>
@@ -323,13 +324,13 @@ function updateQuery(patch: Record<string, string | undefined>) {
                 <input
                   v-model="searchQuery"
                   type="search"
-                  :placeholder="searchPlaceholder"
+                  :placeholder="uiText(searchPlaceholder)"
                   autocomplete="off"
                   class="board-search-input"
                 />
               </div>
 
-              <div v-if="showAnswerFilters" class="status-filters" aria-label="解答状态">
+              <div v-if="showAnswerFilters" class="status-filters" :aria-label="uiText('解答状态')">
                 <button
                   v-for="filter in statusFilters"
                   :key="filter.key"
@@ -337,19 +338,19 @@ function updateQuery(patch: Record<string, string | undefined>) {
                   :class="{ active: activeStatus === filter.key }"
                   @click="activeStatus = filter.key"
                 >
-                  {{ filter.label }}
+                  {{ uiText(filter.label) }}
                 </button>
               </div>
             </div>
           </section>
 
           <UiCard v-if="topicsQuery.isError.value" class="board-state board-state--error" role="alert">
-            主题列表暂时加载失败，请稍后刷新。
+            {{ uiText("主题列表暂时加载失败，请稍后刷新。") }}
           </UiCard>
           <TopicList
             :topics="boardTopics"
-            empty-title="还没有主题"
-            :empty-description="emptyTopicDescription"
+            :empty-title="uiText('还没有主题')"
+            :empty-description="uiText(emptyTopicDescription)"
             :can-delete-topics="canDeleteTopics"
             :deleting-topic-id="deletingTopicId"
             @delete-topic="requestDeleteTopic"
@@ -359,21 +360,21 @@ function updateQuery(patch: Record<string, string | undefined>) {
             class="board-empty-publish-link"
             :to="{ name: 'new-topic', query: { board: board.slug } }"
           >
-            在此版块发帖
+            {{ uiText("在此版块发帖") }}
           </RouterLink>
         </main>
 
-        <aside v-if="hasSidebar" class="board-sidebar" aria-label="版块信息">
+        <aside v-if="hasSidebar" class="board-sidebar" :aria-label="uiText('版块信息')">
           <UiCard v-if="board.childBoards.length" class="sidebar-panel child-board-panel">
-            <span class="panel-kicker">子版块</span>
-            <h2>相关版块</h2>
+            <span class="panel-kicker">{{ uiText("子版块") }}</span>
+            <h2>{{ uiText("相关版块") }}</h2>
             <RouterLink
               v-for="child in board.childBoards"
               :key="child.id"
               :to="{ name: 'board-detail', params: { slug: child.slug } }"
             >
               <strong>{{ child.name }}</strong>
-              <small>{{ child.topicCount }} 主题 · {{ child.description }}</small>
+              <small>{{ uiText("主题数：{count}", { count: child.topicCount }) }} · {{ child.description }}</small>
             </RouterLink>
           </UiCard>
 
@@ -382,8 +383,8 @@ function updateQuery(patch: Record<string, string | undefined>) {
       </div>
     </template>
 
-    <UiEmptyState v-else title="没有找到这个版块" description="可能是链接已变更，回到版块目录重新选择。">
-      <RouterLink class="empty-link" to="/boards">返回版块目录</RouterLink>
+    <UiEmptyState v-else :title="uiText('没有找到这个版块')" :description="uiText('可能是链接已变更，回到版块目录重新选择。')">
+      <RouterLink class="empty-link" to="/boards">{{ uiText("返回版块目录") }}</RouterLink>
     </UiEmptyState>
   </div>
 </template>

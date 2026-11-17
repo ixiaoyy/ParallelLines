@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { onBeforeUnmount, onMounted } from "vue";
 import { useRoute } from "vue-router";
 
@@ -52,4 +53,4 @@ onMounted(() => {
 onBeforeUnmount(() => { disposed = true; cleanup(); window.removeEventListener("message", receive); });
 </script>
 
-<template><span hidden aria-hidden="true">主站登录状态同步</span></template>
+<template><span hidden aria-hidden="true">{{ uiText("主站登录状态同步") }}</span></template>

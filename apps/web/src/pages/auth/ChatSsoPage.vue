@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
+import LanguageSwitcher from "@/shared/ui/LanguageSwitcher.vue";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -114,10 +116,10 @@ onBeforeUnmount(() => {
 
 <template>
   <ChatEntryLoading v-if="!error" />
-  <main v-else aria-live="polite">
-    <h1>进入聊天</h1>
-    <p v-if="error" role="alert">{{ error }}</p>
-    <UiButton v-if="error" :disabled="pending" @click="connectChat">重试</UiButton>
-    <RouterLink to="/games">返回游戏</RouterLink>
+  <main v-else aria-live="polite"><LanguageSwitcher style="position: fixed; top: 12px; right: 16px; z-index: 40" />
+    <h1>{{ uiText("进入聊天") }}</h1>
+    <p v-if="error" role="alert">{{ uiText(error) }}</p>
+    <UiButton v-if="error" :disabled="pending" @click="connectChat">{{ uiText("重试") }}</UiButton>
+    <RouterLink to="/games">{{ uiText("返回游戏") }}</RouterLink>
   </main>
 </template>

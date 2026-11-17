@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { currentLocale, uiText } from "@/shared/i18n/locale";
 import {
   BoldOutlined,
   EnterOutlined,
@@ -335,7 +336,7 @@ async function uploadFiles(files: File[]) {
     return;
   }
 
-  uploadStatusMessage.value = `正在上传 ${uploadableFiles.length} 个文件…`;
+  uploadStatusMessage.value = uiText("正在上传 {value0} 个文件…", { value0: uploadableFiles.length });
   let uploadedCount = 0;
 
   try {
@@ -344,7 +345,7 @@ async function uploadFiles(files: File[]) {
       insertMarkdownUpload(toMarkdownUpload(upload, resolveApiAssetUrl(upload.url) ?? upload.url));
       uploadedCount += 1;
     }
-    uploadStatusMessage.value = `${uploadedCount} 个文件已上传`;
+    uploadStatusMessage.value = uiText("{value0} 个文件已上传", { value0: uploadedCount });
   } catch (error) {
     uploadStatusMessage.value = uploadErrorMessage(error);
   }
@@ -361,7 +362,7 @@ async function handleEditorImageUpload(files: File[], callback: UploadImageCallb
     return;
   }
 
-  uploadStatusMessage.value = `正在上传 ${uploadableFiles.length} 个文件…`;
+  uploadStatusMessage.value = uiText("正在上传 {value0} 个文件…", { value0: uploadableFiles.length });
 
   try {
     const images: string[] = [];
@@ -629,22 +630,22 @@ async function handleSaveDraft() {
   <UiCard class="composer" :class="{ 'composer--compact': compact, 'composer--reply': isReplyMode }">
     <div v-if="showConflictBanner" class="conflict-banner" role="alert">
       <span class="conflict-icon">⚠️</span>
-      <span>草稿已在其他设备更新，已加载最新版本</span>
+      <span>{{ uiText("草稿已在其他设备更新，已加载最新版本") }}</span>
     </div>
 
     <div class="composer-heading">
-      <strong>{{ heading }}</strong>
+      <strong>{{ uiText(heading) }}</strong>
     </div>
 
     <label v-if="!isReplyMode" class="composer-field">
-      <span>标题</span>
-      <input v-model="title" placeholder="输入标题" />
+      <span>{{ uiText("标题") }}</span>
+      <input v-model="title" :placeholder="uiText('输入标题')" />
     </label>
 
     <section
       class="composer-editor"
       :class="{ 'composer-editor--dragging': isDragActive }"
-      aria-label="Markdown 编辑器"
+      :aria-label="uiText('Markdown 编辑器')"
       @dragenter.prevent="handleDragEnter"
       @dragover.prevent="handleDragOver"
       @dragleave.prevent="handleDragLeave"
@@ -655,7 +656,7 @@ async function handleSaveDraft() {
         v-model="draft"
         class="composer-md-editor"
         :id="isReplyMode ? 'reply-composer-editor' : 'topic-composer-editor'"
-        language="zh-CN"
+        :language="currentLocale"
         theme="light"
         preview-theme="github"
         code-theme="atom"
@@ -669,45 +670,45 @@ async function handleSaveDraft() {
         :no-mermaid="true"
         :no-img-zoom-in="true"
         :show-code-row-number="false"
-        :placeholder="placeholder"
+        :placeholder="uiText(placeholder)"
         @onUploadImg="handleEditorImageUpload"
       />
 
       <span v-if="isReplyMode" class="composer-editor-count">{{ characterCount }} / 20000</span>
 
-      <div v-if="isReplyMode && emojiPickerOpen" id="reply-emoji-panel" class="composer-emoji-panel" aria-label="选择表情">
+      <div v-if="isReplyMode && emojiPickerOpen" id="reply-emoji-panel" class="composer-emoji-panel" :aria-label="uiText('选择表情')">
         <button
           v-for="emoji in REPLY_EMOJIS"
           :key="emoji"
           type="button"
           class="composer-emoji-panel__item"
-          :aria-label="`插入表情 ${emoji}`"
+          :aria-label="uiText('插入表情 {value0}', { value0: emoji })"
           @click="insertReplyEmoji(emoji)"
         >
           {{ emoji }}
         </button>
       </div>
 
-      <div v-if="isReplyMode" class="composer-mobile-tools" aria-label="回复工具">
-        <button type="button" aria-label="加粗" @click="insertComposerMarkup('bold')">
+      <div v-if="isReplyMode" class="composer-mobile-tools" :aria-label="uiText('回复工具')">
+        <button type="button" :aria-label="uiText('加粗')" @click="insertComposerMarkup('bold')">
           <BoldOutlined aria-hidden="true" />
         </button>
-        <button type="button" aria-label="斜体" @click="insertComposerMarkup('italic')">
+        <button type="button" :aria-label="uiText('斜体')" @click="insertComposerMarkup('italic')">
           <ItalicOutlined aria-hidden="true" />
         </button>
-        <button type="button" aria-label="链接" @click="insertComposerMarkup('link')">
+        <button type="button" :aria-label="uiText('链接')" @click="insertComposerMarkup('link')">
           <LinkOutlined aria-hidden="true" />
         </button>
         <span class="composer-mobile-tools__divider" aria-hidden="true"></span>
-        <button type="button" class="composer-mobile-tools__text" aria-label="引用" @click="insertComposerMarkup('quote')">
+        <button type="button" class="composer-mobile-tools__text" :aria-label="uiText('引用')" @click="insertComposerMarkup('quote')">
           <EnterOutlined aria-hidden="true" />
-          <span>引用</span>
+          <span>{{ uiText("引用") }}</span>
         </button>
         <button
           type="button"
           class="composer-mobile-tools__emoji-trigger"
           :class="{ 'is-active': emojiPickerOpen }"
-          aria-label="表情"
+          :aria-label="uiText('表情')"
           aria-controls="reply-emoji-panel"
           :aria-expanded="emojiPickerOpen"
           @click="toggleEmojiPicker"
@@ -717,7 +718,7 @@ async function handleSaveDraft() {
       </div>
 
       <div v-if="isDragActive" class="composer-drop-hint" aria-hidden="true">
-        松开上传
+        {{ uiText("松开上传") }}
       </div>
     </section>
 
@@ -725,12 +726,12 @@ async function handleSaveDraft() {
       <div class="composer-reply-action composer-reply-action--upload">
         <PaperClipOutlined aria-hidden="true" />
         <div class="composer-reply-action__copy">
-          <strong>上传附件</strong>
-          <span>支持图片、文件等</span>
+          <strong>{{ uiText("上传附件") }}</strong>
+          <span>{{ uiText("支持图片、文件等") }}</span>
         </div>
         <MarkdownUploadButton
           compact
-          label="上传附件"
+          :label="uiText('上传附件')"
           :disabled="uploadMutation.isPending.value"
           @insert="insertMarkdownUpload"
         />
@@ -738,25 +739,25 @@ async function handleSaveDraft() {
     </div>
 
     <span v-if="isReplyMode && uploadStatusMessage" class="composer-upload-status composer-upload-status--reply" role="status">
-      {{ uploadStatusMessage }}
+      {{ uiText(uploadStatusMessage) }}
     </span>
 
-    <section v-if="isReplyMode" class="composer-reply-tips" aria-label="回复小贴士">
+    <section v-if="isReplyMode" class="composer-reply-tips" :aria-label="uiText('回复小贴士')">
       <div class="composer-reply-tips__heading">
-        <strong>回复小贴士</strong>
+        <strong>{{ uiText("回复小贴士") }}</strong>
       </div>
       <ul>
         <li>
           <MessageOutlined aria-hidden="true" />
-          <span>引用重点，回应具体问题</span>
+          <span>{{ uiText("引用重点，回应具体问题") }}</span>
         </li>
         <li>
           <FileDoneOutlined aria-hidden="true" />
-          <span>资料和链接可以直接贴进正文</span>
+          <span>{{ uiText("资料和链接可以直接贴进正文") }}</span>
         </li>
         <li>
           <SafetyCertificateOutlined aria-hidden="true" />
-          <span>保留友善语气，避免人身攻击</span>
+          <span>{{ uiText("保留友善语气，避免人身攻击") }}</span>
         </li>
       </ul>
       <div class="composer-reply-tips__planet" aria-hidden="true"></div>
@@ -765,18 +766,18 @@ async function handleSaveDraft() {
 
     <div v-if="!isReplyMode" class="composer-upload-row">
       <MarkdownUploadButton :compact="compact" :disabled="uploadMutation.isPending.value" @insert="insertMarkdownUpload" />
-      <span v-if="uploadStatusMessage" class="composer-upload-status" role="status">{{ uploadStatusMessage }}</span>
+      <span v-if="uploadStatusMessage" class="composer-upload-status" role="status">{{ uiText(uploadStatusMessage) }}</span>
     </div>
 
     <label v-if="!isReplyMode" class="composer-field composer-field--tags">
-      <span>标签</span>
-      <input v-model="tags" placeholder="输入标签" />
+      <span>{{ uiText("标签") }}</span>
+      <input v-model="tags" :placeholder="uiText('输入标签')" />
     </label>
 
     <footer v-if="!isReplyMode">
-      <UiButton tone="ghost" @click="handleSaveDraft">保存草稿</UiButton>
+      <UiButton tone="ghost" @click="handleSaveDraft">{{ uiText("保存草稿") }}</UiButton>
       <UiButton tone="primary" :disabled="!canSubmit" @click="handleSubmit">
-        {{ submitting ? "发布中…" : isReplyMode ? "发布回复" : "创建主题" }}
+        {{ submitting ? uiText("发布中…") : isReplyMode ? uiText("发布回复") : uiText("创建主题") }}
       </UiButton>
     </footer>
   </UiCard>

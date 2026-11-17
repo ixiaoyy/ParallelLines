@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import {
   ArrowLeftOutlined,
   CheckCircleOutlined,
@@ -10,6 +11,7 @@ import { computed, nextTick, reactive, ref, watch } from "vue";
 
 import type { PersonaKind } from "@/entities/user/model";
 import OperatorIdentityBadge from "@/features/users/components/OperatorIdentityBadge.vue";
+import { builtinTrustLabel } from "@/features/users/model";
 import { normalizePersonaKind, operatorIdentity, OPERATOR_IDENTITIES } from "@/features/users/operatorIdentity";
 import type { UserBadgeResponse } from "@/features/badges/model";
 import { adminRoleLabel, adminStatusLabel } from "@/features/admin/model";
@@ -269,77 +271,77 @@ function accountStatusClass(status: string): string {
   >
     <header class="users-panel__header">
       <div>
-        <span class="users-panel__context">成员与权限</span>
-        <h1 id="admin-users-title">用户管理</h1>
-        <p>查询账号，维护运营/测试归类、角色、状态、积分成长与徽章。</p>
+        <span class="users-panel__context">{{ uiText("成员与权限") }}</span>
+        <h1 id="admin-users-title">{{ uiText("用户管理") }}</h1>
+        <p>{{ uiText("查询账号，维护运营/测试归类、角色、状态、积分成长与徽章。") }}</p>
       </div>
       <span v-if="!usersQuery.isLoading.value && !usersQuery.isError.value" class="user-result-count">
-        当前显示 <strong>{{ users.length }}</strong> 人
+        {{ uiText("当前显示 {count} 人", { count: users.length }) }}
       </span>
     </header>
 
-    <div class="user-toolbar" aria-label="用户筛选">
+    <div class="user-toolbar" :aria-label="uiText('用户筛选')">
       <label class="filter-field filter-field--search">
-        <span class="filter-field__label">搜索用户</span>
+        <span class="filter-field__label">{{ uiText("搜索用户") }}</span>
         <span class="search-control">
           <SearchOutlined aria-hidden="true" />
           <input
             ref="searchInputElement"
             v-model="userFilters.query"
             type="search"
-            placeholder="搜索用户名或邮箱"
+            :placeholder="uiText('搜索用户名或邮箱')"
           />
         </span>
       </label>
       <label class="filter-field">
-        <span class="filter-field__label">角色</span>
+        <span class="filter-field__label">{{ uiText("角色") }}</span>
         <select v-model="userFilters.role">
-          <option value="">全部角色</option>
-          <option value="admin">管理员</option>
-          <option value="moderator">版主</option>
-          <option value="user">用户</option>
+          <option value="">{{ uiText("全部角色") }}</option>
+          <option value="admin">{{ uiText("管理员") }}</option>
+          <option value="moderator">{{ uiText("版主") }}</option>
+          <option value="user">{{ uiText("用户") }}</option>
         </select>
       </label>
       <label class="filter-field">
-        <span class="filter-field__label">状态</span>
+        <span class="filter-field__label">{{ uiText("状态") }}</span>
         <select v-model="userFilters.status">
-          <option value="">全部状态</option>
-          <option value="pending_verification">待验证</option>
-          <option value="active">正常</option>
-          <option value="silenced">禁言</option>
-          <option value="suspended">停用</option>
-          <option value="deleted">已删除</option>
+          <option value="">{{ uiText("全部状态") }}</option>
+          <option value="pending_verification">{{ adminStatusLabel("pending_verification") }}</option>
+          <option value="active">{{ adminStatusLabel("active") }}</option>
+          <option value="silenced">{{ adminStatusLabel("silenced") }}</option>
+          <option value="suspended">{{ adminStatusLabel("suspended") }}</option>
+          <option value="deleted">{{ adminStatusLabel("deleted") }}</option>
         </select>
       </label>
       <label class="filter-field">
-        <span class="filter-field__label">账号归类</span>
-        <select v-model="userFilters.accountType" aria-label="账号归类">
-          <option value="">全部账号</option>
-          <option value="member">普通账号</option>
-          <option value="persona">运营/测试账号</option>
+        <span class="filter-field__label">{{ uiText("账号归类") }}</span>
+        <select v-model="userFilters.accountType" :aria-label="uiText('账号归类')">
+          <option value="">{{ uiText("全部账号") }}</option>
+          <option value="member">{{ uiText("普通账号") }}</option>
+          <option value="persona">{{ uiText("运营/测试账号") }}</option>
         </select>
       </label>
     </div>
 
     <div class="user-management-layout">
-      <aside class="user-list-pane" aria-label="用户列表">
+      <aside class="user-list-pane" :aria-label="uiText('用户列表')">
         <header class="pane-heading">
           <div>
-            <h2>用户列表</h2>
-            <p>最多显示 50 条匹配记录</p>
+            <h2>{{ uiText("用户列表") }}</h2>
+            <p>{{ uiText("最多显示 50 条匹配记录") }}</p>
           </div>
           <TeamOutlined aria-hidden="true" />
         </header>
 
         <div v-if="usersQuery.isLoading.value" class="user-list-skeleton" role="status">
-          <span class="sr-only">用户列表加载中…</span>
+          <span class="sr-only">{{ uiText("用户列表加载中…") }}</span>
           <i v-for="index in 7" :key="index" />
         </div>
         <div v-else-if="usersQuery.isError.value" class="panel-state panel-state--error" role="alert">
-          <strong>用户列表加载失败</strong>
-          <span>请检查网络或管理员权限后重试。</span>
+          <strong>{{ uiText("用户列表加载失败") }}</strong>
+          <span>{{ uiText("请检查网络或管理员权限后重试。") }}</span>
           <UiButton tone="subtle" :disabled="usersQuery.isFetching.value" @click="usersQuery.refetch()">
-            {{ usersQuery.isFetching.value ? "重试中…" : "重新加载" }}
+            {{ usersQuery.isFetching.value ? uiText("重试中…") : uiText("重新加载") }}
           </UiButton>
         </div>
         <div v-else-if="users.length" class="user-list">
@@ -357,21 +359,21 @@ function accountStatusClass(status: string): string {
               <small>{{ user.email }}</small>
             </span>
             <span class="user-list__meta">
-              <em>{{ adminRoleLabel(user.role) }} · {{ operatorIdentity(user.is_persona, user.persona_kind)?.label ?? "普通" }}</em>
+              <em>{{ adminRoleLabel(user.role) }} · {{ uiText(operatorIdentity(user.is_persona, user.persona_kind)?.label ?? "普通") }}</em>
               <i :class="`is-${accountStatusClass(user.status)}`">{{ adminStatusLabel(user.status) }}</i>
             </span>
           </button>
         </div>
         <div v-else class="panel-state">
-          <strong>没有符合条件的用户</strong>
-          <span>尝试清空搜索词或切换角色、状态筛选。</span>
+          <strong>{{ uiText("没有符合条件的用户") }}</strong>
+          <span>{{ uiText("尝试清空搜索词或切换角色、状态筛选。") }}</span>
         </div>
       </aside>
 
       <article v-if="selectedUser" class="user-detail-pane">
         <button ref="detailBackButtonElement" type="button" class="user-detail-back" @click="showUserList">
           <ArrowLeftOutlined aria-hidden="true" />
-          返回用户列表
+          {{ uiText("返回用户列表") }}
         </button>
 
         <header class="user-detail-header">
@@ -397,82 +399,82 @@ function accountStatusClass(status: string): string {
 
         <dl class="user-facts">
           <div>
-            <dt>内容</dt>
-            <dd>{{ selectedUser.topic_count }} 主题 / {{ selectedUser.post_count }} 回复</dd>
+            <dt>{{ uiText("内容") }}</dt>
+            <dd>{{ uiText("{topics} 主题 / {posts} 回复", { topics: selectedUser.topic_count, posts: selectedUser.post_count }) }}</dd>
           </div>
           <div>
-            <dt>等级与成长</dt>
-            <dd>Lv.{{ selectedUser.level }} · {{ selectedUser.experience_total }} 成长值</dd>
+            <dt>{{ uiText("等级与成长") }}</dt>
+            <dd>Lv.{{ selectedUser.level }} · {{ selectedUser.experience_total }} {{ uiText("成长值") }}</dd>
           </div>
           <div>
-            <dt>信任等级</dt>
-            <dd>TL{{ selectedUser.trust_level }} · {{ selectedUser.trust_level_label }}</dd>
+            <dt>{{ uiText("信任等级") }}</dt>
+            <dd>TL{{ selectedUser.trust_level }} · {{ builtinTrustLabel(selectedUser.trust_level_label) }}</dd>
           </div>
           <div>
-            <dt>可用积分</dt>
-            <dd>{{ selectedUser.points_balance }} 分</dd>
+            <dt>{{ uiText("可用积分") }}</dt>
+            <dd>{{ uiText("{points} 分", { points: selectedUser.points_balance }) }}</dd>
           </div>
           <div>
-            <dt>升级进度</dt>
-            <dd>{{ selectedUser.level_progress_percent }}% · 还需 {{ selectedUser.experience_to_next_level }}</dd>
+            <dt>{{ uiText("升级进度") }}</dt>
+            <dd>{{ selectedUser.level_progress_percent }}{{ uiText("% · 还需") }} {{ selectedUser.experience_to_next_level }}</dd>
           </div>
           <div>
-            <dt>最后活跃</dt>
-            <dd>{{ selectedUser.last_seen_at ? relativeTime(selectedUser.last_seen_at) : "未记录" }}</dd>
+            <dt>{{ uiText("最后活跃") }}</dt>
+            <dd>{{ selectedUser.last_seen_at ? relativeTime(selectedUser.last_seen_at) : uiText("未记录") }}</dd>
           </div>
           <div>
-            <dt>账号归类</dt>
-            <dd>{{ selectedUser.is_persona ? "运营/测试账号" : "普通账号" }}</dd>
+            <dt>{{ uiText("账号归类") }}</dt>
+            <dd>{{ selectedUser.is_persona ? uiText("运营/测试账号") : uiText("普通账号") }}</dd>
           </div>
         </dl>
 
         <section class="user-editor-section" aria-labelledby="account-permissions-title">
           <header class="form-section-heading">
             <div>
-              <h3 id="account-permissions-title">账号权限</h3>
-              <p>账号归类用于真人访问统计；角色和状态决定访问与管理范围。</p>
+              <h3 id="account-permissions-title">{{ uiText("账号权限") }}</h3>
+              <p>{{ uiText("账号归类用于真人访问统计；角色和状态决定访问与管理范围。") }}</p>
             </div>
           </header>
           <div class="editor-fields editor-fields--account">
             <label>
-              <span>角色</span>
+              <span>{{ uiText("角色") }}</span>
               <select v-model="userDraft.role">
-                <option value="user">用户</option>
-                <option value="moderator">版主</option>
-                <option value="admin">管理员</option>
+                <option value="user">{{ uiText("用户") }}</option>
+                <option value="moderator">{{ uiText("版主") }}</option>
+                <option value="admin">{{ uiText("管理员") }}</option>
               </select>
             </label>
             <label>
-              <span>状态</span>
+              <span>{{ uiText("状态") }}</span>
               <select v-model="userDraft.status">
-                <option value="pending_verification">待验证</option>
-                <option value="active">正常</option>
-                <option value="silenced">禁言</option>
-                <option value="suspended">停用</option>
-                <option value="deleted">已删除</option>
+                <option value="pending_verification">{{ adminStatusLabel("pending_verification") }}</option>
+                <option value="active">{{ adminStatusLabel("active") }}</option>
+                <option value="silenced">{{ adminStatusLabel("silenced") }}</option>
+                <option value="suspended">{{ adminStatusLabel("suspended") }}</option>
+                <option value="deleted">{{ adminStatusLabel("deleted") }}</option>
               </select>
             </label>
             <label>
-              <span>等级</span>
+              <span>{{ uiText("等级") }}</span>
               <input v-model.number="userDraft.level" type="number" min="0" max="5" step="1" />
             </label>
             <label>
-              <span>账号归类</span>
+              <span>{{ uiText("账号归类") }}</span>
               <select v-model="userDraft.isPersona">
-                <option :value="false">普通账号</option>
-                <option :value="true">运营/测试账号</option>
+                <option :value="false">{{ uiText("普通账号") }}</option>
+                <option :value="true">{{ uiText("运营/测试账号") }}</option>
               </select>
             </label>
             <label class="editor-field--wide persona-kind-field">
-              <span>公开身份</span>
+              <span>{{ uiText("公开身份") }}</span>
               <select v-model="userDraft.personaKind" :disabled="!userDraft.isPersona">
-                <option :value="null">未细分（运营角色）</option>
+                <option :value="null">{{ uiText("未细分（运营角色）") }}</option>
                 <option v-for="identity in OPERATOR_IDENTITIES" :key="identity.kind" :value="identity.kind">
-                  {{ identity.label }}
+                  {{ uiText(identity.label) }}
                 </option>
               </select>
               <small class="persona-kind-help">
-                {{ operatorIdentity(userDraft.isPersona, userDraft.personaKind)?.description ?? "仅运营/测试账号可选择公开身份。" }}
+                {{ uiText(operatorIdentity(userDraft.isPersona, userDraft.personaKind)?.description ?? "仅运营/测试账号可选择公开身份。") }}
               </small>
             </label>
           </div>
@@ -481,38 +483,38 @@ function accountStatusClass(status: string): string {
         <section class="user-editor-section" aria-labelledby="growth-adjustment-title">
           <header class="form-section-heading">
             <div>
-              <h3 id="growth-adjustment-title">积分与成长</h3>
-              <p>仅提交本次增减值；余额、成长值和等级均由后端重新计算。</p>
+              <h3 id="growth-adjustment-title">{{ uiText("积分与成长") }}</h3>
+              <p>{{ uiText("仅提交本次增减值；余额、成长值和等级均由后端重新计算。") }}</p>
             </div>
           </header>
           <div class="editor-fields editor-fields--growth">
             <label>
-              <span>积分增减</span>
+              <span>{{ uiText("积分增减") }}</span>
               <input v-model.number="userDraft.pointsDelta" type="number" min="-100000" max="100000" />
             </label>
             <label>
-              <span>成长值增减</span>
+              <span>{{ uiText("成长值增减") }}</span>
               <input v-model.number="userDraft.experienceDelta" type="number" min="-100000" max="100000" />
             </label>
             <label class="editor-field--wide">
-              <span>调整备注</span>
+              <span>{{ uiText("调整备注") }}</span>
               <input
                 v-model="userDraft.adjustmentReason"
                 type="text"
                 maxlength="500"
-                placeholder="记录人工调整原因（可选）"
+                :placeholder="uiText('记录人工调整原因（可选）')"
               />
             </label>
           </div>
           <div class="user-detail-actions">
             <p v-if="updateUserMutation.isSuccess.value" class="mutation-message is-success" role="status">
-              <CheckCircleOutlined aria-hidden="true" /> 用户信息已保存，最新余额以服务端返回为准。
+              <CheckCircleOutlined aria-hidden="true" /> {{ uiText("用户信息已保存，最新余额以服务端返回为准。") }}
             </p>
             <p v-else-if="updateUserMutation.isError.value" class="mutation-message is-error" role="alert">
-              {{ updateUserMutation.error.value?.message || "保存失败，请稍后重试。" }}
+              {{ updateUserMutation.error.value?.message || uiText("保存失败，请稍后重试。") }}
             </p>
             <UiButton :disabled="updateUserMutation.isPending.value" @click="saveUser">
-              {{ updateUserMutation.isPending.value ? "保存中…" : "保存用户变更" }}
+              {{ updateUserMutation.isPending.value ? uiText("保存中…") : uiText("保存用户变更") }}
             </UiButton>
           </div>
         </section>
@@ -520,8 +522,8 @@ function accountStatusClass(status: string): string {
         <section class="user-editor-section user-badge-section" aria-labelledby="badge-management-title">
           <header class="form-section-heading">
             <div>
-              <h3 id="badge-management-title">徽章管理</h3>
-              <p>{{ selectedUser.badges.length }} 个有效徽章</p>
+              <h3 id="badge-management-title">{{ uiText("徽章管理") }}</h3>
+              <p>{{ uiText("{count} 个有效徽章", { count: selectedUser.badges.length }) }}</p>
             </div>
           </header>
           <div v-if="selectedUser.badges.length" class="user-badge-list">
@@ -529,14 +531,14 @@ function accountStatusClass(status: string): string {
               <em>{{ badge.icon }}</em>
               {{ badge.name }}
               <button type="button" :disabled="revokeBadgeMutation.isPending.value" @click="revokeBadge(badge)">
-                撤销
+                {{ uiText("撤销") }}
               </button>
             </span>
           </div>
-          <p v-else class="panel-state is-inline">该用户暂无有效徽章。</p>
+          <p v-else class="panel-state is-inline">{{ uiText("该用户暂无有效徽章。") }}</p>
           <div class="badge-admin-form">
             <label>
-              <span>授予徽章</span>
+              <span>{{ uiText("授予徽章") }}</span>
               <select v-model="badgeDraft.badgeSlug" :disabled="badgesQuery.isLoading.value">
                 <option v-for="badge in badgeCatalog" :key="badge.slug" :value="badge.slug">
                   {{ badge.icon }} {{ badge.name }}（TL{{ badge.trust_level_required }}）
@@ -544,35 +546,35 @@ function accountStatusClass(status: string): string {
               </select>
             </label>
             <label>
-              <span>授予备注</span>
-              <input v-model="badgeDraft.note" maxlength="500" placeholder="授予原因（可选）" />
+              <span>{{ uiText("授予备注") }}</span>
+              <input v-model="badgeDraft.note" maxlength="500" :placeholder="uiText('授予原因（可选）')" />
             </label>
             <label>
-              <span>撤销原因</span>
-              <input v-model="badgeDraft.revokeReason" maxlength="500" placeholder="撤销时使用（可选）" />
+              <span>{{ uiText("撤销原因") }}</span>
+              <input v-model="badgeDraft.revokeReason" maxlength="500" :placeholder="uiText('撤销时使用（可选）')" />
             </label>
             <UiButton
               tone="subtle"
               :disabled="!badgeDraft.badgeSlug || grantBadgeMutation.isPending.value"
               @click="grantBadge"
             >
-              {{ grantBadgeMutation.isPending.value ? "授予中…" : "授予徽章" }}
+              {{ grantBadgeMutation.isPending.value ? uiText("授予中…") : uiText("授予徽章") }}
             </UiButton>
           </div>
-          <p v-if="badgesQuery.isError.value" class="mutation-message is-error" role="alert">徽章目录加载失败。</p>
+          <p v-if="badgesQuery.isError.value" class="mutation-message is-error" role="alert">{{ uiText("徽章目录加载失败。") }}</p>
           <p v-else-if="grantBadgeMutation.isError.value" class="mutation-message is-error" role="alert">
-            {{ grantBadgeMutation.error.value?.message || "授予徽章失败。" }}
+            {{ grantBadgeMutation.error.value?.message || uiText("授予徽章失败。") }}
           </p>
           <p v-else-if="revokeBadgeMutation.isError.value" class="mutation-message is-error" role="alert">
-            {{ revokeBadgeMutation.error.value?.message || "撤销徽章失败。" }}
+            {{ revokeBadgeMutation.error.value?.message || uiText("撤销徽章失败。") }}
           </p>
         </section>
       </article>
 
       <div v-else class="user-detail-empty">
         <TeamOutlined aria-hidden="true" />
-        <strong>选择一位用户查看详情</strong>
-        <span>用户的权限、成长数据与徽章将在这里显示。</span>
+        <strong>{{ uiText("选择一位用户查看详情") }}</strong>
+        <span>{{ uiText("用户的权限、成长数据与徽章将在这里显示。") }}</span>
       </div>
     </div>
   </section>

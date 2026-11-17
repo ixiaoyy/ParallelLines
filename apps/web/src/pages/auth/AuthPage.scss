@@ -34,6 +34,18 @@
   z-index: 1;
 }
 
+.auth-page > .auth-standalone-language {
+  position: fixed;
+  z-index: 40;
+  top: max(12px, env(safe-area-inset-top));
+  right: 16px;
+  display: none;
+}
+
+.auth-page > .auth-standalone-language--admin {
+  display: inline-flex;
+}
+
 .auth-topbar {
   position: absolute;
   top: 3.75rem;
@@ -691,6 +703,7 @@
 }
 
 @media (max-width: 767px) {
+  .auth-page > .auth-standalone-language { display: inline-flex; }
   .auth-page {
     min-height: 100svh;
     overflow-x: hidden;

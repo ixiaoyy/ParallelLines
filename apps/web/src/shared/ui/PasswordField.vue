@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { EyeInvisibleOutlined, EyeOutlined } from "@ant-design/icons-vue";
 import { computed, ref } from "vue";
 
@@ -53,7 +54,7 @@ function updateValue(event: Event) {
     <button
       type="button"
       class="password-field__toggle"
-      :aria-label="visible ? '隐藏密码' : '显示密码'"
+      :aria-label="visible ? uiText('隐藏密码') : uiText('显示密码')"
       :aria-pressed="visible"
       :disabled="disabled"
       @click="visible = !visible"

@@ -1,15 +1,16 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { SITE_LINKS } from "@/shared/site/links";
 
 import CatalogIcon from "./CatalogIcon.vue";
 </script>
 
 <template>
-  <nav class="catalog-site-navigation" aria-label="站点导航">
-    <RouterLink :to="{ name: 'home' }" exact-active-class="is-active"><CatalogIcon name="game" />游戏</RouterLink>
-    <a :href="SITE_LINKS.forum"><CatalogIcon name="circle" />圈子</a>
-    <a :href="SITE_LINKS.tools"><CatalogIcon name="tools" />工具</a>
-    <a :href="SITE_LINKS.chat">聊天</a>
+  <nav class="catalog-site-navigation" :aria-label="uiText('站点导航')">
+    <RouterLink :to="{ name: 'home' }" exact-active-class="is-active"><CatalogIcon name="game" />{{ uiText("游戏") }}</RouterLink>
+    <a :href="SITE_LINKS.forum"><CatalogIcon name="circle" />{{ uiText("圈子") }}</a>
+    <a :href="SITE_LINKS.tools"><CatalogIcon name="tools" />{{ uiText("工具") }}</a>
+    <a :href="SITE_LINKS.chat">{{ uiText("聊天") }}</a>
   </nav>
 </template>
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -88,15 +89,15 @@ const clearFiltersQuery = computed(() => ({
 }));
 const resultSummary = computed(() => {
   if (!hasQuery.value) {
-    return "输入关键词开始搜索";
+    return uiText("输入关键词开始搜索");
   }
   if (searchQuery.isFetching.value && !searchQuery.data.value) {
-    return `正在搜索 “${q.value}”`;
+    return uiText("正在搜索 “{value0}”", { value0: q.value });
   }
   if (topics.value.length === 0) {
-    return `没有找到 “${q.value}”`;
+    return uiText("没有找到 “{value0}”", { value0: q.value });
   }
-  return `找到 ${topics.value.length} 个相关主题`;
+  return uiText("找到 {value0} 个相关主题", { value0: topics.value.length });
 });
 const emptyTitle = computed(() => (hasQuery.value ? "没有匹配结果" : "输入关键词开始搜索"));
 const emptyDescription = computed(() =>
@@ -117,18 +118,18 @@ const sortTabs: Array<{ key: TopicSort; label: string }> = [
     <UiCard class="search-console">
       <section class="search-console__header" aria-labelledby="search-title">
         <div class="search-console__copy">
-          <UiBadge tone="blue">搜索</UiBadge>
-          <h1 id="search-title">{{ hasQuery ? `搜索 “${q}”` : "搜索社区内容" }}</h1>
-          <p>{{ hasQuery ? "按相关度和活跃度筛选主题，快速回到有用讨论。" : "输入关键词后，可以继续按版块、标签或作者缩小范围。" }}</p>
+          <UiBadge tone="blue">{{ uiText("搜索") }}</UiBadge>
+          <h1 id="search-title">{{ hasQuery ? uiText("搜索 “{value0}”", { value0: q }) : uiText("搜索社区内容") }}</h1>
+          <p>{{ hasQuery ? uiText("按相关度和活跃度筛选主题，快速回到有用讨论。") : uiText("输入关键词后，可以继续按版块、标签或作者缩小范围。") }}</p>
         </div>
 
         <label class="search-input" for="search-page-input">
-          <span>关键词</span>
+          <span>{{ uiText("关键词") }}</span>
           <input
             id="search-page-input"
             v-model="q"
             type="search"
-            placeholder="搜索主题、标签、作者"
+            :placeholder="uiText('搜索主题、标签、作者')"
             autocomplete="off"
           />
         </label>
@@ -136,11 +137,11 @@ const sortTabs: Array<{ key: TopicSort; label: string }> = [
 
       <div class="search-console__meta">
         <div class="result-heading">
-          <span class="panel-kicker">结果</span>
+          <span class="panel-kicker">{{ uiText("结果") }}</span>
           <strong>{{ resultSummary }}</strong>
         </div>
 
-        <div class="sort-tabs" aria-label="搜索排序">
+        <div class="sort-tabs" :aria-label="uiText('搜索排序')">
           <button
             v-for="tab in sortTabs"
             :key="tab.key"
@@ -148,29 +149,29 @@ const sortTabs: Array<{ key: TopicSort; label: string }> = [
             :class="{ active: activeSort === tab.key }"
             @click="activeSort = tab.key"
           >
-            {{ tab.label }}
+            {{ uiText(tab.label) }}
           </button>
         </div>
       </div>
 
-      <div v-if="hasFilters" class="filter-strip" aria-label="当前筛选">
+      <div v-if="hasFilters" class="filter-strip" :aria-label="uiText('当前筛选')">
         <span v-for="chip in filterChips" :key="chip.key" class="filter-chip">
-          {{ chip.label }}：{{ chip.value }}
+          {{ uiText(chip.label) }}：{{ chip.value }}
         </span>
         <RouterLink class="filter-clear" :to="{ name: 'search', query: clearFiltersQuery }">
-          清除筛选
+          {{ uiText("清除筛选") }}
         </RouterLink>
       </div>
     </UiCard>
 
     <UiCard v-if="hasQuery && searchQuery.isError.value" class="search-state search-state--error" role="alert">
-      <strong>搜索暂时不可用</strong>
-      <span>请稍后重试，或先返回版块目录浏览内容。</span>
+      <strong>{{ uiText("搜索暂时不可用") }}</strong>
+      <span>{{ uiText("请稍后重试，或先返回版块目录浏览内容。") }}</span>
     </UiCard>
 
     <UiCard v-else-if="hasQuery && searchQuery.isLoading.value" class="search-state">
-      <strong>正在搜索…</strong>
-      <span>正在整理相关主题。</span>
+      <strong>{{ uiText("正在搜索…") }}</strong>
+      <span>{{ uiText("正在整理相关主题。") }}</span>
     </UiCard>
 
     <TopicList
@@ -182,10 +183,10 @@ const sortTabs: Array<{ key: TopicSort; label: string }> = [
     />
 
     <UiCard v-else class="search-state search-state--empty">
-      <strong>{{ emptyTitle }}</strong>
-      <span>{{ emptyDescription }}</span>
+      <strong>{{ uiText(emptyTitle) }}</strong>
+      <span>{{ uiText(emptyDescription) }}</span>
       <RouterLink class="empty-link" :to="{ name: 'board-directory' }">
-        浏览全部版块
+        {{ uiText("浏览全部版块") }}
       </RouterLink>
     </UiCard>
   </div>

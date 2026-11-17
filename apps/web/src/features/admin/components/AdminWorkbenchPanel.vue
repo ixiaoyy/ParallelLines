@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { currentLocale, uiText } from "@/shared/i18n/locale";
 import {
   AlertOutlined,
   ArrowRightOutlined,
@@ -21,16 +22,16 @@ import UiButton from "@/shared/ui/Button.vue";
 const systemQuery = useAdminSystem();
 const system = computed(() => systemQuery.data.value);
 const today = new Date();
-const todayLabel = new Intl.DateTimeFormat("zh-CN", {
+const todayLabel = computed(() => new Intl.DateTimeFormat(currentLocale.value, {
   year: "numeric",
   month: "long",
   day: "numeric",
   weekday: "long",
-}).format(today);
-const compactTodayLabel = new Intl.DateTimeFormat("zh-CN", {
+}).format(today));
+const compactTodayLabel = computed(() => new Intl.DateTimeFormat(currentLocale.value, {
   month: "numeric",
   day: "numeric",
-}).format(today);
+}).format(today));
 
 const quickLinks = [
   {
@@ -85,7 +86,7 @@ const summaryItems = computed(() => {
     {
       label: "主题与回复",
       value: stats.topics + stats.posts,
-      note: `${stats.topics} 个主题 · ${stats.posts} 条回复`,
+      note: uiText("{topics} 个主题 · {posts} 条回复", { topics: stats.topics, posts: stats.posts }),
       icon: AuditOutlined,
       route: "admin-analytics",
       tone: "info",
@@ -116,7 +117,7 @@ const attentionItems = computed(() => {
   if (system.value.stats.pending_flags > 0) {
     items.push({
       key: "pending-flags",
-      title: `${system.value.stats.pending_flags} 条举报等待处理`,
+      title: uiText("{count} 条举报等待处理", { count: system.value.stats.pending_flags }),
       detail: "进入审核台查看举报内容与处理记录。",
       route: "admin-moderation",
       tone: "warning",
@@ -127,7 +128,7 @@ const attentionItems = computed(() => {
   for (const service of degradedServices) {
     items.push({
       key: `service-${service.name}`,
-      title: `${serviceNameLabel(service.name)}服务需要留意`,
+      title: uiText("{service}服务需要留意", { service: uiText(serviceNameLabel(service.name)) }),
       detail: service.detail || "服务未返回更多状态说明。",
       route: "admin-system",
       tone: service.status === "degraded" ? "danger" : "warning",
@@ -137,7 +138,7 @@ const attentionItems = computed(() => {
   if ((system.value.queue.dead ?? 0) > 0) {
     items.push({
       key: "dead-jobs",
-      title: `${system.value.queue.dead} 个后台任务执行失败`,
+      title: uiText("{count} 个后台任务执行失败", { count: system.value.queue.dead ?? 0 }),
       detail: "失败任务会保留在系统运行记录中，请检查错误摘要。",
       route: "admin-system",
       tone: "danger",
@@ -171,7 +172,7 @@ function auditTargetLabel(targetType: string, targetId: string): string {
     flag: "举报",
     board: "版块",
   };
-  const label = labels[targetType] ?? targetType;
+  const label = uiText(labels[targetType] ?? targetType);
   return targetId ? `${label} · ${targetId.slice(0, 8)}` : label;
 }
 </script>
@@ -180,9 +181,9 @@ function auditTargetLabel(targetType: string, targetId: string): string {
   <div class="admin-dashboard-page">
     <header class="admin-page-header">
       <div>
-        <span class="admin-page-context">运营总览</span>
-        <h1>工作台</h1>
-        <p>集中查看社区状态，处理今天最重要的运营事项。</p>
+        <span class="admin-page-context">{{ uiText("运营总览") }}</span>
+        <h1>{{ uiText("工作台") }}</h1>
+        <p>{{ uiText("集中查看社区状态，处理今天最重要的运营事项。") }}</p>
       </div>
       <div class="admin-page-date">
         <ClockCircleOutlined aria-hidden="true" />
@@ -192,23 +193,23 @@ function auditTargetLabel(targetType: string, targetId: string): string {
     </header>
 
     <div v-if="systemQuery.isLoading.value" class="admin-dashboard-skeleton" role="status">
-      <span class="sr-only">运营数据加载中…</span>
+      <span class="sr-only">{{ uiText("运营数据加载中…") }}</span>
       <i v-for="index in 8" :key="index" />
     </div>
 
     <section v-else-if="systemQuery.isError.value" class="admin-inline-error" role="alert">
       <ExclamationCircleOutlined aria-hidden="true" />
       <div>
-        <strong>运营数据暂时无法加载</strong>
-        <p>权限已确认，但系统概览请求失败。请检查网络后重试。</p>
+        <strong>{{ uiText("运营数据暂时无法加载") }}</strong>
+        <p>{{ uiText("权限已确认，但系统概览请求失败。请检查网络后重试。") }}</p>
       </div>
       <UiButton tone="subtle" :disabled="systemQuery.isFetching.value" @click="systemQuery.refetch()">
-        {{ systemQuery.isFetching.value ? "重试中…" : "重新加载" }}
+        {{ systemQuery.isFetching.value ? uiText("重试中…") : uiText("重新加载") }}
       </UiButton>
     </section>
 
     <template v-else-if="system">
-      <section class="admin-summary-strip" aria-label="运营摘要">
+      <section class="admin-summary-strip" :aria-label="uiText('运营摘要')">
         <RouterLink
           v-for="item in summaryItems"
           :key="item.label"
@@ -216,12 +217,12 @@ function auditTargetLabel(targetType: string, targetId: string): string {
           :class="`is-${item.tone}`"
           :to="{ name: item.route }"
         >
-          <span>{{ item.label }}</span>
+          <span>{{ uiText(item.label) }}</span>
           <span class="admin-summary-item__value">
             <strong>{{ item.value }}</strong>
             <component :is="item.icon" aria-hidden="true" />
           </span>
-          <small>{{ item.note }}</small>
+          <small>{{ uiText(item.note) }}</small>
         </RouterLink>
       </section>
 
@@ -229,10 +230,10 @@ function auditTargetLabel(targetType: string, targetId: string): string {
         <section class="admin-flat-section" aria-labelledby="workbench-focus-title">
           <header class="admin-section-header">
             <div>
-              <span>当前状态</span>
-              <h2 id="workbench-focus-title">需要处理</h2>
+              <span>{{ uiText("当前状态") }}</span>
+              <h2 id="workbench-focus-title">{{ uiText("需要处理") }}</h2>
             </div>
-            <strong>{{ attentionItems.length }} 项</strong>
+            <strong>{{ uiText("{count} 项", { count: attentionItems.length }) }}</strong>
           </header>
 
           <div v-if="attentionItems.length" class="admin-attention-list">
@@ -248,8 +249,8 @@ function auditTargetLabel(targetType: string, targetId: string): string {
                 <ExclamationCircleOutlined v-else aria-hidden="true" />
               </span>
               <span>
-                <strong>{{ item.title }}</strong>
-                <small>{{ item.detail }}</small>
+                <strong>{{ uiText(item.title) }}</strong>
+                <small>{{ uiText(item.detail) }}</small>
               </span>
               <ArrowRightOutlined aria-hidden="true" />
             </RouterLink>
@@ -257,8 +258,8 @@ function auditTargetLabel(targetType: string, targetId: string): string {
           <div v-else class="admin-healthy-state">
             <CheckCircleOutlined aria-hidden="true" />
             <span>
-              <strong>当前没有需要立即处理的异常</strong>
-              <small>服务、任务队列与举报统计均未触发提醒。</small>
+              <strong>{{ uiText("当前没有需要立即处理的异常") }}</strong>
+              <small>{{ uiText("服务、任务队列与举报统计均未触发提醒。") }}</small>
             </span>
           </div>
         </section>
@@ -266,39 +267,39 @@ function auditTargetLabel(targetType: string, targetId: string): string {
         <section class="admin-flat-section" aria-labelledby="workbench-activity-title">
           <header class="admin-section-header">
             <div>
-              <span>操作记录</span>
-              <h2 id="workbench-activity-title">最近管理动态</h2>
+              <span>{{ uiText("操作记录") }}</span>
+              <h2 id="workbench-activity-title">{{ uiText("最近管理动态") }}</h2>
             </div>
-            <strong>{{ recentAuditLogs.length }} 条</strong>
+            <strong>{{ uiText("{count} 条", { count: recentAuditLogs.length }) }}</strong>
           </header>
 
           <ol v-if="recentAuditLogs.length" class="admin-activity-list">
             <li v-for="log in recentAuditLogs" :key="log.id">
               <span class="admin-activity-list__status"><CheckCircleOutlined aria-hidden="true" /></span>
               <span>
-                <strong>{{ log.actor_name || "系统" }}</strong>
+                <strong>{{ log.actor_name || uiText("系统") }}</strong>
                 <small>{{ log.action }} · {{ auditTargetLabel(log.target_type, log.target_id) }}</small>
               </span>
               <time>{{ relativeTime(log.created_at) }}</time>
             </li>
           </ol>
-          <div v-else class="admin-quiet-empty">暂无管理操作记录。</div>
+          <div v-else class="admin-quiet-empty">{{ uiText("暂无管理操作记录。") }}</div>
         </section>
       </div>
 
       <section class="admin-flat-section admin-quick-section" aria-labelledby="admin-quick-title">
         <header class="admin-section-header">
           <div>
-            <span>常用功能</span>
-            <h2 id="admin-quick-title">快捷入口</h2>
+            <span>{{ uiText("常用功能") }}</span>
+            <h2 id="admin-quick-title">{{ uiText("快捷入口") }}</h2>
           </div>
         </header>
-        <nav class="admin-quick-grid" aria-label="后台快捷入口">
+        <nav class="admin-quick-grid" :aria-label="uiText('后台快捷入口')">
           <RouterLink v-for="item in quickLinks" :key="item.route" :to="{ name: item.route }">
             <component :is="item.icon" aria-hidden="true" />
             <span>
-              <strong>{{ item.label }}</strong>
-              <small>{{ item.description }}</small>
+              <strong>{{ uiText(item.label) }}</strong>
+              <small>{{ uiText(item.description) }}</small>
             </span>
             <ArrowRightOutlined aria-hidden="true" />
           </RouterLink>

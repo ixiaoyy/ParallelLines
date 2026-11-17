@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { builtinSiteText, currentLocale, uiText } from "@/shared/i18n/locale";
 import {
   BranchesOutlined,
   DatabaseOutlined,
@@ -33,6 +34,7 @@ import {
 } from "@/features/analytics/queries";
 import UiButton from "@/shared/ui/Button.vue";
 
+
 echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -51,7 +53,7 @@ let trendChart: ECharts | null = null;
 let trendResizeObserver: ResizeObserver | null = null;
 let growthChart: ECharts | null = null;
 let growthResizeObserver: ResizeObserver | null = null;
-const dailyAverageFormatter = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 });
+const dailyAverageFormatter = computed(() => new Intl.NumberFormat(currentLocale.value, { maximumFractionDigits: 1 }));
 const presetRanges = [
   { label: "7 天", days: 7 },
   { label: "30 天", days: 30 },
@@ -78,7 +80,7 @@ const dateRangeError = computed(() => {
     return "开始日期不能晚于结束日期，请重新选择范围。";
   }
   if (selectedRangeDays.value > MAX_ANALYTICS_RANGE_DAYS) {
-    return `统计范围最多为 ${MAX_ANALYTICS_RANGE_DAYS} 天，请缩短日期范围。`;
+    return uiText("统计范围最多为 {days} 天，请缩短日期范围。", { days: MAX_ANALYTICS_RANGE_DAYS });
   }
   return "";
 });
@@ -91,6 +93,7 @@ const activePresetDays = computed(
 
 const overviewQuery = useAnalyticsOverview(range, computed(() => !isDateRangeInvalid.value));
 const overview = computed(() => overviewQuery.data.value);
+const isRefreshing = computed(() => overviewQuery.isFetching.value);
 const trafficSources = computed(() => overview.value?.traffic_sources ?? []);
 const entryPages = computed(() => overview.value?.entry_pages ?? []);
 const hasAuthenticatedMemberVisitors = computed(
@@ -133,7 +136,7 @@ const summaryMetrics = computed(() => {
     {
       id: "daily-registration-average",
       label: "日均新增",
-      value: dailyAverageFormatter.format(dailyRegistrationAverage.value),
+      value: dailyAverageFormatter.value.format(dailyRegistrationAverage.value),
       icon: RiseOutlined,
       tone: "violet",
     },
@@ -155,15 +158,15 @@ const summaryMetrics = computed(() => {
 });
 const trendChartLabel = computed(() => {
   if (!overview.value) {
-    return "每日访问量与独立访客趋势";
+    return uiText("每日访问量与独立访客趋势");
   }
-  return `每日访问量与独立访客趋势，${overview.value.start_date} 至 ${overview.value.end_date}`;
+  return uiText("每日访问量与独立访客趋势，{start} 至 {end}", { start: overview.value.start_date, end: overview.value.end_date });
 });
 const growthChartLabel = computed(() => {
   if (!overview.value) {
-    return "每日新增用户趋势，不含马甲账号";
+    return uiText("每日新增用户趋势，不含马甲账号");
   }
-  return `每日新增用户趋势，${overview.value.start_date} 至 ${overview.value.end_date}，区间新增 ${formatMetric(overview.value.totals.registrations)} 人，日均新增 ${dailyAverageFormatter.format(dailyRegistrationAverage.value)} 人，不含马甲账号`;
+  return uiText("每日新增用户趋势，{start} 至 {end}，区间新增 {total} 人，日均新增 {average} 人，不含马甲账号", { start: overview.value.start_date, end: overview.value.end_date, total: formatMetric(overview.value.totals.registrations), average: dailyAverageFormatter.value.format(dailyRegistrationAverage.value) });
 });
 
 const reportsQuery = useDataExplorerReports(dataExplorerOpen);
@@ -204,7 +207,7 @@ onMounted(() => {
 });
 
 watch(
-  () => overview.value?.series,
+  [() => overview.value?.series, currentLocale],
   () => {
     void nextTick(() => {
       renderTrendChart();
@@ -414,7 +417,7 @@ function buildTrendChartOption(
     grid: { bottom: 42, containLabel: true, left: 8, right: 14, top: 16 },
     legend: {
       bottom: 0,
-      data: ["访问量", "独立访客"],
+      data: [uiText("访问量"), uiText("独立访客")],
       icon: "roundRect",
       itemHeight: 6,
       itemWidth: 12,
@@ -427,7 +430,7 @@ function buildTrendChartOption(
         emphasis: { focus: "series" },
         itemStyle: { color: primary },
         lineStyle: { color: primary, width: 2.5 },
-        name: "访问量",
+        name: uiText("访问量"),
         showSymbol: points.length <= 14,
         smooth: 0.35,
         symbol: "circle",
@@ -439,7 +442,7 @@ function buildTrendChartOption(
         emphasis: { focus: "series" },
         itemStyle: { color: visitor },
         lineStyle: { color: visitor, width: 2 },
-        name: "独立访客",
+        name: uiText("独立访客"),
         showSymbol: points.length <= 14,
         smooth: 0.35,
         symbol: "circle",
@@ -486,7 +489,7 @@ function buildGrowthChartOption(
     grid: { bottom: 42, containLabel: true, left: 8, right: 14, top: 16 },
     legend: {
       bottom: 0,
-      data: ["新增用户"],
+      data: [uiText("新增用户")],
       icon: "roundRect",
       itemHeight: 6,
       itemWidth: 12,
@@ -499,7 +502,7 @@ function buildGrowthChartOption(
         emphasis: { focus: "series" },
         itemStyle: { color: growth },
         lineStyle: { color: growth, width: 2.5 },
-        name: "新增用户",
+        name: uiText("新增用户"),
         showSymbol: points.length <= 14,
         smooth: 0.35,
         symbol: "circle",
@@ -556,8 +559,15 @@ function formatChartTooltip(params: unknown): string {
     const value = Number.isFinite(numericValue)
       ? formatMetric(numericValue)
       : String(item.data ?? "—");
-    const unit =
-      item.seriesName === "独立访客" ? " 位" : item.seriesName === "新增用户" ? " 人" : " 次";
+    // 图例随语言重绘，单位按当前图例名匹配；只本地化展示，保留原访客/新增用户/访问次数分类。
+    const isVisitor = item.seriesName === uiText("独立访客");
+    const isRegistration = item.seriesName === uiText("新增用户");
+    const unitKind = isVisitor ? "visitor" : isRegistration ? "user" : "view";
+    const unit = builtinSiteText(
+      `analytics.unit.${unitKind}.${numericValue === 1 ? "one" : "other"}`,
+      isVisitor ? " 位" : isRegistration ? " 人" : " 次",
+      currentLocale.value,
+    );
     return `${item.marker ?? ""}${item.seriesName ?? ""}: ${value}${unit}`;
   });
   return [title, ...rows].filter(Boolean).join("<br/>");
@@ -568,27 +578,27 @@ function formatChartTooltip(params: unknown): string {
   <section class="admin-analytics-panel" aria-labelledby="analytics-title">
     <header class="analytics-page-header">
       <div>
-        <h1 id="analytics-title">访问与用户增长</h1>
-        <p>查看所选日期范围内的访问表现与真实用户增长。</p>
+        <h1 id="analytics-title">{{ uiText('访问与用户增长') }}</h1>
+        <p>{{ uiText('查看所选日期范围内的访问表现与真实用户增长。') }}</p>
       </div>
       <div class="analytics-header-actions">
         <UiButton
           tone="ghost"
-          :disabled="isDateRangeInvalid || overviewQuery.isFetching.value"
-          :aria-label="overviewQuery.isFetching.value ? '正在刷新访问与用户增长数据' : '刷新访问与用户增长数据'"
-          :title="overviewQuery.isFetching.value ? '正在刷新访问与用户增长数据' : '刷新访问与用户增长数据'"
+          :disabled="isDateRangeInvalid || isRefreshing"
+          :aria-label="isRefreshing ? uiText('正在刷新访问与用户增长数据') : uiText('刷新访问与用户增长数据')"
+          :title="isRefreshing ? uiText('正在刷新访问与用户增长数据') : uiText('刷新访问与用户增长数据')"
           @click="refreshDashboard"
         >
           <template #icon>
-            <ReloadOutlined :class="{ 'is-spinning': overviewQuery.isFetching.value }" aria-hidden="true" />
+            <ReloadOutlined :class="{ 'is-spinning': isRefreshing }" aria-hidden="true" />
           </template>
-          {{ overviewQuery.isFetching.value ? "刷新中" : "刷新" }}
+          {{ isRefreshing ? uiText('刷新中') : uiText('刷新') }}
         </UiButton>
       </div>
     </header>
 
-    <section class="analytics-toolbar" aria-label="统计日期范围">
-      <div class="range-presets" aria-label="快速日期范围">
+    <section class="analytics-toolbar" :aria-label="uiText('统计日期范围')">
+      <div class="range-presets" :aria-label="uiText('快速日期范围')">
         <button
           v-for="preset in presetRanges"
           :key="preset.days"
@@ -597,29 +607,29 @@ function formatChartTooltip(params: unknown): string {
           :aria-pressed="activePresetDays === preset.days"
           @click="applyPresetRange(preset.days)"
         >
-          {{ preset.label }}
+          {{ uiText(preset.label) }}
         </button>
       </div>
       <span class="toolbar-divider" aria-hidden="true"></span>
       <div class="date-fields">
         <label>
-          <span>开始日期</span>
+          <span>{{ uiText('开始日期') }}</span>
           <input v-model="startDate" type="date" />
         </label>
         <label>
-          <span>结束日期</span>
+          <span>{{ uiText('结束日期') }}</span>
           <input v-model="endDate" type="date" />
         </label>
       </div>
     </section>
 
     <div v-if="isDateRangeInvalid" class="analytics-state analytics-state--error" role="alert">
-      <strong>日期范围无效</strong>
-      <span>{{ dateRangeError }}</span>
+      <strong>{{ uiText('日期范围无效') }}</strong>
+      <span>{{ uiText(dateRangeError) }}</span>
     </div>
 
     <section v-else-if="overviewQuery.isLoading.value" class="analytics-loading" role="status">
-      <span class="sr-only">正在计算访问与运营指标…</span>
+      <span class="sr-only">{{ uiText('正在计算访问与运营指标…') }}</span>
       <div class="loading-metrics" aria-hidden="true">
         <i v-for="index in 6" :key="index"></i>
       </div>
@@ -628,23 +638,23 @@ function formatChartTooltip(params: unknown): string {
 
     <div v-else-if="overviewQuery.isError.value" class="analytics-state analytics-state--error" role="alert">
       <div>
-        <strong>访问报表暂时不可用</strong>
-        <span>请确认当前账号具备管理员权限，或稍后重新加载。</span>
+        <strong>{{ uiText('访问报表暂时不可用') }}</strong>
+        <span>{{ uiText('请确认当前账号具备管理员权限，或稍后重新加载。') }}</span>
       </div>
-      <UiButton tone="subtle" @click="refreshDashboard">重新加载</UiButton>
+      <UiButton tone="subtle" @click="refreshDashboard">{{ uiText('重新加载') }}</UiButton>
     </div>
 
     <template v-else-if="overview">
-      <section class="metric-strip" aria-label="核心指标">
+      <section class="metric-strip" :aria-label="uiText('核心指标')">
         <article
           v-for="metric in summaryMetrics"
           :key="metric.id"
           :class="`metric-item metric-item--${metric.tone}`"
         >
-          <span>{{ metric.label }}</span>
+          <span>{{ uiText(metric.label) }}</span>
           <div class="metric-value">
             <strong>{{ metric.value }}</strong>
-            <small v-if="metric.note">{{ metric.note }}</small>
+            <small v-if="metric.note">{{ uiText(metric.note) }}</small>
             <component :is="metric.icon" v-if="metric.icon" class="metric-icon" aria-hidden="true" />
           </div>
         </article>
@@ -656,38 +666,38 @@ function formatChartTooltip(params: unknown): string {
         aria-labelledby="visitor-signal-title"
       >
         <div class="visitor-signal__summary">
-          <span>真人访问信号</span>
+          <span>{{ uiText('真人访问信号') }}</span>
           <h2 id="visitor-signal-title">
-            {{ hasAuthenticatedMemberVisitors ? "已发现登录普通成员访问" : "尚未发现登录普通成员访问" }}
+            {{ hasAuthenticatedMemberVisitors ? uiText('已发现登录普通成员访问') : uiText('尚未发现登录普通成员访问') }}
           </h2>
           <p>
-            普通成员指已登录、非管理员且未标记为运营/测试的账号；匿名浏览器不计入确认结果，仍可能包含无法识别的自动化访问。
+            {{ uiText('普通成员指已登录、非管理员且未标记为运营/测试的账号；匿名浏览器不计入确认结果，仍可能包含无法识别的自动化访问。') }}
           </p>
         </div>
         <dl class="visitor-signal__breakdown">
           <div>
-            <dt>登录普通成员</dt>
+            <dt>{{ uiText('登录普通成员') }}</dt>
             <dd>{{ formatMetric(overview.totals.authenticated_member_visitors) }}</dd>
-            <small>最可信真人信号</small>
+            <small>{{ uiText('最可信真人信号') }}</small>
           </div>
           <div>
-            <dt>匿名浏览器</dt>
+            <dt>{{ uiText('匿名浏览器') }}</dt>
             <dd>{{ formatMetric(overview.totals.anonymous_visitors) }}</dd>
-            <small>身份无法确认</small>
+            <small>{{ uiText('身份无法确认') }}</small>
           </div>
           <div>
-            <dt>运营/管理员</dt>
+            <dt>{{ uiText('运营/管理员') }}</dt>
             <dd>{{ formatMetric(overview.totals.operator_visitors) }}</dd>
-            <small>不计入真人信号</small>
+            <small>{{ uiText('不计入真人信号') }}</small>
           </div>
         </dl>
       </section>
 
-      <section class="analytics-chart-grid" aria-label="访问与用户增长趋势">
+      <section class="analytics-chart-grid" :aria-label="uiText('访问与用户增长趋势')">
         <article class="analytics-chart-panel">
           <div class="section-heading">
             <div>
-              <h2>站点访问趋势</h2>
+              <h2>{{ uiText('站点访问趋势') }}</h2>
               <span>{{ overview.start_date }} → {{ overview.end_date }}</span>
             </div>
           </div>
@@ -702,8 +712,8 @@ function formatChartTooltip(params: unknown): string {
         <article class="analytics-chart-panel analytics-chart-panel--growth">
           <div class="section-heading">
             <div>
-              <h2>用户增长趋势</h2>
-              <span>真实注册用户 · 不含马甲账号</span>
+              <h2>{{ uiText('用户增长趋势') }}</h2>
+              <span>{{ uiText('真实注册用户 · 不含马甲账号') }}</span>
             </div>
           </div>
           <div
@@ -715,15 +725,15 @@ function formatChartTooltip(params: unknown): string {
         </article>
       </section>
 
-      <section class="analytics-table-grid" aria-label="来源与入口页统计">
+      <section class="analytics-table-grid" :aria-label="uiText('来源与入口页统计')">
         <article class="analytics-table-panel">
           <div class="section-heading">
-            <h2>来源渠道</h2>
+            <h2>{{ uiText('来源渠道') }}</h2>
           </div>
           <div class="analytics-table-wrap">
             <table>
               <thead>
-                <tr><th scope="col">来源渠道</th><th scope="col">访问次数</th></tr>
+                <tr><th scope="col">{{ uiText('来源渠道') }}</th><th scope="col">{{ uiText('访问次数') }}</th></tr>
               </thead>
               <tbody v-if="trafficSources.length">
                 <tr
@@ -732,25 +742,25 @@ function formatChartTooltip(params: unknown): string {
                 >
                   <td>
                     <span>{{ sourceNameLabel(source.source_name) }}</span>
-                    <small>{{ sourceTypeLabel(source.source_type) }} · {{ formatMetric(source.unique_visitors) }} 位访客</small>
+                    <small>{{ sourceTypeLabel(source.source_type) }} · {{ uiText("{count} 位访客", { count: formatMetric(source.unique_visitors) }) }}</small>
                   </td>
                   <td>{{ formatMetric(source.visit_count) }}</td>
                 </tr>
               </tbody>
             </table>
-            <p v-if="!trafficSources.length" class="table-empty">当前范围内暂无访问来源。</p>
+            <p v-if="!trafficSources.length" class="table-empty">{{ uiText('当前范围内暂无访问来源。') }}</p>
           </div>
-          <footer>共 {{ trafficSources.length }} 个来源渠道</footer>
+          <footer>{{ uiText("共 {count} 个来源渠道", { count: trafficSources.length }) }}</footer>
         </article>
 
         <article class="analytics-table-panel analytics-table-panel--entries">
           <div class="section-heading">
-            <h2>入口页面</h2>
+            <h2>{{ uiText('入口页面') }}</h2>
           </div>
           <div class="analytics-table-wrap">
             <table>
               <thead>
-                <tr><th scope="col">入口页面</th><th scope="col">访问次数</th></tr>
+                <tr><th scope="col">{{ uiText('入口页面') }}</th><th scope="col">{{ uiText('访问次数') }}</th></tr>
               </thead>
               <tbody v-if="entryPages.length">
                 <tr v-for="page in entryPages" :key="page.path">
@@ -759,9 +769,9 @@ function formatChartTooltip(params: unknown): string {
                 </tr>
               </tbody>
             </table>
-            <p v-if="!entryPages.length" class="table-empty">当前范围内暂无入口页数据。</p>
+            <p v-if="!entryPages.length" class="table-empty">{{ uiText('当前范围内暂无入口页数据。') }}</p>
           </div>
-          <footer>共 {{ entryPages.length }} 个入口页面</footer>
+          <footer>{{ uiText("共 {count} 个入口页面", { count: entryPages.length }) }}</footer>
         </article>
       </section>
     </template>
@@ -771,8 +781,8 @@ function formatChartTooltip(params: unknown): string {
         <div>
           <DatabaseOutlined aria-hidden="true" />
           <div>
-            <h2 id="data-explorer-title">数据探索</h2>
-            <p>运行后端预设的安全报表；CSV 导出会写入审计日志。</p>
+            <h2 id="data-explorer-title">{{ uiText('数据探索') }}</h2>
+            <p>{{ uiText('运行后端预设的安全报表；CSV 导出会写入审计日志。') }}</p>
           </div>
         </div>
         <UiButton
@@ -781,21 +791,21 @@ function formatChartTooltip(params: unknown): string {
           aria-controls="data-explorer-content"
           @click="toggleDataExplorer"
         >
-          {{ dataExplorerOpen ? "收起" : "打开预设报表" }}
+          {{ dataExplorerOpen ? uiText('收起') : uiText('打开预设报表') }}
         </UiButton>
       </div>
 
       <div v-if="dataExplorerOpen" id="data-explorer-content" class="data-explorer-content">
         <div v-if="reportsQuery.isLoading.value" class="analytics-state" role="status">
-          正在读取预设报表…
+          {{ uiText('正在读取预设报表…') }}
         </div>
         <div v-else-if="reportsQuery.isError.value" class="analytics-state analytics-state--error" role="alert">
-          <span>预设报表读取失败，请稍后重试。</span>
-          <UiButton tone="subtle" @click="reportsQuery.refetch()">重新加载</UiButton>
+          <span>{{ uiText('预设报表读取失败，请稍后重试。') }}</span>
+          <UiButton tone="subtle" @click="reportsQuery.refetch()">{{ uiText('重新加载') }}</UiButton>
         </div>
         <template v-else>
           <div class="report-toolbar">
-            <div class="report-tabs" aria-label="预设报表">
+            <div class="report-tabs" :aria-label="uiText('预设报表')">
               <button
                 v-for="item in reports"
                 :key="item.id"
@@ -813,17 +823,17 @@ function formatChartTooltip(params: unknown): string {
               @click="exportCsv"
             >
               <template #icon><DownloadOutlined /></template>
-              {{ exportReport.isPending.value ? "导出中" : "导出 CSV" }}
+              {{ exportReport.isPending.value ? uiText('导出中') : uiText('导出 CSV') }}
             </UiButton>
           </div>
 
           <p v-if="selectedReport" class="report-description">{{ selectedReport.description }}</p>
-          <p v-if="exportFeedback" class="export-feedback" aria-live="polite">{{ exportFeedback }}</p>
+          <p v-if="exportFeedback" class="export-feedback" aria-live="polite">{{ uiText(exportFeedback) }}</p>
           <div v-if="reportQuery.isLoading.value" class="analytics-state" role="status">
-            正在运行报表…
+            {{ uiText('正在运行报表…') }}
           </div>
           <div v-else-if="reportQuery.isError.value" class="analytics-state analytics-state--error" role="alert">
-            报表运行失败，请检查日期范围后重试。
+            {{ uiText('报表运行失败，请检查日期范围后重试。') }}
           </div>
           <div v-else-if="report" class="report-table-wrap">
             <table class="report-table">
@@ -835,12 +845,12 @@ function formatChartTooltip(params: unknown): string {
                   <td v-for="column in reportColumns" :key="column">{{ reportCell(row[column]) }}</td>
                 </tr>
                 <tr v-if="!reportRows.length">
-                  <td :colspan="Math.max(1, reportColumns.length)" class="report-empty">当前范围内没有结果。</td>
+                  <td :colspan="Math.max(1, reportColumns.length)" class="report-empty">{{ uiText('当前范围内没有结果。') }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <p v-else-if="!reports.length" class="table-empty">暂无可用的预设报表。</p>
+          <p v-else-if="!reports.length" class="table-empty">{{ uiText('暂无可用的预设报表。') }}</p>
         </template>
       </div>
     </section>

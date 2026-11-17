@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
+</script>
+
 <template>
   <div class="hero-meet" aria-hidden="true">
     <svg
@@ -6,7 +10,7 @@
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="不同地方的人在此相遇"
+      :aria-label="uiText('不同地方的人在此相遇')"
     >
       <rect width="300" height="200" rx="18" fill="#f8fafc" />
 

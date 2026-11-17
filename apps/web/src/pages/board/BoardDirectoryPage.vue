@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import {
   AppstoreOutlined,
   BulbOutlined,
@@ -259,15 +260,15 @@ function boardPurpose(board: BoardSummary) {
     engineering: "接口设计与架构方案",
   };
 
-  return labels[board.slug] ?? board.description;
+  return labels[board.slug] ? uiText(labels[board.slug]) : board.description;
 }
 </script>
 
 <template>
   <div class="board-directory-page">
     <header class="discover-hero">
-      <h1>发现内容</h1>
-      <p>按版块进入，按标签筛选。</p>
+      <h1>{{ uiText("发现内容") }}</h1>
+      <p>{{ uiText("按版块进入，按标签筛选。") }}</p>
 
       <label class="discover-search" for="board-directory-search">
         <SearchOutlined aria-hidden="true" />
@@ -275,38 +276,38 @@ function boardPurpose(board: BoardSummary) {
           id="board-directory-search"
           v-model="searchQuery"
           type="search"
-          placeholder="搜索版块或标签"
+          :placeholder="uiText('搜索版块或标签')"
           autocomplete="off"
         />
       </label>
     </header>
 
     <div v-if="boardsQuery.isError.value || tagsQuery.isError.value" class="directory-state directory-state--error" role="alert">
-      部分入口暂时不可用，请稍后刷新。
+      {{ uiText("部分入口暂时不可用，请稍后刷新。") }}
     </div>
 
-    <main class="discover-stack" aria-label="内容发现入口">
+    <main class="discover-stack" :aria-label="uiText('内容发现入口')">
       <section class="discover-section" aria-labelledby="recommended-boards-title">
         <div class="section-head">
           <h2 id="recommended-boards-title">
             <StarFilled aria-hidden="true" />
-            推荐版块
+            {{ uiText("推荐版块") }}
           </h2>
           <button
             v-if="hasExpandableRecommendedBoards"
             type="button"
             @click="setDirectorySectionExpanded('recommended', !showAllRecommendedBoards)"
           >
-            {{ showAllRecommendedBoards ? "收起" : "查看更多" }}
+            {{ showAllRecommendedBoards ? uiText("收起") : uiText("查看更多") }}
             <UpOutlined v-if="showAllRecommendedBoards" aria-hidden="true" />
             <RightOutlined v-else aria-hidden="true" />
           </button>
         </div>
 
-        <div v-if="boardsQuery.isLoading.value" class="recommended-grid" role="status" aria-label="正在加载推荐版块">
+        <div v-if="boardsQuery.isLoading.value" class="recommended-grid" role="status" :aria-label="uiText('正在加载推荐版块')">
           <span v-for="item in 4" :key="item" class="recommended-skeleton"></span>
         </div>
-        <p v-else-if="!recommendedBoards.length" class="directory-state">暂无匹配版块</p>
+        <p v-else-if="!recommendedBoards.length" class="directory-state">{{ uiText("暂无匹配版块") }}</p>
         <div v-else class="recommended-grid">
           <RouterLink
             v-for="board in recommendedBoards"
@@ -324,7 +325,7 @@ function boardPurpose(board: BoardSummary) {
                 <small>{{ boardPurpose(board) }}</small>
               </span>
             </span>
-            <em>{{ compactNumber(board.topicCount) }} 个主题</em>
+            <em>{{ uiText("主题数：{count}", { count: compactNumber(board.topicCount) }) }}</em>
           </RouterLink>
         </div>
       </section>
@@ -333,15 +334,15 @@ function boardPurpose(board: BoardSummary) {
         <div class="section-head">
           <h2 id="all-boards-title">
             <AppstoreOutlined aria-hidden="true" />
-            全部版块
+            {{ uiText("全部版块") }}
           </h2>
           <button v-if="hasHiddenBoards" type="button" @click="setDirectorySectionExpanded('boards', true)">
-            查看全部
+            {{ uiText("查看全部") }}
             <RightOutlined aria-hidden="true" />
           </button>
         </div>
 
-        <div v-if="boardsQuery.isLoading.value" class="board-chip-grid" role="status" aria-label="正在加载版块">
+        <div v-if="boardsQuery.isLoading.value" class="board-chip-grid" role="status" :aria-label="uiText('正在加载版块')">
           <span v-for="item in 6" :key="item" class="chip-skeleton"></span>
         </div>
         <div v-else class="board-chip-grid">
@@ -362,15 +363,15 @@ function boardPurpose(board: BoardSummary) {
         <div class="section-head">
           <h2 id="hot-tags-title">
             <TagsOutlined aria-hidden="true" />
-            热门标签
+            {{ uiText("热门标签") }}
           </h2>
           <button v-if="hasHiddenTags" type="button" @click="setDirectorySectionExpanded('tags', true)">
-            查看全部
+            {{ uiText("查看全部") }}
             <RightOutlined aria-hidden="true" />
           </button>
         </div>
 
-        <div v-if="tagsQuery.isLoading.value" class="tag-chip-grid" role="status" aria-label="正在加载标签">
+        <div v-if="tagsQuery.isLoading.value" class="tag-chip-grid" role="status" :aria-label="uiText('正在加载标签')">
           <span v-for="item in 8" :key="item" class="chip-skeleton"></span>
         </div>
         <div v-else class="tag-chip-grid">
@@ -387,7 +388,7 @@ function boardPurpose(board: BoardSummary) {
           </RouterLink>
           <RouterLink v-if="!hasSearch && showAllTags" class="tag-chip tag-chip--all" :to="{ name: 'search' }">
             <UnorderedListOutlined aria-hidden="true" />
-            <span>所有标签</span>
+            <span>{{ uiText("所有标签") }}</span>
           </RouterLink>
         </div>
       </section>
@@ -395,18 +396,18 @@ function boardPurpose(board: BoardSummary) {
       <RouterLink v-if="!hasSearch" class="latest-topic-link" :to="{ name: 'forum-home' }">
         <CompassOutlined aria-hidden="true" />
         <span>
-          <strong>不知道去哪？</strong>
-          <small>看看大家在聊什么</small>
+          <strong>{{ uiText("不知道去哪？") }}</strong>
+          <small>{{ uiText("看看大家在聊什么") }}</small>
         </span>
         <em>
-          浏览最新主题
+          {{ uiText("浏览最新主题") }}
           <RightOutlined aria-hidden="true" />
         </em>
       </RouterLink>
     </main>
 
     <div v-if="!boardsQuery.isLoading.value && !tagsQuery.isLoading.value && !hasVisibleResults" class="directory-state">
-      没有匹配的版块或标签。
+      {{ uiText("没有匹配的版块或标签。") }}
     </div>
   </div>
 </template>

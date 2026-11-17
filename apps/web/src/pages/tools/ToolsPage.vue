@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed, ref } from "vue";
 import { ArrowRightOutlined, SearchOutlined, ToolOutlined } from "@ant-design/icons-vue";
 
 import UiButton from "@/shared/ui/Button.vue";
 import SiteNavigation from "@/shared/ui/SiteNavigation.vue";
+import LanguageSwitcher from "@/shared/ui/LanguageSwitcher.vue";
 
 type ToolCategory = "office" | "creation";
 interface ToolEntry {
@@ -70,33 +72,34 @@ function clearFilters(): void {
 <template>
   <div class="tools-shell">
     <header class="tools-site-header">
-      <RouterLink class="tools-site-brand" :to="{ name: 'home' }" aria-label="平行线首页">
+      <RouterLink class="tools-site-brand" :to="{ name: 'home' }" :aria-label="uiText('平行线首页')">
         <img src="/logo-lines-mark.png" alt="" width="48" height="42" />
-        <strong>平行线</strong>
+        <strong>{{ uiText('平行线') }}</strong>
       </RouterLink>
+      <LanguageSwitcher />
     </header>
     <main class="tools-page" aria-labelledby="tools-page-title">
       <header class="tools-page__header">
         <div class="tools-page__intro">
-          <h1 id="tools-page-title"><ToolOutlined aria-hidden="true" /> 工具</h1>
-          <p>按用途查找工具，打开即可使用。</p>
+          <h1 id="tools-page-title"><ToolOutlined aria-hidden="true" /> {{ uiText('工具') }}</h1>
+          <p>{{ uiText('按用途查找工具，打开即可使用。') }}</p>
         </div>
         <form class="tools-search" role="search" @submit.prevent>
-          <label class="tools-search__label" for="tools-query">搜索工具名称或用途</label>
+          <label class="tools-search__label" for="tools-query">{{ uiText('搜索工具名称或用途') }}</label>
           <SearchOutlined aria-hidden="true" />
-          <input id="tools-query" v-model="query" type="search" aria-label="搜索工具名称或用途" placeholder="搜索工具名称或用途" autocomplete="off" />
+          <input id="tools-query" v-model="query" type="search" :aria-label="uiText('搜索工具名称或用途')" :placeholder="uiText('搜索工具名称或用途')" autocomplete="off" />
         </form>
       </header>
       <div class="tools-toolbar">
-        <div class="tools-categories" role="group" aria-label="工具分类">
-          <button v-for="item in categories" :key="item.value" type="button" :aria-pressed="category === item.value" @click="category = item.value">{{ item.label }}</button>
+        <div class="tools-categories" role="group" :aria-label="uiText('工具分类')">
+          <button v-for="item in categories" :key="item.value" type="button" :aria-pressed="category === item.value" @click="category = item.value">{{ uiText(item.label) }}</button>
         </div>
         <div class="tools-toolbar__results">
-          <span class="tools-results" role="status" aria-live="polite">{{ visibleTools.length }} 个工具</span>
-          <UiButton v-if="hasFilters && visibleTools.length" tone="ghost" @click="clearFilters">清除筛选</UiButton>
+          <span class="tools-results" role="status" aria-live="polite">{{ uiText('{count} 个工具', { count: visibleTools.length }) }}</span>
+          <UiButton v-if="hasFilters && visibleTools.length" tone="ghost" @click="clearFilters">{{ uiText('清除筛选') }}</UiButton>
         </div>
       </div>
-      <section v-if="visibleTools.length" class="tools-grid" aria-label="工具列表">
+      <section v-if="visibleTools.length" class="tools-grid" :aria-label="uiText('工具列表')">
         <article v-for="tool in visibleTools" :key="tool.id" class="tools-tool" :class="`tools-tool--${tool.previewKind}`" :aria-labelledby="`${tool.id}-tool-title`">
           <div class="tools-tool__preview" aria-hidden="true">
             <div v-if="tool.previewKind === 'excel'" class="tools-excel-preview">
@@ -112,19 +115,19 @@ function clearFilters(): void {
             <div v-else class="tools-bead-preview"><img src="/tools/bead-pattern/pixel-example.svg" alt="" width="160" height="160" loading="lazy" decoding="async" /><span>一格，一颗豆</span></div>
           </div>
           <div class="tools-tool__content">
-            <div class="tools-tool__meta"><span class="tools-tool__category">{{ categoryLabels[tool.category] }}</span><span>{{ tool.detail }}</span></div>
-            <h2 :id="`${tool.id}-tool-title`"><RouterLink :to="{ name: tool.routeName }">{{ tool.title }}</RouterLink></h2>
-            <p>{{ tool.description }}</p>
-            <ul class="tools-tool__topics" :aria-label="`${tool.title}用途`"><li v-for="tag in tool.tags" :key="tag">{{ tag }}</li></ul>
-            <RouterLink class="tools-tool__launch" :to="{ name: tool.routeName }">打开工具 <ArrowRightOutlined aria-hidden="true" /></RouterLink>
+            <div class="tools-tool__meta"><span class="tools-tool__category">{{ uiText(categoryLabels[tool.category]) }}</span><span>{{ uiText(tool.detail) }}</span></div>
+            <h2 :id="`${tool.id}-tool-title`"><RouterLink :to="{ name: tool.routeName }">{{ uiText(tool.title) }}</RouterLink></h2>
+            <p>{{ uiText(tool.description) }}</p>
+            <ul class="tools-tool__topics" :aria-label="uiText('{tool}用途', { tool: uiText(tool.title) })"><li v-for="tag in tool.tags" :key="tag">{{ uiText(tag) }}</li></ul>
+            <RouterLink class="tools-tool__launch" :to="{ name: tool.routeName }">{{ uiText('打开工具') }} <ArrowRightOutlined aria-hidden="true" /></RouterLink>
           </div>
         </article>
       </section>
       <section v-else class="tools-empty" role="status" aria-labelledby="tools-empty-title">
         <SearchOutlined aria-hidden="true" />
-        <h2 id="tools-empty-title">没有找到匹配的工具。</h2>
-        <p>试试其他关键词，或清除筛选查看全部工具。</p>
-        <UiButton @click="clearFilters">清除筛选</UiButton>
+        <h2 id="tools-empty-title">{{ uiText('没有找到匹配的工具。') }}</h2>
+        <p>{{ uiText('试试其他关键词，或清除筛选查看全部工具。') }}</p>
+        <UiButton @click="clearFilters">{{ uiText('清除筛选') }}</UiButton>
       </section>
     </main>
     <footer class="tools-site-footer"><SiteNavigation /></footer>

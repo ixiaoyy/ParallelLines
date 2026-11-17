@@ -3,6 +3,7 @@ import { ref } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
 import { useContentDeleteMutation } from "@/features/moderation/queries";
+import { uiText } from "@/shared/i18n/locale";
 
 interface AdminTopicDeleteOptions {
   note?: string;
@@ -36,10 +37,10 @@ export function useAdminTopicDelete(defaults: AdminTopicDeleteOptions = {}) {
 
     const mergedOptions = { ...defaults, ...options };
     Modal.confirm({
-      title: "删除这个主题？",
-      content: `删除后「${topic.title}」会从公开列表和详情页隐藏，并留下审核记录。`,
-      okText: "删除",
-      cancelText: "取消",
+      title: uiText("删除这个主题？"),
+      content: uiText("删除后「{title}」会从公开列表和详情页隐藏，并留下审核记录。", { title: topic.title }),
+      okText: uiText("删除"),
+      cancelText: uiText("取消"),
       okType: "danger",
       centered: true,
       onOk: async () => {
@@ -50,10 +51,10 @@ export function useAdminTopicDelete(defaults: AdminTopicDeleteOptions = {}) {
             targetId: topic.id,
             note: mergedOptions.note ?? DEFAULT_DELETE_NOTE,
           });
-          void message.success(mergedOptions.successMessage ?? "主题已删除。");
+          void message.success(uiText(mergedOptions.successMessage ?? "主题已删除。"));
           await mergedOptions.onDeleted?.(topic);
         } catch {
-          void message.error("删除失败，请确认管理员权限后重试。");
+          void message.error(uiText("删除失败，请确认管理员权限后重试。"));
         } finally {
           deletingTopicId.value = null;
         }

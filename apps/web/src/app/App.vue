@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ConfigProvider } from "ant-design-vue";
 import zhCN from "ant-design-vue/es/locale/zh_CN";
+import enUS from "ant-design-vue/es/locale/en_US";
 import { computed, defineAsyncComponent, shallowRef, watch } from "vue";
 import { useRoute } from "vue-router";
 
@@ -17,6 +18,7 @@ import {
 import type { JsonLdObject } from "@/shared/seo/structuredData";
 import { UNIFIED_AUTH_ENABLED } from "@/features/auth/unified/protocol";
 import { startUnifiedBrowserSession } from "@/features/auth/unified/session";
+import { currentLocale } from "@/shared/i18n/locale";
 
 const route = useRoute();
 watch(() => route.meta.unifiedFlow, flow => {
@@ -115,7 +117,7 @@ const theme = {
 </script>
 
 <template>
-  <ConfigProvider :locale="zhCN" :theme="theme">
+  <ConfigProvider :locale="currentLocale === 'en-US' ? enUS : zhCN" :theme="theme">
     <RouterView v-slot="{ Component }">
       <AppShell v-if="usesForumShell" @site-structured-data="receiveForumSiteGraph">
         <component :is="Component" />

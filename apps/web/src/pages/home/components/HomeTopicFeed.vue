@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { currentLocale, uiText } from "@/shared/i18n/locale";
 import { computed, onUnmounted, ref, watch } from "vue";
 
 import type { BoardSummary } from "@/entities/board/model";
@@ -148,9 +149,9 @@ onUnmounted(() => observer?.disconnect());
 </script>
 
 <template>
-  <section class="home-topic-feed" aria-label="主题发现流">
+  <section class="home-topic-feed" :aria-label="uiText('主题发现流')">
     <div class="tabs">
-      <div class="tab-list" role="tablist" aria-label="主题筛选">
+      <div class="tab-list" role="tablist" :aria-label="uiText('主题筛选')">
         <button
           v-for="tab in tabs"
           :key="tab.key"
@@ -160,7 +161,7 @@ onUnmounted(() => observer?.disconnect());
           :class="['tab', { active: activeTab === tab.key }]"
           @click="emit('selectTab', tab.key)"
         >
-          {{ tab.label }}
+          {{ uiText(tab.label) }}
         </button>
       </div>
     </div>
@@ -171,7 +172,7 @@ onUnmounted(() => observer?.disconnect());
       aria-labelledby="daily-program-title"
     >
       <div class="daily-program__copy">
-        <span class="daily-program__kicker">今日 AI 在搞什么</span>
+        <span class="daily-program__kicker">{{ uiText("今日 AI 在搞什么") }}</span>
         <h2 id="daily-program-title">
           <RouterLink :to="topicDetailRoute(todayProgramTopic)">
             {{ todayProgramTopic.title }}
@@ -189,26 +190,26 @@ onUnmounted(() => observer?.disconnect());
         </div>
       </div>
       <RouterLink class="daily-program__action" :to="topicDetailRoute(todayProgramTopic)">
-        去看看
+        {{ uiText("去看看") }}
       </RouterLink>
     </section>
 
-    <div v-if="filtersOpen" id="topic-feed-filters" class="topic-filter-panel" aria-label="主题过滤">
+    <div v-if="filtersOpen" id="topic-feed-filters" class="topic-filter-panel" :aria-label="uiText('主题过滤')">
       <label class="topic-filter-field topic-filter-field--title">
-        <span>标题关键词</span>
+        <span>{{ uiText("标题关键词") }}</span>
         <input
           :value="titleFilter"
           type="search"
-          placeholder="只匹配标题"
+          :placeholder="uiText('只匹配标题')"
           autocomplete="off"
           @input="emit('updateTitleFilter', ($event.target as HTMLInputElement).value)"
         />
       </label>
 
       <label class="topic-filter-field">
-        <span>版块</span>
+        <span>{{ uiText("版块") }}</span>
         <select :value="boardFilter" @change="emit('updateBoardFilter', ($event.target as HTMLSelectElement).value)">
-          <option value="">全部版块</option>
+          <option value="">{{ uiText("全部版块") }}</option>
           <option v-for="board in boardOptions" :key="board.id" :value="board.slug">
             {{ board.parentBoardName ? `${board.parentBoardName} / ` : "" }}{{ board.name }}
           </option>
@@ -216,18 +217,18 @@ onUnmounted(() => observer?.disconnect());
       </label>
 
       <label class="topic-filter-field">
-        <span>标签</span>
+        <span>{{ uiText("标签") }}</span>
         <input
           :value="tagFilter"
           list="topic-feed-tag-options"
-          placeholder="全部标签"
+          :placeholder="uiText('全部标签')"
           autocomplete="off"
           @input="emit('updateTagFilter', ($event.target as HTMLInputElement).value)"
         />
       </label>
 
       <button type="button" class="filter-clear-button" :disabled="!hasActiveFilters" @click="emit('clearFilters')">
-        清空
+        {{ uiText("清空") }}
       </button>
       <datalist id="topic-feed-tag-options">
         <option v-for="tag in tagOptions" :key="tag" :value="tag" />
@@ -235,14 +236,14 @@ onUnmounted(() => observer?.disconnect());
     </div>
 
     <div class="feed-header" :class="{ 'feed-header--with-admin-actions': canDeleteTopics }" aria-hidden="true">
-      <span>主题</span>
-      <span>回复</span>
-      <span>浏览</span>
-      <span>活动</span>
-      <span v-if="canDeleteTopics">管理</span>
+      <span>{{ uiText("主题") }}</span>
+      <span>{{ uiText("回复") }}</span>
+      <span>{{ uiText("浏览") }}</span>
+      <span>{{ currentLocale === "en-US" ? uiText("主题活动") : uiText("活动") }}</span>
+      <span v-if="canDeleteTopics">{{ uiText("管理") }}</span>
     </div>
 
-    <div v-if="loading" class="feed-skeleton" role="status" aria-label="正在加载主题">
+    <div v-if="loading" class="feed-skeleton" role="status" :aria-label="uiText('正在加载主题')">
       <div v-for="item in 4" :key="item" class="skeleton-row" aria-hidden="true">
         <span class="skeleton-avatar"></span>
         <span class="skeleton-copy">
@@ -254,14 +255,14 @@ onUnmounted(() => observer?.disconnect());
         <span class="skeleton-activity"></span>
       </div>
     </div>
-    <p v-else-if="error" class="panel-state panel-state--error" role="alert">暂时无法加载主题，请稍后刷新。</p>
+    <p v-else-if="error" class="panel-state panel-state--error" role="alert">{{ uiText("暂时无法加载主题，请稍后刷新。") }}</p>
     <div v-else-if="!topics.length" class="feed-empty">
-      <strong>{{ emptyTitle }}</strong>
-      <p>{{ emptyDescription }}</p>
+      <strong>{{ uiText(emptyTitle) }}</strong>
+      <p>{{ uiText(emptyDescription) }}</p>
       <div class="feed-empty__actions">
-        <button v-if="hasActiveFilters" type="button" @click="emit('clearFilters')">清空筛选</button>
-        <RouterLink v-if="canPublishTopic" :to="{ name: 'new-topic' }">发布主题</RouterLink>
-        <RouterLink :to="{ name: 'board-directory' }">浏览版块</RouterLink>
+        <button v-if="hasActiveFilters" type="button" @click="emit('clearFilters')">{{ uiText("清空筛选") }}</button>
+        <RouterLink v-if="canPublishTopic" :to="{ name: 'new-topic' }">{{ uiText("发布主题") }}</RouterLink>
+        <RouterLink :to="{ name: 'board-directory' }">{{ uiText("浏览版块") }}</RouterLink>
       </div>
     </div>
     <template v-else>
@@ -276,16 +277,16 @@ onUnmounted(() => observer?.disconnect());
 
       <div class="feed-load-container">
         <div v-if="topics.length > displayLimit" class="load-more-action">
-          <button class="btn-load-more" @click="handleLoadMore">显示全部主题 <span class="arrow">→</span></button>
+          <button class="btn-load-more" @click="handleLoadMore">{{ uiText("显示全部主题") }} <span class="arrow">→</span></button>
         </div>
         <div v-if="infiniteScrollActive" ref="scrollTriggerRef" class="scroll-trigger">
           <div v-if="displayLimit < topics.length" class="loading-spinner">
             <span class="dot"></span>
             <span class="dot"></span>
             <span class="dot"></span>
-            正在加载更多...
+            {{ uiText("正在加载更多...") }}
           </div>
-          <div v-else class="all-loaded">已显示全部主题</div>
+          <div v-else class="all-loaded">{{ uiText("已显示全部主题") }}</div>
         </div>
       </div>
     </template>

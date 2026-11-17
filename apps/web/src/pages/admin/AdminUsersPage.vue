@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed } from "vue";
 
 import AdminAccessState from "@/features/admin/components/AdminAccessState.vue";
@@ -15,7 +16,7 @@ const canAccessAdmin = computed(() => isAdmin(currentUserQuery.data.value));
   <AdminAccessState v-if="currentUserQuery.isLoading.value" kind="loading" />
   <AdminAccessState v-else-if="currentUserQuery.isError.value" kind="error">
     <template #actions>
-      <UiButton tone="subtle" @click="currentUserQuery.refetch()">重新检查</UiButton>
+      <UiButton tone="subtle" @click="currentUserQuery.refetch()">{{ uiText("重新检查") }}</UiButton>
     </template>
   </AdminAccessState>
   <AdminAccessState

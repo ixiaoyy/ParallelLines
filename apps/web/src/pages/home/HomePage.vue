@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed, defineAsyncComponent, nextTick, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { LocationQueryRaw } from "vue-router";
@@ -295,7 +296,7 @@ function omitEmptyQuery(query: Record<string, unknown>): LocationQueryRaw {
         :tags-error="tagsQuery.isError.value"
       />
 
-      <main class="main-column" aria-label="平行线首页内容">
+      <main class="main-column" :aria-label="uiText('平行线首页内容')">
         <HomeHero
           v-model:search="heroSearch"
           class="home-hero-slot"

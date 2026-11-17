@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed, ref, watch } from "vue";
 
 import type { PollVM } from "@/entities/topic/model";
@@ -37,15 +38,17 @@ const canSubmit = computed(
   () => !isLocked.value && selectedIds.value.length > 0 && hasChanged.value,
 );
 const pollMeta = computed(() => {
-  const type = props.poll.multipleChoice ? "可多选" : "单选";
+  const type = uiText(props.poll.multipleChoice ? "可多选" : "单选");
   if (props.poll.closed) {
-    return `${type} · 已截止`;
+    return uiText("{type} · 已截止", { type });
   }
   if (hasVoted.value) {
-    return `${type} · 已投票`;
+    return uiText("{type} · 已投票", { type });
   }
 
-  return props.poll.closesAt ? `${type} · ${relativeTime(props.poll.closesAt)}截止` : `${type} · 长期开放`;
+  return props.poll.closesAt
+    ? uiText("{type} · {time}截止", { type, time: relativeTime(props.poll.closesAt) })
+    : uiText("{type} · 长期开放", { type });
 });
 
 function isSelected(optionId: string) {
@@ -92,14 +95,14 @@ function sortedIds(ids: string[]) {
   <UiCard class="poll-panel" aria-labelledby="poll-panel-title">
     <div class="poll-panel__header">
       <div>
-        <span class="panel-kicker">社区投票</span>
+        <span class="panel-kicker">{{ uiText("社区投票") }}</span>
         <h2 id="poll-panel-title">{{ poll.question }}</h2>
       </div>
       <UiBadge :tone="poll.closed ? 'gray' : 'blue'">{{ pollMeta }}</UiBadge>
     </div>
 
     <fieldset class="poll-options" :disabled="isLocked">
-      <legend>选择投票选项</legend>
+      <legend>{{ uiText("选择投票选项") }}</legend>
       <label
         v-for="option in poll.options"
         :key="option.id"
@@ -114,7 +117,7 @@ function sortedIds(ids: string[]) {
         />
         <span class="poll-option__copy">
           <strong>{{ option.label }}</strong>
-          <small>{{ option.voteCount }} 票 · {{ votePercent(option.voteCount) }}%</small>
+          <small>{{ uiText("票数：{count}", { count: option.voteCount }) }} · {{ votePercent(option.voteCount) }}%</small>
         </span>
         <span class="poll-option__bar" aria-hidden="true">
           <i :style="{ width: `${votePercent(option.voteCount)}%` }"></i>
@@ -124,10 +127,10 @@ function sortedIds(ids: string[]) {
 
     <div class="poll-panel__footer">
       <span>
-        {{ poll.totalVotes }} 人参与 · {{ hasVoted ? "已投票，无法修改" : `已选 ${selectedIds.length} 项` }}
+        {{ uiText("参与人数：{count}", { count: poll.totalVotes }) }} · {{ hasVoted ? uiText("已投票，无法修改") : uiText("已选 {value0} 项", { value0: selectedIds.length }) }}
       </span>
       <UiButton tone="primary" :disabled="!canSubmit" @click="submitVote">
-        {{ pending ? "提交中…" : poll.closed ? "投票已截止" : hasVoted ? "已投票" : "提交投票" }}
+        {{ pending ? uiText("提交中…") : poll.closed ? uiText("投票已截止") : hasVoted ? uiText("已投票") : uiText("提交投票") }}
       </UiButton>
     </div>
   </UiCard>

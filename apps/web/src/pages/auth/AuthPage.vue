@@ -1,15 +1,14 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed, onBeforeUnmount, ref, watch, type Component } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   AppleFilled,
   CommentOutlined,
-  DownOutlined,
   EditOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
   GithubFilled,
-  GlobalOutlined,
   GoogleOutlined,
   LinkOutlined,
   LockOutlined,
@@ -36,6 +35,7 @@ import { UNIFIED_AUTH_ENABLED } from "@/features/auth/unified/protocol";
 import { retryPrimaryLogin, unifiedAvailability } from "@/features/auth/unified/session";
 import { cssUrl, staticAssetUrl } from "@/shared/assets/staticAssets";
 import UiButton from "@/shared/ui/Button.vue";
+import LanguageSwitcher from "@/shared/ui/LanguageSwitcher.vue";
 import ChatEntryLoading from "./ChatEntryLoading.vue";
 
 type AuthTab = "login" | "register" | "forgot";
@@ -107,6 +107,7 @@ const verificationCode = ref("");
 const devVerificationCode = ref<string | null>(null);
 const formError = ref("");
 const formNotice = ref("");
+const formNoticeProvider = ref("");
 
 const isSubmitting = computed(
   () =>
@@ -517,61 +518,59 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 <template>
   <ChatEntryLoading v-if="enteringChat" />
   <div v-else class="auth-page" :class="[`auth-page--${activeTab}`, { 'auth-page--admin-login': adminLoginOnly }]" :style="authPageStyle">
-    <nav class="auth-topbar" aria-label="认证页导航">
-      <RouterLink class="auth-topbar__brand" :to="authHomeTarget" aria-label="返回首页">
+    <!-- 手机与后台登录原本隐藏顶栏，仍需保留独立语言入口。 -->
+    <LanguageSwitcher class="auth-standalone-language" :class="{ 'auth-standalone-language--admin': adminLoginOnly }" />
+    <nav class="auth-topbar" :aria-label="uiText('认证页导航')">
+      <RouterLink class="auth-topbar__brand" :to="authHomeTarget" :aria-label="uiText('返回首页')">
         <img :src="authMarkUrl" alt="" class="auth-logo-mark" />
         <span>ParallelLines</span>
       </RouterLink>
-      <div v-if="!adminLoginOnly" class="auth-topbar__actions">
-        <button type="button" class="auth-language" aria-label="切换语言">
-          <GlobalOutlined aria-hidden="true" />
-          <span>简体中文</span>
-          <DownOutlined aria-hidden="true" />
-        </button>
-        <RouterLink class="auth-official-link" :to="authHomeTarget">访问官网</RouterLink>
+      <div class="auth-topbar__actions">
+        <LanguageSwitcher />
+        <RouterLink v-if="!adminLoginOnly" class="auth-official-link" :to="authHomeTarget">{{ uiText("访问官网") }}</RouterLink>
       </div>
     </nav>
 
-    <section class="auth-stage" :aria-label="adminLoginOnly ? '平行线后台登录' : 'ParallelLines 登录注册'">
+    <section class="auth-stage" :aria-label="adminLoginOnly ? uiText('平行线后台登录') : uiText('ParallelLines 登录注册')">
       <aside class="auth-brand-panel">
         <div class="auth-brand-panel__lockup">
           <img :src="authMarkUrl" alt="" class="auth-brand-panel__mark" />
           <strong>ParallelLines</strong>
         </div>
-        <h1>每一条平行线<br />都在这里相遇</h1>
+        <h1>{{ uiText("每一条平行线") }}<br />{{ uiText("都在这里相遇") }}</h1>
         <p>ParallelLines, Infinite Possibilities</p>
-        <ul class="auth-feature-list" aria-label="社区特性">
+        <ul class="auth-feature-list" :aria-label="uiText('社区特性')">
           <li>
             <span><EditOutlined aria-hidden="true" /></span>
-            <strong>自由表达</strong>
-            <small>分享观点，记录思考</small>
+            <strong>{{ uiText("自由表达") }}</strong>
+            <small>{{ uiText("分享观点，记录思考") }}</small>
           </li>
           <li>
             <span><CommentOutlined aria-hidden="true" /></span>
-            <strong>深度交流</strong>
-            <small>遇见同好，碰撞思想</small>
+            <strong>{{ uiText("深度交流") }}</strong>
+            <small>{{ uiText("遇见同好，碰撞思想") }}</small>
           </li>
           <li>
             <span><LinkOutlined aria-hidden="true" /></span>
-            <strong>连接世界</strong>
-            <small>跨越边界，探索无限可能</small>
+            <strong>{{ uiText("连接世界") }}</strong>
+            <small>{{ uiText("跨越边界，探索无限可能") }}</small>
           </li>
         </ul>
       </aside>
 
-      <main class="auth-panel" aria-label="账号认证">
-        <p v-if="UNIFIED_AUTH_ENABLED && unifiedAvailability === 'unavailable'" class="auth-error" role="alert">暂时无法登录。<button type="button" @click="retryUnifiedContinuation">重试</button></p>
+      <main class="auth-panel" :aria-label="uiText('账号认证')">
+        <p v-if="UNIFIED_AUTH_ENABLED && unifiedAvailability === 'unavailable'" class="auth-error" role="alert">{{ uiText("暂时无法登录。") }}<button type="button" @click="retryUnifiedContinuation">{{ uiText("重试") }}</button></p>
         <div class="auth-card" :class="{ 'auth-card--dense': activeTab !== 'login' || twoFactorChallengeToken }">
           <div class="auth-card__brand">
             <img :src="authMarkUrl" alt="" class="auth-card__mark" />
             <strong>ParallelLines</strong>
-            <span>{{ adminLoginOnly ? "目录管理与访问统计" : "连接思想，启发未来" }}</span>
+            <span>{{ adminLoginOnly ? uiText("目录管理与访问统计") : uiText("连接思想，启发未来") }}</span>
           </div>
 
           <div v-if="adminLoginOnly && activeTab !== 'forgot'" class="auth-recovery-heading">
-            <strong>后台登录</strong>
+            <strong>{{ uiText("后台登录") }}</strong>
           </div>
-          <div v-else-if="activeTab !== 'forgot'" class="auth-tabs" role="tablist" aria-label="认证方式">
+          <div v-else-if="activeTab !== 'forgot'" class="auth-tabs" role="tablist" :aria-label="uiText('认证方式')">
             <button
               type="button"
               role="tab"
@@ -579,7 +578,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
               :class="{ active: activeTab === 'login' }"
               @click="switchTab('login')"
             >
-              登录
+              {{ uiText("登录") }}
             </button>
             <button
               type="button"
@@ -588,35 +587,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
               :class="{ active: activeTab === 'register' }"
               @click="switchTab('register')"
             >
-              注册
+              {{ uiText("注册") }}
             </button>
           </div>
           <div v-else class="auth-recovery-heading">
-            <strong>找回密码</strong>
-            <button type="button" @click="switchTab('login')">返回登录</button>
+            <strong>{{ uiText("找回密码") }}</strong>
+            <button type="button" @click="switchTab('login')">{{ uiText("返回登录") }}</button>
           </div>
 
           <form
             v-if="activeTab === 'login' && twoFactorChallengeToken"
             class="auth-form"
-            aria-label="二次验证表单"
+            :aria-label="uiText('二次验证表单')"
             @submit.prevent="submitTwoFactorLogin"
           >
-            <p v-if="formNotice" class="auth-success" role="status">{{ formNotice }}</p>
+            <p v-if="formNotice" class="auth-success" role="status">{{ uiText(formNotice, { provider: uiText(formNoticeProvider) }) }}</p>
             <label class="auth-field">
-              <span class="auth-field__label">二次验证码或恢复码</span>
+              <span class="auth-field__label">{{ uiText("二次验证码或恢复码") }}</span>
               <span class="auth-field__control">
                 <SafetyOutlined class="auth-field__icon" aria-hidden="true" />
                 <input
                   v-model="twoFactorCode"
                   :type="showTwoFactorCode ? 'text' : 'password'"
                   autocomplete="one-time-code"
-                  placeholder="验证码或恢复码"
+                  :placeholder="uiText('验证码或恢复码')"
                 />
                 <button
                   type="button"
                   class="auth-input-toggle"
-                  :aria-label="showTwoFactorCode ? '隐藏验证码' : '显示验证码'"
+                  :aria-label="showTwoFactorCode ? uiText('隐藏验证码') : uiText('显示验证码')"
                   @click="showTwoFactorCode = !showTwoFactorCode"
                 >
                   <EyeOutlined v-if="showTwoFactorCode" />
@@ -624,13 +623,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
                 </button>
               </span>
             </label>
-            <p v-if="formError" class="auth-error" role="alert">{{ formError }}</p>
+            <p v-if="formError" class="auth-error" role="alert">{{ uiText(formError) }}</p>
             <div class="auth-actions">
               <UiButton class="auth-submit" type="submit" tone="primary" :disabled="isSubmitting">
-                {{ isSubmitting ? "验证中…" : "完成登录" }}
+                {{ isSubmitting ? uiText("验证中…") : uiText("完成登录") }}
               </UiButton>
               <UiButton type="button" tone="subtle" :disabled="isSubmitting" @click="twoFactorChallengeToken = ''">
-                返回登录
+                {{ uiText("返回登录") }}
               </UiButton>
             </div>
           </form>
@@ -638,31 +637,31 @@ function isRecord(value: unknown): value is Record<string, unknown> {
           <form
             v-else-if="activeTab === 'login'"
             class="auth-form"
-            aria-label="登录表单"
+            :aria-label="uiText('登录表单')"
             @submit.prevent="submitLogin"
           >
-            <p v-if="formNotice" class="auth-success" role="status">{{ formNotice }}</p>
+            <p v-if="formNotice" class="auth-success" role="status">{{ uiText(formNotice, { provider: uiText(formNoticeProvider) }) }}</p>
             <label class="auth-field">
-              <span class="auth-field__label">用户名 / 邮箱 / 手机号</span>
+              <span class="auth-field__label">{{ uiText("用户名 / 邮箱 / 手机号") }}</span>
               <span class="auth-field__control">
                 <UserOutlined class="auth-field__icon" aria-hidden="true" />
-                <input v-model="account" type="text" autocomplete="username" placeholder="用户名 / 邮箱 / 手机号" />
+                <input v-model="account" type="text" autocomplete="username" :placeholder="uiText('用户名 / 邮箱 / 手机号')" />
               </span>
             </label>
             <label class="auth-field">
-              <span class="auth-field__label">密码</span>
+              <span class="auth-field__label">{{ uiText("密码") }}</span>
               <span class="auth-field__control">
                 <LockOutlined class="auth-field__icon" aria-hidden="true" />
                 <input
                   v-model="loginPassword"
                   :type="showLoginPassword ? 'text' : 'password'"
                   autocomplete="current-password"
-                  placeholder="请输入密码"
+                  :placeholder="uiText('请输入密码')"
                 />
                 <button
                   type="button"
                   class="auth-input-toggle"
-                  :aria-label="showLoginPassword ? '隐藏密码' : '显示密码'"
+                  :aria-label="showLoginPassword ? uiText('隐藏密码') : uiText('显示密码')"
                   @click="showLoginPassword = !showLoginPassword"
                 >
                   <EyeOutlined v-if="showLoginPassword" />
@@ -674,48 +673,48 @@ function isRecord(value: unknown): value is Record<string, unknown> {
               <label class="auth-check">
                 <input v-model="rememberMe" type="checkbox" />
                 <span aria-hidden="true"></span>
-                记住我
+                {{ uiText("记住我") }}
               </label>
-              <button type="button" class="auth-link-button" @click="switchTab('forgot')">忘记密码？</button>
+              <button type="button" class="auth-link-button" @click="switchTab('forgot')">{{ uiText("忘记密码？") }}</button>
             </div>
-            <p v-if="formError" class="auth-error" role="alert">{{ formError }}</p>
+            <p v-if="formError" class="auth-error" role="alert">{{ uiText(formError) }}</p>
             <UiButton class="auth-submit" type="submit" tone="primary" :disabled="isSubmitting">
-              {{ isSubmitting ? "登录中…" : "登录" }}
+              {{ isSubmitting ? uiText("登录中…") : uiText("登录") }}
             </UiButton>
             <div v-if="!adminLoginOnly && availableOAuthProviders.length" class="auth-social-block">
-              <div class="auth-divider"><span>其他登录方式</span></div>
-              <div class="auth-social-list" aria-label="其他登录方式">
+              <div class="auth-divider"><span>{{ uiText("其他登录方式") }}</span></div>
+              <div class="auth-social-list" :aria-label="uiText('其他登录方式')">
                 <button
                   v-for="provider in availableOAuthProviders"
                   :key="provider.id"
                   type="button"
                   class="auth-social"
                   :class="`auth-social--${provider.tone}`"
-                  :aria-label="`${provider.label} 登录`"
-                  @click="formNotice = `${provider.label} 登录入口尚未接入回调流程，请先使用账号密码登录。`"
+                  :aria-label="uiText('{p0} 登录', { p0: uiText(provider.label) })"
+                  @click="formNoticeProvider = provider.label; formNotice = '{provider} 登录入口尚未接入回调流程，请先使用账号密码登录。'"
                 >
                   <component :is="provider.icon" aria-hidden="true" />
-                  <span class="auth-social__label">{{ provider.label }}</span>
+                  <span class="auth-social__label">{{ uiText(provider.label) }}</span>
                 </button>
               </div>
             </div>
-            <p v-if="!adminLoginOnly" class="auth-switch-copy">还没有账号？ <button type="button" @click="switchTab('register')">立即注册</button></p>
+            <p v-if="!adminLoginOnly" class="auth-switch-copy">{{ uiText("还没有账号？") }} <button type="button" @click="switchTab('register')">{{ uiText("立即注册") }}</button></p>
           </form>
 
-          <form v-else-if="activeTab === 'forgot'" class="auth-form auth-form--forgot" aria-label="找回密码表单">
-            <p v-if="formNotice" class="auth-success" role="status">{{ formNotice }}</p>
+          <form v-else-if="activeTab === 'forgot'" class="auth-form auth-form--forgot" :aria-label="uiText('找回密码表单')">
+            <p v-if="formNotice" class="auth-success" role="status">{{ uiText(formNotice, { provider: uiText(formNoticeProvider) }) }}</p>
             <label class="auth-field">
-              <span class="auth-field__label">注册邮箱</span>
+              <span class="auth-field__label">{{ uiText("注册邮箱") }}</span>
               <span class="auth-field__control">
                 <MailOutlined class="auth-field__icon" aria-hidden="true" />
-                <input v-model="resetEmail" type="email" autocomplete="email" placeholder="请输入注册邮箱" />
+                <input v-model="resetEmail" type="email" autocomplete="email" :placeholder="uiText('请输入注册邮箱')" />
               </span>
             </label>
             <UiButton class="auth-submit" type="button" tone="primary" :disabled="isSubmitting" @click="requestPasswordReset">
-              {{ requestPasswordResetMutation.isPending.value ? "发送中…" : "发送重置验证码" }}
+              {{ requestPasswordResetMutation.isPending.value ? uiText("发送中…") : uiText("发送重置验证码") }}
             </UiButton>
             <label class="auth-field">
-              <span class="auth-field__label">重置验证码</span>
+              <span class="auth-field__label">{{ uiText("重置验证码") }}</span>
               <span class="auth-field__control">
                 <SafetyOutlined class="auth-field__icon" aria-hidden="true" />
                 <input
@@ -724,24 +723,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
                   autocomplete="one-time-code"
                   inputmode="numeric"
                   maxlength="6"
-                  placeholder="6 位验证码"
+                  :placeholder="uiText('6 位验证码')"
                 />
               </span>
             </label>
             <label class="auth-field">
-              <span class="auth-field__label">新密码</span>
+              <span class="auth-field__label">{{ uiText("新密码") }}</span>
               <span class="auth-field__control">
                 <LockOutlined class="auth-field__icon" aria-hidden="true" />
                 <input
                   v-model="resetNewPassword"
                   :type="showResetPassword ? 'text' : 'password'"
                   autocomplete="new-password"
-                  placeholder="至少 8 位"
+                  :placeholder="uiText('至少 8 位')"
                 />
                 <button
                   type="button"
                   class="auth-input-toggle"
-                  :aria-label="showResetPassword ? '隐藏密码' : '显示密码'"
+                  :aria-label="showResetPassword ? uiText('隐藏密码') : uiText('显示密码')"
                   @click="showResetPassword = !showResetPassword"
                 >
                   <EyeOutlined v-if="showResetPassword" />
@@ -750,19 +749,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
               </span>
             </label>
             <label class="auth-field">
-              <span class="auth-field__label">确认新密码</span>
+              <span class="auth-field__label">{{ uiText("确认新密码") }}</span>
               <span class="auth-field__control">
                 <LockOutlined class="auth-field__icon" aria-hidden="true" />
                 <input
                   v-model="resetConfirmPassword"
                   :type="showResetConfirmPassword ? 'text' : 'password'"
                   autocomplete="new-password"
-                  placeholder="再次输入新密码"
+                  :placeholder="uiText('再次输入新密码')"
                 />
                 <button
                   type="button"
                   class="auth-input-toggle"
-                  :aria-label="showResetConfirmPassword ? '隐藏密码' : '显示密码'"
+                  :aria-label="showResetConfirmPassword ? uiText('隐藏密码') : uiText('显示密码')"
                   @click="showResetConfirmPassword = !showResetConfirmPassword"
                 >
                   <EyeOutlined v-if="showResetConfirmPassword" />
@@ -770,13 +769,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
                 </button>
               </span>
             </label>
-            <p v-if="formError" class="auth-error" role="alert">{{ formError }}</p>
+            <p v-if="formError" class="auth-error" role="alert">{{ uiText(formError) }}</p>
             <div class="auth-actions">
               <UiButton class="auth-submit" type="button" tone="primary" :disabled="isSubmitting" @click="confirmPasswordReset">
-                {{ confirmPasswordResetMutation.isPending.value ? "重置中…" : "确认重置" }}
+                {{ confirmPasswordResetMutation.isPending.value ? uiText("重置中…") : uiText("确认重置") }}
               </UiButton>
               <UiButton type="button" tone="subtle" :disabled="isSubmitting" @click="switchTab('login')">
-                返回登录
+                {{ uiText("返回登录") }}
               </UiButton>
             </div>
           </form>
@@ -784,37 +783,37 @@ function isRecord(value: unknown): value is Record<string, unknown> {
           <form
             v-else-if="!pendingVerificationEmail"
             class="auth-form auth-form--register"
-            aria-label="注册表单"
+            :aria-label="uiText('注册表单')"
             @submit.prevent="submitRegister"
           >
             <label class="auth-field">
-              <span class="auth-field__label">用户名</span>
+              <span class="auth-field__label">{{ uiText("用户名") }}</span>
               <span class="auth-field__control">
                 <UserOutlined class="auth-field__icon" aria-hidden="true" />
-                <input v-model="username" type="text" autocomplete="username" placeholder="用户名" />
+                <input v-model="username" type="text" autocomplete="username" :placeholder="uiText('用户名')" />
               </span>
             </label>
             <label class="auth-field">
-              <span class="auth-field__label">邮箱</span>
+              <span class="auth-field__label">{{ uiText("邮箱") }}</span>
               <span class="auth-field__control">
                 <MailOutlined class="auth-field__icon" aria-hidden="true" />
-                <input v-model="email" type="email" autocomplete="email" placeholder="邮箱" />
+                <input v-model="email" type="email" autocomplete="email" :placeholder="uiText('邮箱')" />
               </span>
             </label>
             <label class="auth-field">
-              <span class="auth-field__label">密码</span>
+              <span class="auth-field__label">{{ uiText("密码") }}</span>
               <span class="auth-field__control">
                 <LockOutlined class="auth-field__icon" aria-hidden="true" />
                 <input
                   v-model="registerPassword"
                   :type="showRegisterPassword ? 'text' : 'password'"
                   autocomplete="new-password"
-                  placeholder="至少 8 位密码"
+                  :placeholder="uiText('至少 8 位密码')"
                 />
                 <button
                   type="button"
                   class="auth-input-toggle"
-                  :aria-label="showRegisterPassword ? '隐藏密码' : '显示密码'"
+                  :aria-label="showRegisterPassword ? uiText('隐藏密码') : uiText('显示密码')"
                   @click="showRegisterPassword = !showRegisterPassword"
                 >
                   <EyeOutlined v-if="showRegisterPassword" />
@@ -823,19 +822,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
               </span>
             </label>
             <label class="auth-field">
-              <span class="auth-field__label">确认密码</span>
+              <span class="auth-field__label">{{ uiText("确认密码") }}</span>
               <span class="auth-field__control">
                 <LockOutlined class="auth-field__icon" aria-hidden="true" />
                 <input
                   v-model="registerConfirmPassword"
                   :type="showConfirmPassword ? 'text' : 'password'"
                   autocomplete="new-password"
-                  placeholder="再次输入密码"
+                  :placeholder="uiText('再次输入密码')"
                 />
                 <button
                   type="button"
                   class="auth-input-toggle"
-                  :aria-label="showConfirmPassword ? '隐藏密码' : '显示密码'"
+                  :aria-label="showConfirmPassword ? uiText('隐藏密码') : uiText('显示密码')"
                   @click="showConfirmPassword = !showConfirmPassword"
                 >
                   <EyeOutlined v-if="showConfirmPassword" />
@@ -843,17 +842,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
                 </button>
               </span>
             </label>
-            <p v-if="formError" class="auth-error" role="alert">{{ formError }}</p>
+            <p v-if="formError" class="auth-error" role="alert">{{ uiText(formError) }}</p>
             <UiButton class="auth-submit" type="submit" tone="primary" :disabled="isSubmitting">
-              {{ isSubmitting ? "注册中…" : "注册" }}
+              {{ isSubmitting ? uiText("注册中…") : uiText("注册") }}
             </UiButton>
-            <p class="auth-switch-copy">已有账号？ <button type="button" @click="switchTab('login')">立即登录</button></p>
+            <p class="auth-switch-copy">{{ uiText("已有账号？") }} <button type="button" @click="switchTab('login')">{{ uiText("立即登录") }}</button></p>
           </form>
 
-          <form v-else class="auth-form" aria-label="验证码激活表单" @submit.prevent="submitVerification">
-            <p v-if="formNotice" class="auth-success" role="status">{{ formNotice }}</p>
+          <form v-else class="auth-form" :aria-label="uiText('验证码激活表单')" @submit.prevent="submitVerification">
+            <p v-if="formNotice" class="auth-success" role="status">{{ uiText(formNotice, { provider: uiText(formNoticeProvider) }) }}</p>
             <label class="auth-field">
-              <span class="auth-field__label">邮箱验证码</span>
+              <span class="auth-field__label">{{ uiText("邮箱验证码") }}</span>
               <span class="auth-field__control">
                 <SafetyOutlined class="auth-field__icon" aria-hidden="true" />
                 <input
@@ -862,36 +861,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
                   autocomplete="one-time-code"
                   inputmode="numeric"
                   maxlength="6"
-                  placeholder="6 位验证码"
+                  :placeholder="uiText('6 位验证码')"
                 />
               </span>
             </label>
             <p v-if="shouldUseDevVerificationCode && devVerificationCode" class="auth-helper">
-              本地开发验证码：<strong>{{ devVerificationCode }}</strong>
+              {{ uiText("本地开发验证码：") }}<strong>{{ devVerificationCode }}</strong>
             </p>
-            <p v-if="formError" class="auth-error" role="alert">{{ formError }}</p>
+            <p v-if="formError" class="auth-error" role="alert">{{ uiText(formError) }}</p>
             <div class="auth-actions">
               <UiButton class="auth-submit" type="submit" tone="primary" :disabled="isSubmitting">
-                {{ isVerifying ? "激活中…" : "激活账号" }}
+                {{ isVerifying ? uiText("激活中…") : uiText("激活账号") }}
               </UiButton>
               <UiButton type="button" tone="subtle" :disabled="isSubmitting" @click="resendCode">
-                {{ isResending ? "发送中…" : "重新发送验证码" }}
+                {{ isResending ? uiText("发送中…") : uiText("重新发送验证码") }}
               </UiButton>
             </div>
             <button type="button" class="auth-link-button auth-link-button--center" @click="resetPendingVerification">
-              重新填写注册信息
+              {{ uiText("重新填写注册信息") }}
             </button>
           </form>
         </div>
       </main>
     </section>
 
-    <footer v-if="!adminLoginOnly" class="auth-footer" aria-label="认证页页脚">
+    <footer v-if="!adminLoginOnly" class="auth-footer" :aria-label="uiText('认证页页脚')">
       <span>© 2024 ParallelLines. All rights reserved.</span>
-      <RouterLink to="/forum">用户协议</RouterLink>
-      <RouterLink to="/forum">隐私政策</RouterLink>
-      <RouterLink to="/boards">社区规范</RouterLink>
-      <RouterLink to="/forum">帮助中心</RouterLink>
+      <RouterLink to="/forum">{{ uiText("用户协议") }}</RouterLink>
+      <RouterLink to="/forum">{{ uiText("隐私政策") }}</RouterLink>
+      <RouterLink to="/boards">{{ uiText("社区规范") }}</RouterLink>
+      <RouterLink to="/forum">{{ uiText("帮助中心") }}</RouterLink>
     </footer>
   </div>
 </template>

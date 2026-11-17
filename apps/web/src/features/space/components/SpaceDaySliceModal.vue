@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed } from "vue";
 
 import {
@@ -38,30 +39,30 @@ const dayTotals = computed(() => {
 </script>
 
 <template>
-  <div class="slice-modal-backdrop" role="dialog" aria-modal="true" aria-label="一日生活切片" @click.self="emit('close')">
+  <div class="slice-modal-backdrop" role="dialog" aria-modal="true" :aria-label="uiText('一日生活切片')" @click.self="emit('close')">
     <div class="slice-modal-card">
       <header class="slice-modal-head">
         <div>
-          <span class="slice-kicker">🗓️ 一日生活切片</span>
+          <span class="slice-kicker">{{ uiText('🗓️ 一日生活切片') }}</span>
           <h3>{{ date }}</h3>
         </div>
-        <button type="button" class="slice-close-btn" aria-label="关闭" @click="emit('close')">
+        <button type="button" class="slice-close-btn" :aria-label="uiText('关闭')" @click="emit('close')">
           ×
         </button>
       </header>
 
       <div class="slice-modal-body">
         <section class="slice-section">
-          <h4>📖 当日手账（{{ dayJournals.length }}）</h4>
+          <h4>{{ uiText('📖 当日手账（{count}）', { count: dayJournals.length }) }}</h4>
           <div v-if="dayJournals.length" class="slice-journal-list">
             <article v-for="j in dayJournals" :key="j.id" class="slice-journal-item">
               <div class="slice-journal-meta">
-                <span v-if="j.mood">{{ getMoodMeta(j.mood).emoji }} {{ getMoodMeta(j.mood).label }}</span>
-                <span v-if="j.weather">{{ getWeatherMeta(j.weather).emoji }} {{ getWeatherMeta(j.weather).label }}</span>
+                <span v-if="j.mood">{{ getMoodMeta(j.mood).emoji }} {{ uiText(getMoodMeta(j.mood).label) }}</span>
+                <span v-if="j.weather">{{ getWeatherMeta(j.weather).emoji }} {{ uiText(getWeatherMeta(j.weather).label) }}</span>
                 <span v-if="j.location">📍 {{ j.location }}</span>
               </div>
               <p v-if="j.is_locked" class="slice-locked-note">
-                💌 封存中的时间胶囊（将于 {{ j.unlock_at }} 拆封）
+                {{ uiText('💌 封存中的时间胶囊（将于 {date} 拆封）', { date: j.unlock_at ?? '' }) }}
               </p>
               <template v-else>
                 <strong v-if="j.title">{{ j.title }}</strong>
@@ -69,18 +70,18 @@ const dayTotals = computed(() => {
               </template>
             </article>
           </div>
-          <p v-else class="slice-empty-hint">这一天还没有留下手账记录。</p>
+          <p v-else class="slice-empty-hint">{{ uiText('这一天还没有留下手账记录。') }}</p>
         </section>
 
         <section class="slice-section">
           <div class="slice-section-head">
-            <h4>💰 当日收支（{{ dayLedgers.length }}）</h4>
+            <h4>{{ uiText('💰 当日收支（{count}）', { count: dayLedgers.length }) }}</h4>
             <div v-if="dayLedgers.length" class="slice-day-sums">
               <span v-if="dayTotals.expense" class="is-expense">
-                支 {{ formatCentsToYuan(dayTotals.expense) }}
+                {{ uiText('支') }} {{ formatCentsToYuan(dayTotals.expense) }}
               </span>
               <span v-if="dayTotals.income" class="is-income">
-                收 {{ formatCentsToYuan(dayTotals.income, true) }}
+                {{ uiText('收') }} {{ formatCentsToYuan(dayTotals.income, true) }}
               </span>
             </div>
           </div>
@@ -89,23 +90,23 @@ const dayTotals = computed(() => {
             <li v-for="l in dayLedgers" :key="l.id">
               <span>
                 {{ getLedgerCategoryMeta(l.category).emoji }}
-                {{ l.note || getLedgerCategoryMeta(l.category).label }}
+                {{ l.note || uiText(getLedgerCategoryMeta(l.category).label) }}
               </span>
               <b :class="l.kind === 'income' ? 'is-income' : 'is-expense'">
                 {{ formatCentsToYuan(l.kind === "income" ? l.amount_cents : -l.amount_cents, true) }}
               </b>
             </li>
           </ul>
-          <p v-else class="slice-empty-hint">这一天没有记账流水。</p>
+          <p v-else class="slice-empty-hint">{{ uiText('这一天没有记账流水。') }}</p>
         </section>
       </div>
 
       <footer class="slice-modal-footer">
         <UiButton type="button" tone="subtle" @click="emit('filterByDate', date)">
-          在时间线查看这一天
+          {{ uiText('在时间线查看这一天') }}
         </UiButton>
         <UiButton type="button" tone="primary" @click="emit('writeForDate', date)">
-          ✍️ 补记这一天
+          {{ uiText('✍️ 补记这一天') }}
         </UiButton>
       </footer>
     </div>

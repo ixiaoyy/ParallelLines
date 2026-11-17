@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import {
   BulbOutlined,
   CoffeeOutlined,
@@ -147,8 +148,10 @@ function boardIcon(board: BoardSummary): Component {
 // Builds the accessible label for a board shortcut.
 // Key parameter: `board` is the summary shown in the rail. Return value: spoken label text; side effect: none.
 function boardAccessibleLabel(board: BoardSummary): string {
-  const description = board.description ? `，${board.description}` : "";
-  return `${board.name}${description}，${compactNumber(board.topicCount)} 个主题`;
+  const params = { name: board.name, description: board.description, count: compactNumber(board.topicCount) };
+  return board.description
+    ? uiText("{name}，{description}，{count} 个主题", params)
+    : uiText("{name}，{count} 个主题", params);
 }
 
 // Exposes a tag accent CSS variable for the rail tag pill.
@@ -161,24 +164,24 @@ function tagAccentStyle(tagName: string): Record<string, string> {
 
 <template>
   <div class="forum-left-rail" :class="`forum-left-rail--${variant}`">
-    <aside class="forum-left-rail__panel" aria-label="论坛导航">
-      <RouterLink class="rail-action" :to="{ name: 'new-topic' }" @click="emit('navigate')">新建主题</RouterLink>
+    <aside class="forum-left-rail__panel" :aria-label="uiText('论坛导航')">
+      <RouterLink class="rail-action" :to="{ name: 'new-topic' }" @click="emit('navigate')">{{ uiText("新建主题") }}</RouterLink>
       <RouterLink class="rail-space-link" :to="{ name: 'personal-space' }" @click="emit('navigate')">
         <span class="rail-space-link__icon" aria-hidden="true">📖</span>
         <span class="rail-space-link__copy">
-          <strong>私密圈</strong>
-          <em>手账 · 记账 · 圈友</em>
+          <strong>{{ uiText("私密圈") }}</strong>
+          <em>{{ uiText("手账 · 记账 · 圈友") }}</em>
         </span>
       </RouterLink>
 
       <section class="rail-section" aria-labelledby="rail-boards-title">
-        <h2 id="rail-boards-title">公共版块</h2>
-        <div v-if="boardsLoading" class="rail-skeleton" role="status" aria-label="正在加载版块">
+        <h2 id="rail-boards-title">{{ uiText("公共版块") }}</h2>
+        <div v-if="boardsLoading" class="rail-skeleton" role="status" :aria-label="uiText('正在加载版块')">
           <span v-for="item in 5" :key="item" class="rail-skeleton-line" aria-hidden="true"></span>
         </div>
-        <p v-else-if="boardsError" class="rail-state rail-state--error">版块暂时不可用</p>
+        <p v-else-if="boardsError" class="rail-state rail-state--error">{{ uiText("版块暂时不可用") }}</p>
         <template v-else>
-          <p v-if="!publicBoards.length" class="rail-state">暂无可见版块</p>
+          <p v-if="!publicBoards.length" class="rail-state">{{ uiText("暂无可见版块") }}</p>
           <RouterLink
             v-for="board in publicBoards"
             :key="board.id"
@@ -198,11 +201,11 @@ function tagAccentStyle(tagName: string): Record<string, string> {
       </section>
 
       <section class="rail-section rail-section--tags" aria-labelledby="rail-tags-title">
-        <h2 id="rail-tags-title">标签</h2>
-        <div v-if="tagsLoading" class="rail-skeleton rail-skeleton--tags" role="status" aria-label="正在加载标签">
+        <h2 id="rail-tags-title">{{ uiText("标签") }}</h2>
+        <div v-if="tagsLoading" class="rail-skeleton rail-skeleton--tags" role="status" :aria-label="uiText('正在加载标签')">
           <span v-for="item in 4" :key="item" class="rail-skeleton-line" aria-hidden="true"></span>
         </div>
-        <p v-else-if="tagsError" class="rail-state rail-state--error">标签暂时不可用</p>
+        <p v-else-if="tagsError" class="rail-state rail-state--error">{{ uiText("标签暂时不可用") }}</p>
         <template v-else>
           <div class="rail-tag-list">
             <RouterLink
@@ -218,7 +221,7 @@ function tagAccentStyle(tagName: string): Record<string, string> {
             </RouterLink>
             <RouterLink class="rail-tag rail-tag--all" :to="{ name: 'search' }" @click="emit('navigate')">
               <UnorderedListOutlined aria-hidden="true" />
-              <span>所有标签</span>
+              <span>{{ uiText("所有标签") }}</span>
             </RouterLink>
           </div>
         </template>

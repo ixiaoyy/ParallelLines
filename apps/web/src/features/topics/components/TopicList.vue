@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { currentLocale, uiText } from "@/shared/i18n/locale";
 import { computed } from "vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
@@ -42,11 +43,11 @@ const orderedTopics = computed(() =>
     aria-labelledby="topic-list-heading"
   >
     <header class="topic-list-header">
-      <h2 id="topic-list-heading">主题</h2>
-      <span>状态</span>
-      <span>回复</span>
-      <span>互动</span>
-      <span>活动</span>
+      <h2 id="topic-list-heading">{{ uiText("主题") }}</h2>
+      <span>{{ uiText("状态") }}</span>
+      <span>{{ uiText("回复") }}</span>
+      <span>{{ uiText("互动") }}</span>
+      <span>{{ currentLocale === "en-US" ? uiText("主题活动") : uiText("活动") }}</span>
     </header>
 
     <div v-if="orderedTopics.length" class="topic-list">
@@ -62,12 +63,12 @@ const orderedTopics = computed(() =>
     </div>
 
     <div v-else class="topic-list-empty">
-      <strong>{{ emptyTitle }}</strong>
-      <span>{{ emptyDescription }}</span>
+      <strong>{{ uiText(emptyTitle) }}</strong>
+      <span>{{ uiText(emptyDescription) }}</span>
     </div>
 
     <footer v-if="orderedTopics.length" class="topic-list-footer">
-      <span>已经到底啦 🎉</span>
+      <span>{{ uiText("已经到底啦 🎉") }}</span>
     </footer>
   </section>
 </template>

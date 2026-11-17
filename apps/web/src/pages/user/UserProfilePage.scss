@@ -10,6 +10,11 @@
   display: none;
 }
 
+.profile-language-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .profile-hero {
   overflow: hidden;
   border-color: rgba(var(--primary-rgb), 0.1);
@@ -1165,6 +1170,7 @@
 }
 
 @media (max-width: 720px) {
+  .profile-language-toolbar { display: none; }
   .user-profile-page {
     gap: 0.82rem;
     min-height: 100vh;
@@ -1573,6 +1579,12 @@
   .profile-mobile-publish svg {
     width: 1.34rem;
     height: 1.34rem;
+  }
+
+  // 英文操作名可分行，但两行都应在圆形触控区内居中，不贴住边缘。
+  .profile-mobile-publish > span:last-child {
+    max-width: calc(100% - 1rem);
+    text-align: center;
   }
 
   .profile-mobile-publish :deep(.anticon) {

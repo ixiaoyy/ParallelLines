@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed, ref } from "vue";
 
 import { useCurrentUser } from "@/features/auth/queries";
@@ -72,7 +73,7 @@ function reviewableTitle(reviewable: ReviewableResponse) {
 }
 
 function reviewableExcerpt(reviewable: ReviewableResponse) {
-  return readString(reviewable.data.excerpt) ?? "此审核项暂无公开摘要。";
+  return readString(reviewable.data.excerpt) ?? uiText("此审核项暂无公开摘要。");
 }
 
 function reviewableRoute(reviewable: ReviewableResponse) {
@@ -104,25 +105,25 @@ function readNumber(value: unknown): number | null {
     <section class="reviewables-hero" aria-labelledby="my-reviewables-title">
       <div>
         <span class="panel-kicker">My moderation cases</span>
-        <h1 id="my-reviewables-title">我的内容复核</h1>
-        <p>查看你提交或与你相关的待审内容、处理结果，并在可申请复核时补充说明。</p>
+        <h1 id="my-reviewables-title">{{ uiText("我的内容复核") }}</h1>
+        <p>{{ uiText("查看你提交或与你相关的待审内容、处理结果，并在可申请复核时补充说明。") }}</p>
       </div>
-      <RouterLink class="hero-link" to="/boards">返回社区</RouterLink>
+      <RouterLink class="hero-link" to="/boards">{{ uiText("返回社区") }}</RouterLink>
     </section>
 
     <UiCard v-if="!hasToken" class="reviewables-empty">
-      <strong>需要登录后查看</strong>
-      <span>登录后可以看到与你相关的审核项和复核入口。</span>
+      <strong>{{ uiText("需要登录后查看") }}</strong>
+      <span>{{ uiText("登录后可以看到与你相关的审核项和复核入口。") }}</span>
     </UiCard>
 
     <UiCard v-else-if="reviewablesQuery.isError.value" class="reviewables-empty">
-      <strong>暂时无法加载复核记录</strong>
-      <span>请稍后重试，或通过通知中心重新进入。</span>
+      <strong>{{ uiText("暂时无法加载复核记录") }}</strong>
+      <span>{{ uiText("请稍后重试，或通过通知中心重新进入。") }}</span>
     </UiCard>
 
     <template v-else>
-      <p v-if="appealNotice" class="reviewables-success">{{ appealNotice }}</p>
-      <p v-if="appealError" class="reviewables-error">{{ appealError }}</p>
+      <p v-if="appealNotice" class="reviewables-success">{{ uiText(appealNotice) }}</p>
+      <p v-if="appealError" class="reviewables-error">{{ uiText(appealError) }}</p>
 
       <div v-if="reviewables.length" class="reviewables-list">
         <article v-for="item in reviewables" :key="item.id" class="reviewable-card">
@@ -134,22 +135,22 @@ function readNumber(value: unknown): number | null {
               </span>
               <h2>{{ reviewableTitle(item) }}</h2>
             </div>
-            <RouterLink :to="reviewableRoute(item)">查看上下文</RouterLink>
+            <RouterLink :to="reviewableRoute(item)">{{ uiText("查看上下文") }}</RouterLink>
           </header>
 
           <p>{{ reviewableExcerpt(item) }}</p>
           <dl>
             <div>
-              <dt>当前状态</dt>
+              <dt>{{ uiText("当前状态") }}</dt>
               <dd>{{ reviewableStatusLabel(item.status) }}</dd>
             </div>
             <div>
-              <dt>发起账号</dt>
-              <dd>{{ item.created_by_name || currentUser?.username || "我" }}</dd>
+              <dt>{{ uiText("发起账号") }}</dt>
+              <dd>{{ item.created_by_name || currentUser?.username || uiText("我") }}</dd>
             </div>
             <div>
-              <dt>处理人</dt>
-              <dd>{{ item.resolved_by_name || item.assigned_to_name || "待分配" }}</dd>
+              <dt>{{ uiText("处理人") }}</dt>
+              <dd>{{ item.resolved_by_name || item.assigned_to_name || uiText("待分配") }}</dd>
             </div>
           </dl>
 
@@ -159,19 +160,19 @@ function readNumber(value: unknown): number | null {
             @submit.prevent="submitAppeal(item)"
           >
             <label>
-              <span>复核理由</span>
+              <span>{{ uiText("复核理由") }}</span>
               <textarea
                 v-model="appealReason"
                 rows="4"
-                placeholder="说明为什么你认为处理结果需要复核"
+                :placeholder="uiText('说明为什么你认为处理结果需要复核')"
               />
             </label>
             <div class="appeal-actions">
               <UiButton type="submit" tone="success" :disabled="isAppealPending">
-                提交复核
+                {{ uiText("提交复核") }}
               </UiButton>
               <UiButton tone="ghost" :disabled="isAppealPending" @click="cancelAppeal">
-                取消
+                {{ uiText("取消") }}
               </UiButton>
             </div>
           </form>
@@ -183,16 +184,16 @@ function readNumber(value: unknown): number | null {
               :disabled="isAppealPending"
               @click="openAppeal(item)"
             >
-              申请复核
+              {{ uiText("申请复核") }}
             </UiButton>
-            <span v-else>当前状态暂不可申请复核。</span>
+            <span v-else>{{ uiText("当前状态暂不可申请复核。") }}</span>
           </footer>
         </article>
       </div>
 
       <UiCard v-else class="reviewables-empty">
-        <strong>暂无与你相关的审核项</strong>
-        <span>如果内容进入待审或处理完成，相关记录会显示在这里。</span>
+        <strong>{{ uiText("暂无与你相关的审核项") }}</strong>
+        <span>{{ uiText("如果内容进入待审或处理完成，相关记录会显示在这里。") }}</span>
       </UiCard>
     </template>
   </div>

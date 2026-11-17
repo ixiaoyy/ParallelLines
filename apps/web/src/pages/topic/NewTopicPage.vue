@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { currentLocale, uiText } from "@/shared/i18n/locale";
 import type { ExposeParam, ToolbarNames } from "md-editor-v3";
 import DOMPurify from "dompurify";
 import { computed, defineAsyncComponent, nextTick, onMounted, ref, watch } from "vue";
@@ -95,11 +96,11 @@ const suggestedTags = computed(() => {
 });
 const tagIssue = computed(() => {
   if (missingRequiredTags.value.length) {
-    return `需要：${missingRequiredTags.value.map((tag) => `#${tag}`).join(" ")}`;
+    return uiText("需要：{value0}", { value0: missingRequiredTags.value.map((tag) => `#${tag}`).join(" ") });
   }
 
   if (disallowedTags.value.length) {
-    return `不可用：${disallowedTags.value.map((tag) => `#${tag}`).join(" ")}`;
+    return uiText("不可用：{value0}", { value0: disallowedTags.value.map((tag) => `#${tag}`).join(" ") });
   }
 
   return "";
@@ -249,7 +250,7 @@ async function handleEditorImageUpload(files: File[], callback: UploadImageCallb
     return;
   }
 
-  uploadStatusMessage.value = `正在上传 ${uploadableFiles.length} 个文件…`;
+  uploadStatusMessage.value = uiText("正在上传 {value0} 个文件…", { value0: uploadableFiles.length });
 
   try {
     const images: string[] = [];
@@ -351,11 +352,11 @@ function validationMessage(): string {
   }
 
   if (missingRequiredTags.value.length) {
-    return `请补齐标签：${missingRequiredTags.value.map((tag) => `#${tag}`).join(" ")}`;
+    return uiText("请补齐标签：{value0}", { value0: missingRequiredTags.value.map((tag) => `#${tag}`).join(" ") });
   }
 
   if (disallowedTags.value.length) {
-    return `这些标签不可用：${disallowedTags.value.map((tag) => `#${tag}`).join(" ")}`;
+    return uiText("这些标签不可用：{value0}", { value0: disallowedTags.value.map((tag) => `#${tag}`).join(" ") });
   }
 
   return "";
@@ -436,14 +437,14 @@ function boardPolicyMessage(error: unknown): string | null {
     const missing = Array.isArray(error.details.missing_tags)
       ? error.details.missing_tags.join("、")
       : "必填标签";
-    return `请补齐标签：${missing}`;
+    return uiText("请补齐标签：{value0}", { value0: missing });
   }
 
   if (error instanceof ApiError && error.code === "tag_not_allowed") {
     const disallowed = Array.isArray(error.details.disallowed_tags)
       ? error.details.disallowed_tags.join("、")
       : "不允许的标签";
-    return `这些标签不可用：${disallowed}`;
+    return uiText("这些标签不可用：{value0}", { value0: disallowed });
   }
 
   if (error instanceof ApiError && error.code === "board_topic_create_restricted") {
@@ -541,34 +542,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 <template>
   <div class="new-topic-page">
-    <form class="topic-composer" aria-label="创建新话题" @submit.prevent="handleSubmit">
+    <form class="topic-composer" :aria-label="uiText('创建新话题')" @submit.prevent="handleSubmit">
       <UiCard class="composer-card">
         <header class="composer-heading">
           <span class="composer-plus" aria-hidden="true">＋</span>
-          <h1>创建新话题</h1>
+          <h1>{{ uiText("创建新话题") }}</h1>
         </header>
 
         <div v-if="showConflictBanner" class="conflict-banner" role="alert">
-          草稿已在其他设备更新，已加载最新版本。
+          {{ uiText("草稿已在其他设备更新，已加载最新版本。") }}
         </div>
 
         <label class="title-field">
-          <span class="sr-only">标题</span>
+          <span class="sr-only">{{ uiText("标题") }}</span>
           <input
             v-model="title"
             maxlength="180"
-            placeholder="标题"
+            :placeholder="uiText('标题')"
             autocomplete="off"
           />
         </label>
 
         <div class="composer-meta-row">
           <label class="select-field">
-            <span class="sr-only">版块</span>
+            <span class="sr-only">{{ uiText("版块") }}</span>
             <select v-model="selectedBoardSlug" :disabled="boardsQuery.isLoading.value || !publishableBoardOptions.length">
-              <option value="" disabled>选择版块</option>
-              <option v-if="boardsQuery.isLoading.value" value="">正在加载版块…</option>
-              <option v-else-if="!publishableBoardOptions.length" value="">暂无可发布版块</option>
+              <option value="" disabled>{{ uiText("选择版块") }}</option>
+              <option v-if="boardsQuery.isLoading.value" value="">{{ uiText("正在加载版块…") }}</option>
+              <option v-else-if="!publishableBoardOptions.length" value="">{{ uiText("暂无可发布版块") }}</option>
               <option
                 v-for="board in publishableBoardOptions"
                 :key="board.id"
@@ -580,12 +581,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
           </label>
 
           <label class="tag-field">
-            <span class="sr-only">标签</span>
-            <input v-model="tags" placeholder="标签，可选" />
+            <span class="sr-only">{{ uiText("标签") }}</span>
+            <input v-model="tags" :placeholder="uiText('标签，可选')" />
           </label>
         </div>
 
-        <div v-if="suggestedTags.length || parsedTags.length || tagIssue" class="tag-strip" aria-label="标签">
+        <div v-if="suggestedTags.length || parsedTags.length || tagIssue" class="tag-strip" :aria-label="uiText('标签')">
           <button
             v-for="tag in suggestedTags"
             :key="tag"
@@ -613,7 +614,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
             v-model="body"
             id="new-topic-editor"
             class="topic-md-editor"
-            language="zh-CN"
+            :language="currentLocale"
             theme="light"
             preview-theme="github"
             code-theme="atom"
@@ -627,7 +628,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
             :no-mermaid="true"
             :no-img-zoom-in="true"
             :show-code-row-number="false"
-            placeholder="正文"
+            :placeholder="uiText('正文')"
             @onUploadImg="handleEditorImageUpload"
           />
           <span class="body-count" :class="{ 'is-over-limit': isBodyTooLong }">{{ body.length }}/20000</span>
@@ -635,16 +636,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
         <div class="composer-upload-row">
           <MarkdownUploadButton compact @insert="insertMarkdownUpload" />
-          <span v-if="uploadStatusMessage" class="editor-upload-status" role="status">{{ uploadStatusMessage }}</span>
+          <span v-if="uploadStatusMessage" class="editor-upload-status" role="status">{{ uiText(uploadStatusMessage) }}</span>
         </div>
 
-        <p v-if="publishError" class="form-error" role="alert">{{ publishError }}</p>
+        <p v-if="publishError" class="form-error" role="alert">{{ uiText(publishError) }}</p>
 
         <footer class="composer-footer">
-          <RouterLink class="discard-link" to="/boards">舍弃</RouterLink>
-          <UiButton type="button" tone="ghost" @click="handleSaveDraft">保存草稿</UiButton>
+          <RouterLink class="discard-link" to="/boards">{{ uiText("舍弃") }}</RouterLink>
+          <UiButton type="button" tone="ghost" @click="handleSaveDraft">{{ uiText("保存草稿") }}</UiButton>
           <UiButton type="submit" tone="primary" :disabled="createTopic.isPending.value || boardsQuery.isLoading.value || !publishableBoardOptions.length || isBodyTooLong">
-            {{ createTopic.isPending.value ? "发布中…" : "发布" }}
+            {{ createTopic.isPending.value ? uiText("发布中…") : uiText("发布") }}
           </UiButton>
         </footer>
       </UiCard>

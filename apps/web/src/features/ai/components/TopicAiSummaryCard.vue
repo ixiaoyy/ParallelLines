@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed } from "vue";
 
 import { useRefreshTopicAiSummary, useTopicAiSummary } from "@/features/ai/queries";
@@ -25,15 +26,15 @@ function refresh() {
     <div class="ai-card-head">
       <div>
         <span>AI Assistant</span>
-        <h2>主题摘要</h2>
+        <h2>{{ uiText("主题摘要") }}</h2>
       </div>
       <UiButton tone="subtle" :disabled="refreshSummary.isPending.value || !hasAccessToken()" @click="refresh">
-        {{ refreshSummary.isPending.value ? "生成中…" : summary ? "刷新摘要" : "生成摘要" }}
+        {{ refreshSummary.isPending.value ? uiText("生成中…") : summary ? uiText("刷新摘要") : uiText("生成摘要") }}
       </UiButton>
     </div>
 
     <p v-if="summaryQuery.isError.value && !summary" class="ai-muted">
-      暂无摘要。登录后可生成本地确定性摘要，输出仅作人工确认参考。
+      {{ uiText("暂无摘要。登录后可生成本地确定性摘要，输出仅作人工确认参考。") }}
     </p>
     <div v-else-if="summary" class="summary-body">
       <p>{{ summary.summary }}</p>
@@ -41,10 +42,10 @@ function refresh() {
         <li v-for="point in summary.key_points" :key="point">{{ point }}</li>
       </ul>
       <small>
-        {{ summary.model_name }} · 成本 {{ summary.cost_units }} · {{ relativeTime(summary.generated_at) }}
+        {{ summary.model_name }} · {{ uiText("成本：{cost}", { cost: summary.cost_units }) }} · {{ relativeTime(summary.generated_at) }}
       </small>
     </div>
-    <p v-else class="ai-muted">点击生成摘要，快速定位长主题关键回复。</p>
+    <p v-else class="ai-muted">{{ uiText("点击生成摘要，快速定位长主题关键回复。") }}</p>
   </UiCard>
 </template>
 

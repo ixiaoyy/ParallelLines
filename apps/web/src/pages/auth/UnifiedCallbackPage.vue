@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
+import LanguageSwitcher from "@/shared/ui/LanguageSwitcher.vue";
 import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -55,8 +57,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <ChatEntryLoading v-if="!error" label="正在登录…" />
-  <main v-else class="unified-auth-error" aria-live="polite"><h1>登录</h1><p role="alert">{{ error }}</p><UiButton @click="beginCircleLogin(returnTo)">重新登录</UiButton><RouterLink to="/">返回圈子</RouterLink></main>
+  <ChatEntryLoading v-if="!error" :label="uiText('正在登录…')" />
+  <main v-else class="unified-auth-error" aria-live="polite"><LanguageSwitcher style="position: fixed; top: 12px; right: 16px; z-index: 40" /><h1>{{ uiText("登录") }}</h1><p role="alert">{{ uiText(error) }}</p><UiButton @click="beginCircleLogin(returnTo)">{{ uiText("重新登录") }}</UiButton><RouterLink to="/">{{ uiText("返回圈子") }}</RouterLink></main>
 </template>
 
 <style scoped>.unified-auth-error { max-width: 640px; margin: 64px auto; padding: 24px; }.unified-auth-error a { margin-left: 20px; }</style>

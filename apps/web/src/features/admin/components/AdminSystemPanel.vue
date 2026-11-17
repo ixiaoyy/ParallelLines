@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { currentLocale, uiText } from "@/shared/i18n/locale";
 import {
   CheckCircleFilled,
   ClockCircleOutlined,
@@ -54,7 +55,7 @@ const lastUpdatedLabel = computed(() => {
   if (!updatedAt) {
     return "尚未更新";
   }
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(currentLocale.value, {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -119,12 +120,12 @@ function serviceStatusClass(status: string): string {
 // Key parameter `seconds` is a non-negative interval. Return value is Chinese duration text; side effect: none.
 function intervalLabel(seconds: number | undefined): string {
   if (!seconds || seconds < 60) {
-    return `${seconds ?? 0} 秒`;
+    return uiText("{count} 秒", { count: seconds ?? 0 });
   }
   if (seconds % 3600 === 0) {
-    return `${seconds / 3600} 小时`;
+    return uiText("{count} 小时", { count: seconds / 3600 });
   }
-  return `${Math.round(seconds / 60)} 分钟`;
+  return uiText("{count} 分钟", { count: Math.round(seconds / 60) });
 }
 
 // Converts audit target identifiers into concise labels without inventing entity metadata.
@@ -137,7 +138,7 @@ function auditTargetLabel(targetType: string, targetId: string): string {
     flag: "举报",
     board: "版块",
   };
-  const label = labels[targetType] ?? targetType;
+  const label = uiText(labels[targetType] ?? targetType);
   return targetId ? `${label} · ${targetId.slice(0, 8)}` : label;
 }
 
@@ -244,9 +245,9 @@ function isLater(candidate: string, current: string): boolean {
   <section class="system-panel" aria-labelledby="admin-system-title">
     <header class="system-panel__header">
       <div>
-        <span class="system-panel__context">基础设施</span>
-        <h1 id="admin-system-title">系统运行</h1>
-        <p>查看核心服务、后台任务、邮件与审计记录。</p>
+        <span class="system-panel__context">{{ uiText("基础设施") }}</span>
+        <h1 id="admin-system-title">{{ uiText("系统运行") }}</h1>
+        <p>{{ uiText("查看核心服务、后台任务、邮件与审计记录。") }}</p>
       </div>
       <button
         type="button"
@@ -255,23 +256,23 @@ function isLater(candidate: string, current: string): boolean {
         @click="refreshSystem"
       >
         <ReloadOutlined :class="{ 'is-spinning': systemQuery.isFetching.value }" aria-hidden="true" />
-        {{ systemQuery.isFetching.value ? "刷新中…" : "刷新状态" }}
+        {{ systemQuery.isFetching.value ? uiText("刷新中…") : uiText("刷新状态") }}
       </button>
     </header>
 
     <div v-if="systemQuery.isLoading.value" class="system-loading" role="status">
-      <span class="sr-only">系统状态加载中…</span>
+      <span class="sr-only">{{ uiText("系统状态加载中…") }}</span>
       <i v-for="index in 9" :key="index" />
     </div>
 
     <section v-else-if="systemQuery.isError.value" class="system-error" role="alert">
       <ExclamationCircleFilled aria-hidden="true" />
       <div>
-        <strong>系统状态暂时无法读取</strong>
-        <p>请检查网络或管理员权限后重新加载。</p>
+        <strong>{{ uiText("系统状态暂时无法读取") }}</strong>
+        <p>{{ uiText("请检查网络或管理员权限后重新加载。") }}</p>
       </div>
       <UiButton tone="subtle" :disabled="systemQuery.isFetching.value" @click="refreshSystem">
-        {{ systemQuery.isFetching.value ? "重试中…" : "重新加载" }}
+        {{ systemQuery.isFetching.value ? uiText("重试中…") : uiText("重新加载") }}
       </UiButton>
     </section>
 
@@ -282,17 +283,17 @@ function isLater(candidate: string, current: string): boolean {
           <CheckCircleFilled v-else aria-hidden="true" />
         </span>
         <div>
-          <strong>{{ issueCount > 0 ? `${issueCount} 项运行状态需要留意` : "核心服务运行正常" }}</strong>
+          <strong>{{ issueCount > 0 ? uiText("{value0} 项运行状态需要留意", { value0: issueCount }) : uiText("核心服务运行正常") }}</strong>
           <p>
-            {{ issueCount > 0 ? "请检查服务状态和失败任务摘要。" : "服务与任务队列均未返回异常状态。" }}
+            {{ issueCount > 0 ? uiText("请检查服务状态和失败任务摘要。") : uiText("服务与任务队列均未返回异常状态。") }}
           </p>
         </div>
-        <time><ClockCircleOutlined aria-hidden="true" />{{ lastUpdatedLabel }} 更新</time>
+        <time><ClockCircleOutlined aria-hidden="true" />{{ uiText("{time} 更新", { time: uiText(lastUpdatedLabel) }) }}</time>
       </div>
 
-      <section class="system-stat-strip" aria-label="站点数据概览">
+      <section class="system-stat-strip" :aria-label="uiText('站点数据概览')">
         <div v-for="stat in statItems" :key="stat.label">
-          <span>{{ stat.label }}</span>
+          <span>{{ uiText(stat.label) }}</span>
           <strong>{{ stat.value }}</strong>
         </div>
       </section>
@@ -300,10 +301,10 @@ function isLater(candidate: string, current: string): boolean {
       <section class="system-section" aria-labelledby="system-services-title">
         <header class="system-section__header">
           <div>
-            <span>实时检测</span>
-            <h2 id="system-services-title">服务状态</h2>
+            <span>{{ uiText("实时检测") }}</span>
+            <h2 id="system-services-title">{{ uiText("服务状态") }}</h2>
           </div>
-          <strong>{{ system.services.length - degradedServices.length }} 正常 · {{ degradedServices.length }} 提醒</strong>
+          <strong>{{ uiText("{ok} 正常 · {issues} 提醒", { ok: system.services.length - degradedServices.length, issues: degradedServices.length }) }}</strong>
         </header>
         <div v-if="system.services.length" class="system-service-list">
           <div v-for="service in system.services" :key="service.name" class="system-service-row">
@@ -311,48 +312,48 @@ function isLater(candidate: string, current: string): boolean {
               <component :is="serviceIcon(service.name)" aria-hidden="true" />
             </span>
             <div>
-              <strong>{{ serviceNameLabel(service.name) }}</strong>
-              <small>{{ service.detail || "服务未返回更多说明" }}</small>
+              <strong>{{ uiText(serviceNameLabel(service.name)) }}</strong>
+              <small>{{ service.detail || uiText("服务未返回更多说明") }}</small>
             </div>
             <span :class="`system-status-pill is-${serviceStatusClass(service.status)}`">
               <CheckCircleFilled v-if="service.status === 'ok'" aria-hidden="true" />
               <ExclamationCircleFilled v-else aria-hidden="true" />
-              {{ serviceStatusLabel(service.status) }}
+              {{ uiText(serviceStatusLabel(service.status)) }}
             </span>
           </div>
         </div>
-        <div v-else class="system-empty">系统接口没有返回服务检测项。</div>
+        <div v-else class="system-empty">{{ uiText("系统接口没有返回服务检测项。") }}</div>
       </section>
 
       <section class="system-section" aria-labelledby="system-queue-title">
         <header class="system-section__header">
           <div>
-            <span>异步任务</span>
-            <h2 id="system-queue-title">任务队列</h2>
+            <span>{{ uiText("异步任务") }}</span>
+            <h2 id="system-queue-title">{{ uiText("任务队列") }}</h2>
           </div>
           <div class="system-queue-counts">
-            <span>等待 <strong>{{ system.queue.queued ?? 0 }}</strong></span>
-            <span>执行中 <strong>{{ system.queue.running ?? 0 }}</strong></span>
-            <span>失败 <strong :class="{ 'is-danger': (system.queue.dead ?? 0) > 0 }">{{ system.queue.dead ?? 0 }}</strong></span>
+            <span>{{ uiText("等待") }} <strong>{{ system.queue.queued ?? 0 }}</strong></span>
+            <span>{{ uiText("执行中") }} <strong>{{ system.queue.running ?? 0 }}</strong></span>
+            <span>{{ uiText("失败") }} <strong :class="{ 'is-danger': (system.queue.dead ?? 0) > 0 }">{{ system.queue.dead ?? 0 }}</strong></span>
           </div>
         </header>
 
         <div class="system-queue-overview">
           <dl>
             <div>
-              <dt>工作进程</dt>
-              <dd><code>{{ system.queue.worker || "未报告" }}</code></dd>
+              <dt>{{ uiText("工作进程") }}</dt>
+              <dd><code>{{ system.queue.worker || uiText("未报告") }}</code></dd>
             </div>
             <div>
-              <dt>轮询间隔</dt>
+              <dt>{{ uiText("轮询间隔") }}</dt>
               <dd>{{ intervalLabel(system.queue.poll_seconds) }}</dd>
             </div>
             <div>
-              <dt>单批数量</dt>
+              <dt>{{ uiText("单批数量") }}</dt>
               <dd>{{ system.queue.batch_size }}</dd>
             </div>
             <div>
-              <dt>失败重试</dt>
+              <dt>{{ uiText("失败重试") }}</dt>
               <dd>{{ intervalLabel(system.queue.retry_delay_seconds) }}</dd>
             </div>
           </dl>
@@ -360,23 +361,23 @@ function isLater(candidate: string, current: string): boolean {
           <div class="system-error-summary">
             <header>
               <FieldTimeOutlined aria-hidden="true" />
-              <strong>失败记录摘要</strong>
-              <span>{{ recentErrorSummaries.length }} 类</span>
+              <strong>{{ uiText("失败记录摘要") }}</strong>
+              <span>{{ uiText("{count} 类", { count: recentErrorSummaries.length }) }}</span>
             </header>
             <ol v-if="recentErrorSummaries.length">
               <li v-for="error in recentErrorSummaries" :key="error.key">
                 <span>
-                  <strong>{{ error.taskLabel }}</strong>
-                  <small>{{ error.message }}</small>
-                  <small>{{ error.action }}</small>
+                  <strong>{{ uiText(error.taskLabel) }}</strong>
+                  <small>{{ uiText(error.message) }}</small>
+                  <small>{{ uiText(error.action) }}</small>
                 </span>
                 <span>
-                  <em>{{ error.count }} 次</em>
+                  <em>{{ uiText("{count} 次", { count: error.count }) }}</em>
                   <time v-if="error.lastOccurredAt">{{ relativeTime(error.lastOccurredAt) }}</time>
                 </span>
               </li>
             </ol>
-            <div v-else class="system-empty is-compact">没有近期失败记录。</div>
+            <div v-else class="system-empty is-compact">{{ uiText("没有近期失败记录。") }}</div>
           </div>
         </div>
       </section>
@@ -385,10 +386,10 @@ function isLater(candidate: string, current: string): boolean {
         <section class="system-section" aria-labelledby="system-mail-title">
           <header class="system-section__header">
             <div>
-              <span>最近发送</span>
-              <h2 id="system-mail-title">邮件日志</h2>
+              <span>{{ uiText("最近发送") }}</span>
+              <h2 id="system-mail-title">{{ uiText("邮件日志") }}</h2>
             </div>
-            <strong>{{ system.recent_email_logs.length }} 条</strong>
+            <strong>{{ uiText("{count} 条", { count: system.recent_email_logs.length }) }}</strong>
           </header>
           <ol v-if="system.recent_email_logs.length" class="system-log-list">
             <li v-for="email in system.recent_email_logs" :key="`${email.kind}-${email.to_email}-${email.sent_at}`">
@@ -400,33 +401,33 @@ function isLater(candidate: string, current: string): boolean {
               <time>{{ relativeTime(email.sent_at) }}</time>
             </li>
           </ol>
-          <div v-else class="system-empty">暂无邮件发送记录。</div>
+          <div v-else class="system-empty">{{ uiText("暂无邮件发送记录。") }}</div>
         </section>
 
         <section class="system-section" aria-labelledby="system-audit-title">
           <header class="system-section__header">
             <div>
-              <span>管理员操作</span>
-              <h2 id="system-audit-title">最近审计</h2>
+              <span>{{ uiText("管理员操作") }}</span>
+              <h2 id="system-audit-title">{{ uiText("最近审计") }}</h2>
             </div>
-            <strong>{{ system.recent_audit_logs.length }} 条</strong>
+            <strong>{{ uiText("{count} 条", { count: system.recent_audit_logs.length }) }}</strong>
           </header>
           <ol v-if="system.recent_audit_logs.length" class="system-log-list">
             <li v-for="log in system.recent_audit_logs" :key="log.id">
               <CheckCircleFilled aria-hidden="true" />
               <span>
                 <strong>{{ log.action }}</strong>
-                <small>{{ log.actor_name || "系统" }} · {{ auditTargetLabel(log.target_type, log.target_id) }}</small>
+                <small>{{ log.actor_name || uiText("系统") }} · {{ auditTargetLabel(log.target_type, log.target_id) }}</small>
               </span>
               <time>{{ relativeTime(log.created_at) }}</time>
             </li>
           </ol>
-          <div v-else class="system-empty">暂无审计记录。</div>
+          <div v-else class="system-empty">{{ uiText("暂无审计记录。") }}</div>
         </section>
       </div>
     </template>
 
-    <div v-else class="system-empty">系统接口没有返回可展示的数据。</div>
+    <div v-else class="system-empty">{{ uiText("系统接口没有返回可展示的数据。") }}</div>
   </section>
 </template>
 

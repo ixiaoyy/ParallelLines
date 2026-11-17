@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { reactive, ref, watch } from "vue";
 
 import { SPACE_COVER_PRESETS, type SpaceCoverPreset } from "@/features/space/model";
@@ -73,41 +74,41 @@ function handleSave() {
   <div class="space-settings-drawer">
     <div class="space-settings-drawer__grid">
       <label>
-        <span>空间名称</span>
+        <span>{{ uiText('空间名称') }}</span>
         <input
           v-model="draft.space_title"
           type="text"
           maxlength="80"
-          placeholder="例如：阿星的光年手账本"
+          :placeholder="uiText('例如：阿星的光年手账本')"
         />
       </label>
       <label>
-        <span>空间签名 / 寄语</span>
+        <span>{{ uiText('空间签名 / 寄语') }}</span>
         <input
           v-model="draft.space_subtitle"
           type="text"
           maxlength="200"
-          placeholder="写一句展示在空间顶部的生活寄语…"
+          :placeholder="uiText('写一句展示在空间顶部的生活寄语…')"
         />
       </label>
       <label>
-        <span>每月记账预算（元，仅自己可见）</span>
+        <span>{{ uiText('每月记账预算（元，仅自己可见）') }}</span>
         <input
           v-model="draft.monthlyBudgetYuan"
           type="number"
           min="0"
           max="1000000"
           step="0.01"
-          placeholder="留空则不设置预算"
+          :placeholder="uiText('留空则不设置预算')"
           :aria-invalid="Boolean(budgetError)"
           :aria-describedby="budgetError ? 'space-budget-error' : undefined"
         />
-        <small v-if="budgetError" id="space-budget-error" role="alert">{{ budgetError }}</small>
+        <small v-if="budgetError" id="space-budget-error" role="alert">{{ uiText(budgetError) }}</small>
       </label>
     </div>
 
     <div class="space-settings-drawer__presets">
-      <span>封面视觉主题：</span>
+      <span>{{ uiText('封面视觉主题：') }}</span>
       <div class="preset-pills">
         <button
           v-for="preset in SPACE_COVER_PRESETS"
@@ -116,17 +117,17 @@ function handleSave() {
           :class="{ active: draft.cover_preset === preset.key }"
           @click="draft.cover_preset = preset.key"
         >
-          {{ preset.label }}
+          {{ uiText(preset.label) }}
         </button>
       </div>
     </div>
 
     <div class="space-settings-drawer__footer">
       <UiButton type="button" tone="primary" :loading="saving" @click="handleSave">
-        保存空间设置
+        {{ uiText('保存空间设置') }}
       </UiButton>
       <UiButton type="button" tone="ghost" @click="emit('close')">
-        收起
+        {{ uiText('收起') }}
       </UiButton>
     </div>
   </div>

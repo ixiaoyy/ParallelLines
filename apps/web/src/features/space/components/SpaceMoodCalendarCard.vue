@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { currentLocale, uiText } from "@/shared/i18n/locale";
 import { computed } from "vue";
 
 import {
@@ -23,6 +24,11 @@ const emit = defineEmits<{
   selectDate: [dateStr: string];
   selectMood: [moodKey: string];
 }>();
+
+// 仅切换星期标题，日期键、周日起始和日历排列保持原样。
+const weekdays = computed(() => currentLocale.value === "zh-CN"
+  ? ["日", "一", "二", "三", "四", "五", "六"]
+  : Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(currentLocale.value, { weekday: "short" }).format(new Date(2024, 0, 7 + index))));
 
 const calendarCells = computed(() => {
   const [yearStr, monthStr] = props.selectedMonth.split("-");
@@ -137,13 +143,13 @@ const monthlyMoodBreakdown = computed(() => {
 <template>
   <UiCard class="space-side-card space-calendar-card">
     <header class="calendar-header">
-      <button type="button" aria-label="上个月" @click="emit('shiftMonth', -1)">‹</button>
-      <strong>🗓️ {{ selectedMonth }} 心情日历</strong>
-      <button type="button" aria-label="下个月" @click="emit('shiftMonth', 1)">›</button>
+      <button type="button" :aria-label="uiText('上个月')" @click="emit('shiftMonth', -1)">‹</button>
+      <strong>🗓️ {{ selectedMonth }} {{ uiText('心情日历') }}</strong>
+      <button type="button" :aria-label="uiText('下个月')" @click="emit('shiftMonth', 1)">›</button>
     </header>
 
     <div class="calendar-weekdays" aria-hidden="true">
-      <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+      <span v-for="(day, index) in weekdays" :key="index">{{ day }}</span>
     </div>
 
     <div class="calendar-grid">
@@ -165,22 +171,22 @@ const monthlyMoodBreakdown = computed(() => {
         <template v-if="cell.dayNumber">
           <em v-if="cell.moodEmoji" class="cell-mood">{{ cell.moodEmoji }}</em>
           <span class="cell-num">{{ cell.dayNumber }}</span>
-          <i v-if="cell.hasLedger" class="cell-ledger-dot" title="当日有记账"></i>
+          <i v-if="cell.hasLedger" class="cell-ledger-dot" :title="uiText('当日有记账')"></i>
         </template>
       </button>
     </div>
 
     <div v-if="streakDays > 0 || monthlyMoodBreakdown.length" class="calendar-insights">
       <div v-if="streakDays > 0" class="streak-pill">
-        🔥 已连续记录 <b>{{ streakDays }}</b> 天
+        {{ uiText('🔥 已连续记录 {count} 天', { count: streakDays }) }}
       </div>
       <div v-if="monthlyMoodBreakdown.length" class="mood-bar-wrap">
-        <div class="mood-bar-track" title="本月心情分布">
+        <div class="mood-bar-track" :title="uiText('本月心情分布')">
           <i
             v-for="item in monthlyMoodBreakdown"
             :key="item.key"
             :style="{ width: `${Math.max(8, item.percent)}%`, backgroundColor: item.color }"
-            :title="`${item.emoji} ${item.label} ${item.count} 篇 (${item.percent}%)`"
+            :title="uiText('{emoji} {mood} {count} 篇 ({percent}%)', { emoji: item.emoji, mood: uiText(item.label), count: item.count, percent: item.percent })"
           ></i>
         </div>
         <div class="mood-bar-legend">
@@ -192,14 +198,14 @@ const monthlyMoodBreakdown = computed(() => {
     </div>
 
     <div class="calendar-mood-filter">
-      <span>按心情筛选：</span>
+      <span>{{ uiText('按心情筛选：') }}</span>
       <div class="mood-mini-list">
         <button
           v-for="m in JOURNAL_MOODS"
           :key="m.key"
           type="button"
           :class="{ active: filterMood === m.key }"
-          :title="m.label"
+          :title="uiText(m.label)"
           @click="emit('selectMood', m.key)"
         >
           {{ m.emoji }}

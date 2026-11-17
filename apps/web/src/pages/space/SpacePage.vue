@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { builtinSiteText, currentLocale, uiText } from "@/shared/i18n/locale";
 import { computed, reactive, ref, watch } from "vue";
 import { message, Modal as AModal } from "ant-design-vue";
 
@@ -122,7 +123,7 @@ const visibleCommunityFeed = computed(() => {
 async function handleToggleFollowAuthor(entry: SpaceJournalItem) {
   const username = entry.author?.username;
   if (!username || !currentUser.value) {
-    message.info("请先登录后再关注圈友");
+    message.info(uiText("请先登录后再关注圈友"));
     return;
   }
   const currentlyFollowing = followingUsernames.value.has(username);
@@ -130,9 +131,9 @@ async function handleToggleFollowAuthor(entry: SpaceJournalItem) {
   try {
     await setUserRelationship(username, "follow", !currentlyFollowing);
     void queryClient.invalidateQueries({ queryKey: queryKeys.userRelationshipUsersRoot });
-    message.success(currentlyFollowing ? `已取消关注 @${username}` : `已关注 @${username}`);
+    message.success(currentlyFollowing ? uiText("已取消关注 @{username}", { username }) : uiText("已关注 @{username}", { username }));
   } catch {
-    message.error("关注操作失败，请稍后重试");
+    message.error(uiText("关注操作失败，请稍后重试"));
   } finally {
     followBusyUsername.value = null;
   }
@@ -153,6 +154,14 @@ const localSyncBannerDismissed = ref(false);
 const localDataError = ref("");
 const localSyncError = ref("");
 const syncNeedsReview = ref(false);
+// 同步提示只派生可见文案，保留原有零数量省略和本机同步状态。
+const localSyncPrompt = computed(() => {
+  const { journalCount, ledgerCount } = pendingLocalSummary.value;
+  if (journalCount > 0 && ledgerCount > 0) return uiText("检测到本地保存了 {journals} 篇手账和 {ledgers} 笔账单，是否合并到云端空间？", { journals: journalCount, ledgers: ledgerCount });
+  return journalCount > 0
+    ? uiText("检测到本地保存了 {count} 篇手账，是否合并到云端空间？", { count: journalCount })
+    : uiText("检测到本地保存了 {count} 笔账单，是否合并到云端空间？", { count: ledgerCount });
+});
 
 /** 读取待同步计数；存储不可用时保留错误，不让页面初始化失败或伪装空数据。 */
 function refreshPendingLocalSummary() {
@@ -160,7 +169,7 @@ function refreshPendingLocalSummary() {
     pendingLocalSummary.value = getPendingLocalSpaceSummary();
     localDataError.value = "";
   } catch (error) {
-    localDataError.value = error instanceof Error ? error.message : "无法读取本机记录，请勿清空浏览器数据";
+    localDataError.value = error instanceof Error ? uiText(error.message) : "无法读取本机记录，请勿清空浏览器数据";
   }
 }
 refreshPendingLocalSummary();
@@ -178,12 +187,12 @@ async function handleSyncLocalToCloud() {
     const result = await syncLocalMutation.mutateAsync();
     refreshPendingLocalSummary();
     message.success(
-      `已同步 ${result.journalsSynced} 篇手账和 ${result.ledgersSynced} 笔账单到云端`,
+      uiText("已同步 {journals} 篇手账和 {ledgers} 笔账单到云端", { journals: result.journalsSynced, ledgers: result.ledgersSynced }),
     );
   } catch (error) {
     refreshPendingLocalSummary();
     void queryClient.invalidateQueries({ queryKey: queryKeys.spaceRoot });
-    localSyncError.value = error instanceof Error ? error.message : "同步未完成，请先核对云端记录";
+    localSyncError.value = error instanceof Error ? uiText(error.message) : "同步未完成，请先核对云端记录";
     syncNeedsReview.value = error instanceof SpaceLocalSyncError && error.needsCloudReview;
   }
 }
@@ -224,7 +233,7 @@ function copyJournalDraft() {
 /** 将已拆封记录载入同一编辑器；账单快照不进入表单，也不会随正文编辑被覆盖。 */
 function editJournal(entry: SpaceJournalItem) {
   if (journalSaving.value || entry.is_locked) return;
-  if (editingEntry.value && !window.confirm("切换记录会放弃当前编辑，确定继续吗？")) return;
+  if (editingEntry.value && !window.confirm(uiText("切换记录会放弃当前编辑，确定继续吗？"))) return;
   if (!editingEntry.value) savedNewDraft = copyJournalDraft();
   Object.assign(journalDraft, {
     ...buildJournalDraft(), entry_date: entry.entry_date, title: entry.title, content: entry.content,
@@ -301,16 +310,15 @@ const displaySpaceTitle = computed(() => {
   if (spaceSettings.value?.space_title?.trim()) {
     return spaceSettings.value.space_title.trim();
   }
-  const name =
-    currentUser.value?.display_name?.trim() || currentUser.value?.username || "我";
-  return `${name} 的手账空间`;
+  const name = currentUser.value?.display_name?.trim() || currentUser.value?.username;
+  return name ? uiText("{name} 的手账空间", { name }) : uiText("我 的手账空间");
 });
 
 const displaySpaceSubtitle = computed(() => {
   if (spaceSettings.value?.space_subtitle?.trim()) {
     return spaceSettings.value.space_subtitle.trim();
   }
-  return "把日常闪念、心情贴纸与每一笔生活开支，装进属于自己的安静角落。";
+  return uiText("把日常闪念、心情贴纸与每一笔生活开支，装进属于自己的安静角落。");
 });
 
 const activeCoverPreset = computed<SpaceCoverPreset>(
@@ -435,7 +443,7 @@ async function handleImagePick(event: Event) {
   if (!file) return;
 
   if (journalDraft.media_urls.length >= 9) {
-    message.warning("单篇手账最多添加 9 张配图");
+    message.warning(uiText("单篇手账最多添加 9 张配图"));
     return;
   }
 
@@ -443,10 +451,10 @@ async function handleImagePick(event: Event) {
   try {
     const uploaded = await uploadFile(file, "post_attachment");
     journalDraft.media_urls.push(uploaded.url);
-    message.success("配图已添加");
+    message.success(uiText("配图已添加"));
   } catch {
     // 上传失败不添加刷新后会失效的 blob 地址，也不伪装为已保存的配图。
-    message.error("配图上传失败，未添加图片；文字草稿已保留");
+    message.error(uiText("配图上传失败，未添加图片；文字草稿已保留"));
   } finally {
     uploadingImage.value = false;
   }
@@ -462,7 +470,7 @@ async function submitJournal() {
     journalError.value = "写点内容、添加图片或清单后再保存";
     return;
   }
-  if (journalDraft.visibility === "public" && !window.confirm("这篇手账将公开给所有访客，确定保存并公开吗？")) return;
+  if (journalDraft.visibility === "public" && !window.confirm(uiText("这篇手账将公开给所有访客，确定保存并公开吗？"))) return;
   // 新建沿用仅标题可作正文的入口；编辑保持标题和正文的独立含义。
   const finalTitle = editingEntry.value ? title : content ? title : "";
   const finalContent = content || (!editingEntry.value ? title : "") || (journalDraft.checklist.length ? "打卡清单" : "图片记录");
@@ -502,10 +510,10 @@ async function submitJournal() {
       await createJournalMutation.mutateAsync(payload);
       Object.assign(journalDraft, buildJournalDraft());
     }
-    message.success(saveToCloud ? "已保存到云端" : "已保存到本机浏览器，尚未同步云端");
+    message.success(saveToCloud ? uiText("已保存到云端") : uiText("已保存到本机浏览器，尚未同步云端"));
     activeTab.value = "journals";
   } catch (error) {
-    journalError.value = error instanceof Error ? error.message : "保存失败，草稿已保留，请重试";
+    journalError.value = error instanceof Error ? uiText(error.message) : "保存失败，草稿已保留，请重试";
   } finally {
     journalSaving.value = false;
   }
@@ -521,9 +529,9 @@ async function submitLedgerEntry() {
   if (ledgerSaving.value || pendingLedgerJournal.value) return;
   const parsedYuan = Number.parseFloat(ledgerDraft.amountYuan);
   if (!Number.isFinite(parsedYuan) || parsedYuan <= 0) {
-    message.warning("请输入有效的记账金额"); return;
+    message.warning(uiText("请输入有效的记账金额")); return;
   }
-  if (ledgerDraft.syncToJournal && ledgerDraft.journalVisibility === "public" && !window.confirm("同时生成的手账将公开，包含本笔金额和备注，确定继续吗？")) return;
+  if (ledgerDraft.syncToJournal && ledgerDraft.journalVisibility === "public" && !window.confirm(uiText("同时生成的手账将公开，包含本笔金额和备注，确定继续吗？"))) return;
   const amountCents = Math.round(parsedYuan * 100);
   const catMeta = getLedgerCategoryMeta(ledgerDraft.category);
   const ledgerPayload = {
@@ -543,14 +551,14 @@ async function submitLedgerEntry() {
   try {
     await createLedgerMutation.mutateAsync(ledgerPayload);
   } catch (error) {
-    message.error(error instanceof Error ? error.message : "记账失败，输入已保留");
+    message.error(error instanceof Error ? uiText(error.message) : uiText("记账失败，输入已保留"));
     ledgerSaving.value = false; return;
   }
   ledgerDraft.amountYuan = ""; ledgerDraft.note = "";
   pendingLedgerJournal.value = card;
   ledgerSaving.value = false;
   if (card) await retryLedgerJournal();
-  else message.success(hasAccessToken() ? "已记入云端私人账本" : "已记入本机私人账本");
+  else message.success(hasAccessToken() ? uiText("已记入云端私人账本") : uiText("已记入本机私人账本"));
 }
 
 /** 仅重试已保存账目对应的手账卡片，不再次写入账本。 */
@@ -560,9 +568,9 @@ async function retryLedgerJournal() {
   try {
     await createJournalMutation.mutateAsync(pendingLedgerJournal.value);
     pendingLedgerJournal.value = null; ledgerCardError.value = "";
-    message.success(hasAccessToken() ? "账目和手账卡片已保存到云端" : "账目和手账卡片已保存到本机");
+    message.success(hasAccessToken() ? uiText("账目和手账卡片已保存到云端") : uiText("账目和手账卡片已保存到本机"));
   } catch (error) {
-    ledgerCardError.value = `账目已保存，手账卡片尚未确认保存。${error instanceof Error ? error.message : "请先核对手账列表，再决定是否重试卡片"}`;
+    ledgerCardError.value = uiText("账目已保存，手账卡片尚未确认保存。{reason}", { reason: error instanceof Error ? uiText(error.message) : uiText("请先核对手账列表，再决定是否重试卡片") });
   } finally {
     ledgerSaving.value = false;
   }
@@ -595,9 +603,9 @@ async function saveMonthlyBill() {
       },
     });
     monthlyPreview.value = null; activeTab.value = "journals";
-    message.success(hasAccessToken() ? "月度小结已按所选范围保存到云端" : "月度小结已保存到本机，尚未同步云端");
+    message.success(hasAccessToken() ? uiText("月度小结已按所选范围保存到云端") : uiText("月度小结已保存到本机，尚未同步云端"));
   } catch (error) {
-    monthlyError.value = error instanceof Error ? error.message : "保存失败，预览已保留，请重试";
+    monthlyError.value = error instanceof Error ? uiText(error.message) : "保存失败，预览已保留，请重试";
   } finally { monthlySaving.value = false; }
 }
 
@@ -611,9 +619,9 @@ async function saveSpaceSettings(payload: {
   try {
     await updateSettingsMutation.mutateAsync(payload);
     settingsOpen.value = false;
-    message.success("空间装扮与预算设置已保存");
+    message.success(uiText("空间装扮与预算设置已保存"));
   } catch {
-    message.error("保存失败，请稍后重试");
+    message.error(uiText("保存失败，请稍后重试"));
   }
 }
 
@@ -628,9 +636,9 @@ async function selectQuickStatus(statusText: string) {
       monthly_budget_cents: current?.monthly_budget_cents ?? 0,
       current_status: statusText,
     });
-    message.success(statusText ? `当前状态已设为 ${statusText}` : "已清除当前状态");
+    message.success(statusText ? uiText("当前状态已设为 {status}", { status: statusText }) : uiText("已清除当前状态"));
   } catch {
-    message.error("状态更新失败，请稍后重试");
+    message.error(uiText("状态更新失败，请稍后重试"));
   }
 }
 
@@ -641,21 +649,21 @@ async function handleTogglePin(entry: SpaceJournalItem) {
       payload: { is_pinned: !entry.is_pinned },
     });
   } catch {
-    message.error("更新置顶状态失败");
+    message.error(uiText("更新置顶状态失败"));
   }
 }
 
 async function handleToggleVisibility(entry: SpaceJournalItem) {
   const nextVis = entry.visibility === "private" ? "public" : "private";
-  if (nextVis === "public" && !window.confirm("这篇手账将公开给所有访客，包含其中的正文和账单信息，确定公开吗？")) return;
+  if (nextVis === "public" && !window.confirm(uiText("这篇手账将公开给所有访客，包含其中的正文和账单信息，确定公开吗？"))) return;
   try {
     await updateJournalMutation.mutateAsync({
       id: entry.id,
       payload: { visibility: nextVis },
     });
-    message.success(nextVis === "public" ? "已设为公开到个人主页" : "已设为仅自己可见");
+    message.success(nextVis === "public" ? uiText("已设为公开到个人主页") : uiText("已设为仅自己可见"));
   } catch {
-    message.error("切换可见性失败，请稍后重试");
+    message.error(uiText("切换可见性失败，请稍后重试"));
   }
 }
 
@@ -669,19 +677,19 @@ async function handleToggleChecklist(entry: SpaceJournalItem, itemId: string) {
       payload: { checklist: nextChecklist },
     });
   } catch {
-    message.error("更新打卡状态失败");
+    message.error(uiText("更新打卡状态失败"));
   }
 }
 
 async function handleRemoveJournal(entry: SpaceJournalItem) {
-  if (typeof window !== "undefined" && !window.confirm("确定要删除这篇手账吗？")) {
+  if (typeof window !== "undefined" && !window.confirm(uiText("确定要删除这篇手账吗？"))) {
     return;
   }
   try {
     await deleteJournalMutation.mutateAsync(entry.id);
-    message.success("手账已删除");
+    message.success(uiText("手账已删除"));
   } catch {
-    message.error("删除手账失败，请稍后重试");
+    message.error(uiText("删除手账失败，请稍后重试"));
   }
 }
 
@@ -689,7 +697,7 @@ async function handleLikeJournal(entry: SpaceJournalItem) {
   try {
     await likeJournalMutation.mutateAsync(entry.id);
   } catch {
-    message.error("点赞失败，请稍后重试");
+    message.error(uiText("点赞失败，请稍后重试"));
   }
 }
 
@@ -697,16 +705,16 @@ async function handleReactJournal(entry: SpaceJournalItem, kind: SpaceReactionKi
   try {
     await reactJournalMutation.mutateAsync({ entryId: entry.id, kind });
   } catch {
-    message.error("回应失败，请稍后重试");
+    message.error(uiText("回应失败，请稍后重试"));
   }
 }
 
 async function handleDeleteLedger(item: SpaceLedgerItem) {
   try {
     await deleteLedgerMutation.mutateAsync(item.id);
-    message.success("账单记录已删除");
+    message.success(uiText("账单记录已删除"));
   } catch {
-    message.error("删除账单失败，请稍后重试");
+    message.error(uiText("删除账单失败，请稍后重试"));
   }
 }
 
@@ -722,21 +730,21 @@ function scrollToComposer(mode: ComposerMode) {
     <section
       class="space-hero"
       :class="`space-hero--${activeCoverPreset}`"
-      aria-label="个人空间封面"
+      :aria-label="uiText('个人空间封面')"
     >
       <div class="space-hero__pattern" aria-hidden="true"></div>
       <div class="space-hero__inner">
         <div class="space-hero__identity">
           <div class="space-hero__avatar-wrap">
             <UiAvatar
-              :name="currentUser?.display_name || currentUser?.username || '手账'"
+              :name="currentUser?.display_name || currentUser?.username || uiText('手账')"
               :src="resolveApiAssetUrl(currentUser?.avatar_url)"
               size="lg"
             />
             <button
               type="button"
               class="space-hero__mood-badge"
-              :title="spaceSettings?.current_status ? `此刻：${spaceSettings.current_status}（点击切换）` : '设置此刻状态'"
+              :title="spaceSettings?.current_status ? uiText('此刻：{status}（点击切换）', { status: spaceSettings.current_status }) : uiText('设置此刻状态')"
               @click="statusPickerOpen = !statusPickerOpen"
             >
               {{ spaceSettings?.current_status ? spaceSettings.current_status.split(" ")[0] : "✨" }}
@@ -749,7 +757,7 @@ function scrollToComposer(mode: ComposerMode) {
                 :class="{ active: spaceSettings?.current_status === preset }"
                 @click="selectQuickStatus(preset)"
               >
-                {{ preset }}
+                {{ uiText(preset) }}
               </button>
               <button
                 v-if="spaceSettings?.current_status"
@@ -757,14 +765,14 @@ function scrollToComposer(mode: ComposerMode) {
                 class="is-clear"
                 @click="selectQuickStatus('')"
               >
-                清除状态
+                {{ uiText('清除状态') }}
               </button>
             </div>
           </div>
           <div class="space-hero__copy">
             <div class="space-hero__title-row">
               <h1>{{ displaySpaceTitle }}</h1>
-              <span class="space-hero__pill">圈子 · 私密圈</span>
+              <span class="space-hero__pill">{{ uiText('圈子 · 私密圈') }}</span>
               <button
                 v-if="spaceSettings?.current_status"
                 type="button"
@@ -776,11 +784,12 @@ function scrollToComposer(mode: ComposerMode) {
             </div>
             <p class="space-hero__subtitle">{{ displaySpaceSubtitle }}</p>
             <div class="space-hero__stats">
-              <span><b>{{ recordedDaysCount }}</b> 记录天数</span>
-              <span><b>{{ myJournals.length }}</b> 篇手账</span>
-              <span><b>{{ publicJournalsCount }}</b> 篇公开日签</span>
+              <!-- 只切换英文单数量词，计数和中文原标签保持不变。 -->
+              <span><b>{{ recordedDaysCount }}</b> {{ recordedDaysCount === 1 ? builtinSiteText('space.day_recorded_one', '记录天数', currentLocale) : uiText('记录天数') }}</span>
+              <span><b>{{ myJournals.length }}</b> {{ myJournals.length === 1 ? builtinSiteText('space.journal_entry_one', '篇手账', currentLocale) : uiText('篇手账') }}</span>
+              <span><b>{{ publicJournalsCount }}</b> {{ publicJournalsCount === 1 ? builtinSiteText('space.public_entry_one', '篇公开日签', currentLocale) : uiText('篇公开日签') }}</span>
               <span v-if="ledgerSummary">
-                本月支出 <b>{{ formatCentsToYuan(ledgerSummary.total_expense_cents) }}</b>
+                {{ uiText('本月支出') }} <b>{{ formatCentsToYuan(ledgerSummary.total_expense_cents) }}</b>
               </span>
             </div>
           </div>
@@ -792,21 +801,21 @@ function scrollToComposer(mode: ComposerMode) {
             class="space-hero__btn space-hero__btn--glass"
             @click="settingsOpen = !settingsOpen"
           >
-            🎨 空间装扮 / 预算
+            {{ uiText('🎨 空间装扮 / 预算') }}
           </button>
           <RouterLink
             v-if="currentUser"
             class="space-hero__btn space-hero__btn--glass"
             :to="{ name: 'user-profile', params: { id: currentUser.id } }"
           >
-            👤 公开主页视角
+            {{ uiText('👤 公开主页视角') }}
           </RouterLink>
           <RouterLink
             v-else
             class="space-hero__btn space-hero__btn--primary"
             :to="{ name: 'auth', query: { redirect: '/space' } }"
           >
-            登录同步云端
+            {{ uiText('登录同步云端') }}
           </RouterLink>
         </div>
       </div>
@@ -826,14 +835,14 @@ function scrollToComposer(mode: ComposerMode) {
     </section>
 
     <div v-if="workspaceQuery.isError.value || localDataError" class="space-data-error" role="alert">
-      <strong>记录暂时无法读取</strong>
-      <p>{{ localDataError || (workspaceQuery.error.value instanceof Error ? workspaceQuery.error.value.message : '请重试，不要清空浏览器数据') }}</p>
-      <UiButton tone="subtle" @click="refreshPendingLocalSummary(); workspaceQuery.refetch()">重新读取</UiButton>
+      <strong>{{ uiText('记录暂时无法读取') }}</strong>
+      <p>{{ uiText(localDataError || (workspaceQuery.error.value instanceof Error ? workspaceQuery.error.value.message : '请重试，不要清空浏览器数据')) }}</p>
+      <UiButton tone="subtle" @click="refreshPendingLocalSummary(); workspaceQuery.refetch()">{{ uiText('重新读取') }}</UiButton>
     </div>
 
     <div v-if="localSyncError" class="space-data-error" role="alert">
-      <p>{{ localSyncError }}</p>
-      <UiButton tone="subtle" @click="activeTab = 'journals'; workspaceQuery.refetch()">查看云端记录</UiButton>
+      <p>{{ uiText(localSyncError) }}</p>
+      <UiButton tone="subtle" @click="activeTab = 'journals'; workspaceQuery.refetch()">{{ uiText('查看云端记录') }}</UiButton>
     </div>
     <!-- 登录后本地草稿一键同步提示 -->
     <div
@@ -841,19 +850,7 @@ function scrollToComposer(mode: ComposerMode) {
       class="space-sync-banner"
       role="status"
     >
-      <span>
-        检测到本地保存了
-        <template v-if="pendingLocalSummary.journalCount > 0">
-          {{ pendingLocalSummary.journalCount }} 篇手账
-        </template>
-        <template v-if="pendingLocalSummary.journalCount > 0 && pendingLocalSummary.ledgerCount > 0">
-          和
-        </template>
-        <template v-if="pendingLocalSummary.ledgerCount > 0">
-          {{ pendingLocalSummary.ledgerCount }} 笔账单
-        </template>
-        ，是否合并到云端空间？
-      </span>
+      <span>{{ localSyncPrompt }}</span>
       <div class="space-sync-banner__actions">
         <UiButton
           type="button"
@@ -863,7 +860,7 @@ function scrollToComposer(mode: ComposerMode) {
           :disabled="syncNeedsReview"
           @click="handleSyncLocalToCloud"
         >
-          同步到云端
+          {{ uiText('同步到云端') }}
         </UiButton>
         <UiButton
           type="button"
@@ -871,28 +868,28 @@ function scrollToComposer(mode: ComposerMode) {
           size="sm"
           @click="localSyncBannerDismissed = true"
         >
-          暂不同步
+          {{ uiText('暂不同步') }}
         </UiButton>
       </div>
     </div>
 
     <!-- 云端加载失败提示 -->
     <UiCard v-if="isLoggedIn && workspaceQuery.isError.value" class="space-error-banner">
-      <span>云端个人空间加载失败，请检查网络或重新登录后再试。</span>
+      <span>{{ uiText('云端个人空间加载失败，请检查网络或重新登录后再试。') }}</span>
       <UiButton type="button" tone="subtle" size="sm" @click="workspaceQuery.refetch()">
-        重新加载
+        {{ uiText('重新加载') }}
       </UiButton>
     </UiCard>
 
     <!-- 顶部主视图切换栏（移动端与桌面端自适应） -->
-    <nav class="space-nav-bar" aria-label="个人空间模块切换">
+    <nav class="space-nav-bar" :aria-label="uiText('个人空间模块切换')">
       <div class="space-nav-tabs">
         <button
           type="button"
           :class="{ active: activeTab === 'journals' }"
           @click="activeTab = 'journals'"
         >
-          <span>📖 我的手账</span>
+          <span>{{ uiText('📖 我的手账') }}</span>
           <em>{{ myJournals.length }}</em>
         </button>
         <button
@@ -900,7 +897,7 @@ function scrollToComposer(mode: ComposerMode) {
           :class="{ active: activeTab === 'ledger' }"
           @click="activeTab = 'ledger'"
         >
-          <span>💰 随手记账</span>
+          <span>{{ uiText('💰 随手记账') }}</span>
           <em>{{ ledgerSummary?.entry_count ?? 0 }}</em>
         </button>
         <button
@@ -908,7 +905,7 @@ function scrollToComposer(mode: ComposerMode) {
           :class="{ active: activeTab === 'community' }"
           @click="activeTab = 'community'"
         >
-          <span>🌍 圈友手账墙</span>
+          <span>{{ uiText('🌍 圈友手账墙') }}</span>
         </button>
       </div>
 
@@ -918,39 +915,39 @@ function scrollToComposer(mode: ComposerMode) {
           class="space-mobile-cal-toggle"
           @click="mobileCalendarExpanded = !mobileCalendarExpanded"
         >
-          🗓️ {{ selectedMonth }} 心情日历
-          <span>{{ mobileCalendarExpanded ? "收起" : "展开" }}</span>
+          🗓️ {{ selectedMonth }} {{ uiText('心情日历') }}
+          <span>{{ mobileCalendarExpanded ? uiText('收起') : uiText('展开') }}</span>
         </button>
         <RouterLink class="space-back-forum" :to="{ name: 'forum-home' }">
-          🏛️ 公共论坛 →
+          {{ uiText('🏛️ 公共论坛 →') }}
         </RouterLink>
       </div>
     </nav>
 
     <!-- 主体三栏布局：左侧圈子/论坛导航 + 中央手账/记账区 + 右侧心情日历 -->
     <div class="space-workspace-grid">
-      <aside class="space-left-rail" aria-label="圈子与论坛导航">
+      <aside class="space-left-rail" :aria-label="uiText('圈子与论坛导航')">
         <div class="space-left-rail__panel">
           <div class="space-left-rail__item is-active">
             <span class="rail-item-icon" aria-hidden="true">📖</span>
             <span class="rail-item-copy">
-              <strong>私密圈</strong>
-              <em>手账 · 记账 · 圈友</em>
+              <strong>{{ uiText('私密圈') }}</strong>
+              <em>{{ uiText('手账 · 记账 · 圈友') }}</em>
             </span>
           </div>
 
           <RouterLink class="space-left-rail__item is-forum" :to="{ name: 'forum-home' }">
             <span class="rail-item-icon" aria-hidden="true">🏛️</span>
             <span class="rail-item-copy">
-              <strong>公共论坛</strong>
-              <em>版块讨论 · 精华帖</em>
+              <strong>{{ uiText('公共论坛') }}</strong>
+              <em>{{ uiText('版块讨论 · 精华帖') }}</em>
             </span>
           </RouterLink>
 
-          <nav class="space-left-rail__links" aria-label="社区快捷入口">
-            <RouterLink :to="{ name: 'board-directory' }">📂 全部版块</RouterLink>
-            <RouterLink :to="{ name: 'user-directory' }">👥 社区成员</RouterLink>
-            <RouterLink :to="{ name: 'new-topic' }">✍️ 发布主题</RouterLink>
+          <nav class="space-left-rail__links" :aria-label="uiText('社区快捷入口')">
+            <RouterLink :to="{ name: 'board-directory' }">{{ uiText('📂 全部版块') }}</RouterLink>
+            <RouterLink :to="{ name: 'user-directory' }">{{ uiText('👥 社区成员') }}</RouterLink>
+            <RouterLink :to="{ name: 'new-topic' }">{{ uiText('✍️ 发布主题') }}</RouterLink>
           </nav>
         </div>
       </aside>
@@ -965,95 +962,95 @@ function scrollToComposer(mode: ComposerMode) {
               :class="{ active: composerMode === 'journal' }"
               @click="composerMode = 'journal'"
             >
-              ✍️ 写手账 / 碎碎念
+              {{ uiText('✍️ 写手账 / 碎碎念') }}
             </button>
             <button
               type="button"
               :class="{ active: composerMode === 'ledger' }"
               @click="composerMode = 'ledger'"
             >
-              💸 随手记一笔账
+              {{ uiText('💸 随手记一笔账') }}
             </button>
           </div>
 
           <!-- 常用记录只展示正文、图片、范围与保存，其他能力按需展开。 -->
           <fieldset v-if="composerMode === 'journal'" class="space-composer__journal composer-fieldset" :disabled="journalSaving">
             <div v-if="editingEntry" class="composer-edit-notice" role="status">
-              <strong>正在编辑 {{ editingEntry.entry_date }} 的手账</strong>
-              <button type="button" class="link-btn" @click="cancelJournalEdit">取消编辑</button>
+              <strong>{{ uiText('正在编辑 {date} 的手账', { date: editingEntry.entry_date }) }}</strong>
+              <button type="button" class="link-btn" @click="cancelJournalEdit">{{ uiText('取消编辑') }}</button>
             </div>
             <div class="composer-inputs" :class="`composer-inputs--${journalDraft.card_theme}`">
               <textarea v-model="journalDraft.content" rows="3" class="composer-body-input" maxlength="4000"
-                aria-label="手账正文" placeholder="写下想记录的事…"></textarea>
+                :aria-label="uiText('手账正文')" :placeholder="uiText('写下想记录的事…')"></textarea>
               <div v-if="journalDraft.media_urls.length" class="composer-media-preview">
                 <div v-for="(url, idx) in journalDraft.media_urls" :key="`${url}-${idx}`" class="composer-media-thumb">
-                  <img :src="resolveApiAssetUrl(url)" alt="手账配图" />
-                  <button type="button" aria-label="移除配图" @click="journalDraft.media_urls.splice(idx, 1)">×</button>
+                  <img :src="resolveApiAssetUrl(url)" :alt="uiText('手账配图')" />
+                  <button type="button" :aria-label="uiText('移除配图')" @click="journalDraft.media_urls.splice(idx, 1)">×</button>
                 </div>
               </div>
             </div>
             <div v-show="journalDraft.showTools" id="journal-more-options" class="composer-more-options">
-              <label>标题（选填）<input v-model="journalDraft.title" type="text" class="composer-title-input" maxlength="120" /></label>
+              <label>{{ uiText('标题（选填）') }}<input v-model="journalDraft.title" type="text" class="composer-title-input" maxlength="120" /></label>
               <div class="composer-picker-row">
-                <span class="picker-label">心情（选填）</span>
-                <div class="mood-scroll-strip" aria-label="选择心情贴纸">
-                  <button type="button" class="tool-btn" :aria-pressed="journalDraft.mood === ''" @click="journalDraft.mood = ''">不记录</button>
+                <span class="picker-label">{{ uiText('心情（选填）') }}</span>
+                <div class="mood-scroll-strip" :aria-label="uiText('选择心情贴纸')">
+                  <button type="button" class="tool-btn" :aria-pressed="journalDraft.mood === ''" @click="journalDraft.mood = ''">{{ uiText('不记录') }}</button>
                   <button v-for="m in JOURNAL_MOODS" :key="m.key" type="button" class="mood-pill"
                     :class="{ active: journalDraft.mood === m.key }" :aria-pressed="journalDraft.mood === m.key"
                     :style="{ '--mood-color': m.color, '--mood-bg': m.softBg }" @click="journalDraft.mood = m.key">
-                    <em>{{ m.emoji }}</em><span>{{ m.label }}</span>
+                    <em>{{ m.emoji }}</em><span>{{ uiText(m.label) }}</span>
                   </button>
                 </div>
               </div>
-              <div class="weather-strip" aria-label="选择天气">
-                <button type="button" class="weather-chip" :aria-pressed="journalDraft.weather === ''" @click="journalDraft.weather = ''">不记录天气</button>
+              <div class="weather-strip" :aria-label="uiText('选择天气')">
+                <button type="button" class="weather-chip" :aria-pressed="journalDraft.weather === ''" @click="journalDraft.weather = ''">{{ uiText('不记录天气') }}</button>
                 <button v-for="w in JOURNAL_WEATHERS" :key="w.key" type="button" class="weather-chip"
-                  :class="{ active: journalDraft.weather === w.key }" :aria-pressed="journalDraft.weather === w.key" @click="journalDraft.weather = w.key">{{ w.emoji }} {{ w.label }}</button>
+                  :class="{ active: journalDraft.weather === w.key }" :aria-pressed="journalDraft.weather === w.key" @click="journalDraft.weather = w.key">{{ w.emoji }} {{ uiText(w.label) }}</button>
               </div>
-              <div class="theme-strip" aria-label="选择信纸底纹">
+              <div class="theme-strip" :aria-label="uiText('选择信纸底纹')">
                 <button v-for="t in JOURNAL_CARD_THEMES" :key="t.key" type="button" class="theme-dot"
                   :class="{ active: journalDraft.card_theme === t.key }" :aria-pressed="journalDraft.card_theme === t.key"
-                  :style="{ backgroundColor: t.swatch }" :title="`信纸：${t.label}`" @click="journalDraft.card_theme = t.key"><span>{{ t.label }}</span></button>
+                  :style="{ backgroundColor: t.swatch }" :title="uiText('信纸：{theme}', { theme: uiText(t.label) })" @click="journalDraft.card_theme = t.key"><span>{{ uiText(t.label) }}</span></button>
               </div>
               <div class="composer-tags-bar">
                 <span v-for="tag in journalDraft.tags" :key="tag" class="draft-tag">#{{ tag }}
-                  <button type="button" :aria-label="`移除标签 ${tag}`" @click="removeDraftTag(tag)">×</button>
+                  <button type="button" :aria-label="uiText('移除标签 {tag}', { tag })" @click="removeDraftTag(tag)">×</button>
                 </span>
-                <input v-model="journalDraft.tagInput" type="text" aria-label="添加标签" maxlength="24" placeholder="标签，回车添加" @keydown.enter.prevent="addTagFromInput" @blur="addTagFromInput" />
-                <input v-model="journalDraft.location" type="text" aria-label="地点或场景" maxlength="40" class="composer-location-input" placeholder="地点或场景（选填）" />
-                <input v-model="journalDraft.entry_date" type="date" class="composer-date-input" aria-label="手账日期" />
+                <input v-model="journalDraft.tagInput" type="text" :aria-label="uiText('添加标签')" maxlength="24" :placeholder="uiText('标签，回车添加')" @keydown.enter.prevent="addTagFromInput" @blur="addTagFromInput" />
+                <input v-model="journalDraft.location" type="text" :aria-label="uiText('地点或场景')" maxlength="40" class="composer-location-input" :placeholder="uiText('地点或场景（选填）')" />
+                <input v-model="journalDraft.entry_date" type="date" class="composer-date-input" :aria-label="uiText('手账日期')" />
               </div>
               <div class="composer-checklist-box">
-                <strong class="picker-label">打卡清单</strong>
+                <strong class="picker-label">{{ uiText('打卡清单') }}</strong>
                 <div v-for="item in journalDraft.checklist" :key="item.id" class="composer-check-item">
                   <input v-model="item.done" type="checkbox" :aria-label="item.text" /><span>{{ item.text }}</span>
-                  <button type="button" :aria-label="`移除清单 ${item.text}`" @click="removeDraftChecklistItem(item.id)">×</button>
+                  <button type="button" :aria-label="uiText('移除清单 {item}', { item: item.text })" @click="removeDraftChecklistItem(item.id)">×</button>
                 </div>
                 <div class="composer-check-add">
-                  <input v-model="journalDraft.newCheckItem" type="text" maxlength="120" placeholder="添加打卡事项，回车添加" @keydown.enter.prevent="addDraftChecklistItem" />
-                  <button type="button" @click="addDraftChecklistItem">添加</button>
+                  <input v-model="journalDraft.newCheckItem" type="text" maxlength="120" :placeholder="uiText('添加打卡事项，回车添加')" @keydown.enter.prevent="addDraftChecklistItem" />
+                  <button type="button" @click="addDraftChecklistItem">{{ uiText('添加') }}</button>
                 </div>
               </div>
               <div class="composer-tools">
-                <label class="pin-check"><input v-model="journalDraft.is_pinned" type="checkbox" /><span>置顶手账</span></label>
-                <label class="capsule-date-picker"><span>拆封日（选填）</span><input v-model="journalDraft.unlock_at" type="date" :min="todayDateString()" aria-label="时间胶囊拆封日期" /></label>
+                <label class="pin-check"><input v-model="journalDraft.is_pinned" type="checkbox" /><span>{{ uiText('置顶手账') }}</span></label>
+                <label class="capsule-date-picker"><span>{{ uiText('拆封日（选填）') }}</span><input v-model="journalDraft.unlock_at" type="date" :min="todayDateString()" :aria-label="uiText('时间胶囊拆封日期')" /></label>
               </div>
             </div>
-            <p v-if="journalError" class="space-form-error" role="alert">{{ journalError }}；当前草稿未清空。</p>
+            <p v-if="journalError" class="space-form-error" role="alert">{{ uiText('{error}；当前草稿未清空。', { error: uiText(journalError) }) }}</p>
             <div class="space-composer__footer">
               <div class="composer-tools">
                 <input ref="imageInputRef" type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="sr-only-file" @change="handleImagePick" />
-                <button type="button" class="tool-btn" :disabled="uploadingImage" @click="imageInputRef?.click()">{{ uploadingImage ? '上传中…' : '添加图片' }}</button>
-                <button type="button" class="tool-btn" :aria-expanded="journalDraft.showTools" aria-controls="journal-more-options" @click="journalDraft.showTools = !journalDraft.showTools">{{ journalDraft.showTools ? '收起选项' : '更多选项' }}</button>
+                <button type="button" class="tool-btn" :disabled="uploadingImage" @click="imageInputRef?.click()">{{ uploadingImage ? uiText('上传中…') : uiText('添加图片') }}</button>
+                <button type="button" class="tool-btn" :aria-expanded="journalDraft.showTools" aria-controls="journal-more-options" @click="journalDraft.showTools = !journalDraft.showTools">{{ journalDraft.showTools ? uiText('收起选项') : uiText('更多选项') }}</button>
               </div>
               <div class="composer-submit-group">
-                <select v-model="journalDraft.visibility" class="visibility-select" aria-label="手账可见性">
-                  <option value="private">仅自己可见</option><option value="friends">仅互关好友可见</option><option value="public">公开到圈友墙</option>
+                <select v-model="journalDraft.visibility" class="visibility-select" :aria-label="uiText('手账可见性')">
+                  <option value="private">{{ uiText('仅自己可见') }}</option><option value="friends">{{ uiText('仅互关好友可见') }}</option><option value="public">{{ uiText('公开到圈友墙') }}</option>
                 </select>
-                <UiButton type="button" tone="primary" :disabled="journalSaving || uploadingImage" @click="submitJournal">{{ journalSaving ? '保存中…' : editingEntry ? '保存修改' : journalDraft.visibility === 'public' ? '保存并公开' : '保存手账' }}</UiButton>
+                <UiButton type="button" tone="primary" :disabled="journalSaving || uploadingImage" @click="submitJournal">{{ journalSaving ? uiText('保存中…') : editingEntry ? uiText('保存修改') : journalDraft.visibility === 'public' ? uiText('保存并公开') : uiText('保存手账') }}</UiButton>
               </div>
             </div>
-            <span class="private-hint">{{ isLoggedIn ? '保存到当前账号的云端空间' : '保存到本机浏览器；登录后可选择同步云端' }}</span>
+            <span class="private-hint">{{ isLoggedIn ? uiText('保存到当前账号的云端空间') : uiText('保存到本机浏览器；登录后可选择同步云端') }}</span>
           </fieldset>
 
           <!-- 模式 B：随手记一笔账 -->
@@ -1065,14 +1062,14 @@ function scrollToComposer(mode: ComposerMode) {
                   :class="{ active: ledgerDraft.kind === 'expense' }"
                   @click="ledgerDraft.kind = 'expense'"
                 >
-                  支出
+                  {{ uiText('支出') }}
                 </button>
                 <button
                   type="button"
                   :class="{ active: ledgerDraft.kind === 'income' }"
                   @click="ledgerDraft.kind = 'income'"
                 >
-                  收入
+                  {{ uiText('收入') }}
                 </button>
               </div>
 
@@ -1092,11 +1089,11 @@ function scrollToComposer(mode: ComposerMode) {
                 v-model="ledgerDraft.entry_date"
                 type="date"
                 class="composer-date-input"
-                aria-label="记账日期"
+                :aria-label="uiText('记账日期')"
               />
             </div>
 
-            <div class="ledger-category-grid" role="radiogroup" aria-label="收支分类">
+            <div class="ledger-category-grid" role="radiogroup" :aria-label="uiText('收支分类')">
               <button
                 v-for="cat in LEDGER_CATEGORIES"
                 :key="cat.key"
@@ -1107,7 +1104,7 @@ function scrollToComposer(mode: ComposerMode) {
                 @click="selectLedgerCategory(cat.key)"
               >
                 <em>{{ cat.emoji }}</em>
-                <span>{{ cat.label }}</span>
+                <span>{{ uiText(cat.label) }}</span>
               </button>
             </div>
 
@@ -1116,12 +1113,12 @@ function scrollToComposer(mode: ComposerMode) {
                 v-model="ledgerDraft.note"
                 type="text"
                 maxlength="140"
-                placeholder="一句话备注（例如：买独立游戏 / 桂花拿铁 / 稿费入账）"
+                :placeholder="uiText('一句话备注（例如：买独立游戏 / 桂花拿铁 / 稿费入账）')"
                 @keydown.enter.prevent="submitLedgerEntry"
               />
-              <select v-model="ledgerDraft.payment_method" aria-label="支付方式">
+              <select v-model="ledgerDraft.payment_method" :aria-label="uiText('支付方式')">
                 <option v-for="pm in LEDGER_PAYMENT_METHODS" :key="pm.key" :value="pm.key">
-                  {{ pm.label }}
+                  {{ uiText(pm.label) }}
                 </option>
               </select>
             </div>
@@ -1129,7 +1126,7 @@ function scrollToComposer(mode: ComposerMode) {
             <div class="space-composer__footer">
               <label class="sync-journal-toggle">
                 <input v-model="ledgerDraft.syncToJournal" type="checkbox" />
-                <span>✨ 同时生成一张带账单胶囊的手账日签</span>
+                <span>{{ uiText('✨ 同时生成一张带账单胶囊的手账日签') }}</span>
               </label>
 
               <div class="composer-submit-group">
@@ -1138,30 +1135,30 @@ function scrollToComposer(mode: ComposerMode) {
                   v-model="ledgerDraft.journalVisibility"
                   class="visibility-select"
                 >
-                  <option value="private">🔒 手账仅自己可见</option>
-                  <option value="public">🌐 手账公开到空间</option>
+                  <option value="private">{{ uiText('🔒 手账仅自己可见') }}</option>
+                  <option value="public">{{ uiText('🌐 手账公开到空间') }}</option>
                 </select>
-                <span v-else class="private-hint">🔒 账本明细默认严格仅自己可见</span>
+                <span v-else class="private-hint">{{ uiText('🔒 账本明细默认严格仅自己可见') }}</span>
                 <UiButton
                   type="button"
                   tone="primary"
                   :disabled="ledgerSaving || Boolean(pendingLedgerJournal)"
                   @click="submitLedgerEntry"
                 >
-                  {{ ledgerSaving ? "保存中…" : "记入账本" }}
+                  {{ ledgerSaving ? uiText('保存中…') : uiText('记入账本') }}
                 </UiButton>
               </div>
             </div>
           </fieldset>
           <div v-if="ledgerCardError" class="space-form-error" role="alert">
-            <p>{{ ledgerCardError }}</p>
-            <UiButton tone="subtle" :disabled="ledgerSaving" @click="retryLedgerJournal">只重试手账卡片</UiButton>
-            <UiButton tone="ghost" :disabled="ledgerSaving" @click="pendingLedgerJournal = null; ledgerCardError = ''">仅保留账目</UiButton>
+            <p>{{ uiText(ledgerCardError) }}</p>
+            <UiButton tone="subtle" :disabled="ledgerSaving" @click="retryLedgerJournal">{{ uiText('只重试手账卡片') }}</UiButton>
+            <UiButton tone="ghost" :disabled="ledgerSaving" @click="pendingLedgerJournal = null; ledgerCardError = ''">{{ uiText('仅保留账目') }}</UiButton>
           </div>
         </UiCard>
 
         <!-- Tab 1: 我的手账时间轴 -->
-        <section v-if="activeTab === 'journals'" class="space-feed-section" aria-label="我的手账时间线">
+        <section v-if="activeTab === 'journals'" class="space-feed-section" :aria-label="uiText('我的手账时间线')">
           <!-- 筛选状态条 -->
           <div class="space-filter-bar">
             <div class="space-filter-pills">
@@ -1170,21 +1167,21 @@ function scrollToComposer(mode: ComposerMode) {
                 :class="{ active: filterVisibility === 'all' }"
                 @click="filterVisibility = 'all'"
               >
-                全部 ({{ myJournals.length }})
+                {{ uiText('全部 ({count})', { count: myJournals.length }) }}
               </button>
               <button
                 type="button"
                 :class="{ active: filterVisibility === 'public' }"
                 @click="filterVisibility = 'public'"
               >
-                🌐 公开 ({{ publicJournalsCount }})
+                {{ uiText('🌐 公开 ({count})', { count: publicJournalsCount }) }}
               </button>
               <button
                 type="button"
                 :class="{ active: filterVisibility === 'private' }"
                 @click="filterVisibility = 'private'"
               >
-                🔒 私密 ({{ myJournals.length - publicJournalsCount }})
+                {{ uiText('🔒 私密 ({count})', { count: myJournals.length - publicJournalsCount }) }}
               </button>
             </div>
 
@@ -1192,8 +1189,8 @@ function scrollToComposer(mode: ComposerMode) {
               v-model="filterKeyword"
               type="search"
               class="space-filter-search"
-              placeholder="🔍 搜索手账内容、地点或标签…"
-              aria-label="搜索我的手账"
+              :placeholder="uiText('🔍 搜索手账内容、地点或标签…')"
+              :aria-label="uiText('搜索我的手账')"
             />
 
             <div v-if="hasActiveJournalFilters" class="space-active-filters">
@@ -1202,7 +1199,7 @@ function scrollToComposer(mode: ComposerMode) {
                 <i @click="filterDate = ''">×</i>
               </span>
               <span v-if="filterMood" class="filter-chip">
-                {{ getMoodMeta(filterMood).emoji }} {{ getMoodMeta(filterMood).label }}
+                {{ getMoodMeta(filterMood).emoji }} {{ uiText(getMoodMeta(filterMood).label) }}
                 <i @click="filterMood = ''">×</i>
               </span>
               <span v-if="filterTag" class="filter-chip">
@@ -1210,7 +1207,7 @@ function scrollToComposer(mode: ComposerMode) {
                 <i @click="filterTag = ''">×</i>
               </span>
               <button type="button" class="clear-filter-btn" @click="clearJournalFilters">
-                重置筛选
+                {{ uiText('重置筛选') }}
               </button>
             </div>
           </div>
@@ -1234,12 +1231,12 @@ function scrollToComposer(mode: ComposerMode) {
 
           <UiCard v-else class="space-empty-card">
             <span class="empty-emoji">📒</span>
-            <strong>{{ hasActiveJournalFilters ? '没有匹配的手账记录' : '还没有手账记录' }}</strong>
+            <strong>{{ hasActiveJournalFilters ? uiText('没有匹配的手账记录') : uiText('还没有手账记录') }}</strong>
             <p>
               {{
                 hasActiveJournalFilters
-                  ? "尝试清除日期或标签筛选，查看更多历史手账。"
-                  : "直接写下第一条记录，默认仅自己可见。"
+                  ? uiText('尝试清除日期或标签筛选，查看更多历史手账。')
+                  : uiText('直接写下第一条记录，默认仅自己可见。')
               }}
             </p>
             <UiButton
@@ -1248,7 +1245,7 @@ function scrollToComposer(mode: ComposerMode) {
               tone="subtle"
               @click="clearJournalFilters"
             >
-              清除筛选条件
+              {{ uiText('清除筛选条件') }}
             </UiButton>
           </UiCard>
         </section>
@@ -1267,11 +1264,11 @@ function scrollToComposer(mode: ComposerMode) {
         />
 
         <!-- Tab 3: 圈友手账墙（公共公开流） -->
-        <section v-else class="space-community-section" aria-label="圈友公开手账墙">
+        <section v-else class="space-community-section" :aria-label="uiText('圈友公开手账墙')">
           <div class="community-intro-banner">
             <div>
-              <strong>🌍 圈友公开手账墙</strong>
-              <p>这里汇集了圈友们设为「公开」的日常手账、心情日签与月度小结卡片。点击作者头像或关注按钮，把喜欢的圈友收进自己的关注流。</p>
+              <strong>{{ uiText('🌍 圈友公开手账墙') }}</strong>
+              <p>{{ uiText('这里汇集了圈友们设为「公开」的日常手账、心情日签与月度小结卡片。点击作者头像或关注按钮，把喜欢的圈友收进自己的关注流。') }}</p>
             </div>
             <div class="space-filter-pills community-scope-pills">
               <button
@@ -1279,20 +1276,20 @@ function scrollToComposer(mode: ComposerMode) {
                 :class="{ active: communityScope === 'all' }"
                 @click="communityScope = 'all'"
               >
-                全部公开
+                {{ uiText('全部公开') }}
               </button>
               <button
                 type="button"
                 :class="{ active: communityScope === 'following' }"
                 @click="communityScope = 'following'"
               >
-                我关注的
+                {{ uiText('我关注的') }}
               </button>
             </div>
           </div>
 
           <UiCard v-if="communityFeedQuery.isLoading.value" class="space-empty-card">
-            正在加载圈友手账…
+            {{ uiText('正在加载圈友手账…') }}
           </UiCard>
           <div
             v-else-if="visibleCommunityFeed.length"
@@ -1325,12 +1322,12 @@ function scrollToComposer(mode: ComposerMode) {
           </div>
           <UiCard v-else class="space-empty-card">
             <span class="empty-emoji">✨</span>
-            <strong>{{ communityScope === 'following' ? '还没有关注圈友的公开手账' : '还没有公开的圈友手账' }}</strong>
+            <strong>{{ communityScope === 'following' ? uiText('还没有关注圈友的公开手账') : uiText('还没有公开的圈友手账') }}</strong>
             <p>
               {{
                 communityScope === 'following'
-                  ? '先去「全部公开」里逛逛，关注几位喜欢的圈友吧。'
-                  : '发布第一篇设为「公开」的手账日签，点亮圈友手账墙吧！'
+                  ? uiText('先去「全部公开」里逛逛，关注几位喜欢的圈友吧。')
+                  : uiText('发布第一篇设为「公开」的手账日签，点亮圈友手账墙吧！')
               }}
             </p>
           </UiCard>
@@ -1341,7 +1338,7 @@ function scrollToComposer(mode: ComposerMode) {
       <aside
         class="space-sidebar"
         :class="{ 'is-mobile-open': mobileCalendarExpanded }"
-        aria-label="心情日历与账本速览"
+        :aria-label="uiText('心情日历与账本速览')"
       >
         <!-- 月度心情与打卡日历 (Daylio / Memos 风格) -->
         <SpaceMoodCalendarCard
@@ -1367,21 +1364,21 @@ function scrollToComposer(mode: ComposerMode) {
         <!-- 侧栏月度记账速览卡 -->
         <UiCard v-if="ledgerSummary" class="space-side-card space-mini-ledger">
           <header class="side-card-head">
-            <strong>💰 本月账本速览</strong>
+            <strong>{{ uiText('💰 本月账本速览') }}</strong>
             <button type="button" class="link-btn" @click="activeTab = 'ledger'">
-              详情 →
+              {{ uiText('详情 →') }}
             </button>
           </header>
 
           <div class="mini-ledger-numbers">
             <div>
-              <span>本月已支出</span>
+              <span>{{ uiText('本月已支出') }}</span>
               <strong>{{ formatCentsToYuan(ledgerSummary.total_expense_cents) }}</strong>
             </div>
             <div>
-              <span>预算剩余</span>
+              <span>{{ uiText('预算剩余') }}</span>
               <b :class="{ 'is-over': ledgerSummary.monthly_budget_cents > 0 && remainingBudgetCents < 0 }">
-                {{ ledgerSummary.monthly_budget_cents > 0 ? formatCentsToYuan(remainingBudgetCents) : "未设置" }}
+                {{ ledgerSummary.monthly_budget_cents > 0 ? formatCentsToYuan(remainingBudgetCents) : uiText('未设置') }}
               </b>
             </div>
           </div>
@@ -1401,7 +1398,7 @@ function scrollToComposer(mode: ComposerMode) {
               class="mini-cat-pill"
             >
               {{ getLedgerCategoryMeta(cat.category).emoji }}
-              {{ getLedgerCategoryMeta(cat.category).label }}
+              {{ uiText(getLedgerCategoryMeta(cat.category).label) }}
               <b>{{ cat.ratio_percent }}%</b>
             </span>
           </div>
@@ -1410,7 +1407,7 @@ function scrollToComposer(mode: ComposerMode) {
         <!-- 手账标签云 -->
         <UiCard v-if="tagCloud.length" class="space-side-card">
           <header class="side-card-head">
-            <strong>🏷️ 我的手账标签</strong>
+            <strong>{{ uiText('🏷️ 我的手账标签') }}</strong>
           </header>
           <div class="side-tag-cloud">
             <button
@@ -1431,36 +1428,36 @@ function scrollToComposer(mode: ComposerMode) {
     </div>
 
     <!-- 移动端底部悬浮快记按钮 -->
-    <div class="space-mobile-fab-group" aria-label="移动端快捷记录">
+    <div class="space-mobile-fab-group" :aria-label="uiText('移动端快捷记录')">
       <button
         type="button"
         class="space-mobile-fab space-mobile-fab--primary"
         @click="scrollToComposer('journal')"
       >
-        ✍️ 写手账
+        {{ uiText('✍️ 写手账') }}
       </button>
       <button
         type="button"
         class="space-mobile-fab space-mobile-fab--secondary"
         @click="scrollToComposer('ledger')"
       >
-        💸 记一笔
+        {{ uiText('💸 记一笔') }}
       </button>
     </div>
-    <AModal :open="Boolean(monthlyPreview)" title="预览月度小结" :footer="null" :mask-closable="!monthlySaving" :closable="!monthlySaving" @cancel="!monthlySaving && (monthlyPreview = null)">
+    <AModal :open="Boolean(monthlyPreview)" :title="uiText('预览月度小结')" :footer="null" :mask-closable="!monthlySaving" :closable="!monthlySaving" @cancel="!monthlySaving && (monthlyPreview = null)">
       <div v-if="monthlyPreview" class="monthly-preview">
-        <h3>{{ monthlyPreview.month }} 月度生活账单小结</h3>
-        <p>共记录 {{ monthlyPreview.entry_count }} 笔收支。</p>
+        <h3>{{ uiText('{month} 月度生活账单小结', { month: monthlyPreview.month }) }}</h3>
+        <p>{{ uiText('共记录 {count} 笔收支。', { count: monthlyPreview.entry_count }) }}</p>
         <div v-if="!monthlyHideAmount" class="monthly-preview__amounts">
-          <span>支出 {{ formatCentsToYuan(monthlyPreview.total_expense_cents) }}</span>
-          <span>收入 {{ formatCentsToYuan(monthlyPreview.total_income_cents) }}</span>
+          <span>{{ uiText('支出') }} {{ formatCentsToYuan(monthlyPreview.total_expense_cents) }}</span>
+          <span>{{ uiText('收入') }} {{ formatCentsToYuan(monthlyPreview.total_income_cents) }}</span>
         </div>
-        <p v-for="cat in monthlyPreview.category_breakdown.slice(0, 4)" :key="cat.category">{{ getLedgerCategoryMeta(cat.category).label }} {{ cat.ratio_percent }}%</p>
-        <label><input v-model="monthlyHideAmount" type="checkbox" :disabled="monthlySaving" /> 仅晒比例（隐藏金额）</label>
-        <label>可见范围<select v-model="monthlyVisibility" aria-label="月度小结可见范围" :disabled="monthlySaving"><option value="private">仅自己可见</option><option value="friends">仅互关好友可见</option><option value="public">公开到圈友墙</option></select></label>
-        <p class="monthly-preview__notice">{{ monthlyVisibility === 'public' ? monthlyHideAmount ? '确认后将公开笔数和分类比例，不包含精确金额。' : '确认后将公开精确收支金额，请确认愿意分享。' : '保存为私人记录，不会发布到公开圈友墙。' }}</p>
-        <p v-if="monthlyError" class="space-form-error" role="alert">{{ monthlyError }}</p>
-        <div class="monthly-preview__actions"><UiButton tone="ghost" :disabled="monthlySaving" @click="monthlyPreview = null">取消</UiButton><UiButton :disabled="monthlySaving" @click="saveMonthlyBill">{{ monthlySaving ? '保存中…' : monthlyVisibility === 'public' ? '确认公开发布' : monthlyVisibility === 'friends' ? '确认分享给互关好友' : '保存为私密手账' }}</UiButton></div>
+        <p v-for="cat in monthlyPreview.category_breakdown.slice(0, 4)" :key="cat.category">{{ uiText(getLedgerCategoryMeta(cat.category).label) }} {{ cat.ratio_percent }}%</p>
+        <label><input v-model="monthlyHideAmount" type="checkbox" :disabled="monthlySaving" /> {{ uiText('仅晒比例（隐藏金额）') }}</label>
+        <label>{{ uiText('可见范围') }}<select v-model="monthlyVisibility" :aria-label="uiText('月度小结可见范围')" :disabled="monthlySaving"><option value="private">{{ uiText('仅自己可见') }}</option><option value="friends">{{ uiText('仅互关好友可见') }}</option><option value="public">{{ uiText('公开到圈友墙') }}</option></select></label>
+        <p class="monthly-preview__notice">{{ monthlyVisibility === 'public' ? monthlyHideAmount ? uiText('确认后将公开笔数和分类比例，不包含精确金额。') : uiText('确认后将公开精确收支金额，请确认愿意分享。') : uiText('保存为私人记录，不会发布到公开圈友墙。') }}</p>
+        <p v-if="monthlyError" class="space-form-error" role="alert">{{ uiText(monthlyError) }}</p>
+        <div class="monthly-preview__actions"><UiButton tone="ghost" :disabled="monthlySaving" @click="monthlyPreview = null">{{ uiText('取消') }}</UiButton><UiButton :disabled="monthlySaving" @click="saveMonthlyBill">{{ monthlySaving ? uiText('保存中…') : monthlyVisibility === 'public' ? uiText('确认公开发布') : monthlyVisibility === 'friends' ? uiText('确认分享给互关好友') : uiText('保存为私密手账') }}</UiButton></div>
       </div>
     </AModal>
     <!-- 一日生活切片弹窗 -->

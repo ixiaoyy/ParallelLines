@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { Badge as ABadge } from "ant-design-vue";
 import { BellFilled, CheckCircleOutlined, InboxOutlined } from "@ant-design/icons-vue";
 import { computed, ref } from "vue";
@@ -57,7 +58,7 @@ useOutsidePointerDown(bellRef, closePanel, () => open.value);
       <button
         class="notification-trigger"
         type="button"
-        :aria-label="`通知，${unreadCount} 条未读`"
+        :aria-label="uiText('通知，{value0} 条未读', { value0: unreadCount })"
         :aria-expanded="open"
         aria-haspopup="dialog"
         @click="togglePanel"
@@ -66,11 +67,11 @@ useOutsidePointerDown(bellRef, closePanel, () => open.value);
       </button>
     </ABadge>
 
-    <section v-if="open" class="notification-panel" role="dialog" aria-label="通知中心">
+    <section v-if="open" class="notification-panel" role="dialog" :aria-label="uiText('通知中心')">
       <header class="notification-panel__header">
         <div>
-          <span class="panel-kicker">{{ streamStateLabel }}</span>
-          <h2>通知中心</h2>
+          <span class="panel-kicker">{{ uiText(streamStateLabel) }}</span>
+          <h2>{{ uiText("通知中心") }}</h2>
         </div>
         <button
           type="button"
@@ -79,14 +80,14 @@ useOutsidePointerDown(bellRef, closePanel, () => open.value);
           @click="markAllRead"
         >
           <CheckCircleOutlined />
-          全部已读
+          {{ uiText("全部已读") }}
         </button>
       </header>
 
       <div v-if="notificationsQuery.isError.value" class="notification-empty notification-empty--error" role="alert">
         <InboxOutlined />
-        <strong>通知暂时不可用</strong>
-        <span>请稍后重试。</span>
+        <strong>{{ uiText("通知暂时不可用") }}</strong>
+        <span>{{ uiText("请稍后重试。") }}</span>
       </div>
 
       <div v-else-if="hasNotifications" class="notification-list" aria-live="polite">
@@ -108,18 +109,18 @@ useOutsidePointerDown(bellRef, closePanel, () => open.value);
             v-if="item.unread"
             type="button"
             class="mark-one"
-            :aria-label="`将通知 ${item.title} 标记为已读`"
+            :aria-label="uiText('将通知 {value0} 标记为已读', { value0: item.title })"
             @click="markOneRead(item.id)"
           >
-            已读
+            {{ uiText("已读") }}
           </button>
         </article>
       </div>
 
       <div v-else class="notification-empty">
         <InboxOutlined />
-        <strong>暂时没有新通知</strong>
-        <span>回复、提及、主题更新和成员动态会在这里出现。</span>
+        <strong>{{ uiText("暂时没有新通知") }}</strong>
+        <span>{{ uiText("回复、提及、主题更新和成员动态会在这里出现。") }}</span>
       </div>
     </section>
   </div>

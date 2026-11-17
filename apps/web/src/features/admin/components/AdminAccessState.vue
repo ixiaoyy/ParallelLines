@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import {
   ExclamationCircleOutlined,
   LoadingOutlined,
@@ -59,11 +60,11 @@ const icon = computed(() => {
       <component :is="icon" :spin="kind === 'loading'" />
     </span>
     <div>
-      <h1>{{ copy.title }}</h1>
-      <p>{{ copy.description }}</p>
+      <h1>{{ uiText(copy.title) }}</h1>
+      <p>{{ uiText(copy.description) }}</p>
       <div v-if="actionTo || $slots.actions" class="admin-access-state__actions">
         <RouterLink v-if="actionTo" class="admin-access-state__link" :to="actionTo">
-          {{ actionLabel || "继续" }}
+          {{ uiText(actionLabel || "继续") }}
         </RouterLink>
         <slot name="actions" />
       </div>

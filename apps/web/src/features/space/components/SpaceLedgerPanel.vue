@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { builtinSiteText, currentLocale, uiText } from "@/shared/i18n/locale";
 import { computed, ref } from "vue";
 
 import {
@@ -59,28 +60,28 @@ const monthlyLifestylePortrait = computed(() => {
   const top = summary.category_breakdown[0];
   if (top) {
     const meta = getLedgerCategoryMeta(top.category);
-    parts.push(`${meta.emoji} ${meta.label}占 ${top.ratio_percent}%`);
+    parts.push(uiText("{emoji} {category}占 {percent}%", { emoji: meta.emoji, category: uiText(meta.label), percent: top.ratio_percent }));
   }
   const coffee = summary.category_breakdown.find((c) => c.category === "coffee");
   if (coffee && coffee.count > 0) {
-    parts.push(`☕ 咖啡饮品 ${coffee.count} 笔`);
+    parts.push(uiText("☕ 咖啡饮品 {count} 笔", { count: coffee.count }));
   }
-  parts.push(`共记 ${summary.entry_count} 笔`);
+  parts.push(uiText("共记 {count} 笔", { count: summary.entry_count }));
   if (summary.monthly_budget_cents > 0) {
     const remain = summary.monthly_budget_cents - summary.total_expense_cents;
-    parts.push(remain >= 0 ? "未超出本月预算" : "已超出本月预算");
+    parts.push(uiText(remain >= 0 ? "未超出本月预算" : "已超出本月预算"));
   }
   return parts.join(" · ");
 });
 </script>
 
 <template>
-  <section class="space-ledger-section" aria-label="私人记账本">
+  <section class="space-ledger-section" :aria-label="uiText('私人记账本')">
     <UiCard v-if="ledgerSummary" class="ledger-overview-card">
       <div class="ledger-overview-card__head">
         <div>
-          <span class="kicker">🔒 私人月度账本（仅自己可见）</span>
-          <h2>{{ selectedMonth }} 收支总览</h2>
+          <span class="kicker">{{ uiText('🔒 私人月度账本（仅自己可见）') }}</span>
+          <h2>{{ uiText('{month} 收支总览', { month: selectedMonth }) }}</h2>
           <p v-if="monthlyLifestylePortrait" class="ledger-portrait-line">
             ✨ {{ monthlyLifestylePortrait }}
           </p>
@@ -88,7 +89,7 @@ const monthlyLifestylePortrait = computed(() => {
         <div class="ledger-share-box">
           <label class="hide-amount-check">
             <input v-model="hideExactAmountOnShare" type="checkbox" />
-            <span>仅晒比例（隐藏金额）</span>
+            <span>{{ uiText('仅晒比例（隐藏金额）') }}</span>
           </label>
           <UiButton
             type="button"
@@ -96,28 +97,28 @@ const monthlyLifestylePortrait = computed(() => {
             :disabled="ledgerSummary.entry_count === 0"
             @click="emit('shareMonthlyBill', 'private', hideExactAmountOnShare)"
           >
-            预览月度小结
+            {{ uiText('预览月度小结') }}
           </UiButton>
         </div>
       </div>
 
       <div class="ledger-metrics-grid">
         <div class="metric-item">
-          <span>本月支出</span>
+          <span>{{ uiText('本月支出') }}</span>
           <strong class="is-expense">
             {{ formatCentsToYuan(ledgerSummary.total_expense_cents) }}
           </strong>
         </div>
         <div class="metric-item">
-          <span>本月收入</span>
+          <span>{{ uiText('本月收入') }}</span>
           <strong class="is-income">
             {{ formatCentsToYuan(ledgerSummary.total_income_cents, true) }}
           </strong>
         </div>
         <div class="metric-item">
-          <span>预算剩余</span>
+          <span>{{ uiText('预算剩余') }}</span>
           <strong :class="{ 'is-over': ledgerSummary.monthly_budget_cents > 0 && remainingBudgetCents < 0 }">
-            {{ ledgerSummary.monthly_budget_cents > 0 ? formatCentsToYuan(remainingBudgetCents) : "未设置" }}
+            {{ ledgerSummary.monthly_budget_cents > 0 ? formatCentsToYuan(remainingBudgetCents) : uiText('未设置') }}
           </strong>
         </div>
       </div>
@@ -126,9 +127,9 @@ const monthlyLifestylePortrait = computed(() => {
       <div v-if="ledgerSummary.monthly_budget_cents > 0" class="budget-progress-wrap">
         <div class="budget-progress-labels">
           <span>
-            月度预算进度（预算 {{ formatCentsToYuan(ledgerSummary.monthly_budget_cents) }}）
+            {{ uiText('月度预算进度（预算 {amount}）', { amount: formatCentsToYuan(ledgerSummary.monthly_budget_cents) }) }}
           </span>
-          <b>已用 {{ budgetUsagePercent }}%</b>
+          <b>{{ uiText('已用 {percent}%', { percent: budgetUsagePercent }) }}</b>
         </div>
         <div class="budget-progress-bar">
           <i
@@ -139,7 +140,7 @@ const monthlyLifestylePortrait = computed(() => {
       </div>
 
       <div v-if="ledgerSummary.category_breakdown.length" class="ledger-breakdown-list">
-        <h3>支出分类占比</h3>
+        <h3>{{ uiText('支出分类占比') }}</h3>
         <div
           v-for="cat in ledgerSummary.category_breakdown"
           :key="cat.category"
@@ -147,8 +148,8 @@ const monthlyLifestylePortrait = computed(() => {
         >
           <span class="cat-badge">
             <em>{{ getLedgerCategoryMeta(cat.category).emoji }}</em>
-            <b>{{ getLedgerCategoryMeta(cat.category).label }}</b>
-            <small>{{ cat.count }} 笔</small>
+            <b>{{ uiText(getLedgerCategoryMeta(cat.category).label) }}</b>
+            <small>{{ uiText(cat.count === 1 ? builtinSiteText('space.entry_one', '{count} 笔', currentLocale) : '{count} 笔', { count: cat.count }) }}</small>
           </span>
           <div class="cat-track">
             <i
@@ -170,9 +171,9 @@ const monthlyLifestylePortrait = computed(() => {
         <header class="ledger-day-card__head">
           <strong>📅 {{ group.date }}</strong>
           <div class="day-sums">
-            <span v-if="group.dayExpense">支 {{ formatCentsToYuan(group.dayExpense) }}</span>
+            <span v-if="group.dayExpense">{{ uiText('支') }} {{ formatCentsToYuan(group.dayExpense) }}</span>
             <span v-if="group.dayIncome" class="is-income">
-              收 {{ formatCentsToYuan(group.dayIncome, true) }}
+              {{ uiText('收') }} {{ formatCentsToYuan(group.dayIncome, true) }}
             </span>
           </div>
         </header>
@@ -189,8 +190,8 @@ const monthlyLifestylePortrait = computed(() => {
               {{ getLedgerCategoryMeta(item.category).emoji }}
             </span>
             <div class="entry-info">
-              <strong>{{ getLedgerCategoryMeta(item.category).label }}</strong>
-              <p>{{ item.note || "无备注" }}</p>
+              <strong>{{ uiText(getLedgerCategoryMeta(item.category).label) }}</strong>
+              <p>{{ item.note || uiText('无备注') }}</p>
             </div>
             <div class="entry-right">
               <b :class="item.kind === 'income' ? 'is-income' : 'is-expense'">
@@ -204,10 +205,10 @@ const monthlyLifestylePortrait = computed(() => {
               <button
                 type="button"
                 class="entry-del-btn"
-                title="删除此笔记录"
+                :title="uiText('删除此笔记录')"
                 @click="emit('deleteLedger', item)"
               >
-                删除
+                {{ uiText('删除') }}
               </button>
             </div>
           </li>
@@ -217,10 +218,10 @@ const monthlyLifestylePortrait = computed(() => {
 
     <UiCard v-else class="space-empty-card">
       <span class="empty-emoji">🪙</span>
-      <strong>{{ selectedMonth }} 还没有记账流水</strong>
-      <p>使用上方「随手记一笔账」记录日常咖啡、餐饮或游戏开销，月底可一键生成漂亮的手账小结卡。</p>
+      <strong>{{ uiText('{month} 还没有记账流水', { month: selectedMonth }) }}</strong>
+      <p>{{ uiText('使用上方「随手记一笔账」记录日常咖啡、餐饮或游戏开销，月底可一键生成漂亮的手账小结卡。') }}</p>
       <UiButton type="button" tone="primary" @click="emit('composeLedger')">
-        记第一笔账
+        {{ uiText('记第一笔账') }}
       </UiButton>
     </UiCard>
   </section>

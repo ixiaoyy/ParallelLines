@@ -1,3 +1,5 @@
+import { uiText } from "@/shared/i18n/locale";
+
 export type FlagTargetType = "topic" | "post";
 export type FlagReason = "spam" | "harassment" | "off_topic" | "private_info" | "other";
 export type FlagStatus = "pending" | "resolved" | "rejected";
@@ -180,7 +182,7 @@ export function flagReasonLabel(reason: FlagReason): string {
     private_info: "隐私泄露",
     other: "其他问题",
   };
-  return labels[reason];
+  return uiText(labels[reason]);
 }
 
 export function flagStatusLabel(status: FlagStatus): string {
@@ -189,7 +191,7 @@ export function flagStatusLabel(status: FlagStatus): string {
     resolved: "已处理",
     rejected: "已驳回",
   };
-  return labels[status];
+  return uiText(labels[status]);
 }
 
 export function auditActionLabel(action: string): string {
@@ -212,7 +214,7 @@ export function auditActionLabel(action: string): string {
     decided: "处理",
     appealed: "复核",
   };
-  return labels[action] ?? action;
+  return labels[action] ? uiText(labels[action]) : action;
 }
 
 export function reviewableStatusLabel(status: string): string {
@@ -227,7 +229,8 @@ export function reviewableStatusLabel(status: string): string {
     escalated: "已升级",
     appealed: "复核中",
   };
-  return labels[status as ReviewableStatus] ?? status;
+  const label = labels[status as ReviewableStatus];
+  return label ? uiText(label) : status;
 }
 
 export function reviewableTypeLabel(type: string): string {
@@ -239,5 +242,6 @@ export function reviewableTypeLabel(type: string): string {
     appeal: "复核请求",
     system: "系统规则",
   };
-  return labels[type as ReviewableType] ?? type;
+  const label = labels[type as ReviewableType];
+  return label ? uiText(label) : type;
 }

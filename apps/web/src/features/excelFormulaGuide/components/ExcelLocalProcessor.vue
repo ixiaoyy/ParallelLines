@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { currentLocale, uiText } from "@/shared/i18n/locale";
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import UiButton from "@/shared/ui/Button.vue";
 import type { DataSheet, LocalWorkbook, OperationOptions, OperationResult, PlainCell, TableData } from "../localProcessingModel";
@@ -55,7 +56,7 @@ const tableState = computed<{ table: TableData | null; error: string }>(() => {
 const originalTable = computed(() => tableState.value.table);
 const columnOptions = computed(() => Array.from({ length: originalTable.value?.columnCount ?? 0 }, (_, index) => {
   const header = originalTable.value?.headers?.[index];
-  return { index, label: `${columnLetter(index)} · ${header === undefined ? "无表头" : cellText(header).trim().slice(0, 40) || "无标题"}` };
+  return { index, label: `${columnLetter(index)} · ${header === undefined ? uiText("无表头") : cellText(header).trim().slice(0, 40) || uiText("无标题")}` };
 }));
 const originalPreview = computed(() => originalTable.value?.rows.slice(0, 20) ?? []);
 const resultPreview = computed(() => result.value?.rows.slice(0, 20) ?? []);
@@ -65,6 +66,21 @@ const canDownload = computed(() => Boolean(result.value && !result.value.issues.
   && ((result.value.kind !== "sum" && result.value.kind !== "count") || result.value.aggregate)) && !isReading.value && !isExporting.value);
 
 function readableError(cause: unknown): string { return cause instanceof Error ? cause.message : "处理未完成，请重试。"; }
+/** 仅本地化固定诊断框架，保留工作表名称、单元格地址及未知底层详情原文。 */
+function displayWorkbookMessage(source: string): string {
+  if (currentLocale.value === "zh-CN") return source;
+  const translated = uiText(source);
+  if (translated !== source) return translated;
+  const cell = source.match(/^([A-Z]+[1-9]\d*)：(.+)$/s);
+  if (cell) return uiText("{cell}：{message}", { cell: cell[1]!, message: uiText(cell[2]!) });
+  const position = source.match(/^原表第 (\d+) 行、第 (\d+) 列含不支持的数字；长编号请先保存为文本。$/);
+  if (position) return uiText("原表第 {row} 行、第 {column} 列含不支持的数字；长编号请先保存为文本。", { row: position[1]!, column: position[2]! });
+  const sheet = source.match(/^工作表“(.*)”超过 5000 行或 50 列，未导入任何数据。$/s);
+  if (sheet) return uiText("工作表{name}超过 5000 行或 50 列，未导入任何数据。", { name: sheet[1]! });
+  const prefix = "没有可处理的普通值工作表。";
+  if (source.startsWith(prefix)) return uiText("没有可处理的普通值工作表。{details}", { details: source.slice(prefix.length) });
+  return source;
+}
 function columnLetter(index: number): string {
   let value = index + 1;
   let label = "";
@@ -201,92 +217,92 @@ onBeforeUnmount(() => {
 <template>
   <section id="excel-local-workbook" class="excel-local" tabindex="-1" aria-labelledby="excel-local-title">
     <div class="excel-local__heading">
-      <div><h3 id="excel-local-title">用自己的表格试一试</h3><p>选择数据、设置操作，再核对结果并下载。</p></div>
-      <UiButton tone="ghost" @click="resetAll">重置</UiButton>
+      <div><h3 id="excel-local-title">{{ uiText('用自己的表格试一试') }}</h3><p>{{ uiText('选择数据、设置操作，再核对结果并下载。') }}</p></div>
+      <UiButton tone="ghost" @click="resetAll">{{ uiText('重置') }}</UiButton>
     </div>
-    <p class="excel-local__privacy">文件仅在当前浏览器处理，不上传。离开页面或重置后清除。</p>
+    <p class="excel-local__privacy">{{ uiText('文件仅在当前浏览器处理，不上传。离开页面或重置后清除。') }}</p>
 
     <div class="excel-local__source">
-      <div class="excel-local__subheading"><h4>1. 选择数据</h4><UiButton tone="ghost" :aria-pressed="sourceMode === 'sample'" @click="useSample">使用示例数据</UiButton></div>
-      <label for="excel-local-file" class="excel-local__label">选择本地 Excel 文件 <span>（.xlsx，最大 5 MB）</span></label>
+      <div class="excel-local__subheading"><h4>{{ uiText('1. 选择数据') }}</h4><UiButton tone="ghost" :aria-pressed="sourceMode === 'sample'" @click="useSample">{{ uiText('使用示例数据') }}</UiButton></div>
+      <label for="excel-local-file" class="excel-local__label">{{ uiText('选择本地 Excel 文件') }} <span>{{ uiText('（.xlsx，最大 5 MB）') }}</span></label>
       <input id="excel-local-file" ref="fileInput" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" @change="readFile" />
-      <p v-if="workbook" class="excel-local__source-name">当前数据：<strong>{{ workbook.sourceName }}</strong></p>
-      <p v-if="isReading" role="status">正在读取文件…可以选择其他文件或重置。</p>
-      <p v-if="error" class="excel-local__error" role="alert">{{ error }}</p>
+      <p v-if="workbook" class="excel-local__source-name">{{ uiText('当前数据：') }}<strong>{{ workbook.sourceName }}</strong></p>
+      <p v-if="isReading" role="status">{{ uiText('正在读取文件…可以选择其他文件或重置。') }}</p>
+      <p v-if="error" class="excel-local__error" role="alert">{{ displayWorkbookMessage(error) }}</p>
       <details class="excel-local__limits">
-        <summary>支持范围与导出说明</summary>
+        <summary>{{ uiText('支持范围与导出说明') }}</summary>
         <ul>
-          <li>工作簿最多 10 张工作表、累计 100,000 格；每张表最多 5,000 行、50 列。每次处理其中一张。导出汇总表也计入累计上限。</li>
-          <li>含公式、合并单元格、隐藏行列或错误单元格的工作表暂不支持。</li>
-          <li>日期按文本导出。工号、前导零和长编号请在原文件中保存为文本；超过 15 位的数字编号不支持。</li>
-          <li>下载的是所选工作表处理后的新值表，不保留原公式、样式、图片、其他工作表或表头前的内容。求和与计数另附汇总表。</li>
+          <li>{{ uiText('工作簿最多 10 张工作表、累计 100,000 格；每张表最多 5,000 行、50 列。每次处理其中一张。导出汇总表也计入累计上限。') }}</li>
+          <li>{{ uiText('含公式、合并单元格、隐藏行列或错误单元格的工作表暂不支持。') }}</li>
+          <li>{{ uiText('日期按文本导出。工号、前导零和长编号请在原文件中保存为文本；超过 15 位的数字编号不支持。') }}</li>
+          <li>{{ uiText('下载的是所选工作表处理后的新值表，不保留原公式、样式、图片、其他工作表或表头前的内容。求和与计数另附汇总表。') }}</li>
         </ul>
       </details>
-      <ul v-if="blockedSheets.length" class="excel-local__blocked"><li v-for="sheet in blockedSheets" :key="sheet.name"><strong>{{ sheet.name }}</strong>：{{ sheet.blockedReason }}</li></ul>
+      <ul v-if="blockedSheets.length" class="excel-local__blocked"><li v-for="sheet in blockedSheets" :key="sheet.name"><strong>{{ sheet.name }}</strong>：{{ displayWorkbookMessage(sheet.blockedReason ?? '') }}</li></ul>
     </div>
 
     <template v-if="workbook && activeSheet && !activeSheet.blockedReason">
       <fieldset class="excel-local__settings" :disabled="isReading">
-        <legend>2. 设置操作</legend>
+        <legend>{{ uiText('2. 设置操作') }}</legend>
         <div class="excel-local__fields">
-          <label>工作表<select :value="sheetName" @change="chooseSheet"><option v-for="sheet in workbook.sheets" :key="sheet.name" :value="sheet.name" :disabled="Boolean(sheet.blockedReason)">{{ sheet.name }}{{ sheet.blockedReason ? '（不支持）' : '' }}</option></select></label>
-          <label>表头行号<input v-model.number="headerRow" type="number" min="0" :max="activeSheet.rows.length" step="1" inputmode="numeric" aria-describedby="excel-local-header-help" /></label>
+          <label>{{ uiText('工作表') }}<select :value="sheetName" @change="chooseSheet"><option v-for="sheet in workbook.sheets" :key="sheet.name" :value="sheet.name" :disabled="Boolean(sheet.blockedReason)">{{ sheet.name }}{{ sheet.blockedReason ? uiText('（不支持）') : '' }}</option></select></label>
+          <label>{{ uiText('表头行号') }}<input v-model.number="headerRow" type="number" min="0" :max="activeSheet.rows.length" step="1" inputmode="numeric" aria-describedby="excel-local-header-help" /></label>
         </div>
-        <p id="excel-local-header-help" class="excel-local__help">填写原表中的行号；没有表头时填 0。只处理表头下方的数据。</p>
-        <p v-if="tableState.error" class="excel-local__error" role="alert">{{ tableState.error }}</p>
-        <ul v-if="activeSheet.warnings.length" class="excel-local__warnings"><li v-for="warning in activeSheet.warnings" :key="warning">{{ warning }}</li></ul>
-        <label class="excel-local__operation">处理方式<select v-model="kind"><option value="clean">清理空格与空行</option><option value="dedupe">按列去重</option><option value="sum">单条件求和</option><option value="count">单条件计数</option></select></label>
+        <p id="excel-local-header-help" class="excel-local__help">{{ uiText('填写原表中的行号；没有表头时填 0。只处理表头下方的数据。') }}</p>
+        <p v-if="tableState.error" class="excel-local__error" role="alert">{{ displayWorkbookMessage(tableState.error) }}</p>
+        <ul v-if="activeSheet.warnings.length" class="excel-local__warnings"><li v-for="warning in activeSheet.warnings" :key="warning">{{ uiText(warning) }}</li></ul>
+        <label class="excel-local__operation">{{ uiText('处理方式') }}<select v-model="kind"><option value="clean">{{ uiText('清理空格与空行') }}</option><option value="dedupe">{{ uiText('按列去重') }}</option><option value="sum">{{ uiText('单条件求和') }}</option><option value="count">{{ uiText('单条件计数') }}</option></select></label>
 
         <template v-if="kind === 'clean'">
-          <label>清理哪些列<select v-model.number="cleanColumn"><option :value="-1">全部列中的文本</option><option v-for="column in columnOptions" :key="column.index" :value="column.index">{{ column.label }}</option></select></label>
-          <label class="excel-local__check"><input v-model="removeBlankRows" type="checkbox" /><span>同时移除全空行</span></label>
-          <p class="excel-local__help">仅移除文本两端的空白，保留文字中间的空格；不改变数字和日期。</p>
+          <label>{{ uiText('清理哪些列') }}<select v-model.number="cleanColumn"><option :value="-1">{{ uiText('全部列中的文本') }}</option><option v-for="column in columnOptions" :key="column.index" :value="column.index">{{ column.label }}</option></select></label>
+          <label class="excel-local__check"><input v-model="removeBlankRows" type="checkbox" /><span>{{ uiText('同时移除全空行') }}</span></label>
+          <p class="excel-local__help">{{ uiText('仅移除文本两端的空白，保留文字中间的空格；不改变数字和日期。') }}</p>
         </template>
         <fieldset v-else-if="kind === 'dedupe'" class="excel-local__columns">
-          <legend>根据哪些列判断重复</legend>
+          <legend>{{ uiText('根据哪些列判断重复') }}</legend>
           <div class="excel-local__checks"><label v-for="column in columnOptions" :key="column.index" class="excel-local__check"><input v-model="dedupeColumns" type="checkbox" :value="column.index" /><span>{{ column.label }}</span></label></div>
-          <p class="excel-local__help">至少选一列；所选列完全相同才重复，保留首次出现的行。区分大小写和数据类型，空值也参与判断。</p>
+          <p class="excel-local__help">{{ uiText('至少选一列；所选列完全相同才重复，保留首次出现的行。区分大小写和数据类型，空值也参与判断。') }}</p>
         </fieldset>
         <template v-else>
           <div class="excel-local__fields">
-            <label>条件所在列<select v-model.number="conditionColumn"><option v-for="column in columnOptions" :key="column.index" :value="column.index">{{ column.label }}</option></select></label>
-            <label>精确匹配的值<input v-model="conditionValue" type="text" placeholder="留空则匹配空值" autocomplete="off" /></label>
+            <label>{{ uiText('条件所在列') }}<select v-model.number="conditionColumn"><option v-for="column in columnOptions" :key="column.index" :value="column.index">{{ column.label }}</option></select></label>
+            <label>{{ uiText('精确匹配的值') }}<input v-model="conditionValue" type="text" :placeholder="uiText('留空则匹配空值')" autocomplete="off" /></label>
           </div>
-          <p class="excel-local__help">按显示值精确匹配，区分大小写，不自动去空格，不支持通配符。</p>
-          <label v-if="kind === 'sum'">求和数值列<select v-model.number="valueColumn"><option v-for="column in columnOptions" :key="column.index" :value="column.index">{{ column.label }}</option></select></label>
-          <p v-if="kind === 'sum'" class="excel-local__help">支持普通十进制数，最多 12 位小数、30 位数字。空数值跳过；无效数值会列出位置，修正后才能下载。</p>
+          <p class="excel-local__help">{{ uiText('按显示值精确匹配，区分大小写，不自动去空格，不支持通配符。') }}</p>
+          <label v-if="kind === 'sum'">{{ uiText('求和数值列') }}<select v-model.number="valueColumn"><option v-for="column in columnOptions" :key="column.index" :value="column.index">{{ column.label }}</option></select></label>
+          <p v-if="kind === 'sum'" class="excel-local__help">{{ uiText('支持普通十进制数，最多 12 位小数、30 位数字。空数值跳过；无效数值会列出位置，修正后才能下载。') }}</p>
         </template>
-        <div class="excel-local__actions"><UiButton :disabled="!canProcess" @click="processData">{{ operationTitle }}</UiButton><span>每次从原始数据处理，不累加上次结果。修改设置后请重新处理。</span></div>
+        <div class="excel-local__actions"><UiButton :disabled="!canProcess" @click="processData">{{ uiText(operationTitle) }}</UiButton><span>{{ uiText('每次从原始数据处理，不累加上次结果。修改设置后请重新处理。') }}</span></div>
       </fieldset>
 
       <div class="excel-local__previews">
         <div class="excel-local__preview">
-          <h4>原始数据</h4><p class="excel-local__help">{{ originalTable?.rows.length ?? 0 }} 行数据，预览前 20 行。左侧为原表行号。</p>
-          <div v-if="originalTable" class="excel-local__table-scroll" tabindex="0" role="region" aria-label="原始数据表，可横向滚动">
-            <table><caption>{{ activeSheet.name }} · 原始数据</caption><thead><tr><th scope="col">原行号</th><th v-for="column in columnOptions" :key="column.index" scope="col">{{ column.label }}</th></tr></thead><tbody><tr v-for="(row, index) in originalPreview" :key="originalTable.rowNumbers[index]"><th scope="row">{{ originalTable.rowNumbers[index] }}</th><td v-for="column in columnOptions" :key="column.index">{{ displayCell(row[column.index]) }}</td></tr></tbody></table>
+          <h4>{{ uiText('原始数据') }}</h4><p class="excel-local__help">{{ uiText('{count} 行数据，预览前 20 行。左侧为原表行号。', { count: originalTable?.rows.length ?? 0 }) }}</p>
+          <div v-if="originalTable" class="excel-local__table-scroll" tabindex="0" role="region" :aria-label="uiText('原始数据表，可横向滚动')">
+            <table><caption>{{ activeSheet.name }} {{ uiText('· 原始数据') }}</caption><thead><tr><th scope="col">{{ uiText('原行号') }}</th><th v-for="column in columnOptions" :key="column.index" scope="col">{{ column.label }}</th></tr></thead><tbody><tr v-for="(row, index) in originalPreview" :key="originalTable.rowNumbers[index]"><th scope="row">{{ originalTable.rowNumbers[index] }}</th><td v-for="column in columnOptions" :key="column.index">{{ displayCell(row[column.index]) }}</td></tr></tbody></table>
           </div>
-          <p v-if="!originalTable?.rows.length" class="excel-local__empty">没有可预览的数据行，请核对表头位置。</p>
+          <p v-if="!originalTable?.rows.length" class="excel-local__empty">{{ uiText('没有可预览的数据行，请核对表头位置。') }}</p>
         </div>
         <div class="excel-local__preview">
-          <h4>处理结果</h4><p class="excel-local__help">{{ result ? `${result.rows.length} 行数据，预览前 20 行。` : '处理后在这里核对结果。' }}<span v-if="result && (result.kind === 'sum' || result.kind === 'count')">表格展示命中条件的记录。</span></p>
-          <div v-if="result" class="excel-local__table-scroll" tabindex="0" role="region" aria-label="处理结果表，可横向滚动">
-            <table><caption>{{ activeSheet.name }} · 处理结果</caption><thead><tr><th scope="col">原行号</th><th v-for="column in columnOptions" :key="column.index" scope="col">{{ column.label }}</th></tr></thead><tbody><tr v-for="(row, index) in resultPreview" :key="result.rowNumbers[index]"><th scope="row">{{ result.rowNumbers[index] }}</th><td v-for="column in columnOptions" :key="column.index">{{ displayCell(row[column.index]) }}</td></tr></tbody></table>
+          <h4>{{ uiText('处理结果') }}</h4><p class="excel-local__help">{{ result ? uiText('{count} 行数据，预览前 20 行。', { count: result.rows.length }) : uiText('处理后在这里核对结果。') }}<span v-if="result && (result.kind === 'sum' || result.kind === 'count')">{{ uiText('表格展示命中条件的记录。') }}</span></p>
+          <div v-if="result" class="excel-local__table-scroll" tabindex="0" role="region" :aria-label="uiText('处理结果表，可横向滚动')">
+            <table><caption>{{ activeSheet.name }} {{ uiText('· 处理结果') }}</caption><thead><tr><th scope="col">{{ uiText('原行号') }}</th><th v-for="column in columnOptions" :key="column.index" scope="col">{{ column.label }}</th></tr></thead><tbody><tr v-for="(row, index) in resultPreview" :key="result.rowNumbers[index]"><th scope="row">{{ result.rowNumbers[index] }}</th><td v-for="column in columnOptions" :key="column.index">{{ displayCell(row[column.index]) }}</td></tr></tbody></table>
           </div>
-          <p v-if="!result" class="excel-local__empty">尚未处理。请选择操作并点击处理按钮。</p><p v-else-if="!result.rows.length" class="excel-local__empty">结果没有数据行。</p>
+          <p v-if="!result" class="excel-local__empty">{{ uiText('尚未处理。请选择操作并点击处理按钮。') }}</p><p v-else-if="!result.rows.length" class="excel-local__empty">{{ uiText('结果没有数据行。') }}</p>
         </div>
       </div>
 
       <div v-if="result" class="excel-local__result" role="status" aria-live="polite">
-        <h4>处理摘要</h4>
-        <dl class="excel-local__counts"><div><dt>输入行</dt><dd>{{ result.summary.inputRows }}</dd></div><div><dt>结果行</dt><dd>{{ result.summary.outputRows }}</dd></div><div><dt>改动单元格</dt><dd>{{ result.summary.changedCells }}</dd></div><div><dt>删除行</dt><dd>{{ result.summary.removedRows }}</dd></div><div v-if="result.kind === 'sum' || result.kind === 'count'"><dt>命中行</dt><dd>{{ result.summary.matchedRows }}</dd></div><div v-if="result.kind === 'sum'"><dt>参与求和</dt><dd>{{ result.summary.usedNumericRows }}</dd></div><div v-if="result.kind === 'sum'"><dt>跳过空数值</dt><dd>{{ result.summary.blankNumericRows }}</dd></div></dl>
-        <p v-if="result.aggregate" class="excel-local__aggregate">{{ result.kind === 'sum' ? '合计' : '计数' }}：<strong>{{ result.aggregate.value }}</strong><span v-if="result.kind === 'count'"> 行</span></p>
-        <p v-if="result.aggregate?.notice" class="excel-local__help">{{ result.aggregate.notice }}</p>
+        <h4>{{ uiText('处理摘要') }}</h4>
+        <dl class="excel-local__counts"><div><dt>{{ uiText('输入行') }}</dt><dd>{{ result.summary.inputRows }}</dd></div><div><dt>{{ uiText('结果行') }}</dt><dd>{{ result.summary.outputRows }}</dd></div><div><dt>{{ uiText('改动单元格') }}</dt><dd>{{ result.summary.changedCells }}</dd></div><div><dt>{{ uiText('删除行') }}</dt><dd>{{ result.summary.removedRows }}</dd></div><div v-if="result.kind === 'sum' || result.kind === 'count'"><dt>{{ uiText('命中行') }}</dt><dd>{{ result.summary.matchedRows }}</dd></div><div v-if="result.kind === 'sum'"><dt>{{ uiText('参与求和') }}</dt><dd>{{ result.summary.usedNumericRows }}</dd></div><div v-if="result.kind === 'sum'"><dt>{{ uiText('跳过空数值') }}</dt><dd>{{ result.summary.blankNumericRows }}</dd></div></dl>
+        <p v-if="result.aggregate" class="excel-local__aggregate">{{ result.kind === 'sum' ? uiText('合计') : uiText('计数') }}：<strong>{{ result.aggregate.value }}</strong><span v-if="result.kind === 'count'"> {{ uiText('行') }}</span></p>
+        <p v-if="result.aggregate?.notice" class="excel-local__help">{{ uiText(result.aggregate.notice) }}</p>
       </div>
-      <div v-if="result?.issues.length" class="excel-local__error" role="alert"><strong>发现 {{ result.issues.length }} 个异常，尚不能下载结果。</strong><ul><li v-for="(issue, index) in result.issues.slice(0, 20)" :key="index">原表第 {{ issue.row }} 行、第 {{ columnLetter(issue.column - 1) }} 列：{{ issue.message }}</li></ul><p v-if="result.issues.length > 20">仅展示前 20 项。请先在原文件中修正这些数值，再重新导入。</p></div>
-      <div class="excel-local__actions excel-local__download"><UiButton :disabled="!canDownload" :loading="isExporting" @click="downloadResult">{{ isExporting ? '正在生成…' : '下载新的结果文件' }}</UiButton><span>原文件不会被覆盖；仅导出所选工作表的处理结果。</span></div>
-      <p v-if="downloadMessage" role="status" class="excel-local__help">{{ downloadMessage }}</p>
+      <div v-if="result?.issues.length" class="excel-local__error" role="alert"><strong>{{ uiText('发现 {count} 个异常，尚不能下载结果。', { count: result.issues.length }) }}</strong><ul><li v-for="(issue, index) in result.issues.slice(0, 20)" :key="index">{{ uiText('原表第 {row} 行、第 {column} 列：{message}', { row: issue.row, column: columnLetter(issue.column - 1), message: uiText(issue.message) }) }}</li></ul><p v-if="result.issues.length > 20">{{ uiText('仅展示前 20 项。请先在原文件中修正这些数值，再重新导入。') }}</p></div>
+      <div class="excel-local__actions excel-local__download"><UiButton :disabled="!canDownload" :loading="isExporting" @click="downloadResult">{{ isExporting ? uiText('正在生成…') : uiText('下载新的结果文件') }}</UiButton><span>{{ uiText('原文件不会被覆盖；仅导出所选工作表的处理结果。') }}</span></div>
+      <p v-if="downloadMessage" role="status" class="excel-local__help">{{ uiText(downloadMessage) }}</p>
     </template>
-    <p v-else-if="!isReading && !workbook" class="excel-local__empty">选择一个 .xlsx 文件，或使用示例数据开始。</p>
+    <p v-else-if="!isReading && !workbook" class="excel-local__empty">{{ uiText('选择一个 .xlsx 文件，或使用示例数据开始。') }}</p>
   </section>
 </template>
 

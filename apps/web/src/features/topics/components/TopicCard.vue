@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { builtinSiteText, currentLocale, uiText } from "@/shared/i18n/locale";
 import { CheckCircleOutlined, DeleteOutlined, EllipsisOutlined, LockOutlined } from "@ant-design/icons-vue";
 import { computed } from "vue";
 
@@ -78,7 +79,7 @@ function requestDeleteTopic() {
     <RouterLink
       class="topic-row-hit"
       :to="topicRoute"
-      :aria-label="`打开主题：${topic.title}`"
+      :aria-label="uiText('打开主题：{value0}', { value0: topic.title })"
       tabindex="-1"
       aria-hidden="true"
     />
@@ -101,10 +102,10 @@ function requestDeleteTopic() {
           :is-persona="topic.authorIsPersona"
           :kind="topic.authorPersonaKind"
         />
-        <UiBadge v-if="topic.pinned" tone="amber">置顶</UiBadge>
-        <UiBadge v-if="topic.featured && !topic.solved" tone="green">精华</UiBadge>
-        <UiBadge v-if="topic.unreadCount" tone="blue">{{ topic.unreadCount }} 新</UiBadge>
-        <LockOutlined v-if="topic.status === 'closed'" class="topic-status-icon" aria-label="已关闭" />
+        <UiBadge v-if="topic.pinned" tone="amber">{{ builtinSiteText("topic.pinned", "置顶", currentLocale) }}</UiBadge>
+        <UiBadge v-if="topic.featured && !topic.solved" tone="green">{{ uiText("精华") }}</UiBadge>
+        <UiBadge v-if="topic.unreadCount" tone="blue">{{ topic.unreadCount }} {{ uiText("新") }}</UiBadge>
+        <LockOutlined v-if="topic.status === 'closed'" class="topic-status-icon" :aria-label="uiText('已关闭')" />
         <RouterLink class="topic-title" :to="topicRoute">{{ topic.title }}</RouterLink>
       </div>
 
@@ -131,7 +132,7 @@ function requestDeleteTopic() {
         </RouterLink>
       </div>
 
-      <div v-if="appearance !== 'profile'" class="participant-strip" aria-label="发起人">
+      <div v-if="appearance !== 'profile'" class="participant-strip" :aria-label="uiText('发起人')">
         <UiAvatar
           :src="resolveApiAssetUrl(topic.authorAvatarUrl)"
           :name="topic.authorName"
@@ -145,7 +146,7 @@ function requestDeleteTopic() {
         <div class="participant-copy">
           <span class="participant-name">{{ topic.authorName }}</span>
           <OperatorIdentityBadge :is-persona="topic.authorIsPersona" :kind="topic.authorPersonaKind" />
-          <span>发起 · {{ relativeTime(topic.lastPostedAt) }}有新动静</span>
+          <span>{{ uiText("发起 · {time}有新动静", { time: relativeTime(topic.lastPostedAt) }) }}</span>
         </div>
       </div>
     </div>
@@ -153,13 +154,13 @@ function requestDeleteTopic() {
     <div class="answer-state" :class="`answer-state--${answerState.tone}`">
       <CheckCircleOutlined v-if="answerState.tone === 'solved'" />
       <LockOutlined v-else-if="answerState.tone === 'closed'" />
-      <strong>{{ answerState.label }}</strong>
-      <small>{{ answerState.helper }}</small>
+      <strong>{{ uiText(answerState.label) }}</strong>
+      <small>{{ uiText(answerState.helper) }}</small>
     </div>
 
     <div class="topic-stat">
       <strong>{{ compactNumber(topic.replyCount) }}</strong>
-      <span>回复</span>
+      <span>{{ uiText("回复") }}</span>
     </div>
 
     <div class="topic-activity">
@@ -169,7 +170,7 @@ function requestDeleteTopic() {
 
     <div v-if="canDeleteTopic" class="topic-admin-actions" @click.stop>
       <details v-if="appearance === 'profile'" class="topic-overflow-menu">
-        <summary :aria-label="`主题操作：${topic.title}`" :title="`主题操作：${topic.title}`">
+        <summary :aria-label="uiText('主题操作：{value0}', { value0: topic.title })" :title="uiText('主题操作：{value0}', { value0: topic.title })">
           <EllipsisOutlined aria-hidden="true" />
         </summary>
         <div>
@@ -177,11 +178,11 @@ function requestDeleteTopic() {
             class="topic-delete-button"
             type="button"
             :disabled="deletingTopic"
-            :aria-label="`删除主题：${topic.title}`"
+            :aria-label="uiText('删除主题：{value0}', { value0: topic.title })"
             @click.stop.prevent="requestDeleteTopic"
           >
             <DeleteOutlined aria-hidden="true" />
-            <span>{{ deletingTopic ? "删除中" : "删除主题" }}</span>
+            <span>{{ deletingTopic ? uiText("删除中") : uiText("删除主题") }}</span>
           </button>
         </div>
       </details>
@@ -190,12 +191,12 @@ function requestDeleteTopic() {
         class="topic-delete-button"
         type="button"
         :disabled="deletingTopic"
-        :aria-label="`删除主题：${topic.title}`"
-        :title="`删除主题：${topic.title}`"
+        :aria-label="uiText('删除主题：{value0}', { value0: topic.title })"
+        :title="uiText('删除主题：{value0}', { value0: topic.title })"
         @click.stop.prevent="requestDeleteTopic"
       >
         <DeleteOutlined aria-hidden="true" />
-        <span>{{ deletingTopic ? "删除中" : "删除" }}</span>
+        <span>{{ deletingTopic ? uiText("删除中") : uiText("删除") }}</span>
       </button>
     </div>
   </article>

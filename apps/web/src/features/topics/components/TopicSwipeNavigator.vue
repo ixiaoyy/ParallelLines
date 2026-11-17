@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { LeftOutlined, LoadingOutlined, RightOutlined } from "@ant-design/icons-vue";
 import { computed } from "vue";
 
@@ -19,7 +20,7 @@ const hasNavigation = computed(() => Boolean(props.previousTopic || props.nextTo
 </script>
 
 <template>
-  <UiCard v-if="hasNavigation || loading" class="topic-swipe-navigator" aria-label="同版块主题导航">
+  <UiCard v-if="hasNavigation || loading" class="topic-swipe-navigator" :aria-label="uiText('同版块主题导航')">
     <button
       class="topic-swipe-button topic-swipe-button--previous"
       type="button"
@@ -28,9 +29,9 @@ const hasNavigation = computed(() => Boolean(props.previousTopic || props.nextTo
     >
       <span class="topic-swipe-button__label">
         <LeftOutlined aria-hidden="true" />
-        上一篇
+        {{ uiText("上一篇") }}
       </span>
-      <strong>{{ previousTopic?.title ?? "已经是最新" }}</strong>
+      <strong>{{ previousTopic?.title ?? uiText("已经是最新") }}</strong>
     </button>
 
     <div class="topic-swipe-divider" aria-hidden="true">
@@ -45,10 +46,10 @@ const hasNavigation = computed(() => Boolean(props.previousTopic || props.nextTo
       @click="emit('navigate', 'next')"
     >
       <span class="topic-swipe-button__label">
-        下一篇
+        {{ uiText("下一篇") }}
         <RightOutlined aria-hidden="true" />
       </span>
-      <strong>{{ nextTopic?.title ?? "没有更多主题" }}</strong>
+      <strong>{{ nextTopic?.title ?? uiText("没有更多主题") }}</strong>
     </button>
   </UiCard>
 </template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { currentLocale, uiText } from "@/shared/i18n/locale";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -160,11 +161,11 @@ function saveGrant(): void {
 
   const expiresAt = toIsoDateTime(grantDraft.expiresAt);
   if (grantDraft.expiresAt && !expiresAt) {
-    message.warning("请输入有效的到期时间");
+    message.warning(uiText("请输入有效的到期时间"));
     return;
   }
   if (expiresAt && new Date(expiresAt).getTime() <= Date.now()) {
-    message.warning("到期时间需要晚于当前时间");
+    message.warning(uiText("到期时间需要晚于当前时间"));
     return;
   }
 
@@ -177,7 +178,7 @@ function saveGrant(): void {
       },
     },
     {
-      onSuccess: () => message.success(`已更新 ${user.username} 的 FableSpace 高级能力`),
+      onSuccess: () => message.success(uiText("已更新 {name} 的 FableSpace 高级能力", { name: user.username })),
     },
   );
 }
@@ -191,15 +192,15 @@ function confirmRevokeGrant(): void {
   }
 
   Modal.confirm({
-    title: `撤销 ${user.username} 的 FableSpace 高级能力？`,
-    content: "账号会回退到基础体验；论坛账号、角色、内容和基础入口不会改变。",
-    okText: "确认撤销",
+    title: uiText("撤销 {name} 的 FableSpace 高级能力？", { name: user.username }),
+    content: uiText("账号会回退到基础体验；论坛账号、角色、内容和基础入口不会改变。"),
+    okText: uiText("确认撤销"),
     okType: "danger",
-    cancelText: "取消",
+    cancelText: uiText("取消"),
     centered: true,
     onOk: async () => {
       await revokeGrantMutation.mutateAsync(user.user_id);
-      message.success(`已撤销 ${user.username} 的 FableSpace 高级能力`);
+      message.success(uiText("已撤销 {name} 的 FableSpace 高级能力", { name: user.username }));
     },
   });
 }
@@ -246,13 +247,13 @@ function toIsoDateTime(value: string): string | null {
 // `iso` may be null. Return value is localized date/time or the supplied fallback; side effect: none.
 function formatDateTime(iso: string | null, fallback = "未记录"): string {
   if (!iso) {
-    return fallback;
+    return uiText(fallback);
   }
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {
-    return fallback;
+    return uiText(fallback);
   }
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(currentLocale.value, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -300,51 +301,51 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
   <section class="fablespace-access-panel" aria-labelledby="fablespace-access-title">
     <header class="fablespace-access-panel__header">
       <div>
-        <span class="fablespace-access-panel__context">独立产品能力管理</span>
-        <h1 id="fablespace-access-title">FableSpace 高级能力</h1>
-        <p>所有正常登录用户均可进入；在这里管理创作、运营与产品管理能力。</p>
+        <span class="fablespace-access-panel__context">{{ uiText("独立产品能力管理") }}</span>
+        <h1 id="fablespace-access-title">{{ uiText("FableSpace 高级能力") }}</h1>
+        <p>{{ uiText("所有正常登录用户均可进入；在这里管理创作、运营与产品管理能力。") }}</p>
       </div>
       <div v-if="!grantsQuery.isLoading.value && !grantsQuery.isError.value" class="result-summary">
         <strong>{{ visibleGrantCount }}</strong>
-        <span>位已配置 / 当前 {{ users.length }} 位</span>
+        <span>{{ uiText("{granted} 位已配置 / 当前 {total} 位", { granted: visibleGrantCount, total: users.length }) }}</span>
       </div>
     </header>
 
-    <aside class="product-boundary-note" aria-label="权限边界说明">
+    <aside class="product-boundary-note" :aria-label="uiText('权限边界说明')">
       <span class="product-boundary-note__icon"><LockOutlined aria-hidden="true" /></span>
       <div>
-        <strong>基础访问已经向登录用户开放</strong>
-        <p>这里的设置只影响 FableSpace 高级能力，不改变基础入口，也不改变论坛角色、等级、发帖权限或内容。</p>
+        <strong>{{ uiText("基础访问已经向登录用户开放") }}</strong>
+        <p>{{ uiText("这里的设置只影响 FableSpace 高级能力，不改变基础入口，也不改变论坛角色、等级、发帖权限或内容。") }}</p>
       </div>
-      <span class="product-boundary-note__tag">与论坛角色解耦</span>
+      <span class="product-boundary-note__tag">{{ uiText("与论坛角色解耦") }}</span>
     </aside>
 
     <div class="access-workspace">
-      <aside class="access-directory" aria-label="用户高级能力列表">
+      <aside class="access-directory" :aria-label="uiText('用户高级能力列表')">
         <label class="access-search">
-          <span class="sr-only">搜索用户名或邮箱</span>
+          <span class="sr-only">{{ uiText("搜索用户名或邮箱") }}</span>
           <SearchOutlined aria-hidden="true" />
-          <input v-model="searchInput" type="search" placeholder="搜索用户名或邮箱" autocomplete="off" />
+          <input v-model="searchInput" type="search" :placeholder="uiText('搜索用户名或邮箱')" autocomplete="off" />
           <kbd v-if="searchQuery">{{ users.length }}</kbd>
         </label>
 
         <header class="access-directory__heading">
           <div>
-            <h2>账号目录</h2>
-            <p>搜索结果包含仅有基础访问的账号</p>
+            <h2>{{ uiText("账号目录") }}</h2>
+            <p>{{ uiText("搜索结果包含仅有基础访问的账号") }}</p>
           </div>
           <TeamOutlined aria-hidden="true" />
         </header>
 
         <div v-if="grantsQuery.isLoading.value" class="access-list-skeleton" role="status">
-          <span class="sr-only">授权列表加载中…</span>
+          <span class="sr-only">{{ uiText("授权列表加载中…") }}</span>
           <i v-for="index in 7" :key="index" />
         </div>
         <div v-else-if="grantsQuery.isError.value" class="access-state is-error" role="alert">
-          <strong>账号目录加载失败</strong>
-          <p>{{ grantsQuery.error.value?.message || "请检查网络或管理员权限后重试。" }}</p>
+          <strong>{{ uiText("账号目录加载失败") }}</strong>
+          <p>{{ grantsQuery.error.value?.message || uiText("请检查网络或管理员权限后重试。") }}</p>
           <UiButton tone="subtle" :disabled="grantsQuery.isFetching.value" @click="grantsQuery.refetch()">
-            {{ grantsQuery.isFetching.value ? "重试中…" : "重新加载" }}
+            {{ grantsQuery.isFetching.value ? uiText("重试中…") : uiText("重新加载") }}
           </UiButton>
         </div>
         <div v-else-if="users.length" class="access-list">
@@ -362,14 +363,14 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
               <small>{{ user.email }}</small>
             </span>
             <span class="access-list__status" :class="`is-${grantStatusClass(user)}`">
-              {{ grantStatusLabel(user) }}
+              {{ uiText(grantStatusLabel(user)) }}
             </span>
           </button>
         </div>
         <div v-else class="access-state">
           <SearchOutlined aria-hidden="true" />
-          <strong>没有匹配的账号</strong>
-          <p>尝试输入完整用户名或邮箱。</p>
+          <strong>{{ uiText("没有匹配的账号") }}</strong>
+          <p>{{ uiText("尝试输入完整用户名或邮箱。") }}</p>
         </div>
       </aside>
 
@@ -382,31 +383,31 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
             size="lg"
           />
           <div>
-            <span>正在配置</span>
+            <span>{{ uiText("正在配置") }}</span>
             <h2>{{ selectedUser.display_name || selectedUser.username }}</h2>
             <p>{{ selectedUser.email }}</p>
           </div>
           <span class="grant-status" :class="`is-${grantStatusClass(selectedUser)}`">
-            {{ grantStatusLabel(selectedUser) }}
+            {{ uiText(grantStatusLabel(selectedUser)) }}
           </span>
         </header>
 
         <dl class="identity-boundary">
           <div>
-            <dt>论坛角色</dt>
+            <dt>{{ uiText("论坛角色") }}</dt>
             <dd>{{ adminRoleLabel(selectedUser.forum_role) }}</dd>
           </div>
           <div>
-            <dt>论坛状态</dt>
+            <dt>{{ uiText("论坛状态") }}</dt>
             <dd>{{ adminStatusLabel(selectedUser.account_status) }}</dd>
           </div>
           <div>
-            <dt>当前产品级别</dt>
-            <dd>{{ accessLevelLabel(selectedUser.access_level) }}</dd>
+            <dt>{{ uiText("当前产品级别") }}</dt>
+            <dd>{{ uiText(accessLevelLabel(selectedUser.access_level)) }}</dd>
           </div>
           <div>
-            <dt>有效期</dt>
-            <dd>{{ formatDateTime(selectedUser.expires_at, "长期有效") }}</dd>
+            <dt>{{ uiText("有效期") }}</dt>
+            <dd>{{ formatDateTime(selectedUser.expires_at, uiText("长期有效")) }}</dd>
           </div>
         </dl>
 
@@ -415,8 +416,8 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
             <div>
               <span>01</span>
               <div>
-                <h3 id="access-level-title">选择产品权限</h3>
-                <p>高等级包含其下方等级的产品能力。</p>
+                <h3 id="access-level-title">{{ uiText("选择产品权限") }}</h3>
+                <p>{{ uiText("高等级包含其下方等级的产品能力。") }}</p>
               </div>
             </div>
             <KeyOutlined aria-hidden="true" />
@@ -435,15 +436,15 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
                 :disabled="!canEditSelectedGrant"
               />
               <span class="access-level-grid__index">{{ option.eyebrow }}</span>
-              <strong>{{ option.label }}</strong>
-              <p>{{ option.description }}</p>
+              <strong>{{ uiText(option.label) }}</strong>
+              <p>{{ uiText(option.description) }}</p>
               <CheckCircleOutlined aria-hidden="true" />
             </label>
           </div>
 
           <div class="selected-level-note">
             <SafetyCertificateOutlined aria-hidden="true" />
-            <p><strong>{{ selectedLevelOption.label }}</strong>{{ selectedLevelOption.description }}</p>
+            <p><strong>{{ uiText(selectedLevelOption.label) }}</strong>{{ uiText(selectedLevelOption.description) }}</p>
           </div>
         </section>
 
@@ -452,8 +453,8 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
             <div>
               <span>02</span>
               <div>
-                <h3 id="access-expiry-title">设置有效期</h3>
-                <p>到期后高级能力自动失效，账号仍可继续基础体验。</p>
+                <h3 id="access-expiry-title">{{ uiText("设置有效期") }}</h3>
+                <p>{{ uiText("到期后高级能力自动失效，账号仍可继续基础体验。") }}</p>
               </div>
             </div>
             <ClockCircleOutlined aria-hidden="true" />
@@ -461,62 +462,62 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
 
           <div class="expiry-editor">
             <label>
-              <span>到期时间</span>
+              <span>{{ uiText("到期时间") }}</span>
               <input v-model="grantDraft.expiresAt" type="datetime-local" :disabled="!canEditSelectedGrant" />
             </label>
-            <div class="expiry-shortcuts" aria-label="有效期快捷设置">
-              <button type="button" :disabled="!canEditSelectedGrant" @click="setExpiryDays(7)">7 天</button>
-              <button type="button" :disabled="!canEditSelectedGrant" @click="setExpiryDays(30)">30 天</button>
-              <button type="button" :disabled="!canEditSelectedGrant" @click="setExpiryDays(90)">90 天</button>
+            <div class="expiry-shortcuts" :aria-label="uiText('有效期快捷设置')">
+              <button type="button" :disabled="!canEditSelectedGrant" @click="setExpiryDays(7)">{{ uiText("7 天") }}</button>
+              <button type="button" :disabled="!canEditSelectedGrant" @click="setExpiryDays(30)">{{ uiText("30 天") }}</button>
+              <button type="button" :disabled="!canEditSelectedGrant" @click="setExpiryDays(90)">{{ uiText("90 天") }}</button>
               <button
                 type="button"
                 :disabled="!canEditSelectedGrant"
                 :class="{ 'is-active': !grantDraft.expiresAt }"
                 @click="clearExpiry"
               >
-                长期有效
+                {{ uiText("长期有效") }}
               </button>
             </div>
           </div>
         </section>
 
-        <section v-if="selectedUser.updated_at" class="grant-audit" aria-label="授权记录">
+        <section v-if="selectedUser.updated_at" class="grant-audit" :aria-label="uiText('授权记录')">
           <div>
-            <span>授权操作人</span>
-            <strong>{{ selectedUser.granted_by_name || "系统" }}</strong>
+            <span>{{ uiText("授权操作人") }}</span>
+            <strong>{{ selectedUser.granted_by_name || uiText("系统") }}</strong>
           </div>
           <div>
-            <span>最后更新时间</span>
+            <span>{{ uiText("最后更新时间") }}</span>
             <strong>{{ formatDateTime(selectedUser.updated_at) }}</strong>
           </div>
           <div>
-            <span>授权版本</span>
+            <span>{{ uiText("授权版本") }}</span>
             <strong>#{{ selectedUser.authorization_version }}</strong>
           </div>
           <div class="grant-audit__capabilities">
-            <span>当前能力</span>
+            <span>{{ uiText("当前能力") }}</span>
             <p v-if="selectedUser.capabilities.length">
               <code v-for="capability in selectedUser.capabilities" :key="capability">{{ capability }}</code>
             </p>
-            <strong v-else>由权限级别自动计算</strong>
+            <strong v-else>{{ uiText("由权限级别自动计算") }}</strong>
           </div>
         </section>
 
         <footer class="grant-actions">
           <div class="grant-actions__feedback" aria-live="polite">
             <p v-if="selectedUser.account_status !== 'active'">
-              账号当前不可用；可撤销已有权限，但不能新增或更新授权。
+              {{ uiText("账号当前不可用；可撤销已有权限，但不能新增或更新授权。") }}
             </p>
             <p v-else-if="updateGrantMutation.isSuccess.value" class="is-success">
-              <CheckCircleOutlined aria-hidden="true" />高级能力配置已保存。
+              <CheckCircleOutlined aria-hidden="true" />{{ uiText("高级能力配置已保存。") }}
             </p>
             <p v-else-if="updateGrantMutation.isError.value" class="is-error" role="alert">
-              {{ updateGrantMutation.error.value?.message || "保存失败，请稍后重试。" }}
+              {{ updateGrantMutation.error.value?.message || uiText("保存失败，请稍后重试。") }}
             </p>
             <p v-else-if="revokeGrantMutation.isError.value" class="is-error" role="alert">
-              {{ revokeGrantMutation.error.value?.message || "撤销失败，请稍后重试。" }}
+              {{ revokeGrantMutation.error.value?.message || uiText("撤销失败，请稍后重试。") }}
             </p>
-            <p v-else>所有操作都会写入后台审计记录。</p>
+            <p v-else>{{ uiText("所有操作都会写入后台审计记录。") }}</p>
           </div>
           <UiButton
             v-if="selectedUser.access_level"
@@ -524,19 +525,19 @@ function accessLevelLabel(level: FableSpaceAccessLevel | null): string {
             :disabled="mutationPending"
             @click="confirmRevokeGrant"
           >
-            <StopOutlined aria-hidden="true" />撤销高级能力
+            <StopOutlined aria-hidden="true" />{{ uiText("撤销高级能力") }}
           </UiButton>
           <UiButton :disabled="mutationPending || !canEditSelectedGrant" @click="saveGrant">
             <KeyOutlined aria-hidden="true" />
-            {{ updateGrantMutation.isPending.value ? "保存中…" : selectedUser.access_level ? "保存能力" : "配置能力" }}
+            {{ updateGrantMutation.isPending.value ? uiText("保存中…") : selectedUser.access_level ? uiText("保存能力") : uiText("配置能力") }}
           </UiButton>
         </footer>
       </article>
 
       <div v-else-if="!grantsQuery.isLoading.value && !grantsQuery.isError.value" class="grant-editor-empty">
         <LockOutlined aria-hidden="true" />
-        <strong>选择一位用户</strong>
-        <p>在左侧搜索并选择账号，然后配置独立的 FableSpace 高级能力。</p>
+        <strong>{{ uiText("选择一位用户") }}</strong>
+        <p>{{ uiText("在左侧搜索并选择账号，然后配置独立的 FableSpace 高级能力。") }}</p>
       </div>
     </div>
   </section>

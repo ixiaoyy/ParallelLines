@@ -1,3 +1,4 @@
+import { uiText } from "@/shared/i18n/locale";
 import { readonly, shallowRef } from "vue";
 
 import { clearAuthTokens, getAccessToken, getRefreshToken, registerSessionAccessRefresher,
@@ -183,7 +184,7 @@ export async function silentCircleAccess(): Promise<UnifiedAccess> {
     return new Promise<UnifiedAccess>((resolve, reject) => {
       const frame = document.createElement("iframe");
       frame.hidden = true;
-      frame.title = "同步主站登录";
+      frame.title = uiText("同步主站登录");
       frame.referrerPolicy = "no-referrer";
       const finish = (access: UnifiedAccess | null, error?: Error) => {
         window.clearTimeout(timer); window.removeEventListener("message", receive); frame.remove();
@@ -271,7 +272,7 @@ export function startUnifiedBrowserSession(): () => void {
   if (IS_FORUM_SITE) {
     statusRequest = randomRequestId();
     statusFrame = document.createElement("iframe");
-    statusFrame.hidden = true; statusFrame.title = "主站登录状态"; statusFrame.referrerPolicy = "no-referrer";
+    statusFrame.hidden = true; statusFrame.title = uiText("主站登录状态"); statusFrame.referrerPolicy = "no-referrer";
     window.addEventListener("message", receive);
     statusFrame.src = mainAuthOrigin() + STATUS_PATH + "?client=circle&request_id=" + statusRequest;
     statusTimer = window.setTimeout(() => { availability.value = "unavailable"; }, 8000);

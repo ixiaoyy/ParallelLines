@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
+import LanguageSwitcher from "@/shared/ui/LanguageSwitcher.vue";
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 
@@ -29,20 +31,20 @@ const deniedCopy = computed(() => {
 </script>
 
 <template>
-  <main class="access-denied-page" aria-labelledby="access-denied-title">
+  <main class="access-denied-page" aria-labelledby="access-denied-title"><LanguageSwitcher style="position: fixed; top: 12px; right: 16px; z-index: 40" />
     <UiCard class="access-denied-card">
-      <span class="access-denied-card__eyebrow">访问受限</span>
-      <h1 id="access-denied-title">{{ deniedCopy.title }}</h1>
-      <p>{{ deniedCopy.description }}</p>
+      <span class="access-denied-card__eyebrow">{{ uiText("访问受限") }}</span>
+      <h1 id="access-denied-title">{{ uiText(deniedCopy.title) }}</h1>
+      <p>{{ uiText(deniedCopy.description) }}</p>
       <div class="access-denied-card__actions">
         <RouterLink :to="{ name: 'forum-home' }">
-          <UiButton tone="primary">返回首页</UiButton>
+          <UiButton tone="primary">{{ uiText("返回首页") }}</UiButton>
         </RouterLink>
         <RouterLink v-if="requiredAccess === 'moderation'" :to="{ name: 'my-reviewables' }">
-          <UiButton tone="subtle">我的审核</UiButton>
+          <UiButton tone="subtle">{{ uiText("我的审核") }}</UiButton>
         </RouterLink>
         <RouterLink :to="{ name: 'account-home' }">
-          <UiButton tone="ghost">个人中心</UiButton>
+          <UiButton tone="ghost">{{ uiText("个人中心") }}</UiButton>
         </RouterLink>
       </div>
     </UiCard>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { CommentOutlined } from "@ant-design/icons-vue";
 import { computed } from "vue";
 
@@ -22,11 +23,11 @@ const emit = defineEmits<{
   toggleSolution: [post: PostItemVM];
 }>();
 
-const replyCountLabel = computed(() => `${props.replies.length} 条回复`);
+const replyCountLabel = computed(() => uiText("回复数：{count}", { count: props.replies.length }));
 </script>
 
 <template>
-  <section v-if="replies.length" id="replies" class="topic-replies-panel" aria-label="回复列表">
+  <section v-if="replies.length" id="replies" class="topic-replies-panel" :aria-label="uiText('回复列表')">
     <UiCard class="topic-replies-header">
       <div class="topic-replies-header__summary">
         <CommentOutlined aria-hidden="true" />

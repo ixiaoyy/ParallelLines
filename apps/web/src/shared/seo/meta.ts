@@ -1,6 +1,8 @@
 import { toValue, watchEffect } from "vue";
 import type { MaybeRefOrGetter } from "vue";
 
+import { currentLocale, uiText } from "@/shared/i18n/locale";
+
 export interface SeoMetaInput {
   title: string;
   description: string;
@@ -38,7 +40,7 @@ export function useSeoMeta(source: MaybeRefOrGetter<SeoMetaInput | null | undefi
     if (meta.siteName) {
       setMeta("property", "og:site_name", meta.siteName);
     }
-    setMeta("property", "og:locale", meta.locale ?? "zh_CN");
+    setMeta("property", "og:locale", meta.locale ?? currentLocale.value.replace("-", "_"));
     setMeta("name", "twitter:card", "summary");
     setMeta("name", "twitter:title", meta.title);
     setMeta("name", "twitter:description", description);
@@ -59,13 +61,13 @@ export function resolveRouteSeoMeta(
 ): SeoMetaInput {
   const canonicalPath = routeSeo?.canonicalPath ?? cleanRoutePath(context.routePath);
   return {
-    title: formatSeoTemplate(routeSeo?.title ?? "{siteTitle}", context),
-    description: formatSeoTemplate(routeSeo?.description ?? "{siteTagline}", context),
+    title: formatSeoTemplate(uiText(routeSeo?.title ?? "{siteTitle}"), context),
+    description: formatSeoTemplate(uiText(routeSeo?.description ?? "{siteTagline}"), context),
     canonicalPath,
     ogType: routeSeo?.ogType,
     robots: routeSeo?.robots,
     siteName: context.siteName ?? context.siteTitle,
-    locale: "zh_CN",
+    locale: currentLocale.value.replace("-", "_"),
   };
 }
 
@@ -120,7 +122,7 @@ function formatSeoTemplate(
   return template
     .replaceAll("{siteTitle}", context.siteTitle)
     .replaceAll("{siteName}", siteName)
-    .replaceAll("{siteTagline}", context.siteTagline);
+    .replaceAll("{siteTagline}", uiText(context.siteTagline));
 }
 
 /**

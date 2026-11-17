@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { currentLocale, uiText } from "@/shared/i18n/locale";
 import {
   BoldOutlined,
   CheckCircleOutlined,
@@ -415,7 +416,7 @@ async function handleEditImageUpload(files: File[], callback: UploadImageCallbac
     return;
   }
 
-  statusMessage.value = `正在上传 ${uploadableFiles.length} 个文件…`;
+  statusMessage.value = uiText("正在上传 {value0} 个文件…", { value0: uploadableFiles.length });
 
   try {
     const images: string[] = [];
@@ -491,7 +492,7 @@ function restoreRevision(revisionId: string, versionNumber: number) {
     },
     {
       onSuccess: () => {
-        setStatus(`已恢复到版本 ${versionNumber}`);
+        setStatus(uiText("已恢复到版本 {version}", { version: versionNumber }));
       },
       onError: () => {
         setStatus("恢复失败，请确认版主权限后重试");
@@ -507,10 +508,10 @@ function deleteReply() {
 
   closeMoreMenu();
   Modal.confirm({
-    title: "删除这条回复？",
-    content: "删除后正文会被隐藏，其他用户将不能继续看到这条内容。",
-    okText: "删除",
-    cancelText: "取消",
+    title: uiText("删除这条回复？"),
+    content: uiText("删除后正文会被隐藏，其他用户将不能继续看到这条内容。"),
+    okText: uiText("删除"),
+    cancelText: uiText("取消"),
     okType: "danger",
     onOk: () => {
       deletePostMutation.mutate(props.post.id, {
@@ -664,7 +665,7 @@ function extractComicPages(html: string): ComicPage[] {
         src,
         thumbSrc: dedicatedThumbnail ?? src,
         usesDedicatedThumbnail: Boolean(dedicatedThumbnail),
-        alt: image.alt || `漫画第 ${index + 1} 页`,
+        alt: image.alt || uiText("漫画第 {page} 页", { page: index + 1 }),
       };
     })
     .filter((page) => page.src.length > 0);
@@ -963,8 +964,8 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
             <div class="post-author-name">
               <strong>{{ post.authorName }}</strong>
               <OperatorIdentityBadge :is-persona="post.authorIsPersona" :kind="post.authorPersonaKind" />
-              <span v-if="post.floor === 1" class="author-badge author-badge--owner">楼主</span>
-              <span v-if="authorRoleBadge" class="author-badge author-badge--role">{{ authorRoleBadge }}</span>
+              <span v-if="post.floor === 1" class="author-badge author-badge--owner">{{ uiText("楼主") }}</span>
+              <span v-if="authorRoleBadge" class="author-badge author-badge--role">{{ uiText(authorRoleBadge) }}</span>
             </div>
             <div class="post-meta-line">
               <time :datetime="post.createdAt">{{ relativeTime(post.createdAt) }}</time>
@@ -972,7 +973,7 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
               <a class="post-floor-link" :href="`#post-${post.floor}`">#{{ post.floor }}</a>
               <template v-if="editedAfterPublish">
                 <span aria-hidden="true">·</span>
-                <span>已编辑</span>
+                <span>{{ uiText("已编辑") }}</span>
               </template>
             </div>
           </div>
@@ -982,8 +983,8 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
             v-if="canEdit"
             class="post-header-edit icon-action"
             type="button"
-            title="编辑"
-            aria-label="编辑楼层"
+            :title="uiText('编辑')"
+            :aria-label="uiText('编辑楼层')"
             @click="startEdit"
           >
             <EditOutlined aria-hidden="true" />
@@ -994,23 +995,23 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
         <button
           class="post-header-edit icon-action"
           type="button"
-          title="编辑"
-          aria-label="编辑楼层"
+          :title="uiText('编辑')"
+          :aria-label="uiText('编辑楼层')"
           @click="startEdit"
         >
           <EditOutlined aria-hidden="true" />
         </button>
       </div>
-      <div v-if="post.acceptedAnswer" class="accepted-answer-badge">✓ 已采纳解决方案</div>
-      <div v-if="post.deleted" class="deleted-copy">该楼层已删除或隐藏。</div>
+      <div v-if="post.acceptedAnswer" class="accepted-answer-badge">{{ uiText("✓ 已采纳解决方案") }}</div>
+      <div v-if="post.deleted" class="deleted-copy">{{ uiText("该楼层已删除或隐藏。") }}</div>
       <template v-else-if="editing">
-        <div class="edit-shell" aria-label="编辑楼层">
+        <div class="edit-shell" :aria-label="uiText('编辑楼层')">
           <header class="edit-shell__topbar">
             <button class="edit-shell__cancel" type="button" :disabled="savingEdit" @click="cancelEdit">
-              取消
+              {{ uiText("取消") }}
             </button>
             <div class="edit-shell__title">
-              <strong>编辑楼层</strong>
+              <strong>{{ uiText("编辑楼层") }}</strong>
               <span>#{{ post.floor }} · {{ post.authorName }}</span>
             </div>
             <UiButton
@@ -1021,25 +1022,25 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
               @click="saveEdit"
             >
               <SaveOutlined aria-hidden="true" />
-              {{ savingEdit ? "保存中" : "保存" }}
+              {{ savingEdit ? uiText("保存中") : uiText("保存") }}
             </UiButton>
           </header>
 
           <div class="edit-shell__context" role="status">
             <span class="edit-shell__status-dot" aria-hidden="true"></span>
-            <span>#{{ post.floor }} {{ post.floor === 1 ? "楼主" : "楼层" }}</span>
-            <span>{{ editedAfterPublish ? "已编辑过" : "首次编辑" }}</span>
+            <span>#{{ post.floor }} {{ post.floor === 1 ? uiText("楼主") : uiText("楼层") }}</span>
+            <span>{{ editedAfterPublish ? uiText("已编辑过") : uiText("首次编辑") }}</span>
           </div>
 
           <div class="edit-field">
-            <span class="edit-field__label">编辑本楼层</span>
+            <span class="edit-field__label">{{ uiText("编辑本楼层") }}</span>
             <div class="edit-editor-box">
               <MdEditor
                 ref="editEditorRef"
                 v-model="editDraft"
                 :id="`post-edit-editor-${post.id}`"
                 class="edit-md-editor"
-                language="zh-CN"
+                :language="currentLocale"
                 theme="light"
                 preview-theme="github"
                 code-theme="atom"
@@ -1053,40 +1054,40 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
                 :no-mermaid="true"
                 :no-img-zoom-in="true"
                 :show-code-row-number="false"
-                placeholder="编辑内容"
+                :placeholder="uiText('编辑内容')"
                 @onUploadImg="handleEditImageUpload"
               />
             </div>
           </div>
 
-          <div class="edit-mobile-tools" aria-label="编辑工具">
+          <div class="edit-mobile-tools" :aria-label="uiText('编辑工具')">
             <button type="button" @click="insertEditMarkup('bold')">
               <BoldOutlined aria-hidden="true" />
-              加粗
+              {{ uiText("加粗") }}
             </button>
             <button type="button" @click="insertEditMarkup('italic')">
               <ItalicOutlined aria-hidden="true" />
-              斜体
+              {{ uiText("斜体") }}
             </button>
             <button type="button" @click="insertEditMarkup('quote')">
               <EnterOutlined aria-hidden="true" />
-              引用
+              {{ uiText("引用") }}
             </button>
             <button type="button" @click="insertEditMarkup('unorderedList')">
               <UnorderedListOutlined aria-hidden="true" />
-              列表
+              {{ uiText("列表") }}
             </button>
             <button type="button" @click="insertEditMarkup('orderedList')">
               <OrderedListOutlined aria-hidden="true" />
-              编号
+              {{ uiText("编号") }}
             </button>
             <button type="button" @click="insertEditMarkup('code')">
               <CodeOutlined aria-hidden="true" />
-              代码
+              {{ uiText("代码") }}
             </button>
             <button type="button" @click="insertEditMarkup('link')">
               <LinkOutlined aria-hidden="true" />
-              链接
+              {{ uiText("链接") }}
             </button>
           </div>
 
@@ -1098,30 +1099,30 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
             <MarkdownUploadButton compact :disabled="savingEdit" @insert="insertEditMarkdownUpload" />
             <button type="button" class="edit-mobile-bottom__preview" @click="toggleEditPreview">
               <EyeOutlined aria-hidden="true" />
-              {{ editPreviewVisible ? "编辑" : "预览" }}
+              {{ editPreviewVisible ? uiText("编辑") : uiText("预览") }}
             </button>
             <span class="edit-mobile-bottom__count">{{ editCharacterCount }} / 20000</span>
           </div>
 
           <div class="edit-actions edit-actions--desktop">
             <UiButton tone="primary" :disabled="!editDraft.trim() || savingEdit" @click="saveEdit">
-              {{ savingEdit ? "保存中…" : "保存编辑" }}
+              {{ savingEdit ? uiText("保存中…") : uiText("保存编辑") }}
             </UiButton>
-            <UiButton tone="ghost" :disabled="savingEdit" @click="cancelEdit">取消编辑</UiButton>
+            <UiButton tone="ghost" :disabled="savingEdit" @click="cancelEdit">{{ uiText("取消编辑") }}</UiButton>
           </div>
         </div>
       </template>
       <section
         v-else-if="hasComicPages"
         class="comic-reader"
-        aria-label="漫画阅读器"
+        :aria-label="uiText('漫画阅读器')"
         tabindex="0"
         @keydown="handleComicReaderKeydown"
       >
         <header class="comic-reader__toolbar">
           <div class="comic-reader__title">
-            <span>漫画阅读</span>
-            <strong>第 {{ activeComicPageIndex + 1 }} / {{ comicPages.length }} 页</strong>
+            <span>{{ uiText("漫画阅读") }}</span>
+            <strong>{{ uiText("第 {page} / {total} 页", { page: activeComicPageIndex + 1, total: comicPages.length }) }}</strong>
           </div>
 
           <div class="comic-reader__nav">
@@ -1130,14 +1131,14 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
               :disabled="activeComicPageIndex === 0"
               @click="goToComicPage(activeComicPageIndex - 1)"
             >
-              上一页
+              {{ uiText("上一页") }}
             </button>
             <button
               type="button"
               :disabled="activeComicPageIndex >= comicPages.length - 1"
               @click="goToComicPage(activeComicPageIndex + 1)"
             >
-              下一页
+              {{ uiText("下一页") }}
             </button>
           </div>
         </header>
@@ -1148,7 +1149,7 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
               <button
                 class="comic-reader__page-hit comic-reader__page-hit--prev"
                 type="button"
-                aria-label="上一页"
+                :aria-label="uiText('上一页')"
                 :disabled="activeComicPageIndex === 0"
                 @click="goToComicPage(activeComicPageIndex - 1)"
               >
@@ -1166,18 +1167,18 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
                 @error="markActiveComicImageUnavailable"
               />
               <div v-else class="comic-reader__page-unavailable" role="status">
-                <span>图片没有加载出来</span>
+                <span>{{ uiText("图片没有加载出来") }}</span>
                 <strong>{{ activeComicPage.alt }}</strong>
-                <p>原图地址可能暂时不可用，先保留页码和原图入口。</p>
+                <p>{{ uiText("原图地址可能暂时不可用，先保留页码和原图入口。") }}</p>
                 <div class="comic-reader__page-unavailable-actions">
-                  <button type="button" @click="retryActiveComicImage">重试</button>
-                  <a :href="activeComicPage.src" target="_blank" rel="noreferrer">打开原图</a>
+                  <button type="button" @click="retryActiveComicImage">{{ uiText("重试") }}</button>
+                  <a :href="activeComicPage.src" target="_blank" rel="noreferrer">{{ uiText("打开原图") }}</a>
                 </div>
               </div>
               <button
                 class="comic-reader__page-hit comic-reader__page-hit--next"
                 type="button"
-                aria-label="下一页"
+                :aria-label="uiText('下一页')"
                 :disabled="activeComicPageIndex >= comicPages.length - 1"
                 @click="goToComicPage(activeComicPageIndex + 1)"
               >
@@ -1186,18 +1187,18 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
             </div>
           </figure>
 
-          <aside v-if="comicPages.length > 1" class="comic-reader__thumbs" aria-label="漫画页列表">
+          <aside v-if="comicPages.length > 1" class="comic-reader__thumbs" :aria-label="uiText('漫画页列表')">
             <button
               v-for="(page, index) in comicPages"
               :key="page.src"
               class="comic-reader__thumb"
               :class="{ 'comic-reader__thumb--active': index === activeComicPageIndex }"
               type="button"
-              :aria-label="`跳到第 ${index + 1} 页`"
+              :aria-label="uiText('跳到第 {value0} 页', { value0: index + 1 })"
               :aria-current="index === activeComicPageIndex ? 'page' : undefined"
               @click="goToComicPage(index)"
             >
-              <span>第 {{ index + 1 }} 页</span>
+              <span>{{ uiText("第 {page} 页", { page: index + 1 }) }}</span>
               <img
                 v-if="shouldRenderComicThumbnail(page, index)"
                 :src="page.thumbSrc"
@@ -1212,14 +1213,14 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
         </div>
       </section>
       <div v-else class="markdown-body" v-html="renderedPostHtml" />
-      <p v-if="statusMessage" class="post-status" role="status">{{ statusMessage }}</p>
+      <p v-if="statusMessage" class="post-status" role="status">{{ uiText(statusMessage) }}</p>
       <footer v-if="!post.deleted" class="post-action-bar">
         <button
           class="icon-action"
           :class="{ 'is-active': liked }"
           type="button"
-          :title="liked ? '取消点赞' : '点赞'"
-          :aria-label="`${liked ? '取消点赞' : '点赞'}，当前 ${optimisticLikeCount}`"
+          :title="liked ? uiText('取消点赞') : uiText('点赞')"
+          :aria-label="uiText('{value0}，当前 {value1}', { value0: liked ? uiText('取消点赞') : uiText('点赞'), value1: optimisticLikeCount })"
           :aria-pressed="liked"
           :disabled="likePending"
           @click="toggleLike"
@@ -1228,7 +1229,7 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
           <HeartOutlined v-else aria-hidden="true" />
           <span v-if="optimisticLikeCount" class="action-count">{{ optimisticLikeCount }}</span>
         </button>
-        <button class="icon-action" type="button" title="复制楼层链接" aria-label="复制楼层链接" @click="copyPostLink">
+        <button class="icon-action" type="button" :title="uiText('复制楼层链接')" :aria-label="uiText('复制楼层链接')" @click="copyPostLink">
           <LinkOutlined aria-hidden="true" />
         </button>
         <button
@@ -1236,8 +1237,8 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
           class="icon-action"
           :class="{ 'is-active': post.acceptedAnswer }"
           type="button"
-          :title="post.acceptedAnswer ? '取消采纳' : '采纳为答案'"
-          :aria-label="post.acceptedAnswer ? '取消采纳这个答案' : '采纳这个楼层为答案'"
+          :title="post.acceptedAnswer ? uiText('取消采纳') : uiText('采纳为答案')"
+          :aria-label="post.acceptedAnswer ? uiText('取消采纳这个答案') : uiText('采纳这个楼层为答案')"
           :aria-pressed="post.acceptedAnswer"
           :disabled="solutionPending"
           @click="toggleSolution"
@@ -1246,33 +1247,33 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
           <RocketOutlined v-else aria-hidden="true" />
         </button>
         <details ref="postMoreRef" class="post-more" @keydown.esc="closeMoreMenu">
-          <summary title="更多操作" aria-label="更多楼层操作">
+          <summary :title="uiText('更多操作')" :aria-label="uiText('更多楼层操作')">
             <EllipsisOutlined aria-hidden="true" />
           </summary>
           <div class="post-more-menu">
             <button v-if="hasCodeBlock" type="button" @click="copyCode">
               <CodeOutlined aria-hidden="true" />
-              复制代码
+              {{ uiText("复制代码") }}
             </button>
             <button type="button" @click="quotePost">
               <EnterOutlined aria-hidden="true" />
-              引用楼层
+              {{ uiText("引用楼层") }}
             </button>
             <button type="button" :disabled="!canFlag" @click="flagPost">
               <FlagOutlined aria-hidden="true" />
-              举报
+              {{ uiText("举报") }}
             </button>
             <button v-if="canBlockAuthor" type="button" @click="blockAuthor">
               <UserDeleteOutlined aria-hidden="true" />
-              屏蔽用户
+              {{ uiText("屏蔽用户") }}
             </button>
             <button v-if="canViewHistory" type="button" @click="toggleHistory">
               <HistoryOutlined aria-hidden="true" />
-              {{ historyOpen ? "收起历史" : "编辑历史" }}
+              {{ historyOpen ? uiText("收起历史") : uiText("编辑历史") }}
             </button>
             <button v-if="canDelete" type="button" :disabled="deletingPost" @click="deleteReply">
               <DeleteOutlined aria-hidden="true" />
-              {{ deletingPost ? "删除中…" : "删除" }}
+              {{ deletingPost ? uiText("删除中…") : uiText("删除") }}
             </button>
             <button
               v-if="canDeleteTopicFromPost"
@@ -1281,25 +1282,25 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
               @click="deleteTopic"
             >
               <DeleteOutlined aria-hidden="true" />
-              {{ topicDeletePending ? "删除中…" : "删除主题" }}
+              {{ topicDeletePending ? uiText("删除中…") : uiText("删除主题") }}
             </button>
           </div>
         </details>
         <button class="reply-action" type="button" @click="replyPost">
           <RollbackOutlined aria-hidden="true" />
-          <span>回复</span>
+          <span>{{ uiText("回复") }}</span>
           <small v-if="post.replyCount">{{ post.replyCount }}</small>
         </button>
       </footer>
-      <section v-if="historyOpen && canViewHistory" class="revision-panel" aria-label="楼层编辑历史">
-        <p v-if="revisionsQuery.isLoading.value" role="status">正在加载编辑历史…</p>
-        <p v-else-if="revisionsQuery.isError.value" role="alert">编辑历史加载失败。</p>
-        <p v-else-if="!revisionsQuery.data.value?.length">暂无历史版本。</p>
+      <section v-if="historyOpen && canViewHistory" class="revision-panel" :aria-label="uiText('楼层编辑历史')">
+        <p v-if="revisionsQuery.isLoading.value" role="status">{{ uiText("正在加载编辑历史…") }}</p>
+        <p v-else-if="revisionsQuery.isError.value" role="alert">{{ uiText("编辑历史加载失败。") }}</p>
+        <p v-else-if="!revisionsQuery.data.value?.length">{{ uiText("暂无历史版本。") }}</p>
         <template v-else>
           <article v-for="revision in revisionsQuery.data.value" :key="revision.id" class="revision-card">
             <header>
-              <strong>版本 {{ revision.versionNumber }}</strong>
-              <span>{{ revision.editorName ?? "已删除用户" }} · {{ relativeTime(revision.createdAt) }}</span>
+              <strong>{{ uiText("版本 {version}", { version: revision.versionNumber }) }}</strong>
+              <span>{{ revision.editorName ?? uiText("已删除用户") }} · {{ relativeTime(revision.createdAt) }}</span>
             </header>
             <p>{{ revision.summary }}</p>
             <pre>{{ revision.rawMd.slice(0, 260) }}{{ revision.rawMd.length > 260 ? "…" : "" }}</pre>
@@ -1309,7 +1310,7 @@ function clearRenderedImageUnavailable(image: HTMLImageElement) {
               :disabled="restoringRevision"
               @click="restoreRevision(revision.id, revision.versionNumber)"
             >
-              恢复此版本
+              {{ uiText("恢复此版本") }}
             </UiButton>
           </article>
         </template>

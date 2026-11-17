@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { ref } from "vue";
 import type { CropRegion } from "../model";
 
@@ -64,16 +65,16 @@ function setPart(key: keyof CropRegion, event: Event) {
 <template>
   <div class="bead-crop">
     <div ref="frame" class="bead-crop__frame" :class="{ 'is-disabled': disabled }" @pointerdown="begin" @pointermove="move" @pointerup="finish" @pointercancel="finish" @lostpointercapture="finish">
-      <img :src="src" alt="原图与当前取景范围" draggable="false" />
+      <img :src="src" :alt="uiText('原图与当前取景范围')" draggable="false" />
       <div class="bead-crop__selection" :style="{ left: `${modelValue.x * 100}%`, top: `${modelValue.y * 100}%`, width: `${modelValue.width * 100}%`, height: `${modelValue.height * 100}%` }"><span></span></div>
     </div>
-    <p class="bead-help">拖动框选要保留的区域，让主体更突出。</p>
-    <div class="bead-crop__actions"><button type="button" :disabled="disabled" @click="fullImage">保留整图</button><button type="button" :disabled="disabled" @click="square">居中正方形</button></div>
+    <p class="bead-help">{{ uiText('拖动框选要保留的区域，让主体更突出。') }}</p>
+    <div class="bead-crop__actions"><button type="button" :disabled="disabled" @click="fullImage">{{ uiText('保留整图') }}</button><button type="button" :disabled="disabled" @click="square">{{ uiText('居中正方形') }}</button></div>
     <details class="bead-crop__precise">
-      <summary>精确调整取景</summary>
+      <summary>{{ uiText('精确调整取景') }}</summary>
       <div>
-        <label v-for="item in [{ key: 'x' as const, label: '左边距' }, { key: 'y' as const, label: '上边距' }, { key: 'width' as const, label: '宽度' }, { key: 'height' as const, label: '高度' }]" :key="item.key">
-          {{ item.label }} %<input type="number" :aria-label="`取景${item.label}百分比`" :value="Math.round(modelValue[item.key] * 100)" min="0" max="100" :disabled="disabled" @change="setPart(item.key, $event)" />
+        <label v-for="item in [{ key: 'x' as const, label: uiText('左边距') }, { key: 'y' as const, label: uiText('上边距') }, { key: 'width' as const, label: uiText('宽度') }, { key: 'height' as const, label: uiText('高度') }]" :key="item.key">
+          {{ item.label }} %<input type="number" :aria-label="uiText('取景{part}百分比', { part: item.label })" :value="Math.round(modelValue[item.key] * 100)" min="0" max="100" :disabled="disabled" @change="setPart(item.key, $event)" />
         </label>
       </div>
     </details>

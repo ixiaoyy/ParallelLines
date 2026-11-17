@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { CalendarOutlined, CloseCircleOutlined, DeleteOutlined, RedoOutlined } from "@ant-design/icons-vue";
 import { Modal } from "ant-design-vue";
 import { computed, reactive, ref } from "vue";
@@ -126,10 +127,10 @@ function toggleEventLifecycle(event: EventItem) {
 
   const nextStatus = event.status === "canceled" ? "scheduled" : "canceled";
   Modal.confirm({
-    title: nextStatus === "canceled" ? "终止这个活动？" : "恢复这个活动？",
-    content: nextStatus === "canceled" ? "终止后将不能继续报名。" : "恢复后用户可以继续报名参加。",
-    okText: nextStatus === "canceled" ? "终止活动" : "恢复活动",
-    cancelText: "取消",
+    title: nextStatus === "canceled" ? uiText("终止这个活动？") : uiText("恢复这个活动？"),
+    content: nextStatus === "canceled" ? uiText("终止后将不能继续报名。") : uiText("恢复后用户可以继续报名参加。"),
+    okText: nextStatus === "canceled" ? uiText("终止活动") : uiText("恢复活动"),
+    cancelText: uiText("取消"),
     okType: nextStatus === "canceled" ? "danger" : "primary",
     onOk: () => {
       updateEventLifecycle.mutate(
@@ -156,10 +157,10 @@ function deleteCalendarEvent(event: EventItem) {
   }
 
   Modal.confirm({
-    title: "删除这个活动？",
-    content: "删除后报名记录也会一起移除。",
-    okText: "删除活动",
-    cancelText: "取消",
+    title: uiText("删除这个活动？"),
+    content: uiText("删除后报名记录也会一起移除。"),
+    okText: uiText("删除活动"),
+    cancelText: uiText("取消"),
     okType: "danger",
     onOk: () => {
       deleteEvent.mutate(event.id, {
@@ -178,62 +179,62 @@ function deleteCalendarEvent(event: EventItem) {
 <template>
   <div class="events-page">
     <UiCard class="events-hero">
-      <h1>社区日历</h1>
-      <p>集中展示活动、报名人数、截止时间和本地时区时间；支持 iCal 订阅。</p>
-      <a class="ical-link" href="/api/v1/events/calendar.ics" aria-label="订阅社区日历 iCal">
+      <h1>{{ uiText("社区日历") }}</h1>
+      <p>{{ uiText("集中展示活动、报名人数、截止时间和本地时区时间；支持 iCal 订阅。") }}</p>
+      <a class="ical-link" href="/api/v1/events/calendar.ics" :aria-label="uiText('订阅社区日历 iCal')">
         <CalendarOutlined aria-hidden="true" />
-        <span>订阅 iCal</span>
+        <span>{{ uiText("订阅 iCal") }}</span>
       </a>
     </UiCard>
 
     <UiCard v-if="currentUser" class="event-form">
-      <h2>创建活动</h2>
+      <h2>{{ uiText("创建活动") }}</h2>
       <form novalidate @input="formStatus = ''" @submit.prevent="submitEvent">
         <label class="event-field event-field--title">
-          <span>标题</span>
+          <span>{{ uiText("标题") }}</span>
           <input
             v-model="form.title"
-            placeholder="活动标题"
-            aria-label="活动标题"
+            :placeholder="uiText('活动标题')"
+            :aria-label="uiText('活动标题')"
             aria-describedby="event-form-status"
             :aria-invalid="Boolean(formStatus && formStatusTone === 'error' && !form.title.trim())"
             required
           />
         </label>
         <label class="event-field">
-          <span>开始时间</span>
+          <span>{{ uiText("开始时间") }}</span>
           <input
             v-model="form.startAt"
             type="datetime-local"
-            aria-label="活动开始时间"
+            :aria-label="uiText('活动开始时间')"
             aria-describedby="event-form-status"
             :aria-invalid="Boolean(formStatus && formStatusTone === 'error' && !form.startAt)"
             required
           />
         </label>
         <label class="event-field">
-          <span>结束时间</span>
+          <span>{{ uiText("结束时间") }}</span>
           <input
             v-model="form.endAt"
             type="datetime-local"
-            aria-label="活动结束时间"
+            :aria-label="uiText('活动结束时间')"
             aria-describedby="event-form-status"
             :aria-invalid="Boolean(formStatus && formStatusTone === 'error' && !form.endAt)"
             required
           />
         </label>
         <label class="event-field event-field--timezone">
-          <span>时区</span>
+          <span>{{ uiText("时区") }}</span>
           <input
             v-model="form.timezone"
             placeholder="Asia/Shanghai"
-            aria-label="活动时区"
+            :aria-label="uiText('活动时区')"
             aria-describedby="event-form-status"
             :aria-invalid="Boolean(formStatus && formStatusTone === 'error' && !form.timezone.trim())"
             required
           />
         </label>
-        <UiButton class="event-form__submit" type="submit" :disabled="createEvent.isPending.value">发布活动</UiButton>
+        <UiButton class="event-form__submit" type="submit" :disabled="createEvent.isPending.value">{{ uiText("发布活动") }}</UiButton>
         <p
           v-if="formStatus"
           id="event-form-status"
@@ -241,34 +242,34 @@ function deleteCalendarEvent(event: EventItem) {
           :class="`event-form-status--${formStatusTone}`"
           role="status"
         >
-          {{ formStatus }}
+          {{ uiText(formStatus) }}
         </p>
       </form>
     </UiCard>
 
-    <UiCard v-if="eventsQuery.isLoading.value" class="events-state">正在加载活动…</UiCard>
+    <UiCard v-if="eventsQuery.isLoading.value" class="events-state">{{ uiText("正在加载活动…") }}</UiCard>
     <UiCard v-else-if="eventsQuery.isError.value" class="events-state events-state--error">
-      活动日历暂时不可用。
+      {{ uiText("活动日历暂时不可用。") }}
     </UiCard>
     <template v-else>
       <UiCard v-if="eventActionStatus" class="events-state" role="status">
-        {{ eventActionStatus }}
+        {{ uiText(eventActionStatus) }}
       </UiCard>
-      <section class="event-list" aria-label="活动列表">
+      <section class="event-list" :aria-label="uiText('活动列表')">
         <UiCard v-for="event in events" :key="event.id" class="event-card">
           <div class="event-card__topline">
             <span class="event-time">{{ localEventTime(event) }}</span>
-            <span v-if="event.status === 'canceled'" class="event-status">已终止</span>
+            <span v-if="event.status === 'canceled'" class="event-status">{{ uiText("已终止") }}</span>
           </div>
           <h2>{{ event.title }}</h2>
-          <p>{{ event.description || "暂无活动说明。" }}</p>
+          <p>{{ event.description || uiText("暂无活动说明。") }}</p>
           <div class="event-card__footer">
             <small>
-              {{ event.timezone }} · 已报名 {{ event.going_count }}
+              {{ event.timezone }} · {{ uiText("已报名：{count}", { count: event.going_count }) }}
               <template v-if="event.capacity"> / {{ event.capacity }}</template>
             </small>
             <div class="event-card__actions">
-              <div v-if="canManageEvent(event)" class="event-admin-actions" aria-label="活动管理">
+              <div v-if="canManageEvent(event)" class="event-admin-actions" :aria-label="uiText('活动管理')">
                 <UiButton
                   tone="subtle"
                   :disabled="updateEventLifecycle.isPending.value"
@@ -278,7 +279,7 @@ function deleteCalendarEvent(event: EventItem) {
                     <RedoOutlined v-if="event.status === 'canceled'" aria-hidden="true" />
                     <CloseCircleOutlined v-else aria-hidden="true" />
                   </template>
-                  {{ event.status === "canceled" ? "恢复活动" : "终止活动" }}
+                  {{ event.status === "canceled" ? uiText("恢复活动") : uiText("终止活动") }}
                 </UiButton>
                 <UiButton
                   tone="danger"
@@ -288,7 +289,7 @@ function deleteCalendarEvent(event: EventItem) {
                   <template #icon>
                     <DeleteOutlined aria-hidden="true" />
                   </template>
-                  {{ deleteEvent.isPending.value ? "删除中…" : "删除" }}
+                  {{ deleteEvent.isPending.value ? uiText("删除中…") : uiText("删除") }}
                 </UiButton>
               </div>
               <UiButton
@@ -298,7 +299,7 @@ function deleteCalendarEvent(event: EventItem) {
                 :disabled="event.status === 'canceled' || rsvpEvent.isPending.value"
                 @click="rsvpEvent.mutate({ eventId: event.id, payload: { status: 'going' } })"
               >
-                {{ eventRsvpLabel(event) }}
+                {{ uiText(eventRsvpLabel(event)) }}
               </UiButton>
             </div>
           </div>

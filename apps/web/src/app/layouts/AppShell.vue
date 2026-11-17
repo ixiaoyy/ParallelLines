@@ -21,6 +21,8 @@ import { useCurrentUser, useLogout } from "@/features/auth/queries";
 import { useBoards } from "@/features/boards/queries";
 import { useTags } from "@/features/tags/queries";
 import { useLocale } from "@/shared/i18n/locale";
+import { uiText } from "@/shared/i18n/locale";
+import LanguageSwitcher from "@/shared/ui/LanguageSwitcher.vue";
 import { runWhenBrowserIdle } from "@/shared/lib/loadWhenIdle";
 import { useMediaQuery } from "@/shared/lib/useMediaQuery";
 import { useOutsidePointerDown } from "@/shared/lib/useOutsidePointerDown";
@@ -125,9 +127,11 @@ const isRouteNavigating = ref(false);
 const siteTitle = computed(() =>
   publicSettingString(siteSettingsQuery.data.value, "site_title", "平行线"),
 );
-const siteTagline = computed(() =>
-  publicSettingString(siteSettingsQuery.data.value, "site_tagline", "让答案可追溯"),
-);
+const siteTagline = computed(() => {
+  const tagline = publicSettingString(siteSettingsQuery.data.value, "site_tagline", "让答案可追溯");
+  // 只翻译已知内置标语，后台自定义介绍继续保留管理员的原文。
+  return tagline === "让答案可追溯" ? uiText(tagline) : tagline;
+});
 const siteSeoName = computed(() => buildSeoSiteName(siteTitle.value));
 const routeSeoMeta = computed(() =>
   route.meta.forumShell ? resolveRouteSeoMeta(route.meta.seo, {
@@ -415,6 +419,7 @@ function t(key: string, fallback: string) {
       'app-shell--auth-immersive': isAuthRoute,
       'app-shell--play-game': isPlayGameRoute,
       'app-shell--profile-screen': isProfileScreenRoute,
+      'app-shell--english': locale === 'en-US',
     }"
   >
     <header v-if="!isAuthRoute && !isPlayGameRoute" ref="topbarRef" class="topbar" @keydown.esc="closeNavigation">
@@ -466,11 +471,13 @@ function t(key: string, fallback: string) {
       </button>
 
       <div class="topbar-actions" :class="{ 'topbar-actions--guest': !currentUser }">
+        <LanguageSwitcher />
         <NotificationBell v-if="currentUser" class="topbar-notification" />
 
         <template v-if="!currentUser">
-          <RouterLink v-if="!isAuthRoute" class="auth-link auth-link--guest" :to="{ name: 'auth' }">
-            {{ t("auth.login_register", "登录/注册") }}
+          <RouterLink v-if="!isAuthRoute" class="auth-link auth-link--guest" :to="{ name: 'auth' }" :aria-label="t('auth.login_register', '登录/注册')">
+            <span class="auth-copy--full">{{ t("auth.login_register", "登录/注册") }}</span>
+            <span class="auth-copy--compact">{{ t("auth.login", "登录") }}</span>
           </RouterLink>
         </template>
         <template v-else>
@@ -495,7 +502,7 @@ function t(key: string, fallback: string) {
                 @click="closeAccountMenu"
               >
                 <span>{{ t("nav.profile", "个人中心") }}</span>
-                <small>{{ currentUser.points_balance }} 可用积分</small>
+                <small>{{ currentUser.points_balance }} {{ uiText('可用积分') }}</small>
               </RouterLink>
               <RouterLink
                 v-if="canAccessModeration(currentUser)"

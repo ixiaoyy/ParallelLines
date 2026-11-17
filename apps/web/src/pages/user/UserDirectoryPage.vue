@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed, ref } from "vue";
 
-import { profileDisplayName, type UserDirectorySort } from "@/features/users/model";
+import { builtinTrustLabel, profileDisplayName, type UserDirectorySort } from "@/features/users/model";
 import OperatorIdentityBadge from "@/features/users/components/OperatorIdentityBadge.vue";
 import { useUserDirectory } from "@/features/users/queries";
 import { resolveApiAssetUrl } from "@/shared/api/client";
@@ -26,29 +27,29 @@ const sortOptions: { label: string; value: UserDirectorySort; description: strin
   <div class="user-directory-page">
     <section class="directory-hero">
       <div>
-        <UiBadge tone="blue">成员目录</UiBadge>
-        <h1>发现社区里的平行线</h1>
-        <p>目录只展示公开资料与贡献统计，不包含邮箱、私密资料或隐藏内容。</p>
+        <UiBadge tone="blue">{{ uiText("成员目录") }}</UiBadge>
+        <h1>{{ uiText("发现社区里的平行线") }}</h1>
+        <p>{{ uiText("目录只展示公开资料与贡献统计，不包含邮箱、私密资料或隐藏内容。") }}</p>
       </div>
-      <div class="directory-sort" aria-label="目录排序">
+      <div class="directory-sort" :aria-label="uiText('目录排序')">
         <UiButton
           v-for="option in sortOptions"
           :key="option.value"
           type="button"
           :tone="sort === option.value ? 'primary' : 'ghost'"
-          :title="option.description"
+          :title="uiText(option.description)"
           @click="sort = option.value"
         >
-          {{ option.label }}
+          {{ uiText(option.label) }}
         </UiButton>
       </div>
     </section>
 
-    <UiCard v-if="directoryQuery.isLoading.value" class="directory-state">正在加载成员目录…</UiCard>
+    <UiCard v-if="directoryQuery.isLoading.value" class="directory-state">{{ uiText("正在加载成员目录…") }}</UiCard>
     <UiCard v-else-if="directoryQuery.isError.value" class="directory-state directory-state--error" role="alert">
-      成员目录暂时不可用，请稍后重试。
+      {{ uiText("成员目录暂时不可用，请稍后重试。") }}
     </UiCard>
-    <section v-else class="directory-grid" aria-label="公开成员列表">
+    <section v-else class="directory-grid" :aria-label="uiText('公开成员列表')">
       <RouterLink v-for="user in users" :key="user.id" class="directory-card" :to="{ name: 'user-profile', params: { id: user.id } }">
         <UiAvatar
           :name="user.username"
@@ -64,11 +65,11 @@ const sortOptions: { label: string; value: UserDirectorySort; description: strin
             <OperatorIdentityBadge :is-persona="user.is_persona" :kind="user.persona_kind" />
           </div>
           <span>@{{ user.username }} · {{ user.role }}</span>
-          <p>主题 {{ user.topic_count }} · 回复 {{ user.post_count }} · {{ user.points_balance }} 可用积分</p>
+          <p>{{ uiText("主题") }} {{ user.topic_count }} {{ uiText("· 回复") }} {{ user.post_count }} · {{ user.points_balance }} {{ uiText("可用积分") }}</p>
         </div>
         <div class="directory-card__meta">
           <UiBadge tone="green">Lv.{{ user.level }}</UiBadge>
-          <small>TL{{ user.trust_level }} · {{ user.trust_level_label }}</small>
+          <small>TL{{ user.trust_level }} · {{ builtinTrustLabel(user.trust_level_label) }}</small>
           <small>{{ user.last_seen_at ? relativeTime(user.last_seen_at) : relativeTime(user.created_at) }}</small>
         </div>
       </RouterLink>

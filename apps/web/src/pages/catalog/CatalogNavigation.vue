@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { nextTick, onMounted, onUnmounted, ref } from "vue";
 
 import CatalogIcon from "./CatalogIcon.vue";
@@ -113,7 +114,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <nav ref="navigation" class="catalog-navigation" aria-label="游戏导航" @keydown.esc.stop.prevent="closeCategories(true)">
+  <nav ref="navigation" class="catalog-navigation" :aria-label="uiText('游戏导航')" @keydown.esc.stop.prevent="closeCategories(true)">
     <div class="catalog-navigation__items" @scroll.passive="hideTooltip">
       <button
         v-for="item in items"
@@ -121,7 +122,7 @@ onUnmounted(() => {
         type="button"
         class="catalog-navigation__button"
         :class="{ 'is-active': active === item.id, 'is-separated': item.id === 'authors' }"
-        :aria-label="item.label"
+        :aria-label="uiText(item.label)"
         :aria-current="active === item.id ? 'page' : undefined"
         @click="navigate(item.id)"
         @pointerenter="showTooltip($event, item.label)"
@@ -134,7 +135,7 @@ onUnmounted(() => {
         type="button"
         class="catalog-navigation__button is-separated"
         :class="{ 'is-active': selectedCategory !== 'all' || categoryOpen }"
-        aria-label="分类"
+        :aria-label="uiText('分类')"
         aria-controls="catalog-navigation-categories"
         :aria-expanded="categoryOpen"
         @click="toggleCategories"
@@ -147,18 +148,18 @@ onUnmounted(() => {
 
     <section v-if="categoryOpen" id="catalog-navigation-categories" ref="categoryPanel" class="catalog-navigation__panel" aria-labelledby="catalog-navigation-categories-title">
       <header class="catalog-navigation__panel-header">
-        <h2 id="catalog-navigation-categories-title">游戏分类</h2>
-        <button type="button" class="catalog-navigation__close" aria-label="关闭分类" @click="closeCategories(true)"><CatalogIcon name="close" /></button>
+        <h2 id="catalog-navigation-categories-title">{{ uiText("游戏分类") }}</h2>
+        <button type="button" class="catalog-navigation__close" :aria-label="uiText('关闭分类')" @click="closeCategories(true)"><CatalogIcon name="close" /></button>
       </header>
-      <div class="catalog-navigation__categories" role="group" aria-label="选择游戏分类">
-        <button type="button" class="catalog-navigation__category" :aria-pressed="selectedCategory === 'all'" @click="chooseCategory('all')">全部分类</button>
+      <div class="catalog-navigation__categories" role="group" :aria-label="uiText('选择游戏分类')">
+        <button type="button" class="catalog-navigation__category" :aria-pressed="selectedCategory === 'all'" @click="chooseCategory('all')">{{ uiText("全部分类") }}</button>
         <button v-for="category in categories" :key="category.id" type="button" class="catalog-navigation__category" :aria-pressed="selectedCategory === category.slug" @click="chooseCategory(category.slug)">{{ category.name }}</button>
       </div>
-      <p v-if="!categories.length" class="catalog-navigation__empty">暂无分类</p>
+      <p v-if="!categories.length" class="catalog-navigation__empty">{{ uiText("暂无分类") }}</p>
     </section>
 
     <Teleport to="body">
-      <span v-if="tooltip" class="catalog-navigation__tooltip" :class="{ 'catalog-navigation__tooltip--above': tooltip.above }" :style="{ left: `${tooltip.x}px`, top: `${tooltip.y}px` }" aria-hidden="true">{{ tooltip.label }}</span>
+      <span v-if="tooltip" class="catalog-navigation__tooltip" :class="{ 'catalog-navigation__tooltip--above': tooltip.above }" :style="{ left: `${tooltip.x}px`, top: `${tooltip.y}px` }" aria-hidden="true">{{ uiText(tooltip.label) }}</span>
     </Teleport>
   </nav>
 </template>

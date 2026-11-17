@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed, ref } from "vue";
 
 import UiCard from "@/shared/ui/Card.vue";
@@ -71,7 +72,7 @@ function handleToggleChecklist(entry: SpaceJournalItem, itemId: string) {
 }
 
 function handleRemove(entry: SpaceJournalItem) {
-  if (typeof window !== "undefined" && !window.confirm("确定要删除这篇手账吗？")) {
+  if (typeof window !== "undefined" && !window.confirm(uiText("确定要删除这篇手账吗？"))) {
     return;
   }
   deleteJournalMutation.mutate(entry.id);
@@ -79,40 +80,40 @@ function handleRemove(entry: SpaceJournalItem) {
 </script>
 
 <template>
-  <section class="profile-space-panel" aria-label="个人手账空间">
+  <section class="profile-space-panel" :aria-label="uiText('个人手账空间')">
     <div class="profile-space-banner">
       <div class="profile-space-banner__copy">
-        <span class="profile-space-banner__kicker">📖 手账与日常空间</span>
+        <span class="profile-space-banner__kicker">{{ uiText('📖 手账与日常空间') }}</span>
         <strong>
-          {{ spaceQuery.data.value?.space_title || `${displayName} 的手账自留地` }}
+          {{ spaceQuery.data.value?.space_title || uiText('{name} 的手账自留地', { name: displayName }) }}
         </strong>
         <p>
           {{
             spaceQuery.data.value?.space_subtitle ||
             (isOwnProfile
-              ? "记录日常碎碎念、心情贴纸与私人月度账本，公开手账会展示在你的个人档案页。"
-              : "这里展示该成员设为公开的日常手账、心情日签与月度小结卡片。")
+              ? uiText('记录日常碎碎念、心情贴纸与私人月度账本，公开手账会展示在你的个人档案页。')
+              : uiText('这里展示该成员设为公开的日常手账、心情日签与月度小结卡片。'))
           }}
         </p>
       </div>
       <div class="profile-space-banner__actions">
         <RouterLink v-if="isOwnProfile" class="profile-space-cta" :to="{ name: 'personal-space' }">
-          ✍️ 进入手账与记账工作台
+          {{ uiText('✍️ 进入手账与记账工作台') }}
         </RouterLink>
         <RouterLink v-else class="profile-space-cta profile-space-cta--soft" :to="{ name: 'personal-space' }">
-          去我的空间
+          {{ uiText('去我的空间') }}
         </RouterLink>
       </div>
     </div>
 
-    <div v-if="allTags.length" class="profile-space-tags" aria-label="手账标签筛选">
+    <div v-if="allTags.length" class="profile-space-tags" :aria-label="uiText('手账标签筛选')">
       <button
         type="button"
         class="profile-space-tag"
         :class="{ active: !selectedTag }"
         @click="selectedTag = ''"
       >
-        全部 ({{ journals.length }})
+        {{ uiText('全部 ({count})', { count: journals.length }) }}
       </button>
       <button
         v-for="[tag, count] in allTags"
@@ -127,7 +128,7 @@ function handleRemove(entry: SpaceJournalItem) {
     </div>
 
     <UiCard v-if="spaceQuery.isLoading.value" class="profile-space-state">
-      正在加载手账时间线…
+      {{ uiText('正在加载手账时间线…') }}
     </UiCard>
 
     <div v-else-if="filteredJournals.length" class="profile-space-timeline">
@@ -148,17 +149,17 @@ function handleRemove(entry: SpaceJournalItem) {
     <UiCard v-else class="profile-space-empty">
       <span class="profile-space-empty__icon" aria-hidden="true">📒</span>
       <div>
-        <strong>{{ isOwnProfile ? "还没有写下第一篇手账" : "暂时没有公开的手账记录" }}</strong>
+        <strong>{{ isOwnProfile ? uiText('还没有写下第一篇手账') : uiText('暂时没有公开的手账记录') }}</strong>
         <p>
           {{
             isOwnProfile
-              ? "去个人空间随手记下今天的心情贴纸、待办打卡或一笔日常开销吧。"
-              : "当作者将手账设为「公开」后，这里会呈现带心情贴纸的时间轴。"
+              ? uiText('去个人空间随手记下今天的心情贴纸、待办打卡或一笔日常开销吧。')
+              : uiText('当作者将手账设为「公开」后，这里会呈现带心情贴纸的时间轴。')
           }}
         </p>
       </div>
       <RouterLink v-if="isOwnProfile" class="profile-space-cta" :to="{ name: 'personal-space' }">
-        去写第一篇手账
+        {{ uiText('去写第一篇手账') }}
       </RouterLink>
     </UiCard>
   </section>

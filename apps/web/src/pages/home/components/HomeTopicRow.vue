@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { builtinSiteText, currentLocale, uiText } from "@/shared/i18n/locale";
 import { DeleteOutlined } from "@ant-design/icons-vue";
 
 import type { TopicCardVM } from "@/entities/topic/model";
@@ -43,7 +44,7 @@ function requestDeleteTopic() {
     <RouterLink
       class="home-topic-hit"
       :to="topicDetailRoute(topic)"
-      :aria-label="`打开主题：${topic.title}`"
+      :aria-label="uiText('打开主题：{value0}', { value0: topic.title })"
       tabindex="-1"
       aria-hidden="true"
     />
@@ -63,12 +64,12 @@ function requestDeleteTopic() {
       <div class="topic-copy">
         <div class="topic-title-line">
           <RouterLink class="topic-title" :to="topicDetailRoute(topic)">{{ topic.title }}</RouterLink>
-          <span v-if="topic.pinned" class="topic-status">置顶</span>
-          <span v-if="topic.tags.includes('今日节目')" class="topic-status topic-status--program">今日节目</span>
-          <span v-if="topic.featured" class="topic-status topic-status--signal">精选</span>
-          <span v-if="topic.solved" class="topic-status topic-status--solved">已解决</span>
+          <span v-if="topic.pinned" class="topic-status">{{ builtinSiteText("topic.pinned", "置顶", currentLocale) }}</span>
+          <span v-if="topic.tags.includes('今日节目')" class="topic-status topic-status--program">{{ uiText("今日节目") }}</span>
+          <span v-if="topic.featured" class="topic-status topic-status--signal">{{ uiText("精选") }}</span>
+          <span v-if="topic.solved" class="topic-status topic-status--solved">{{ uiText("已解决") }}</span>
         </div>
-        <div class="topic-author" aria-label="发起人">
+        <div class="topic-author" :aria-label="uiText('发起人')">
           <span>{{ topic.authorName }}</span>
           <OperatorIdentityBadge :is-persona="topic.authorIsPersona" :kind="topic.authorPersonaKind" />
         </div>
@@ -101,12 +102,12 @@ function requestDeleteTopic() {
         class="admin-topic-delete"
         type="button"
         :disabled="deletingTopic"
-        :aria-label="`删除主题：${topic.title}`"
-        :title="`删除主题：${topic.title}`"
+        :aria-label="uiText('删除主题：{value0}', { value0: topic.title })"
+        :title="uiText('删除主题：{value0}', { value0: topic.title })"
         @click.stop.prevent="requestDeleteTopic"
       >
         <DeleteOutlined aria-hidden="true" />
-        <span>{{ deletingTopic ? "删除中" : "删除" }}</span>
+        <span>{{ deletingTopic ? uiText("删除中") : uiText("删除") }}</span>
       </button>
     </div>
   </article>

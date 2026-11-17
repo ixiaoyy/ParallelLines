@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed, ref, watch } from "vue";
 
 import type { BoardDefaultSort, BoardNotificationLevel, BoardSummary } from "@/entities/board/model";
@@ -103,7 +104,7 @@ async function removeExistingMember(username: string) {
   memberError.value = "";
   try {
     await removeMember.mutateAsync(username);
-    memberNotice.value = `已移除 ${username}。`;
+    memberNotice.value = uiText("已移除 {value0}。", { value0: username });
   } catch (error) {
     memberError.value = boardManagementError(error);
   }
@@ -151,17 +152,17 @@ function boardManagementError(error: unknown): string {
   <UiCard class="board-settings-panel">
     <header>
       <div>
-        <span>版块控制台</span>
-        <h2>管理层级、标签策略和版主</h2>
+        <span>{{ uiText("版块控制台") }}</span>
+        <h2>{{ uiText("管理层级、标签策略和版主") }}</h2>
       </div>
-      <small>{{ settingsQuery.isFetching.value ? "同步中" : "仅 owner / admin 可见" }}</small>
+      <small>{{ settingsQuery.isFetching.value ? uiText("同步中") : uiText("仅 owner / admin 可见") }}</small>
     </header>
 
     <form class="settings-grid" @submit.prevent="saveSettings">
       <label>
-        <span>父版块</span>
+        <span>{{ uiText("父版块") }}</span>
         <select v-model="parentBoardId">
-          <option value="">顶层版块</option>
+          <option value="">{{ uiText("顶层版块") }}</option>
           <option v-for="candidate in parentCandidates" :key="candidate.id" :value="candidate.id">
             {{ candidate.name }}
           </option>
@@ -169,65 +170,65 @@ function boardManagementError(error: unknown): string {
       </label>
 
       <label>
-        <span>默认排序</span>
+        <span>{{ uiText("默认排序") }}</span>
         <select v-model="defaultSort">
-          <option value="latest">最新</option>
-          <option value="hot">热门</option>
-          <option value="top">精华</option>
+          <option value="latest">{{ uiText("最新") }}</option>
+          <option value="hot">{{ uiText("热门") }}</option>
+          <option value="top">{{ uiText("精华") }}</option>
         </select>
       </label>
 
       <label>
-        <span>默认通知</span>
+        <span>{{ uiText("默认通知") }}</span>
         <select v-model="defaultNotificationLevel">
-          <option value="watching">关注 · 新主题提醒</option>
-          <option value="tracking">跟踪 · 精简提醒</option>
-          <option value="normal">普通 · 不主动提醒</option>
-          <option value="muted">静音 · 不接收提醒</option>
+          <option value="watching">{{ uiText("关注 · 新主题提醒") }}</option>
+          <option value="tracking">{{ uiText("跟踪 · 精简提醒") }}</option>
+          <option value="normal">{{ uiText("普通 · 不主动提醒") }}</option>
+          <option value="muted">{{ uiText("静音 · 不接收提醒") }}</option>
         </select>
       </label>
 
       <label>
-        <span>必填标签</span>
-        <input v-model="requiredTags" placeholder="例如：bug, backend" />
+        <span>{{ uiText("必填标签") }}</span>
+        <input v-model="requiredTags" :placeholder="uiText('例如：bug, backend')" />
       </label>
 
       <label class="settings-grid__wide">
-        <span>允许标签</span>
-        <input v-model="allowedTags" placeholder="留空表示不限制；用逗号分隔" />
+        <span>{{ uiText("允许标签") }}</span>
+        <input v-model="allowedTags" :placeholder="uiText('留空表示不限制；用逗号分隔')" />
       </label>
 
       <label class="settings-grid__wide">
-        <span>发帖模板</span>
+        <span>{{ uiText("发帖模板") }}</span>
         <textarea
           v-model="postTemplate"
           rows="5"
-          placeholder="环境：&#10;复现步骤：&#10;实际结果："
+          :placeholder="uiText('环境：\n复现步骤：\n实际结果：')"
         ></textarea>
       </label>
 
-      <p v-if="settingsNotice" class="panel-success">{{ settingsNotice }}</p>
-      <p v-if="settingsError" class="panel-error">{{ settingsError }}</p>
+      <p v-if="settingsNotice" class="panel-success">{{ uiText(settingsNotice) }}</p>
+      <p v-if="settingsError" class="panel-error">{{ uiText(settingsError) }}</p>
       <UiButton type="submit" tone="primary" :disabled="updateSettings.isPending.value">
-        {{ updateSettings.isPending.value ? "保存中…" : "保存版块策略" }}
+        {{ updateSettings.isPending.value ? uiText("保存中…") : uiText("保存版块策略") }}
       </UiButton>
     </form>
 
-    <section class="member-manager" aria-label="版块成员角色">
+    <section class="member-manager" :aria-label="uiText('版块成员角色')">
       <div class="member-manager__form">
         <label>
-          <span>成员用户名</span>
+          <span>{{ uiText("成员用户名") }}</span>
           <input v-model="memberUsername" placeholder="username" />
         </label>
         <label>
-          <span>角色</span>
+          <span>{{ uiText("角色") }}</span>
           <select v-model="memberRole">
-            <option value="moderator">版主</option>
-            <option value="follower">成员</option>
+            <option value="moderator">{{ uiText("版主") }}</option>
+            <option value="follower">{{ uiText("成员") }}</option>
           </select>
         </label>
         <UiButton tone="subtle" :disabled="updateMember.isPending.value" @click="saveMember">
-          更新成员
+          {{ uiText("更新成员") }}
         </UiButton>
       </div>
 
@@ -243,13 +244,13 @@ function boardManagementError(error: unknown): string {
             :disabled="removeMember.isPending.value"
             @click="removeExistingMember(member.username)"
           >
-            移除
+            {{ uiText("移除") }}
           </UiButton>
         </div>
       </div>
 
-      <p v-if="memberNotice" class="panel-success">{{ memberNotice }}</p>
-      <p v-if="memberError" class="panel-error">{{ memberError }}</p>
+      <p v-if="memberNotice" class="panel-success">{{ uiText(memberNotice) }}</p>
+      <p v-if="memberError" class="panel-error">{{ uiText(memberError) }}</p>
     </section>
   </UiCard>
 </template>

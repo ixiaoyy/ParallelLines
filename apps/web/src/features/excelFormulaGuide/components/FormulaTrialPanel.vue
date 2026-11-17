@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import type { FormulaLesson, PracticeSheet } from "../model";
 import expandedPractice from "../expandedPractice.json";
@@ -112,35 +113,35 @@ onBeforeUnmount(() => { generation += 1; client.dispose(); });
 
 <template>
   <section class="formula-trial" aria-labelledby="formula-trial-title">
-    <div class="formula-trial__heading"><h3 id="formula-trial-title">直接在网页输入并试算</h3><UiButton tone="ghost" @click="reset">恢复原始示例</UiButton></div>
-    <p class="formula-trial__privacy">只计算本题示例，不上传。可修改蓝色格公式及输入数据；切换教程或离开后清除改动。</p>
-    <label class="formula-trial__formula-label" for="trial-formula">本次公式 · {{ lesson.sheetName }}!{{ lesson.targetCell }}</label>
+    <div class="formula-trial__heading"><h3 id="formula-trial-title">{{ uiText('直接在网页输入并试算') }}</h3><UiButton tone="ghost" @click="reset">{{ uiText('恢复原始示例') }}</UiButton></div>
+    <p class="formula-trial__privacy">{{ uiText('只计算本题示例，不上传。可修改蓝色格公式及输入数据；切换教程或离开后清除改动。') }}</p>
+    <label class="formula-trial__formula-label" for="trial-formula">{{ uiText('本次公式 · {sheet}!{cell}', { sheet: lesson.sheetName, cell: lesson.targetCell }) }}</label>
     <textarea id="trial-formula" v-model="formula" :maxlength="TRIAL_LIMITS.formulaChars" rows="2" spellcheck="false" @keydown.ctrl.enter.prevent="calculate"></textarea>
-    <div class="formula-trial__actions"><UiButton :disabled="busy" :loading="busy" @click="calculate">{{ busy ? '正在试算…' : '试算公式' }}</UiButton><UiButton v-if="busy" tone="ghost" @click="cancel">停止试算</UiButton><span>{{ lesson.sheetName }}!{{ lesson.targetCell }} · 本次结果不会覆盖参考答案</span></div>
-    <p v-if="error" role="alert" class="formula-trial__error">{{ error }}</p>
-    <p v-if="notice" class="formula-trial__notice" role="status">{{ notice }}</p>
+    <div class="formula-trial__actions"><UiButton :disabled="busy" :loading="busy" @click="calculate">{{ busy ? uiText('正在试算…') : uiText('试算公式') }}</UiButton><UiButton v-if="busy" tone="ghost" @click="cancel">{{ uiText('停止试算') }}</UiButton><span>{{ uiText('{sheet}!{cell} · 本次结果不会覆盖参考答案', { sheet: lesson.sheetName, cell: lesson.targetCell }) }}</span></div>
+    <p v-if="error" role="alert" class="formula-trial__error">{{ uiText(error) }}</p>
+    <p v-if="notice" class="formula-trial__notice" role="status">{{ uiText(notice) }}</p>
     <div v-if="result" class="formula-trial__result" role="status" aria-live="polite">
-      <h4>本次计算结果</h4><output data-testid="trial-result">{{ outputText }}</output>
-      <p>{{ result.values.length }} 行 × {{ result.values[0]?.length }} 列<span v-if="numberFormat"> · 显示格式 {{ numberFormat }}<template v-if="result.values.length === 1"> · 原始值 {{ result.values[0]?.[0] }}</template></span></p>
+      <h4>{{ uiText('本次计算结果') }}</h4><output data-testid="trial-result">{{ outputText }}</output>
+      <p>{{ uiText('{rows} 行 × {columns} 列', { rows: result.values.length, columns: result.values[0]?.length ?? 0 }) }}<span v-if="numberFormat"> {{ uiText('· 显示格式') }} {{ numberFormat }}<template v-if="result.values.length === 1"> {{ uiText('· 原始值') }} {{ result.values[0]?.[0] }}</template></span></p>
     </div>
-    <div class="formula-trial__tabs" role="group" aria-label="示例工作表"><button v-for="sheet in sheets" :key="sheet.name" type="button" :aria-pressed="activeSheet?.name === sheet.name" @click="sheetName = sheet.name">{{ sheet.name }}</button></div>
+    <div class="formula-trial__tabs" role="group" :aria-label="uiText('示例工作表')"><button v-for="sheet in sheets" :key="sheet.name" type="button" :aria-pressed="activeSheet?.name === sheet.name" @click="sheetName = sheet.name">{{ sheet.name }}</button></div>
     <template v-if="activeSheet">
       <p class="formula-trial__help">{{ sheetDescription }}</p>
-      <div ref="viewport" class="formula-sheet-scroll" tabindex="0" :aria-label="`${activeSheet.name}工作表示例，可横向滚动`">
-        <table class="formula-sheet"><caption class="formula-trial__visually-hidden">{{ activeSheet.name }}工作表，可修改输入数据</caption><thead>
-          <tr class="formula-sheet__letters"><th scope="col" aria-label="行号"></th><th v-for="(_, index) in activeSheet.rows[0]" :key="index" scope="col">{{ columnName(index) }}</th></tr>
+      <div ref="viewport" class="formula-sheet-scroll" tabindex="0" :aria-label="uiText('{sheet}工作表示例，可横向滚动', { sheet: activeSheet.name })">
+        <table class="formula-sheet"><caption class="formula-trial__visually-hidden">{{ uiText('{sheet}工作表，可修改输入数据', { sheet: activeSheet.name }) }}</caption><thead>
+          <tr class="formula-sheet__letters"><th scope="col" :aria-label="uiText('行号')"></th><th v-for="(_, index) in activeSheet.rows[0]" :key="index" scope="col">{{ columnName(index) }}</th></tr>
           <tr><th scope="row" class="formula-sheet__row-number">1</th><th v-for="(heading, index) in activeSheet.rows[0]" :key="index" scope="col">{{ heading }}</th></tr>
         </thead><tbody><tr v-for="row in rows" :key="row.row"><th scope="row" class="formula-sheet__row-number">{{ row.row }}</th>
           <td v-for="(cell, column) in row.cells" :key="column" :class="{ 'is-target': isTarget(row.row, column) }">
-            <input v-if="isTarget(row.row, column)" v-model="formula" :aria-label="`${activeSheet.name}!${columnName(column)}${row.row}公式`" type="text" :maxlength="TRIAL_LIMITS.formulaChars" placeholder="在此输入公式" spellcheck="false" @keydown.enter.prevent="calculate" />
+            <input v-if="isTarget(row.row, column)" v-model="formula" :aria-label="uiText('{sheet}!{cell}公式', { sheet: activeSheet.name, cell: `${columnName(column)}${row.row}` })" type="text" :maxlength="TRIAL_LIMITS.formulaChars" :placeholder="uiText('在此输入公式')" spellcheck="false" @keydown.enter.prevent="calculate" />
             <input v-else-if="editable(row.row, column)" :type="inputType(row.row, column)" :value="cell ?? ''" :aria-label="`${activeSheet.name}!${columnName(column)}${row.row}`" :maxlength="TRIAL_LIMITS.valueChars" step="any" :min="inputType(row.row, column) === 'date' ? '1900-01-01' : undefined" :max="inputType(row.row, column) === 'date' ? '9999-12-31' : undefined" @input="changeCell($event, row.row, column)" />
             <span v-else>{{ cell }}</span>
           </td>
         </tr></tbody></table>
       </div>
-      <p class="formula-trial__help">表格可横向滚动。蓝格可直接输入公式并按 Enter；文字工号仍按文字处理。参考答案是原示例的固定值。</p>
+      <p class="formula-trial__help">{{ uiText('表格可横向滚动。蓝格可直接输入公式并按 Enter；文字工号仍按文字处理。参考答案是原示例的固定值。') }}</p>
     </template>
-    <details class="formula-trial__limits"><summary>试算范围与计算引擎</summary><p>支持本页教程的函数及有界单元格范围；不执行宏、JavaScript、网络函数或外链。公式最多 {{ TRIAL_LIMITS.formulaChars }} 字符、单范围 {{ TRIAL_LIMITS.rangeCells }} 格、每次 {{ TRIAL_LIMITS.timeoutMs / 1000 }} 秒，超限会明确停止；不支持完整 Excel 的隐藏行、格式及全部函数模式。</p><a href="/licenses/excel-formula-engine.txt" target="_blank" rel="noopener noreferrer">离线计算引擎许可说明</a></details>
+    <details class="formula-trial__limits"><summary>{{ uiText('试算范围与计算引擎') }}</summary><p>{{ uiText('支持本页教程的函数及有界单元格范围；不执行宏、JavaScript、网络函数或外链。公式最多 {characters} 字符、单范围 {cells} 格、每次 {seconds} 秒，超限会明确停止；不支持完整 Excel 的隐藏行、格式及全部函数模式。', { characters: TRIAL_LIMITS.formulaChars, cells: TRIAL_LIMITS.rangeCells, seconds: TRIAL_LIMITS.timeoutMs / 1000 }) }}</p><a href="/licenses/excel-formula-engine.txt" target="_blank" rel="noopener noreferrer">{{ uiText('离线计算引擎许可说明') }}</a></details>
   </section>
 </template>
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { uiText } from "@/shared/i18n/locale";
 import { ArrowLeftOutlined } from "@ant-design/icons-vue";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { message, Modal } from "ant-design-vue";
@@ -91,8 +92,8 @@ useSeoMeta(
     if (!current) {
       return topicQuery.isError.value
         ? {
-            title: `页面不存在 · ${siteTitle.value}`,
-            description: "请求的主题不存在、已被移除或不可公开访问。",
+            title: uiText("页面不存在 · {value0}", { value0: siteTitle.value }),
+            description: uiText("请求的主题不存在、已被移除或不可公开访问。"),
             canonicalPath: route.path,
             robots: "noindex,nofollow",
             siteName: siteTitle.value,
@@ -101,8 +102,8 @@ useSeoMeta(
     }
     if (!isTopicIndexableForSeo(current)) {
       return {
-        title: `受限内容 · ${siteTitle.value}`,
-        description: "该主题需要相应访问权限。",
+        title: uiText("受限内容 · {value0}", { value0: siteTitle.value }),
+        description: uiText("该主题需要相应访问权限。"),
         canonicalPath: route.path,
         robots: "noindex,nofollow",
         siteName: siteTitle.value,
@@ -110,7 +111,7 @@ useSeoMeta(
     }
     return {
       title: `${current.title} · ${current.boardName} · ${siteTitle.value}`,
-      description: current.excerpt || `${current.boardName} 中的公开主题：${current.title}`,
+      description: current.excerpt || uiText("{value0} 中的公开主题：{value1}", { value0: current.boardName, value1: current.title }),
       canonicalPath: `/topics/${current.id}/${current.slug}`,
       ogType: "article",
       siteName: siteTitle.value,
@@ -324,10 +325,10 @@ function requireLogin(message: string) {
 // Key parameter: `content` explains the blocked action. Side effect: may route to auth after user confirmation.
 function confirmLogin(content: string) {
   Modal.confirm({
-    title: "登录后继续",
-    content,
-    okText: "去登录",
-    cancelText: "先看看",
+    title: uiText("登录后继续"),
+    content: uiText(content),
+    okText: uiText("去登录"),
+    cancelText: uiText("先看看"),
     centered: true,
     class: "auth-gate-modal",
     onOk: () => router.push({ name: "auth", query: { redirect: route.fullPath } }),
@@ -344,9 +345,9 @@ function togglePostSolution(post: PostItemVM) {
     { post_id: clearing ? null : post.id },
     {
       onSuccess: () => {
-        setToolbarStatus(clearing ? "已取消采纳答案" : `已采纳 #${post.floor} 为解决方案`);
+        setToolbarStatus(clearing ? uiText("已取消采纳答案") : uiText("已采纳 #{value0} 为解决方案", { value0: post.floor }));
       },
-      onError: () => setToolbarStatus("采纳失败，请确认主题权限和楼层状态"),
+      onError: () => setToolbarStatus(uiText("采纳失败，请确认主题权限和楼层状态")),
     },
   );
 }
@@ -364,12 +365,12 @@ function votePoll(optionIds: string[]) {
   pollVoteMutation.mutate(
     { option_ids: optionIds },
     {
-      onSuccess: () => setToolbarStatus("投票已提交，提交后不可修改"),
+      onSuccess: () => setToolbarStatus(uiText("投票已提交，提交后不可修改")),
       onError: (error) =>
         setToolbarStatus(
           isApiErrorCode(error, "poll_already_voted")
-            ? "你已经投过票，不能修改选择"
-            : "投票失败，可能已截止或选项无效",
+            ? uiText("你已经投过票，不能修改选择")
+            : uiText("投票失败，可能已截止或选项无效"),
         ),
     },
   );
@@ -380,7 +381,7 @@ function votePoll(optionIds: string[]) {
 function navigateSwipeTopic(direction: "previous" | "next") {
   const target = direction === "previous" ? previousSwipeTopic.value : nextSwipeTopic.value;
   if (!target) {
-    setToolbarStatus(direction === "previous" ? "已经是最新主题" : "没有更多主题");
+    setToolbarStatus(direction === "previous" ? uiText("已经是最新主题") : uiText("没有更多主题"));
     return;
   }
 
@@ -416,7 +417,7 @@ function quotePost(post: PostItemVM) {
   replyTargetPost.value = post;
   insertReplyDraft(quoteText);
   openReplyComposer();
-  setToolbarStatus(`已引用 ${post.authorName} #${post.floor}`);
+  setToolbarStatus(uiText("已引用 {value0} #{value1}", { value0: post.authorName, value1: post.floor }));
 }
 
 // Opens the reply composer without injecting quoted text.
@@ -426,13 +427,13 @@ function replyToPost(post: PostItemVM) {
   replyTargetPost.value = post;
   openReplyComposer();
   if (canReply.value) {
-    setToolbarStatus(`正在回复 ${post.authorName} #${post.floor}`);
+    setToolbarStatus(uiText("正在回复 {value0} #{value1}", { value0: post.authorName, value1: post.floor }));
   }
 }
 
 function blockPostAuthor(post: PostItemVM) {
   if (post.userId === currentUserId.value) {
-    setToolbarStatus("不能屏蔽自己。");
+    setToolbarStatus(uiText("不能屏蔽自己。"));
     return;
   }
   if (!hasAccessToken()) {
@@ -443,15 +444,15 @@ function blockPostAuthor(post: PostItemVM) {
     return;
   }
   Modal.confirm({
-    title: `屏蔽 ${post.authorName}？`,
-    content: "之后将不再显示该用户的主题和楼层，也不能互发私信。",
-    okText: "屏蔽用户",
-    cancelText: "取消",
+    title: uiText("屏蔽 {value0}？", { value0: post.authorName }),
+    content: uiText("之后将不再显示该用户的主题和楼层，也不能互发私信。"),
+    okText: uiText("屏蔽用户"),
+    cancelText: uiText("取消"),
     okType: "danger",
     onOk: () => {
       blockAuthorMutation.mutate(post.authorName, {
-        onSuccess: () => setToolbarStatus(`已屏蔽 ${post.authorName}，正在隐藏相关楼层。`),
-        onError: () => setToolbarStatus("屏蔽失败，请稍后重试。"),
+        onSuccess: () => setToolbarStatus(uiText("已屏蔽 {value0}，正在隐藏相关楼层。", { value0: post.authorName })),
+        onError: () => setToolbarStatus(uiText("屏蔽失败，请稍后重试。")),
       });
     },
   });
@@ -536,7 +537,7 @@ function clearReplyInsertRequest() {
 
 
 function setToolbarStatus(content: string) {
-  void message.open({ key: "topic-detail-status", type: "info", content, duration: 2.6 });
+  void message.open({ key: "topic-detail-status", type: "info", content: uiText(content), duration: 2.6 });
 }
 
 </script>
@@ -544,15 +545,15 @@ function setToolbarStatus(content: string) {
 <template>
   <div class="topic-detail-page" :class="{ 'topic-detail-page--comic-reader': comicReader }">
     <UiCard v-if="topicQuery.isLoading.value" class="topic-state" role="status">
-      正在加载主题…
+      {{ uiText("正在加载主题…") }}
     </UiCard>
 
     <UiEmptyState
       v-else-if="topicQuery.isError.value"
-      title="无法加载这个主题"
-      description="这个主题暂时无法访问，可能已被删除或链接已变更。请稍后重试。"
+      :title="uiText('无法加载这个主题')"
+      :description="uiText('这个主题暂时无法访问，可能已被删除或链接已变更。请稍后重试。')"
     >
-      <RouterLink class="empty-link" to="/forum">返回首页</RouterLink>
+      <RouterLink class="empty-link" to="/forum">{{ uiText("返回首页") }}</RouterLink>
     </UiEmptyState>
 
     <template v-else-if="topic">
@@ -571,13 +572,13 @@ function setToolbarStatus(content: string) {
         <div class="topic-content">
           <TopicDetailHero :topic="topic" />
 
-          <main class="post-stream" aria-label="主题正文与回复">
+          <main class="post-stream" :aria-label="uiText('主题正文与回复')">
             <UiCard v-if="postsQuery.isLoading.value" class="topic-state" role="status">
-              正在加载正文…
+              {{ uiText("正在加载正文…") }}
             </UiCard>
 
             <UiCard v-else-if="postsQuery.isError.value" class="topic-state topic-state--error" role="alert">
-              楼层暂时加载失败，请稍后刷新。
+              {{ uiText("楼层暂时加载失败，请稍后刷新。") }}
             </UiCard>
 
             <template v-else>
@@ -609,7 +610,7 @@ function setToolbarStatus(content: string) {
               />
 
               <UiCard v-if="hiddenRelationshipPostCount > 0" class="topic-state topic-state--muted" role="status">
-                已隐藏 {{ hiddenRelationshipPostCount }} 条来自已屏蔽用户的楼层。
+                {{ uiText("已隐藏 {count} 条来自已屏蔽用户的楼层。", { count: hiddenRelationshipPostCount }) }}
               </UiCard>
 
               <PollPanel
@@ -649,14 +650,14 @@ function setToolbarStatus(content: string) {
                     <button
                       class="reply-composer-sheet__back"
                       type="button"
-                      aria-label="关闭回复编辑器"
+                      :aria-label="uiText('关闭回复编辑器')"
                       :disabled="createPost.isPending.value"
                       @click="closeReplyComposer"
                     >
                       <ArrowLeftOutlined aria-hidden="true" />
                     </button>
                     <div class="reply-composer-sheet__title">
-                      <h2 id="reply-composer-title">回复主题</h2>
+                      <h2 id="reply-composer-title">{{ uiText("回复主题") }}</h2>
                       <span>{{ topic.title }} ›</span>
                     </div>
                     <button
@@ -665,16 +666,16 @@ function setToolbarStatus(content: string) {
                       :disabled="createPost.isPending.value"
                       @click="publishReplyComposer"
                     >
-                      {{ createPost.isPending.value ? "发布中" : "发布" }}
+                      {{ createPost.isPending.value ? uiText("发布中") : uiText("发布") }}
                     </button>
                   </header>
 
                   <div class="reply-composer-sheet__body">
-                    <section v-if="replyComposerTarget" class="reply-composer-target" aria-label="回复目标">
+                    <section v-if="replyComposerTarget" class="reply-composer-target" :aria-label="uiText('回复目标')">
                       <div class="reply-composer-target__meta">
                         <span class="reply-composer-target__dot" aria-hidden="true"></span>
-                        <strong>#{{ replyComposerTarget.floor }} 楼层</strong>
-                        <span>回复给 {{ replyComposerTarget.authorName }}</span>
+                        <strong>#{{ replyComposerTarget.floor }} {{ uiText("楼层") }}</strong>
+                        <span>{{ uiText("回复给 {name}", { name: replyComposerTarget.authorName }) }}</span>
                       </div>
                       <p>{{ replyComposerTarget.excerpt }}</p>
                       <span class="reply-composer-target__quote" aria-hidden="true">“</span>
@@ -693,15 +694,15 @@ function setToolbarStatus(content: string) {
                       :insert-token="replyInsertToken"
                       @submit="handleReply"
                     />
-                    <p v-if="replyStatus" class="reply-composer-sheet__status" role="status">{{ replyStatus }}</p>
+                    <p v-if="replyStatus" class="reply-composer-sheet__status" role="status">{{ uiText(replyStatus) }}</p>
                   </div>
                 </section>
               </div>
             </Teleport>
             <UiCard v-else class="topic-state" role="status">
-              主题当前为已关闭状态，暂不接受新回复。
+              {{ uiText("主题当前为已关闭状态，暂不接受新回复。") }}
             </UiCard>
-            <p v-if="replyStatus" class="reply-status" role="status">{{ replyStatus }}</p>
+            <p v-if="replyStatus" class="reply-status" role="status">{{ uiText(replyStatus) }}</p>
             <span id="topic-end" class="topic-end-anchor" aria-hidden="true" />
           </main>
         </div>
@@ -709,8 +710,8 @@ function setToolbarStatus(content: string) {
 
     </template>
 
-    <UiEmptyState v-else title="没有找到这个主题" description="主题可能已被移动、隐藏或不存在，回到首页继续浏览。">
-      <RouterLink class="empty-link" to="/forum">返回首页</RouterLink>
+    <UiEmptyState v-else :title="uiText('没有找到这个主题')" :description="uiText('主题可能已被移动、隐藏或不存在，回到首页继续浏览。')">
+      <RouterLink class="empty-link" to="/forum">{{ uiText("返回首页") }}</RouterLink>
     </UiEmptyState>
   </div>
 </template>
