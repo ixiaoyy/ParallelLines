@@ -84,6 +84,52 @@ const calendarCells = computed(() => {
   }
   return cells;
 });
+
+const streakDays = computed(() => {
+  const activeDates = new Set<string>();
+  for (const j of props.journals) activeDates.add(j.entry_date);
+  for (const l of props.ledgers) activeDates.add(l.entry_date);
+  if (activeDates.size === 0) return 0;
+
+  const cursor = new Date();
+  const format = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  if (!activeDates.has(format(cursor))) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  let streak = 0;
+  while (activeDates.has(format(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+});
+
+const monthlyMoodBreakdown = computed(() => {
+  const prefix = `${props.selectedMonth}-`;
+  const counts = new Map<string, number>();
+  let total = 0;
+  for (const j of props.journals) {
+    if (!j.entry_date.startsWith(prefix)) continue;
+    counts.set(j.mood, (counts.get(j.mood) ?? 0) + 1);
+    total += 1;
+  }
+  if (total === 0) return [];
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([moodKey, count]) => {
+      const meta = getMoodMeta(moodKey);
+      return {
+        key: moodKey,
+        emoji: meta.emoji,
+        label: meta.label,
+        color: meta.color,
+        count,
+        percent: Math.round((count * 100) / total),
+      };
+    });
+});
 </script>
 
 <template>
@@ -120,6 +166,27 @@ const calendarCells = computed(() => {
           <i v-if="cell.hasLedger" class="cell-ledger-dot" title="当日有记账"></i>
         </template>
       </button>
+    </div>
+
+    <div v-if="streakDays > 0 || monthlyMoodBreakdown.length" class="calendar-insights">
+      <div v-if="streakDays > 0" class="streak-pill">
+        🔥 已连续记录 <b>{{ streakDays }}</b> 天
+      </div>
+      <div v-if="monthlyMoodBreakdown.length" class="mood-bar-wrap">
+        <div class="mood-bar-track" title="本月心情分布">
+          <i
+            v-for="item in monthlyMoodBreakdown"
+            :key="item.key"
+            :style="{ width: `${Math.max(8, item.percent)}%`, backgroundColor: item.color }"
+            :title="`${item.emoji} ${item.label} ${item.count} 篇 (${item.percent}%)`"
+          ></i>
+        </div>
+        <div class="mood-bar-legend">
+          <span v-for="item in monthlyMoodBreakdown.slice(0, 3)" :key="item.key">
+            {{ item.emoji }} {{ item.count }}
+          </span>
+        </div>
+      </div>
     </div>
 
     <div class="calendar-mood-filter">
@@ -251,6 +318,46 @@ const calendarCells = computed(() => {
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--muted);
+}
+
+.calendar-insights {
+  display: grid;
+  gap: 0.45rem;
+  padding-top: 0.25rem;
+  border-top: 1px dashed var(--border);
+}
+
+.streak-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text);
+
+  b { color: #ea580c; font-weight: 900; }
+}
+
+.mood-bar-wrap {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.mood-bar-track {
+  display: flex;
+  gap: 2px;
+  height: 0.42rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg-subtle);
+
+  i { display: block; height: 100%; border-radius: 999px; }
+}
+
+.mood-bar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .mood-mini-list {

@@ -1069,6 +1069,24 @@
   gap: 0.5rem;
 }
 
+.space-filter-search {
+  flex: 1 1 12rem;
+  max-width: 16rem;
+  min-width: 0;
+  padding: 0.36rem 0.78rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--title);
+  font-size: 0.8rem;
+  outline: none;
+
+  &:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+}
+
 .space-filter-pills {
   display: flex;
   gap: 0.35rem;
@@ -1149,10 +1167,15 @@
 }
 
 .community-intro-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
   padding: 1rem 1.15rem;
   border-radius: 1.15rem;
   border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
-  background: linear-gradient(135deg, #f0f9ff 0%, #fdf2f8 100%);
+  background: linear-gradient(135deg, rgba(240, 249, 255, 0.9) 0%, rgba(253, 242, 248, 0.88) 100%);
 
   strong { font-size: 0.98rem; color: var(--title); }
   p { margin: 0.25rem 0 0; font-size: 0.84rem; color: var(--text); line-height: 1.55; }

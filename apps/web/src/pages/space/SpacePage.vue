@@ -3,6 +3,8 @@ import { computed, reactive, ref, watch } from "vue";
 import { message } from "ant-design-vue";
 
 import { useCurrentUser } from "@/features/auth/queries";
+import { setUserRelationship } from "@/features/social/api";
+import { useUserRelationshipUsers } from "@/features/social/queries";
 import SpaceJournalCard from "@/features/space/components/SpaceJournalCard.vue";
 import SpaceLedgerPanel from "@/features/space/components/SpaceLedgerPanel.vue";
 import SpaceMoodCalendarCard from "@/features/space/components/SpaceMoodCalendarCard.vue";
@@ -45,6 +47,8 @@ import {
 } from "@/features/space/queries";
 import { uploadFile } from "@/features/uploads/api";
 import { hasAccessToken, resolveApiAssetUrl } from "@/shared/api/client";
+import { queryClient } from "@/shared/api/queryClient";
+import { queryKeys } from "@/shared/api/queryKeys";
 import UiAvatar from "@/shared/ui/Avatar.vue";
 import UiButton from "@/shared/ui/Button.vue";
 import UiCard from "@/shared/ui/Card.vue";
@@ -72,13 +76,58 @@ const mobileCalendarExpanded = ref(false);
 const filterDate = ref("");
 const filterMood = ref<string>("");
 const filterTag = ref("");
+const filterKeyword = ref("");
 const filterVisibility = ref<"all" | "public" | "private">("all");
+const communityScope = ref<"all" | "following">("all");
+const followBusyUsername = ref<string | null>(null);
 
 const workspaceQuery = useMySpaceWorkspace(selectedMonth, workspaceAuthScope);
 const communityFeedQuery = usePublicSpaceFeed(
   30,
   computed(() => activeTab.value === "community"),
 );
+const followingUsersQuery = useUserRelationshipUsers(
+  computed(() => currentUser.value?.username ?? ""),
+  "following",
+  computed(() => activeTab.value === "community" && Boolean(currentUser.value?.username)),
+);
+
+const followingUsernames = computed(() => {
+  const set = new Set<string>();
+  for (const item of followingUsersQuery.data.value ?? []) {
+    set.add(item.username);
+  }
+  return set;
+});
+
+const visibleCommunityFeed = computed(() => {
+  const list = communityFeedQuery.data.value ?? [];
+  if (communityScope.value === "following") {
+    return list.filter(
+      (item) => item.author?.username && followingUsernames.value.has(item.author.username),
+    );
+  }
+  return list;
+});
+
+async function handleToggleFollowAuthor(entry: SpaceJournalItem) {
+  const username = entry.author?.username;
+  if (!username || !currentUser.value) {
+    message.info("请先登录后再关注圈友");
+    return;
+  }
+  const currentlyFollowing = followingUsernames.value.has(username);
+  followBusyUsername.value = username;
+  try {
+    await setUserRelationship(username, "follow", !currentlyFollowing);
+    void queryClient.invalidateQueries({ queryKey: queryKeys.userRelationshipUsersRoot });
+    message.success(currentlyFollowing ? `已取消关注 @${username}` : `已关注 @${username}`);
+  } catch {
+    message.error("关注操作失败，请稍后重试");
+  } finally {
+    followBusyUsername.value = null;
+  }
+}
 
 const createJournalMutation = useCreateSpaceJournal();
 const updateJournalMutation = useUpdateSpaceJournal();
@@ -201,12 +250,17 @@ const publicJournalsCount = computed(
 );
 
 const filteredJournals = computed(() => {
+  const kw = filterKeyword.value.trim().toLowerCase();
   return myJournals.value.filter((item) => {
     if (filterDate.value && item.entry_date !== filterDate.value) return false;
     if (filterMood.value && item.mood !== filterMood.value) return false;
     if (filterTag.value && !item.tags?.includes(filterTag.value)) return false;
     if (filterVisibility.value !== "all" && item.visibility !== filterVisibility.value) {
       return false;
+    }
+    if (kw) {
+      const hay = `${item.title} ${item.content} ${item.location} ${(item.tags ?? []).join(" ")}`.toLowerCase();
+      if (!hay.includes(kw)) return false;
     }
     return true;
   });
@@ -217,6 +271,7 @@ const hasActiveJournalFilters = computed(() =>
     filterDate.value ||
       filterMood.value ||
       filterTag.value ||
+      filterKeyword.value.trim() ||
       filterVisibility.value !== "all",
   ),
 );
@@ -225,6 +280,7 @@ function clearJournalFilters() {
   filterDate.value = "";
   filterMood.value = "";
   filterTag.value = "";
+  filterKeyword.value = "";
   filterVisibility.value = "all";
 }
 
@@ -346,6 +402,13 @@ async function submitJournal() {
     trimmedTitle ||
     (journalDraft.checklist.length ? "今日打卡记录" : "分享日常瞬间");
 
+  // 自动提取正文中的 #标签 并合并到标签列表。
+  const inlineTags = Array.from(
+    finalContent.matchAll(/#([\p{L}\p{N}_-]{1,24})/gu),
+    (match) => match[1]!.trim(),
+  ).filter(Boolean);
+  const mergedTags = Array.from(new Set([...journalDraft.tags, ...inlineTags])).slice(0, 12);
+
   try {
     await createJournalMutation.mutateAsync({
       entry_date: journalDraft.entry_date || todayDateString(),
@@ -357,7 +420,7 @@ async function submitJournal() {
       visibility: journalDraft.visibility,
       is_pinned: journalDraft.is_pinned,
       card_theme: journalDraft.card_theme,
-      tags: [...journalDraft.tags],
+      tags: mergedTags,
       media_urls: [...journalDraft.media_urls],
       checklist: [...journalDraft.checklist],
     });
@@ -1105,6 +1168,14 @@ function scrollToComposer(mode: ComposerMode) {
               </button>
             </div>
 
+            <input
+              v-model="filterKeyword"
+              type="search"
+              class="space-filter-search"
+              placeholder="🔍 搜索手账内容、地点或标签…"
+              aria-label="搜索我的手账"
+            />
+
             <div v-if="hasActiveJournalFilters" class="space-active-filters">
               <span v-if="filterDate" class="filter-chip">
                 📅 {{ filterDate }}
@@ -1178,7 +1249,23 @@ function scrollToComposer(mode: ComposerMode) {
           <div class="community-intro-banner">
             <div>
               <strong>🌍 圈友公开手账墙</strong>
-              <p>这里汇集了圈友们设为「公开」的日常手账、心情日签与月度小结卡片。点击作者头像还能逛逛 TA 的个人主页。</p>
+              <p>这里汇集了圈友们设为「公开」的日常手账、心情日签与月度小结卡片。点击作者头像或关注按钮，把喜欢的圈友收进自己的关注流。</p>
+            </div>
+            <div class="space-filter-pills community-scope-pills">
+              <button
+                type="button"
+                :class="{ active: communityScope === 'all' }"
+                @click="communityScope = 'all'"
+              >
+                全部公开
+              </button>
+              <button
+                type="button"
+                :class="{ active: communityScope === 'following' }"
+                @click="communityScope = 'following'"
+              >
+                我关注的
+              </button>
             </div>
           </div>
 
@@ -1186,19 +1273,23 @@ function scrollToComposer(mode: ComposerMode) {
             正在加载圈友手账…
           </UiCard>
           <div
-            v-else-if="communityFeedQuery.data.value && communityFeedQuery.data.value.length"
+            v-else-if="visibleCommunityFeed.length"
             class="space-journal-timeline"
           >
             <SpaceJournalCard
-              v-for="item in communityFeedQuery.data.value"
+              v-for="item in visibleCommunityFeed"
               :key="item.id"
               :entry="item"
               :show-author="true"
               :editable="Boolean(currentUser && item.user_id === currentUser.id)"
+              :show-follow="Boolean(currentUser && item.author && item.user_id !== currentUser.id)"
+              :is-following="Boolean(item.author?.username && followingUsernames.has(item.author.username))"
+              :follow-busy="Boolean(item.author?.username && followBusyUsername === item.author.username)"
               @like="handleLikeJournal"
               @toggle-pin="handleTogglePin"
               @toggle-visibility="handleToggleVisibility"
               @toggle-checklist="handleToggleChecklist"
+              @toggle-follow="handleToggleFollowAuthor"
               @remove="handleRemoveJournal"
               @select-tag="
                 (t) => {
@@ -1210,8 +1301,14 @@ function scrollToComposer(mode: ComposerMode) {
           </div>
           <UiCard v-else class="space-empty-card">
             <span class="empty-emoji">✨</span>
-            <strong>还没有公开的圈友手账</strong>
-            <p>发布第一篇设为「公开」的手账日签，点亮圈友手账墙吧！</p>
+            <strong>{{ communityScope === 'following' ? '还没有关注圈友的公开手账' : '还没有公开的圈友手账' }}</strong>
+            <p>
+              {{
+                communityScope === 'following'
+                  ? '先去「全部公开」里逛逛，关注几位喜欢的圈友吧。'
+                  : '发布第一篇设为「公开」的手账日签，点亮圈友手账墙吧！'
+              }}
+            </p>
           </UiCard>
         </section>
       </main>

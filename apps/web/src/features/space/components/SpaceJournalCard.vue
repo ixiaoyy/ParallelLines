@@ -18,10 +18,16 @@ const props = withDefaults(
     entry: SpaceJournalItem;
     editable?: boolean;
     showAuthor?: boolean;
+    showFollow?: boolean;
+    isFollowing?: boolean;
+    followBusy?: boolean;
   }>(),
   {
     editable: false,
     showAuthor: false,
+    showFollow: false,
+    isFollowing: false,
+    followBusy: false,
   },
 );
 
@@ -29,6 +35,7 @@ const emit = defineEmits<{
   togglePin: [entry: SpaceJournalItem];
   toggleVisibility: [entry: SpaceJournalItem];
   toggleChecklist: [entry: SpaceJournalItem, itemId: string];
+  toggleFollow: [entry: SpaceJournalItem];
   like: [entry: SpaceJournalItem];
   remove: [entry: SpaceJournalItem];
   selectTag: [tag: string];
@@ -104,6 +111,16 @@ function handleChecklistClick(item: SpaceChecklistItem) {
             <strong>{{ entry.author.display_name || entry.author.username }}</strong>
             <span>@{{ entry.author.username }}</span>
           </RouterLink>
+          <button
+            v-if="showFollow"
+            type="button"
+            class="space-journal-card__follow-btn"
+            :class="{ 'is-following': isFollowing }"
+            :disabled="followBusy"
+            @click="emit('toggleFollow', entry)"
+          >
+            {{ isFollowing ? "已关注" : "+ 关注" }}
+          </button>
         </div>
 
         <div class="space-journal-card__stickers">
@@ -335,6 +352,37 @@ function handleChecklistClick(item: SpaceChecklistItem) {
 
   &.is-pinned {
     border-color: color-mix(in srgb, var(--primary) 38%, var(--border));
+  }
+}
+
+.space-journal-card__author {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.space-journal-card__follow-btn {
+  flex-shrink: 0;
+  padding: 0.2rem 0.65rem;
+  border: 1px solid var(--theme-soft-border, rgba(64, 158, 255, 0.35));
+  border-radius: var(--radius-pill);
+  background: var(--theme-soft-bg, rgba(64, 158, 255, 0.1));
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+
+  &.is-following {
+    border-color: var(--border);
+    background: var(--bg-subtle);
+    color: var(--muted);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }
 

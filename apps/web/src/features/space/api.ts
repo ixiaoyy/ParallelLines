@@ -2,7 +2,6 @@ import { apiRequest, hasAccessToken } from "@/shared/api/client";
 
 import {
   currentMonthString,
-  todayDateString,
   type SpaceJournalCreatePayload,
   type SpaceJournalItem,
   type SpaceJournalUpdatePayload,
@@ -16,6 +15,17 @@ import {
 } from "./model";
 
 const LOCAL_STORAGE_KEY = "parallellines.space.local_v1";
+const LEGACY_SEED_JOURNAL_IDS = new Set([
+  "local-journal-1",
+  "local-journal-2",
+  "local-journal-welcome",
+]);
+const LEGACY_SEED_LEDGER_IDS = new Set([
+  "local-ledger-1",
+  "local-ledger-2",
+  "local-ledger-3",
+  "local-ledger-demo-1",
+]);
 
 interface LocalSpaceStore {
   settings: SpaceSetting;
@@ -24,123 +34,16 @@ interface LocalSpaceStore {
 }
 
 function buildDefaultLocalStore(): LocalSpaceStore {
-  const today = todayDateString();
-  const nowIso = new Date().toISOString();
   return {
     settings: {
       user_id: "local",
-      space_title: "平行线手账本",
-      space_subtitle: "把日常的闪念、玩过的游戏与每一笔生活开支，装进属于自己的安静角落。",
+      space_title: "",
+      space_subtitle: "",
       cover_preset: "aurora",
       monthly_budget_cents: 300000,
     },
-    journals: [
-      {
-        id: "local-journal-1",
-        user_id: "local",
-        entry_date: today,
-        title: "今日小记：把生活调成自己喜欢的频道",
-        content:
-          "在圈子里开辟了一块属于自己的手账角落。不管是随手记下刚通关的小游戏感想、读到的一段好句子，还是整理这个月的日常开销，都可以在这里安静沉淀。",
-        mood: "inspired",
-        weather: "sunny",
-        location: "书桌前",
-        visibility: "public",
-        is_pinned: true,
-        card_theme: "paper",
-        tags: ["手账初体验", "日常灵感", "平行线"],
-        media_urls: [],
-        checklist: [
-          { id: "c1", text: "写下第一篇心情日签", done: true },
-          { id: "c2", text: "记录今天的一杯咖啡开销", done: true },
-          { id: "c3", text: "晚上睡前阅读 30 分钟", done: false },
-        ],
-        ledger_snapshot: null,
-        likes_count: 0,
-        created_at: nowIso,
-        updated_at: nowIso,
-        author: {
-          id: "local",
-          username: "me",
-          display_name: "我的手账本",
-          avatar_url: null,
-          level: 2,
-        },
-      },
-      {
-        id: "local-journal-2",
-        user_id: "local",
-        entry_date: today,
-        title: "",
-        content:
-          "下午泡了一杯热拿铁，顺手整理了一下这周的小目标。发现把碎片想法写成带贴纸的卡片之后，焦虑感会明显少很多。",
-        mood: "cozy",
-        weather: "breezy",
-        location: "窗边角落",
-        visibility: "private",
-        is_pinned: false,
-        card_theme: "mint",
-        tags: ["随手记", "充电时刻"],
-        media_urls: [],
-        checklist: [],
-        ledger_snapshot: {
-          single_entry: {
-            kind: "expense",
-            category: "coffee",
-            amount_cents: 2600,
-            note: "桂花燕麦拿铁",
-          },
-        },
-        likes_count: 0,
-        created_at: nowIso,
-        updated_at: nowIso,
-        author: {
-          id: "local",
-          username: "me",
-          display_name: "我的手账本",
-          avatar_url: null,
-          level: 2,
-        },
-      },
-    ],
-    ledgers: [
-      {
-        id: "local-ledger-1",
-        user_id: "local",
-        entry_date: today,
-        kind: "expense",
-        amount_cents: 2600,
-        category: "coffee",
-        note: "下午茶：桂花燕麦拿铁",
-        payment_method: "wechat",
-        created_at: nowIso,
-        updated_at: nowIso,
-      },
-      {
-        id: "local-ledger-2",
-        user_id: "local",
-        entry_date: today,
-        kind: "expense",
-        amount_cents: 4200,
-        category: "dining",
-        note: "晚餐：日式猪排滑蛋饭",
-        payment_method: "alipay",
-        created_at: nowIso,
-        updated_at: nowIso,
-      },
-      {
-        id: "local-ledger-3",
-        user_id: "local",
-        entry_date: today,
-        kind: "expense",
-        amount_cents: 6800,
-        category: "gaming",
-        note: "独立解谜游戏与创意工坊支持",
-        payment_method: "wechat",
-        created_at: nowIso,
-        updated_at: nowIso,
-      },
-    ],
+    journals: [],
+    ledgers: [],
   };
 }
 
@@ -151,16 +54,20 @@ function readLocalStore(): LocalSpaceStore {
   try {
     const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
     if (!raw) {
-      const seed = buildDefaultLocalStore();
-      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(seed));
-      return seed;
+      return buildDefaultLocalStore();
     }
     const parsed = JSON.parse(raw) as Partial<LocalSpaceStore>;
     const fallback = buildDefaultLocalStore();
+    const journals = Array.isArray(parsed.journals)
+      ? parsed.journals.filter((item) => !LEGACY_SEED_JOURNAL_IDS.has(item.id))
+      : [];
+    const ledgers = Array.isArray(parsed.ledgers)
+      ? parsed.ledgers.filter((item) => !LEGACY_SEED_LEDGER_IDS.has(item.id))
+      : [];
     return {
       settings: parsed.settings ?? fallback.settings,
-      journals: Array.isArray(parsed.journals) ? parsed.journals : fallback.journals,
-      ledgers: Array.isArray(parsed.ledgers) ? parsed.ledgers : fallback.ledgers,
+      journals,
+      ledgers,
     };
   } catch {
     return buildDefaultLocalStore();
@@ -244,9 +151,6 @@ function buildWorkspaceFromLocal(month: string): SpaceMyWorkspace {
   };
 }
 
-const LOCAL_SEED_JOURNAL_ID = "local-journal-welcome";
-const LOCAL_SEED_LEDGER_ID = "local-ledger-demo-1";
-
 export interface LocalSpacePendingSummary {
   journalCount: number;
   ledgerCount: number;
@@ -262,12 +166,10 @@ export function getPendingLocalSpaceSummary(): LocalSpacePendingSummary {
     return { journalCount: 0, ledgerCount: 0, totalCount: 0 };
   }
   const store = readLocalStore();
-  const journals = store.journals.filter((item) => item.id !== LOCAL_SEED_JOURNAL_ID);
-  const ledgers = store.ledgers.filter((item) => item.id !== LOCAL_SEED_LEDGER_ID);
   return {
-    journalCount: journals.length,
-    ledgerCount: ledgers.length,
-    totalCount: journals.length + ledgers.length,
+    journalCount: store.journals.length,
+    ledgerCount: store.ledgers.length,
+    totalCount: store.journals.length + store.ledgers.length,
   };
 }
 
@@ -279,8 +181,8 @@ export async function syncLocalSpaceToCloud(): Promise<{
     throw new Error("请先登录后再同步到云端");
   }
   const store = readLocalStore();
-  const pendingJournals = store.journals.filter((item) => item.id !== LOCAL_SEED_JOURNAL_ID);
-  const pendingLedgers = store.ledgers.filter((item) => item.id !== LOCAL_SEED_LEDGER_ID);
+  const pendingJournals = [...store.journals];
+  const pendingLedgers = [...store.ledgers];
 
   let journalsSynced = 0;
   let ledgersSynced = 0;
@@ -328,7 +230,7 @@ export async function syncLocalSpaceToCloud(): Promise<{
     if (idx >= 0) remainingLedgers.splice(idx, 1);
   }
 
-  if (remainingJournals.length <= 1 && remainingLedgers.length <= 1 && typeof window !== "undefined") {
+  if (remainingJournals.length === 0 && remainingLedgers.length === 0 && typeof window !== "undefined") {
     window.localStorage.removeItem(LOCAL_STORAGE_KEY);
   } else {
     writeLocalStore({
