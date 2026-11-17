@@ -226,6 +226,12 @@ const monthLedgersGrouped = computed(() => {
   gap: 1rem;
   padding: 1.15rem 1.2rem;
   border-radius: 1.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 28px rgba(15, 23, 42, 0.05);
 
   &__head {
     display: flex;
@@ -362,6 +368,10 @@ const monthLedgersGrouped = computed(() => {
 .ledger-day-card {
   padding: 0.85rem 1rem;
   border-radius: 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
 
   &__head {
     display: flex;

@@ -146,6 +146,12 @@ const calendarCells = computed(() => {
   gap: 0.75rem;
   padding: 1rem;
   border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 28px rgba(15, 23, 42, 0.05);
 }
 
 .calendar-header {
