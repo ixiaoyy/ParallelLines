@@ -1,5 +1,7 @@
 """固定 Matrix 娱乐模块运维；无任意命令、域名、路径或版本输入。"""
+import contextlib
 import hashlib
+import http.client
 import json
 import os
 from pathlib import Path
@@ -13,6 +15,7 @@ import ssl
 import subprocess
 import sys
 import time
+import types
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -26,7 +29,7 @@ DOMAINS = ('tavern.pingxingxian.space', 'matrix.pingxingxian.space')
 SERVICES = ('element', 'synapse', 'postgres')
 PORTS = (13101, 13102)
 MAX_OUTPUT = 4 * 1024 * 1024
-OPERATIONS = ('inventory', 'prepare', 'deploy', 'bootstrap', 'prepare-tls', 'health', 'stop')
+OPERATIONS = ('inventory', 'prepare', 'deploy', 'bootstrap', 'prepare-tls', 'publish', 'retract', 'health', 'stop')
 SOURCE_REVISION = '5b96163a00f7c4877150cd5185fc510436ed6697'
 SOURCE_BASE = 'https://raw.githubusercontent.com/ixiaoyy/parallellines-entertainment/' + SOURCE_REVISION + '/'
 PREPARED = ROOT / 'prepared.json'
@@ -35,6 +38,15 @@ CERTIFICATE_ROOT = Path('/opt/parallellines/var/letsencrypt')
 HTTP01_ROOT = Path('/opt/parallellines/var/certbot')
 CERTIFICATE_NAME = 'parallellines-entertainment'
 TLS_PREPARED = ROOT / 'tls-prepared.json'
+PUBLIC_STATE = ROOT / 'public-entry.json'
+EDGE_NETWORK = 'pl-official-candidate-20261030_default'
+GATEWAY_LAYER = '/etc/nginx/conf.d/parallellines-entertainment.conf'
+TOOLS_DIRECTORY = Path('/opt/parallellines-tools/ops')
+TOOLS_SOURCE_DIGESTS = {
+    'tls.py': '844134baef2d45170db29dd1d9504b1e3e51c2a2545129d0ac3b13d58c019142',
+    'managed_config.py': '7a4ed86ebb241261029c11becbd40cfad37ca0cdc9e3226fb352b80ebd4d1807',
+}
+_TOOLS_MODULE = None
 IMAGES = {
     'element': 'ghcr.io/element-hq/element-web:v1.12.35@sha256:406b48b80153818284a235fa3600b2a5b5b6b0aa0e4ef4896b36d8d3461352f3',
     'synapse': 'ghcr.io/element-hq/synapse:v1.165.0@sha256:673b4223c81a7634fd07d832b939a58f97081cfdaae7cdd2d1664cdcf7611b62',
@@ -489,6 +501,9 @@ def compose(runner, label, arguments, *, timeout=60):
     paths = [owned(ROOT / 'compose.yaml')]
     edge = owned(ROOT / 'compose.edge.yaml')
     if edge.exists():
+        # 这是可执行 Compose 输入，存在不代表获准；每次使用都绑定固定本模块字节。
+        check(edge.is_file() and edge.stat().st_size == len(EDGE_CONFIGURATION) and
+              edge.read_bytes() == EDGE_CONFIGURATION, 'owned_edge_overlay_changed')
         paths.append(edge)
     args = ['docker', 'compose', '--project-name', PROJECT, '--project-directory', str(ROOT)]
     for path in paths:
@@ -631,7 +646,8 @@ def deploy(runner):
               'existing_module_container_changed')
         if len(current) == 3 and all(item['running'] for item in current):
             result = health(runner)
-            return {**result, 'deployed': True, 'already_running': True, 'public_entry': False}
+            return {**result, 'deployed': True, 'already_running': True,
+                    'public_entry': saved.get('public_entry') is True}
     if not any(item['running'] for item in current):
         # 拉取/生成与激活可能间隔较久；首次启动或全停后恢复都重新核资源和端口。
         capacity = resources(runner)
@@ -677,9 +693,12 @@ def deploy(runner):
 
 def request_status(url, expected_json=False):
     """只读固定回环健康入口；不登录、不发送聊天或模型请求。"""
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *arguments):
+            return None
     request = urllib.request.Request(url, headers={'User-Agent': 'ParallelLines-Entertainment-Health'})
     try:
-        with urllib.request.urlopen(request, timeout=5) as response:
+        with urllib.request.build_opener(NoRedirect()).open(request, timeout=5) as response:
             body = response.read(65537)
             check(len(body) <= 65536, 'health_response_bound')
             check(response.status == 200, 'health_http_status')
@@ -705,7 +724,7 @@ def module_containers(runner):
     return values
 
 
-def health(runner):
+def native_health(runner):
     """同时检查原生服务连接和首页；不代表注册、同步、加密或会话验收。"""
     values = module_containers(runner)
     check(len(values) == 3 and all(item['running'] for item in values), 'module_not_fully_running')
@@ -951,8 +970,584 @@ def prepare_tls(runner):
             'other_services_changed': False, 'public_entry': False}
 
 
+def approved_tools_module():
+    """只加载逐字节匹配已审公开源码的两个现有模块，不执行未知 installed 代码。"""
+    global _TOOLS_MODULE
+    sources = {}
+    for name, expected in TOOLS_SOURCE_DIGESTS.items():
+        path = TOOLS_DIRECTORY / name
+        check(path.is_file() and not path.is_symlink() and path.stat().st_size <= 128 * 1024,
+              'approved_tools_reload_source_missing')
+        source = path.read_bytes()
+        check(digest(source) == expected, 'approved_tools_reload_source_identity_mismatch')
+        sources[name] = source.decode('utf-8')
+    if _TOOLS_MODULE is None:
+        managed = types.ModuleType('managed_config')
+        managed.__file__ = str(TOOLS_DIRECTORY / 'managed_config.py')
+        exec(compile(sources['managed_config.py'], managed.__file__, 'exec'), managed.__dict__)
+        previous = sys.modules.get('managed_config')
+        sys.modules['managed_config'] = managed
+        try:
+            module = types.ModuleType('pl_entertainment_approved_tools_tls')
+            module.__file__ = str(TOOLS_DIRECTORY / 'tls.py')
+            exec(compile(sources['tls.py'], module.__file__, 'exec'), module.__dict__)
+        finally:
+            if previous is None:
+                sys.modules.pop('managed_config', None)
+            else:
+                sys.modules['managed_config'] = previous
+        _TOOLS_MODULE = module
+    return _TOOLS_MODULE
+
+
+def require_approved_reload():
+    """复核既有 Main/Tools 认可的配置归属，不能用本次操作前像给未知改动背书。"""
+    module = approved_tools_module()
+    try:
+        allowed = module.configuration_may_reload()
+    except module.OperationError as error:
+        code = str(error)
+        check(False, 'existing_reload_guard:' +
+              (code if re.fullmatch('[A-Za-z0-9_:]{1,160}', code) else type(error).__name__))
+    check(allowed is True, 'gateway_configuration_not_owned_for_reload')
+    return module
+
+
+@contextlib.contextmanager
+def approved_reload_scope():
+    """复用既有非阻塞 TLS 锁，与旧 reload 消费者串行；不改它们的配置或状态。"""
+    module = require_approved_reload()
+    try:
+        with module.tls_lock():
+            require_approved_reload()
+            yield
+    except module.OperationError as error:
+        code = str(error)
+        raise OperationError('existing_tls_lock:' +
+                             (code if re.fullmatch('[A-Za-z0-9_:]{1,160}', code) else type(error).__name__)) from None
+
+
+def public_record():
+    """读取本模块入口回执；没有回执不能覆盖同名网关文件。"""
+    value = read_record(PUBLIC_STATE)
+    check(value.get('project') == PROJECT and value.get('source_revision') == SOURCE_REVISION,
+          'public_entry_receipt_identity_changed')
+    return value
+
+
+def default_identity(runner, gateway):
+    """绑定 default.conf 原字节、inode 与原只读挂载，不更改任何旧配置。"""
+    check(MAIN_CONFIG.is_file() and not MAIN_CONFIG.is_symlink(), 'gateway_default_not_regular')
+    check(any(item.get('Source') == str(MAIN_CONFIG) and
+              item.get('Destination') == '/etc/nginx/conf.d/default.conf' and item.get('RW') is False
+              for item in gateway['mounts']), 'gateway_default_mount_changed')
+    stat = MAIN_CONFIG.stat()
+    observed = runner.run('gateway_default_bound_inode', [
+        'docker', 'exec', gateway['id'], 'stat', '-c', '%d:%i', '/etc/nginx/conf.d/default.conf']).stdout.strip()
+    check(observed == str(stat.st_dev) + ':' + str(stat.st_ino), 'gateway_default_inode_changed')
+    return {'device': stat.st_dev, 'inode': stat.st_ino, 'sha256': digest(MAIN_CONFIG.read_bytes())}
+
+
+def gateway_layer_digest(runner, gateway):
+    """只对本模块固定文件取前像；拒绝软链、目录或未知文件覆盖。"""
+    check(runner.run('owned_gateway_layer_symlink', ['docker', 'exec', gateway['id'], 'test', '-L', GATEWAY_LAYER],
+                     accepted=(0, 1)).returncode != 0, 'owned_gateway_layer_symlink')
+    exists = runner.run('owned_gateway_layer_present', ['docker', 'exec', gateway['id'], 'test', '-e', GATEWAY_LAYER],
+                        accepted=(0, 1)).returncode == 0
+    if not exists:
+        return None
+    check(runner.run('owned_gateway_layer_regular', ['docker', 'exec', gateway['id'], 'test', '-f', GATEWAY_LAYER],
+                     accepted=(0, 1)).returncode == 0, 'owned_gateway_layer_not_regular')
+    value = runner.run('owned_gateway_layer_identity', ['docker', 'exec', gateway['id'], 'sha256sum', GATEWAY_LAYER]).stdout.split()[0]
+    check(re.fullmatch('[0-9a-f]{64}', value), 'owned_gateway_layer_identity_invalid')
+    return value
+
+
+def gateway_public_context(runner, values):
+    """核当前网关和已有 edge，不改变网关网络，拒绝其它配置已占用两个域名。"""
+    gateway = select(values, 'parallellines', 'nginx')
+    chat = select(values, 'pl-official-candidate-20261030', 'openwebui')
+    check(gateway['running'] and EDGE_NETWORK in gateway['networks'] and EDGE_NETWORK in chat['networks'],
+          'approved_shared_edge_changed')
+    raw = runner.run('gateway_http_include_and_domain_ownership', ['docker', 'exec', gateway['id'], 'nginx', '-T']).stdout
+    check(re.search(r'^\s*include\s+/etc/nginx/conf\.d/\*\.conf;', raw, re.M), 'gateway_conf_d_include_missing')
+    current_file = ''
+    for line in raw.splitlines():
+        header = re.match(r'^# configuration file ([^:]+):$', line)
+        if header:
+            current_file = header.group(1)
+        match = re.match(r'^\s*server_name\s+([^;]+);', line)
+        if match and current_file != GATEWAY_LAYER:
+            names = {name.strip('"\'') for name in match.group(1).split()}
+            check(not names.intersection(DOMAINS), 'module_domain_already_owned_by_other_configuration')
+    return gateway
+
+
+def gateway_fragment():
+    """只生成两个域的原生代理；Matrix 原始 URI、查询串、认证与长轮询均透传。"""
+    return ('''# parallellines-entertainment-owned matrix-element
+map $http_upgrade $pl_entertainment_connection {
+    default upgrade;
+    '' close;
+}
+server {
+    listen 80;
+    server_name tavern.pingxingxian.space matrix.pingxingxian.space;
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type text/plain;
+        try_files $uri =404;
+    }
+    location / { return 301 https://$host$request_uri; }
+}
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name tavern.pingxingxian.space;
+    ssl_certificate /etc/letsencrypt/live/parallellines-entertainment/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/parallellines-entertainment/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $pl_entertainment_element pl-entertainment-element:80;
+    access_log off;
+    location / {
+        proxy_pass http://$pl_entertainment_element$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $pl_entertainment_connection;
+    }
+}
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name matrix.pingxingxian.space;
+    ssl_certificate /etc/letsencrypt/live/parallellines-entertainment/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/parallellines-entertainment/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $pl_entertainment_synapse pl-entertainment-synapse:8008;
+    client_max_body_size 50M;
+    access_log off;
+    location = /.well-known/matrix/client {
+        default_type application/json;
+        add_header Access-Control-Allow-Origin "*" always;
+        return 200 '{"m.homeserver":{"base_url":"https://matrix.pingxingxian.space"}}';
+    }
+    location = /.well-known/matrix/server {
+        default_type application/json;
+        return 200 '{"m.server":"matrix.pingxingxian.space:443"}';
+    }
+    location ~ ^/_synapse/admin(?:/|$) { return 404; }
+    location ~ ^/(?:_matrix|_synapse/client)(?:/|$) {
+        proxy_pass http://$pl_entertainment_synapse$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $pl_entertainment_connection;
+        proxy_buffering off;
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+    }
+    location / { return 404; }
+}
+''').encode()
+
+
+EDGE_CONFIGURATION = b'''services:
+  element:
+    networks:
+      edge:
+        aliases: [pl-entertainment-element]
+  synapse:
+    networks:
+      edge:
+        aliases: [pl-entertainment-synapse]
+networks:
+  edge:
+    external: true
+    name: pl-official-candidate-20261030_default
+'''
+
+
+def write_gateway_artifact(path, content):
+    """将已审核的公开代理/edge 材料保留在本项目私有目录，不写旧配置。"""
+    path = owned(path)
+    temporary = owned(path.with_name(path.name + '.new-' + secrets.token_hex(8)))
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, path)
+
+
+def gateway_source_for(expected):
+    """只在已登记的 active/candidate/前像三类自有材料中寻找匹配源，支持中断后恢复。"""
+    check(re.fullmatch('[0-9a-f]{64}', expected or ''), 'owned_gateway_source_identity_invalid')
+    for name in ('active.conf', 'candidate.conf', 'before-' + expected + '.conf'):
+        path = owned(ROOT / 'gateway' / name)
+        if path.is_file() and path.stat().st_size <= 64 * 1024 and digest(path.read_bytes()) == expected:
+            return path
+    raise OperationError('owned_gateway_source_preimage_missing')
+
+
+def certificate_leaf_identity(runner):
+    """只取本模块公开叶证书身份，与实际源站 SNI 握手比较，不读取私钥。"""
+    path = CERTIFICATE_ROOT / 'live' / CERTIFICATE_NAME / 'fullchain.pem'
+    value = runner.run('module_public_leaf_identity', ['openssl', 'x509', '-in', str(path),
+                       '-noout', '-fingerprint', '-sha256']).stdout.partition('=')[2].strip().replace(':', '').lower()
+    check(re.fullmatch('[0-9a-f]{64}', value), 'module_public_leaf_identity_invalid')
+    return value
+
+
+class OriginHTTPS(http.client.HTTPSConnection):
+    """对本机源站做真实 SNI/CA 验证，不把 Cloudflare 边缘证书误认为源站证书。"""
+
+    def connect(self):
+        with socket.create_connection(('127.0.0.1', 443), timeout=self.timeout) as raw:
+            self.sock = ssl.create_default_context().wrap_socket(raw, server_hostname=self.host)
+
+
+def origin_response(domain, path, expected_leaf):
+    """只读两个固定域的有限源站响应；保留真实证书验证，不输出响应正文。"""
+    check(domain in DOMAINS and path.startswith('/'), 'origin_probe_outside_scope')
+    connection = OriginHTTPS(domain, timeout=6)
+    try:
+        connection.connect()
+        check(digest(connection.sock.getpeercert(binary_form=True)) == expected_leaf, 'origin_certificate_not_loaded')
+        connection.request('GET', path, headers={'Host': domain, 'User-Agent': 'ParallelLines-Matrix-Origin'})
+        response = connection.getresponse()
+        body = response.read(65537)
+        check(len(body) <= 65536, 'origin_response_bound')
+        return response.status, body, dict(response.getheaders())
+    except (OSError, http.client.HTTPException) as error:
+        raise OperationError('module_origin_probe:' + type(error).__name__) from None
+    finally:
+        connection.close()
+
+
+def public_health(runner):
+    """核源站已加载新证书/路由，再核两个公网 HTTPS 入口；不登录或发送聊天。"""
+    meta = certificate_metadata(runner)
+    check(meta is not None and meta['valid_for_at_least_one_day'], 'public_module_certificate_not_ready')
+    leaf = certificate_leaf_identity(runner)
+    expected = json.loads(owned(ROOT / 'config/element.json').read_text())
+    status, body, _ = origin_response(DOMAINS[0], '/config.json', leaf)
+    check(status == 200 and response_json(body) == expected, 'origin_element_homeserver_mismatch')
+    status, body, headers = origin_response(DOMAINS[1], '/_matrix/client/versions', leaf)
+    check(status == 200 and response_json(body).get('versions'), 'origin_matrix_client_versions_failed')
+    check(any(key.lower() == 'access-control-allow-origin' and value == '*'
+              for key, value in headers.items()), 'origin_native_matrix_cors_missing')
+    status, _, _ = origin_response(DOMAINS[1], '/_synapse/admin/v1/server_version', leaf)
+    check(status == 404, 'origin_admin_api_not_blocked')
+    remote_element = request_status('https://' + DOMAINS[0] + '/config.json', expected_json=True)
+    check(remote_element == expected, 'public_element_homeserver_mismatch')
+    remote_matrix = request_status('https://' + DOMAINS[1] + '/_matrix/client/versions', expected_json=True)
+    check(remote_matrix.get('versions'), 'public_matrix_client_versions_failed')
+    check(certificate_leaf_identity(runner) == leaf, 'module_certificate_changed_during_public_probe')
+    return {'origin_certificate_loaded': True, 'public_element_https': True,
+            'public_matrix_https': True, 'native_matrix_cors': True, 'admin_api_blocked': True}
+
+
+def response_json(body):
+    """把固定原生探针的非 JSON/非对象响应转为明确失败，不把 HTML 回退当成功。"""
+    try:
+        value = json.loads(body)
+    except (ValueError, UnicodeError):
+        raise OperationError('public_native_response_not_json') from None
+    check(isinstance(value, dict), 'public_native_response_not_object')
+    return value
+
+
+def health(runner):
+    """原生健康与已登记公网入口一起核对；没有公网发布记录时只读内部服务。"""
+    result = native_health(runner)
+    if STATE.exists() and read_record(STATE).get('public_entry') is True:
+        result.update(public_health(runner), public_entry=True, temporary_conf_layer=True)
+    else:
+        result['public_entry'] = False
+    return result
+
+
+def live_module_record(runner):
+    """绑定原生部署记录与当前三个官方容器，不接管换镜像或换身份的新实例。"""
+    saved = read_record(STATE)
+    check(saved.get('project') == PROJECT and saved.get('stack') == 'matrix' and
+          saved.get('source_revision') == SOURCE_REVISION, 'live_module_record_identity_changed')
+    values = module_containers(runner)
+    check(len(values) == 3, 'live_module_service_count_changed')
+    check(all(saved.get('container_ids', {}).get(item['service']) == item['id'] and
+              item['image'] == IMAGES[item['service']] for item in values),
+          'live_module_container_or_image_changed')
+    return saved, values
+
+
+def assert_gateway_unchanged(runner, gateway, baseline, protected):
+    """每次 reload 前后重核旧配置/容器身份；旧站的陌生变化不能由本任务接管。"""
+    assert_protected(runner, protected)
+    current = select(containers(runner), 'parallellines', 'nginx')
+    check(current['id'] == gateway['id'] and default_identity(runner, current) == baseline,
+          'gateway_identity_or_default_changed_outside_module')
+
+
+def replace_gateway_layer(runner, gateway, source, expected, replacement):
+    """CAS 只写/撤回本模块固定容器层文件，保留所有其它 conf 和挂载。"""
+    check(gateway_layer_digest(runner, gateway) == expected, 'owned_gateway_layer_preimage_changed')
+    if replacement is None:
+        if expected is not None:
+            runner.run('remove_only_owned_gateway_layer', ['docker', 'exec', gateway['id'], 'rm', '--', GATEWAY_LAYER])
+    else:
+        check(source.is_file() and digest(source.read_bytes()) == replacement, 'owned_gateway_source_changed')
+        runner.run('copy_only_owned_gateway_layer', ['docker', 'cp', str(source), gateway['id'] + ':' + GATEWAY_LAYER])
+    check(gateway_layer_digest(runner, gateway) == replacement, 'owned_gateway_layer_write_not_confirmed')
+
+
+def approved_gateway_reload(runner, gateway, baseline, protected):
+    """仅在旧配置仍获既有 owner 批准且全局 nginx-t 通过时，向同一网关发送 reload。"""
+    assert_gateway_unchanged(runner, gateway, baseline, protected)
+    require_approved_reload()
+    runner.run('gateway_configuration_test', ['docker', 'exec', gateway['id'], 'nginx', '-t'])
+    require_approved_reload()
+    assert_gateway_unchanged(runner, gateway, baseline, protected)
+    runner.run('reload_same_approved_gateway', ['docker', 'exec', gateway['id'], 'nginx', '-s', 'reload'])
+
+
+def wait_native_health(runner, seconds=150):
+    """只等待本次两个新服务接 edge 后恢复，不重启或轮询修复其它系统。"""
+    deadline = min(runner.end - 30, time.monotonic() + seconds)
+    while time.monotonic() < deadline:
+        try:
+            return native_health(runner)
+        except OperationError as error:
+            transient = str(error) in ('module_not_fully_running', 'module_container_unhealthy')
+            check(transient or str(error).startswith('health_transport:'), str(error))
+            time.sleep(3)
+    raise OperationError('native_edge_startup_health_deadline')
+
+
+def publish(runner):
+    """仅新增两域独立 conf 层；旧网关不重建，跨其重建需显式重新 publish。"""
+    preparation_record()
+    native_health(runner)
+    saved, own = live_module_record(runner)
+    tls = read_record(TLS_PREPARED)
+    check(tls.get('status') == 'prepared' and tls.get('source_revision') == SOURCE_REVISION and
+          tls.get('certificate_name') == CERTIFICATE_NAME, 'module_tls_not_prepared')
+    meta = certificate_metadata(runner)
+    check(meta is not None and meta['valid_for_at_least_one_day'], 'module_certificate_not_ready')
+    with approved_reload_scope():
+        values = containers(runner)
+        gateway = gateway_public_context(runner, values)
+        baseline = default_identity(runner, gateway)
+        protected = protected_snapshot(values)
+        previous = public_record() if PUBLIC_STATE.exists() else None
+        before_conf = gateway_layer_digest(runner, gateway)
+        if before_conf is not None:
+            check(previous is not None and before_conf in
+                  (previous.get('conf_sha256'), previous.get('pending_conf_sha256')),
+                  'unknown_existing_module_gateway_layer')
+        directory = owned(ROOT / 'gateway')
+        directory.mkdir(mode=0o700, exist_ok=True)
+        active = owned(directory / 'active.conf')
+        before_source = None
+        if before_conf is not None:
+            previous_source = gateway_source_for(before_conf)
+            before_source = owned(directory / ('before-' + before_conf + '.conf'))
+            if before_source.exists():
+                check(digest(before_source.read_bytes()) == before_conf, 'owned_gateway_backup_changed')
+            else:
+                write_gateway_artifact(before_source, previous_source.read_bytes())
+        content = gateway_fragment()
+        next_conf = digest(content)
+        next_source = owned(directory / 'candidate.conf')
+        write_gateway_artifact(next_source, content)
+        edge = owned(ROOT / 'compose.edge.yaml')
+        if edge.exists():
+            check(edge.is_file() and edge.read_bytes() == EDGE_CONFIGURATION, 'owned_edge_overlay_changed')
+        else:
+            write_gateway_artifact(edge, EDGE_CONFIGURATION)
+        # STATE 可能尚未跟上已经 HUP 的 publishing 回执，不能把旧入口误判为未激活。
+        prior_uncertain = bool(previous and (previous.get('status') == 'publishing' or
+                                            previous.get('loaded_state_uncertain') is True))
+        old_public = (saved.get('public_entry') is True or bool(previous and (
+            previous.get('status') in ('publishing', 'published') or
+            previous.get('public_entry') is True or previous.get('loaded_state_uncertain') is True)))
+        receipt = {'schema': 1, 'project': PROJECT, 'source_revision': SOURCE_REVISION,
+                   'status': 'publishing', 'gateway_id': gateway['id'],
+                   'gateway_image_id': gateway['image_id'], 'default_identity': baseline,
+                   'conf_sha256': before_conf, 'pending_conf_sha256': next_conf,
+                   'edge_sha256': digest(EDGE_CONFIGURATION), 'temporary_conf_layer': True,
+                   'public_entry': old_public, 'loaded_state_uncertain': prior_uncertain}
+        private_record(PUBLIC_STATE, receipt)
+        reload_attempted = False
+        web_recreated = False
+        failure = None
+        result = None
+        try:
+            desired = {'element': 'pl-entertainment-element', 'synapse': 'pl-entertainment-synapse'}
+            ready = all(EDGE_NETWORK in item['networks'] and desired[item['service']] in
+                        (item['networks'][EDGE_NETWORK].get('Aliases') or [])
+                        for item in own if item['service'] in desired)
+            if not ready:
+                compose(runner, 'native_edge_configuration', ['config', '--quiet'])
+                # 只重建新项目的两个 Web 服务；PG、稳定密钥和所有旧站容器均保留。
+                compose(runner, 'attach_only_new_web_services_to_edge', [
+                    'up', '-d', '--no-deps', '--no-build', '--pull', 'never', '--force-recreate',
+                    'element', 'synapse'], timeout=90)
+                web_recreated = True
+            current = module_containers(runner)
+            saved['container_ids'] = {item['service']: item['id'] for item in current}
+            private_record(STATE, saved)
+            wait_native_health(runner)
+            preparation_record()
+            assert_gateway_unchanged(runner, gateway, baseline, protected)
+            replace_gateway_layer(runner, gateway, next_source, before_conf, next_conf)
+            approved_gateway_reload(runner, gateway, baseline, protected)
+            reload_attempted = True
+            # HUP 后新 worker 可稍后开始接受连接，只重试明确的旧证书/连接过渡。
+            for attempt in range(5):
+                try:
+                    result = public_health(runner)
+                    break
+                except OperationError as error:
+                    transition = str(error) == 'origin_certificate_not_loaded' or str(error).startswith('module_origin_probe:')
+                    check(transition and attempt < 4, str(error))
+                    time.sleep(0.4)
+            check(result is not None, 'module_public_health_not_confirmed')
+            assert_gateway_unchanged(runner, gateway, baseline, protected)
+            write_gateway_artifact(active, content)
+            receipt.update(status='published', conf_sha256=next_conf, public_entry=True,
+                           loaded_certificate_identity=certificate_leaf_identity(runner),
+                           gateway_recreate_requires_publish=True, renewal_ready=False,
+                           loaded_state_uncertain=False)
+            receipt.pop('error', None)
+            receipt.pop('recovery_error', None)
+            private_record(PUBLIC_STATE, receipt)
+            saved.update(public_entry=True, status='running')
+            private_record(STATE, saved)
+        except (OperationError, OSError) as error:
+            failure = str(error) if isinstance(error, OperationError) else 'public_io:' + type(error).__name__
+            reload_attempted = reload_attempted or failure.startswith('reload_same_approved_gateway:')
+        if failure:
+            recovery = None
+            try:
+                current = module_containers(runner)
+                check(all(item['image'] == IMAGES[item['service']] for item in current),
+                      'new_module_image_changed_during_public_recovery')
+                saved['container_ids'] = {item['service']: item['id'] for item in current}
+                private_record(STATE, saved)
+                current_hash = gateway_layer_digest(runner, gateway)
+                if current_hash == next_conf:
+                    replace_gateway_layer(runner, gateway, before_source, next_conf, before_conf)
+                else:
+                    check(current_hash == before_conf, 'owned_gateway_layer_changed_during_recovery')
+                if reload_attempted:
+                    approved_gateway_reload(runner, gateway, baseline, protected)
+                saved['public_entry'] = old_public
+                private_record(STATE, saved)
+            except (OperationError, OSError) as error:
+                recovery = str(error) if isinstance(error, OperationError) else 'public_recovery_io:' + type(error).__name__
+                saved['public_entry'] = old_public or reload_attempted
+                private_record(STATE, saved)
+            receipt.update(status='pending', public_entry=saved.get('public_entry') is True,
+                           error=failure, recovery_error=recovery,
+                           loaded_state_uncertain=prior_uncertain or recovery is not None)
+            private_record(PUBLIC_STATE, receipt)
+            raise OperationError('public_activation:' + failure +
+                                 (':recovery:' + recovery if recovery else ':owned_layer_restored'))
+    return {'complete': True, 'read_only': False, 'public_entry': True, **result,
+            'temporary_conf_layer': True, 'gateway_recreated': False,
+            'gateway_recreate_requires_publish': True, 'new_web_services_recreated': web_recreated,
+            'default_configuration_changed': False, 'other_services_changed': False,
+            'renewal_ready': False, 'native_account_and_message_flow_verified': False}
+
+
+def retract(runner):
+    """仅撤回本模块已登记独立 conf；重新加载仍须旧 owner 批准，不停止旧站。"""
+    saved = read_record(STATE)
+    check(saved.get('project') == PROJECT and saved.get('stack') == 'matrix' and
+          saved.get('source_revision') == SOURCE_REVISION, 'retract_module_record_identity_changed')
+    own = module_containers(runner)
+    check(all(saved.get('container_ids', {}).get(item['service']) == item['id'] and
+              item['image'] == IMAGES[item['service']] for item in own),
+          'retract_module_container_or_image_changed')
+    with approved_reload_scope():
+        values = containers(runner)
+        gateway = select(values, 'parallellines', 'nginx')
+        baseline = default_identity(runner, gateway)
+        protected = protected_snapshot(values)
+        actual = gateway_layer_digest(runner, gateway)
+        if not PUBLIC_STATE.exists():
+            check(actual is None and saved.get('public_entry') is not True,
+                  'unknown_module_public_entry_without_receipt')
+            return {'complete': True, 'read_only': True, 'entry_retracted': True, 'already_absent': True}
+        receipt = public_record()
+        check(gateway['id'] == receipt.get('gateway_id'), 'gateway_recreated_requires_publish_review')
+        check(actual is None or actual in (receipt.get('conf_sha256'), receipt.get('pending_conf_sha256')),
+              'owned_gateway_layer_changed_before_retract')
+        if (actual is None and receipt.get('status') == 'retracted' and
+                saved.get('public_entry') is not True and receipt.get('loaded_state_uncertain') is not True):
+            return {'complete': True, 'read_only': True, 'entry_retracted': True, 'already_absent': True}
+        active = None
+        if actual is not None:
+            active = gateway_source_for(actual)
+        prior_receipt = dict(receipt)
+        prior_uncertain = receipt.get('status') == 'publishing' or receipt.get('loaded_state_uncertain') is True
+        prior_public = (saved.get('public_entry') is True or actual is not None or
+                        receipt.get('status') in ('publishing', 'published') or
+                        receipt.get('public_entry') is True or receipt.get('loaded_state_uncertain') is True)
+        failure = None
+        reloaded = False
+        try:
+            if actual is not None:
+                replace_gateway_layer(runner, gateway, None, actual, None)
+            approved_gateway_reload(runner, gateway, baseline, protected)
+            reloaded = True
+            assert_gateway_unchanged(runner, gateway, baseline, protected)
+            check(gateway_layer_digest(runner, gateway) is None, 'owned_gateway_layer_not_retracted')
+            receipt.update(status='retracted', public_entry=False, loaded_state_uncertain=False)
+            receipt.pop('error', None)
+            receipt.pop('recovery_error', None)
+            private_record(PUBLIC_STATE, receipt)
+            saved['public_entry'] = False
+            private_record(STATE, saved)
+        except (OperationError, OSError) as error:
+            failure = str(error) if isinstance(error, OperationError) else 'retract_io:' + type(error).__name__
+            reloaded = reloaded or failure.startswith('reload_same_approved_gateway:')
+        if failure:
+            recovery = None
+            try:
+                if actual is not None:
+                    replace_gateway_layer(runner, gateway, active, None, actual)
+                if reloaded:
+                    approved_gateway_reload(runner, gateway, baseline, protected)
+                saved['public_entry'] = prior_public
+                private_record(STATE, saved)
+            except (OperationError, OSError) as error:
+                recovery = str(error) if isinstance(error, OperationError) else 'retract_recovery_io:' + type(error).__name__
+            receipt = prior_receipt
+            receipt.update(status='pending', public_entry=prior_public, error=failure, recovery_error=recovery,
+                           loaded_state_uncertain=prior_uncertain or recovery is not None)
+            private_record(PUBLIC_STATE, receipt)
+            raise OperationError('public_retraction:' + failure +
+                                 (':recovery:' + recovery if recovery else ':owned_layer_restored'))
+    return {'complete': True, 'read_only': False, 'entry_retracted': True,
+            'other_services_changed': False, 'data_preserved': True}
+
+
 def stop(runner):
-    """只停止本项目已登记容器，保留卷与密钥；不修改网关或其他服务。"""
+    """先撤回本模块入口，再只停止已登记新容器；保留卷、密钥和所有旧站。"""
+    if PUBLIC_STATE.exists():
+        public = public_record()
+        if public.get('status') in ('publishing', 'published', 'pending') or public.get('public_entry') is True or public.get('loaded_state_uncertain'):
+            retract(runner)
     values = module_containers(runner)
     if not values:
         return {'complete': True, 'stopped': True, 'already_absent': True, 'data_preserved': True}
@@ -974,10 +1569,10 @@ def main(arguments):
     report = {'operation': arguments[0] if arguments else 'rejected', 'complete': False, 'errors': []}
     try:
         check(len(arguments) == 1 and arguments[0] in OPERATIONS, 'unsupported_fixed_operation')
-        runner = Runner(850 if arguments[0] == 'prepare' else 420 if arguments[0] in ('deploy', 'prepare-tls') else 180)
+        runner = Runner(850 if arguments[0] == 'prepare' else 420 if arguments[0] in ('deploy', 'prepare-tls', 'publish') else 180)
         report.update({'inventory': inventory, 'prepare': prepare, 'deploy': deploy,
                        'bootstrap': bootstrap, 'prepare-tls': prepare_tls,
-                       'health': health, 'stop': stop}[arguments[0]](runner))
+                       'publish': publish, 'retract': retract, 'health': health, 'stop': stop}[arguments[0]](runner))
     except OperationError as error:
         report['errors'].append(str(error))
         if isinstance(error, TLSPreparationError):
