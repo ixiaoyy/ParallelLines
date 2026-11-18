@@ -8,21 +8,37 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, prepare, deploy, bootstrap, prepare-tls, publish, retract, install-renewal, renew, renewal-status, health, stop, enable-main-login, restore-main-login, main-login-status]
+        options: [inventory, prepare, deploy, bootstrap, prepare-tls, publish, retract, install-renewal, renew, renewal-status, health, stop, enable-main-login, restore-main-login, main-login-status, tavern-release-status, publish-tavern-bridge, rollback-tavern-bridge, publish-tavern-frontend, rollback-tavern-frontend]
+      chat_revision:
+        description: Reviewed full Chat main SHA (Tavern release actions only)
+        type: string
+        default: ''
+      expected_image_id:
+        description: Current target image ID from tavern-release-status (publish only)
+        type: string
+        default: ''
+      frontend_manifest_sha256:
+        description: Reviewed public frontend manifest SHA-256 (publish-tavern-frontend only)
+        type: string
+        default: ''
+      tavern_login_verified:
+        description: Manually verified both Tavern sign-in paths (publish-tavern-frontend only)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
   # 独立读取不等待发布；写操作与现有生产发布共用互斥组。
-  group: ${{ (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'renewal-status' || inputs.operation == 'main-login-status') && format('entertainment-read-{0}', inputs.operation) || 'deploy-production' }}
+  group: ${{ (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'renewal-status' || inputs.operation == 'main-login-status' || inputs.operation == 'tavern-release-status') && format('entertainment-read-{0}', inputs.operation) || 'deploy-production' }}
   cancel-in-progress: false
 
 jobs:
   entertainment:
     if: github.repository == 'ixiaoyy/ParallelLines' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 26
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,16 +50,39 @@ jobs:
         env:
           OPERATION: ${{ inputs.operation }}
           OPERATION_REVISION: ${{ github.sha }}
+          CHAT_REVISION: ${{ inputs.chat_revision }}
+          EXPECTED_IMAGE_ID: ${{ inputs.expected_image_id }}
+          FRONTEND_MANIFEST_SHA256: ${{ inputs.frontend_manifest_sha256 }}
+          TAVERN_LOGIN_VERIFIED: ${{ inputs.tavern_login_verified }}
         run: |
           python3 - <<'PY'
           import base64,hashlib,os,re,uuid,zlib
           from pathlib import Path
           operation=os.environ['OPERATION']
           sso_operations=('enable-main-login','restore-main-login','main-login-status')
-          if operation not in ('inventory','prepare','deploy','bootstrap','prepare-tls','publish','retract','install-renewal','renew','renewal-status','health','stop')+sso_operations: raise SystemExit('Unsupported entertainment operation')
+          tavern_release=('publish-tavern-bridge','rollback-tavern-bridge','publish-tavern-frontend','rollback-tavern-frontend','tavern-release-status')
+          if operation not in ('inventory','prepare','deploy','bootstrap','prepare-tls','publish','retract','install-renewal','renew','renewal-status','health','stop')+sso_operations+tavern_release: raise SystemExit('Unsupported entertainment operation')
           revision=os.environ['OPERATION_REVISION']
           if not re.fullmatch('[a-f0-9]{40}',revision): raise SystemExit('Reviewed operation identity required')
-          source=Path('.github/scripts/entertainment_ops.py').read_text(encoding='utf-8')
+          args=[operation]
+          if operation in tavern_release:
+              chat_revision=os.environ['CHAT_REVISION']
+              if not re.fullmatch('[a-f0-9]{40}',chat_revision): raise SystemExit('Reviewed Chat revision required')
+              args.append(chat_revision)
+              if operation.startswith('publish-'):
+                  image_id=os.environ['EXPECTED_IMAGE_ID']
+                  if not re.fullmatch('sha256:[a-f0-9]{64}',image_id): raise SystemExit('Reviewed current image ID required')
+                  args+=['--expected-image-id',image_id]
+              if operation=='publish-tavern-frontend':
+                  manifest=os.environ['FRONTEND_MANIFEST_SHA256']
+                  if not re.fullmatch('[a-f0-9]{64}',manifest): raise SystemExit('Reviewed public frontend manifest required')
+                  if os.environ['TAVERN_LOGIN_VERIFIED']!='true': raise SystemExit('Manual Tavern sign-in acceptance required')
+                  args+=['--frontend-manifest-sha256',manifest,'--login-verified']
+              operator=Path('.github/scripts/tavern_release_ops.py').read_text(encoding='utf-8')
+              # 回退入口保留已审操作器原文；所有远程 argv 仍是固定枚举、布尔或校验后的摘要。
+              source='OPERATOR_SOURCE='+repr(operator)+'\n'+operator
+          else:
+              source=Path('.github/scripts/entertainment_ops.py').read_text(encoding='utf-8')
           if operation in sso_operations:
               extension=Path('.github/scripts/entertainment_sso.py').read_text(encoding='utf-8')
               # 原续期 source 原字节导入；新入口不改旧消费者及其来源守卫。
@@ -59,7 +98,7 @@ jobs:
           source_digest=hashlib.sha256(source.encode('utf-8')).hexdigest()
           program="import base64,hashlib,zlib\nOPS_REVISION="+repr(revision)+"\nOPS_SOURCE=zlib.decompress(base64.b64decode("+repr(encoded)+")).decode('utf-8')\n"
           program+="assert hashlib.sha256(OPS_SOURCE.encode('utf-8')).hexdigest()=="+repr(source_digest)+"\nexec(compile(OPS_SOURCE, '<fixed-entertainment-ops>', 'exec'))\n"
-          payload="set -eu\nsudo -n python3 -B - "+operation+" <<'"+marker+"'\n"+program+marker+'\n'
+          payload="set -eu\nsudo -n python3 -B - "+' '.join(args)+" <<'"+marker+"'\n"+program+marker+'\n'
           if len(payload.encode())>120000: raise SystemExit('Fixed operation exceeds SSH transport bound')
           with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as output:
               output.write('script<<'+marker+'_OUTPUT\n'+payload+marker+'_OUTPUT\n')
@@ -73,6 +112,6 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           timeout: 30s
-          command_timeout: ${{ inputs.operation == 'prepare' && '15m' || (inputs.operation == 'deploy' || inputs.operation == 'prepare-tls' || inputs.operation == 'publish' || inputs.operation == 'renew' || inputs.operation == 'enable-main-login' || inputs.operation == 'restore-main-login') && '8m' || '5m' }}
+          command_timeout: ${{ (inputs.operation == 'publish-tavern-bridge' || inputs.operation == 'publish-tavern-frontend') && '22m' || inputs.operation == 'prepare' && '15m' || (inputs.operation == 'deploy' || inputs.operation == 'prepare-tls' || inputs.operation == 'publish' || inputs.operation == 'renew' || inputs.operation == 'enable-main-login' || inputs.operation == 'restore-main-login' || inputs.operation == 'rollback-tavern-bridge' || inputs.operation == 'rollback-tavern-frontend') && '8m' || '5m' }}
           script_stop: false
           script: ${{ steps.payload.outputs.script }}

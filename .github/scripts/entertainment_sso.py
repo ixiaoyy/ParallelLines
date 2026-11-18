@@ -256,6 +256,18 @@ def verify_sso_flows():
                  ['oidc-parallellines'], 'main_login_native_provider_missing_or_changed')
 
 
+def verify_bridge_client(runner, containers):
+    """只读现有健康发行方的客户端布尔结果；未配置前不关闭 Tavern 原生登录。"""
+    bridge = native.select(containers, 'parallellines-chat', 'chat-oidc')
+    native.check(bridge['running'] and bridge['health'] == 'healthy', 'tavern_bridge_not_healthy')
+    program = ('import("./config.mjs").then(({loadConfiguration})=>'
+               'process.exit(loadConfiguration().clients.some(c=>c.clientId==="parallellines-tavern"'
+               '&&c.callbackUri==="https://matrix.pingxingxian.space/_synapse/client/oidc/callback"'
+               '&&!c.refreshEnabled&&!c.profileSyncEnabled)?0:1))')
+    runner.run('tavern_bridge_client_not_configured', [
+        'docker', 'exec', '--workdir', '/app', bridge['id'], 'node', '-e', program])
+
+
 def prepare_snapshots(runner, synapse):
     """生成并校验原生候选，保存前后像与独立恢复入口，再允许激活。"""
     secret_sha = secret_identity()
@@ -369,7 +381,9 @@ def enable_main_login(runner):
     native.preparation_record()
     synapse = synapse_container(runner)
     native.health(runner)
-    protected = native.protected_snapshot(native.containers(runner))
+    containers = native.containers(runner)
+    verify_bridge_client(runner, containers)
+    protected = native.protected_snapshot(containers)
     if STATE.exists():
         value = load_record()
         verify_recovery(value)
@@ -409,9 +423,19 @@ def restore_main_login(runner):
     verify_recovery(value)
     synapse_container(runner, value)
     assert_targets(value, allow_interrupted=True)
-    protected = native.protected_snapshot(native.containers(runner))
+    containers = native.containers(runner)
+    protected = native.protected_snapshot(containers)
     if value['status'] == 'restored':
         return {**main_login_status(runner), 'already_restored': True}
+    # 先撤公网再恢复旧密码能力；不要让应急回退重新公开第二套登录。
+    published = native.read_record(native.STATE)
+    gateway = native.select(containers, 'parallellines', 'nginx')
+    public = native.public_record() if native.PUBLIC_STATE.exists() else None
+    native.check(published.get('public_entry') is not True and
+                 native.gateway_layer_digest(runner, gateway) is None and
+                 (public is None or (public.get('status') == 'retracted' and
+                  public.get('loaded_state_uncertain') is not True)),
+                 'retract_tavern_public_entry_before_restore')
     value.update(status='restoring', stage='restoring_configuration')
     native.private_record(STATE, value)
     # 必须先修复当前中断目标，避免下一次写意图覆盖仍需恢复的中间像证明。
@@ -441,7 +465,9 @@ def main(arguments):
         if Path(globals().get('__file__', '')).absolute() == PROGRAM:
             verify_recovery(load_record())
         runner = native.Runner(360 if arguments[0] != 'main-login-status' else 180)
-        with write_operation_lock() if arguments[0] != 'main-login-status' else contextlib.nullcontext():
+        lock = write_operation_lock() if arguments[0] != 'main-login-status' else contextlib.nullcontext()
+        edge = native.approved_reload_scope() if arguments[0] == 'restore-main-login' else contextlib.nullcontext()
+        with lock, edge:
             report.update({'enable-main-login': enable_main_login, 'restore-main-login': restore_main_login,
                            'main-login-status': main_login_status}[arguments[0]](runner))
     except native.OperationError as error:
