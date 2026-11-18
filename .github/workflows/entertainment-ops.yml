@@ -25,6 +25,10 @@ on:
         description: Manually verified both Tavern sign-in paths (publish-tavern-frontend only)
         type: boolean
         default: false
+      tavern_login_waived:
+        description: Owner approved this Chat release without manual login acceptance (publish-tavern-frontend only)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -54,6 +58,7 @@ jobs:
           EXPECTED_IMAGE_ID: ${{ inputs.expected_image_id }}
           FRONTEND_MANIFEST_SHA256: ${{ inputs.frontend_manifest_sha256 }}
           TAVERN_LOGIN_VERIFIED: ${{ inputs.tavern_login_verified }}
+          TAVERN_LOGIN_WAIVED: ${{ inputs.tavern_login_waived }}
         run: |
           python3 - <<'PY'
           import base64,hashlib,os,re,uuid,zlib
@@ -65,6 +70,8 @@ jobs:
           revision=os.environ['OPERATION_REVISION']
           if not re.fullmatch('[a-f0-9]{40}',revision): raise SystemExit('Reviewed operation identity required')
           args=[operation]
+          waived=os.environ['TAVERN_LOGIN_WAIVED']=='true'
+          if waived and operation!='publish-tavern-frontend': raise SystemExit('Acceptance waiver is for the Chat frontend only')
           if operation in tavern_release:
               chat_revision=os.environ['CHAT_REVISION']
               if not re.fullmatch('[a-f0-9]{40}',chat_revision): raise SystemExit('Reviewed Chat revision required')
@@ -76,8 +83,9 @@ jobs:
               if operation=='publish-tavern-frontend':
                   manifest=os.environ['FRONTEND_MANIFEST_SHA256']
                   if not re.fullmatch('[a-f0-9]{64}',manifest): raise SystemExit('Reviewed public frontend manifest required')
-                  if os.environ['TAVERN_LOGIN_VERIFIED']!='true': raise SystemExit('Manual Tavern sign-in acceptance required')
-                  args+=['--frontend-manifest-sha256',manifest,'--login-verified']
+                  verified=os.environ['TAVERN_LOGIN_VERIFIED']=='true'
+                  if verified==waived: raise SystemExit('Choose manual acceptance or the explicit release waiver')
+                  args+=['--frontend-manifest-sha256',manifest,'--login-verified' if verified else '--login-waived']
               operator=Path('.github/scripts/tavern_release_ops.py').read_text(encoding='utf-8')
               # 回退入口保留已审操作器原文；所有远程 argv 仍是固定枚举、布尔或校验后的摘要。
               source='OPERATOR_SOURCE='+repr(operator)+'\n'+operator

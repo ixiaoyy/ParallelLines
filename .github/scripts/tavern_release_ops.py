@@ -32,6 +32,11 @@ TARGETS = {
 }
 ACTIONS = ('publish-tavern-bridge', 'rollback-tavern-bridge',
            'publish-tavern-frontend', 'rollback-tavern-frontend', 'tavern-release-status')
+# 用户仅批准这份侧栏产物在人工验收未完成时发布；其他版本仍须人工验收。
+FRONTEND_ACCEPTANCE_WAIVER = (
+    '6578349bd3594245b06d3854896eef54bf4f7082',
+    '4877a9e5c829dc0d1cd1fc835b104a412d779bbc972cfa90f366a89a82109fcc',
+)
 BRIDGE_BEFORE = {
     # i18n 已发布的三个被覆盖文件；其他桥代码全部继承运行镜像。
     'config.mjs': '760eb10c7c69ce68d6dbfff942ce3729ca6126f34038a0dc552590074c1afeda',
@@ -400,8 +405,11 @@ def publish(role, revision, directory, args):
     current = inspect(role)
     require(current and current['image'] == args.expected_image_id and current['running']
             and current['health'] == 'healthy', 'release_expected_healthy_baseline_changed')
+    acceptance = {'manual_tavern_login_accepted': False}
     if role == 'frontend':
-        require(args.login_verified, 'manual_tavern_login_acceptance_required')
+        acceptance = {'manual_tavern_login_accepted': args.login_verified,
+                      'manual_tavern_login_waived': args.login_waived}
+        # 豁免只影响人工登录项；上线前仍严格核对 Tavern、身份桥和候选产物。
         tavern_gate()
         bridge = inspect('bridge')
         require(bridge and bridge['running'] and bridge['health'] == 'healthy', 'tavern_bridge_not_healthy')
@@ -460,7 +468,8 @@ def publish(role, revision, directory, args):
               'before_hash': utils.service_hash(raw, service), 'after_hash': utils.service_hash(projected, service),
               'before_image': current['image'], 'before_reference': current['reference'], 'after_image': after_image,
               'after_reference': base, 'old_service': old_yaml, 'compose_identity': identity,
-              'utility_sha256': digest(utility_bytes), 'status': 'switching', 'restart_intent': False}
+              'utility_sha256': digest(utility_bytes), 'status': 'switching', 'restart_intent': False,
+              **acceptance}
     restored = utils.patch_service(projected, service, restoring_service(record, utils))
     record['restored_hash'] = utils.service_hash(restored, service)
     # 备妥当前操作器字节；回退不依赖 GitHub、候选上下文或登录。
@@ -483,9 +492,10 @@ def publish(role, revision, directory, args):
     else:
         frontend_matches(candidate, prepared, full=True)
     require(guard(role, record, utils)[0] == record['after_hash'], 'release_candidate_drift')
-    record.update(status='active', manual_tavern_login_accepted=role == 'frontend')
+    record['status'] = 'active'
     save_record(receipt, record)
-    return {'status': 'active', 'role': role, 'image_id': after_image, 'recovery_program': str(role_dir / 'operator.py')}
+    return {'status': 'active', 'role': role, 'image_id': after_image,
+            'recovery_program': str(role_dir / 'operator.py'), **acceptance}
 
 
 def rollback(role, revision, directory):
@@ -550,10 +560,18 @@ def main():
     parser.add_argument('revision')
     parser.add_argument('--expected-image-id')
     parser.add_argument('--frontend-manifest-sha256')
-    parser.add_argument('--login-verified', action='store_true')
+    acceptance = parser.add_mutually_exclusive_group()
+    acceptance.add_argument('--login-verified', action='store_true')
+    acceptance.add_argument('--login-waived', action='store_true')
     args = parser.parse_args()
     operation, revision = args.operation, args.revision
     require(re.fullmatch(r'[0-9a-f]{40}', revision), 'reviewed_chat_revision_required')
+    require(not args.login_waived or operation == 'publish-tavern-frontend', 'frontend_acceptance_waiver_only')
+    if operation == 'publish-tavern-frontend':
+        require(args.login_verified or args.login_waived, 'manual_tavern_login_acceptance_required')
+        if args.login_waived:
+            require((revision, args.frontend_manifest_sha256) == FRONTEND_ACCEPTANCE_WAIVER,
+                    'frontend_acceptance_waiver_not_approved_for_release')
     directory = safe_path(ROOT / revision)
     if operation == 'tavern-release-status':
         return status(revision, directory)
