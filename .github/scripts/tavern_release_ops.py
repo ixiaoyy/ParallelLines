@@ -57,10 +57,10 @@ def require(value, code):
         raise OperationError(code)
 
 
-def run(args, code, *, timeout=30, binary=False, cwd=None):
+def run(args, code, *, timeout=30, binary=False, cwd=None, stdin_data=None):
     """执行有界的固定命令；私有配置、容器环境和命令输出不进入 Actions 日志。"""
     result = subprocess.run([str(x) for x in args], capture_output=True, cwd=cwd,
-                            timeout=timeout, env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'})
+                            timeout=timeout, input=stdin_data, env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'})
     require(result.returncode == 0, code)
     return result.stdout if binary else result.stdout.decode().strip()
 
@@ -193,7 +193,7 @@ def inspect(role):
     return value
 
 
-def compose(role, scope, *args, override=None, failure='target_compose_command_failed'):
+def compose(role, scope, *args, override=None, failure='target_compose_command_failed', stdin_data=None):
     project, service, *_ = TARGETS[role]
     command = ['docker', 'compose', '--project-name', project, '--project-directory', safe_path(scope['working'])]
     for key, flag in (('env', '--env-file'), ('files', '-f')):
@@ -203,7 +203,7 @@ def compose(role, scope, *args, override=None, failure='target_compose_command_f
         command.extend(('-f', safe_path(override)))
     if args == ('replace',):
         args = ('up', '-d', '--no-deps', '--no-build', '--pull', 'never', service)
-    return run([*command, *args], failure, timeout=180, cwd=scope['working'])
+    return run([*command, *args], failure, timeout=180, cwd=scope['working'], stdin_data=stdin_data)
 
 
 def image_id(reference):
@@ -256,23 +256,27 @@ def bridge_registered(current):
 def preflight_bridge(scope, attempt, image):
     """以候选和原 Compose 环境比较私有客户端配置；仅运行校验，不启动第二个发行方。"""
     secret = safe_path(MATRIX_SECRET)
-    meta = secret.stat()
-    require(stat.S_ISREG(meta.st_mode) and (meta.st_uid, meta.st_gid) == (991, 991)
-            and stat.S_IMODE(meta.st_mode) == 0o600 and 32 <= meta.st_size <= 4096,
-            'private_tavern_client_secret_required')
+    require(secret.is_file(), 'private_tavern_client_secret_required')
+    with os.fdopen(os.open(secret, os.O_RDONLY | os.O_NOFOLLOW), 'rb') as stream:
+        meta = os.fstat(stream.fileno())
+        require(stat.S_ISREG(meta.st_mode) and (meta.st_uid, meta.st_gid) == (991, 991)
+                and stat.S_IMODE(meta.st_mode) == 0o600 and 32 <= meta.st_size <= 4096,
+                'private_tavern_client_secret_required')
+        credential = stream.read(4097)
+        require(len(credential) == meta.st_size, 'private_tavern_client_secret_changed')
     override = attempt / 'bridge-preflight.json'
     save_record(override, {'services': {'chat-oidc': {'image': image}}})
     check = ('import("./config.mjs").then(async ({loadConfiguration})=>{'
              'const clients=loadConfiguration().clients;'
              'const c=clients.find(x=>x.clientId==="parallellines-tavern");'
              'const {readFileSync}=await import("node:fs");'
-             'const match=c&&c.clientSecret===readFileSync("/run/tavern-release-secret","utf8").trim();'
+             'const match=c&&c.clientSecret===readFileSync(0,"utf8").trim();'
              'process.exit(match&&["parallellines-openwebui","parallellines-newapi"]'
              '.every(id=>clients.some(client=>client.clientId===id))?0:1);})')
+    # 保留容器实际用户和权限；专用秘密只经主机本地标准输入比较，不挂载或放到参数里。
     compose('bridge', scope, 'run', '--rm', '--no-deps', '--pull', 'never', '-T',
-            '--entrypoint', 'node', '--user', '0:0', '--workdir', '/app',
-            '--volume', f'{secret}:/run/tavern-release-secret:ro', 'chat-oidc', '-e', check,
-            override=override, failure='tavern_candidate_client_configuration_invalid')
+            '--entrypoint', 'node', '--workdir', '/app', 'chat-oidc', '-e', check,
+            override=override, failure='tavern_candidate_client_configuration_invalid', stdin_data=credential)
 
 
 def wait_ready(role, expected):
