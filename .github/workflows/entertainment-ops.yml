@@ -8,14 +8,14 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, prepare, deploy, bootstrap, prepare-tls, publish, retract, install-renewal, renew, renewal-status, health, stop]
+        options: [inventory, prepare, deploy, bootstrap, prepare-tls, publish, retract, install-renewal, renew, renewal-status, health, stop, enable-main-login, restore-main-login, main-login-status]
 
 permissions:
   contents: read
 
 concurrency:
   # 独立读取不等待发布；写操作与现有生产发布共用互斥组。
-  group: ${{ (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'renewal-status') && format('entertainment-read-{0}', inputs.operation) || 'deploy-production' }}
+  group: ${{ (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'renewal-status' || inputs.operation == 'main-login-status') && format('entertainment-read-{0}', inputs.operation) || 'deploy-production' }}
   cancel-in-progress: false
 
 jobs:
@@ -39,10 +39,20 @@ jobs:
           import base64,hashlib,os,re,uuid,zlib
           from pathlib import Path
           operation=os.environ['OPERATION']
-          if operation not in ('inventory','prepare','deploy','bootstrap','prepare-tls','publish','retract','install-renewal','renew','renewal-status','health','stop'): raise SystemExit('Unsupported entertainment operation')
+          sso_operations=('enable-main-login','restore-main-login','main-login-status')
+          if operation not in ('inventory','prepare','deploy','bootstrap','prepare-tls','publish','retract','install-renewal','renew','renewal-status','health','stop')+sso_operations: raise SystemExit('Unsupported entertainment operation')
           revision=os.environ['OPERATION_REVISION']
           if not re.fullmatch('[a-f0-9]{40}',revision): raise SystemExit('Reviewed operation identity required')
           source=Path('.github/scripts/entertainment_ops.py').read_text(encoding='utf-8')
+          if operation in sso_operations:
+              extension=Path('.github/scripts/entertainment_sso.py').read_text(encoding='utf-8')
+              # 原续期 source 原字节导入；新入口不改旧消费者及其来源守卫。
+              bundle={'native':source,'sso':extension,'revision':revision}
+              loader="import sys,types\nBUNDLED_PROGRAM='BUNDLE='+repr(BUNDLE)+'\\nLOADER='+repr(LOADER)+'\\nexec(LOADER)\\n'\nmodule=types.ModuleType('entertainment_ops')\nmodule.__dict__.update(OPS_SOURCE=BUNDLE['native'],OPS_REVISION=BUNDLE['revision'])\nsys.modules['entertainment_ops']=module\nexec(compile(BUNDLE['native'], '<fixed-entertainment-ops>', 'exec'),module.__dict__)\n"
+              loader+="exec(compile(BUNDLE['sso'], '<fixed-tavern-sso>', 'exec'),{'__name__':'__main__','__file__':globals().get('__file__','<fixed-tavern-sso>'),'SSO_SOURCE':BUNDLE['sso'],'SSO_PROGRAM_SOURCE':BUNDLED_PROGRAM,'OPS_REVISION':BUNDLE['revision']})\n"
+              prefix='BUNDLE='+repr(bundle)+'\nLOADER='+repr(loader)+'\n'
+              # 保存的独立程序与实际执行的固定 bundle 相同，断开 GitHub 后仍可恢复。
+              source=prefix+'exec(LOADER)\n'
           marker='PL_ENTERTAINMENT_'+uuid.uuid4().hex
           # 只压缩当前 checkout 的公开固定 source 适配 SSH exec 长度；绝不编码生产响应或凭据。
           encoded=base64.b64encode(zlib.compress(source.encode('utf-8'),9)).decode('ascii')
@@ -63,6 +73,6 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
           timeout: 30s
-          command_timeout: ${{ inputs.operation == 'prepare' && '15m' || (inputs.operation == 'deploy' || inputs.operation == 'prepare-tls' || inputs.operation == 'publish' || inputs.operation == 'renew') && '8m' || '5m' }}
+          command_timeout: ${{ inputs.operation == 'prepare' && '15m' || (inputs.operation == 'deploy' || inputs.operation == 'prepare-tls' || inputs.operation == 'publish' || inputs.operation == 'renew' || inputs.operation == 'enable-main-login' || inputs.operation == 'restore-main-login') && '8m' || '5m' }}
           script_stop: false
           script: ${{ steps.payload.outputs.script }}
