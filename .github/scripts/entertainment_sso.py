@@ -8,6 +8,7 @@ import re
 import secrets
 import stat
 import sys
+import tempfile
 import time
 
 import entertainment_ops as native
@@ -17,6 +18,11 @@ OPERATIONS = ('enable-main-login', 'restore-main-login', 'main-login-status')
 STATE = native.ROOT / 'main-login.json'
 BACKUP = native.ROOT / 'runtime/main-login-backup'
 PROGRAM = native.ROOT / 'sso-operations.py'
+# 固定识别这次已写完配置但未结案的首版，保留原独立程序供审计。
+LEGACY_REVISION = '7d3ab51cff65e239e17c945a87950cbb6df8ab85'
+LEGACY_EXTENSION = '8e9e34b40ac822f2a53ec7612101c4cd8d749805f2bae67fd1de63f5cf77d178'
+LEGACY_PROGRAM_SHA = '168ad90981a394c14ef35a006a33597640819f2a55e92bb0ea6c975d95c74fee'
+LEGACY_PROGRAM = native.ROOT / 'sso-operations.before-element-sync-7d3ab51c.py'
 CANDIDATE = native.ROOT / 'data/synapse/tavern-sso-candidate.yaml'
 SECRET = native.ROOT / 'data/synapse/tavern-oidc-client-secret'
 LOCK = native.ROOT / 'runtime/main-login.lock'
@@ -44,6 +50,26 @@ OIDC_PROVIDER = {
         'display_name_template': '{{ user.name }}',
     }},
 }
+
+ELEMENT_SYNC = r'''
+set -eu
+src=/app/config.json
+dir=/tmp/element-web-config
+dst=$dir/config.json
+[ ! -L "$dir" ] && [ -d "$dir" ] && [ ! -L "$dst" ] && [ -f "$dst" ] && [ ! -L "$src" ] && [ -f "$src" ] || exit 1
+[ "$(stat -c %u:%a "$dst")" = "$(id -u):644" ]
+source_sha=$(sha256sum "$src"); [ "${source_sha%% *}" = "$2" ]
+live_sha=$(sha256sum "$dst"); live_sha=${live_sha%% *}
+[ "$live_sha" = "$2" ] && exit 0
+[ "$live_sha" = "$1" ]
+tmp=$(mktemp "$dir/.tavern-config.XXXXXXXX")
+trap 'rm -f "$tmp"' EXIT
+cp "$src" "$tmp"
+chmod 644 "$tmp"
+tmp_sha=$(sha256sum "$tmp"); [ "${tmp_sha%% *}" = "$2" ]
+live_sha=$(sha256sum "$dst"); [ "${live_sha%% *}" = "$1" ]
+mv -f "$tmp" "$dst"
+'''
 
 # 只在既有官方容器内解析 YAML。候选文件不激活服务，也不输出任何私有配置。
 PREPARE_PROGRAM = r'''
@@ -83,7 +109,7 @@ def file_snapshot(path):
     """读取本模块有界常规文件及权限/归属，返回私有前像，不输出正文。"""
     path = native.owned(path)
     info = path.stat()
-    limit = 240 * 1024 if path == PROGRAM else 128 * 1024
+    limit = 240 * 1024 if path in (PROGRAM, LEGACY_PROGRAM) else 128 * 1024
     native.check(stat.S_ISREG(info.st_mode) and 0 < info.st_size <= limit,
                  'main_login_file_missing_or_out_of_bound')
     content = path.read_bytes()
@@ -101,6 +127,12 @@ def secret_identity():
     return info['sha256']
 
 
+def is_legacy_record(value):
+    """仅兼容已核首次生产切换的精确版本，不接受其他历史消费者。"""
+    return (value.get('operation_revision'), value.get('extension_sha256'), value.get('program_sha256')) == (
+        LEGACY_REVISION, LEGACY_EXTENSION, LEGACY_PROGRAM_SHA)
+
+
 def load_record():
     """校验本次叠加配置回执，不将其它版本或目录当成本次恢复对象。"""
     value = native.read_record(STATE)
@@ -109,17 +141,25 @@ def load_record():
                  'main_login_record_identity_changed')
     native.check(value.get('status') in ('pending', 'enabled', 'restoring', 'restored'),
                  'main_login_record_status_invalid')
-    native.check(value.get('extension_sha256') == native.digest(globals().get('SSO_SOURCE', '').encode()) and
+    current = native.digest(globals().get('SSO_SOURCE', '').encode())
+    native.check((value.get('extension_sha256') == current or is_legacy_record(value)) and
                  value.get('native_source_sha256') == native.digest(native.OPS_SOURCE.encode()),
                  'main_login_recovery_source_changed')
     return value
 
 
 def verify_recovery(value):
-    """独立恢复程序须为首次保存的 root 私有常规文件；不覆盖既有续期程序。"""
+    """原位恢复入口须为已登记的 root 私有程序；只识别自身原子升级的中间态。"""
     _, info = file_snapshot(PROGRAM)
-    native.check(info['uid'] == 0 and info['mode'] == 0o600 and
-                 info['sha256'] == value.get('program_sha256'), 'main_login_recovery_program_changed')
+    native.check(info['uid'] == 0 and info['mode'] == 0o600, 'main_login_recovery_program_changed')
+    if info['sha256'] == value.get('program_sha256'):
+        return
+    source = globals().get('SSO_PROGRAM_SOURCE', '')
+    native.check(is_legacy_record(value) and source and info['sha256'] == native.digest(source.encode()),
+                 'main_login_recovery_program_changed')
+    _, old = file_snapshot(LEGACY_PROGRAM)
+    native.check(old['uid'] == 0 and old['mode'] == 0o600 and old['sha256'] == LEGACY_PROGRAM_SHA,
+                 'main_login_legacy_recovery_program_changed')
 
 
 def save_private_snapshot(path, content):
@@ -135,6 +175,42 @@ def save_private_snapshot(path, content):
         stream.write(content)
         stream.flush()
         os.fsync(stream.fileno())
+
+
+def upgrade_recovery(value):
+    """保留原备份及独立入口路径，原子换程序；调用方再持久化新回执。"""
+    if not is_legacy_record(value):
+        return
+    verify_recovery(value)
+    for name in TARGETS:
+        for side in ('before', 'after'):
+            backup_content(value, name, side)
+    source = globals().get('SSO_PROGRAM_SOURCE', '')
+    native.check(isinstance(source, str) and source, 'main_login_reviewed_source_required')
+    compile(source, '<tavern-recovery>', 'exec')
+    current, info = file_snapshot(PROGRAM)
+    if info['sha256'] == LEGACY_PROGRAM_SHA:
+        save_private_snapshot(LEGACY_PROGRAM, current)
+        target = native.owned(PROGRAM)
+        with tempfile.NamedTemporaryFile(dir=target.parent, prefix='.tavern-recovery-', delete=False) as stream:
+            tmp = Path(stream.name)
+            stream.write(source.encode())
+            stream.flush()
+            os.fsync(stream.fileno())
+        try:
+            os.replace(tmp, target)
+            directory = os.open(target.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        finally:
+            if tmp.exists():
+                tmp.unlink()
+    value.update(extension_sha256=native.digest(globals()['SSO_SOURCE'].encode()),
+                 program_sha256=native.digest(source.encode()),
+                 recovery_operation_revision=globals()['OPS_REVISION'])
+    verify_recovery(value)
 
 
 def intermediate_content_matches(content, source, target):
@@ -254,6 +330,21 @@ def verify_sso_flows():
     sso = [item for item in flows if item.get('type') == 'm.login.sso']
     native.check(len(sso) == 1 and [item.get('id') for item in sso[0].get('identity_providers', [])] ==
                  ['oidc-parallellines'], 'main_login_native_provider_missing_or_changed')
+
+
+def sync_element_config(runner, value, side):
+    """Element 将挂载文件复制后对外提供；原子更新已登记容器里的实际网页副本。"""
+    saved, items = native.live_module_record(runner)
+    native.check(saved['container_ids'] == value['container_ids'], 'main_login_module_container_changed')
+    element = native.select(items, native.PROJECT, 'element')
+    expected = backup_content(value, 'element', side)
+    desired = native.digest(expected)
+    other = 'before' if side == 'after' else 'after'
+    previous = native.digest(backup_content(value, 'element', other))
+    runner.run('main_login_sync_element_served_config', [
+        'docker', 'exec', element['id'], 'sh', '-c', ELEMENT_SYNC, 'tavern-element-sync', previous, desired])
+    seen = native.request_status('http://127.0.0.1:13101/config.json', expected_json=True)
+    native.check(seen == json.loads(expected), 'main_login_element_served_configuration_changed')
 
 
 def verify_bridge_client(runner, containers):
@@ -380,7 +471,6 @@ def enable_main_login(runner):
     native.verify_renewal_installation()
     native.preparation_record()
     synapse = synapse_container(runner)
-    native.health(runner)
     containers = native.containers(runner)
     verify_bridge_client(runner, containers)
     protected = native.protected_snapshot(containers)
@@ -389,12 +479,23 @@ def enable_main_login(runner):
         verify_recovery(value)
         if value['status'] == 'enabled':
             return {**main_login_status(runner), 'already_enabled': True}
+        if value['status'] == 'pending':
+            # 仅已完成三项原地写入的后像可续结；未完成或不明中间写仍按现有规则回退。
+            native.check(value.get('stage') == 'synapse_configuration_written' and not value.get('write_intent'),
+                         'main_login_pending_requires_restore')
+            synapse_container(runner, value)
+            assert_targets(value, side='after')
+            verify_sso_flows()
+            return finish_enable(runner, value, protected, resumed=True)
         native.check(value['status'] == 'restored', 'main_login_pending_requires_restore')
         assert_targets(value, side='before')
         native.check(secret_identity() == value['secret_sha256'], 'main_login_secret_changed')
+        native.health(runner)
+        upgrade_recovery(value)
         value.update(status='pending', stage='backed_up')
         native.private_record(STATE, value)
     else:
+        native.health(runner)
         value = prepare_snapshots(runner, synapse)
     # 先启用服务端能力，再开启前端自动跳转，避免把访客送入尚未就绪的登录链。
     write_target(value, 'synapse', 'after')
@@ -404,14 +505,24 @@ def enable_main_login(runner):
     verify_sso_flows()
     write_target(value, 'element', 'after')
     write_target(value, 'prepared', 'after')
+    return finish_enable(runner, value, protected)
+
+
+def finish_enable(runner, value, protected, *, resumed=False):
+    """重核三项目标和网页实际配置后结案；续跑不再次重启 Synapse。"""
+    assert_targets(value, side='after')
+    native.check(secret_identity() == value['secret_sha256'], 'main_login_secret_changed')
+    sync_element_config(runner, value, 'after')
     native.preparation_record()
     native.health(runner)
     native.assert_protected(runner, protected)
+    upgrade_recovery(value)
     value.update(status='enabled', stage='configuration_and_native_flows_verified',
                  finished_at=int(time.time()))
     native.private_record(STATE, value)
     return {'complete': True, 'read_only': False, 'main_login_enabled': True,
-            'authenticated_main_login_verified': False, 'only_synapse_restarted': True,
+            'authenticated_main_login_verified': False, 'only_synapse_restarted': not resumed,
+            'resumed_pending': resumed, 'element_restarted': False,
             'other_services_changed': False, 'account_or_message_data_changed': False,
             'recovery_program': str(PROGRAM)}
 
@@ -436,6 +547,7 @@ def restore_main_login(runner):
                  (public is None or (public.get('status') == 'retracted' and
                   public.get('loaded_state_uncertain') is not True)),
                  'retract_tavern_public_entry_before_restore')
+    upgrade_recovery(value)
     value.update(status='restoring', stage='restoring_configuration')
     native.private_record(STATE, value)
     # 必须先修复当前中断目标，避免下一次写意图覆盖仍需恢复的中间像证明。
@@ -444,6 +556,7 @@ def restore_main_login(runner):
         name for name in TARGETS if name != interrupted]
     for name in order:
         write_target(value, name, 'before')
+    sync_element_config(runner, value, 'before')
     restart_synapse(runner, value)
     native.check(login_flows() == value['login_flows_before'], 'restored_native_login_flows_changed')
     native.preparation_record()
