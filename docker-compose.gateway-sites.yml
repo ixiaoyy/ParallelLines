@@ -1,0 +1,9 @@
+# 共享 Nginx 边缘网关持久站点扩展叠加文件（由 ParallelLines 统一持有与发布）。
+# 仅用于将目前仍依赖容器层的独立站点路由（优先 Tavern / Matrix）纳入宿主机持久化挂载；
+# 已经持久化的既有站点无需为了目录整齐强行搬迁。
+# 注意：分文件只解决配置归属，共享网关的故障范围并不会因此缩小；变更仍须经同一发布链执行 nginx -t 校验与切换。
+services:
+  nginx:
+    volumes:
+      - ./deploy/nginx/sites.d/00-include-sites.conf:/etc/nginx/conf.d/zz-gateway-sites.conf:ro
+      - ${GATEWAY_SITES_DIR:-/opt/parallellines/nginx/sites.d}:/etc/nginx/sites.d:ro
