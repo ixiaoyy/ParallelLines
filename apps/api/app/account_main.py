@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from app.api.v1 import auth, auth_chat_sso, auth_unified, invites, users
+from app.api.v1 import auth, auth_chat_sso, auth_unified
 from app.core.config import get_settings
 from app.core.exceptions import AppError
 from app.core.logging import configure_logging
@@ -30,13 +30,11 @@ SERVICE_NAME = "parallellines-account-api"
 
 
 def create_account_router() -> APIRouter:
-    """只聚合账号域边界路由，禁止引入非账号业务路由。"""
+    """只聚合窄账号认证与 SSO 边界路由，不挂载 /users、/invites 及任何业务路由。"""
     router = APIRouter()
     router.include_router(auth.router)
     router.include_router(auth_chat_sso.router)
     router.include_router(auth_unified.router)
-    router.include_router(users.router)
-    router.include_router(invites.router)
     return router
 
 

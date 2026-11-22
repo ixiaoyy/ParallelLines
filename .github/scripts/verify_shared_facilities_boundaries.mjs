@@ -44,16 +44,23 @@ export function verifySharedFacilitiesBoundaries(repoRoot) {
 		}
 	}
 
-	// 核对独立邮件 worker 试点叠加文件关闭定时入队（保持唯一调度方）。
+	// 核对独立邮件 worker 试点叠加文件：原 worker 排除 mail，email-worker 仅消费 mail 且关闭定时入队。
 	const emailPilot = path.join(root, 'docker-compose.email-worker-pilot.yml');
 	if (!fs.existsSync(emailPilot)) {
 		violations.push('missing_email_worker_pilot_compose');
 	} else {
 		const compose = fs.readFileSync(emailPilot, 'utf8');
-		if (!/BACKGROUND_WORKER_QUEUES:\s*["']?mail["']?/.test(compose)) {
+		if (!/^\s*worker:\s*$/m.test(compose)) {
+			violations.push('email_worker_pilot_missing_worker_queue_override');
+		}
+		const workerQueueMatch = compose.match(/worker:[\s\S]*?BACKGROUND_WORKER_QUEUES:\s*["']?([^"'\r\n]+)["']?/);
+		if (!workerQueueMatch || workerQueueMatch[1].split(',').map((s) => s.trim()).includes('mail')) {
+			violations.push('email_worker_pilot_must_exclude_mail_from_default_worker');
+		}
+		if (!/email-worker:[\s\S]*?BACKGROUND_WORKER_QUEUES:\s*["']?mail["']?/.test(compose)) {
 			violations.push('email_worker_pilot_missing_mail_queue');
 		}
-		if (!/BACKGROUND_WORKER_ENQUEUE_SCHEDULED:\s*["']?false["']?/.test(compose)) {
+		if (!/email-worker:[\s\S]*?BACKGROUND_WORKER_ENQUEUE_SCHEDULED:\s*["']?false["']?/.test(compose)) {
 			violations.push('email_worker_pilot_must_disable_scheduler');
 		}
 	}

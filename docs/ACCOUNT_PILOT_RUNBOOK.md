@@ -6,7 +6,8 @@
 
 - **唯一启动入口**：`apps/api/app/account_main.py`（通过 `docker-compose.account-pilot.yml` 以 `127.0.0.1:8001` 回环启动）。
 - **唯一迁移责任方**：`account-api` **不执行** `alembic upgrade head`，数据库迁移仍只由主站 `api` 唯一负责。
-- **路由范围**：仅承接 `/api/v1/auth/*`（含 `chat-sso`、`unified`、`fablespace` 票据）、`/api/v1/users/*`、`/api/v1/invites/*` 及 `/healthz`、`/readyz`。
+- **路由范围**：仅承接窄认证与 SSO 路由（`/api/v1/auth/*`，含 `chat-sso`、`unified`、`fablespace` 票据）及 `/healthz`、`/readyz`；**明确不挂载 `/users`（含圈子关系、私信、匿名注销与本地上传卷清理）与 `/invites`**。
+- **就绪与验收边界**：`/readyz` 仅核对数据库可查询（`SELECT 1`），**不能替代**旧会话兼容、撤销、FableSpace 一次性票据兑换与回切验收。
 - **同库兼容**：初期与主站共用现有 MySQL / Redis，不改表结构、不拆外键、不更换 OIDC Issuer URL（`https://pingxingxian.space/auth/oidc`）或 `sub`。
 
 ## 2. 切流前门槛

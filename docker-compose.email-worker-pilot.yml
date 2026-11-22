@@ -1,6 +1,14 @@
 # 独立邮件投递 Worker 试点叠加文件（显式 opt-in，默认部署不启动）。
-# 仅消费 mail 队列并关闭定时任务入队（保持主站唯一调度方），不暴露端口、不执行 Alembic 迁移。
+# 强制唯一消费边界：
+# 1. 原 worker 显式排除 mail 队列，并保留唯一定时入队调度权；
+# 2. email-worker 仅消费 mail 队列并关闭定时入队，避免双 worker 重复领取 mail 任务；
+# 3. 启用前须先排空原 worker 在途 mail 任务，验证交接与回切后再保留运行。
 services:
+  worker:
+    environment:
+      BACKGROUND_WORKER_QUEUES: "notifications,maintenance,webhooks,default"
+      BACKGROUND_WORKER_ENQUEUE_SCHEDULED: "true"
+
   email-worker:
     build:
       context: ./apps/api

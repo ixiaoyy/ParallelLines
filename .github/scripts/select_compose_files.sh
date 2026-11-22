@@ -71,7 +71,7 @@ select_parallellines_compose_files() {
             echo "[deploy] gateway-sites-enabled must be a regular marker file" >&2
             return 1
         }
-        for recipe in docker-compose.gateway-sites.yml deploy/nginx/sites.d/00-include-sites.conf; do
+        for recipe in docker-compose.gateway-sites.yml deploy/nginx/sites.d/00-include-sites.conf deploy/nginx/sites.d/verify-gateway-sites.mjs; do
             test -s "$recipe" || {
                 echo "[deploy] enabled gateway sites overlay is missing recipe: $recipe" >&2
                 return 1
@@ -82,12 +82,14 @@ select_parallellines_compose_files() {
             echo "[deploy] enabled gateway sites directory is missing: $GATEWAY_SITES_TARGET" >&2
             return 1
         }
-        if command -v node >/dev/null 2>&1 && test -s deploy/nginx/sites.d/verify-gateway-sites.mjs; then
-            node deploy/nginx/sites.d/verify-gateway-sites.mjs "$GATEWAY_SITES_TARGET" deploy/nginx/sites.d/00-include-sites.conf >/dev/null || {
-                echo "[deploy] gateway sites preflight verification failed" >&2
-                return 1
-            }
-        fi
+        command -v node >/dev/null 2>&1 || {
+            echo "[deploy] node is required to verify enabled gateway sites before loading" >&2
+            return 1
+        }
+        node deploy/nginx/sites.d/verify-gateway-sites.mjs "$GATEWAY_SITES_TARGET" deploy/nginx/sites.d/00-include-sites.conf >/dev/null || {
+            echo "[deploy] gateway sites preflight verification failed" >&2
+            return 1
+        }
         COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.gateway-sites.yml"
     fi
 }

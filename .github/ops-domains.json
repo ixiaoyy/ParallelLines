@@ -4,6 +4,7 @@
   "domains": {
     "main": {
       "workflows": [
+        "architecture-guards.yml",
         "ci.yml",
         "deploy.yml",
         "build-ai-rollback.yml",

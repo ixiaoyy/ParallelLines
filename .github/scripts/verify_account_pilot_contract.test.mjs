@@ -8,13 +8,24 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const ACCOUNT_MAIN = path.join(REPO_ROOT, 'apps', 'api', 'app', 'account_main.py');
 const PILOT_COMPOSE = path.join(REPO_ROOT, 'docker-compose.account-pilot.yml');
 
-test('account_main.py mounts only narrow account routers and excludes business routers', () => {
+test('account_main.py mounts only narrow auth/SSO routers and excludes users, invites, and business routers', () => {
 	const text = fs.readFileSync(ACCOUNT_MAIN, 'utf8');
-	for (const allowed of ['auth.router', 'auth_chat_sso.router', 'auth_unified.router', 'users.router', 'invites.router']) {
+	for (const allowed of ['auth.router', 'auth_chat_sso.router', 'auth_unified.router']) {
 		assert.equal(text.includes(allowed), true, `expected ${allowed} in account_main.py`);
 	}
-	for (const forbidden of ['catalog.router', 'boards.router', 'topics.router', 'posts.router', 'admin.router', 'traffic.router', 'space.router', 'moderation.router']) {
-		assert.equal(text.includes(forbidden), false, `forbidden business router ${forbidden} found in account_main.py`);
+	for (const forbidden of [
+		'users.router',
+		'invites.router',
+		'catalog.router',
+		'boards.router',
+		'topics.router',
+		'posts.router',
+		'admin.router',
+		'traffic.router',
+		'space.router',
+		'moderation.router'
+	]) {
+		assert.equal(text.includes(forbidden), false, `forbidden router ${forbidden} found in account_main.py`);
 	}
 });
 

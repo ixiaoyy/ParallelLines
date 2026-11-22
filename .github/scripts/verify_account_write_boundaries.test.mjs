@@ -24,8 +24,14 @@ test('ignores read comparisons while detecting actual assignments and ORM writes
 	const readOnly = 'if user.status == "active" and user.role == "admin": pass\n';
 	assert.deepEqual(scanAccountWritesInSource(readOnly), []);
 
-	const mutation = 'user.status = "suspended"\ndb.add(UserSession(user_id=user.id))\n';
-	assert.deepEqual(scanAccountWritesInSource(mutation), ['UserSession(', 'user.status=']);
+	const mutation =
+		'user.status = "suspended"\nbot.hashed_password = "x"\nacc.two_factor_secret = "y"\ndb.add(UserSession(user_id=user.id))\n';
+	assert.deepEqual(scanAccountWritesInSource(mutation), [
+		'UserSession(',
+		'acc.two_factor_secret=',
+		'bot.hashed_password=',
+		'user.status='
+	]);
 });
 
 test('blocks unauthorized business module from directly writing account tables', () => {
