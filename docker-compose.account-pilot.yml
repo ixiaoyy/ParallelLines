@@ -1,0 +1,28 @@
+# 阶段 2 独立账号服务试点叠加文件（显式 opt-in，默认部署不启动）。
+# 边界约束：
+# 1. 仅监听回环 127.0.0.1:8001，不直接暴露公网。
+# 2. 不执行 alembic upgrade head，数据库迁移仍由主站唯一责任方执行。
+# 3. 健康检查使用 /readyz（真实数据库探测），而非仅存活的 /healthz。
+services:
+  account-api:
+    build:
+      context: ./apps/api
+    restart: unless-stopped
+    env_file:
+      - ./apps/api/.env
+    environment:
+      PUBLIC_SITE_URL: https://pingxingxian.space
+    ports:
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      uvicorn app.account_main:app --host 0.0.0.0 --port 8001
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/readyz', timeout=2)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10

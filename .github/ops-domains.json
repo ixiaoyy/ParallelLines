@@ -18,6 +18,7 @@
         "test_deploy_artifacts.py",
         "test_forum_deploy.py",
         "test_static_cache_contract.py",
+        "verify_account_pilot_contract.test.mjs",
         "verify_account_write_boundaries.mjs",
         "verify_account_write_boundaries.test.mjs",
         "verify_ops_boundaries.mjs",
