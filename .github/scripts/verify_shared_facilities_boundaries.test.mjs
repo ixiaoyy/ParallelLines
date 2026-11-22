@@ -22,3 +22,13 @@ test('background_jobs worker supports BACKGROUND_WORKER_QUEUES and BACKGROUND_WO
 	assert.match(worker, /BACKGROUND_WORKER_QUEUES/);
 	assert.match(worker, /BACKGROUND_WORKER_ENQUEUE_SCHEDULED/);
 });
+
+test('BackgroundJobService.acquire_next uses atomic conditional UPDATE CAS claim', () => {
+	const service = fs.readFileSync(
+		path.join(REPO_ROOT, 'apps', 'api', 'app', 'services', 'background_jobs.py'),
+		'utf8'
+	);
+	assert.match(service, /update\(BackgroundJob\)/);
+	assert.match(service, /BackgroundJob\.status == "queued"/);
+	assert.match(service, /claim\.rowcount/);
+});

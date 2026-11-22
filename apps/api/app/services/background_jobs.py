@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, date, datetime, time, timedelta
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import SHANGHAI_TZ, utcnow
@@ -133,35 +133,52 @@ class BackgroundJobService:
         now: datetime | None = None,
     ) -> BackgroundJob | None:
         run_time = _queue_timestamp(now or utcnow())
-        statement = select(BackgroundJob).where(
+        statement = select(BackgroundJob.id).where(
             BackgroundJob.status == "queued",
             BackgroundJob.run_at <= run_time,
         )
         if queues:
             statement = statement.where(BackgroundJob.queue.in_(tuple(queues)))
-        job = await self.session.scalar(
-            statement.order_by(
-                BackgroundJob.priority.asc(),
-                BackgroundJob.run_at.asc(),
-                BackgroundJob.created_at.asc(),
-            ).limit(1)
+        candidate_ids = list(
+            await self.session.scalars(
+                statement.order_by(
+                    BackgroundJob.priority.asc(),
+                    BackgroundJob.run_at.asc(),
+                    BackgroundJob.created_at.asc(),
+                ).limit(5)
+            )
         )
-        if job is None:
-            return None
-
-        job.status = "running"
-        job.locked_at = run_time
-        job.locked_by = worker_id
-        job.attempts += 1
-        self._add_log(
-            job.id,
-            event="started",
-            message="Job started",
-            data={"attempt": job.attempts, "worker_id": worker_id},
-        )
-        await self.session.commit()
-        await self.session.refresh(job)
-        return job
+        for job_id in candidate_ids:
+            # 原子 CAS 领取：仅当状态仍为 queued 且到期时抢占成功，避免双 worker 交接期重复消费。
+            claim = await self.session.execute(
+                update(BackgroundJob)
+                .where(
+                    BackgroundJob.id == job_id,
+                    BackgroundJob.status == "queued",
+                    BackgroundJob.run_at <= run_time,
+                )
+                .values(
+                    status="running",
+                    locked_at=run_time,
+                    locked_by=worker_id,
+                    attempts=BackgroundJob.attempts + 1,
+                )
+            )
+            if (claim.rowcount or 0) != 1:
+                continue
+            job = await self.session.get(BackgroundJob, job_id)
+            if job is None:
+                continue
+            self._add_log(
+                job.id,
+                event="started",
+                message="Job started",
+                data={"attempt": job.attempts, "worker_id": worker_id},
+            )
+            await self.session.commit()
+            await self.session.refresh(job)
+            return job
+        return None
 
     async def run_next(
         self,
