@@ -18,6 +18,7 @@ from app.core.trust import trust_adjusted_limit
 from app.db.base import utcnow
 from app.models.moderation import AuditLog, RateLimitEvent, ScreenedRule, SpamAction
 from app.models.user import User
+from app.services.account_commands import set_user_status
 from app.schemas.moderation import (
     ScreenedRuleCreateRequest,
     ScreenedRuleResponse,
@@ -453,7 +454,7 @@ class SpamPreventionService:
         cutoff = utcnow() - timedelta(days=self.settings.new_user_screening_days)
         if current_user.created_at < cutoff:
             return
-        current_user.status = "silenced"
+        set_user_status(current_user, "silenced")
         self._add_spam_action(
             kind="new_user_screening",
             action="silence",
@@ -483,7 +484,7 @@ class SpamPreventionService:
         url: str | None = None,
     ) -> None:
         if rule.action == "silence" and user is not None:
-            user.status = "silenced"
+            set_user_status(user, "silenced")
             self._add_audit_log(
                 actor_id=None,
                 action="user_status_changed",

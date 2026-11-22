@@ -18,12 +18,13 @@
 
 ---
 
-## 2. 写入边界台账（全仓实证：共 16 个写入文件）
+## 2. 写入边界台账（全仓实证：核心 7 个 + 剩余历史跨界 2 个）
 
-### 2.1 账号与权益核心写入方（6 个 · 合法归属）
+### 2.1 账号与权益核心写入方（7 个 · 合法归属）
 
 | 文件（相对 `apps/api/app/`） | 当前写入范围 |
 | --- | --- |
+| `services/account_commands.py` | 受控账号命令入口（`set_user_avatar_url`、`set_user_role`、`set_user_status`、`set_user_trust_level`、`build_provisioned_user`，已收口 8 个跨界服务的直写） |
 | `services/auth.py` | `User`、`UserSession`、`EmailVerificationCode`、`UserSecurityToken`、`UserRecoveryCode`、`user.email`、`user.status` |
 | `services/chat_sso.py` | `UserSecurityToken`（OIDC 桥接审批码与会话状态） |
 | `services/unified_auth.py` | `UserSecurityToken`（统一登录票据） |
@@ -31,20 +32,12 @@
 | `services/users.py` | `user.display_name`、`user.bio`（用户资料） |
 | `services/privacy.py` | `User` 匿名脱敏、`UserSession` 撤销（匿名注销事务） |
 
-### 2.2 登记在账的受控历史跨界写入（10 个 · 禁止继续扩面，后续逐项收口至账号用例）
+### 2.2 剩余登记在账的受控历史跨界写入（2 个 · 已由 10 个收口至 2 个，禁止继续扩面）
 
 | 分类 | 文件（相对 `apps/api/app/`） | 当前登记写入点 | 收口方向 |
 | --- | --- | --- | --- |
-| **管理与风控** | `services/admin.py` | `user.role=`、`user.status=` | 收口为账号域显式管理命令（同步处理会话撤销与审计） |
-| **管理与风控** | `services/moderation.py` | `user.status=` | 收口为账号域封禁/解封用例 |
-| **管理与风控** | `services/spam.py` | `current_user.status=`、`user.status=` | 收口为账号域风控冻结用例 |
-| **社区成长** | `services/growth.py` | `UserPointEvent(` | 与账号主表解耦，归社区成长域 |
-| **社区成长** | `services/badges.py` | `user.trust_level=` | 与账号主表解耦，归社区信任等级域 |
-| **媒体上传** | `services/uploads.py` | `current_user.avatar_url=` | 收口为调用 `services/users.py` 资料更新用例 |
-| **系统/导入建号** | `services/daily_reading.py` | `User(` | 收口为账号域系统账号创建用例 |
-| **系统/导入建号** | `services/frontier_news.py` | `User(` | 收口为账号域系统账号创建用例 |
-| **系统/导入建号** | `services/living_forum.py` | `User(` | 收口为账号域系统账号创建用例 |
-| **系统/导入建号** | `services/migrations.py` | `User(` | 收口为账号域数据导入建号用例 |
+| **社区成长** | `services/growth.py` | `UserPointEvent(` | 属社区成长事件表，非 `users` 主表写入；后续归社区域 |
+| **系统建号（并行改动待合并）** | `services/daily_reading.py` | `User(` | 当前存在其他并行暂存改动，待其合入后再改用 `build_provisioned_user` |
 
 > 其余全部业务模块（游戏目录、圈子帖子/评论、搜索、活动、推送、流量统计等）**严禁新增对上述 7 张表的直接写入**，由 `.github/scripts/verify_account_write_boundaries.mjs` 静态守卫强制拦截。
 

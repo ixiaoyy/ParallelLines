@@ -21,6 +21,7 @@ from app.models.badge import UserBadge
 from app.models.forum import Board, Post, Topic
 from app.models.moderation import AuditLog, Flag, SpamAction
 from app.models.user import User
+from app.services.account_commands import set_user_role, set_user_status
 from app.schemas.admin import (
     AdminBackgroundJobLogResponse,
     AdminBackgroundJobResponse,
@@ -471,9 +472,9 @@ class AdminService:
             "experience_total": user.experience_total,
         }
         if payload.role is not None:
-            user.role = payload.role
+            set_user_role(user, payload.role)
         if payload.status is not None:
-            user.status = payload.status
+            set_user_status(user, payload.status)
         user.is_persona = next_is_persona
         user.persona_kind = next_persona_kind
         if payload.level is not None:

@@ -27,6 +27,7 @@ from app.models.forum import Board
 from app.models.moderation import AuditLog, Reviewable
 from app.models.news import FrontierNewsAiRun, FrontierNewsItem, FrontierNewsSource
 from app.models.user import User
+from app.services.account_commands import build_provisioned_user
 from app.schemas.news import (
     FrontierNewsCollectResponse,
     FrontierNewsItemResponse,
@@ -864,7 +865,7 @@ class FrontierNewsService:
             )
         bot = by_username or by_email or by_legacy_email
         if bot is None:
-            bot = User(
+            bot = build_provisioned_user(
                 username=username,
                 email=email,
                 hashed_password=hash_password(secrets.token_urlsafe(48)),

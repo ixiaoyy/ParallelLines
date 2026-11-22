@@ -14,6 +14,7 @@ from app.db.base import utcnow
 from app.models.forum import Board, BoardMember, Post, Topic
 from app.models.moderation import AuditLog, Flag, Reviewable, ReviewableEvent
 from app.models.user import User
+from app.services.account_commands import set_user_status
 from app.schemas.moderation import (
     AuditLogResponse,
     FlagCreateRequest,
@@ -442,7 +443,7 @@ class ModerationService:
         if not user:
             raise NotFoundError("user_not_found", "User not found")
         previous_status = user.status
-        user.status = payload.status
+        set_user_status(user, payload.status)
         self._add_audit_log(
             actor_id=current_user.id,
             action="user_status_changed",
@@ -1040,7 +1041,7 @@ class ModerationService:
             user = await self.session.get(User, reviewable.target_user_id)
             if not user:
                 raise NotFoundError("user_not_found", "User not found")
-            user.status = "silenced"
+            set_user_status(user, "silenced")
             if reviewable.flag_id:
                 await self._set_flag_status(reviewable.flag_id, "resolved", None)
             return

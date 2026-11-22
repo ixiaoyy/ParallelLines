@@ -28,6 +28,7 @@ from app.models.catalog import CatalogCategory, CatalogProject
 from app.models.forum import Board, Post, Topic
 from app.models.upload import Upload
 from app.models.user import User
+from app.services.account_commands import set_user_avatar_url
 from app.services.admin import SiteSettingService
 from app.services.board_access import can_access_board as user_can_access_board
 from app.services.spam import SpamPreventionService
@@ -440,7 +441,7 @@ class UploadService:
     ) -> Upload:
         upload = await self._create_upload(file, current_user, kind="avatar", request=request)
         upload.status = "avatar"
-        current_user.avatar_url = f"/uploads/{upload.id}/content"
+        set_user_avatar_url(current_user, f"/uploads/{upload.id}/content")
         await self.session.commit()
         return upload
 

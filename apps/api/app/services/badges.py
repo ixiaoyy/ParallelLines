@@ -12,6 +12,7 @@ from app.db.base import new_random_suffix, utcnow
 from app.models.badge import BadgeDefinition, UserBadge, UserTrustLevelEvent
 from app.models.forum import Post, Topic
 from app.models.user import User, UserPointEvent
+from app.services.account_commands import set_user_trust_level
 from app.schemas.badges import BadgeResponse, UserBadgeResponse
 
 
@@ -216,7 +217,7 @@ class BadgeTrustService:
                 )
             return None
 
-        user.trust_level = next_level
+        set_user_trust_level(user, next_level)
         user.trust_level_changed_at = utcnow()
         event = UserTrustLevelEvent(
             user_id=user.id,

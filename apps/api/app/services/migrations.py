@@ -14,6 +14,7 @@ from app.db.base import utcnow
 from app.models.forum import Board, BoardMember, Post, Tag, Topic
 from app.models.moderation import AuditLog
 from app.models.user import User
+from app.services.account_commands import build_provisioned_user
 from app.schemas.migrations import (
     MigrationBoardRecord,
     MigrationExportResponse,
@@ -182,7 +183,7 @@ class MigrationService:
                     "已更新运营身份" if changed else "用户已存在",
                 )
                 continue
-            user = User(
+            user = build_provisioned_user(
                 username=username,
                 email=email,
                 hashed_password=hash_password(IMPORTED_PASSWORD_PLACEHOLDER),

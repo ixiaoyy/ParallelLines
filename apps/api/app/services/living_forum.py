@@ -16,6 +16,7 @@ from app.db.base import utcnow
 from app.models.forum import Board, Post, Topic
 from app.models.moderation import AuditLog
 from app.models.user import User
+from app.services.account_commands import build_provisioned_user
 from app.schemas.forum import (
     PollCreateRequest,
     PollVoteRequest,
@@ -836,7 +837,7 @@ class LivingForumService:
             await self.session.flush()
             return existing
 
-        user = User(
+        user = build_provisioned_user(
             username=persona.username,
             email=persona.email,
             hashed_password=hash_password(secrets.token_urlsafe(32)),

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const ACCOUNT_CORE_WRITERS = new Set([
+	'services/account_commands.py',
 	'services/auth.py',
 	'services/chat_sso.py',
 	'services/unified_auth.py',
@@ -15,16 +16,8 @@ export const ACCOUNT_CORE_WRITERS = new Set([
 
 // 已登记的历史跨界写入点：只允许收口减少，不允许在现有文件扩大写入类型或新增其他跨界文件。
 export const REGISTERED_LEGACY_WRITERS = Object.freeze({
-	'services/admin.py': ['user.role=', 'user.status='],
-	'services/badges.py': ['user.trust_level='],
 	'services/daily_reading.py': ['User('],
-	'services/frontier_news.py': ['User('],
-	'services/growth.py': ['UserPointEvent('],
-	'services/living_forum.py': ['User('],
-	'services/migrations.py': ['User('],
-	'services/moderation.py': ['user.status='],
-	'services/spam.py': ['current_user.status=', 'user.status='],
-	'services/uploads.py': ['current_user.avatar_url=']
+	'services/growth.py': ['UserPointEvent(']
 });
 
 const WRITE_MODELS = [

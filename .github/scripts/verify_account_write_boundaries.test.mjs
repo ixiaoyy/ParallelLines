@@ -50,12 +50,12 @@ test('blocks registered legacy writer from expanding to new account write types'
 	try {
 		fs.mkdirSync(path.join(tmp, 'services'), { recursive: true });
 		fs.writeFileSync(
-			path.join(tmp, 'services', 'uploads.py'),
-			'def bad(current_user):\n    current_user.avatar_url = "ok"\n    current_user.role = "admin"\n'
+			path.join(tmp, 'services', 'growth.py'),
+			'def bad(user):\n    event = UserPointEvent(user_id=user.id)\n    user.role = "admin"\n'
 		);
 		assert.throws(
 			() => verifyAccountWriteBoundaries(tmp),
-			/legacy_writer_expanded:services\/uploads\.py:current_user\.role=/
+			/legacy_writer_expanded:services\/growth\.py:user\.role=/
 		);
 	} finally {
 		fs.rmSync(tmp, { recursive: true, force: true });
