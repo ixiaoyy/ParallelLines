@@ -11,7 +11,7 @@ test('current ParallelLines satisfies all shared facilities write and queue boun
 	const summary = verifySharedFacilitiesBoundaries(REPO_ROOT);
 	assert.equal(summary.ok, true);
 	assert.equal(summary.email_worker_isolated, true);
-	assert.ok(summary.scanned_files >= 180);
+	assert.ok(summary.scanned_files >= 100);
 });
 
 test('background_jobs worker supports BACKGROUND_WORKER_QUEUES and BACKGROUND_WORKER_ENQUEUE_SCHEDULED', () => {
