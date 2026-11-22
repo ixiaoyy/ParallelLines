@@ -12,6 +12,7 @@
       "scripts": [
         "community_ops.py",
         "deploy_artifacts.py",
+        "run_architecture_guards.mjs",
         "select_compose_files.sh",
         "test_community_ops.py",
         "test_deploy_artifacts.py",
