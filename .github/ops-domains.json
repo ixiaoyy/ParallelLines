@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "description": "ParallelLines 跨站运维域归属清单：在暂不物理拆出 parallellines-ops 仓库的前提下，强制隔离主站、Chat、娱乐模块与统一登录四个运维域的脚本与工作流边界。",
+  "domains": {
+    "main": {
+      "workflows": [
+        "ci.yml",
+        "deploy.yml",
+        "build-ai-rollback.yml",
+        "community-ops.yml"
+      ],
+      "scripts": [
+        "community_ops.py",
+        "deploy_artifacts.py",
+        "select_compose_files.sh",
+        "test_community_ops.py",
+        "test_deploy_artifacts.py",
+        "test_forum_deploy.py",
+        "test_static_cache_contract.py",
+        "verify_ops_boundaries.mjs",
+        "verify_ops_boundaries.test.mjs"
+      ]
+    },
+    "chat": {
+      "workflows": [
+        "chat-ops.yml"
+      ],
+      "scripts": [
+        "chat_ops.py",
+        "test_chat_ops.py"
+      ]
+    },
+    "entertainment": {
+      "workflows": [
+        "entertainment-ops.yml"
+      ],
+      "scripts": [
+        "entertainment_ops.py",
+        "entertainment_sso.py",
+        "tavern_release_ops.py"
+      ]
+    },
+    "unified": {
+      "workflows": [
+        "unified-login-ops.yml"
+      ],
+      "scripts": [
+        "unified-login-release-plan.json",
+        "unified_artifact_prepare.py",
+        "unified_login_ops.py",
+        "unified_nginx_release.py",
+        "unified_services_activate.py",
+        "unified_source_alignment.py"
+      ]
+    }
+  }
+}

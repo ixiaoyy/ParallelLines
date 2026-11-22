@@ -64,6 +64,32 @@ select_parallellines_compose_files() {
         export VITE_UNIFIED_AUTH_ENABLED=true
         COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.unified.yml"
     fi
+
+    # 共享网关持久站点扩展（优先持久化原依赖容器层的 Tavern / Matrix 路由，不搬动已持久化站点）。
+    if test -e .deployment/gateway-sites-enabled; then
+        test -f .deployment/gateway-sites-enabled || {
+            echo "[deploy] gateway-sites-enabled must be a regular marker file" >&2
+            return 1
+        }
+        for recipe in docker-compose.gateway-sites.yml deploy/nginx/sites.d/00-include-sites.conf; do
+            test -s "$recipe" || {
+                echo "[deploy] enabled gateway sites overlay is missing recipe: $recipe" >&2
+                return 1
+            }
+        done
+        GATEWAY_SITES_TARGET="${GATEWAY_SITES_DIR:-/opt/parallellines/nginx/sites.d}"
+        test -d "$GATEWAY_SITES_TARGET" || {
+            echo "[deploy] enabled gateway sites directory is missing: $GATEWAY_SITES_TARGET" >&2
+            return 1
+        }
+        if command -v node >/dev/null 2>&1 && test -s deploy/nginx/sites.d/verify-gateway-sites.mjs; then
+            node deploy/nginx/sites.d/verify-gateway-sites.mjs "$GATEWAY_SITES_TARGET" deploy/nginx/sites.d/00-include-sites.conf >/dev/null || {
+                echo "[deploy] gateway sites preflight verification failed" >&2
+                return 1
+            }
+        fi
+        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.gateway-sites.yml"
+    fi
 }
 
 select_parallellines_compose_files
