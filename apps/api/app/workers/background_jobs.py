@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import socket
 from collections.abc import Sequence
 from datetime import date, timedelta
@@ -299,21 +300,45 @@ async def run_once(
     return processed_count
 
 
+def _configured_worker_queues() -> tuple[str, ...] | None:
+    raw = os.getenv("BACKGROUND_WORKER_QUEUES", "").strip()
+    if not raw:
+        return None
+    queues = tuple(item.strip() for item in raw.split(",") if item.strip())
+    return queues or None
+
+
+def _configured_enqueue_scheduled() -> bool:
+    raw = os.getenv("BACKGROUND_WORKER_ENQUEUE_SCHEDULED", "true").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
 async def run_forever() -> None:
     configure_logging()
     settings = get_settings()
     logger = get_logger("worker.background_jobs")
     worker_id = _default_worker_id()
+    configured_queues = _configured_worker_queues()
+    enqueue_scheduled = _configured_enqueue_scheduled()
     logger.info(
         "worker_started",
         worker_id=worker_id,
+        queues=configured_queues,
+        enqueue_scheduled=enqueue_scheduled,
         poll_seconds=settings.background_job_poll_seconds,
         batch_size=settings.background_job_batch_size,
     )
 
     while True:
         try:
-            processed_count = await run_once(settings=settings, worker_id=worker_id)
+            run_kwargs: dict[str, object] = {
+                "settings": settings,
+                "worker_id": worker_id,
+                "enqueue_scheduled": enqueue_scheduled,
+            }
+            if configured_queues is not None:
+                run_kwargs["queues"] = configured_queues
+            processed_count = await run_once(**run_kwargs)
             logger.info("background_jobs_processed", processed_count=processed_count)
         except Exception as exc:
             logger.exception("background_worker_iteration_failed", error=str(exc))

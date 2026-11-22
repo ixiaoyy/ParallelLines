@@ -22,7 +22,9 @@
         "verify_account_write_boundaries.mjs",
         "verify_account_write_boundaries.test.mjs",
         "verify_ops_boundaries.mjs",
-        "verify_ops_boundaries.test.mjs"
+        "verify_ops_boundaries.test.mjs",
+        "verify_shared_facilities_boundaries.mjs",
+        "verify_shared_facilities_boundaries.test.mjs"
       ]
     },
     "chat": {

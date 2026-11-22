@@ -1,0 +1,18 @@
+# 独立邮件投递 Worker 试点叠加文件（显式 opt-in，默认部署不启动）。
+# 仅消费 mail 队列并关闭定时任务入队（保持主站唯一调度方），不暴露端口、不执行 Alembic 迁移。
+services:
+  email-worker:
+    build:
+      context: ./apps/api
+    restart: unless-stopped
+    env_file:
+      - ./apps/api/.env
+    environment:
+      BACKGROUND_WORKER_QUEUES: "mail"
+      BACKGROUND_WORKER_ENQUEUE_SCHEDULED: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: python -m app.workers.background_jobs
