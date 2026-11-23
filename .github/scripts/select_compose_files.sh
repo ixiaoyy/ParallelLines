@@ -71,7 +71,7 @@ select_parallellines_compose_files() {
             echo "[deploy] gateway-sites-enabled must be a regular marker file" >&2
             return 1
         }
-        for recipe in docker-compose.gateway-sites.yml deploy/nginx/sites.d/00-include-sites.conf deploy/nginx/sites.d/verify-gateway-sites.mjs; do
+        for recipe in docker-compose.gateway-sites.yml deploy/nginx/sites.d/00-include-sites.conf deploy/nginx/sites.d/verify-gateway-sites.mjs deploy/nginx/sites.d/verify_gateway_sites.py; do
             test -s "$recipe" || {
                 echo "[deploy] enabled gateway sites overlay is missing recipe: $recipe" >&2
                 return 1
@@ -80,10 +80,6 @@ select_parallellines_compose_files() {
         GATEWAY_SITES_TARGET="${GATEWAY_SITES_DIR:-/opt/parallellines/nginx/sites.d}"
         test ! -L "$GATEWAY_SITES_TARGET" && test -d "$GATEWAY_SITES_TARGET" || {
             echo "[deploy] enabled gateway sites directory is missing: $GATEWAY_SITES_TARGET" >&2
-            return 1
-        }
-        command -v node >/dev/null 2>&1 || {
-            echo "[deploy] node is required to verify enabled gateway sites before loading" >&2
             return 1
         }
         set --
@@ -101,11 +97,22 @@ select_parallellines_compose_files() {
                 set -- "$@" --require-route "$GATEWAY_REQUIRED_ROUTE"
             done < .deployment/gateway-sites-enabled
         fi
-        node deploy/nginx/sites.d/verify-gateway-sites.mjs "$GATEWAY_SITES_TARGET" \
-            deploy/nginx/sites.d/00-include-sites.conf --require-active-routes "$@" >/dev/null || {
-            echo "[deploy] gateway sites preflight verification failed" >&2
+        if command -v node >/dev/null 2>&1; then
+            node deploy/nginx/sites.d/verify-gateway-sites.mjs "$GATEWAY_SITES_TARGET" \
+                deploy/nginx/sites.d/00-include-sites.conf --require-active-routes "$@" >/dev/null || {
+                echo "[deploy] gateway sites preflight verification failed" >&2
+                return 1
+            }
+        elif command -v python3 >/dev/null 2>&1; then
+            python3 -B deploy/nginx/sites.d/verify_gateway_sites.py "$GATEWAY_SITES_TARGET" \
+                deploy/nginx/sites.d/00-include-sites.conf --require-active-routes "$@" >/dev/null || {
+                echo "[deploy] gateway sites preflight verification failed" >&2
+                return 1
+            }
+        else
+            echo "[deploy] node or python3 is required to verify enabled gateway sites before loading" >&2
             return 1
-        }
+        fi
         COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.gateway-sites.yml"
     fi
 }

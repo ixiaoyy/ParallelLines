@@ -1131,19 +1131,49 @@ def gateway_persistent_digest(runner, gateway=None):
 
 
 def verify_gateway_sites_host(runner, *, require_published=False):
-    """调用主站 verify-gateway-sites.mjs 校验宿主机 sites.d；发布态强制验证两域唯一归属。"""
+    """纯 Python 3 静态校验宿主机 sites.d（不依赖宿主机安装 Node），发布态强制验证两域唯一归属。"""
     ensure_gateway_sites_directory()
-    check(GATEWAY_SITES_VERIFY.is_file() and not GATEWAY_SITES_VERIFY.is_symlink(),
-          'gateway_sites_verifier_missing')
-    check(GATEWAY_INCLUDE_SOURCE.is_file() and not GATEWAY_INCLUDE_SOURCE.is_symlink(),
-          'gateway_sites_include_source_missing')
-    args = ['node', str(GATEWAY_SITES_VERIFY), str(GATEWAY_SITES_DIR), str(GATEWAY_INCLUDE_SOURCE)]
+    if GATEWAY_INCLUDE_SOURCE.exists() or GATEWAY_INCLUDE_SOURCE.is_symlink():
+        check(GATEWAY_INCLUDE_SOURCE.is_file() and not GATEWAY_INCLUDE_SOURCE.is_symlink(),
+              'gateway_sites_include_source_missing')
+        non_comment = [line.strip() for line in GATEWAY_INCLUDE_SOURCE.read_text(encoding='utf-8').splitlines()
+                       if line.strip() and not line.strip().startswith('#')]
+        check(non_comment == ['include /etc/nginx/sites.d/*.conf;'],
+              'gateway_include_file_unexpected_content')
+    protected_domains = {'pingxingxian.space', 'www.pingxingxian.space', '_'}
+    safe_name_re = re.compile(r'^[a-z0-9][a-z0-9._-]*\.conf$')
+    server_name_re = re.compile(r'\bserver_name\s+([^;]+);')
+    domain_owners = {}
+    file_domain_sets = {}
+    checked_files = []
+    for entry in sorted(GATEWAY_SITES_DIR.iterdir(), key=lambda item: item.name):
+        name = entry.name
+        if not name.endswith('.conf') or name == '00-include-sites.conf':
+            continue
+        check(safe_name_re.fullmatch(name) is not None, 'unsafe_site_filename:' + name)
+        check(not entry.is_symlink() and entry.is_file(), 'site_file_must_be_regular:' + name)
+        cleaned = re.sub(r'#[^\n]*', '', entry.read_text(encoding='utf-8'))
+        names = [token.lower() for match in server_name_re.finditer(cleaned)
+                 for token in match.group(1).strip().split() if token]
+        check(bool(names), 'site_file_missing_server_name:' + name)
+        for domain in names:
+            check(domain not in protected_domains, 'site_file_hijacks_core_domain:' + name)
+            existing = domain_owners.get(domain)
+            check(not existing or existing == name, 'duplicate_server_name:' + domain)
+            domain_owners[domain] = name
+        unique = list(dict.fromkeys(names))
+        file_domain_sets[name] = set(unique)
+        checked_files.append({'file': name, 'server_names': unique})
     if require_published:
-        args.extend(['--require-active-routes', '--require-route', GATEWAY_REQUIRED_ROUTE])
-    result = runner.run('verify_gateway_sites_directory', args, timeout=15)
-    summary = response_json(result.stdout)
-    check(summary.get('ok') is True, 'gateway_sites_verification_failed')
-    return summary
+        check(bool(domain_owners), 'gateway_sites_no_active_routes')
+        actual_set = file_domain_sets.get(GATEWAY_CONF_NAME)
+        check(actual_set is not None, 'required_route_file_missing:' + GATEWAY_CONF_NAME)
+        expected_set = {d.lower() for d in DOMAINS}
+        for domain in expected_set:
+            check(domain_owners.get(domain) == GATEWAY_CONF_NAME,
+                  'required_route_domain_not_owned:' + domain)
+        check(actual_set == expected_set, 'required_route_unexpected_domain:' + GATEWAY_CONF_NAME)
+    return {'ok': True, 'site_files': checked_files, 'domain_count': len(domain_owners)}
 
 
 def snapshot_gateway_sites_marker():
