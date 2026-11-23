@@ -45,7 +45,18 @@ RENEWAL_LAST = ROOT / 'renewal-last.json'
 RUNTIME_PROGRAM = ROOT / 'operations.py'
 RENEWAL_CRON = Path('/etc/cron.d/parallellines-entertainment-renew')
 EDGE_NETWORK = 'pl-official-candidate-20261030_default'
-GATEWAY_LAYER = '/etc/nginx/conf.d/parallellines-entertainment.conf'
+GATEWAY_CONF_NAME = 'parallellines-entertainment.conf'
+GATEWAY_LAYER = '/etc/nginx/conf.d/' + GATEWAY_CONF_NAME
+GATEWAY_SITES_DIR = Path('/opt/parallellines/nginx/sites.d')
+GATEWAY_PERSISTENT_CONF = GATEWAY_SITES_DIR / GATEWAY_CONF_NAME
+GATEWAY_CONTAINER_CONF = '/etc/nginx/sites.d/' + GATEWAY_CONF_NAME
+GATEWAY_INCLUDE_SOURCE = Path('/opt/parallellines/deploy/nginx/sites.d/00-include-sites.conf')
+GATEWAY_INCLUDE_CONTAINER = '/etc/nginx/conf.d/zz-gateway-sites.conf'
+GATEWAY_SITES_VERIFY = Path('/opt/parallellines/deploy/nginx/sites.d/verify-gateway-sites.mjs')
+GATEWAY_SITES_MARKER = Path('/opt/parallellines/.deployment/gateway-sites-enabled')
+GATEWAY_REQUIRED_ROUTE = GATEWAY_CONF_NAME + '=' + ','.join(DOMAINS)
+LEGACY_NATIVE_SOURCE_SHA = '005694547821f42e5778ab7819970e3f113599d3c57cd47e6bcb4732f8184335'
+LEGACY_RUNTIME_BACKUP = ROOT / 'runtime/operations.before-persistent-sites-1abefac5.py'
 TOOLS_DIRECTORY = Path('/opt/parallellines-tools/ops')
 TOOLS_SOURCE_DIGESTS = {
     'tls.py': '844134baef2d45170db29dd1d9504b1e3e51c2a2545129d0ac3b13d58c019142',
@@ -1068,21 +1079,164 @@ def gateway_layer_digest(runner, gateway):
     return value
 
 
+def ensure_gateway_sites_directory():
+    """验证或初始化共享网关宿主机持久站点目录，拒绝任一级软链。"""
+    for item in (GATEWAY_SITES_DIR, *GATEWAY_SITES_DIR.parents):
+        check(not item.is_symlink(), 'gateway_sites_path_symlink')
+    if not GATEWAY_SITES_DIR.exists():
+        GATEWAY_SITES_DIR.mkdir(parents=True, mode=0o755)
+    check(GATEWAY_SITES_DIR.is_dir(), 'gateway_sites_dir_not_regular')
+    return GATEWAY_SITES_DIR
+
+
+def gateway_sites_mount_active(runner, gateway):
+    """检查当前网关容器是否已只读挂载 sites.d 与引导 include 文件，并核对宿主机 inode。"""
+    mounts = {(item.get('Source'), item.get('Destination'), item.get('RW')) for item in gateway['mounts']}
+    has_dir = (str(GATEWAY_SITES_DIR), '/etc/nginx/sites.d', False) in mounts
+    has_inc = (str(GATEWAY_INCLUDE_SOURCE), GATEWAY_INCLUDE_CONTAINER, False) in mounts
+    check(has_dir == has_inc, 'gateway_sites_partial_mount_invalid')
+    if not has_dir:
+        return False
+    check(GATEWAY_INCLUDE_SOURCE.is_file() and not GATEWAY_INCLUDE_SOURCE.is_symlink(),
+          'gateway_sites_include_source_not_regular')
+    inc_stat = GATEWAY_INCLUDE_SOURCE.stat()
+    observed_inc = runner.run('gateway_sites_include_bound_inode', [
+        'docker', 'exec', gateway['id'], 'stat', '-c', '%d:%i', GATEWAY_INCLUDE_CONTAINER]).stdout.strip()
+    check(observed_inc == f'{inc_stat.st_dev}:{inc_stat.st_ino}', 'gateway_sites_include_inode_changed')
+    return True
+
+
+def gateway_persistent_digest(runner, gateway=None):
+    """只对宿主机持久 sites.d 内本模块文件取摘要；网关已挂载时同步核对容器只读绑定 inode。"""
+    if not GATEWAY_SITES_DIR.exists():
+        check(not GATEWAY_SITES_DIR.is_symlink(), 'gateway_sites_path_symlink')
+        return None
+    ensure_gateway_sites_directory()
+    check(not GATEWAY_PERSISTENT_CONF.is_symlink(), 'owned_gateway_persistent_symlink')
+    if not GATEWAY_PERSISTENT_CONF.exists():
+        if gateway is not None and gateway_sites_mount_active(runner, gateway):
+            absent = runner.run('owned_gateway_persistent_container_absent', [
+                'docker', 'exec', gateway['id'], 'test', '!', '-e', GATEWAY_CONTAINER_CONF], accepted=(0, 1))
+            check(absent.returncode == 0, 'owned_gateway_persistent_mount_desync')
+        return None
+    check(GATEWAY_PERSISTENT_CONF.is_file() and 0 < GATEWAY_PERSISTENT_CONF.stat().st_size <= 64 * 1024,
+          'owned_gateway_persistent_not_regular')
+    value = digest(GATEWAY_PERSISTENT_CONF.read_bytes())
+    if gateway is not None and gateway_sites_mount_active(runner, gateway):
+        st = GATEWAY_PERSISTENT_CONF.stat()
+        observed = runner.run('owned_gateway_persistent_bound_inode', [
+            'docker', 'exec', gateway['id'], 'stat', '-c', '%d:%i', GATEWAY_CONTAINER_CONF]).stdout.strip()
+        check(observed == f'{st.st_dev}:{st.st_ino}', 'owned_gateway_persistent_inode_mismatch')
+    return value
+
+
+def verify_gateway_sites_host(runner, *, require_published=False):
+    """调用主站 verify-gateway-sites.mjs 校验宿主机 sites.d；发布态强制验证两域唯一归属。"""
+    ensure_gateway_sites_directory()
+    check(GATEWAY_SITES_VERIFY.is_file() and not GATEWAY_SITES_VERIFY.is_symlink(),
+          'gateway_sites_verifier_missing')
+    check(GATEWAY_INCLUDE_SOURCE.is_file() and not GATEWAY_INCLUDE_SOURCE.is_symlink(),
+          'gateway_sites_include_source_missing')
+    args = ['node', str(GATEWAY_SITES_VERIFY), str(GATEWAY_SITES_DIR), str(GATEWAY_INCLUDE_SOURCE)]
+    if require_published:
+        args.extend(['--require-active-routes', '--require-route', GATEWAY_REQUIRED_ROUTE])
+    result = runner.run('verify_gateway_sites_directory', args, timeout=15)
+    summary = response_json(result.stdout)
+    check(summary.get('ok') is True, 'gateway_sites_verification_failed')
+    return summary
+
+
+def snapshot_gateway_sites_marker():
+    """读取启用标记前像，供写失败时精确回滚，不篡改其他站点契约。"""
+    for item in (GATEWAY_SITES_MARKER, *GATEWAY_SITES_MARKER.parents):
+        check(not item.is_symlink(), 'gateway_sites_marker_symlink')
+    if not GATEWAY_SITES_MARKER.exists():
+        return None
+    check(GATEWAY_SITES_MARKER.is_file() and GATEWAY_SITES_MARKER.stat().st_size <= 16 * 1024,
+          'gateway_sites_marker_invalid')
+    return GATEWAY_SITES_MARKER.read_bytes()
+
+
+def restore_gateway_sites_marker(previous):
+    """将 gateway-sites-enabled 精确恢复为操作前状态。"""
+    for item in (GATEWAY_SITES_MARKER, *GATEWAY_SITES_MARKER.parents):
+        check(not item.is_symlink(), 'gateway_sites_marker_symlink')
+    if previous is None:
+        if GATEWAY_SITES_MARKER.exists():
+            GATEWAY_SITES_MARKER.unlink()
+        return
+    GATEWAY_SITES_MARKER.parent.mkdir(parents=True, exist_ok=True)
+    temporary = GATEWAY_SITES_MARKER.with_name(GATEWAY_SITES_MARKER.name + '.restore-' + secrets.token_hex(8))
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(previous)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, GATEWAY_SITES_MARKER)
+
+
+def sync_gateway_sites_marker(runner, *, published):
+    """同步 .deployment/gateway-sites-enabled；撤回最后一个站点时移除标记，有其他站点时保留标记。"""
+    previous = snapshot_gateway_sites_marker()
+    lines = []
+    if previous is not None:
+        for raw in previous.decode('utf-8').splitlines():
+            line = raw.strip()
+            if not line or line.startswith('#'):
+                continue
+            if line.split('=', 1)[0].strip() == GATEWAY_CONF_NAME:
+                continue
+            lines.append(line)
+    if published:
+        lines.append(GATEWAY_REQUIRED_ROUTE)
+    summary = verify_gateway_sites_host(runner, require_published=published)
+    if not published and summary.get('domain_count', 0) == 0 and not lines:
+        if GATEWAY_SITES_MARKER.exists():
+            GATEWAY_SITES_MARKER.unlink()
+        return
+    GATEWAY_SITES_MARKER.parent.mkdir(parents=True, exist_ok=True)
+    payload = ('\n'.join(lines) + ('\n' if lines else '')).encode('utf-8')
+    temporary = GATEWAY_SITES_MARKER.with_name(GATEWAY_SITES_MARKER.name + '.new-' + secrets.token_hex(8))
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(payload)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, GATEWAY_SITES_MARKER)
+
+
+def gateway_effective_digest(runner, gateway):
+    """返回当前网关实际生效的 Tavern/Matrix 配置摘要；禁止容器层与持久层同时存留两份配置。"""
+    persistent_mounted = gateway_sites_mount_active(runner, gateway)
+    persistent_hash = gateway_persistent_digest(runner, gateway)
+    layer_hash = gateway_layer_digest(runner, gateway)
+    if persistent_mounted:
+        check(layer_hash is None, 'duplicate_gateway_container_and_persistent_layer')
+        return persistent_hash
+    if persistent_hash is not None and layer_hash is not None:
+        check(persistent_hash == layer_hash, 'divergent_gateway_container_and_persistent_layer')
+    return layer_hash
+
+
 def gateway_public_context(runner, values):
     """核当前网关和已有 edge，不改变网关网络，拒绝其它配置已占用两个域名。"""
     gateway = select(values, 'parallellines', 'nginx')
     chat = select(values, 'pl-official-candidate-20261030', 'openwebui')
     check(gateway['running'] and EDGE_NETWORK in gateway['networks'] and EDGE_NETWORK in chat['networks'],
           'approved_shared_edge_changed')
+    persistent_mounted = gateway_sites_mount_active(runner, gateway)
+    allowed_files = {GATEWAY_CONTAINER_CONF} if persistent_mounted else {GATEWAY_LAYER}
     raw = runner.run('gateway_http_include_and_domain_ownership', ['docker', 'exec', gateway['id'], 'nginx', '-T']).stdout
     check(re.search(r'^\s*include\s+/etc/nginx/conf\.d/\*\.conf;', raw, re.M), 'gateway_conf_d_include_missing')
+    if persistent_mounted:
+        check(re.search(r'^\s*include\s+/etc/nginx/sites\.d/\*\.conf;', raw, re.M), 'gateway_sites_d_include_missing')
     current_file = ''
     for line in raw.splitlines():
         header = re.match(r'^# configuration file ([^:]+):$', line)
         if header:
             current_file = header.group(1)
         match = re.match(r'^\s*server_name\s+([^;]+);', line)
-        if match and current_file != GATEWAY_LAYER:
+        if match and current_file not in allowed_files:
             names = {name.strip('"\'') for name in match.group(1).split()}
             check(not names.intersection(DOMAINS), 'module_domain_already_owned_by_other_configuration')
     return gateway
@@ -1275,7 +1429,12 @@ def health(runner):
     """原生健康与已登记公网入口一起核对；没有公网发布记录时只读内部服务。"""
     result = native_health(runner)
     if STATE.exists() and read_record(STATE).get('public_entry') is True:
-        result.update(public_health(runner), public_entry=True, temporary_conf_layer=True)
+        values = containers(runner)
+        gateway = select(values, 'parallellines', 'nginx')
+        persistent_mounted = gateway_sites_mount_active(runner, gateway)
+        result.update(public_health(runner), public_entry=True,
+                      temporary_conf_layer=not persistent_mounted,
+                      persistent_gateway_sites_mounted=persistent_mounted)
     else:
         result['public_entry'] = False
     return result
@@ -1302,9 +1461,40 @@ def assert_gateway_unchanged(runner, gateway, baseline, protected):
           'gateway_identity_or_default_changed_outside_module')
 
 
+def replace_gateway_persistent_conf(source, expected, replacement):
+    """CAS 原子替换或撤回宿主机 sites.d 内本模块路由文件，严禁向只读挂载执行 docker cp。"""
+    ensure_gateway_sites_directory()
+    actual = gateway_persistent_digest(None)
+    check(actual in (expected, None) if replacement is not None else actual == expected,
+          'owned_gateway_persistent_preimage_changed')
+    if replacement is None:
+        if GATEWAY_PERSISTENT_CONF.exists():
+            GATEWAY_PERSISTENT_CONF.unlink()
+    else:
+        check(source is not None and source.is_file() and digest(source.read_bytes()) == replacement,
+              'owned_gateway_source_changed')
+        temporary = GATEWAY_PERSISTENT_CONF.with_name(GATEWAY_CONF_NAME + '.new-' + secrets.token_hex(8))
+        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        with os.fdopen(fd, 'wb') as stream:
+            stream.write(source.read_bytes())
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, GATEWAY_PERSISTENT_CONF)
+    check(gateway_persistent_digest(None) == replacement, 'owned_gateway_persistent_write_not_confirmed')
+
+
 def replace_gateway_layer(runner, gateway, source, expected, replacement):
-    """CAS 只写/撤回本模块固定容器层文件，保留所有其它 conf 和挂载。"""
-    check(gateway_layer_digest(runner, gateway) == expected, 'owned_gateway_layer_preimage_changed')
+    """写宿主机持久 sites.d 并按当前网关挂载状态处理；已挂载 sites.d 时绝不写容器层。"""
+    persistent_mounted = gateway_sites_mount_active(runner, gateway)
+    layer_actual = gateway_layer_digest(runner, gateway)
+    if persistent_mounted:
+        check(layer_actual is None, 'duplicate_gateway_container_and_persistent_layer')
+        replace_gateway_persistent_conf(source, expected, replacement)
+        check(gateway_persistent_digest(runner, gateway) == replacement,
+              'owned_gateway_persistent_mount_write_not_confirmed')
+        return
+    check(layer_actual == expected, 'owned_gateway_layer_preimage_changed')
+    replace_gateway_persistent_conf(source, expected, replacement)
     if replacement is None:
         if expected is not None:
             runner.run('remove_only_owned_gateway_layer', ['docker', 'exec', gateway['id'], 'rm', '--', GATEWAY_LAYER])
@@ -1350,14 +1540,21 @@ def publish(runner):
         saved, own = live_module_record(runner)
         values = containers(runner)
         gateway = gateway_public_context(runner, values)
+        persistent_mounted = gateway_sites_mount_active(runner, gateway)
         baseline = default_identity(runner, gateway)
         protected = protected_snapshot(values)
         previous = public_record() if owned(PUBLIC_STATE).exists() else None
-        before_conf = gateway_layer_digest(runner, gateway)
+        before_conf = gateway_effective_digest(runner, gateway)
+        before_persistent = gateway_persistent_digest(runner, gateway)
+        before_marker = snapshot_gateway_sites_marker()
         if before_conf is not None:
             check(previous is not None and before_conf in
                   (previous.get('conf_sha256'), previous.get('pending_conf_sha256')),
                   'unknown_existing_module_gateway_layer')
+        if before_persistent is not None:
+            check(previous is not None and before_persistent in
+                  (previous.get('conf_sha256'), previous.get('pending_conf_sha256')),
+                  'unknown_existing_module_persistent_gateway_conf')
         desired = {'element': 'pl-entertainment-element', 'synapse': 'pl-entertainment-synapse'}
         ready = all(EDGE_NETWORK in item['networks'] and desired[item['service']] in
                     (item['networks'][EDGE_NETWORK].get('Aliases') or [])
@@ -1395,7 +1592,10 @@ def publish(runner):
                    'status': 'publishing', 'gateway_id': gateway['id'],
                    'gateway_image_id': gateway['image_id'], 'default_identity': baseline,
                    'conf_sha256': before_conf, 'pending_conf_sha256': next_conf,
-                   'edge_sha256': digest(EDGE_CONFIGURATION), 'temporary_conf_layer': True,
+                   'edge_sha256': digest(EDGE_CONFIGURATION),
+                   'temporary_conf_layer': not persistent_mounted,
+                   'persistent_gateway_sites_mounted': persistent_mounted,
+                   'persistent_conf_path': str(GATEWAY_PERSISTENT_CONF),
                    'public_entry': old_public, 'loaded_state_uncertain': prior_uncertain}
         private_record(PUBLIC_STATE, receipt)
         reload_attempted = False
@@ -1417,6 +1617,7 @@ def publish(runner):
             preparation_record()
             assert_gateway_unchanged(runner, gateway, baseline, protected)
             replace_gateway_layer(runner, gateway, next_source, before_conf, next_conf)
+            sync_gateway_sites_marker(runner, published=True)
             approved_gateway_reload(runner, gateway, baseline, protected)
             reload_attempted = True
             # HUP 后新 worker 可稍后开始接受连接，只重试明确的旧证书/连接过渡。
@@ -1433,8 +1634,10 @@ def publish(runner):
             write_gateway_artifact(active, content)
             receipt.update(status='published', conf_sha256=next_conf, public_entry=True,
                            loaded_certificate_identity=certificate_leaf_identity(runner),
-                           gateway_recreate_requires_publish=True, renewal_ready=False,
-                           loaded_state_uncertain=False)
+                           gateway_recreate_requires_publish=not persistent_mounted,
+                           temporary_conf_layer=not persistent_mounted,
+                           persistent_gateway_sites_mounted=persistent_mounted,
+                           renewal_ready=False, loaded_state_uncertain=False)
             receipt.pop('error', None)
             receipt.pop('recovery_error', None)
             private_record(PUBLIC_STATE, receipt)
@@ -1451,11 +1654,16 @@ def publish(runner):
                       'new_module_image_changed_during_public_recovery')
                 saved['container_ids'] = {item['service']: item['id'] for item in current}
                 private_record(STATE, saved)
-                current_hash = gateway_layer_digest(runner, gateway)
+                current_hash = gateway_effective_digest(runner, gateway)
                 if current_hash == next_conf:
                     replace_gateway_layer(runner, gateway, before_source, next_conf, before_conf)
                 else:
                     check(current_hash == before_conf, 'owned_gateway_layer_changed_during_recovery')
+                if not persistent_mounted and gateway_persistent_digest(None) != before_persistent:
+                    replace_gateway_persistent_conf(
+                        gateway_source_for(before_persistent) if before_persistent is not None else None,
+                        gateway_persistent_digest(None), before_persistent)
+                restore_gateway_sites_marker(before_marker)
                 if reload_attempted:
                     approved_gateway_reload(runner, gateway, baseline, protected)
                 saved['public_entry'] = old_public
@@ -1471,8 +1679,11 @@ def publish(runner):
             raise OperationError('public_activation:' + failure +
                                  (':recovery:' + recovery if recovery else ':owned_layer_restored'))
     return {'complete': True, 'read_only': False, 'public_entry': True, **result,
-            'temporary_conf_layer': True, 'gateway_recreated': False,
-            'gateway_recreate_requires_publish': True, 'new_web_services_recreated': web_recreated,
+            'temporary_conf_layer': not persistent_mounted,
+            'persistent_gateway_sites_mounted': persistent_mounted,
+            'gateway_recreated': False,
+            'gateway_recreate_requires_publish': not persistent_mounted,
+            'new_web_services_recreated': web_recreated,
             'default_configuration_changed': False, 'other_services_changed': False,
             'renewal_ready': False, 'native_account_and_message_flow_verified': False}
 
@@ -1489,23 +1700,31 @@ def retract(runner):
     with approved_reload_scope():
         values = containers(runner)
         gateway = select(values, 'parallellines', 'nginx')
+        persistent_mounted = gateway_sites_mount_active(runner, gateway)
         baseline = default_identity(runner, gateway)
         protected = protected_snapshot(values)
-        actual = gateway_layer_digest(runner, gateway)
+        actual = gateway_effective_digest(runner, gateway)
+        before_persistent = gateway_persistent_digest(runner, gateway)
+        before_marker = snapshot_gateway_sites_marker()
         if not PUBLIC_STATE.exists():
-            check(actual is None and saved.get('public_entry') is not True,
+            check(actual is None and before_persistent is None and saved.get('public_entry') is not True,
                   'unknown_module_public_entry_without_receipt')
             return {'complete': True, 'read_only': True, 'entry_retracted': True, 'already_absent': True}
         receipt = public_record()
-        check(gateway['id'] == receipt.get('gateway_id'), 'gateway_recreated_requires_publish_review')
+        check(gateway['id'] == receipt.get('gateway_id') or persistent_mounted,
+              'gateway_recreated_requires_publish_review')
         check(actual is None or actual in (receipt.get('conf_sha256'), receipt.get('pending_conf_sha256')),
               'owned_gateway_layer_changed_before_retract')
-        if (actual is None and receipt.get('status') == 'retracted' and
+        check(before_persistent is None or before_persistent in (receipt.get('conf_sha256'), receipt.get('pending_conf_sha256')),
+              'owned_gateway_persistent_changed_before_retract')
+        if (actual is None and before_persistent is None and receipt.get('status') == 'retracted' and
                 saved.get('public_entry') is not True and receipt.get('loaded_state_uncertain') is not True):
             return {'complete': True, 'read_only': True, 'entry_retracted': True, 'already_absent': True}
         active = None
         if actual is not None:
             active = gateway_source_for(actual)
+        elif before_persistent is not None:
+            active = gateway_source_for(before_persistent)
         prior_receipt = dict(receipt)
         prior_uncertain = receipt.get('status') == 'publishing' or receipt.get('loaded_state_uncertain') is True
         prior_public = (saved.get('public_entry') is True or actual is not None or
@@ -1516,11 +1735,18 @@ def retract(runner):
         try:
             if actual is not None:
                 replace_gateway_layer(runner, gateway, None, actual, None)
+            elif before_persistent is not None:
+                replace_gateway_persistent_conf(None, before_persistent, None)
+            sync_gateway_sites_marker(runner, published=False)
             approved_gateway_reload(runner, gateway, baseline, protected)
             reloaded = True
             assert_gateway_unchanged(runner, gateway, baseline, protected)
-            check(gateway_layer_digest(runner, gateway) is None, 'owned_gateway_layer_not_retracted')
-            receipt.update(status='retracted', public_entry=False, loaded_state_uncertain=False)
+            check(gateway_effective_digest(runner, gateway) is None and
+                  gateway_persistent_digest(runner, gateway) is None,
+                  'owned_gateway_layer_not_retracted')
+            receipt.update(status='retracted', public_entry=False, loaded_state_uncertain=False,
+                           temporary_conf_layer=not persistent_mounted,
+                           persistent_gateway_sites_mounted=persistent_mounted)
             receipt.pop('error', None)
             receipt.pop('recovery_error', None)
             private_record(PUBLIC_STATE, receipt)
@@ -1534,6 +1760,9 @@ def retract(runner):
             try:
                 if actual is not None:
                     replace_gateway_layer(runner, gateway, active, None, actual)
+                elif before_persistent is not None and gateway_persistent_digest(None) is None:
+                    replace_gateway_persistent_conf(active, None, before_persistent)
+                restore_gateway_sites_marker(before_marker)
                 if reloaded:
                     approved_gateway_reload(runner, gateway, baseline, protected)
                 saved['public_entry'] = prior_public
@@ -1563,12 +1792,12 @@ def renewal_record():
 
 def renewal_artifact(path, expected, mode):
     """校验仅本项目程序/cron 的常规文件、root 所有权、精确权限和完整来源身份。"""
-    check(path in (RUNTIME_PROGRAM, RENEWAL_CRON), 'renewal_artifact_outside_scope')
+    check(path in (RUNTIME_PROGRAM, RENEWAL_CRON, LEGACY_RUNTIME_BACKUP), 'renewal_artifact_outside_scope')
     check(not path.is_symlink(), 'renewal_artifact_symlink')
     check(path.is_file(), 'renewal_artifact_missing')
     stat = path.stat()
     check(stat.st_uid == 0 and stat.st_mode & 0o777 == mode, 'renewal_artifact_permissions_changed')
-    check(0 < stat.st_size <= 160 * 1024 and digest(path.read_bytes()) == expected,
+    check(0 < stat.st_size <= 200 * 1024 and digest(path.read_bytes()) == expected,
           'renewal_artifact_source_changed')
     return True
 
@@ -1582,14 +1811,16 @@ def verify_runtime_program():
     return record
 
 
-def verify_renewal_installation():
-    """核完整消费者与 cron 安装，Actions 调用还要求与当前已审 source 字节一致。"""
+def verify_renewal_installation(*, allow_legacy_upgrade=False):
+    """核完整消费者与 cron 安装，Actions 调用还要求与当前已审 source 字节一致（或显式升级旧已核基线）。"""
     record = renewal_record()
     renewal_artifact(RUNTIME_PROGRAM, record.get('program_sha256'), 0o600)
     renewal_artifact(RENEWAL_CRON, record.get('cron_sha256'), 0o644)
     source = globals().get('OPS_SOURCE')
     if isinstance(source, str):
-        check(digest(source.encode('utf-8')) == record.get('source_sha256'),
+        current_sha = digest(source.encode('utf-8'))
+        check(current_sha == record.get('source_sha256') or
+              (allow_legacy_upgrade and record.get('source_sha256') == LEGACY_NATIVE_SOURCE_SHA),
               'installed_renewal_program_requires_reviewed_update')
     return record
 
@@ -1611,7 +1842,7 @@ def scheduler_active(runner):
 
 
 def renewal_context(runner):
-    """消费者只接受已发布的同一网关/自有 conf；重建或丢层必须人工 publish 恢复。"""
+    """消费者识别同一网关，或已挂载持久 sites.d 且唯一归属与证书核验通过的新网关实例。"""
     preparation_record()
     saved, own = live_module_record(runner)
     receipt = public_record()
@@ -1620,22 +1851,27 @@ def renewal_context(runner):
           'published_module_required_for_renewal')
     values = containers(runner)
     gateway = select(values, 'parallellines', 'nginx')
-    check(gateway['id'] == receipt.get('gateway_id') and gateway['image_id'] == receipt.get('gateway_image_id'),
-          'gateway_recreated_requires_publish')
-    check(gateway_layer_digest(runner, gateway) == receipt.get('conf_sha256'),
+    persistent_mounted = gateway_sites_mount_active(runner, gateway)
+    effective_hash = gateway_effective_digest(runner, gateway)
+    check(effective_hash == receipt.get('conf_sha256'),
           'owned_gateway_layer_missing_or_changed_requires_publish')
     baseline = default_identity(runner, gateway)
     check(baseline == receipt.get('default_identity'), 'gateway_default_changed_requires_publish')
+    if gateway['id'] != receipt.get('gateway_id') or gateway['image_id'] != receipt.get('gateway_image_id'):
+        check(persistent_mounted, 'gateway_recreated_requires_publish')
+        gateway_public_context(runner, values)
+        verify_gateway_sites_host(runner, require_published=True)
     return gateway, baseline, protected_snapshot(values), receipt
 
 
-def write_renewal_artifact(path, content, expected, mode):
-    """仅排他安装已登记的本项目程序或 cron，重试只能接受原拟安装的相同字节。"""
-    check(path in (RUNTIME_PROGRAM, RENEWAL_CRON), 'renewal_artifact_outside_scope')
+def write_renewal_artifact(path, content, expected, mode, *, replace_existing=False):
+    """安装或受控原子升级已登记的本项目程序或 cron，不会向定时任务暴露半写文件。"""
+    check(path in (RUNTIME_PROGRAM, RENEWAL_CRON, LEGACY_RUNTIME_BACKUP), 'renewal_artifact_outside_scope')
     check(path.parent.is_dir() and not path.parent.is_symlink(), 'renewal_artifact_parent_invalid')
-    if path.exists() or path.is_symlink():
+    if (path.exists() or path.is_symlink()) and not replace_existing:
         renewal_artifact(path, expected, mode)
         return
+    check(not path.is_symlink(), 'renewal_artifact_symlink')
     temporary = path.with_name(path.name + '.new-' + secrets.token_hex(8))
     fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
     with os.fdopen(fd, 'wb') as stream:
@@ -1643,22 +1879,26 @@ def write_renewal_artifact(path, content, expected, mode):
         stream.write(content)
         stream.flush()
         os.fsync(stream.fileno())
-    # 链接排他发布，不覆盖两次检查之间出现的文件，也不会暴露半写 cron。
-    try:
-        os.link(temporary, path)
-    finally:
-        temporary.unlink()
+    if replace_existing:
+        os.replace(temporary, path)
+    else:
+        # 链接排他发布，不覆盖两次检查之间出现的文件，也不会暴露半写 cron。
+        try:
+            os.link(temporary, path)
+        finally:
+            temporary.unlink()
     renewal_artifact(path, expected, mode)
 
 
 def install_renewal(runner):
-    """安装私有固定恢复脚本和仅本项目 cron；真实 native renew 验证前不宣布 ready。"""
+    """安装或受控升级私有恢复脚本和仅本项目 cron；升级前保存并验证可独立恢复的前像。"""
     source = globals().get('OPS_SOURCE')
     revision = globals().get('OPS_REVISION')
     check(isinstance(source, str) and isinstance(revision, str) and
           re.fullmatch('[0-9a-f]{40}', revision), 'reviewed_runtime_source_required')
+    source_sha = digest(source.encode('utf-8'))
     program = ('OPS_REVISION=' + repr(revision) + '\n' + source).encode('utf-8')
-    check(len(program) <= 160 * 1024, 'fixed_runtime_program_bound')
+    check(len(program) <= 200 * 1024, 'fixed_runtime_program_bound')
     cron = ('# parallellines-entertainment-owned ' + SOURCE_REVISION + '\n'
             '37 */6 * * * root /usr/bin/python3 -B ' + str(RUNTIME_PROGRAM) +
             ' scheduled-renew >/dev/null 2>&1\n').encode()
@@ -1669,48 +1909,79 @@ def install_renewal(runner):
         runner.run('renewal_reload_path_configuration_test', ['docker', 'exec', gateway['id'], 'nginx', '-t'])
         require_approved_reload()
         assert_gateway_unchanged(runner, gateway, baseline, protected)
+        upgrading_legacy = False
+        prior_record = None
+        prior_program_bytes = None
         if RENEWAL_STATE.exists():
             record = renewal_record()
-            check(record.get('source_sha256') == digest(source.encode('utf-8')),
-                  'renewal_program_update_requires_explicit_review')
-            # 相同 source 的重复调用保留已安装 producer 身份，不因其它 Main commit 漂移而重写。
-            if record.get('status') != 'installing' and record.get('runtime_health_verified') is True:
-                verify_renewal_installation()
-                latest = read_record(RENEWAL_LAST) if RENEWAL_LAST.exists() else {}
-                ready = (record.get('status') == 'ready' and latest.get('complete') is True and
-                         certificate_leaf_identity(runner) == public.get('loaded_certificate_identity'))
-                return {'complete': True, 'read_only': True, 'already_installed': True,
-                        'renewal_ready': ready, 'native_renewal_verification_required': not ready}
-            program = ('OPS_REVISION=' + repr(record['operation_revision']) + '\n' + source).encode('utf-8')
+            if record.get('source_sha256') == source_sha:
+                # 相同 source 的重复调用保留已安装 producer 身份，不因其它 Main commit 漂移而重写。
+                if record.get('status') != 'installing' and record.get('runtime_health_verified') is True:
+                    verify_renewal_installation()
+                    latest = read_record(RENEWAL_LAST) if RENEWAL_LAST.exists() else {}
+                    ready = (record.get('status') == 'ready' and latest.get('complete') is True and
+                             certificate_leaf_identity(runner) == public.get('loaded_certificate_identity'))
+                    return {'complete': True, 'read_only': True, 'already_installed': True,
+                            'renewal_ready': ready, 'native_renewal_verification_required': not ready}
+                program = ('OPS_REVISION=' + repr(record['operation_revision']) + '\n' + source).encode('utf-8')
+            else:
+                check(record.get('source_sha256') == LEGACY_NATIVE_SOURCE_SHA,
+                      'renewal_program_update_requires_explicit_review')
+                verify_renewal_installation(allow_legacy_upgrade=True)
+                prior_record = dict(record)
+                prior_program_bytes = RUNTIME_PROGRAM.read_bytes()
+                write_renewal_artifact(LEGACY_RUNTIME_BACKUP, prior_program_bytes,
+                                       prior_record['program_sha256'], 0o600)
+                private_record(ROOT / 'runtime/renewal.before-persistent-sites-1abefac5.json', prior_record)
+                upgrading_legacy = True
+                record = dict(record, operation_revision=revision, source_sha256=source_sha,
+                              program_sha256=digest(program), cron_sha256=digest(cron),
+                              previous_operation_revision=prior_record.get('operation_revision'),
+                              previous_source_sha256=prior_record.get('source_sha256'),
+                              previous_program_sha256=prior_record.get('program_sha256'),
+                              legacy_backup_program=str(LEGACY_RUNTIME_BACKUP))
         else:
             check(not RUNTIME_PROGRAM.exists() and not RUNTIME_PROGRAM.is_symlink() and
                   not RENEWAL_CRON.exists() and not RENEWAL_CRON.is_symlink(),
                   'unknown_existing_renewal_program_or_cron')
             record = {'schema': 1, 'project': PROJECT, 'source_revision': SOURCE_REVISION,
                       'certificate_name': CERTIFICATE_NAME, 'domains': list(DOMAINS),
-                      'operation_revision': revision, 'source_sha256': digest(source.encode('utf-8')),
+                      'operation_revision': revision, 'source_sha256': source_sha,
                       'program_sha256': digest(program), 'cron_sha256': digest(cron),
                       'status': 'installing', 'native_renewal_command_verified': False}
             private_record(RENEWAL_STATE, record)
         check(digest(program) == record.get('program_sha256') and digest(cron) == record.get('cron_sha256'),
               'renewal_install_intent_changed')
-        write_renewal_artifact(RUNTIME_PROGRAM, program, record['program_sha256'], 0o600)
-        write_renewal_artifact(RENEWAL_CRON, cron, record['cron_sha256'], 0o644)
-        verify_renewal_installation()
-        assert_gateway_unchanged(runner, gateway, baseline, protected)
-        record['status'] = 'installed'
-        private_record(RENEWAL_STATE, record)
-        # 真正从私有文件走一次独立只读 health，证明恢复入口不依赖 Actions 注入或 Secrets。
-        probe = runner.run('installed_manual_health_entrypoint', [
-            '/usr/bin/python3', '-B', str(RUNTIME_PROGRAM), 'health'], timeout=80)
-        observed = response_json(probe.stdout)
-        check(observed.get('complete') is True and observed.get('public_entry') is True,
-              'installed_manual_health_not_verified')
-        record['runtime_health_verified'] = True
-        private_record(RENEWAL_STATE, record)
-        assert_gateway_unchanged(runner, gateway, baseline, protected)
-    return {'complete': True, 'read_only': False, 'installed': True, 'renewal_ready': False,
-            'native_renewal_verification_required': True, 'scheduler_active': True,
+        try:
+            write_renewal_artifact(RUNTIME_PROGRAM, program, record['program_sha256'], 0o600,
+                                   replace_existing=upgrading_legacy)
+            write_renewal_artifact(RENEWAL_CRON, cron, record['cron_sha256'], 0o644)
+            if not upgrading_legacy:
+                record['status'] = 'installed'
+            private_record(RENEWAL_STATE, record)
+            verify_renewal_installation()
+            assert_gateway_unchanged(runner, gateway, baseline, protected)
+            # 真正从私有文件走一次独立只读 health，证明恢复入口不依赖 Actions 注入或 Secrets。
+            probe = runner.run('installed_manual_health_entrypoint', [
+                '/usr/bin/python3', '-B', str(RUNTIME_PROGRAM), 'health'], timeout=80)
+            observed = response_json(probe.stdout)
+            check(observed.get('complete') is True and observed.get('public_entry') is True,
+                  'installed_manual_health_not_verified')
+            record['runtime_health_verified'] = True
+            private_record(RENEWAL_STATE, record)
+            assert_gateway_unchanged(runner, gateway, baseline, protected)
+        except Exception:
+            if upgrading_legacy and prior_record is not None and prior_program_bytes is not None:
+                write_renewal_artifact(RUNTIME_PROGRAM, prior_program_bytes,
+                                       prior_record['program_sha256'], 0o600, replace_existing=True)
+                private_record(RENEWAL_STATE, prior_record)
+            raise
+    latest = read_record(RENEWAL_LAST) if RENEWAL_LAST.exists() else {}
+    ready = (record.get('status') == 'ready' and latest.get('complete') is True and
+             certificate_leaf_identity(runner) == public.get('loaded_certificate_identity'))
+    return {'complete': True, 'read_only': False, 'installed': True,
+            'upgraded_legacy_runtime': upgrading_legacy, 'renewal_ready': ready,
+            'native_renewal_verification_required': not ready, 'scheduler_active': True,
             'manual_runtime_program': str(RUNTIME_PROGRAM), 'runtime_program_private': True,
             'manual_health_entrypoint_verified': True,
             'other_services_changed': False}
@@ -1777,7 +2048,12 @@ def renew(runner, *, scheduled=False):
         assert_gateway_unchanged(runner, gateway, baseline, protected)
         text = (result.stdout + result.stderr).lower()
         skipped = not changed and ('not due for renewal' in text or 'no renewals were attempted' in text)
-        public.update(loaded_certificate_identity=latest, renewal_ready=True)
+        persistent_mounted = gateway_sites_mount_active(runner, gateway)
+        public.update(gateway_id=gateway['id'], gateway_image_id=gateway['image_id'],
+                      loaded_certificate_identity=latest, renewal_ready=True,
+                      temporary_conf_layer=not persistent_mounted,
+                      persistent_gateway_sites_mounted=persistent_mounted,
+                      gateway_recreate_requires_publish=not persistent_mounted)
         private_record(PUBLIC_STATE, public)
         record.update(status='ready', native_renewal_command_verified=True,
                       last_verified_at=int(time.time()), last_native_result='not_due' if skipped else 'rotated' if changed else 'unchanged')

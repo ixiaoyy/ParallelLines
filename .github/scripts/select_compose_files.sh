@@ -67,7 +67,7 @@ select_parallellines_compose_files() {
 
     # 共享网关持久站点扩展（优先持久化原依赖容器层的 Tavern / Matrix 路由，不搬动已持久化站点）。
     if test -e .deployment/gateway-sites-enabled; then
-        test -f .deployment/gateway-sites-enabled || {
+        test ! -L .deployment/gateway-sites-enabled && test -f .deployment/gateway-sites-enabled || {
             echo "[deploy] gateway-sites-enabled must be a regular marker file" >&2
             return 1
         }
@@ -78,7 +78,7 @@ select_parallellines_compose_files() {
             }
         done
         GATEWAY_SITES_TARGET="${GATEWAY_SITES_DIR:-/opt/parallellines/nginx/sites.d}"
-        test -d "$GATEWAY_SITES_TARGET" || {
+        test ! -L "$GATEWAY_SITES_TARGET" && test -d "$GATEWAY_SITES_TARGET" || {
             echo "[deploy] enabled gateway sites directory is missing: $GATEWAY_SITES_TARGET" >&2
             return 1
         }
@@ -86,7 +86,23 @@ select_parallellines_compose_files() {
             echo "[deploy] node is required to verify enabled gateway sites before loading" >&2
             return 1
         }
-        node deploy/nginx/sites.d/verify-gateway-sites.mjs "$GATEWAY_SITES_TARGET" deploy/nginx/sites.d/00-include-sites.conf >/dev/null || {
+        set --
+        if test -s .deployment/gateway-sites-enabled; then
+            while IFS= read -r GATEWAY_REQUIRED_ROUTE || test -n "$GATEWAY_REQUIRED_ROUTE"; do
+                case "$GATEWAY_REQUIRED_ROUTE" in
+                    ""|\#*)
+                        continue
+                        ;;
+                    *[!A-Za-z0-9._,=-]*)
+                        echo "[deploy] gateway-sites-enabled contains an invalid route contract" >&2
+                        return 1
+                        ;;
+                esac
+                set -- "$@" --require-route "$GATEWAY_REQUIRED_ROUTE"
+            done < .deployment/gateway-sites-enabled
+        fi
+        node deploy/nginx/sites.d/verify-gateway-sites.mjs "$GATEWAY_SITES_TARGET" \
+            deploy/nginx/sites.d/00-include-sites.conf --require-active-routes "$@" >/dev/null || {
             echo "[deploy] gateway sites preflight verification failed" >&2
             return 1
         }

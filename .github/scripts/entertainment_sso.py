@@ -23,6 +23,11 @@ LEGACY_REVISION = '7d3ab51cff65e239e17c945a87950cbb6df8ab85'
 LEGACY_EXTENSION = '8e9e34b40ac822f2a53ec7612101c4cd8d749805f2bae67fd1de63f5cf77d178'
 LEGACY_PROGRAM_SHA = '168ad90981a394c14ef35a006a33597640819f2a55e92bb0ea6c975d95c74fee'
 LEGACY_PROGRAM = native.ROOT / 'sso-operations.before-element-sync-7d3ab51c.py'
+LEGACY_NATIVE_SHA = '005694547821f42e5778ab7819970e3f113599d3c57cd47e6bcb4732f8184335'
+DEPENDENT_TRANSITIONS = (
+    native.ROOT / 'runtime/element-background-v1/transition.json',
+    native.ROOT / 'runtime/tavern-invite-module-v1/transition.json',
+)
 CANDIDATE = native.ROOT / 'data/synapse/tavern-sso-candidate.yaml'
 SECRET = native.ROOT / 'data/synapse/tavern-oidc-client-secret'
 LOCK = native.ROOT / 'runtime/main-login.lock'
@@ -133,7 +138,16 @@ def is_legacy_record(value):
         LEGACY_REVISION, LEGACY_EXTENSION, LEGACY_PROGRAM_SHA)
 
 
-def load_record():
+def needs_runtime_migration(value):
+    """识别仍绑定旧 native 源码或旧 SSO 扩展的已登记回执，供显式写入口受控升级。"""
+    current_ext = native.digest(globals().get('SSO_SOURCE', '').encode())
+    current_native = native.digest(native.OPS_SOURCE.encode())
+    return (is_legacy_record(value) or
+            value.get('native_source_sha256') != current_native or
+            value.get('extension_sha256') != current_ext)
+
+
+def load_record(*, allow_migration=False):
     """校验本次叠加配置回执，不将其它版本或目录当成本次恢复对象。"""
     value = native.read_record(STATE)
     native.check(value.get('schema') == 1 and value.get('project') == native.PROJECT and
@@ -141,10 +155,14 @@ def load_record():
                  'main_login_record_identity_changed')
     native.check(value.get('status') in ('pending', 'enabled', 'restoring', 'restored'),
                  'main_login_record_status_invalid')
-    current = native.digest(globals().get('SSO_SOURCE', '').encode())
-    native.check((value.get('extension_sha256') == current or is_legacy_record(value)) and
-                 value.get('native_source_sha256') == native.digest(native.OPS_SOURCE.encode()),
-                 'main_login_recovery_source_changed')
+    current_ext = native.digest(globals().get('SSO_SOURCE', '').encode())
+    current_native = native.digest(native.OPS_SOURCE.encode())
+    ext_ok = (value.get('extension_sha256') == current_ext or is_legacy_record(value) or
+              (allow_migration and isinstance(value.get('extension_sha256'), str) and
+               re.fullmatch('[0-9a-f]{64}', value['extension_sha256'])))
+    native_ok = (value.get('native_source_sha256') == current_native or
+                 (allow_migration and value.get('native_source_sha256') == LEGACY_NATIVE_SHA))
+    native.check(ext_ok and native_ok, 'main_login_recovery_source_changed')
     return value
 
 
@@ -155,11 +173,12 @@ def verify_recovery(value):
     if info['sha256'] == value.get('program_sha256'):
         return
     source = globals().get('SSO_PROGRAM_SOURCE', '')
-    native.check(is_legacy_record(value) and source and info['sha256'] == native.digest(source.encode()),
+    native.check(needs_runtime_migration(value) and source and info['sha256'] == native.digest(source.encode()),
                  'main_login_recovery_program_changed')
-    _, old = file_snapshot(LEGACY_PROGRAM)
-    native.check(old['uid'] == 0 and old['mode'] == 0o600 and old['sha256'] == LEGACY_PROGRAM_SHA,
-                 'main_login_legacy_recovery_program_changed')
+    if is_legacy_record(value):
+        _, old = file_snapshot(LEGACY_PROGRAM)
+        native.check(old['uid'] == 0 and old['mode'] == 0o600 and old['sha256'] == LEGACY_PROGRAM_SHA,
+                     'main_login_legacy_recovery_program_changed')
 
 
 def save_private_snapshot(path, content):
@@ -177,10 +196,10 @@ def save_private_snapshot(path, content):
         os.fsync(stream.fileno())
 
 
-def upgrade_recovery(value):
-    """保留原备份及独立入口路径，原子换程序；调用方再持久化新回执。"""
-    if not is_legacy_record(value):
-        return
+def upgrade_recovery(value, runner=None):
+    """保留整组前像（程序、回执及关联角色/外观 transition）后原子升级，失败自动回滚整组前像。"""
+    if not needs_runtime_migration(value):
+        return False
     verify_recovery(value)
     for name in TARGETS:
         for side in ('before', 'after'):
@@ -188,29 +207,79 @@ def upgrade_recovery(value):
     source = globals().get('SSO_PROGRAM_SOURCE', '')
     native.check(isinstance(source, str) and source, 'main_login_reviewed_source_required')
     compile(source, '<tavern-recovery>', 'exec')
-    current, info = file_snapshot(PROGRAM)
-    if info['sha256'] == LEGACY_PROGRAM_SHA:
-        save_private_snapshot(LEGACY_PROGRAM, current)
-        target = native.owned(PROGRAM)
-        with tempfile.NamedTemporaryFile(dir=target.parent, prefix='.tavern-recovery-', delete=False) as stream:
+    current_program, info = file_snapshot(PROGRAM)
+    old_program_sha = value.get('program_sha256')
+    prior_state_bytes = STATE.read_bytes()
+    backup_tag = (value.get('recovery_operation_revision') or value.get('operation_revision') or 'legacy')[:8]
+    program_backup = (LEGACY_PROGRAM if info['sha256'] == LEGACY_PROGRAM_SHA else
+                      native.ROOT / f'runtime/sso-operations.before-{backup_tag}-{info["sha256"][:12]}.py')
+    state_backup = native.ROOT / f'runtime/main-login.before-{backup_tag}-{info["sha256"][:12]}.json'
+    save_private_snapshot(program_backup, current_program)
+    save_private_snapshot(state_backup, prior_state_bytes)
+    dependent_preimages = []
+    for transition_path in DEPENDENT_TRANSITIONS:
+        path = native.owned(transition_path)
+        if not path.exists():
+            continue
+        raw, meta = file_snapshot(path)
+        native.check(meta['uid'] == 0 and meta['mode'] == 0o600, 'dependent_transition_permissions_changed')
+        record = json.loads(raw.decode('utf-8'))
+        if record.get('program_sha256') == old_program_sha:
+            dep_backup = path.with_name(f'transition.before-{backup_tag}-{old_program_sha[:12]}.json')
+            save_private_snapshot(dep_backup, raw)
+            dependent_preimages.append((path, raw, record))
+    new_program_bytes = source.encode('utf-8')
+    new_program_sha = native.digest(new_program_bytes)
+    target = native.owned(PROGRAM)
+    try:
+        if info['sha256'] != new_program_sha:
+            with tempfile.NamedTemporaryFile(dir=target.parent, prefix='.tavern-recovery-', delete=False) as stream:
+                tmp = Path(stream.name)
+                os.fchmod(stream.fileno(), 0o600)
+                stream.write(new_program_bytes)
+                stream.flush()
+                os.fsync(stream.fileno())
+            try:
+                os.replace(tmp, target)
+                directory = os.open(target.parent, os.O_RDONLY | os.O_DIRECTORY)
+                try:
+                    os.fsync(directory)
+                finally:
+                    os.close(directory)
+            finally:
+                if tmp.exists():
+                    tmp.unlink()
+        value.update(extension_sha256=native.digest(globals()['SSO_SOURCE'].encode()),
+                     native_source_sha256=native.digest(native.OPS_SOURCE.encode()),
+                     program_sha256=new_program_sha,
+                     recovery_operation_revision=globals()['OPS_REVISION'],
+                     previous_program_sha256=old_program_sha)
+        native.private_record(STATE, value)
+        for dep_path, _, dep_record in dependent_preimages:
+            dep_record['previous_program_sha256'] = old_program_sha
+            dep_record['program_sha256'] = new_program_sha
+            native.private_record(dep_path, dep_record)
+        verify_recovery(value)
+        if runner is not None and value.get('status') in ('enabled', 'restored'):
+            probe = runner.run('verify_upgraded_independent_main_login_recovery', [
+                '/usr/bin/python3', '-B', str(PROGRAM), 'main-login-status'], timeout=90)
+            observed = native.response_json(probe.stdout)
+            native.check(observed.get('complete') is True and
+                         observed.get('main_login_status') == value['status'],
+                         'upgraded_independent_main_login_recovery_not_verified')
+    except Exception:
+        with tempfile.NamedTemporaryFile(dir=target.parent, prefix='.tavern-recovery-rollback-', delete=False) as stream:
             tmp = Path(stream.name)
-            stream.write(source.encode())
+            os.fchmod(stream.fileno(), 0o600)
+            stream.write(current_program)
             stream.flush()
             os.fsync(stream.fileno())
-        try:
-            os.replace(tmp, target)
-            directory = os.open(target.parent, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(directory)
-            finally:
-                os.close(directory)
-        finally:
-            if tmp.exists():
-                tmp.unlink()
-    value.update(extension_sha256=native.digest(globals()['SSO_SOURCE'].encode()),
-                 program_sha256=native.digest(source.encode()),
-                 recovery_operation_revision=globals()['OPS_REVISION'])
-    verify_recovery(value)
+        os.replace(tmp, target)
+        native.private_record(STATE, json.loads(prior_state_bytes.decode('utf-8')))
+        for dep_path, dep_raw, _ in dependent_preimages:
+            native.private_record(dep_path, json.loads(dep_raw.decode('utf-8')))
+        raise
+    return True
 
 
 def intermediate_content_matches(content, source, target):
@@ -467,7 +536,7 @@ def main_login_status(runner):
 
 
 def enable_main_login(runner):
-    """在已审核独立客户端秘密就绪后启用本次原生配置；不写身份桥或业务数据。"""
+    """在已审核独立客户端秘密就绪后启用本次原生配置；支持对已启用实例受控升级恢复程序与回执。"""
     native.verify_renewal_installation()
     native.preparation_record()
     synapse = synapse_container(runner)
@@ -475,10 +544,12 @@ def enable_main_login(runner):
     verify_bridge_client(runner, containers)
     protected = native.protected_snapshot(containers)
     if STATE.exists():
-        value = load_record()
+        value = load_record(allow_migration=True)
         verify_recovery(value)
         if value['status'] == 'enabled':
-            return {**main_login_status(runner), 'already_enabled': True}
+            upgraded = upgrade_recovery(value, runner=runner)
+            return {**main_login_status(runner), 'already_enabled': True,
+                    'upgraded_recovery_program': upgraded}
         if value['status'] == 'pending':
             # 仅已完成三项原地写入的后像可续结；未完成或不明中间写仍按现有规则回退。
             native.check(value.get('stage') == 'synapse_configuration_written' and not value.get('write_intent'),
@@ -491,7 +562,7 @@ def enable_main_login(runner):
         assert_targets(value, side='before')
         native.check(secret_identity() == value['secret_sha256'], 'main_login_secret_changed')
         native.health(runner)
-        upgrade_recovery(value)
+        upgrade_recovery(value, runner=runner)
         value.update(status='pending', stage='backed_up')
         native.private_record(STATE, value)
     else:
@@ -530,20 +601,23 @@ def finish_enable(runner, value, protected, *, resumed=False):
 def restore_main_login(runner):
     """仅恢复本次配置前像；不回灌数据库、不删除后续账号/消息、不改专用秘密。"""
     native.verify_renewal_installation()
-    value = load_record()
+    value = load_record(allow_migration=True)
     verify_recovery(value)
     synapse_container(runner, value)
     assert_targets(value, allow_interrupted=True)
     containers = native.containers(runner)
     protected = native.protected_snapshot(containers)
     if value['status'] == 'restored':
-        return {**main_login_status(runner), 'already_restored': True}
+        upgraded = upgrade_recovery(value, runner=runner)
+        return {**main_login_status(runner), 'already_restored': True,
+                'upgraded_recovery_program': upgraded}
     # 先撤公网再恢复旧密码能力；不要让应急回退重新公开第二套登录。
     published = native.read_record(native.STATE)
     gateway = native.select(containers, 'parallellines', 'nginx')
     public = native.public_record() if native.PUBLIC_STATE.exists() else None
     native.check(published.get('public_entry') is not True and
-                 native.gateway_layer_digest(runner, gateway) is None and
+                 native.gateway_effective_digest(runner, gateway) is None and
+                 native.gateway_persistent_digest(runner, gateway) is None and
                  (public is None or (public.get('status') == 'retracted' and
                   public.get('loaded_state_uncertain') is not True)),
                  'retract_tavern_public_entry_before_restore')

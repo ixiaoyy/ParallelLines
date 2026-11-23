@@ -43,25 +43,12 @@ jobs:
     if: github.repository == 'ixiaoyy/ParallelLines' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 26
-    env:
-      REGISTERED_RUNTIME_OPERATIONS: '["install-renewal","renew","renewal-status","enable-main-login","restore-main-login","main-login-status"]'
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
           fetch-depth: 1
-      # 续期和单点登录回执仍固定旧源码；运行程序及回执完成受控升级后移除此兼容入口。
-      - name: Check out only the registered runtime source
-        if: contains(fromJSON(env.REGISTERED_RUNTIME_OPERATIONS), inputs.operation)
-        uses: actions/checkout@v4
-        with:
-          ref: 1abefac5b9b20af63f9821d010cfe7efb1b88752
-          path: .registered-entertainment-runtime
-          persist-credentials: false
-          fetch-depth: 1
-          sparse-checkout: /.github/scripts/entertainment_ops.py
-          sparse-checkout-cone-mode: false
       - name: Prepare only the reviewed fixed operation
         id: payload
         env:
@@ -74,7 +61,7 @@ jobs:
           TAVERN_LOGIN_WAIVED: ${{ inputs.tavern_login_waived }}
         run: |
           python3 - <<'PY'
-          import base64,hashlib,json,os,re,subprocess,uuid,zlib
+          import base64,hashlib,os,re,uuid,zlib
           from pathlib import Path
           operation=os.environ['OPERATION']
           sso_operations=('enable-main-login','restore-main-login','main-login-status')
@@ -103,15 +90,6 @@ jobs:
               operator=Path('.github/scripts/tavern_release_ops.py').read_text(encoding='utf-8')
               # 回退入口保留已审操作器原文；所有远程 argv 仍是固定枚举、布尔或校验后的摘要。
               source='OPERATOR_SOURCE='+repr(operator)+'\n'+operator
-          elif operation in json.loads(os.environ['REGISTERED_RUNTIME_OPERATIONS']):
-              try:
-                  native_source=subprocess.check_output(
-                      ['git','-C','.registered-entertainment-runtime','show','HEAD:'+native_path],timeout=5)
-              except (subprocess.SubprocessError,OSError):
-                  raise SystemExit('Unable to read the registered entertainment operations source') from None
-              if hashlib.sha256(native_source).hexdigest()!='005694547821f42e5778ab7819970e3f113599d3c57cd47e6bcb4732f8184335':
-                  raise SystemExit('Registered entertainment operations source digest mismatch')
-              source=native_source.decode('utf-8')
           else:
               source=Path(native_path).read_text(encoding='utf-8')
           if operation in sso_operations:

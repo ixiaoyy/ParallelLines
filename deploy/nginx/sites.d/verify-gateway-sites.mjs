@@ -12,6 +12,38 @@ export const CORE_PROTECTED_DOMAINS = new Set([
 	'_'
 ]);
 
+export function parseRequiredRouteSpecs(specs = []) {
+	const requirements = [];
+	const seenDomains = new Set();
+	for (const raw of specs) {
+		const spec = String(raw || '').trim();
+		const eqIndex = spec.indexOf('=');
+		if (eqIndex <= 0 || eqIndex === spec.length - 1) {
+			throw new Error(`invalid_required_route_spec:${spec}`);
+		}
+		const file = spec.slice(0, eqIndex).trim();
+		if (!SAFE_SITE_FILENAME_RE.test(file) || file === '00-include-sites.conf') {
+			throw new Error(`invalid_required_route_file:${file}`);
+		}
+		const domains = spec
+			.slice(eqIndex + 1)
+			.split(',')
+			.map((d) => d.trim().toLowerCase())
+			.filter(Boolean);
+		if (domains.length === 0) {
+			throw new Error(`invalid_required_route_domains:${spec}`);
+		}
+		for (const domain of domains) {
+			if (CORE_PROTECTED_DOMAINS.has(domain) || seenDomains.has(domain)) {
+				throw new Error(`invalid_required_route_domain:${domain}`);
+			}
+			seenDomains.add(domain);
+		}
+		requirements.push({ file, domains });
+	}
+	return requirements;
+}
+
 export function extractServerNames(confText) {
 	const names = [];
 	const cleaned = confText.replace(/#[^\n]*/g, '');
@@ -25,7 +57,10 @@ export function extractServerNames(confText) {
 	return names;
 }
 
-export function verifyGatewaySitesDirectory(sitesDir, { includeFile = null } = {}) {
+export function verifyGatewaySitesDirectory(
+	sitesDir,
+	{ includeFile = null, requireActiveRoutes = false, requiredRoutes = [] } = {}
+) {
 	const resolvedDir = path.resolve(sitesDir);
 	if (!fs.existsSync(resolvedDir) || !fs.statSync(resolvedDir).isDirectory()) {
 		throw new Error(`gateway_sites_dir_missing:${resolvedDir}`);
@@ -42,9 +77,16 @@ export function verifyGatewaySitesDirectory(sitesDir, { includeFile = null } = {
 		}
 	}
 
+	const parsedRequired = Array.isArray(requiredRoutes)
+		? requiredRoutes.every((item) => typeof item === 'string')
+			? parseRequiredRouteSpecs(requiredRoutes)
+			: requiredRoutes
+		: [];
+
 	const entries = fs.readdirSync(resolvedDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
 	const checkedFiles = [];
 	const domainOwners = new Map();
+	const fileDomainSets = new Map();
 
 	for (const entry of entries) {
 		if (!entry.name.endsWith('.conf')) continue;
@@ -72,7 +114,31 @@ export function verifyGatewaySitesDirectory(sitesDir, { includeFile = null } = {
 			}
 			domainOwners.set(domain, entry.name);
 		}
-		checkedFiles.push({ file: entry.name, server_names: [...new Set(serverNames)] });
+		const uniqueNames = [...new Set(serverNames)];
+		fileDomainSets.set(entry.name, new Set(uniqueNames));
+		checkedFiles.push({ file: entry.name, server_names: uniqueNames });
+	}
+
+	if (requireActiveRoutes && domainOwners.size === 0) {
+		throw new Error('gateway_sites_no_active_routes');
+	}
+
+	for (const req of parsedRequired) {
+		const actualSet = fileDomainSets.get(req.file);
+		if (!actualSet) {
+			throw new Error(`required_route_file_missing:${req.file}`);
+		}
+		const expectedSet = new Set(req.domains.map((d) => d.toLowerCase()));
+		for (const domain of expectedSet) {
+			if (domainOwners.get(domain) !== req.file) {
+				throw new Error(`required_route_domain_not_owned:${req.file}:${domain}`);
+			}
+		}
+		for (const actualDomain of actualSet) {
+			if (!expectedSet.has(actualDomain)) {
+				throw new Error(`required_route_unexpected_domain:${req.file}:${actualDomain}`);
+			}
+		}
 	}
 
 	return {
@@ -84,8 +150,35 @@ export function verifyGatewaySitesDirectory(sitesDir, { includeFile = null } = {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-	const sitesDir = process.argv[2] || path.dirname(fileURLToPath(import.meta.url));
-	const includeFile = process.argv[3] || path.join(path.dirname(fileURLToPath(import.meta.url)), '00-include-sites.conf');
-	const summary = verifyGatewaySitesDirectory(sitesDir, { includeFile });
+	const rawArgs = process.argv.slice(2);
+	const positionals = [];
+	let requireActiveRoutes = false;
+	const requiredRouteSpecs = [];
+	for (let i = 0; i < rawArgs.length; i += 1) {
+		const arg = rawArgs[i];
+		if (arg === '--require-active-routes') {
+			requireActiveRoutes = true;
+		} else if (arg === '--require-route') {
+			i += 1;
+			if (i >= rawArgs.length) {
+				throw new Error('missing_require_route_value');
+			}
+			requiredRouteSpecs.push(rawArgs[i]);
+		} else if (arg.startsWith('--require-route=')) {
+			requiredRouteSpecs.push(arg.slice('--require-route='.length));
+		} else if (arg.startsWith('--')) {
+			throw new Error(`unknown_verify_gateway_sites_flag:${arg}`);
+		} else {
+			positionals.push(arg);
+		}
+	}
+	const defaultDir = path.dirname(fileURLToPath(import.meta.url));
+	const sitesDir = positionals[0] || defaultDir;
+	const includeFile = positionals[1] || path.join(defaultDir, '00-include-sites.conf');
+	const summary = verifyGatewaySitesDirectory(sitesDir, {
+		includeFile,
+		requireActiveRoutes,
+		requiredRoutes: requiredRouteSpecs
+	});
 	console.log(JSON.stringify(summary));
 }
