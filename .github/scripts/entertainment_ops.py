@@ -1338,26 +1338,33 @@ def wait_native_health(runner, seconds=150):
 
 
 def publish(runner):
-    """仅新增两域独立 conf 层；旧网关不重建，跨其重建需显式重新 publish。"""
+    """发布两域独立配置；仅首次可组网，恢复已有入口不重建服务。"""
     preparation_record()
     native_health(runner)
-    saved, own = live_module_record(runner)
     tls = read_record(TLS_PREPARED)
     check(tls.get('status') == 'prepared' and tls.get('source_revision') == SOURCE_REVISION and
           tls.get('certificate_name') == CERTIFICATE_NAME, 'module_tls_not_prepared')
     meta = certificate_metadata(runner)
     check(meta is not None and meta['valid_for_at_least_one_day'], 'module_certificate_not_ready')
     with approved_reload_scope():
+        saved, own = live_module_record(runner)
         values = containers(runner)
         gateway = gateway_public_context(runner, values)
         baseline = default_identity(runner, gateway)
         protected = protected_snapshot(values)
-        previous = public_record() if PUBLIC_STATE.exists() else None
+        previous = public_record() if owned(PUBLIC_STATE).exists() else None
         before_conf = gateway_layer_digest(runner, gateway)
         if before_conf is not None:
             check(previous is not None and before_conf in
                   (previous.get('conf_sha256'), previous.get('pending_conf_sha256')),
                   'unknown_existing_module_gateway_layer')
+        desired = {'element': 'pl-entertainment-element', 'synapse': 'pl-entertainment-synapse'}
+        ready = all(EDGE_NETWORK in item['networks'] and desired[item['service']] in
+                    (item['networks'][EDGE_NETWORK].get('Aliases') or [])
+                    for item in own if item['service'] in desired)
+        # 已撤回或失败的回执也属于恢复；缺别名时在写文件前停止，不重建容器。
+        check(ready or (previous is None and saved.get('public_entry') is False),
+              'module_edge_alias_missing_for_public_recovery')
         directory = owned(ROOT / 'gateway')
         directory.mkdir(mode=0o700, exist_ok=True)
         active = owned(directory / 'active.conf')
@@ -1396,10 +1403,6 @@ def publish(runner):
         failure = None
         result = None
         try:
-            desired = {'element': 'pl-entertainment-element', 'synapse': 'pl-entertainment-synapse'}
-            ready = all(EDGE_NETWORK in item['networks'] and desired[item['service']] in
-                        (item['networks'][EDGE_NETWORK].get('Aliases') or [])
-                        for item in own if item['service'] in desired)
             if not ready:
                 compose(runner, 'native_edge_configuration', ['config', '--quiet'])
                 # 只重建新项目的两个 Web 服务；PG、稳定密钥和所有旧站容器均保留。
