@@ -478,8 +478,8 @@ class WorkflowWiringTests(unittest.TestCase):
         self.assertIn("VITE_API_BASE_URL: /api/v1", ci)
         self.assertIn("pnpm-workspace.yaml", ci)
         self.assertEqual(ci.count("overwrite: true"), 3)
-        self.assertEqual(deploy.count("overwrite: true"), 1)
-        self.assertEqual(deploy.count("uses: docker/build-push-action@v6"), 1)
+        self.assertEqual(deploy.count("overwrite: true"), 2)
+        self.assertEqual(deploy.count("uses: docker/build-push-action@v6"), 2)
         manual = deploy.split("- name: Build Web once for an explicit manual deployment", 1)[1].split("- name:", 1)[0]
         self.assertIn("github.event_name == 'workflow_dispatch'", manual)
         runtime = (ROOT / "apps/web/Dockerfile.prebuilt").read_text(encoding="utf-8")
