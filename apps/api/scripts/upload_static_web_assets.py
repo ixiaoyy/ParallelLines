@@ -164,6 +164,11 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-11-10-v1/covers/solitomb.webp",
     "catalog/2026-11-10-v1/covers/slipways-classic.webp",
     "catalog/2026-11-10-v1/covers/die-in-the-dungeon-classic.webp",
+    # 0114 本批正式封面独立版本；发布时定向上传，再核图片与目录引用。
+    "catalog/2026-11-24-v1/covers/polytrack.webp",
+    "catalog/2026-11-24-v1/covers/space-huggers.webp",
+    "catalog/2026-11-24-v1/covers/a-dark-room.svg",
+    "catalog/2026-11-24-v1/covers/evolution-of-trust.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 # 压缩后的目录装饰来自 Web public；仍用原版本目录，保留 PNG 和旧对象便于恢复。

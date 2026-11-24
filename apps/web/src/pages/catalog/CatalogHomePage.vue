@@ -4,6 +4,7 @@ import { CloseOutlined, CrownFilled, HeartFilled, LeftOutlined, MenuOutlined, Ri
 import { computed, defineAsyncComponent, ref, watch } from "vue";
 
 import { useCurrentUser } from "@/features/auth/queries";
+import { recordGameOpenTraffic } from "@/features/analytics/trafficCollector";
 
 import type { CatalogProject } from "@/features/catalog/model";
 import { catalogAuthorKey, rankCatalogAuthors } from "@/features/catalog/authorRanking";
@@ -351,6 +352,7 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
   // 只记有效点击，不推断实际游玩；本地保存与原累计量请求互不依赖。
   updatePersonalLibrary(recordRecentProject(personalLibrary.value, project.id));
   viewMutation.mutate({ projectId: project.id });
+  recordGameOpenTraffic(project.slug);
 }
 
 </script>

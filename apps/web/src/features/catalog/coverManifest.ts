@@ -250,6 +250,11 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "solitomb": "/catalog/2026-11-10-v1/covers/solitomb.webp",
   "slipways-classic": "/catalog/2026-11-10-v1/covers/slipways-classic.webp",
   "die-in-the-dungeon-classic": "/catalog/2026-11-10-v1/covers/die-in-the-dungeon-classic.webp",
+  // 四款直玩游戏的正式封面随 0114 同批交付；旧版本路径保持不变。
+  polytrack: "/catalog/2026-11-24-v1/covers/polytrack.webp",
+  "space-huggers": "/catalog/2026-11-24-v1/covers/space-huggers.webp",
+  "a-dark-room": "/catalog/2026-11-24-v1/covers/a-dark-room.svg",
+  "evolution-of-trust": "/catalog/2026-11-24-v1/covers/evolution-of-trust.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {

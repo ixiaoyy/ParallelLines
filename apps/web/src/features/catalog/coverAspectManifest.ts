@@ -260,4 +260,9 @@ export const CATALOG_COVER_ASPECTS_BY_PATH: Readonly<Record<string, number>> = {
   "/catalog/2026-11-10-v1/covers/solitomb.webp": 1,
   "/catalog/2026-11-10-v1/covers/slipways-classic.webp": 1.259842519685,
   "/catalog/2026-11-10-v1/covers/die-in-the-dungeon-classic.webp": 1.318681318681,
+  // 本批图片的实际画布均为 4:3，不需要等图片下载再识别卡片比例。
+  "/catalog/2026-11-24-v1/covers/polytrack.webp": 4 / 3,
+  "/catalog/2026-11-24-v1/covers/space-huggers.webp": 4 / 3,
+  "/catalog/2026-11-24-v1/covers/a-dark-room.svg": 4 / 3,
+  "/catalog/2026-11-24-v1/covers/evolution-of-trust.webp": 4 / 3,
 };
