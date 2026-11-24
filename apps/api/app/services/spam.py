@@ -18,12 +18,12 @@ from app.core.trust import trust_adjusted_limit
 from app.db.base import utcnow
 from app.models.moderation import AuditLog, RateLimitEvent, ScreenedRule, SpamAction
 from app.models.user import User
-from app.services.account_commands import set_user_status
 from app.schemas.moderation import (
     ScreenedRuleCreateRequest,
     ScreenedRuleResponse,
     SpamActionResponse,
 )
+from app.services.account_commands import set_user_status
 
 URL_PATTERN = re.compile(r"https?://[^\s<>\])\"']+", re.IGNORECASE)
 

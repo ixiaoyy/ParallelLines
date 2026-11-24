@@ -803,8 +803,12 @@ def apply_schema_comments(metadata: MetaData) -> None:
     TABLE_COMMENTS.update(
         {
             "space_settings": "个人空间个性化设置，保存封面主题、签名与月度记账预算。",
-            "space_journal_entries": "个人空间手账与日常闪念记录，保存心情、天气、配图、清单及公开/私密范围。",
-            "space_ledger_entries": "个人空间轻量记账明细，保存收支分类、金额与备注（严格仅本人可见）。",
+            "space_journal_entries": (
+                "个人空间手账与日常闪念记录，保存心情、天气、配图、清单及公开/私密范围。"
+            ),
+            "space_ledger_entries": (
+                "个人空间轻量记账明细，保存收支分类、金额与备注（严格仅本人可见）。"
+            ),
         }
     )
     COLUMN_COMMENTS.update(
@@ -813,7 +817,9 @@ def apply_schema_comments(metadata: MetaData) -> None:
                 "user_id": "所属用户 ID。",
                 "space_title": "个人空间自定义标题；为空时前端使用昵称默认名称。",
                 "space_subtitle": "个人空间顶栏签名或心情寄语。",
-                "cover_preset": "个人空间封面主题预设标识，如 aurora、sunset、meadow、paper、starlight。",
+                "cover_preset": (
+                    "个人空间封面主题预设标识，如 aurora、sunset、meadow、paper、starlight。"
+                ),
                 "monthly_budget_cents": "个人账本月度预算金额（单位：分），仅用户本人可见。",
             },
             "space_journal_entries": {
@@ -821,10 +827,17 @@ def apply_schema_comments(metadata: MetaData) -> None:
                 "entry_date": "手账归属日期（YYYY-MM-DD），用于心情日历与按日检索。",
                 "title": "手账可选短标题；为空表示纯闪念/碎碎念卡片。",
                 "content": "手账正文内容，支持轻量文本与标签记录。",
-                "mood": "当日心情贴纸标识，如 happy、focused、calm、cozy、inspired、tired、rainy、celebrate。",
-                "weather": "当日天气或状态图标标识，如 sunny、cloudy、breezy、rainy、snowy、night。",
+                "mood": (
+                    "当日心情贴纸标识，如 happy、focused、calm、cozy、inspired、"
+                    "tired、rainy、celebrate。"
+                ),
+                "weather": (
+                    "当日天气或状态图标标识，如 sunny、cloudy、breezy、rainy、snowy、night。"
+                ),
                 "location": "手账可选地点或场景小标，如 书桌前、咖啡馆、通勤路上。",
-                "visibility": "可见性范围：public 表示公开到个人空间与圈子，private 表示仅自己可见。",
+                "visibility": (
+                    "可见性范围：public 表示公开到个人空间与圈子，private 表示仅自己可见。"
+                ),
                 "is_pinned": "是否在个人空间置顶展示。",
                 "card_theme": "手账信纸视觉主题：paper、sky、mint、sunset、lavender、grid。",
                 "tags": "手账关联的标签字符串数组。",
@@ -838,7 +851,10 @@ def apply_schema_comments(metadata: MetaData) -> None:
                 "entry_date": "记账发生日期（YYYY-MM-DD）。",
                 "kind": "收支类型：expense（支出）或 income（收入）。",
                 "amount_cents": "记账金额（单位：分，正整数）。",
-                "category": "收支分类标识，如 dining、coffee、gaming、shopping、transit、entertainment、housing、salary、other。",
+                "category": (
+                    "收支分类标识，如 dining、coffee、gaming、shopping、transit、"
+                    "entertainment、housing、salary、other。"
+                ),
                 "note": "记账一句话备注。",
                 "payment_method": "支付或入账方式标识，如 wechat、alipay、card、cash。",
             },

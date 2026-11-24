@@ -14,7 +14,6 @@ from app.db.base import utcnow
 from app.models.forum import Board, BoardMember, Post, Topic
 from app.models.moderation import AuditLog, Flag, Reviewable, ReviewableEvent
 from app.models.user import User
-from app.services.account_commands import set_user_status
 from app.schemas.moderation import (
     AuditLogResponse,
     FlagCreateRequest,
@@ -31,6 +30,7 @@ from app.schemas.moderation import (
     UserStatusResponse,
     UserStatusUpdateRequest,
 )
+from app.services.account_commands import set_user_status
 from app.services.background_jobs import BackgroundJobService
 from app.services.integrations import IntegrationService
 from app.services.search import SearchIndexService

@@ -12,8 +12,8 @@ from app.db.base import new_random_suffix, utcnow
 from app.models.badge import BadgeDefinition, UserBadge, UserTrustLevelEvent
 from app.models.forum import Post, Topic
 from app.models.user import User, UserPointEvent
-from app.services.account_commands import set_user_trust_level
 from app.schemas.badges import BadgeResponse, UserBadgeResponse
+from app.services.account_commands import set_user_trust_level
 
 
 @dataclass(frozen=True)

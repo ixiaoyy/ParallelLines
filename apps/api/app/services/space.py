@@ -310,7 +310,10 @@ class SpaceService:
         if not entry:
             raise NotFoundError(code="journal_not_found", message="手账记录不存在。")
         if str(entry.user_id) != str(current_user.id):
-            raise PermissionDeniedError(code="journal_forbidden", message="无权修改他人的手账记录。")
+            raise PermissionDeniedError(
+                code="journal_forbidden",
+                message="无权修改他人的手账记录。",
+            )
 
         if payload.entry_date is not None:
             entry.entry_date = payload.entry_date
@@ -351,7 +354,10 @@ class SpaceService:
         if not entry:
             raise NotFoundError(code="journal_not_found", message="手账记录不存在。")
         if str(entry.user_id) != str(current_user.id):
-            raise PermissionDeniedError(code="journal_forbidden", message="无权删除他人的手账记录。")
+            raise PermissionDeniedError(
+                code="journal_forbidden",
+                message="无权删除他人的手账记录。",
+            )
         await self.session.delete(entry)
         await self.session.commit()
         return True

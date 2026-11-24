@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, IntegerPrimaryKeyMixin, TimestampMixin
@@ -91,7 +101,10 @@ class SpaceJournalEntry(IntegerPrimaryKeyMixin, TimestampMixin, Base):
         String(32),
         default="happy",
         nullable=False,
-        comment="当日心情贴纸标识，如 happy、focused、calm、cozy、inspired、tired、rainy、celebrate。",
+        comment=(
+            "当日心情贴纸标识，如 happy、focused、calm、cozy、inspired、"
+            "tired、rainy、celebrate。"
+        ),
     )
     weather: Mapped[str] = mapped_column(
         String(32),
@@ -198,7 +211,10 @@ class SpaceLedgerEntry(IntegerPrimaryKeyMixin, TimestampMixin, Base):
         String(32),
         default="dining",
         nullable=False,
-        comment="收支分类标识，如 dining、coffee、gaming、shopping、transit、entertainment、housing、salary、other。",
+        comment=(
+            "收支分类标识，如 dining、coffee、gaming、shopping、transit、"
+            "entertainment、housing、salary、other。"
+        ),
     )
     note: Mapped[str] = mapped_column(
         String(200),

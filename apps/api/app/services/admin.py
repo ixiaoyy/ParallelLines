@@ -21,7 +21,6 @@ from app.models.badge import UserBadge
 from app.models.forum import Board, Post, Topic
 from app.models.moderation import AuditLog, Flag, SpamAction
 from app.models.user import User
-from app.services.account_commands import set_user_role, set_user_status
 from app.schemas.admin import (
     AdminBackgroundJobLogResponse,
     AdminBackgroundJobResponse,
@@ -37,6 +36,7 @@ from app.schemas.admin import (
 )
 from app.schemas.badges import BadgeResponse, UserBadgeResponse
 from app.schemas.moderation import AuditLogResponse
+from app.services.account_commands import set_user_role, set_user_status
 from app.services.background_jobs import BackgroundJobService
 from app.services.badges import BadgeTrustService
 from app.services.email import EMAIL_OUTBOX

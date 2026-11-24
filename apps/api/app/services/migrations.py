@@ -14,7 +14,6 @@ from app.db.base import utcnow
 from app.models.forum import Board, BoardMember, Post, Tag, Topic
 from app.models.moderation import AuditLog
 from app.models.user import User
-from app.services.account_commands import build_provisioned_user
 from app.schemas.migrations import (
     MigrationBoardRecord,
     MigrationExportResponse,
@@ -25,6 +24,7 @@ from app.schemas.migrations import (
     MigrationTopicRecord,
     MigrationUserRecord,
 )
+from app.services.account_commands import build_provisioned_user
 from app.services.forum import calculate_hot_score, normalize_tag_name, render_markdown, slugify
 from app.services.search import SearchIndexService
 

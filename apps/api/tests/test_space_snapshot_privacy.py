@@ -13,7 +13,6 @@ from app.models.user import User
 from app.schemas.space import SpaceJournalCreateRequest, SpaceJournalUpdateRequest
 from app.services.space import SpaceService, _serialize_journal
 
-
 STAMP = datetime(2026, 11, 17, tzinfo=UTC)
 
 

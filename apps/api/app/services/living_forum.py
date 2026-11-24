@@ -16,13 +16,13 @@ from app.db.base import utcnow
 from app.models.forum import Board, Post, Topic
 from app.models.moderation import AuditLog
 from app.models.user import User
-from app.services.account_commands import build_provisioned_user
 from app.schemas.forum import (
     PollCreateRequest,
     PollVoteRequest,
     PostCreateRequest,
     TopicCreateRequest,
 )
+from app.services.account_commands import build_provisioned_user
 from app.services.forum import ForumService
 
 LIVING_FORUM_AUDIT_ACTION = "living_forum_topic_published"

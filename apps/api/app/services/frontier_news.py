@@ -27,7 +27,6 @@ from app.models.forum import Board
 from app.models.moderation import AuditLog, Reviewable
 from app.models.news import FrontierNewsAiRun, FrontierNewsItem, FrontierNewsSource
 from app.models.user import User
-from app.services.account_commands import build_provisioned_user
 from app.schemas.news import (
     FrontierNewsCollectResponse,
     FrontierNewsItemResponse,
@@ -35,6 +34,7 @@ from app.schemas.news import (
     FrontierNewsSourceResponse,
     FrontierNewsSourceUpdateRequest,
 )
+from app.services.account_commands import build_provisioned_user
 from app.services.moderation import ModerationService
 
 FRONTIER_NEWS_PROMPT_VERSION = "frontier-v1"

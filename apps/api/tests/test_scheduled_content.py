@@ -24,9 +24,13 @@ def entry(**overrides: object) -> FetchedNewsEntry:
     """Build one dated source entry without network or database access."""
 
     values = {
-        "external_id": "story-1", "title": "A fresh model announcement",
-        "url": "https://openai.com/index/story-1", "summary": "A short source summary.",
-        "author_names": [], "published_at": SLOT - timedelta(hours=1), "raw_payload": {},
+        "external_id": "story-1",
+        "title": "A fresh model announcement",
+        "url": "https://openai.com/index/story-1",
+        "summary": "A short source summary.",
+        "author_names": [],
+        "published_at": SLOT - timedelta(hours=1),
+        "raw_payload": {},
     }
     values.update(overrides)
     return FetchedNewsEntry(**values)
@@ -50,23 +54,40 @@ def test_slots_are_aware_and_exactly_three_shanghai_hours() -> None:
 
 
 def test_source_identity_ignores_tracking_but_preserves_article_identity() -> None:
-    assert content.source_key("https://openai.com/index/a?utm_source=x#top") == content.source_key("https://openai.com/index/a/")
-    assert content.source_key("https://openai.com/index/a") != content.source_key("https://openai.com/index/b")
+    assert content.source_key("https://openai.com/index/a?utm_source=x#top") == content.source_key(
+        "https://openai.com/index/a/"
+    )
+    assert content.source_key("https://openai.com/index/a") != content.source_key(
+        "https://openai.com/index/b"
+    )
 
 
-@pytest.mark.parametrize("values", [
-    {"published_at": None}, {"published_at": SLOT - timedelta(days=3)},
-    {"published_at": SLOT + timedelta(hours=1)},
-    {"url": "http://openai.com/index/story"},
-    {"url": "https://evil.example/story"},
-    {"url": "https://user@openai.com/story"},
-])
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"published_at": None},
+        {"published_at": SLOT - timedelta(days=3)},
+        {"published_at": SLOT + timedelta(hours=1)},
+        {"url": "http://openai.com/index/story"},
+        {"url": "https://evil.example/story"},
+        {"url": "https://user@openai.com/story"},
+    ],
+)
 def test_source_cards_reject_undated_stale_or_unapproved_sources(values: dict[str, object]) -> None:
-    assert content.news_draft("news", "OpenAI", entry(**values), hosts=("openai.com",), now=SLOT) is None
+    assert (
+        content.news_draft("news", "OpenAI", entry(**values), hosts=("openai.com",), now=SLOT)
+        is None
+    )
 
 
 def test_source_card_keeps_attribution_and_short_excerpt_without_invented_analysis() -> None:
-    result = content.news_draft("news", "OpenAI", entry(summary="<p>" + "原文摘要" * 100 + "</p>"), hosts=("openai.com",), now=SLOT)
+    result = content.news_draft(
+        "news",
+        "OpenAI",
+        entry(summary="<p>" + "原文摘要" * 100 + "</p>"),
+        hosts=("openai.com",),
+        now=SLOT,
+    )
     assert result is not None
     assert "专用运营身份自动采集" in result.raw_md
     assert "https://openai.com/index/story-1" in result.raw_md
@@ -75,9 +96,14 @@ def test_source_card_keeps_attribution_and_short_excerpt_without_invented_analys
 
 
 def test_hot_search_duplicate_identity_ignores_rank_heat_and_time() -> None:
-    topics = [{"title": "新的热搜", "rank": 1, "heat": 100, "url": "https://s.weibo.com/weibo?q=a"}, {"title": "另一热搜", "rank": 2, "url": "https://s.weibo.com/weibo?q=b"}]
+    topics = [
+        {"title": "新的热搜", "rank": 1, "heat": 100, "url": "https://s.weibo.com/weibo?q=a"},
+        {"title": "另一热搜", "rank": 2, "url": "https://s.weibo.com/weibo?q=b"},
+    ]
     first = content.hot_search_draft({"topics": topics, "collected_at": "10:00"}, SLOT)
-    second = content.hot_search_draft({"topics": list(reversed(topics)), "collected_at": "14:00"}, SLOT.replace(hour=14))
+    second = content.hot_search_draft(
+        {"topics": list(reversed(topics)), "collected_at": "14:00"}, SLOT.replace(hour=14)
+    )
     assert first is not None and second is not None
     assert first.source_key == second.source_key
     assert "不代表相关说法已核实" in first.raw_md
@@ -100,21 +126,37 @@ class SessionDouble:
 
 
 def actor(**overrides: object) -> SimpleNamespace:
-    values = {"id": "1", "username": "小小资讯", "email": "xiaoxiao-zixun@pingxingxian.space", "role": "user", "status": "active", "is_persona": True, "persona_kind": "automation"}
+    values = {
+        "id": "1",
+        "username": "小小资讯",
+        "email": "xiaoxiao-zixun@pingxingxian.space",
+        "role": "user",
+        "status": "active",
+        "is_persona": True,
+        "persona_kind": "automation",
+    }
     values.update(overrides)
     return SimpleNamespace(**values)
 
 
 @pytest.mark.asyncio
-async def test_publish_stages_slot_source_event_audits_before_canonical_commit(monkeypatch: pytest.MonkeyPatch) -> None:
-    session = SessionDouble([actor(), None, SimpleNamespace(id="2", visibility="public"), None, None])
+async def test_publish_stages_slot_source_event_audits_before_canonical_commit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = SessionDouble(
+        [actor(), None, SimpleNamespace(id="2", visibility="public"), None, None]
+    )
     service = content.ScheduledContentService(cast(AsyncSession, session), Settings(_env_file=None))
     monkeypatch.setattr(service, "_collect_drafts", AsyncMock(return_value=([draft()], [])))
 
     async def create(_service, board, payload, owner, **flags):
         assert board == "frontier" and owner.is_persona is True
         assert flags == {"skip_spam_checks": True, "skip_review_queue": True}
-        assert {record.action for record in session.added} == {content.SLOT_ACTION, content.SOURCE_ACTION, content.EVENT_ACTION}
+        assert {record.action for record in session.added} == {
+            content.SLOT_ACTION,
+            content.SOURCE_ACTION,
+            content.EVENT_ACTION,
+        }
         assert all("topic_id" not in record.data for record in session.added)
         return SimpleNamespace(id="3", title=payload.title)
 
@@ -128,8 +170,19 @@ async def test_publish_stages_slot_source_event_audits_before_canonical_commit(m
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("values", [{"is_persona": False}, {"persona_kind": None}, {"role": "admin"}, {"status": "disabled"}, {"email": "someone@example.com"}])
-async def test_publish_refuses_wrong_identity_without_repair(monkeypatch: pytest.MonkeyPatch, values: dict[str, object]) -> None:
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"is_persona": False},
+        {"persona_kind": None},
+        {"role": "admin"},
+        {"status": "disabled"},
+        {"email": "someone@example.com"},
+    ],
+)
+async def test_publish_refuses_wrong_identity_without_repair(
+    monkeypatch: pytest.MonkeyPatch, values: dict[str, object]
+) -> None:
     owner = actor(**values)
     session = SessionDouble([owner])
     service = content.ScheduledContentService(cast(AsyncSession, session), Settings(_env_file=None))
@@ -141,7 +194,9 @@ async def test_publish_refuses_wrong_identity_without_repair(monkeypatch: pytest
 
 
 @pytest.mark.asyncio
-async def test_slot_receipt_prevents_republish_and_source_marker_skips_new_slot(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_slot_receipt_prevents_republish_and_source_marker_skips_new_slot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     previous = SimpleNamespace(data={"topic_id": "old"})
     session = SessionDouble([actor(), previous])
     service = content.ScheduledContentService(cast(AsyncSession, session), Settings(_env_file=None))
@@ -160,18 +215,28 @@ async def test_slot_receipt_prevents_republish_and_source_marker_skips_new_slot(
 async def test_missing_receipt_never_blindly_publishes_again() -> None:
     session = SessionDouble([])
     service = content.ScheduledContentService(cast(AsyncSession, session), Settings(_env_file=None))
-    previous = SimpleNamespace(data={"source_url": "https://openai.com/index/a"}, actor_id="1", board_id="2", created_at=SLOT)
+    previous = SimpleNamespace(
+        data={"source_url": "https://openai.com/index/a"},
+        actor_id="1",
+        board_id="2",
+        created_at=SLOT,
+    )
     with pytest.raises(ConflictError):
         await service._existing_result(previous, "news", "news:2026-11-15:10")
     assert not session.added
 
 
 @pytest.mark.asyncio
-async def test_hot_search_snapshots_are_per_slot_and_reused_on_retry(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_hot_search_snapshots_are_per_slot_and_reused_on_retry(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(content.weibo, "DEFAULT_OUTPUT_DIR", tmp_path)
-    fetch = lambda **_: {"ok": 1, "data": {"realtime": [{"note": "新词条"}]}}
+    def fetch(**_: object) -> dict[str, object]:
+        return {"ok": 1, "data": {"realtime": [{"note": "新词条"}]}}
     monkeypatch.setattr(content.weibo, "fetch_hot_search_payload", fetch)
-    service = content.ScheduledContentService(cast(AsyncSession, object()), Settings(_env_file=None))
+    service = content.ScheduledContentService(
+        cast(AsyncSession, object()), Settings(_env_file=None)
+    )
     first = await service.collect_hot_search(SLOT)
     assert first == await service.collect_hot_search(SLOT)
     await service.collect_hot_search(SLOT.replace(hour=14))

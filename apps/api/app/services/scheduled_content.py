@@ -68,7 +68,11 @@ FEEDS: dict[str, tuple[tuple[str, str, tuple[str, ...]], ...]] = {
         ("Google 官方博客", "https://blog.google/rss/", ("blog.google",)),
     ),
     "sports": (
-        ("BBC Sport", "https://feeds.bbci.co.uk/sport/rss.xml", ("feeds.bbci.co.uk", "www.bbc.com", "www.bbc.co.uk")),
+        (
+            "BBC Sport",
+            "https://feeds.bbci.co.uk/sport/rss.xml",
+            ("feeds.bbci.co.uk", "www.bbc.com", "www.bbc.co.uk"),
+        ),
     ),
 }
 
@@ -91,9 +95,7 @@ class _BoundedRssCollector(FrontierNewsService):
     async def _read_url(self, url: str) -> str:
         """Fetch one fixed configured feed with size, connection and total limits."""
 
-        return await asyncio.wait_for(
-            asyncio.to_thread(read_feed, url), timeout=TOTAL_TIMEOUT
-        )
+        return await asyncio.wait_for(asyncio.to_thread(read_feed, url), timeout=TOTAL_TIMEOUT)
 
 
 class ScheduledContentService:
@@ -153,8 +155,11 @@ class ScheduledContentService:
         drafts, errors = await self._collect_drafts(channel, local, persist=not dry_run)
         if not drafts:
             return {
-                "status": "no_candidate", "channel": channel, "slot": slot_key,
-                "reason": "no_fresh_verified_source", "source_errors": errors,
+                "status": "no_candidate",
+                "channel": channel,
+                "slot": slot_key,
+                "reason": "no_fresh_verified_source",
+                "source_errors": errors,
             }
         try:
             author = await self._managed_author(channel, lock=not dry_run)
@@ -166,7 +171,9 @@ class ScheduledContentService:
                 select(Board).where(Board.slug == identity.board_slug)
             )
             if board is None or board.visibility != "public":
-                raise ValidationError("scheduled_content_board_missing", "内容任务版块不存在或非公开")
+                raise ValidationError(
+                    "scheduled_content_board_missing", "内容任务版块不存在或非公开"
+                )
             for draft in drafts:
                 if await self._audit(SOURCE_ACTION, draft.source_key) is not None:
                     continue
@@ -174,25 +181,39 @@ class ScheduledContentService:
                     continue
                 if dry_run:
                     return {
-                        "status": "preview", "channel": channel, "slot": slot_key,
-                        "author": author.username, "title": draft.title,
-                        "source_url": draft.source_url, "raw_md": draft.raw_md,
+                        "status": "preview",
+                        "channel": channel,
+                        "slot": slot_key,
+                        "author": author.username,
+                        "title": draft.title,
+                        "source_url": draft.source_url,
+                        "raw_md": draft.raw_md,
                         "source_errors": errors,
                     }
                 # 审计先挂入同一事务；ForumService 的提交同时保存帖子与防重标识。
                 created_at = utcnow()
                 data: dict[str, object] = {
-                    "channel": channel, "slot": slot_key, "title": draft.title,
-                    "source_name": draft.source_name, "source_url": draft.source_url,
-                    "source_key": draft.source_key, "event_key": draft.event_key,
+                    "channel": channel,
+                    "slot": slot_key,
+                    "title": draft.title,
+                    "source_name": draft.source_name,
+                    "source_url": draft.source_url,
+                    "source_key": draft.source_key,
+                    "event_key": draft.event_key,
                 }
                 records = [
                     AuditLog(
-                        actor_id=author.id, action=action, target_type=AUDIT_TARGET,
-                        target_id=key, board_id=board.id, data=dict(data), created_at=created_at,
+                        actor_id=author.id,
+                        action=action,
+                        target_type=AUDIT_TARGET,
+                        target_id=key,
+                        board_id=board.id,
+                        data=dict(data),
+                        created_at=created_at,
                     )
                     for action, key in (
-                        (SLOT_ACTION, slot_key), (SOURCE_ACTION, draft.source_key),
+                        (SLOT_ACTION, slot_key),
+                        (SOURCE_ACTION, draft.source_key),
                         (EVENT_ACTION, draft.event_key),
                     )
                 ]
@@ -200,20 +221,31 @@ class ScheduledContentService:
                     self.session.add(record)
                 topic = await ForumService(self.session).create_topic(
                     identity.board_slug,
-                    TopicCreateRequest(title=draft.title, raw_md=draft.raw_md, tags=list(identity.tags)),
-                    author, skip_spam_checks=True, skip_review_queue=True,
+                    TopicCreateRequest(
+                        title=draft.title, raw_md=draft.raw_md, tags=list(identity.tags)
+                    ),
+                    author,
+                    skip_spam_checks=True,
+                    skip_review_queue=True,
                 )
                 for record in records:
                     record.data = {**record.data, "topic_id": topic.id, "title": topic.title}
                 await self.session.commit()
                 return {
-                    "status": "published", "channel": channel, "slot": slot_key,
-                    "topic_id": topic.id, "title": topic.title,
-                    "source_url": draft.source_url, "source_errors": errors,
+                    "status": "published",
+                    "channel": channel,
+                    "slot": slot_key,
+                    "topic_id": topic.id,
+                    "title": topic.title,
+                    "source_url": draft.source_url,
+                    "source_errors": errors,
                 }
             return {
-                "status": "no_candidate", "channel": channel, "slot": slot_key,
-                "reason": "all_sources_or_events_already_published", "source_errors": errors,
+                "status": "no_candidate",
+                "channel": channel,
+                "slot": slot_key,
+                "reason": "all_sources_or_events_already_published",
+                "source_errors": errors,
             }
         finally:
             # 预览、跳过及异常均释放专用身份行锁，不让网络重试持有数据库事务。
@@ -229,9 +261,13 @@ class ScheduledContentService:
         author = await self.session.scalar(statement)
         expected_kind = seeded_persona_kind(identity.username, identity.email)
         if (
-            author is None or author.email != identity.email or author.status != "active"
-            or author.role != "user" or author.is_persona is not True
-            or expected_kind is None or author.persona_kind != expected_kind
+            author is None
+            or author.email != identity.email
+            or author.status != "active"
+            or author.role != "user"
+            or author.is_persona is not True
+            or expected_kind is None
+            or author.persona_kind != expected_kind
         ):
             raise PermissionDeniedError(
                 "scheduled_content_identity_invalid", "专用发布身份未通过核对，内容任务已停止"
@@ -242,10 +278,14 @@ class ScheduledContentService:
         """Return one exact existing duplicate marker; no unbounded history scan is used."""
 
         return await self.session.scalar(
-            select(AuditLog).where(
-                AuditLog.action == action, AuditLog.target_type == AUDIT_TARGET,
+            select(AuditLog)
+            .where(
+                AuditLog.action == action,
+                AuditLog.target_type == AUDIT_TARGET,
                 AuditLog.target_id == target_id,
-            ).order_by(AuditLog.id.desc()).limit(1)
+            )
+            .order_by(AuditLog.id.desc())
+            .limit(1)
         )
 
     async def _existing_result(
@@ -261,21 +301,34 @@ class ScheduledContentService:
         if not topic_id:
             source_url = str((audit.data or {}).get("source_url") or "")
             statement = (
-                select(Topic).join(Post, Post.topic_id == Topic.id)
+                select(Topic)
+                .join(Post, Post.topic_id == Topic.id)
                 .where(
-                    Topic.user_id == audit.actor_id, Topic.board_id == audit.board_id,
+                    Topic.user_id == audit.actor_id,
+                    Topic.board_id == audit.board_id,
                     Topic.created_at >= audit.created_at,
                     Topic.created_at <= as_utc_datetime(audit.created_at) + timedelta(minutes=5),
-                    Post.post_number == 1, Post.raw_md.contains(source_url, autoescape=True),
-                ).order_by(Topic.id).limit(2)
+                    Post.post_number == 1,
+                    Post.raw_md.contains(source_url, autoescape=True),
+                )
+                .order_by(Topic.id)
+                .limit(2)
             )
             matches = list(await self.session.scalars(statement)) if source_url else []
             if len(matches) != 1:
-                raise ConflictError("scheduled_content_receipt_missing", "发布审计已存在，帖子回执需人工核对；不重复发帖")
+                raise ConflictError(
+                    "scheduled_content_receipt_missing",
+                    "发布审计已存在，帖子回执需人工核对；不重复发帖",
+                )
             topic_id = matches[0].id
             audit.data = {**audit.data, "topic_id": topic_id}
             await self.session.commit()
-        return {"status": "already_published", "channel": channel, "slot": slot_key, "topic_id": topic_id}
+        return {
+            "status": "already_published",
+            "channel": channel,
+            "slot": slot_key,
+            "topic_id": topic_id,
+        }
 
     async def _collect_drafts(
         self, channel: ContentChannel, scheduled_for: datetime, *, persist: bool
@@ -291,16 +344,28 @@ class ScheduledContentService:
         errors: list[str] = []
         for name, url, hosts in FEEDS[channel]:
             source = FrontierNewsSource(
-                name=name, key=name, kind="rss", url=url,
-                config={"max_items": 20, "keywords": list(AI_KEYWORDS) if channel == "news" else []},
-                trust_level=100, fetch_interval_minutes=60,
+                name=name,
+                key=name,
+                kind="rss",
+                url=url,
+                config={
+                    "max_items": 20,
+                    "keywords": list(AI_KEYWORDS) if channel == "news" else [],
+                },
+                trust_level=100,
+                fetch_interval_minutes=60,
             )
             try:
                 entries = await collector._fetch_rss_entries(source)
             except (OSError, ValueError, RuntimeError, TimeoutError, ET.ParseError) as exc:
                 errors.append(f"{name}: {type(exc).__name__}")
                 continue
-            entries.sort(key=lambda entry: as_utc_datetime(entry.published_at or datetime.min.replace(tzinfo=utcnow().tzinfo)), reverse=True)
+            entries.sort(
+                key=lambda entry: as_utc_datetime(
+                    entry.published_at or datetime.min.replace(tzinfo=utcnow().tzinfo)
+                ),
+                reverse=True,
+            )
             for entry in entries:
                 draft = news_draft(channel, name, entry, hosts=hosts, now=utcnow())
                 if draft is not None:
@@ -323,14 +388,31 @@ def source_key(url: str) -> str:
     """Return a stable canonical-source identity for cross-slot publication deduplication."""
 
     parts = urlsplit(url)
-    query = [(k, v) for k, v in parse_qsl(parts.query) if not k.lower().startswith("utm_") and k.lower() not in {"ocid", "ref", "at_medium", "at_campaign"}]
-    canonical = urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"), urlencode(sorted(query)), ""))
+    query = [
+        (k, v)
+        for k, v in parse_qsl(parts.query)
+        if not k.lower().startswith("utm_")
+        and k.lower() not in {"ocid", "ref", "at_medium", "at_campaign"}
+    ]
+    canonical = urlunsplit(
+        (
+            parts.scheme.lower(),
+            parts.netloc.lower(),
+            parts.path.rstrip("/"),
+            urlencode(sorted(query)),
+            "",
+        )
+    )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def news_draft(
-    channel: ContentChannel, source_name: str, entry: FetchedNewsEntry, *,
-    hosts: tuple[str, ...], now: datetime,
+    channel: ContentChannel,
+    source_name: str,
+    entry: FetchedNewsEntry,
+    *,
+    hosts: tuple[str, ...],
+    now: datetime,
 ) -> SourcedDraft | None:
     """Build an attributed source card only for a recent, dated, allowed-host entry."""
 
@@ -349,31 +431,48 @@ def news_draft(
     body = (
         f"> 本帖由专用运营身份自动采集。以下标题与短摘来自 {source_name}，详细内容请核对原文。\n\n"
         f"[{markdown_label(original_title)}]({entry.url})\n\n"
-        f"来源：{source_name} · 原文时间：{as_shanghai_datetime(entry.published_at).isoformat(timespec='minutes')}\n"
+        f"来源：{source_name} · 原文时间："
+        f"{as_shanghai_datetime(entry.published_at).isoformat(timespec='minutes')}\n"
     )
     if excerpt:
         body += f"\n来源短摘：{excerpt}\n"
     event = re.sub(r"[\W_]+", "", original_title.casefold())
-    return SourcedDraft(title, body, source_name, entry.url, source_key(entry.url), hashlib.sha256(event.encode()).hexdigest())
+    return SourcedDraft(
+        title,
+        body,
+        source_name,
+        entry.url,
+        source_key(entry.url),
+        hashlib.sha256(event.encode()).hexdigest(),
+    )
 
 
-def hot_search_draft(snapshot: Mapping[str, object], scheduled_for: datetime) -> SourcedDraft | None:
+def hot_search_draft(
+    snapshot: Mapping[str, object], scheduled_for: datetime
+) -> SourcedDraft | None:
     """Render a distinct ranked-list observation, never a claim that trends are true."""
 
     local, _ = slot_identity("hot_search", scheduled_for)
     raw_topics = snapshot.get("topics")
-    topics = [item for item in raw_topics if isinstance(item, dict)] if isinstance(raw_topics, list) else []
+    topics = (
+        [item for item in raw_topics if isinstance(item, dict)]
+        if isinstance(raw_topics, list)
+        else []
+    )
     if not topics:
         return None
     # 相同词条集合不因名次、热度、采集时间变化重复发；下批必须有真实榜单变化。
-    normalized = sorted({re.sub(r"[\W_]+", "", str(item.get("title", "")).casefold()) for item in topics})
+    normalized = sorted(
+        {re.sub(r"[\W_]+", "", str(item.get("title", "")).casefold()) for item in topics}
+    )
     normalized = [item for item in normalized if item]
     if not normalized:
         return None
     digest = hashlib.sha256("\n".join(normalized).encode()).hexdigest()
     title = f"微博热搜观察｜{local.date().isoformat()} {local.hour:02d}:00"
     body = (
-        "> 本帖由小瓜同学专用运营身份自动采集。热搜仅表示讨论热度，不代表相关说法已核实；不依据词条推断事件经过。\n\n"
+        "> 本帖由小瓜同学专用运营身份自动采集。"
+        "热搜仅表示讨论热度，不代表相关说法已核实；不依据词条推断事件经过。\n\n"
         f"采集时间：{snapshot.get('collected_at', '')}\n\n"
     )
     for item in topics[:10]:
@@ -382,7 +481,14 @@ def hot_search_draft(snapshot: Mapping[str, object], scheduled_for: datetime) ->
             continue
         body += f"{item.get('rank', '')}. [{markdown_label(str(item.get('title') or ''))}]({url})\n"
     body += "\n来源：[微博热搜榜](https://s.weibo.com/top/summary)\n"
-    return SourcedDraft(title, body, "微博热搜榜", "https://s.weibo.com/top/summary", f"weibo:{digest}", f"weibo:{digest}")
+    return SourcedDraft(
+        title,
+        body,
+        "微博热搜榜",
+        "https://s.weibo.com/top/summary",
+        f"weibo:{digest}",
+        f"weibo:{digest}",
+    )
 
 
 def plain_text(value: str, *, limit: int) -> str:
@@ -413,9 +519,17 @@ def read_feed(url: str) -> str:
         def redirect_request(self, req, fp, code, msg, headers, newurl):
             return None
 
-    request = urllib.request.Request(url, headers={"User-Agent": weibo.USER_AGENT, "Accept": "application/rss+xml, application/xml, text/xml"})
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": weibo.USER_AGENT,
+            "Accept": "application/rss+xml, application/xml, text/xml",
+        },
+    )
     started = time.monotonic()
-    with urllib.request.build_opener(NoRedirect()).open(request, timeout=REQUEST_TIMEOUT) as response:
+    with urllib.request.build_opener(NoRedirect()).open(
+        request, timeout=REQUEST_TIMEOUT
+    ) as response:
         chunks: list[bytes] = []
         size = 0
         while True:
