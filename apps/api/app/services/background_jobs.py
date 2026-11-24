@@ -163,10 +163,11 @@ class BackgroundJobService:
                     locked_by=worker_id,
                     attempts=BackgroundJob.attempts + 1,
                 )
+                .execution_options(synchronize_session=False)
             )
             if (claim.rowcount or 0) != 1:
                 continue
-            job = await self.session.get(BackgroundJob, job_id)
+            job = await self.session.get(BackgroundJob, job_id, populate_existing=True)
             if job is None:
                 continue
             self._add_log(
