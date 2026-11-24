@@ -35,8 +35,8 @@ const compactTodayLabel = computed(() => new Intl.DateTimeFormat(currentLocale.v
 
 const quickLinks = [
   {
-    label: "查看增长数据",
-    description: "访问、访客与真实用户增长",
+    label: "查看全系统分析",
+    description: "综合流量、分站表现与用户增长",
     icon: BarChartOutlined,
     route: "admin-analytics",
   },

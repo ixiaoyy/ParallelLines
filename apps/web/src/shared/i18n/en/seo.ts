@@ -46,6 +46,7 @@ export const seoText: Record<string, string> = {
   "查看分配给当前账号的平行线待处理审核事项。": "View pending reviews assigned to your account.",
   "搜索 · {siteTitle}": "Search · {siteTitle}",
   "搜索平行线公开主题、标签和作者，快速定位可追溯讨论。": "Search public topics, tags and authors to find discussions.",
+  "全系统分析 · {siteTitle}": "Cross-site analytics · {siteTitle}",
   "查看各站综合流量、分站访问、来源渠道、回访表现与主站用户增长。": "View cross-site traffic, individual sites, sources, returning visitors and main-site user growth.",
   "用户管理 · {siteTitle}": "Users · {siteTitle}",
   "管理平行线用户角色、状态、等级和徽章。": "Manage user roles, status, levels and badges.",
@@ -65,6 +66,4 @@ export const seoText: Record<string, string> = {
   "查看平行线访问统计、用户管理、内容安全和系统状态。": "View analytics, manage users, moderate content and monitor system health.",
   "后台登录 · {siteTitle}": "Admin login · {siteTitle}",
   "登录平行线后台管理项目目录与访问统计。": "Log in to manage the catalog and view analytics.",
-  "访问与用户增长 · {siteTitle}": "Traffic & growth · {siteTitle}",
-  "查看平行线访问表现、真实用户增长、来源渠道和入口页统计。": "View ParallelLines traffic, registered-user growth, traffic sources, and entry-page statistics."
 };

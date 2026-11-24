@@ -34,6 +34,7 @@ import {
 } from "@/features/analytics/queries";
 import UiButton from "@/shared/ui/Button.vue";
 
+import AdminTrafficPanel from "./AdminTrafficPanel.vue";
 
 echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
 
@@ -46,6 +47,7 @@ const startDate = ref(toDateInput(prior));
 const endDate = ref(toDateInput(today));
 const selectedReportId = ref("");
 const dataExplorerOpen = ref(false);
+const trafficPanel = ref<InstanceType<typeof AdminTrafficPanel> | null>(null);
 const exportFeedback = ref("");
 const trendChartElement = ref<HTMLDivElement | null>(null);
 const growthChartElement = ref<HTMLDivElement | null>(null);
@@ -93,7 +95,7 @@ const activePresetDays = computed(
 
 const overviewQuery = useAnalyticsOverview(range, computed(() => !isDateRangeInvalid.value));
 const overview = computed(() => overviewQuery.data.value);
-const isRefreshing = computed(() => overviewQuery.isFetching.value);
+const isRefreshing = computed(() => overviewQuery.isFetching.value || trafficPanel.value?.isFetching === true);
 const trafficSources = computed(() => overview.value?.traffic_sources ?? []);
 const entryPages = computed(() => overview.value?.entry_pages ?? []);
 const hasAuthenticatedMemberVisitors = computed(
@@ -273,6 +275,7 @@ function applyPresetRange(days: number): void {
 // Refreshes the overview and the currently visible preset report.
 // Key parameters: none. Return value is none. Side effect: refetches active TanStack queries.
 function refreshDashboard(): void {
+  trafficPanel.value?.refresh();
   void overviewQuery.refetch();
   if (dataExplorerOpen.value && selectedReportId.value) {
     void reportQuery.refetch();
@@ -578,15 +581,15 @@ function formatChartTooltip(params: unknown): string {
   <section class="admin-analytics-panel" aria-labelledby="analytics-title">
     <header class="analytics-page-header">
       <div>
-        <h1 id="analytics-title">{{ uiText('访问与用户增长') }}</h1>
-        <p>{{ uiText('查看所选日期范围内的访问表现与真实用户增长。') }}</p>
+        <h1 id="analytics-title">{{ uiText('全系统分析') }}</h1>
+        <p>{{ uiText('查看综合与分站流量、访客来源及回访表现，保留原主站分析。') }}</p>
       </div>
       <div class="analytics-header-actions">
         <UiButton
           tone="ghost"
           :disabled="isDateRangeInvalid || isRefreshing"
-          :aria-label="isRefreshing ? uiText('正在刷新访问与用户增长数据') : uiText('刷新访问与用户增长数据')"
-          :title="isRefreshing ? uiText('正在刷新访问与用户增长数据') : uiText('刷新访问与用户增长数据')"
+          :aria-label="isRefreshing ? uiText('正在刷新分析数据') : uiText('刷新分析数据')"
+          :title="isRefreshing ? uiText('正在刷新分析数据') : uiText('刷新分析数据')"
           @click="refreshDashboard"
         >
           <template #icon>
@@ -628,7 +631,20 @@ function formatChartTooltip(params: unknown): string {
       <span>{{ uiText(dateRangeError) }}</span>
     </div>
 
-    <section v-else-if="overviewQuery.isLoading.value" class="analytics-loading" role="status">
+    <AdminTrafficPanel
+      v-if="!isDateRangeInvalid"
+      ref="trafficPanel"
+      :start-date="startDate"
+      :end-date="endDate"
+      :enabled="!isDateRangeInvalid"
+    />
+
+    <header v-if="!isDateRangeInvalid" class="analytics-legacy-heading">
+      <h2>{{ uiText('原主站访问与用户增长') }}</h2>
+      <p>{{ uiText('沿用原主站访问、账号与圈子内容口径，不与上方独立站流量重复相加。') }}</p>
+    </header>
+
+    <section v-if="!isDateRangeInvalid && overviewQuery.isLoading.value" class="analytics-loading" role="status">
       <span class="sr-only">{{ uiText('正在计算访问与运营指标…') }}</span>
       <div class="loading-metrics" aria-hidden="true">
         <i v-for="index in 6" :key="index"></i>
@@ -636,7 +652,7 @@ function formatChartTooltip(params: unknown): string {
       <div class="loading-charts" aria-hidden="true"><i></i><i></i></div>
     </section>
 
-    <div v-else-if="overviewQuery.isError.value" class="analytics-state analytics-state--error" role="alert">
+    <div v-else-if="!isDateRangeInvalid && overviewQuery.isError.value" class="analytics-state analytics-state--error" role="alert">
       <div>
         <strong>{{ uiText('访问报表暂时不可用') }}</strong>
         <span>{{ uiText('请确认当前账号具备管理员权限，或稍后重新加载。') }}</span>
@@ -644,7 +660,7 @@ function formatChartTooltip(params: unknown): string {
       <UiButton tone="subtle" @click="refreshDashboard">{{ uiText('重新加载') }}</UiButton>
     </div>
 
-    <template v-else-if="overview">
+    <template v-else-if="!isDateRangeInvalid && overview">
       <section class="metric-strip" :aria-label="uiText('核心指标')">
         <article
           v-for="metric in summaryMetrics"

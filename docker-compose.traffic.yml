@@ -1,0 +1,27 @@
+# 可选统计进程：只有显式合入此文件并启用 traffic profile 才会启动；不共享邮件 worker 队列。
+services:
+  traffic-worker:
+    profiles: ["traffic"]
+    build:
+      context: ./apps/api
+    restart: unless-stopped
+    env_file:
+      - ./apps/api/.env
+    command: python -m app.workers.traffic
+    cpus: 0.25
+    mem_limit: 256m
+    pids_limit: 64
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

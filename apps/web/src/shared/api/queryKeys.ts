@@ -50,6 +50,9 @@ export const queryKeys = {
   adminPlugins: ["admin", "plugins"] as const,
   adminAnalytics: (startDate: string, endDate: string) =>
     ["admin", "analytics", startDate, endDate] as const,
+  // 跨站流量独立于旧主站报表；日期和站点共同决定缓存范围。
+  adminTraffic: (startDate: string, endDate: string, siteKey: string) =>
+    ["admin", "analytics", "traffic", startDate, endDate, siteKey] as const,
   adminAnalyticsReports: ["admin", "analytics", "reports"] as const,
   // Builds a range-aware cache key for one backend-owned Data Explorer preset.
   // Key parameters are report ID and inclusive dates; return value is a stable query key. Side effect: none.

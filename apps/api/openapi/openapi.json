@@ -1918,6 +1918,14 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "ApiResponse_TrafficAcceptedResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "ApiResponse_TrafficOverviewResponse_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ApiResponse_TwoFactorRecoveryCodesResponse_": {
         "additionalProperties": true,
         "type": "object"
@@ -13347,6 +13355,574 @@
         "title": "TopicSplitRequest",
         "type": "object"
       },
+      "TrafficAcceptedResponse": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "accepted"
+        ],
+        "title": "TrafficAcceptedResponse",
+        "type": "object"
+      },
+      "TrafficAction": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "event_name": {
+            "enum": [
+              "page_view",
+              "game_open",
+              "tool_download",
+              "tool_copy"
+            ],
+            "title": "Event Name",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "site_key": {
+            "enum": [
+              "games",
+              "forum",
+              "tools",
+              "chat",
+              "api"
+            ],
+            "title": "Site Key",
+            "type": "string"
+          },
+          "unique_visitors": {
+            "title": "Unique Visitors",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "site_key",
+          "event_name",
+          "path",
+          "count",
+          "unique_visitors"
+        ],
+        "title": "TrafficAction",
+        "type": "object"
+      },
+      "TrafficMetrics": {
+        "properties": {
+          "actions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actions"
+          },
+          "ephemeral_visitors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ephemeral Visitors"
+          },
+          "new_visitors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Visitors"
+          },
+          "page_views": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Views"
+          },
+          "returning_visitors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returning Visitors"
+          },
+          "shared_unique_visitors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared Unique Visitors"
+          },
+          "site_only_visitors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Only Visitors"
+          },
+          "unique_visitors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unique Visitors"
+          }
+        },
+        "title": "TrafficMetrics",
+        "type": "object"
+      },
+      "TrafficOverviewResponse": {
+        "properties": {
+          "cache_seconds": {
+            "default": 300,
+            "title": "Cache Seconds",
+            "type": "integer"
+          },
+          "collection_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Started At"
+          },
+          "data_through": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Through"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "last_ingested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Ingested At"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/TrafficMetrics"
+          },
+          "queue": {
+            "$ref": "#/components/schemas/TrafficQueueStatus"
+          },
+          "retention": {
+            "$ref": "#/components/schemas/TrafficRetention"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/TrafficPoint"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "site_key": {
+            "enum": [
+              "all",
+              "games",
+              "forum",
+              "tools",
+              "chat",
+              "api"
+            ],
+            "title": "Site Key",
+            "type": "string"
+          },
+          "sites": {
+            "items": {
+              "$ref": "#/components/schemas/TrafficSite"
+            },
+            "title": "Sites",
+            "type": "array"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "disabled",
+              "not_connected",
+              "ready"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "timezone": {
+            "const": "Asia/Shanghai",
+            "default": "Asia/Shanghai",
+            "title": "Timezone",
+            "type": "string"
+          },
+          "top_actions": {
+            "items": {
+              "$ref": "#/components/schemas/TrafficAction"
+            },
+            "title": "Top Actions",
+            "type": "array"
+          },
+          "top_pages": {
+            "items": {
+              "$ref": "#/components/schemas/TrafficPage"
+            },
+            "title": "Top Pages",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/TrafficMetrics"
+          },
+          "traffic_sources": {
+            "items": {
+              "$ref": "#/components/schemas/TrafficSource"
+            },
+            "title": "Traffic Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "status",
+          "start_date",
+          "end_date",
+          "site_key",
+          "generated_at",
+          "queue"
+        ],
+        "title": "TrafficOverviewResponse",
+        "type": "object"
+      },
+      "TrafficPage": {
+        "properties": {
+          "page_views": {
+            "title": "Page Views",
+            "type": "integer"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "site_key": {
+            "enum": [
+              "games",
+              "forum",
+              "tools",
+              "chat",
+              "api"
+            ],
+            "title": "Site Key",
+            "type": "string"
+          },
+          "unique_visitors": {
+            "title": "Unique Visitors",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "site_key",
+          "path",
+          "page_views",
+          "unique_visitors"
+        ],
+        "title": "TrafficPage",
+        "type": "object"
+      },
+      "TrafficPoint": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "page_views": {
+            "title": "Page Views",
+            "type": "integer"
+          },
+          "shared_unique_visitors": {
+            "title": "Shared Unique Visitors",
+            "type": "integer"
+          },
+          "unique_visitors": {
+            "title": "Unique Visitors",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "page_views",
+          "unique_visitors",
+          "shared_unique_visitors"
+        ],
+        "title": "TrafficPoint",
+        "type": "object"
+      },
+      "TrafficQueueStatus": {
+        "properties": {
+          "dropped_events": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dropped Events"
+          },
+          "pending": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending"
+          },
+          "status": {
+            "enum": [
+              "disabled",
+              "ok",
+              "full",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "TrafficQueueStatus",
+        "type": "object"
+      },
+      "TrafficRetention": {
+        "properties": {
+          "cohort_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cohort End"
+          },
+          "cohort_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cohort Start"
+          },
+          "eligible_visitors": {
+            "default": 0,
+            "title": "Eligible Visitors",
+            "type": "integer"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "returned_visitors": {
+            "default": 0,
+            "title": "Returned Visitors",
+            "type": "integer"
+          }
+        },
+        "title": "TrafficRetention",
+        "type": "object"
+      },
+      "TrafficSite": {
+        "properties": {
+          "actions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actions"
+          },
+          "last_received_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Received At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "page_views": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Views"
+          },
+          "site_key": {
+            "enum": [
+              "games",
+              "forum",
+              "tools",
+              "chat",
+              "api"
+            ],
+            "title": "Site Key",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "disabled",
+              "not_connected",
+              "no_activity",
+              "collecting",
+              "stale"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "unique_visitors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unique Visitors"
+          }
+        },
+        "required": [
+          "site_key",
+          "name",
+          "status"
+        ],
+        "title": "TrafficSite",
+        "type": "object"
+      },
+      "TrafficSource": {
+        "properties": {
+          "page_views": {
+            "title": "Page Views",
+            "type": "integer"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "unique_visitors": {
+            "title": "Unique Visitors",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source_type",
+          "source_name",
+          "page_views",
+          "unique_visitors"
+        ],
+        "title": "TrafficSource",
+        "type": "object"
+      },
       "TwoFactorDisableRequest": {
         "properties": {
           "code": {
@@ -15497,6 +16073,97 @@
           }
         ],
         "summary": "Export Data Explorer Report",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/analytics/traffic": {
+      "get": {
+        "description": "管理员读取五分钟缓存的流量报表；查询只针对独立统计表，旧分析接口保持不变。",
+        "operationId": "traffic_overview_api_v1_admin_analytics_traffic_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "site_key",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "games",
+                "forum",
+                "tools",
+                "chat",
+                "api"
+              ],
+              "title": "Site Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TrafficOverviewResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Traffic Overview",
         "tags": [
           "admin"
         ]
@@ -24824,6 +25491,40 @@
           }
         },
         "summary": "Public Site Settings",
+        "tags": [
+          "site"
+        ]
+      }
+    },
+    "/api/v1/site/traffic": {
+      "post": {
+        "description": "接收匿名小批次并入 Redis 队列；无业务会话或 SQL 依赖，失败不走同步入库兜底。",
+        "operationId": "collect_traffic_api_v1_site_traffic_post",
+        "requestBody": {
+          "content": {
+            "text/plain": {
+              "schema": {
+                "maxLength": 16384,
+                "type": "string"
+              }
+            }
+          },
+          "description": "JSON-encoded TrafficBatchRequest, no credentials or private content.",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TrafficAcceptedResponse_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Collect Traffic",
         "tags": [
           "site"
         ]

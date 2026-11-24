@@ -1,0 +1,464 @@
+.traffic-panel {
+  display: grid;
+  // 允许单列收缩到容器宽度，避免内部 40rem 表格撑宽整列并被外壳裁切。
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: 1.5rem;
+  margin-bottom: 3.5rem;
+}
+
+.traffic-panel > * {
+  min-width: 0;
+}
+
+.traffic-heading,
+.traffic-subheading,
+.traffic-privacy {
+  display: flex;
+  min-width: 0;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.traffic-heading h2 {
+  margin: 0.3rem 0 0;
+  color: var(--title);
+  font-size: 1.4rem;
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+}
+
+.traffic-heading p,
+.traffic-subheading p,
+.traffic-privacy p {
+  margin: 0.35rem 0 0;
+  color: var(--analytics-muted);
+  font-size: 0.8rem;
+  line-height: 1.65;
+}
+
+.traffic-eyebrow {
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.traffic-delay-label {
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  padding: 0.35rem 0.65rem;
+  color: var(--analytics-muted);
+  font-size: 0.73rem;
+}
+
+.traffic-site-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.traffic-site-filters button,
+.traffic-preference-button {
+  min-height: 2.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.9rem;
+  color: var(--text);
+  background: var(--bg-surface);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.traffic-site-filters button:hover,
+.traffic-preference-button:hover {
+  border-color: var(--primary-hover);
+  color: var(--primary);
+  background: var(--bg-hover);
+}
+
+.traffic-site-filters button.active {
+  border-color: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  background: var(--btn-primary-bg);
+}
+
+.traffic-panel button:focus-visible,
+.traffic-table-wrap:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.traffic-freshness {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  color: var(--analytics-muted);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.traffic-freshness strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.traffic-state {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  color: var(--text);
+  background: var(--bg-subtle);
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+.traffic-state strong {
+  font-weight: 650;
+}
+
+.traffic-state p {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+}
+
+.traffic-state--error {
+  border-color: var(--danger-border);
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.traffic-state--warning {
+  border-color: color-mix(in srgb, var(--accent-coral) 35%, var(--border));
+  color: color-mix(in srgb, var(--accent-coral) 72%, var(--title));
+  background: color-mix(in srgb, var(--accent-coral) 5%, var(--bg-surface));
+}
+
+.traffic-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1.6rem 1.3rem;
+  padding: 0.5rem 0;
+}
+
+.traffic-metric {
+  display: grid;
+  min-width: 0;
+  gap: 0.55rem;
+  align-content: start;
+}
+
+.traffic-metric h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.79rem;
+  font-weight: 650;
+}
+
+.traffic-metric > strong {
+  color: var(--title);
+  font-size: 1.85rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 670;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.traffic-metric-change {
+  color: var(--text);
+  font-size: 0.73rem;
+  line-height: 1.5;
+}
+
+.traffic-metric small {
+  color: var(--analytics-muted);
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
+.traffic-identity-note {
+  display: grid;
+  gap: 0.25rem;
+  border-left: 2px solid var(--primary);
+  padding: 0.25rem 0 0.25rem 0.9rem;
+  color: var(--analytics-muted);
+  font-size: 0.76rem;
+  line-height: 1.7;
+}
+
+.traffic-identity-note strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.traffic-subheading h3 {
+  margin: 0;
+  color: var(--title);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.traffic-chart {
+  width: 100%;
+  height: 17rem;
+  margin-top: 0.5rem;
+}
+
+.traffic-table-wrap {
+  overflow-x: auto;
+  min-width: 0;
+  margin-top: 0.7rem;
+}
+
+.traffic-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.8rem;
+}
+
+.traffic-panel th,
+.traffic-panel td {
+  height: 3rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0.65rem 0.5rem;
+  color: var(--text);
+  line-height: 1.5;
+  text-align: right;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.traffic-panel thead th {
+  color: var(--analytics-muted);
+  font-size: 0.73rem;
+  font-weight: 600;
+}
+
+.traffic-panel th:first-child,
+.traffic-panel td:first-child {
+  padding-left: 0;
+  text-align: left;
+}
+
+.traffic-panel th:last-child,
+.traffic-panel td:last-child {
+  padding-right: 0;
+}
+
+.traffic-panel td:first-child span,
+.traffic-panel td:first-child code,
+.traffic-panel td small {
+  display: block;
+}
+
+.traffic-panel td code {
+  font-size: 0.76rem;
+  line-height: 1.6;
+  white-space: normal;
+}
+
+.traffic-panel td small {
+  margin-top: 0.15rem;
+  color: var(--analytics-muted);
+  font-size: 0.7rem;
+}
+
+.traffic-sites-table {
+  min-width: 40rem;
+}
+
+.traffic-sites-table th:first-child {
+  width: 16%;
+}
+
+.traffic-sites-table th:last-child {
+  width: 18%;
+}
+
+.traffic-sites-table .is-selected {
+  background: var(--bg-hover);
+}
+
+.traffic-text-button {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: 0.2rem;
+  padding: 0.3rem 0;
+  color: var(--primary);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.traffic-text-button:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+.traffic-status {
+  display: inline-block;
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  color: var(--analytics-muted);
+  background: var(--bg-subtle);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.traffic-status--collecting,
+.traffic-status--no_activity {
+  color: color-mix(in srgb, var(--accent-geek) 65%, var(--title));
+  background: color-mix(in srgb, var(--accent-geek) 8%, var(--bg-surface));
+}
+
+.traffic-status--stale {
+  color: color-mix(in srgb, var(--accent-coral) 70%, var(--title));
+  background: color-mix(in srgb, var(--accent-coral) 8%, var(--bg-surface));
+}
+
+.traffic-footnote {
+  margin: 0.65rem 0 0;
+  color: var(--analytics-muted);
+  font-size: 0.73rem;
+  line-height: 1.7;
+}
+
+.traffic-rankings {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 2.5rem;
+}
+
+.traffic-rankings article {
+  min-width: 0;
+}
+
+.traffic-rankings th:first-child,
+.traffic-actions th:first-child {
+  width: 62%;
+}
+
+.traffic-empty {
+  padding-block: 1.25rem !important;
+  color: var(--analytics-muted) !important;
+  text-align: left !important;
+}
+
+.traffic-daily-table {
+  max-height: 20rem;
+}
+
+.traffic-privacy {
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding-top: 1.25rem;
+}
+
+.traffic-privacy strong {
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.traffic-privacy p,
+.traffic-privacy span {
+  font-size: 0.73rem;
+}
+
+.traffic-privacy span {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.traffic-preference-button {
+  flex: none;
+}
+
+.traffic-preference-button[aria-pressed="true"] {
+  border-color: var(--theme-soft-border, var(--primary));
+  color: var(--theme-soft-fg, var(--primary));
+  background: var(--theme-soft-bg, var(--bg-selected));
+}
+
+@media (max-width: 1220px) {
+  .traffic-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .traffic-rankings {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
+  }
+}
+
+@media (max-width: 620px) {
+  .traffic-panel {
+    gap: 1.25rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .traffic-heading {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .traffic-heading h2 {
+    font-size: 1.25rem;
+  }
+
+  .traffic-site-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .traffic-site-filters button {
+    padding-inline: 0.4rem;
+  }
+
+  .traffic-freshness {
+    gap: 0.3rem 0.85rem;
+  }
+
+  .traffic-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem 1rem;
+  }
+
+  .traffic-metric > strong {
+    font-size: 1.65rem;
+  }
+
+  .traffic-chart {
+    height: 14rem;
+  }
+
+  .traffic-subheading {
+    gap: 0.75rem;
+  }
+
+  .traffic-subheading > .traffic-text-button {
+    flex: none;
+  }
+
+  .traffic-state,
+  .traffic-privacy {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

@@ -27,6 +27,7 @@ const EXCLUDED_PATH_PREFIXES = [
   "/messages",
   "/moderation",
   "/new-topic",
+  "/tavern/invite",
 ];
 
 // Installs a Vue Router hook that records public page views for PV/UV and acquisition reports.
@@ -41,24 +42,24 @@ export function installSiteVisitTracker(router: Router): void {
 
   router.afterEach((to, _from, failure) => {
     if (failure || shouldRespectDoNotTrack() || isAutomatedBrowser()) {
-      nextReferrer = window.location.href;
+      nextReferrer = currentVisitReferrer();
       return;
     }
     if (!shouldTrackRoute(to)) {
-      nextReferrer = window.location.href;
+      nextReferrer = currentVisitReferrer();
       return;
     }
 
     window.setTimeout(() => {
       const path = currentVisitPath();
       if (!path || path === lastTrackedPath) {
-        nextReferrer = window.location.href;
+        nextReferrer = currentVisitReferrer();
         return;
       }
 
       lastTrackedPath = path;
       const referrer = nextReferrer || null;
-      nextReferrer = window.location.href;
+      nextReferrer = currentVisitReferrer();
       void recordSiteVisit({
         path,
         title: document.title || null,
@@ -90,6 +91,11 @@ function shouldTrackRoute(route: RouteLocationNormalized): boolean {
 // Key parameters: none. Return value is a site-internal path plus query string. Side effect: none.
 function currentVisitPath(): string {
   return `${window.location.pathname}${window.location.search}`;
+}
+
+/** 酒馆邀请是私密入口，不能作为后续公开访问的来源记录原始片段。 */
+function currentVisitReferrer(): string {
+  return /^\/tavern\/invite\/?$/i.test(window.location.pathname) ? "" : window.location.href;
 }
 
 // Honors browser-level do-not-track flags for first-party analytics collection.

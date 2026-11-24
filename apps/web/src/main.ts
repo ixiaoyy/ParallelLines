@@ -5,6 +5,7 @@ import { createApp } from "vue";
 import App from "@/app/App.vue";
 import { router } from "@/app/router";
 import { installSiteVisitTracker } from "@/features/analytics/siteVisitTracker";
+import { installTrafficCollector } from "@/features/analytics/trafficCollector";
 import { queryClient } from "@/shared/api/queryClient";
 import { injectBoardPalette } from "@/shared/theme/boardPalette";
 import { UNIFIED_AUTH_ENABLED } from "@/features/auth/unified/protocol";
@@ -18,6 +19,7 @@ import "@/shared/styles/tone-utilities.scss";
 // 首次私有查询发出前先隔离尚未核定的本地旧凭据；公开页面不会因此被导航到登录墙。
 if (UNIFIED_AUTH_ENABLED) startUnifiedBrowserSession();
 installSiteVisitTracker(router);
+installTrafficCollector();
 // 旧论坛版块复用统一色板，注入仅声明作用于版块类名的变量。
 injectBoardPalette();
 

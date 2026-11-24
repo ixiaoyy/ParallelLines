@@ -22,6 +22,13 @@ class Settings(BaseSettings):
 
     database_url: str = "mysql+asyncmy://root:root@localhost:3306/parallellines?charset=utf8mb4"
     redis_url: str = "redis://localhost:6379/0"
+    # 跨站统计独立启用；采集仅入 Redis，独立 worker 批量写库，不进入业务事务。
+    traffic_enabled: bool = False
+    traffic_allow_loopback: bool = False
+    traffic_queue_capacity: int = Field(default=20000, ge=100, le=100000)
+    traffic_batch_size: int = Field(default=100, ge=1, le=500)
+    traffic_worker_interval_seconds: int = Field(default=15, ge=5, le=300)
+    traffic_redis_timeout_seconds: float = Field(default=0.25, ge=0.05, le=1.0)
     slow_request_ms: int = 500
     background_job_poll_seconds: int = 5
     background_job_batch_size: int = 25

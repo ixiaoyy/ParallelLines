@@ -53,6 +53,26 @@
   align-items: center;
 }
 
+.analytics-legacy-heading {
+  margin-bottom: 1.75rem;
+  border-top: 1px solid var(--border);
+  padding-top: 2rem;
+}
+
+.analytics-legacy-heading h2 {
+  margin: 0;
+  color: var(--title);
+  font-size: 1.2rem;
+  line-height: 1.4;
+}
+
+.analytics-legacy-heading p {
+  margin: 0.4rem 0 0;
+  color: var(--analytics-muted);
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+
 .analytics-header-actions :deep(.ui-button--ghost) {
   color: var(--primary) !important;
 }

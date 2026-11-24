@@ -660,6 +660,12 @@ export interface components {
     ApiResponse_TopicResponse_: {
       [key: string]: unknown;
     };
+    ApiResponse_TrafficAcceptedResponse_: {
+      [key: string]: unknown;
+    };
+    ApiResponse_TrafficOverviewResponse_: {
+      [key: string]: unknown;
+    };
     ApiResponse_TwoFactorRecoveryCodesResponse_: {
       [key: string]: unknown;
     };
@@ -2472,6 +2478,87 @@ export interface components {
       post_ids: Array<string>;
       title: string;
     };
+    TrafficAcceptedResponse: {
+      accepted: number;
+    };
+    TrafficAction: {
+      count: number;
+      event_name: "page_view" | "game_open" | "tool_download" | "tool_copy";
+      path: string;
+      site_key: "games" | "forum" | "tools" | "chat" | "api";
+      unique_visitors: number;
+    };
+    TrafficMetrics: {
+      actions?: number | null;
+      ephemeral_visitors?: number | null;
+      new_visitors?: number | null;
+      page_views?: number | null;
+      returning_visitors?: number | null;
+      shared_unique_visitors?: number | null;
+      site_only_visitors?: number | null;
+      unique_visitors?: number | null;
+    };
+    TrafficOverviewResponse: {
+      cache_seconds?: number;
+      collection_started_at?: string | null;
+      data_through?: string | null;
+      enabled: boolean;
+      end_date: string;
+      generated_at: string;
+      last_ingested_at?: string | null;
+      previous?: components["schemas"]["TrafficMetrics"];
+      queue: components["schemas"]["TrafficQueueStatus"];
+      retention?: components["schemas"]["TrafficRetention"];
+      series?: Array<components["schemas"]["TrafficPoint"]>;
+      site_key: "all" | "games" | "forum" | "tools" | "chat" | "api";
+      sites?: Array<components["schemas"]["TrafficSite"]>;
+      start_date: string;
+      status: "disabled" | "not_connected" | "ready";
+      timezone?: "Asia/Shanghai";
+      top_actions?: Array<components["schemas"]["TrafficAction"]>;
+      top_pages?: Array<components["schemas"]["TrafficPage"]>;
+      totals?: components["schemas"]["TrafficMetrics"];
+      traffic_sources?: Array<components["schemas"]["TrafficSource"]>;
+    };
+    TrafficPage: {
+      page_views: number;
+      path: string;
+      site_key: "games" | "forum" | "tools" | "chat" | "api";
+      unique_visitors: number;
+    };
+    TrafficPoint: {
+      day: string;
+      page_views: number;
+      shared_unique_visitors: number;
+      unique_visitors: number;
+    };
+    TrafficQueueStatus: {
+      dropped_events?: number | null;
+      pending?: number | null;
+      status: "disabled" | "ok" | "full" | "unavailable";
+    };
+    TrafficRetention: {
+      cohort_end?: string | null;
+      cohort_start?: string | null;
+      eligible_visitors?: number;
+      rate?: number | null;
+      returned_visitors?: number;
+    };
+    TrafficSite: {
+      actions?: number | null;
+      last_received_at?: string | null;
+      name: string;
+      page_views?: number | null;
+      site_key: "games" | "forum" | "tools" | "chat" | "api";
+      status: "disabled" | "not_connected" | "no_activity" | "collecting" | "stale";
+      unique_visitors?: number | null;
+    };
+    TrafficSource: {
+      page_views: number;
+      source_name: string;
+      source_type: string;
+      unique_visitors: number;
+    };
     TwoFactorDisableRequest: {
       code: string;
       password: string;
@@ -2776,6 +2863,9 @@ export interface paths {
     };
     "/api/v1/admin/analytics/reports/{report_id}/export.csv": {
       get: { response: unknown; operationId: "export_data_explorer_report_api_v1_admin_analytics_reports__report_id__export_csv_get" };
+    };
+    "/api/v1/admin/analytics/traffic": {
+      get: { response: components["schemas"]["ApiResponse_TrafficOverviewResponse_"]; operationId: "traffic_overview_api_v1_admin_analytics_traffic_get" };
     };
     "/api/v1/admin/api-keys": {
       get: { response: components["schemas"]["ApiResponse_list_ApiKeyResponse__"]; operationId: "list_api_keys_api_v1_admin_api_keys_get" };
@@ -3299,6 +3389,9 @@ export interface paths {
     };
     "/api/v1/site/settings": {
       get: { response: components["schemas"]["ApiResponse_PublicSiteSettingsResponse_"]; operationId: "public_site_settings_api_v1_site_settings_get" };
+    };
+    "/api/v1/site/traffic": {
+      post: { response: unknown; operationId: "collect_traffic_api_v1_site_traffic_post" };
     };
     "/api/v1/site/visits": {
       post: { response: unknown; operationId: "record_site_visit_api_v1_site_visits_post" };

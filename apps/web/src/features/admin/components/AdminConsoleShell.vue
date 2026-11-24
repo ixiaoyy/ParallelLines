@@ -65,8 +65,8 @@ const navigationItems = computed<AdminNavigationItem[]>(() => [
   },
   {
     id: "analytics",
-    label: t("admin.nav.analytics", "访问与增长"),
-    mobileLabel: t("admin.nav.analytics_short", "增长"),
+    label: t("admin.nav.analytics", "全系统分析"),
+    mobileLabel: t("admin.nav.analytics_short", "分析"),
     path: "/admin/analytics",
     icon: BarChartOutlined,
     adminOnly: true,
