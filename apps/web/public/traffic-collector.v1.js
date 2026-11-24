@@ -20,7 +20,7 @@
     endpoint = new URL(data.endpoint || "https://pingxingxian.space/api/v1/site/traffic", location.href);
     if (!local && endpoint.href !== "https://pingxingxian.space/api/v1/site/traffic") return;
     if (local && !/^(localhost|127\.0\.0\.1)$/.test(endpoint.hostname)) return;
-  } catch (_) { return; }
+  } catch { return; }
   window.__parallelLinesTrafficInstalled = true;
 
   // 先等待站点加载和空闲；不使用轮询、心跳、持久重试队列或业务请求拦截。
@@ -42,7 +42,7 @@
 
     function cookieText() {
       try { return document.cookie; }
-      catch (_) { return null; } // 无法读取排除偏好时停止采集，不绕过浏览器策略。
+      catch { return null; } // 无法读取排除偏好时停止采集，不绕过浏览器策略。
     }
 
     function excluded() {
@@ -65,13 +65,13 @@
           (local ? "" : "; Domain=pingxingxian.space; Secure");
         if (document.cookie.indexOf("px_traffic_id=" + id) !== -1)
           return { id: id, scope: local ? "site" : "shared" };
-      } catch (_) { /* 禁用 cookie 时不尝试绕过浏览器限制。 */ }
+      } catch { /* 禁用 cookie 时不尝试绕过浏览器限制。 */ }
       try {
         var saved = localStorage.getItem("parallellines.traffic_id.v1");
         if (saved && /^[a-f0-9-]{36}$/i.test(saved)) return { id: saved, scope: "site" };
         localStorage.setItem("parallellines.traffic_id.v1", id);
         return { id: id, scope: "site" };
-      } catch (_) { return { id: id, scope: "ephemeral" }; }
+      } catch { return { id: id, scope: "ephemeral" }; }
     }
 
     function route() {
@@ -214,6 +214,6 @@
 
   function safeReferrer(value) {
     try { var parsed = new URL(value); return /^(http|https):$/.test(parsed.protocol) ? parsed.origin : null; }
-    catch (_) { return null; }
+    catch { return null; }
   }
 })();
