@@ -477,7 +477,7 @@ class WorkflowWiringTests(unittest.TestCase):
         self.assertIn("file: apps/web/Dockerfile.prebuilt", ci)
         self.assertIn("VITE_API_BASE_URL: /api/v1", ci)
         self.assertIn("pnpm-workspace.yaml", ci)
-        self.assertEqual(ci.count("overwrite: true"), 2)
+        self.assertEqual(ci.count("overwrite: true"), 3)
         self.assertEqual(deploy.count("overwrite: true"), 1)
         self.assertEqual(deploy.count("uses: docker/build-push-action@v6"), 1)
         manual = deploy.split("- name: Build Web once for an explicit manual deployment", 1)[1].split("- name:", 1)[0]
