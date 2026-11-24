@@ -20,10 +20,10 @@ env:
   SOURCE_RUN_ID: ${{ github.event.workflow_run.id || github.run_id }}
 
 jobs:
-  changes:
-    name: Prepare checked deploy scope and image
+  release:
+    name: Deploy the verified revision
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 120
     # workflow_run 可能获得 secrets；只接受本仓 main push 的成功 CI，拒绝两类 PR。
     if: >-
       github.event_name == 'workflow_dispatch' ||
@@ -34,14 +34,6 @@ jobs:
     permissions:
       contents: read
       actions: read
-    outputs:
-      ready: ${{ steps.target.outputs.ready }}
-      sha: ${{ steps.plan.outputs.sha }}
-      source_run_id: ${{ steps.plan.outputs.source_run_id }}
-      backend: ${{ steps.plan.outputs.backend }}
-      frontend: ${{ steps.plan.outputs.frontend }}
-      nginx: ${{ steps.plan.outputs.nginx }}
-      compose: ${{ steps.plan.outputs.compose }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,12 +63,44 @@ jobs:
       - name: Prepare manual full-stack scope without a historical artifact
         if: steps.target.outputs.ready == 'true' && github.event_name == 'workflow_dispatch'
         run: python3 .github/scripts/deploy_artifacts.py plan --output "$RUNNER_TEMP/parallellines-plan/deploy-plan.json" --github-output "$GITHUB_OUTPUT"
-      - name: Validate source commit and scope
+      - name: Read the actual component release baseline
+        if: steps.target.outputs.ready == 'true' && github.event_name == 'workflow_run'
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          # 仅 Deploy 读取私有回执；CI 不接触生产凭据或运行态。
+          key="$(mktemp)"
+          known_hosts="$(mktemp)"
+          trap 'rm -f "$key" "$known_hosts"' EXIT
+          chmod 600 "$key"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$key"
+          PORT="${DEPLOY_PORT:-22}"
+          ssh-keyscan -T 10 -t ed25519 -p "$PORT" "$DEPLOY_HOST" > "$known_hosts" 2>/dev/null
+          test "$(ssh-keygen -lf "$known_hosts" | awk '{print $2}')" = "SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA"
+          timeout 90 ssh -T -p "$PORT" -i "$key" -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 -o UserKnownHostsFile="$known_hosts" \
+            "$DEPLOY_USER@$DEPLOY_HOST" 'sudo -n python3 -B - release-state --repo /opt/parallellines' \
+            < .github/scripts/deploy_artifacts.py > "$RUNNER_TEMP/parallellines-release-state.json"
+      - name: Reconcile the CI target with successfully released components
         id: plan
         if: steps.target.outputs.ready == 'true'
-        run: python3 .github/scripts/deploy_artifacts.py read-plan --source "$RUNNER_TEMP/parallellines-plan/deploy-plan.json" --github-output "$GITHUB_OUTPUT"
+        run: |
+          set -euo pipefail
+          # 自动发布保留目标 CI 的身份与校验结果，但发布范围以各组件运行前像为准。
+          if ! python3 .github/scripts/deploy_artifacts.py resolve-deploy \
+              --source "$RUNNER_TEMP/parallellines-plan/deploy-plan.json" \
+              --release-state "$RUNNER_TEMP/parallellines-release-state.json" --github-output "$GITHUB_OUTPUT"; then
+            echo "::error::Release pending. Resolve the reported baseline/check issue or authorize the existing manual full-stack Deploy for this revision."
+            exit 1
+          fi
       - name: Download the checked CI Web image
+        id: download_web
         if: steps.target.outputs.ready == 'true' && steps.plan.outputs.web_required == 'true' && github.event_name == 'workflow_run'
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: parallellines-web-${{ env.DEPLOY_SHA }}
@@ -92,6 +116,26 @@ jobs:
           path: ${{ runner.temp }}/parallellines-forum-web-image
           github-token: ${{ github.token }}
           run-id: ${{ env.SOURCE_RUN_ID }}
+      - name: Reject missing exact Web artifacts before production writes
+        if: steps.target.outputs.ready == 'true' && steps.plan.outputs.web_required == 'true' && github.event_name == 'workflow_run'
+        env:
+          WEB_DOWNLOAD: ${{ steps.download_web.outcome }}
+          FORUM_ENABLED_IN_BASELINE: ${{ steps.plan.outputs.forum_enabled }}
+        run: |
+          set -euo pipefail
+          # 累计范围可能首次需要此目标的归档；不能借用前次归档或在服务器重建。
+          if [ "$WEB_DOWNLOAD" != success ]; then
+            echo "::error::Release pending: exact CI Web artifact for $DEPLOY_SHA is unavailable. Authorize the existing manual Deploy to build this revision explicitly."
+            exit 1
+          fi
+          if [ "$FORUM_ENABLED_IN_BASELINE" = true ]; then
+            FORUM_ARCHIVE="parallellines-forum-web-$DEPLOY_SHA.tar.gz"
+            if ! (cd "$RUNNER_TEMP/parallellines-forum-web-image" &&
+                  test -s "$FORUM_ARCHIVE" && sha256sum --strict -c "$FORUM_ARCHIVE.sha256"); then
+              echo "::error::Release pending: enabled Forum has no valid exact CI artifact for $DEPLOY_SHA."
+              exit 1
+            fi
+          fi
       - uses: docker/setup-buildx-action@v3
         if: steps.target.outputs.ready == 'true' && github.event_name == 'workflow_dispatch'
       # 手动入口保留原源码构建能力；自动链路缺产物直接失败，绝不悄悄重建。
@@ -104,6 +148,7 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=/api/v1
             VITE_UNIFIED_AUTH_ENABLED=${{ vars.VITE_UNIFIED_AUTH_ENABLED || 'false' }}
+            VITE_TRAFFIC_ANALYTICS_ENABLED=${{ vars.VITE_TRAFFIC_ANALYTICS_ENABLED || 'false' }}
             SOURCE_REVISION=${{ env.DEPLOY_SHA }}
           tags: |
             parallellines-web:${{ env.DEPLOY_SHA }}
@@ -120,6 +165,7 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=/api/v1
             VITE_UNIFIED_AUTH_ENABLED=${{ vars.VITE_UNIFIED_AUTH_ENABLED || 'false' }}
+            VITE_TRAFFIC_ANALYTICS_ENABLED=${{ vars.VITE_TRAFFIC_ANALYTICS_ENABLED || 'false' }}
             SOURCE_REVISION=${{ env.DEPLOY_SHA }}
           tags: |
             parallellines-forum-web:${{ env.DEPLOY_SHA }}
@@ -129,67 +175,197 @@ jobs:
           cache-to: type=gha,mode=max,scope=forum-web
       - name: Export the manual Web image and receipt
         if: steps.target.outputs.ready == 'true' && github.event_name == 'workflow_dispatch'
-        run: |
-          set -euo pipefail
-          OUT="$RUNNER_TEMP/parallellines-web-image"
-          mkdir -p "$OUT"
-          docker save "parallellines-web:$DEPLOY_SHA" parallellines-web:latest | gzip > "$OUT/parallellines-web-$DEPLOY_SHA.tar.gz"
-          python3 .github/scripts/deploy_artifacts.py receipt --directory "$OUT" --sha "$DEPLOY_SHA" --run-id "$GITHUB_RUN_ID" \
-            --image-id "$(docker image inspect --format '{{.Id}}' "parallellines-web:$DEPLOY_SHA")" \
-            --image-revision "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "parallellines-web:$DEPLOY_SHA")"
-          FORUM_OUT="$RUNNER_TEMP/parallellines-forum-web-image"
-          mkdir -p "$FORUM_OUT"
-          docker save "parallellines-forum-web:$DEPLOY_SHA" parallellines-forum-web:latest | gzip > "$FORUM_OUT/parallellines-forum-web-$DEPLOY_SHA.tar.gz"
-          (cd "$FORUM_OUT" && sha256sum "parallellines-forum-web-$DEPLOY_SHA.tar.gz" > "parallellines-forum-web-$DEPLOY_SHA.tar.gz.sha256")
+        run: python3 .github/scripts/deploy_artifacts.py export-web --directory "$RUNNER_TEMP" --sha "$DEPLOY_SHA" --run-id "$GITHUB_RUN_ID"
       - name: Verify Web artifact before any server changes
         if: steps.target.outputs.ready == 'true' && steps.plan.outputs.web_required == 'true'
-        run: python3 .github/scripts/deploy_artifacts.py verify-web --directory "$RUNNER_TEMP/parallellines-web-image" --sha "$DEPLOY_SHA" --run-id "$SOURCE_RUN_ID"
-      - name: Pass the same verified archive to the existing deployment jobs
-        if: steps.target.outputs.ready == 'true' && steps.plan.outputs.web_required == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-image-ready-${{ env.DEPLOY_SHA }}
-          path: ${{ runner.temp }}/parallellines-web-image/
-          if-no-files-found: error
-          retention-days: 7
-          compression-level: 0
-          overwrite: true
-      - name: Pass the Forum Web archive to the frontend deployment job
-        if: steps.target.outputs.ready == 'true' && steps.plan.outputs.web_required == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: forum-web-image-ready-${{ env.DEPLOY_SHA }}
-          path: ${{ runner.temp }}/parallellines-forum-web-image/
-          if-no-files-found: ignore
-          retention-days: 7
-          compression-level: 0
-          overwrite: true
+        run: |
+          if ! python3 .github/scripts/deploy_artifacts.py verify-web --directory "$RUNNER_TEMP/parallellines-web-image" --sha "$DEPLOY_SHA" --run-id "$SOURCE_RUN_ID"; then
+            echo "::error::Release pending: exact Web artifact failed verification for $DEPLOY_SHA."
+            exit 1
+          fi
 
-  deploy-full-stack:
-    name: Deploy full stack (compose)
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.ready == 'true' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.compose == 'true')
+      - name: Deploy backend (api + worker)
+        if: steps.target.outputs.ready == 'true' && steps.plan.outputs.backend == 'true' && steps.plan.outputs.compose != 'true'
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          MAIN_DEPLOY_MODE: deploy-backend
+        with: &apply_main_release
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
+          port: ${{ secrets.DEPLOY_PORT }}
+          command_timeout: ${{ env.MAIN_DEPLOY_MODE == 'deploy-full-stack' && '30m' || '20m' }}
+          script: |
+            set -eu
+            DEPLOY_REVISION="${{ steps.plan.outputs.sha }}"
+            sudo mountpoint -q /data
+            sudo test -d /data/uploads/parallellines
+            sudo test -d /data/backups/parallellines
+            sudo test -s /opt/parallellines/apps/api/.env
+            cd /opt/parallellines
+            git remote set-url origin https://github.com/${{ github.repository }}.git
+            git fetch --prune origin main
+            git cat-file -e "${DEPLOY_REVISION}^{commit}" 2>/dev/null || git fetch origin "$DEPLOY_REVISION"
+            # 锁覆盖工作树重置到发布成功回执；取代码和 runner 传包仍在锁外。
+            TLS_DEPLOY_RUNNER="$(git show "${DEPLOY_REVISION}:deploy/nginx/run-deploy-with-tls-lock.py")"
+            sudo -n python3 -B -c "$TLS_DEPLOY_RUNNER" "$DEPLOY_REVISION" <<'DEPLOY_WITH_TLS_LOCK'
+            set -eu
+            DEPLOY_REVISION="$1"
+            DEPLOY_JOB="${{ env.MAIN_DEPLOY_MODE }}"
+            DEPLOY_STARTED_AT=$(date +%s)
+            DIRECTORY_PHASE="storage directory check"
+            case "$DEPLOY_JOB" in
+              deploy-full-stack)
+                set -- backend frontend nginx compose
+                echo "[deploy] mode=full stack reason=docker-compose changed"
+                ;;
+              deploy-backend)
+                set -- backend
+                echo "[deploy] mode=backend services=api,worker"
+                ;;
+              deploy-frontend)
+                set -- frontend
+                echo "[deploy] mode=frontend service=web"
+                ;;
+              deploy-nginx)
+                set -- nginx
+                DIRECTORY_PHASE="certificate directory check"
+                echo "[deploy] mode=nginx service=nginx"
+                ;;
+              *) exit 1 ;;
+            esac
+            record_release() {
+              sudo -n python3 -B .github/scripts/deploy_artifacts.py record-release "$@"
+            }
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.changes.outputs.sha }}
-      - name: Download the already verified image
-        uses: actions/download-artifact@v4
-        with:
-          name: web-image-ready-${{ env.DEPLOY_SHA }}
-          path: ${{ runner.temp }}/parallellines-web-image
-      - name: Download the Forum Web image if available
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: forum-web-image-ready-${{ env.DEPLOY_SHA }}
-          path: ${{ runner.temp }}/parallellines-forum-web-image
-      - name: Verify the exact image before transfer
-        run: python3 .github/scripts/deploy_artifacts.py verify-web --directory "$RUNNER_TEMP/parallellines-web-image" --sha "$DEPLOY_SHA" --run-id "$SOURCE_RUN_ID"
+            # 锁内用目标提交的脚本只读校验，不先重置工作树，也不查询运行容器。
+            RELEASE_HELPER="$(git show "${DEPLOY_REVISION}:.github/scripts/deploy_artifacts.py")"
+            test -n "$RELEASE_HELPER"
+            sudo -n python3 -B - release-state --repo "$PWD" --validate-only <<RELEASE_STATE_HELPER
+            $RELEASE_HELPER
+            RELEASE_STATE_HELPER
+
+            STEP_STARTED_AT=$(date +%s)
+            git reset --hard "$DEPLOY_REVISION"
+            test "$(git rev-parse HEAD)" = "$DEPLOY_REVISION"
+            STEP_FINISHED_AT=$(date +%s)
+            echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
+
+            STEP_STARTED_AT=$(date +%s)
+            sudo test -d /opt/parallellines/var/letsencrypt
+            sudo install -d -m 0755 -o root -g root /opt/parallellines/var/certbot
+            STEP_FINISHED_AT=$(date +%s)
+            echo "[deploy] $DIRECTORY_PHASE took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
+
+            # 只在 Web 两路仍先记待发布并加载归档；后端/网关仍要先核已有网关。
+            if [ "$DEPLOY_JOB" = deploy-full-stack ] || [ "$DEPLOY_JOB" = deploy-frontend ]; then
+              STEP_STARTED_AT=$(date +%s)
+              if [ "$DEPLOY_JOB" = deploy-full-stack ]; then
+                # 首次正式发布由部署账号建立目录，不改变已有目录权限。
+                mkdir -p -- .deployment
+                LOAD_PHASE="frontend image load"
+              else
+                LOAD_PHASE="image load"
+              fi
+              record_release "$@"
+              WEB_IMAGE_BASE="/tmp/parallellines-web-$DEPLOY_REVISION"
+              WEB_IMAGE_ARCHIVE="$WEB_IMAGE_BASE.tar.gz"
+              # 保留归档和跨 classic/containerd 的 config 身份核验。
+              (cd /tmp && sha256sum -c "${WEB_IMAGE_ARCHIVE}.sha256")
+              sudo docker load -i "${WEB_IMAGE_ARCHIVE}"
+              sudo python3 -B .github/scripts/deploy_artifacts.py verify-loaded --sha "$DEPLOY_REVISION"                 --receipt "$WEB_IMAGE_BASE.image.json" --run-id "${{ env.SOURCE_RUN_ID }}"                 --expected-config-digest "$(cat "$WEB_IMAGE_BASE.image-config-digest")"
+              rm -f "${WEB_IMAGE_ARCHIVE}" "${WEB_IMAGE_ARCHIVE}.sha256" "$WEB_IMAGE_BASE.image-id"                 "$WEB_IMAGE_BASE.image-config-digest" "$WEB_IMAGE_BASE.image.json"
+              STEP_FINISHED_AT=$(date +%s)
+              echo "[deploy] $LOAD_PHASE took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
+            fi
+
+            STEP_STARTED_AT=$(date +%s)
+            if sudo docker compose version >/dev/null 2>&1; then
+              COMPOSE="sudo docker compose"
+            else
+              COMPOSE="sudo docker-compose"
+            fi
+            . .github/scripts/select_compose_files.sh
+            STEP_FINISHED_AT=$(date +%s)
+            echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
+
+            STEP_STARTED_AT=$(date +%s)
+            if [ "$DEPLOY_JOB" != deploy-full-stack ] &&
+               ! $COMPOSE $COMPOSE_FILES ps --services --status running 2>/dev/null | grep -qx nginx; then
+              echo "::error::Release pending: gateway is not running. Use the authorized manual full-stack Deploy to recover."
+              exit 1
+            fi
+            case "$DEPLOY_JOB" in
+              deploy-backend|deploy-nginx)
+                record_release "$@"
+                ;;
+              deploy-full-stack|deploy-frontend)
+                if [ "$FORUM_ENABLED" = true ]; then
+                  FORUM_IMAGE_ARCHIVE="/tmp/parallellines-forum-web-$DEPLOY_REVISION.tar.gz"
+                  if [ ! -f "$FORUM_IMAGE_ARCHIVE" ] || [ ! -f "${FORUM_IMAGE_ARCHIVE}.sha256" ]; then
+                    echo "::error::Release pending: enabled Forum has no exact artifact for $DEPLOY_REVISION."
+                    exit 1
+                  fi
+                  (cd /tmp && sha256sum -c "${FORUM_IMAGE_ARCHIVE}.sha256")
+                  sudo docker load -i "$FORUM_IMAGE_ARCHIVE"
+                  sudo docker tag "parallellines-forum-web:$DEPLOY_REVISION" "parallellines-forum-web:$FORUM_IMAGE_TAG"
+                  sudo docker tag "parallellines-forum-web:$DEPLOY_REVISION" "parallellines-forum-web:local"
+                  rm -f "$FORUM_IMAGE_ARCHIVE" "${FORUM_IMAGE_ARCHIVE}.sha256"
+                fi
+                ;;
+            esac
+
+            case "$DEPLOY_JOB" in
+              deploy-full-stack)
+                $COMPOSE $COMPOSE_FILES build api worker nginx
+                $COMPOSE $COMPOSE_FILES up -d --no-build
+                PHASE="compose full deploy"
+                ;;
+              deploy-backend)
+                $COMPOSE $COMPOSE_FILES up -d --build api worker
+                $COMPOSE $COMPOSE_FILES exec -T nginx nginx -s reload
+                PHASE="backend deploy"
+                ;;
+              deploy-frontend)
+                $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build --force-recreate web
+                if [ "$FORUM_ENABLED" = true ]; then
+                  $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build --force-recreate forum-web
+                fi
+                $COMPOSE $COMPOSE_FILES exec -T nginx nginx -s reload
+                PHASE="frontend deploy"
+                ;;
+              deploy-nginx)
+                $COMPOSE $COMPOSE_FILES up -d --no-deps --build --force-recreate nginx
+                PHASE="nginx deploy"
+                ;;
+            esac
+            STEP_FINISHED_AT=$(date +%s)
+            echo "[deploy] $PHASE took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
+
+            if [ "$DEPLOY_JOB" = deploy-full-stack ] || [ "$DEPLOY_JOB" = deploy-nginx ]; then
+              STEP_STARTED_AT=$(date +%s)
+              if sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/fullchain.pem && sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/privkey.pem; then
+                echo "[deploy] certificate already exists; skipping certbot bootstrap"
+              else
+                echo "[deploy] certificate missing; requesting initial Let's Encrypt certificate"
+                if $COMPOSE $COMPOSE_FILES run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
+                  $COMPOSE $COMPOSE_FILES exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
+                else
+                  echo "::warning::Let's Encrypt certificate request failed; Nginx is running with a temporary self-signed certificate."
+                fi
+              fi
+              STEP_FINISHED_AT=$(date +%s)
+              echo "[deploy] certificate check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
+            fi
+
+            record_release --revision "$DEPLOY_REVISION" "$@"
+            DEPLOY_FINISHED_AT=$(date +%s)
+            echo "[deploy] total took $((DEPLOY_FINISHED_AT - DEPLOY_STARTED_AT))s"
+            DEPLOY_WITH_TLS_LOCK
 
       - name: Upload frontend image archive to server
+        if: steps.target.outputs.ready == 'true' && steps.plan.outputs.web_required == 'true'
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -197,6 +373,7 @@ jobs:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           set -euo pipefail
+          python3 .github/scripts/deploy_artifacts.py verify-web --directory "$RUNNER_TEMP/parallellines-web-image" --sha "$DEPLOY_SHA" --run-id "$SOURCE_RUN_ID"
           install -m 700 -d ~/.ssh
           printf '%s\n' "${DEPLOY_SSH_KEY}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
@@ -213,444 +390,23 @@ jobs:
             timeout 900 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${FORUM_ARTIFACT}.tar.gz" "${FORUM_ARTIFACT}.tar.gz.sha256" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
           fi
 
-      - name: Deploy all services to server
+      - name: Deploy full stack (compose)
+        if: steps.target.outputs.ready == 'true' && steps.plan.outputs.compose == 'true'
         uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
-          port: ${{ secrets.DEPLOY_PORT }}
-          command_timeout: 30m
-          script: |
-            set -eu
-            DEPLOY_REVISION="${{ needs.changes.outputs.sha }}"
-            sudo mountpoint -q /data
-            sudo test -d /data/uploads/parallellines
-            sudo test -d /data/backups/parallellines
-            sudo test -s /opt/parallellines/apps/api/.env
-            WEB_IMAGE_BASE="/tmp/parallellines-web-$DEPLOY_REVISION"
-            WEB_IMAGE_ARCHIVE="$WEB_IMAGE_BASE.tar.gz"
-            DEPLOY_STARTED_AT=$(date +%s)
-            echo "[deploy] mode=full stack reason=docker-compose changed"
-
-            STEP_STARTED_AT=$(date +%s)
-            cd /opt/parallellines
-            git remote set-url origin https://github.com/${{ github.repository }}.git
-            git fetch --prune origin main
-            git cat-file -e "${DEPLOY_REVISION}^{commit}" 2>/dev/null || git fetch origin "$DEPLOY_REVISION"
-            git reset --hard "$DEPLOY_REVISION"
-            test "$(git rev-parse HEAD)" = "$DEPLOY_REVISION"
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            sudo test -d /opt/parallellines/var/letsencrypt
-            sudo install -d -m 0755 -o root -g root /opt/parallellines/var/certbot
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] storage directory check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            # 先核传输完整性，再确认 SHA 标签、兼容 latest 与实际镜像身份一致。
-            (cd /tmp && sha256sum -c "${WEB_IMAGE_ARCHIVE}.sha256")
-            sudo docker load -i "${WEB_IMAGE_ARCHIVE}"
-            # native ID 仅作构建审计；跨 classic/containerd 使用 config 原始内容摘要核验。
-            sudo python3 -B .github/scripts/deploy_artifacts.py verify-loaded --sha "$DEPLOY_REVISION" \
-              --receipt "$WEB_IMAGE_BASE.image.json" --run-id "${{ env.SOURCE_RUN_ID }}" \
-              --expected-config-digest "$(cat "$WEB_IMAGE_BASE.image-config-digest")"
-            rm -f "${WEB_IMAGE_ARCHIVE}" "${WEB_IMAGE_ARCHIVE}.sha256" "$WEB_IMAGE_BASE.image-id" \
-              "$WEB_IMAGE_BASE.image-config-digest" "$WEB_IMAGE_BASE.image.json"
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] frontend image load took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            if sudo docker compose version >/dev/null 2>&1; then
-              COMPOSE="sudo docker compose"
-            else
-              COMPOSE="sudo docker-compose"
-            fi
-            . .github/scripts/select_compose_files.sh
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            if [ "$FORUM_ENABLED" = true ]; then
-              FORUM_IMAGE_ARCHIVE="/tmp/parallellines-forum-web-$DEPLOY_REVISION.tar.gz"
-              if [ -f "$FORUM_IMAGE_ARCHIVE" ] && [ -f "${FORUM_IMAGE_ARCHIVE}.sha256" ]; then
-                (cd /tmp && sha256sum -c "${FORUM_IMAGE_ARCHIVE}.sha256")
-                sudo docker load -i "$FORUM_IMAGE_ARCHIVE"
-                sudo docker tag "parallellines-forum-web:$DEPLOY_REVISION" "parallellines-forum-web:$FORUM_IMAGE_TAG"
-                sudo docker tag "parallellines-forum-web:$DEPLOY_REVISION" "parallellines-forum-web:local"
-                rm -f "$FORUM_IMAGE_ARCHIVE" "${FORUM_IMAGE_ARCHIVE}.sha256"
-              else
-                sudo docker tag "parallellines-forum-web:$FORUM_IMAGE_TAG" "parallellines-forum-web:local"
-              fi
-            fi
-            $COMPOSE $COMPOSE_FILES build api worker nginx
-            $COMPOSE $COMPOSE_FILES up -d --no-build
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] compose full deploy took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            if sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/fullchain.pem && sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/privkey.pem; then
-              echo "[deploy] certificate already exists; skipping certbot bootstrap"
-            else
-              echo "[deploy] certificate missing; requesting initial Let's Encrypt certificate"
-              if $COMPOSE $COMPOSE_FILES run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
-                $COMPOSE $COMPOSE_FILES exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
-              else
-                echo "::warning::Let's Encrypt certificate request failed; Nginx is running with a temporary self-signed certificate."
-              fi
-            fi
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] certificate check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            DEPLOY_FINISHED_AT=$(date +%s)
-            echo "[deploy] total took $((DEPLOY_FINISHED_AT - DEPLOY_STARTED_AT))s"
-
-  deploy-backend:
-    name: Deploy backend (api + worker)
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.ready == 'true' && needs.changes.outputs.backend == 'true' && needs.changes.outputs.compose != 'true'
-
-    steps:
-      - name: Deploy backend services to server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
-          port: ${{ secrets.DEPLOY_PORT }}
-          command_timeout: 20m
-          script: |
-            set -eu
-            DEPLOY_REVISION="${{ needs.changes.outputs.sha }}"
-            sudo mountpoint -q /data
-            sudo test -d /data/uploads/parallellines
-            sudo test -d /data/backups/parallellines
-            sudo test -s /opt/parallellines/apps/api/.env
-            DEPLOY_STARTED_AT=$(date +%s)
-            echo "[deploy] mode=backend services=api,worker"
-
-            STEP_STARTED_AT=$(date +%s)
-            cd /opt/parallellines
-            git remote set-url origin https://github.com/${{ github.repository }}.git
-            git fetch --prune origin main
-            git cat-file -e "${DEPLOY_REVISION}^{commit}" 2>/dev/null || git fetch origin "$DEPLOY_REVISION"
-            git reset --hard "$DEPLOY_REVISION"
-            test "$(git rev-parse HEAD)" = "$DEPLOY_REVISION"
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            sudo test -d /opt/parallellines/var/letsencrypt
-            sudo install -d -m 0755 -o root -g root /opt/parallellines/var/certbot
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] storage directory check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            if sudo docker compose version >/dev/null 2>&1; then
-              COMPOSE="sudo docker compose"
-            else
-              COMPOSE="sudo docker-compose"
-            fi
-            . .github/scripts/select_compose_files.sh
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            FULL_BOOTSTRAP=false
-            if ! $COMPOSE $COMPOSE_FILES ps --services --status running 2>/dev/null | grep -qx nginx; then
-              echo "[deploy] nginx is not running; falling back to full bootstrap"
-              FULL_BOOTSTRAP=true
-              if [ "$FORUM_ENABLED" = true ]; then
-                # 论坛沿用标记锁定的独立镜像，主站 bootstrap 不重建或覆盖该标签。
-                $COMPOSE $COMPOSE_FILES build api worker web nginx
-                $COMPOSE $COMPOSE_FILES up -d --no-build
-              else
-                $COMPOSE $COMPOSE_FILES up -d --build
-              fi
-            else
-              $COMPOSE $COMPOSE_FILES up -d --build api worker
-              $COMPOSE $COMPOSE_FILES exec -T nginx nginx -s reload
-            fi
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] backend deploy took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            if [ "${FULL_BOOTSTRAP}" = "true" ]; then
-              STEP_STARTED_AT=$(date +%s)
-              if sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/fullchain.pem && sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/privkey.pem; then
-                echo "[deploy] certificate already exists; skipping certbot bootstrap"
-              else
-                echo "[deploy] certificate missing after bootstrap; requesting initial Let's Encrypt certificate"
-                if $COMPOSE $COMPOSE_FILES run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
-                  $COMPOSE $COMPOSE_FILES exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
-                else
-                  echo "::warning::Let's Encrypt certificate request failed; Nginx is running with a temporary self-signed certificate."
-                fi
-              fi
-              STEP_FINISHED_AT=$(date +%s)
-              echo "[deploy] bootstrap certificate check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-            fi
-
-            DEPLOY_FINISHED_AT=$(date +%s)
-            echo "[deploy] total took $((DEPLOY_FINISHED_AT - DEPLOY_STARTED_AT))s"
-
-  deploy-frontend:
-    name: Deploy frontend (web)
-    runs-on: ubuntu-latest
-    needs:
-      - changes
-      - deploy-backend
-    if: |
-      always() &&
-      needs.changes.result == 'success' &&
-      needs.changes.outputs.ready == 'true' &&
-      needs.changes.outputs.frontend == 'true' &&
-      needs.changes.outputs.compose != 'true' &&
-      (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped')
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.changes.outputs.sha }}
-      - name: Download the already verified image
-        uses: actions/download-artifact@v4
-        with:
-          name: web-image-ready-${{ env.DEPLOY_SHA }}
-          path: ${{ runner.temp }}/parallellines-web-image
-      - name: Download the Forum Web image if available
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: forum-web-image-ready-${{ env.DEPLOY_SHA }}
-          path: ${{ runner.temp }}/parallellines-forum-web-image
-      - name: Verify the exact image before transfer
-        run: python3 .github/scripts/deploy_artifacts.py verify-web --directory "$RUNNER_TEMP/parallellines-web-image" --sha "$DEPLOY_SHA" --run-id "$SOURCE_RUN_ID"
-
-      - name: Upload frontend image archive to server
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-        run: |
-          set -euo pipefail
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "${DEPLOY_SSH_KEY}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          PORT="${DEPLOY_PORT:-22}"
-          ssh-keyscan -T 10 -t ed25519 -p "${PORT}" "${DEPLOY_HOST}" > /tmp/deploy-host-key 2>/dev/null
-          test "$(ssh-keygen -lf /tmp/deploy-host-key | awk '{print $2}')" = "SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA"
-          cat /tmp/deploy-host-key >> ~/.ssh/known_hosts
-          ARTIFACT="$RUNNER_TEMP/parallellines-web-image/parallellines-web-$DEPLOY_SHA"
-          cp "$RUNNER_TEMP/parallellines-web-image/web-image.json" "${ARTIFACT}.image.json"
-          # 与全量发布使用相同的有限传输窗口。
-          timeout 900 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${ARTIFACT}.tar.gz" "${ARTIFACT}.tar.gz.sha256" "${ARTIFACT}.image-id" "${ARTIFACT}.image-config-digest" "${ARTIFACT}.image.json" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
-          FORUM_ARTIFACT="$RUNNER_TEMP/parallellines-forum-web-image/parallellines-forum-web-$DEPLOY_SHA"
-          if [ -f "${FORUM_ARTIFACT}.tar.gz" ] && [ -f "${FORUM_ARTIFACT}.tar.gz.sha256" ]; then
-            timeout 900 scp -P "${PORT}" -i ~/.ssh/deploy_key -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 "${FORUM_ARTIFACT}.tar.gz" "${FORUM_ARTIFACT}.tar.gz.sha256" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
-          fi
+          MAIN_DEPLOY_MODE: deploy-full-stack
+        with: *apply_main_release
 
-      - name: Deploy frontend service to server
+      - name: Deploy frontend (web)
+        if: steps.target.outputs.ready == 'true' && steps.plan.outputs.frontend == 'true' && steps.plan.outputs.compose != 'true'
         uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
-          port: ${{ secrets.DEPLOY_PORT }}
-          command_timeout: 20m
-          script: |
-            set -eu
-            DEPLOY_REVISION="${{ needs.changes.outputs.sha }}"
-            sudo mountpoint -q /data
-            sudo test -d /data/uploads/parallellines
-            sudo test -d /data/backups/parallellines
-            sudo test -s /opt/parallellines/apps/api/.env
-            DEPLOY_STARTED_AT=$(date +%s)
-            WEB_IMAGE_BASE="/tmp/parallellines-web-$DEPLOY_REVISION"
-            WEB_IMAGE_ARCHIVE="$WEB_IMAGE_BASE.tar.gz"
-            echo "[deploy] mode=frontend service=web"
+        env:
+          MAIN_DEPLOY_MODE: deploy-frontend
+        with: *apply_main_release
 
-            STEP_STARTED_AT=$(date +%s)
-            cd /opt/parallellines
-            git remote set-url origin https://github.com/${{ github.repository }}.git
-            git fetch --prune origin main
-            git cat-file -e "${DEPLOY_REVISION}^{commit}" 2>/dev/null || git fetch origin "$DEPLOY_REVISION"
-            git reset --hard "$DEPLOY_REVISION"
-            test "$(git rev-parse HEAD)" = "$DEPLOY_REVISION"
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            sudo test -d /opt/parallellines/var/letsencrypt
-            sudo install -d -m 0755 -o root -g root /opt/parallellines/var/certbot
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] storage directory check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-            STEP_STARTED_AT=$(date +%s)
-            # 先核传输完整性，再确认 SHA 标签、兼容 latest 与实际镜像身份一致。
-            (cd /tmp && sha256sum -c "${WEB_IMAGE_ARCHIVE}.sha256")
-            sudo docker load -i "${WEB_IMAGE_ARCHIVE}"
-            # native ID 仅作构建审计；跨 classic/containerd 使用 config 原始内容摘要核验。
-            sudo python3 -B .github/scripts/deploy_artifacts.py verify-loaded --sha "$DEPLOY_REVISION" \
-              --receipt "$WEB_IMAGE_BASE.image.json" --run-id "${{ env.SOURCE_RUN_ID }}" \
-              --expected-config-digest "$(cat "$WEB_IMAGE_BASE.image-config-digest")"
-            rm -f "${WEB_IMAGE_ARCHIVE}" "${WEB_IMAGE_ARCHIVE}.sha256" "$WEB_IMAGE_BASE.image-id" \
-              "$WEB_IMAGE_BASE.image-config-digest" "$WEB_IMAGE_BASE.image.json"
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] image load took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            if sudo docker compose version >/dev/null 2>&1; then
-              COMPOSE="sudo docker compose"
-            else
-              COMPOSE="sudo docker-compose"
-            fi
-            . .github/scripts/select_compose_files.sh
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            FULL_BOOTSTRAP=false
-            if ! $COMPOSE $COMPOSE_FILES ps --services --status running 2>/dev/null | grep -qx nginx; then
-              echo "[deploy] nginx is not running; falling back to full bootstrap"
-              FULL_BOOTSTRAP=true
-              $COMPOSE $COMPOSE_FILES up -d --build db redis api worker
-              $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build --force-recreate web
-              if [ "$FORUM_ENABLED" = true ]; then
-                $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build forum-web
-              fi
-              $COMPOSE $COMPOSE_FILES up -d --no-deps --build nginx
-              $COMPOSE $COMPOSE_FILES up -d --no-deps certbot
-            else
-              $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build --force-recreate web
-              FORUM_IMAGE_ARCHIVE="/tmp/parallellines-forum-web-$DEPLOY_REVISION.tar.gz"
-              if [ "$FORUM_ENABLED" = true ] && [ -f "$FORUM_IMAGE_ARCHIVE" ] && [ -f "${FORUM_IMAGE_ARCHIVE}.sha256" ]; then
-                (cd /tmp && sha256sum -c "${FORUM_IMAGE_ARCHIVE}.sha256")
-                sudo docker load -i "$FORUM_IMAGE_ARCHIVE"
-                sudo docker tag "parallellines-forum-web:$DEPLOY_REVISION" "parallellines-forum-web:$FORUM_IMAGE_TAG"
-                sudo docker tag "parallellines-forum-web:$DEPLOY_REVISION" "parallellines-forum-web:local"
-                rm -f "$FORUM_IMAGE_ARCHIVE" "${FORUM_IMAGE_ARCHIVE}.sha256"
-                $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build --force-recreate forum-web
-              fi
-              $COMPOSE $COMPOSE_FILES exec -T nginx nginx -s reload
-            fi
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] frontend deploy took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            if [ "${FULL_BOOTSTRAP}" = "true" ]; then
-              STEP_STARTED_AT=$(date +%s)
-              if sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/fullchain.pem && sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/privkey.pem; then
-                echo "[deploy] certificate already exists; skipping certbot bootstrap"
-              else
-                echo "[deploy] certificate missing after bootstrap; requesting initial Let's Encrypt certificate"
-                if $COMPOSE $COMPOSE_FILES run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
-                  $COMPOSE $COMPOSE_FILES exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
-                else
-                  echo "::warning::Let's Encrypt certificate request failed; Nginx is running with a temporary self-signed certificate."
-                fi
-              fi
-              STEP_FINISHED_AT=$(date +%s)
-              echo "[deploy] bootstrap certificate check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-            fi
-
-            DEPLOY_FINISHED_AT=$(date +%s)
-            echo "[deploy] total took $((DEPLOY_FINISHED_AT - DEPLOY_STARTED_AT))s"
-
-  deploy-nginx:
-    name: Deploy nginx edge
-    runs-on: ubuntu-latest
-    needs:
-      - changes
-      - deploy-backend
-      - deploy-frontend
-    if: |
-      always() &&
-      needs.changes.result == 'success' &&
-      needs.changes.outputs.ready == 'true' &&
-      needs.changes.outputs.nginx == 'true' &&
-      needs.changes.outputs.compose != 'true' &&
-      (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped') &&
-      (needs.deploy-frontend.result == 'success' || needs.deploy-frontend.result == 'skipped')
-
-    steps:
-      - name: Deploy nginx service to server
+      - name: Deploy nginx edge
+        if: steps.target.outputs.ready == 'true' && steps.plan.outputs.nginx == 'true' && steps.plan.outputs.compose != 'true'
         uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
-          port: ${{ secrets.DEPLOY_PORT }}
-          command_timeout: 20m
-          script: |
-            set -eu
-            DEPLOY_REVISION="${{ needs.changes.outputs.sha }}"
-            sudo mountpoint -q /data
-            sudo test -d /data/uploads/parallellines
-            sudo test -d /data/backups/parallellines
-            sudo test -s /opt/parallellines/apps/api/.env
-            DEPLOY_STARTED_AT=$(date +%s)
-            echo "[deploy] mode=nginx service=nginx"
-
-            STEP_STARTED_AT=$(date +%s)
-            cd /opt/parallellines
-            git remote set-url origin https://github.com/${{ github.repository }}.git
-            git fetch --prune origin main
-            git cat-file -e "${DEPLOY_REVISION}^{commit}" 2>/dev/null || git fetch origin "$DEPLOY_REVISION"
-            git reset --hard "$DEPLOY_REVISION"
-            test "$(git rev-parse HEAD)" = "$DEPLOY_REVISION"
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] checkout took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            sudo test -d /opt/parallellines/var/letsencrypt
-            sudo install -d -m 0755 -o root -g root /opt/parallellines/var/certbot
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] certificate directory check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            if sudo docker compose version >/dev/null 2>&1; then
-              COMPOSE="sudo docker compose"
-            else
-              COMPOSE="sudo docker-compose"
-            fi
-            . .github/scripts/select_compose_files.sh
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] compose detection took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            if ! $COMPOSE $COMPOSE_FILES ps --services --status running 2>/dev/null | grep -qx nginx; then
-              echo "[deploy] nginx is not running; falling back to full bootstrap"
-              if [ "$FORUM_ENABLED" = true ]; then
-                # 论坛发布节奏独立；这里只恢复已经存在的锁定镜像。
-                $COMPOSE $COMPOSE_FILES build api worker web nginx
-                $COMPOSE $COMPOSE_FILES up -d --no-build
-              else
-                $COMPOSE $COMPOSE_FILES up -d --build
-              fi
-            else
-              $COMPOSE $COMPOSE_FILES up -d --no-deps --build --force-recreate nginx
-            fi
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] nginx deploy took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            STEP_STARTED_AT=$(date +%s)
-            if sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/fullchain.pem && sudo test -s /opt/parallellines/var/letsencrypt/live/pingxingxian.space/privkey.pem; then
-              echo "[deploy] certificate already exists; skipping certbot bootstrap"
-            else
-              echo "[deploy] certificate missing; requesting initial Let's Encrypt certificate"
-              if $COMPOSE $COMPOSE_FILES run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name pingxingxian.space --keep-until-expiring --non-interactive --agree-tos --register-unsafely-without-email -d pingxingxian.space -d www.pingxingxian.space; then
-                $COMPOSE $COMPOSE_FILES exec -T nginx sh -c 'ln -sf /etc/letsencrypt/live/pingxingxian.space/fullchain.pem /etc/nginx/ssl/live/fullchain.pem && ln -sf /etc/letsencrypt/live/pingxingxian.space/privkey.pem /etc/nginx/ssl/live/privkey.pem && nginx -s reload'
-              else
-                echo "::warning::Let's Encrypt certificate request failed; Nginx is running with a temporary self-signed certificate."
-              fi
-            fi
-            STEP_FINISHED_AT=$(date +%s)
-            echo "[deploy] certificate check took $((STEP_FINISHED_AT - STEP_STARTED_AT))s"
-
-            DEPLOY_FINISHED_AT=$(date +%s)
-            echo "[deploy] total took $((DEPLOY_FINISHED_AT - DEPLOY_STARTED_AT))s"
+        env:
+          MAIN_DEPLOY_MODE: deploy-nginx
+        with: *apply_main_release

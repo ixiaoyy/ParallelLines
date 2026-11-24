@@ -6,10 +6,13 @@ import io
 import json
 import os
 from pathlib import Path
+import runpy
+import stat
 import subprocess
 import sys
 import tarfile
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -81,23 +84,149 @@ class DeployPlanTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             artifacts.flag("yes")
 
-    def test_cli_plan_and_read_emit_the_actual_workflow_outputs(self):
+    def test_cli_plan_and_resolve_emit_the_actual_workflow_outputs(self):
         with tempfile.TemporaryDirectory() as directory:
             plan = Path(directory) / "plan.json"
+            state = Path(directory) / "state.json"
             created = Path(directory) / "created.txt"
             consumed = Path(directory) / "consumed.txt"
-            env = {**os.environ, **self.environment(FULL_SCOPE="false", FRONTEND_CHANGED="true")}
+            env = {**os.environ, **self.environment(FULL_SCOPE="false", FRONTEND_CHANGED="false")}
             script = str(ROOT / ".github/scripts/deploy_artifacts.py")
             subprocess.run([sys.executable, script, "plan", "--output", str(plan),
                             "--github-output", str(created)], env=env, check=True, timeout=10)
+            state.write_text(json.dumps({"schema": 1, "forum_enabled": True,
+                                         "revisions": dict.fromkeys(artifacts.RELEASE_PATHS, SHA) | {"frontend": None}}),
+                             encoding="utf-8")
             env.update(GITHUB_EVENT_NAME="workflow_run", DEPLOY_SHA=SHA, SOURCE_RUN_ID="42")
-            subprocess.run([sys.executable, script, "read-plan", "--source", str(plan),
+            subprocess.run([sys.executable, script, "resolve-deploy", "--source", str(plan), "--release-state", str(state),
                             "--github-output", str(consumed)], env=env, check=True, timeout=10)
             values = dict(line.split("=", 1) for line in consumed.read_text().splitlines())
             self.assertEqual(values["sha"], SHA)
             self.assertEqual(values["source_run_id"], "42")
             self.assertEqual(values["web_required"], "true")
             self.assertEqual(values["backend"], "false")
+            self.assertEqual(values["forum_enabled"], "true")
+
+
+class ReleaseReconciliationTests(unittest.TestCase):
+    COMPONENTS = ("backend", "frontend", "nginx", "compose")
+
+    def plan(self, **changes):
+        return artifacts.make_plan({
+            "GITHUB_SHA": SHA, "GITHUB_REPOSITORY": REPOSITORY, "GITHUB_RUN_ID": "42",
+            "GITHUB_EVENT_NAME": "push", "GITHUB_REF": "refs/heads/main", "BEFORE_SHA": BEFORE,
+            **changes,
+        })
+
+    def state(self, **revisions):
+        return {"schema": 1, "revisions": dict.fromkeys(self.COMPONENTS, BEFORE) | revisions,
+                "forum_enabled": False}
+
+    def test_following_push_includes_unreleased_backend_when_same_run_checked_it(self):
+        # A changed the API but never deployed; B only changed docs, and checked the API.
+        earlier_release = "c" * 40
+        plan = self.plan(CHECK_BACKEND="true")
+        self.assertFalse(any(plan["scopes"].values()))
+        changed = mock.Mock(side_effect=lambda component, old, target:
+                            (component, old, target) == ("backend", earlier_release, SHA))
+
+        scopes = artifacts.reconcile_scopes(plan, self.state(backend=earlier_release), changed)
+
+        self.assertEqual(scopes, dict.fromkeys(self.COMPONENTS, False) | {"backend": True})
+        changed.assert_any_call("backend", earlier_release, SHA)
+
+    def test_backlog_without_matching_backend_checks_stops_instead_of_silently_skipping(self):
+        # 前端检查不能替代待发布后端代码的同次 CI。
+        plan = self.plan(CHECK_FRONTEND="true")
+        with self.assertRaisesRegex(ValueError, "^deploy_pending_backend_checks$"):
+            artifacts.reconcile_scopes(
+                plan, self.state(), lambda component, *_: component == "backend")
+
+    def test_compose_only_keeps_existing_ci_without_requiring_backend_code_checks(self):
+        scopes = artifacts.reconcile_scopes(
+            self.plan(), self.state(), lambda component, *_: component == "compose")
+        self.assertEqual(scopes, dict.fromkeys(self.COMPONENTS, False) | {"compose": True})
+
+    def test_following_docs_push_still_requires_web_when_a_frontend_release_was_skipped(self):
+        before_a = "c" * 40
+        plan = self.plan()
+        self.assertFalse(plan["scopes"]["frontend"])
+        scopes = artifacts.reconcile_scopes(
+            plan, self.state(frontend=before_a),
+            lambda component, old, target: (component, old, target) == ("frontend", before_a, SHA),
+        )
+        self.assertTrue(scopes["frontend"])
+
+    def test_only_docs_since_the_running_revisions_has_no_deploy_scope(self):
+        scopes = artifacts.reconcile_scopes(self.plan(), self.state(), lambda *_: False)
+        self.assertEqual(scopes, dict.fromkeys(self.COMPONENTS, False))
+
+    def test_partial_success_only_repairs_components_with_a_remaining_difference(self):
+        # This push touched the API and Web, but a previous attempt already applied the API.
+        older_web = "d" * 40
+        changed = mock.Mock(side_effect=lambda component, old, target:
+                            (component, old, target) == ("frontend", older_web, SHA))
+        scopes = artifacts.reconcile_scopes(
+            self.plan(BACKEND_CHANGED="true", FRONTEND_CHANGED="true"),
+            self.state(backend=SHA, frontend=older_web), changed)
+
+        self.assertEqual(scopes, dict.fromkeys(self.COMPONENTS, False) | {"frontend": True})
+        changed.assert_any_call("frontend", older_web, SHA)
+
+    def test_revert_compares_with_the_version_running_not_the_old_git_baseline(self):
+        # Target restored older contents, but the version in production still has the change.
+        deployed_change = "e" * 40
+        changed = mock.Mock(side_effect=lambda component, old, target:
+                            (component, old, target) == ("backend", deployed_change, SHA))
+        scopes = artifacts.reconcile_scopes(
+            self.plan(CHECK_WORKFLOW="true"), self.state(backend=deployed_change), changed)
+
+        self.assertEqual(scopes, dict.fromkeys(self.COMPONENTS, False) | {"backend": True})
+        changed.assert_any_call("backend", deployed_change, SHA)
+
+    def test_missing_baseline_blocks_bootstrap_but_a_missing_component_stays_pending(self):
+        with self.assertRaisesRegex(ValueError, "^deploy_baseline_missing$"):
+            artifacts.reconcile_scopes(
+                self.plan(CHECK_WORKFLOW="true"),
+                self.state(**dict.fromkeys(self.COMPONENTS)), lambda *_: False)
+
+        scopes = artifacts.reconcile_scopes(
+            self.plan(), self.state(nginx=None), lambda *_: False)
+        self.assertEqual(scopes, dict.fromkeys(self.COMPONENTS, False) | {"nginx": True})
+
+
+class ReleaseReceiptTests(unittest.TestCase):
+    def test_partial_progress_survives_and_changed_live_container_is_not_a_baseline(self):
+        containers = dict(zip(("api", "worker", "web", "nginx", "db", "redis", "certbot"),
+                              (str(index) * 64 for index in range(1, 8))))
+        statuses = "running healthy\nrunning none\nrunning healthy\nrunning healthy\n" \
+                   "running healthy\nrunning healthy\nrunning none\n"
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            with mock.patch.object(artifacts, "running_release_containers", return_value=containers):
+                self.assertIsNone(artifacts.release_snapshot(repo)["revisions"]["frontend"])
+                with mock.patch.object(artifacts.subprocess, "check_output", return_value=statuses):
+                    artifacts.record_release(repo, list(artifacts.RELEASE_PATHS), BEFORE)
+                artifacts.record_release(repo, ["backend", "frontend"], None)
+                with mock.patch.object(artifacts.subprocess, "check_output",
+                                       return_value="running healthy\nrunning none\n"):
+                    artifacts.record_release(repo, ["backend"], SHA)
+                self.assertEqual(artifacts.release_snapshot(repo)["revisions"],
+                                 {"backend": SHA, "frontend": None, "nginx": BEFORE, "compose": BEFORE})
+                containers["nginx"] = "9" * 64
+                with self.assertRaisesRegex(ValueError, "^deploy_baseline_drift:nginx$"):
+                    artifacts.release_snapshot(repo)
+
+    def test_unhealthy_target_keeps_selected_scope_pending(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            artifacts.record_release(repo, ["frontend"], None)
+            with mock.patch.object(artifacts, "running_release_containers", return_value={"web": "1" * 64}), \
+                    mock.patch.object(artifacts.subprocess, "check_output", return_value="running starting\n"), \
+                    mock.patch.object(artifacts.time, "monotonic", side_effect=[0, artifacts.RELEASE_READY_SECONDS]):
+                with self.assertRaisesRegex(ValueError, "^deploy_release_readiness_timeout$"):
+                    artifacts.record_release(repo, ["frontend"], SHA)
+            self.assertIsNone(artifacts.read_release_state(repo)["frontend"])
 
 
 def raw_json(value):
@@ -448,9 +577,107 @@ class LoadedImageTests(unittest.TestCase):
                     artifacts.main()
 
 
+class GatewayTLSLockTests(unittest.TestCase):
+    def setUp(self):
+        # Windows 本地没有 fcntl/pwd；这里替换系统调用，模拟忙锁、真实 inode 与权限切换。
+        self.flock = mock.Mock(LOCK_EX=2, LOCK_NB=4)
+        account = SimpleNamespace(pw_name="deploy", pw_dir="/home/deploy")
+        with mock.patch.dict(sys.modules, {"fcntl": self.flock, "pwd": mock.Mock(
+                getpwuid=mock.Mock(return_value=account))}):
+            loaded = runpy.run_path(str(ROOT / "deploy/nginx/run-deploy-with-tls-lock.py"))
+        self.main = loaded["main"]
+        self.guard = self.main.__globals__
+        self.metadata = SimpleNamespace(st_mode=stat.S_IFREG | 0o600, st_uid=0, st_dev=2, st_ino=3)
+        self.path = mock.Mock()
+        self.path.parent.resolve.return_value = self.path.parent
+        self.path.lstat.return_value = self.metadata
+        self.os = mock.Mock(O_RDONLY=0, O_NOFOLLOW=4, O_NONBLOCK=8,
+                            environ={"SUDO_UID": "1001", "SUDO_GID": "1002", "SUDO_USER": "deploy"})
+        self.os.open.return_value = 15
+        self.os.fstat.return_value = self.metadata
+        self.guard.update(os=self.os, LOCK_FILE=self.path)
+
+    def run_guard(self):
+        with mock.patch("sys.stdin", SimpleNamespace(buffer=io.BytesIO(b"exit 0\n"))), \
+                mock.patch("sys.stderr", new_callable=io.StringIO):
+            return self.main([SHA])
+
+    def test_busy_or_missing_lock_never_starts_release(self):
+        self.flock.flock.side_effect = BlockingIOError
+        self.assertEqual(self.run_guard(), self.guard["LOCK_BUSY"])
+        self.os.close.assert_called_once_with(15)
+        self.os.initgroups.assert_not_called()
+        self.os.execve.assert_not_called()
+        self.os.open.side_effect = FileNotFoundError
+        self.assertEqual(self.run_guard(), 1)
+        self.os.open.assert_called_with(self.path, 12)
+        self.os.execve.assert_not_called()
+
+    def test_substituted_inode_stops_before_switching_identity(self):
+        self.path.lstat.return_value = SimpleNamespace(st_dev=2, st_ino=4)
+        self.assertEqual(self.run_guard(), 1)
+        self.os.execve.assert_not_called()
+        self.os.initgroups.assert_not_called()
+        self.os.close.assert_called_once_with(15)
+
+    def test_runner_inherits_same_lock_and_uses_original_deploy_user(self):
+        events = []
+        self.flock.flock.side_effect = lambda *_: events.append("flock")
+        self.os.dup2.side_effect = lambda *_, **__: events.append("inherit fd")
+        self.os.setuid.side_effect = lambda *_: events.append("drop root")
+        self.os.execve.side_effect = lambda *_: events.append("exec")
+        self.run_guard()
+        self.assertEqual(events, ["flock", "inherit fd", "drop root", "exec"])
+        self.os.dup2.assert_called_once_with(15, 9, inheritable=True)
+        self.os.initgroups.assert_called_once_with("deploy", 1002)
+        self.os.setuid.assert_called_once_with(1001)
+        self.assertEqual(self.os.execve.call_args.args, (
+            "/bin/sh", [b"/bin/sh", b"-ec", b"exit 0\n", b"main-deploy", SHA.encode()],
+            {"HOME": "/home/deploy", "USER": "deploy", "LOGNAME": "deploy"},
+        ))
+
+
 class WorkflowWiringTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.deploy = (ROOT / ".github/workflows/deploy.yml").read_text(encoding="utf-8")
+        cls.apply = cls.deploy.split("        with: &apply_main_release\n", 1)[1].split(
+            "      - name: Upload frontend image archive to server", 1)[0]
+
+    def test_every_main_mutation_holds_the_existing_gateway_lock_through_the_receipt(self):
+        before, body = self.apply.split("<<'DEPLOY_WITH_TLS_LOCK'\n", 1)
+        locked, after = body.split("            DEPLOY_WITH_TLS_LOCK\n", 1)
+        self.assertIn("git fetch --prune origin main", before)
+        self.assertIn('git show "${DEPLOY_REVISION}:deploy/nginx/run-deploy-with-tls-lock.py"', before)
+        self.assertIn('git reset --hard "$DEPLOY_REVISION"', locked)
+        self.assertIn('record_release --revision "$DEPLOY_REVISION" "$@"', locked)
+        for outside in (before, after):
+            self.assertNotIn("git reset --hard", outside)
+            self.assertNotIn("nginx -s reload", outside)
+            self.assertNotIn("$COMPOSE $COMPOSE_FILES up", outside)
+        self.assertLess(locked.index("WEB_IMAGE_BASE="), locked.index("sudo docker load -i"))
+        self.assertIn("env.MAIN_DEPLOY_MODE == 'deploy-full-stack' && '30m' || '20m'", self.apply)
+        for mode in ("full-stack", "frontend", "nginx"):
+            self.assertIn(f"MAIN_DEPLOY_MODE: deploy-{mode}\n        with: *apply_main_release", self.deploy)
+
+    def test_deploy_reconciles_before_requiring_artifacts_and_records_after_service_changes(self):
+        deploy = self.deploy
+        self.assertLess(deploy.index("release-state --repo"), deploy.index("resolve-deploy"))
+        self.assertLess(deploy.index("resolve-deploy"), deploy.index("id: download_web"))
+        self.assertLess(deploy.index("Release pending: exact CI Web"), deploy.index("        with: &apply_main_release"))
+        self.assertNotIn("FULL_BOOTSTRAP=", deploy)
+        script = self.apply
+        for mode, components in (("full-stack", "backend frontend nginx compose"),
+                                 ("backend", "backend"), ("frontend", "frontend"), ("nginx", "nginx")):
+            self.assertIn(f"deploy-{mode})\n                set -- {components}\n", script)
+        pending = 'record_release "$@"'
+        self.assertLess(script.index(pending), script.index("sudo docker load -i"))
+        self.assertLess(script.index("gateway is not running"), script.rindex(pending))
+        self.assertLess(script.rindex(pending), script.index("$COMPOSE $COMPOSE_FILES up"))
+        self.assertLess(script.rindex("$COMPOSE $COMPOSE_FILES up"), script.index("record_release --revision"))
+
     def test_automatic_deploy_uses_only_matching_successful_main_push(self):
-        deploy = (ROOT / ".github/workflows/deploy.yml").read_text(encoding="utf-8")
+        deploy = self.deploy
         for guard in ("github.event.workflow_run.conclusion == 'success'",
                       "github.event.workflow_run.event == 'push'",
                       "github.event.workflow_run.head_branch == 'main'",
@@ -460,28 +687,39 @@ class WorkflowWiringTests(unittest.TestCase):
         self.assertIn('CURRENT" != "$DEPLOY_SHA', deploy)
         self.assertIn("cancel-in-progress: false", deploy)
         self.assertNotIn("git reset --hard origin/main", deploy)
-        self.assertEqual(deploy.count('git reset --hard "$DEPLOY_REVISION"'), 4)
-        self.assertEqual(deploy.count("deploy_artifacts.py verify-loaded"), 2)
-        self.assertEqual(deploy.count('--receipt "$WEB_IMAGE_BASE.image.json"'), 2)
-        self.assertEqual(deploy.count('--expected-config-digest "$(cat "$WEB_IMAGE_BASE.image-config-digest")"'), 2)
-        self.assertEqual(deploy.count('"${ARTIFACT}.image-config-digest" "${ARTIFACT}.image.json"'), 2)
+        self.assertEqual(deploy.count('git reset --hard "$DEPLOY_REVISION"'), 1)
+        self.assertEqual(deploy.count("deploy_artifacts.py verify-loaded"), 1)
+        self.assertIn('--receipt "$WEB_IMAGE_BASE.image.json"', deploy)
+        self.assertIn('--expected-config-digest "$(cat "$WEB_IMAGE_BASE.image-config-digest")"', deploy)
+        self.assertEqual(deploy.count('"${ARTIFACT}.image-config-digest" "${ARTIFACT}.image.json"'), 1)
         self.assertNotIn("EXPECTED_WEB_IMAGE_ID", deploy)
-        for job in ("deploy-frontend", "deploy-nginx"):
-            condition = deploy.split(f"  {job}:\n", 1)[1].split("    steps:\n", 1)[0]
-            self.assertIn("needs.changes.result == 'success'", condition)
+        self.assertNotIn("always()", deploy)
+        stages = ["Verify Web artifact before any server changes", "Deploy backend (api + worker)",
+                  "Upload frontend image archive to server", "Deploy full stack (compose)",
+                  "Deploy frontend (web)", "Deploy nginx edge"]
+        self.assertEqual(sorted(stages, key=lambda name: deploy.index(f"- name: {name}")), stages)
 
     def test_ci_packages_same_dist_and_manual_build_remains_explicit(self):
         ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-        deploy = (ROOT / ".github/workflows/deploy.yml").read_text(encoding="utf-8")
-        self.assertEqual(ci.count("run: pnpm --dir apps/web build"), 1)
-        self.assertIn("file: apps/web/Dockerfile.prebuilt", ci)
+        deploy = self.deploy
+        for command in ("run: pnpm --dir apps/web build", "run: pnpm --dir apps/web run build:forum"):
+            self.assertEqual([line.strip() for line in ci.splitlines()].count(command), 1)
+        self.assertEqual(ci.count("file: apps/web/Dockerfile.prebuilt"), 2)
         self.assertIn("VITE_API_BASE_URL: /api/v1", ci)
         self.assertIn("pnpm-workspace.yaml", ci)
-        self.assertEqual(ci.count("overwrite: true"), 3)
-        self.assertEqual(deploy.count("overwrite: true"), 2)
+        self.assertNotIn("actions/upload-artifact", deploy)
+        for asset in ("web", "forum-web"):
+            artifact = ci.split(f"    name: parallellines-{asset}-${{{{ github.sha }}}}\n", 1)[1].split("      - ", 1)[0]
+            self.assertIn("overwrite: true", artifact)
+            download = deploy.split(f"    name: parallellines-{asset}-${{{{ env.DEPLOY_SHA }}}}\n", 1)[1]
+            self.assertIn("run-id: ${{ env.SOURCE_RUN_ID }}", download.split("      - ", 1)[0])
         self.assertEqual(deploy.count("uses: docker/build-push-action@v6"), 2)
-        manual = deploy.split("- name: Build Web once for an explicit manual deployment", 1)[1].split("- name:", 1)[0]
-        self.assertIn("github.event_name == 'workflow_dispatch'", manual)
+        for mode in ("Web", "Forum Web"):
+            manual = deploy.split(
+                f"- name: Build {mode} once for an explicit manual deployment", 1
+            )[1].split("- name:", 1)[0]
+            self.assertIn("github.event_name == 'workflow_dispatch'", manual)
+            self.assertIn("uses: docker/build-push-action@v6", manual)
         runtime = (ROOT / "apps/web/Dockerfile.prebuilt").read_text(encoding="utf-8")
         self.assertNotIn("RUN ", runtime)
         self.assertIn("COPY dist/", runtime)

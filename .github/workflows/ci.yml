@@ -204,12 +204,14 @@ jobs:
           VITE_API_BASE_URL: /api/v1
           VITE_STATIC_ASSET_BASE_URL: https://img.pingxingxian.space/static/web
           VITE_UNIFIED_AUTH_ENABLED: ${{ vars.VITE_UNIFIED_AUTH_ENABLED || 'false' }}
+          VITE_TRAFFIC_ANALYTICS_ENABLED: ${{ vars.VITE_TRAFFIC_ANALYTICS_ENABLED || 'false' }}
         run: pnpm --dir apps/web build
       - name: Build forum
         env:
           VITE_API_BASE_URL: /api/v1
           VITE_STATIC_ASSET_BASE_URL: https://img.pingxingxian.space/static/web
           VITE_UNIFIED_AUTH_ENABLED: ${{ vars.VITE_UNIFIED_AUTH_ENABLED || 'false' }}
+          VITE_TRAFFIC_ANALYTICS_ENABLED: ${{ vars.VITE_TRAFFIC_ANALYTICS_ENABLED || 'false' }}
         run: pnpm --dir apps/web run build:forum
       # 只有本仓 main push 交付镜像；PR 仅运行检查，不进入生产产物链。
       - name: Prepare checked Web runtime context
@@ -247,18 +249,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=forum-web-runtime
       - name: Export commit-bound Web image and receipt
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
-        run: |
-          set -euo pipefail
-          OUT="$RUNNER_TEMP/parallellines-web-image"
-          mkdir -p "$OUT"
-          docker save "parallellines-web:$GITHUB_SHA" parallellines-web:latest | gzip > "$OUT/parallellines-web-$GITHUB_SHA.tar.gz"
-          python3 .github/scripts/deploy_artifacts.py receipt --directory "$OUT" --sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
-            --image-id "$(docker image inspect --format '{{.Id}}' "parallellines-web:$GITHUB_SHA")" \
-            --image-revision "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "parallellines-web:$GITHUB_SHA")"
-          FORUM_OUT="$RUNNER_TEMP/parallellines-forum-web-image"
-          mkdir -p "$FORUM_OUT"
-          docker save "parallellines-forum-web:$GITHUB_SHA" parallellines-forum-web:latest | gzip > "$FORUM_OUT/parallellines-forum-web-$GITHUB_SHA.tar.gz"
-          (cd "$FORUM_OUT" && sha256sum "parallellines-forum-web-$GITHUB_SHA.tar.gz" > "parallellines-forum-web-$GITHUB_SHA.tar.gz.sha256")
+        run: python3 .github/scripts/deploy_artifacts.py export-web --directory "$RUNNER_TEMP" --sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID"
       - name: Publish the checked Web image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.compose == 'true')
         uses: actions/upload-artifact@v4

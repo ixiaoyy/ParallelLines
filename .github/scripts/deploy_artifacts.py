@@ -1,19 +1,39 @@
-"""CI/Deploy 产物交接及本机只读镜像核验；不连接远端或执行部署。"""
+"""CI/Deploy 产物交接、组件发布回执及本机镜像核验。"""
 
 import argparse
+from collections.abc import Callable
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import tarfile
+import tempfile
 import threading
+import time
 
 
 METADATA_LIMIT = 4 * 1024 * 1024
 REVISION_LABEL = "org.opencontainers.image.revision"
+RELEASE_PATHS = {
+    "backend": ("apps/api",),
+    "frontend": ("apps/web", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".dockerignore"),
+    "nginx": ("deploy/nginx",),
+    "compose": ("docker-compose.yml", "deploy/docker-compose.migration.yml"),
+}
+RELEASE_SERVICES = {
+    "backend": ("api", "worker"),
+    "frontend": ("web",),
+    "nginx": ("nginx",),
+    "compose": ("db", "redis", "certbot"),
+}
+RELEASE_HEALTHCHECKS = {"api", "web", "forum-web", "nginx", "db", "redis"}
+RELEASE_STATE = Path(".deployment/ci-release-state.json")
+RELEASE_STATE_LIMIT = 16 * 1024
+RELEASE_READY_SECONDS = 300
 MANIFEST_TYPES = {"application/vnd.oci.image.manifest.v1+json",
                   "application/vnd.docker.distribution.manifest.v2+json"}
 CONFIG_TYPES = {"application/vnd.oci.image.config.v1+json",
@@ -83,13 +103,173 @@ def validate_plan(plan: dict, sha: str, repository: str, run_id: str, event: str
     if plan.get("event") != wanted or (wanted == "push" and plan.get("ref") != "refs/heads/main"):
         raise ValueError("deploy_plan_not_trusted_main_push")
     scopes = plan.get("scopes", {})
-    if set(scopes) != {"backend", "frontend", "nginx", "compose"}:
+    if set(scopes) != set(RELEASE_PATHS):
         raise ValueError("deploy_plan_scope_missing")
     if any(type(value) is not bool for value in scopes.values()):
         raise ValueError("deploy_plan_scope_not_boolean")
     if wanted == "workflow_dispatch" and not all(scopes.values()):
         raise ValueError("manual_full_stack_scope_required")
     return scopes
+
+
+def reconcile_scopes(plan: dict, state: dict, changed: Callable[[str, str, str], bool]) -> dict:
+    """将已校验目标与各组件实际发布版本比较；未完成组件不能因净差为空而被确认。"""
+    revisions = state.get("revisions")
+    if (state.get("schema") != 1 or type(state.get("forum_enabled")) is not bool
+            or not isinstance(revisions, dict) or set(revisions) != set(RELEASE_PATHS)):
+        raise ValueError("deploy_baseline_invalid")
+    if all(value is None for value in revisions.values()):
+        raise ValueError("deploy_baseline_missing")
+    target = revision(plan["revision"])
+    scopes = {
+        component: before is None or changed(component, revision(before), target)
+        for component, before in revisions.items()
+    }
+    checks = plan.get("checks", {})
+    if scopes["backend"] and checks.get("backend") is not True and checks.get("workflow") is not True:
+        raise ValueError("deploy_pending_backend_checks")
+    return scopes
+
+
+def changed_since_release(component: str, before: str, target: str) -> bool:
+    """按原发布范围比对两个 Git 树；深度为一即可，不用 checkout 或猜部署版本。"""
+    if before == target:
+        return False
+    if subprocess.run(["git", "cat-file", "-e", f"{before}^{{commit}}"],
+                      capture_output=True, timeout=10).returncode != 0:
+        fetched = subprocess.run(["git", "fetch", "--no-tags", "--depth=1", "origin", before],
+                                 capture_output=True, timeout=30)
+        if fetched.returncode != 0:
+            raise ValueError(f"deploy_baseline_commit_unavailable:{component}")
+    result = subprocess.run(
+        ["git", "diff", "--quiet", "--no-ext-diff", "--no-textconv", before, target,
+         "--", *RELEASE_PATHS[component]], timeout=30,
+    )
+    if result.returncode not in (0, 1):
+        raise ValueError(f"deploy_baseline_diff_failed:{component}")
+    return result.returncode == 1
+
+
+def read_release_state(repo: Path) -> dict:
+    """读取发布门禁的私有回执；缺失不等同部署成功，拒绝不受控的记录文件。"""
+    path = repo / RELEASE_STATE
+    try:
+        parent = path.parent.lstat()
+        if not stat.S_ISDIR(parent.st_mode):
+            raise ValueError("deploy_release_state_path")
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return dict.fromkeys(RELEASE_PATHS)
+    if stat.S_ISLNK(metadata.st_mode):
+        raise ValueError("deploy_release_state_path")
+    if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > RELEASE_STATE_LIMIT:
+        raise ValueError("deploy_release_state_invalid")
+    value = json.loads(path.read_text(encoding="utf-8"))
+    entries = value.get("components") if isinstance(value, dict) else None
+    if (not isinstance(entries, dict) or set(entries) != set(RELEASE_PATHS)
+            or type(value.get("schema")) is not int or value["schema"] != 1):
+        raise ValueError("deploy_release_state_invalid")
+    for entry in entries.values():
+        if entry is not None:
+            if (not isinstance(entry, dict) or not isinstance(entry.get("revision"), str)
+                    or not isinstance(entry.get("containers"), dict) or not all(
+                        isinstance(item, str) and re.fullmatch(r"[0-9a-f]{64}", item)
+                        for item in entry["containers"].values()
+                    )):
+                raise ValueError("deploy_release_state_invalid")
+            revision(entry["revision"])
+    return entries
+
+
+def running_release_containers() -> dict:
+    """只取主站 Compose 的在运行容器身份和健康状态，不读取其环境或日志。"""
+    rows = subprocess.check_output(
+        ["docker", "ps", "--no-trunc", "--filter", "label=com.docker.compose.project=parallellines",
+         "--format", '{{.Label "com.docker.compose.service"}} {{.ID}}'],
+        encoding="utf-8", timeout=10,
+    ).splitlines()
+    containers = {}
+    for row in rows:
+        service, container = row.split()
+        if service not in RELEASE_HEALTHCHECKS and service not in {"worker", "certbot"}:
+            continue
+        if not re.fullmatch(r"[0-9a-f]{64}", container) or service in containers:
+            raise ValueError("deploy_release_container_identity")
+        containers[service] = container
+    return containers
+
+
+def services_for(component: str, forum_enabled: bool) -> tuple:
+    """只在圈子已启用时纳入它；禁止把不存在的圈子容器记录为已发布。"""
+    services = RELEASE_SERVICES[component]
+    return services + ("forum-web",) if component == "frontend" and forum_enabled else services
+
+
+def release_snapshot(repo: Path) -> dict:
+    """返回可用于净差比较的成功版本；独立发布或回滚导致前像变化时停止自动切换。"""
+    entries = read_release_state(repo)
+    forum = (repo / ".deployment/forum-enabled").exists()
+    live = running_release_containers() if any(entries.values()) else {}
+    revisions = {}
+    for component, entry in entries.items():
+        if entry is None:
+            revisions[component] = None
+            continue
+        expected = {service: live.get(service) for service in services_for(component, forum)}
+        if entry["containers"] != expected:
+            raise ValueError(f"deploy_baseline_drift:{component}")
+        revisions[component] = entry["revision"]
+    return {"schema": 1, "revisions": revisions, "forum_enabled": forum}
+
+
+def record_release(repo: Path, components: list[str], target: str | None) -> None:
+    """在重建前标记待完成；仅在已选组件就绪后，原子更新这些组件的成功记录。"""
+    entries = read_release_state(repo)
+    forum = (repo / ".deployment/forum-enabled").exists()
+    if target is None:
+        entries.update(dict.fromkeys(components))
+    else:
+        revision(target)
+        required = {service for component in components for service in services_for(component, forum)}
+        ordered = sorted(required)
+        deadline = time.monotonic() + RELEASE_READY_SECONDS
+        while True:
+            live = running_release_containers()
+            if required <= live.keys():
+                statuses = subprocess.check_output(
+                    ["docker", "inspect", "--format",
+                     "{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}",
+                     *(live[service] for service in ordered)],
+                    encoding="utf-8", timeout=10,
+                ).splitlines()
+                if len(statuses) == len(required) and all(
+                    status == "running healthy" or (
+                        service not in RELEASE_HEALTHCHECKS and status == "running none"
+                    ) for service, status in zip(ordered, statuses)
+                ):
+                    break
+            if time.monotonic() >= deadline:
+                raise ValueError("deploy_release_readiness_timeout")
+            time.sleep(5)
+        for component in components:
+            entries[component] = {
+                "revision": target,
+                "containers": {service: live[service] for service in services_for(component, forum)},
+            }
+
+    # 只持久化版本和容器身份；中断时读者看见完整的旧记录或新记录。
+    path = repo / RELEASE_STATE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as stream:
+        temporary = Path(stream.name)
+        try:
+            json.dump({"schema": 1, "components": entries}, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+            stream.close()
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
 
 
 def prepare_context(dist: Path, nginx: Path, destination: Path) -> None:
@@ -210,6 +390,29 @@ def write_receipt(directory: Path, sha: str, image_id: str, image_revision: str,
     (directory / f"parallellines-web-{sha}.image-id").write_text(image_id + "\n", encoding="ascii")
     (directory / f"parallellines-web-{sha}.image-config-digest").write_text(
         identity["image_config_digest"] + "\n", encoding="ascii")
+
+
+def export_web_images(root: Path, sha: str, run_id: str) -> None:
+    """导出目标提交的两个镜像及原格式校验材料；任一导出失败即停止。"""
+    revision(sha)
+    for image in ("parallellines-web", "parallellines-forum-web"):
+        directory = root / f"{image}-image"
+        directory.mkdir(parents=True, exist_ok=True)
+        archive = directory / f"{image}-{sha}.tar.gz"
+        tagged = f"{image}:{sha}"
+        # 保留 docker 与 gzip 任一端失败时的退出语义；标签通过固定脚本的位置参数传入。
+        with archive.open("wb") as stream:
+            subprocess.run(["bash", "-o", "pipefail", "-c", 'docker save "$@" | gzip',
+                            "export-web", tagged, f"{image}:latest"], stdout=stream, check=True)
+        if image == "parallellines-web":
+            image_id, image_revision = (
+                subprocess.check_output(["docker", "image", "inspect", "--format", fmt, tagged],
+                                        text=True).rstrip("\n")
+                for fmt in ("{{.Id}}", f'{{{{ index .Config.Labels "{REVISION_LABEL}" }}}}'))
+            write_receipt(directory, sha, image_id, image_revision, run_id)
+        else:
+            with (directory / f"{archive.name}.sha256").open("wb") as stream:
+                subprocess.run(["sha256sum", archive.name], cwd=directory, stdout=stream, check=True)
 
 
 def verify_web(directory: Path, sha: str, run_id: str) -> None:
@@ -354,9 +557,17 @@ def main() -> None:
     plan = commands.add_parser("plan")
     plan.add_argument("--output", type=Path, required=True)
     plan.add_argument("--github-output", type=Path, required=True)
-    read = commands.add_parser("read-plan")
-    read.add_argument("--source", type=Path, required=True)
-    read.add_argument("--github-output", type=Path, required=True)
+    resolve = commands.add_parser("resolve-deploy")
+    resolve.add_argument("--source", type=Path, required=True)
+    resolve.add_argument("--release-state", type=Path)
+    resolve.add_argument("--github-output", type=Path, required=True)
+    snapshot = commands.add_parser("release-state")
+    snapshot.add_argument("--repo", type=Path, required=True)
+    snapshot.add_argument("--validate-only", action="store_true", help="Validate the receipt without querying Docker.")
+    record = commands.add_parser("record-release")
+    record.add_argument("--repo", type=Path, default=Path.cwd())
+    record.add_argument("--revision")
+    record.add_argument("components", nargs="+", choices=RELEASE_PATHS)
     context = commands.add_parser("context")
     context.add_argument("--dist", type=Path, required=True)
     context.add_argument("--nginx", type=Path, required=True)
@@ -369,14 +580,11 @@ def main() -> None:
     loaded.add_argument("--receipt", type=Path)
     loaded.add_argument("--run-id")
     loaded.add_argument("--expected-config-digest")
-    for name in ("receipt", "verify-web"):
+    for name in ("export-web", "verify-web"):
         command = commands.add_parser(name)
         command.add_argument("--directory", type=Path, required=True)
         command.add_argument("--sha", required=True)
         command.add_argument("--run-id", required=True)
-        if name == "receipt":
-            command.add_argument("--image-id", required=True)
-            command.add_argument("--image-revision", required=True)
     args = parser.parse_args()
     if args.command == "plan":
         value = make_plan(os.environ)
@@ -384,16 +592,36 @@ def main() -> None:
         outputs(args.github_output, {**value["scopes"], **{
             f"check_{key}": enabled for key, enabled in value["checks"].items()
         }})
-    elif args.command == "read-plan":
+    elif args.command == "resolve-deploy":
         value = json.loads(args.source.read_text(encoding="utf-8"))
+        event = os.environ["GITHUB_EVENT_NAME"]
         scopes = validate_plan(value, os.environ["DEPLOY_SHA"], os.environ["GITHUB_REPOSITORY"],
-                               os.environ["SOURCE_RUN_ID"], os.environ["GITHUB_EVENT_NAME"])
+                               os.environ["SOURCE_RUN_ID"], event)
+        forum_enabled = False
+        if event == "workflow_run":
+            if args.release_state is None:
+                parser.error("automatic deploy requires --release-state")
+            state = json.loads(args.release_state.read_text(encoding="utf-8"))
+            scopes = reconcile_scopes(value, state, changed_since_release)
+            forum_enabled = state["forum_enabled"]
         outputs(args.github_output, {**scopes, "sha": value["revision"], "source_run_id": value["run_id"],
-                                     "web_required": scopes["frontend"] or scopes["compose"]})
+                                     "web_required": scopes["frontend"] or scopes["compose"],
+                                     "forum_enabled": forum_enabled})
+    elif args.command == "release-state":
+        if args.validate_only:
+            try:
+                read_release_state(args.repo)
+            except (OSError, ValueError):
+                parser.exit(1, "deploy_release_state_invalid_or_unreadable: preserve the receipt and see "
+                               "docs/PERFORMANCE.md#累计发布与补发 before retrying.\n")
+        else:
+            print(json.dumps(release_snapshot(args.repo)))
+    elif args.command == "record-release":
+        record_release(args.repo, args.components, args.revision)
     elif args.command == "context":
         prepare_context(args.dist, args.nginx, args.output)
-    elif args.command == "receipt":
-        write_receipt(args.directory, args.sha, args.image_id, args.image_revision, args.run_id)
+    elif args.command == "export-web":
+        export_web_images(args.directory, args.sha, args.run_id)
     elif args.command == "verify-web":
         verify_web(args.directory, args.sha, args.run_id)
     elif args.command == "archive-identity":

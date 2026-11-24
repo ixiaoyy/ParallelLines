@@ -34,6 +34,15 @@ services:
         bind: {create_host_path: false}
   nginx:
     ports: !override ["0.0.0.0:80:80", "0.0.0.0:443:443"]
+    environment:
+      GATEWAY_TLS_LOCK_FILE: /run/parallellines-tls.lock
+    volumes:
+      # 只挂载现有 Tools 互斥 inode，不暴露运维目录或让 Compose 代建锁。
+      - type: bind
+        source: /opt/parallellines-tools/ops/tls.lock
+        target: /run/parallellines-tls.lock
+        read_only: true
+        bind: {create_host_path: false}
     # 现网网关必须加入 Chat/API 已有网络，重建后保留原有代理可达性。
     networks: [default, fablespace, official_services]
 

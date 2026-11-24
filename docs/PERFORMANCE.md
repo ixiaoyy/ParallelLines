@@ -79,14 +79,22 @@ CDN 发布时发现 `gd-super-chicken-td.webp` 仍命中旧字节缓存，源站
 
 调用链为 `.github/workflows/ci.yml` → `.github/scripts/deploy_artifacts.py` → `apps/web/Dockerfile.prebuilt` → `.github/workflows/deploy.yml`。
 
-1. CI 保存原 push 的 `before`、完整提交 ID、仓库、run ID 和部署范围。比较基线无法取得时按全范围处理，不猜单个父提交。
+1. CI 保存原 push 的 `before`、完整提交 ID、仓库、run ID、检查范围和制品范围。比较基线无法取得时按全范围构建和检查，不猜单个父提交；原 push 范围不是实际待发布范围。
 2. 前端 CI 用生产参数构建一次，将同次 `dist` 与 Nginx 配置封装为运行时镜像，不再次运行 Vite。源码 `Dockerfile` 仍可独立构建。
-3. 自动部署只接受本仓 `main` 成功 push CI，拒绝 PR、失败或取消的 CI。只消费对应 run/SHA 的清单与归档；缺失、过期或损坏即停止，不换成其他产物或隐式重建。
+3. 自动部署只接受本仓 `main` 成功 push CI，拒绝 PR、失败或取消的 CI。直接下载对应 run/SHA 的清单与 Web、圈子原始归档，校验与传包共用同一 runner，不再上传中转制品。缺失、过期或损坏即停止，不换成其他产物或隐式重建。
 4. 归档摘要、原始 config 摘要、平台、RootFS、revision、SHA 标签与服务端源码绑定同一提交；构建端 native 镜像 ID 单独保留审计，不能直接跨 Docker 存储类型比较。保留 `latest` 兼容现有 Compose。迟到旧 CI 跳过，已开始的部署不自动取消。
-5. 后端或 Nginx 单独更新的正常路径不构建/下载 Web。Compose、全量、手动路径准备 Web；原缺服务 bootstrap 分支仍可能在服务器构建 Web。
-6. 手动 `workflow_dispatch` 保留显式源码构建能力，不依赖历史 CI 产物。自动链省去重复 Vite，但仍有归档传输成本，实际端到端收益须实测。
+5. 验包先于服务写入；增量顺序仍是后端、SCP、前端、Nginx，前一步失败即停。只更新后端或 Nginx 时不构建、下载或传 Web。全栈恢复仍为独立的显式操作；增量缺网关时不在服务器补构建 Web。
+6. 手动 `workflow_dispatch` 在同一 runner 显式构建并消费本次归档，不依赖历史 CI 产物。发布阶段现在是同一 job 的步骤；自动重试会重新读取成功回执，只重做未更新的组件。实际端到端收益须实测。
 
-自动范围只描述本次 push，不累计前一次 CI 失败后尚未发布的变化。修复推送通过后，发布负责方须检查前一批未上线的服务范围：可使用现有显式全量入口，或在同一已验证提交上补齐缺失服务。已由 CI 交付的 Web 镜像无需再次运行 Vite；不能把最后一次分流任务成功当成此前所有服务均已更新。
+### 累计发布与补发
+
+- Deploy 读取服务器 `/opt/parallellines/.deployment/ci-release-state.json` 的私有回执，确认 API 与 worker、Web（含启用的圈子）、Nginx 和 Compose 各自的运行容器身份，再按其成功版本与目标提交的文件差异选发布范围。CI 不接触生产凭据。A 变更业务但未部署、B 仅改文档时，A 的差异仍会进入判断；没有积压的纯文档提交不重建服务。
+- 每个分流在运行变更前将相关范围标为待完成；现有容器健康检查通过后才独立登记该范围成功。失败或取消保留待完成状态；其他已成功范围不会跟着回退或重跑。Compose 全栈是一个整体动作。相同 Git SHA、CI 绿灯、Git 工作目录或新镜像标签不等于发布成功。发布回执不代替公网业务验收。
+- **首次无回执**：不直接启用自动发布。发布人先核对运行基线和[网关重建条件](../deploy/nginx/sites.d/README.md#重建前检查与失败处理)，另行批准现有手动全栈 Deploy 建立首份成功回执。
+- **回执损坏或无法读取**：先停止重试，包括手动全栈。当前手动流程可能已经重置工作树才报错，不能用它绕过坏回执。先保留坏回执、发布日志和现场状态；用已核对的脚本执行只读 `release-state` 核对，不打印回执原文。经本次授权后，在既有 TLS 锁下隔离坏回执；只有能与实际运行容器匹配的完整备份才可恢复，没有可信备份则另行批准全栈重建基线。不清空、不静默覆盖，也不用服务器 Git HEAD 填写成功记录。
+- **运行身份漂移**：若出现 `deploy_baseline_drift`，先核对是否已有独立发布或主动回退；不把这个情况当回执损坏。未决定恢复到 `main` 前，不发起手动全栈补发。
+- 累计范围需要重新发布后端、但该目标 CI 未跑后端检查，或需要 Web/已启用圈子的归档、但该目标同次 CI 的制品缺失或校验失败，Deploy 明确报待补发并在服务写入前停止。CI 仍只按原 push 范围准备归档；不扩大每次 Web/API 构建。发布人先补齐目标验证，再使用现有显式手动入口构建并补发；不会拿旧归档或在服务器隐式补构建 Web。
+- 同一 runner 的发布任务总上限 120 分钟，单次 SCP 仍为 900 秒，全栈 SSH 仍为 30 分钟、其余发布 SSH 为 20 分钟。私有回执上限为 16 KiB，读取回执的 SSH 总限时 90 秒（连接限时 15 秒），缺失的组件提交分别最多取 30 秒。登记成功前对目标容器额外观察最多约 5 分钟，单条 Docker 查询限时 10 秒。超过窗口时停止，未完成范围仍待发布；实际耗时须另验。
 
 合同测试位于 `.github/scripts/test_deploy_artifacts.py`，只使用临时文件，不连接 Docker、GitHub 或服务器。
 静态缓存条件另由 `.github/scripts/test_static_cache_contract.py` 核对，不用离线正则检查替代实际 Nginx 语法和响应头验收。
@@ -95,7 +103,7 @@ CDN 发布时发现 `gd-super-chicken-td.webp` 仍命中旧字节缓存，源站
 
 `web-image.json` 使用 schema 2。原 `image_id` 和 `.image-id` 旁文件仍是构建端原生 ID，不改含义；新增 `image_config_digest` 和 `.image-config-digest` 旁文件。该摘要从 `docker save` 归档中的原始 config bytes 计算，不从 `docker inspect .Config` 重建 JSON。清单同时保存 `image_revision`、`platform` 和有序 `rootfs_diff_ids`。
 
-生产者不需要新增 Docker 操作：原 CI 和手动入口仍只构建、save 一次，由同一 `receipt` 命令生成新清单。`verify-web` 只接受 schema 2，并同时核归档 SHA、旁文件、两个 RepoTags 对同一个 config、原始 config 摘要、`linux/amd64`、revision 和 RootFS。当前不接受多镜像归档或多平台 index，不自动选取其他平台。
+CI 和手动入口仍各构建一次，再共用 `export-web` 导出两个镜像。它为主站生成原格式回执，为圈子生成原格式 SHA-256 旁文件。`verify-web` 只接受 schema 2，同时核归档 SHA、旁文件、两个 RepoTags 对同一个 config、原始 config 摘要、`linux/amd64`、revision 和 RootFS。不接受多镜像归档或多平台 index。
 
 服务器收到同一清单的 SHA 命名副本 `.image.json`。归档校验和 load 后，先运行 `verify-loaded`，通过才替换服务：
 
