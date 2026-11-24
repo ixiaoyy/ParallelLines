@@ -4,6 +4,7 @@ import type { RouteLocationGeneric, RouteLocationNormalized } from "vue-router";
 import { fetchCurrentUser } from "@/features/auth/api";
 import { CURRENT_USER_STALE_TIME_MS, type UserPublic } from "@/features/auth/model";
 import { canAccessModeration, isAdmin } from "@/features/auth/permissions";
+import { captureTavernInvite, TAVERN_INVITE_PATH } from "@/features/auth/tavernInvite";
 import { clearAuthTokens, hasAccessToken, isAuthenticationError } from "@/shared/api/client";
 import { queryClient } from "@/shared/api/queryClient";
 import { queryKeys } from "@/shared/api/queryKeys";
@@ -440,8 +441,8 @@ export const router = createRouter({
         forumShell: true,
         requiredAccess: "admin",
         seo: {
-          title: "访问与用户增长 · {siteTitle}",
-          description: "查看平行线访问表现、真实用户增长、来源渠道和入口页统计。",
+          title: "全系统分析 · {siteTitle}",
+          description: "查看各站综合流量、分站访问、来源渠道、回访表现与主站用户增长。",
           canonicalPath: "/admin/analytics",
           robots: NOINDEX_ROBOTS,
         },
@@ -521,6 +522,19 @@ export const router = createRouter({
       path: "/play",
       name: "play-hub",
       redirect: { name: "home" },
+    },
+    {
+      path: TAVERN_INVITE_PATH,
+      name: "tavern-invite",
+      component: () => import("@/pages/auth/TavernInvitePage.vue"),
+      meta: {
+        forumShell: false,
+        seo: {
+          title: "加入聊天房间 · {siteTitle}",
+          description: "用平行线主站账号进入酒馆。",
+          robots: NOINDEX_ROBOTS,
+        },
+      },
     },
     {
       path: "/auth/chat",
@@ -606,6 +620,15 @@ router.beforeEach(async (to) => {
       window.location.replace(destination.href);
       return false;
     }
+  }
+  // 挂载前清除片段；主站只接收无入场权的酒馆流程标记。
+  if (to.name === "tavern-invite" && (to.hash || Object.keys(to.query).length)) {
+    if (to.hash) captureTavernInvite(to.hash);
+    if (window.location.pathname === to.path) {
+      // 浏览器直接打开或仅切换片段时，立即改写当前历史条目而不是再插入一条。
+      window.history.replaceState(window.history.state, "", TAVERN_INVITE_PATH);
+    }
+    return { name: "tavern-invite", replace: true };
   }
   const requiredAccess = to.meta.requiredAccess;
   if (!requiredAccess) {
