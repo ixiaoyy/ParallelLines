@@ -35,9 +35,7 @@ DAILY_READING_AUDIT_TARGET = "daily_reading_seed"
 DAILY_READING_PLAN_ACTION = "daily_reading_day_planned"
 DAILY_READING_PLAN_TARGET = "daily_reading_plan"
 DAILY_READING_TOPIC_COUNT = 2
-DAILY_READING_AUTOMATION_MARKER = (
-    "> 本帖由专用账号页边有光自动生成，使用创作角色口吻，不代表真人阅读经历。"
-)
+DAILY_READING_AUTOMATION_MARKER = "> 自动创作，非真人阅读经历。"
 
 
 @dataclass(frozen=True)

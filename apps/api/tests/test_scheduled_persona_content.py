@@ -99,6 +99,7 @@ async def test_reading_three_slots_are_single_distinct_marked_drafts() -> None:
     assert len({plan.seed_key for plan in plans}) == 3
     assert all(plan.planned_date == planned_date and plan.slot == 1 for plan in plans)
     assert all(plan.raw_md.count(DAILY_READING_AUTOMATION_MARKER) == 1 for plan in plans)
+    assert all(plan.raw_md.endswith("> 自动创作，非真人阅读经历。") for plan in plans)
     assert [plan.scheduled_time for plan in plans] == list(DAILY_READING_SCHEDULED_TIMES)
     assert len(await service.plan_day(planned_date, force_local=True)) == 2
     assert daily_reading_seed_key(planned_date, 1) == "daily-reading:2026-11-15:01"

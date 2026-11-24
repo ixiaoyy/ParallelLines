@@ -7,7 +7,8 @@ from app.services.background_jobs import BackgroundJobService
 
 CONTENT_QUEUE = "community_content"
 CONTENT_TASK = "community_content_slot"
-CONTENT_CHANNELS = ("weibo_snapshot", "news", "sports", "hot_search", "living", "reading")
+# 海外合集加入现有独立队列；生活小问继续停用，其余栏目及历史帖子保持原样。
+CONTENT_CHANNELS = ("weibo_snapshot", "news", "sports", "hot_search", "reading", "overseas")
 CONTENT_TIMES = ("10:00", "14:00", "18:00")
 SLOT_GRACE = timedelta(minutes=30)
 
@@ -63,7 +64,7 @@ def parse_content_payload(payload: dict[str, object]) -> tuple[str, datetime]:
 async def enqueue_content_slots(
     service: BackgroundJobService, *, now: datetime, start_at: datetime
 ) -> int:
-    """沿用现有队列唯一幂等键，为六个栏目分别安排当前新时段；不触及旧队列。"""
+    """沿用现有队列唯一幂等键，为六项内容任务分别安排当前新时段；不触及旧队列。"""
 
     count = 0
     for scheduled in due_content_slots(now, start_at):

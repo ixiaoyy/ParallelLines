@@ -1,0 +1,4 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+# 回退保留原五项功能，遗留海外任务正常写跳过回执；不清队列或回滚历史业务数据。
+COPY app/workers/community_content.py /app/app/workers/community_content.py

@@ -1,0 +1,4 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+# 恢复上一版已支持海外任务的worker；保留六项调度、持久快照及开关。
+COPY app/workers/community_content.py /app/app/workers/community_content.py

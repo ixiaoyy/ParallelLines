@@ -99,10 +99,48 @@ def test_render_markdown_warns_that_trends_are_not_verified_facts() -> None:
 
     markdown = collector.render_markdown(snapshot)
 
-    assert "# 微博热搜 2026-07-27" in markdown
-    assert "不代表事实已经核实" in markdown
+    assert markdown.startswith("# 微博热搜｜一个好玩的热搜\n\n1.")
+    assert markdown.endswith("> 自动采集，仅反映热度，内容未核实。\n")
     assert "[一个好玩的热搜]" in markdown
     assert "热度 123456" in markdown
+    assert "采集时间：2026-07-27T09:00:00+08:00" in markdown
+    assert "来源：[微博热搜榜](https://s.weibo.com/top/summary)" in markdown
+    assert markdown.index("[一个好玩的热搜]") < markdown.index("采集时间：")
+
+
+def test_hot_search_title_uses_real_top_two_ranks_without_changing_input() -> None:
+    """标题选来源名次前两项，不改原榜单数据或把日期拼入标题。"""
+
+    topics = [
+        {"rank": 3, "title": "第三个词条"},
+        {"rank": 1, "title": "榜首词条"},
+        {"rank": 2, "title": "第二个词条"},
+    ]
+    original = json.dumps(topics, ensure_ascii=False)
+    assert collector.hot_search_title(topics) == "微博热搜｜榜首词条、第二个词条"
+    assert json.dumps(topics, ensure_ascii=False) == original
+
+
+@pytest.mark.parametrize("count", [1, 2])
+def test_hot_search_title_shortens_only_real_words_to_a_bounded_length(count: int) -> None:
+    """一个词条也可成题；超长词条以省略号截短，不添第三条或虚构描述。"""
+
+    topics = [
+        {"rank": index + 1, "title": ("甲" if index == 0 else "乙") * 100}
+        for index in range(count)
+    ]
+    title = collector.hot_search_title(topics)
+    assert len(title) <= collector.HOT_SEARCH_TITLE_LIMIT
+    assert title.startswith("微博热搜｜甲") and title.endswith("…")
+    assert title.count("、") == count - 1
+    assert title.count("…") == count
+
+
+def test_hot_search_title_keeps_single_topic_and_empty_snapshot_meaning() -> None:
+    assert collector.hot_search_title([{"rank": 1, "title": "只有一个真实词条"}]) == (
+        "微博热搜｜只有一个真实词条"
+    )
+    assert collector.hot_search_title([]) == "微博热搜"
 
 
 def test_write_snapshot_replaces_the_daily_file(tmp_path: Path) -> None:

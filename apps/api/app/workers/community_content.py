@@ -4,14 +4,15 @@ import argparse
 import asyncio
 import socket
 from contextlib import asynccontextmanager
-from datetime import datetime
-from pathlib import Path
+from urllib.error import HTTPError, URLError
 
 from sqlalchemy import select, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.community_content import CommunityContentSettings
 from app.core.config import get_settings
+from app.core.exceptions import AppError
 from app.core.logging import configure_logging, get_logger
 from app.db.base import utcnow
 from app.db.session import AsyncSessionLocal, engine
@@ -24,15 +25,118 @@ from app.services.community_schedule import (
     enqueue_content_slots,
     parse_content_payload,
 )
+from app.workers.community_content_health import HEARTBEAT, worker_is_healthy
 
-HEARTBEAT = Path("/tmp/parallellines-community-content-heartbeat")
 WORKER_LOCK = "parallellines:community-content:v1"
+
+
+class ContentQueueService(BackgroundJobService):
+    """只给新内容队列区分暂态失败；不改变原worker的重试合同。"""
+
+    async def run_next(
+        self, handlers, *, worker_id, queues=(CONTENT_QUEUE,), retry_delay_seconds=60
+    ):
+        """沿用既有领取/日志/重试，只在内容服务返回后显式重载任务。
+
+        正常发帖服务会独立提交或回滚事务，回滚会过期同会话任务对象；
+        新队列必须先刷新再完成任务，不能在异步边界隐式读取过期字段。
+        """
+
+        job = await self.acquire_next(worker_id=worker_id, queues=queues)
+        if job is None:
+            return None
+        job_id = job.id
+        handler = handlers.get(job.task_name)
+        if handler is None:
+            return await self._mark_dead(job_id, "permanent_content:unknown_task")
+        try:
+            result = await handler(self.session, dict(job.payload or {}))
+        except Exception as exc:
+            return await self._mark_retry_or_dead(
+                job_id, error=str(exc), retry_delay_seconds=retry_delay_seconds
+            )
+        await self.session.refresh(job)
+        job.status = "succeeded"
+        job.result = result or {}
+        job.finished_at = utcnow().replace(microsecond=0)
+        job.locked_at = None
+        job.locked_by = None
+        job.last_error = None
+        self._add_log(
+            job_id,
+            event="succeeded",
+            message="Content job completed",
+            data={"attempt": job.attempts},
+        )
+        await self.session.commit()
+        await self.session.refresh(job)
+        return job
+
+    async def _mark_retry_or_dead(self, job_id, *, error, retry_delay_seconds):
+        """网络/暂态服务错误才重试；身份、参数及内容错误直接进入失败记录。"""
+
+        if error.startswith("retryable_content:"):
+            return await super()._mark_retry_or_dead(
+                job_id, error=error, retry_delay_seconds=retry_delay_seconds
+            )
+        await self.session.rollback()
+        return await self._mark_dead(job_id, error)
 
 
 async def handle_content_slot(
     session: AsyncSession, payload: dict[str, object]
 ) -> dict[str, object]:
+    """统一错误边界只记录稳定错误码；不给永久错误盲目重试或泄露数据库参数。"""
+
+    try:
+        return await execute_content_slot(session, payload)
+    except Exception as exc:
+        retryable = isinstance(exc, OSError | TimeoutError | URLError)
+        if isinstance(exc, HTTPError):
+            retryable = exc.code in (408, 429, 500, 502, 503, 504)
+        if isinstance(exc, AppError):
+            retryable = exc.status_code in (408, 429, 502, 503, 504)
+        if isinstance(exc, OperationalError):
+            retryable = bool(exc.orig.args and exc.orig.args[0] in (1205, 1213, 2003, 2006, 2013))
+        code = exc.code if isinstance(exc, AppError) else type(exc).__name__
+        prefix = "retryable_content" if retryable else "permanent_content"
+        raise RuntimeError(f"{prefix}:{code}") from exc
+
+
+def require_persona_publication(result: dict[str, object], channel: str) -> dict[str, object]:
+    """人设服务正常返回不等于发布成功；逐项核实真实写结果，拒绝误开预览/off。"""
+
+    rows = result.get("results")
+    if (
+        result.get("dry_run") is not False
+        or result.get("publish_mode") != "auto"
+        or not isinstance(rows, list)
+        or len(rows) != 1
+        or not isinstance(rows[0], dict)
+        or rows[0].get("status") not in ("created", "recovered", "existing")
+        or not rows[0].get("topic_id")
+    ):
+        reason = (
+            rows[0].get("reason", "unconfirmed_result")
+            if isinstance(rows, list) and rows and isinstance(rows[0], dict)
+            else "no_result"
+        )
+        raise AppError(
+            f"persona_publication_failed:{channel}:{reason}",
+            f"{channel}内容未完成真实发布",
+            status_code=422,
+        )
+    return result
+
+
+async def execute_content_slot(
+    session: AsyncSession, payload: dict[str, object]
+) -> dict[str, object]:
     """按已授权栏目执行新时段；无旧任务回接，也不调用互动种子脚本。"""
+
+    # 生活小问不再发布；先消费历史排队任务，避免移出调度清单后解析失败或再次发帖。
+    if payload.get("channel") == "living":
+        return {"status": "skipped", "reason": "living_retired", "channel": "living"}
 
     activation = CommunityContentSettings()
     if not activation.enabled or activation.start_at is None:
@@ -42,18 +146,13 @@ async def handle_content_slot(
         return {"status": "skipped", "reason": "outside_current_slot", "channel": channel}
 
     settings = get_settings()
-    if channel == "living":
-        from app.services.living_forum import LivingForumService
-
-        return await LivingForumService(session, settings).publish_day(
-            scheduled.date(), scheduled_time=scheduled.strftime("%H:%M"), dry_run=False
-        )
     if channel == "reading":
         from app.services.daily_reading import DailyReadingService
 
-        return await DailyReadingService(session, settings).publish_day(
+        result = await DailyReadingService(session, settings).publish_day(
             scheduled.date(), scheduled_time=scheduled.strftime("%H:%M"), dry_run=False
         )
+        return require_persona_publication(result, channel)
 
     from app.services.scheduled_content import ScheduledContentService
 
@@ -69,11 +168,17 @@ async def recover_interrupted_jobs(session: AsyncSession) -> int:
     仅处理独立队列的固定任务名，不触及邮箱、原worker或退休任务；部署必须单实例。
     """
 
-    jobs = list(await session.scalars(select(BackgroundJob).where(
-        BackgroundJob.queue == CONTENT_QUEUE,
-        BackgroundJob.task_name == CONTENT_TASK,
-        BackgroundJob.status == "running",
-    ).limit(101)))
+    jobs = list(
+        await session.scalars(
+            select(BackgroundJob)
+            .where(
+                BackgroundJob.queue == CONTENT_QUEUE,
+                BackgroundJob.task_name == CONTENT_TASK,
+                BackgroundJob.status == "running",
+            )
+            .limit(101)
+        )
+    )
     if len(jobs) > 100:
         raise RuntimeError("Too many interrupted content jobs; inspect the owned queue first")
     for job in jobs:
@@ -90,14 +195,14 @@ async def recover_interrupted_jobs(session: AsyncSession) -> int:
 
 
 async def run_once() -> int:
-    """只调度及消费独立内容队列，每轮最多六项，失败复用既有三次有界重试。"""
+    """只调度六项内容并消费遗留任务，每轮最多六项，复用既有三次有界重试。"""
 
     activation = CommunityContentSettings()
     if not activation.enabled or activation.start_at is None:
         return 0
     processed = 0
     async with AsyncSessionLocal() as session:
-        service = BackgroundJobService(session)
+        service = ContentQueueService(session)
         await enqueue_content_slots(service, now=utcnow(), start_at=activation.start_at)
         for _ in range(6):
             job = await service.run_next(
@@ -110,21 +215,15 @@ async def run_once() -> int:
                 break
             processed += 1
             get_logger("worker.community_content").info(
-                "content_job_finished", job_id=job.id, status=job.status,
-                channel=(job.payload or {}).get("channel"), result=job.result,
-                attempts=job.attempts, error=job.last_error,
+                "content_job_finished",
+                job_id=job.id,
+                status=job.status,
+                channel=(job.payload or {}).get("channel"),
+                result=job.result,
+                attempts=job.attempts,
+                error=job.last_error,
             )
     return processed
-
-
-def worker_is_healthy() -> bool:
-    """只读健康入口：最近五分钟确实完成过一轮数据库轮询才视为健康。"""
-
-    try:
-        seen = datetime.fromisoformat(HEARTBEAT.read_text(encoding="ascii"))
-        return 0 <= (utcnow() - seen).total_seconds() < 300
-    except (OSError, ValueError, TypeError):
-        return False
 
 
 async def run_forever(*, once: bool = False) -> None:

@@ -23,6 +23,8 @@ USER_AGENT = (
 SHANGHAI_TIMEZONE = timezone(timedelta(hours=8), "Asia/Shanghai")
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "var" / "weibo-hot-search"
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+HOT_SEARCH_TITLE_LIMIT = 64
+HOT_SEARCH_AUTOMATION_MARKER = "> 自动采集，仅反映热度，内容未核实。"
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -155,8 +157,7 @@ def build_snapshot(
                 or position,
                 "title": title,
                 "heat": _non_negative_int(raw_item.get("num")),
-                "label": _text(raw_item.get("label_name"))
-                or _text(raw_item.get("icon_desc")),
+                "label": _text(raw_item.get("label_name")) or _text(raw_item.get("icon_desc")),
                 "category": _text(raw_item.get("flag_desc")),
                 "is_topic": bool(raw_item.get("topic_flag")),
                 "url": WEIBO_SEARCH_URL + quote(search_term, safe=""),
@@ -165,9 +166,7 @@ def build_snapshot(
         if len(topics) >= limit:
             break
 
-    timestamp = (collected_at or datetime.now(SHANGHAI_TIMEZONE)).astimezone(
-        SHANGHAI_TIMEZONE
-    )
+    timestamp = (collected_at or datetime.now(SHANGHAI_TIMEZONE)).astimezone(SHANGHAI_TIMEZONE)
     return {
         "source": "weibo_hot_search",
         "source_url": WEIBO_HOT_SEARCH_URL,
@@ -181,25 +180,47 @@ def build_snapshot(
     }
 
 
+def hot_search_title(topics: Sequence[Mapping[str, object]]) -> str:
+    """用真实榜单前两项生成短标题；空榜返回栏目名，不改榜单或去重数据。"""
+
+    # 以来源名次选标题；无名次的旧快照项保持原相对顺序，排在有效名次后。
+    ranked = sorted(topics, key=lambda topic: _positive_int(topic.get("rank")) or sys.maxsize)
+    titles = [" ".join(_text(topic.get("title")).split()) for topic in ranked]
+    titles = [title for title in titles if title][:2]
+    if not titles:
+        return "微博热搜"
+    prefix, separator = "微博热搜｜", "、"
+    limit = (HOT_SEARCH_TITLE_LIMIT - len(prefix) - len(titles) + 1) // len(titles)
+    # 只截短已有词条，不把词条扩写成已核实的事件经过。
+    titles = [title if len(title) <= limit else title[: limit - 1] + "…" for title in titles]
+    return prefix + separator.join(titles)
+
+
 def render_markdown(snapshot: Mapping[str, Any]) -> str:
     """Render a compact discovery digest from a normalized snapshot."""
 
-    lines = [
-        f"# 微博热搜 {snapshot['date']}",
-        "",
-        f"> 采集时间：{snapshot['collected_at']}。热搜仅表示讨论热度，不代表事实已经核实。",
-        "",
-    ]
     topics = snapshot.get("topics")
-    if isinstance(topics, list):
-        for topic in topics:
-            if not isinstance(topic, Mapping):
-                continue
-            label = f" · {topic['label']}" if topic.get("label") else ""
-            heat = f" · 热度 {topic['heat']}" if topic.get("heat") is not None else ""
-            lines.append(
-                f"{topic['rank']}. [{topic['title']}]({topic['url']}){label}{heat}"
-            )
+    rendered = (
+        [topic for topic in topics if isinstance(topic, Mapping)]
+        if isinstance(topics, list)
+        else []
+    )
+    lines = [f"# {hot_search_title(rendered)}", ""]
+    for topic in rendered:
+        label = f" · {topic['label']}" if topic.get("label") else ""
+        heat = f" · 热度 {topic['heat']}" if topic.get("heat") is not None else ""
+        lines.append(f"{topic['rank']}. [{topic['title']}]({topic['url']}){label}{heat}")
+    # 元信息与短说明放在榜单后，列表摘要优先显示真实词条。
+    lines.extend(
+        [
+            "",
+            f"采集时间：{snapshot['collected_at']}",
+            "",
+            "来源：[微博热搜榜](https://s.weibo.com/top/summary)",
+            "",
+            HOT_SEARCH_AUTOMATION_MARKER,
+        ]
+    )
     return "\n".join(lines) + "\n"
 
 
