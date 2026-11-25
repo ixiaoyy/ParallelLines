@@ -17,6 +17,12 @@ STATE = Path("/opt/parallellines/.deployment/ci-release-state.json")
 APP_PATHS = ("app", "alembic", "alembic.ini", "pyproject.toml", "uv.lock")
 EXPECTED_RELEASE = "25fb43e0c6a7015acdcc063e5fc5ec5f20ed7e35"
 EXPECTED_API = "77be24efc3f9770820b49763020b5cfe3919749ab798d90bf6b8038673288d85"
+MYSQL_IMAGE = "mysql:8.4@sha256:563602a18ffd5be220968e8508d84c9dcd80fbffe69e28af51572db29e3285b2"
+MYSQL_DATA = "/opt/parallellines/var/mysql"
+MYSQL_COMMAND = [
+    "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci",
+    "--max-connections=30", "--innodb-buffer-pool-size=256M", "--event-scheduler=OFF",
+]
 SERVICES = {"api": "parallellines-api-1", "worker": "parallellines-worker-1"}
 ID = re.compile(r"[0-9a-f]{64}")
 REVISION = re.compile(r"[0-9a-f]{40}")
@@ -209,8 +215,45 @@ def describe(report):
     report["complete"] = True
 
 
+def verify_database(container, report):
+    """用固定 Compose 前像核对 MySQL 元数据；不接触数据目录或环境变量。"""
+    if not container or not ID.fullmatch(container):
+        raise ValueError("database_container_missing")
+    spec = json.loads(query("database_runtime", [
+        "docker", "inspect", "--format",
+        '{"name":{{json .Name}},"image":{{json .Config.Image}},"image_id":{{json .Image}},'
+        '"command":{{json .Config.Cmd}},"ports":{{json .HostConfig.PortBindings}},'
+        '"health":{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}},'
+        '"mounts":[{{range $i,$m := .Mounts}}{{if $i}},{{end}}'
+        '{"source":{{json $m.Source}},"target":{{json $m.Destination}},'
+        '"type":{{json $m.Type}},"rw":{{json $m.RW}}}{{end}}]}',
+        container,
+    ]))
+    if not re.fullmatch(r"sha256:[0-9a-f]{64}", spec["image_id"]):
+        raise ValueError("database_image_identity_invalid")
+    digests = json.loads(query("database_image_digest", [
+        "docker", "image", "inspect", "--format", "{{json .RepoDigests}}", spec["image_id"],
+    ]))
+    expected_digest = MYSQL_IMAGE.split("@", 1)[1]
+    report["database_spec"] = {
+        "container": spec["name"] == "/parallellines-db-1",
+        "healthy": spec["health"] == "healthy",
+        "image": spec["image"] == MYSQL_IMAGE and any(
+            digest in (f"mysql@{expected_digest}", f"docker.io/library/mysql@{expected_digest}")
+            for digest in digests or []
+        ),
+        "data_mount": spec["mounts"] == [
+            {"source": MYSQL_DATA, "target": "/var/lib/mysql", "type": "bind", "rw": True}
+        ],
+        "command": spec["command"] == MYSQL_COMMAND,
+        "ports": not spec["ports"],
+    }
+    if not all(report["database_spec"].values()):
+        raise ValueError("database_configuration_differs_from_release")
+
+
 def repair(report):
-    """持已有发布锁、备份并只更新已复核归属的后端回执。"""
+    """持已有发布锁，备份后只同步已复核的 API 和 MySQL 身份。"""
     native = trusted_helper(".github/scripts/deploy_artifacts.py", "catalog_native_release")
     tls = trusted_helper("deploy/nginx/run-deploy-with-tls-lock.py", "catalog_native_lock")
     with tls["existing_tls_lock"](tls["LOCK_FILE"]):
@@ -225,17 +268,27 @@ def repair(report):
         before = STATE.read_bytes()
         live = native["running_release_containers"]()
         forum = (REPO / ".deployment/forum-enabled").exists()
-        # 不掩盖其他组件的漂移或缺失回执。
+        if entries["compose"] is None or entries["compose"]["revision"] != EXPECTED_RELEASE:
+            raise ValueError("compose_reference_revision_changed")
+        verify_database(live.get("db"), report)
+        changes = []
+        admitted = {"backend": {"api"}, "compose": {"db"}}
+        effective = {}
+        # 只允许本批的 API/DB 变化；Redis、certbot、Web、圈子和网关仍受原门禁保护。
         for component, entry in entries.items():
             if entry is None:
                 raise ValueError("release_component_receipt_missing")
-            if component != "backend":
-                expected = {name: live.get(name) for name in native["services_for"](component, forum)}
-                if entry["containers"] != expected:
-                    raise ValueError("another_release_component_drift")
-        if observed["containers"]["api"]["matches"]:
+            expected = {name: live.get(name) for name in native["services_for"](component, forum)}
+            effective[component] = expected
+            old = entry["containers"]
+            differences = {name for name in old.keys() | expected.keys() if old.get(name) != expected.get(name)}
+            if differences - admitted.get(component, set()):
+                raise ValueError("another_release_component_drift")
+            if differences:
+                changes.append(component)
+        if not changes:
             native["release_snapshot"](REPO)
-            report.update({"complete": True, "repaired": False})
+            report.update({"complete": True, "repaired_components": []})
             return
         expected_live = {name: observed["containers"][name]["live"] for name in SERVICES}
         expected_recorded = {name: observed["containers"][name]["recorded"] for name in SERVICES}
@@ -249,15 +302,18 @@ def repair(report):
             backup.flush()
             os.fsync(backup.fileno())
             report["receipt_backup"] = Path(backup.name).name
-        if STATE.read_bytes() != before or running_backend() != expected_live:
+        if STATE.read_bytes() != before or native["running_release_containers"]() != live:
             raise ValueError("backend_repair_preimage_changed")
-        native["record_release"](REPO, ["backend"], EXPECTED_RELEASE)
+        native["record_release"](REPO, changes, EXPECTED_RELEASE)
         after = native["read_release_state"](REPO)
-        if (backend_receipt() != (EXPECTED_RELEASE, expected_live)
-                or any(after[key] != entries[key] for key in entries if key != "backend")):
+        expected_after = {
+            key: ({"revision": EXPECTED_RELEASE, "containers": effective[key]} if key in changes else entry)
+            for key, entry in entries.items()
+        }
+        if after != expected_after:
             raise ValueError("backend_repair_verification_failed")
         native["release_snapshot"](REPO)
-        report.update({"complete": True, "repaired": True, "backend_revision": EXPECTED_RELEASE})
+        report.update({"complete": True, "repaired_components": changes, "release_revision": EXPECTED_RELEASE})
 
 
 def main(arguments):
