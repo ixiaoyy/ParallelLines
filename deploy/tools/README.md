@@ -99,6 +99,10 @@ gh workflow run tools-ops.yml --ref ops/tools-deploy-20261109 -f operation=rollb
 
 deploy 先核 receipt、静态归档大小/摘要和安全路径，再核四份固定描述符：COPY-only Dockerfile、专用 dockerignore、Compose 和容器静态 Nginx 配置。仅允许从官方 Nginx digest 封装已验证 dist，不运行 npm/Vite/媒体编译。工具容器无 host ports、DB 或数据卷，只接入 `parallellines_default`，上限 CPU 0.5、内存 256 MiB、进程 64。
 
+仅当 inventory 证实现网工具站为未记录的历史短镜像标签、且原专属续期任务仍受记录控制时，给 deploy 同时加上 `previous_release_tag=site-<已核实的旧完整提交>` 与 `previous_receipt_sha256=<可信旧回执摘要>`。旧版也走同一正式包校验/COPY 封装，以只读清单比对现网全部静态文件及两份 Nginx 配置；单边最多 45 秒，清单最多 10,002 条，沿用 2 MiB 命令输出限制。任一缺失、内容或运行范围不匹配会在切换前失败；新版本仍要求完整提交号。
+
+验证后的旧包作为回退镜像，原镜像和旧 `current` 记录保留；不提前替换现网旧容器。若本次新容器切换后需要回退，恢复已比对内容的旧正式发布及已备份的工具配置，不切到失配的历史登记版本。旧镜像与回退镜像的实际 ID 可以不同。后续常规 deploy 不传这两个参数。
+
 配置原文备份与完整事务保存于自有 release/attempt 目录。切服务前重核 gateway、RO bind、宿主/容器 inode 和配置前像；只原 inode 写入唯一工具标记段，`nginx -t` 后 reload，不 recreate gateway。工具及原站健康、独立证书 dry-run 和真正安装消费者都成功后才提交 current 状态。
 
 rollback 撤销指定应用部署的工具增量，不是把任意旧标签直接发布。恢复前先核完整 attempt 与原 gateway/bind/inode；若已被其他部署接管或网关被替换，保留 pending 和备份并停止，不能向新实例补偿写入。首次追加被中断时，仅恢复由本事务原文和工具片段严格证明的 EOF 部分尾部，不接管外部字节。写操作与既有主站发布共用 `deploy-production` 并发组；health/inventory 独立，执行通道失败后仍可使用。

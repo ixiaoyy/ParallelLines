@@ -11,6 +11,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import textwrap
 import types
 import unittest
 from unittest.mock import patch
@@ -103,6 +104,92 @@ class DeployTests(unittest.TestCase):
             with self.assertRaisesRegex(DEPLOY.DeployError, "another_source"):
                 DEPLOY.tools_metadata()
         self.assertTrue(all("inspect" in call.args[1] or "ps" in call.args[1] for call in command.call_args_list))
+
+    def test_legacy_container_requires_exact_tag_and_stateless_scope(self):
+        tag = "site-" + "a" * 40
+        running = {"reference": "parallellines-tools:aaaaaaa", "id": "b" * 64, "image": "sha256:" + "c" * 64,
+                   "revision": "uncommitted", "project": "parallellines-tools", "service": "tools-static",
+                   "networks": DEPLOY.NETWORK, "running": True, "health": "healthy", "mount_types": ["tmpfs"],
+                   "memory": 268435456, "cpu": 500000000, "pids": 64, "read_only": True,
+                   "privileged": False, "ports": {}}
+        with patch.object(DEPLOY, "tools_snapshot", return_value=running):
+            self.assertEqual(DEPLOY.legacy_container(tag), running)
+            with self.assertRaisesRegex(DEPLOY.DeployError, "invalid_application_revision"):
+                DEPLOY.tools_metadata()
+            for key, value, error in (("reference", "parallellines-tools:bbbbbbb", "reference_mismatch"),
+                                      ("revision", tag[5:], "recovery_not_needed"),
+                                      ("networks", DEPLOY.NETWORK + " another", "scope_mismatch"),
+                                      ("mount_types", ["bind"], "runtime_boundary_mismatch")):
+                with self.subTest(key=key), patch.dict(running, {key: value}):
+                    with self.assertRaisesRegex(DEPLOY.DeployError, error):
+                        DEPLOY.legacy_container(tag)
+
+    def test_manifest_requires_all_config_files_and_rejects_duplicate_paths(self):
+        paths = ["./index.html", "/etc/nginx/nginx.conf", "/etc/nginx/conf.d/default.conf"]
+        text = "\n".join("a" * 64 + "  " + item for item in paths)
+        result = subprocess.CompletedProcess([], 0, text, "")
+        with patch.object(DEPLOY, "run", return_value=result) as command:
+            self.assertEqual(set(DEPLOY.served_manifest(["docker", "exec", "fake", "/bin/sh"])), set(paths))
+            self.assertEqual(command.call_args.kwargs["timeout"], 45)
+            self.assertEqual(command.call_args.args[1][3:5], ["/bin/sh", "-c"])
+            result.stdout = text + "\n" + text.splitlines()[0]
+            with self.assertRaisesRegex(DEPLOY.DeployError, "manifest_invalid"):
+                DEPLOY.served_manifest([])
+            result.stdout = text.splitlines()[0]
+            with self.assertRaisesRegex(DEPLOY.DeployError, "manifest_incomplete"):
+                DEPLOY.served_manifest([])
+
+    def test_legacy_recovery_saves_copy_only_after_exact_live_content_proof(self):
+        tag, digest = "site-" + "a" * 40, "d" * 64
+        running, original = {"id": "b" * 64}, {"cron_sha256": "f" * 64}
+        image, reference = "sha256:" + "c" * 64, "parallellines-tools:" + tag[5:]
+        attempt = Path("/fixture/old")
+        with patch.object(DEPLOY, "prepare_release_image", return_value=(attempt, image, reference)), \
+             patch.object(DEPLOY, "served_manifest") as manifest, \
+             patch.object(DEPLOY, "legacy_container", return_value=running), \
+             patch.object(DEPLOY, "verify_image", return_value=image), \
+             patch.object(DEPLOY, "save_json") as save:
+            manifest.side_effect = [{"./index.html": "old"}, {"./index.html": "different"}]
+            with self.assertRaisesRegex(DEPLOY.DeployError, "release_does_not_match_running_content"):
+                DEPLOY.stage_legacy_recovery((tag, digest), running, original, {})
+            save.assert_not_called()
+            manifest.side_effect = [{"./index.html": "same"}] * 2
+            info = {}
+            record = DEPLOY.stage_legacy_recovery((tag, digest), running, original, info)
+            self.assertTrue(info["legacy_recovery_verified"])
+            self.assertTrue(record["adopted_legacy_baseline"])
+            self.assertEqual(record["image_id"], image)
+            self.assertEqual(record["cron_sha256"], original["cron_sha256"])
+            self.assertEqual([call.args[0].name for call in save.call_args_list], ["compose.json", "legacy-before.json"])
+
+    def test_legacy_dispatch_packs_pair_and_rejects_partial_input(self):
+        project = Path(__file__).resolve().parents[2]
+        workflow = (project / ".github/workflows/tools-ops.yml").read_text(encoding="utf-8")
+        runner = textwrap.dedent(workflow.split("          python3 - <<'PY'\n", 1)[1].split("\n          PY", 1)[0])
+        previous = Path.cwd()
+        try:
+            os.chdir(project)
+            with tempfile.TemporaryDirectory() as directory:
+                output = Path(directory) / "step-output"
+                inputs = {"GITHUB_OUTPUT": str(output), "OPERATION": "deploy",
+                          "RELEASE_TAG": "site-" + "a" * 40, "RECEIPT_SHA256": "b" * 64,
+                          "EXPECTED_CONFIG_SHA256": "c" * 64, "PREVIOUS_RELEASE_TAG": "site-" + "d" * 40,
+                          "PREVIOUS_RECEIPT_SHA256": ""}
+                with patch.dict(os.environ, inputs):
+                    with self.assertRaisesRegex(SystemExit, "Provide both"):
+                        exec(compile(runner, "deploy-payload", "exec"), {})
+                    os.environ["PREVIOUS_RECEIPT_SHA256"] = "e" * 64
+                    exec(compile(runner, "deploy-payload", "exec"), {})
+                command = output.read_text(encoding="utf-8").splitlines()[2]
+                self.assertEqual(command.split()[:-1], ["sudo", "-n", "python3", "-B", "-", "deploy",
+                                 "site-" + "a" * 40, "b" * 64, "c" * 64, "site-" + "d" * 40, "e" * 64])
+                output.unlink()
+                with patch.dict(os.environ, {**inputs, "OPERATION": "rollback", "PREVIOUS_RELEASE_TAG": ""}):
+                    exec(compile(runner, "rollback-payload", "exec"), {})
+                command = output.read_text(encoding="utf-8").splitlines()[2]
+                self.assertEqual(command.split()[:-1], ["sudo", "-n", "python3", "-B", "-", "rollback", "a" * 40])
+        finally:
+            os.chdir(previous)
 
     def transaction(self, fail_health=False):
         """整条事务用替身推进，实际文件仅位于测试临时目录。"""
@@ -247,6 +334,37 @@ class DeployTests(unittest.TestCase):
         else:
             output = hashlib.sha256(config.read_bytes()).hexdigest()
         return subprocess.CompletedProcess(arguments, 0, output, "")
+
+    def test_legacy_rollback_restores_canonical_copy_and_not_stale_current(self):
+        with tempfile.TemporaryDirectory() as temporary, contextlib.ExitStack() as stack:
+            app, attempt, ops, config, before, _, state = self.recovery_fixture(temporary)
+            self.recovery_patches(stack, app, ops, config)
+            prior = {"attempt": str(app / "stale-record"), "image_id": "sha256:" + "b" * 64}
+            live = {"image": "sha256:" + "c" * 64}
+            canonical_id, old_revision = "sha256:" + "d" * 64, "e" * 40
+            old_tag = "parallellines-tools:" + old_revision
+            recovery = {"attempt": str(app / "legacy-copy"), "adopted_legacy_baseline": True,
+                        "applicationRevision": old_revision, "image_id": canonical_id, "image_tag": old_tag,
+                        "compose": str(app / "legacy-copy/compose.json")}
+            state.update(before_current=recovery, before_container=live, legacy_recorded_current=prior)
+            DEPLOY.save_json(ops / "current.json", prior)
+            DEPLOY.save_json(ops / "pending.json", state)
+            DEPLOY.save_json(attempt / "transaction.json", state)
+            stack.enter_context(patch.object(DEPLOY, "known_configuration", return_value=True))
+            stack.enter_context(patch.object(DEPLOY, "run", side_effect=lambda label,args,**kw: self.recovery_command(config,label,args)))
+            stack.enter_context(patch.object(DEPLOY, "tools_snapshot", return_value={"image": state["image_id"]}))
+            image = stack.enter_context(patch.object(DEPLOY, "verify_image", return_value=canonical_id))
+            up = stack.enter_context(patch.object(DEPLOY, "up_application"))
+            wait = stack.enter_context(patch.object(DEPLOY, "wait_application"))
+            report = {}
+            DEPLOY.restore_state(state, report)
+            image.assert_called_once_with(old_tag, old_revision)
+            up.assert_called_once_with(Path(recovery["compose"]), old_tag)
+            wait.assert_called_once_with(canonical_id)
+            self.assertTrue(report["recovery"]["complete"])
+            self.assertEqual(DEPLOY.read_json(ops / "current.json"), recovery)
+            self.assertFalse((ops / "pending.json").exists())
+            self.assertEqual(config.read_bytes(), before)
 
     def test_interrupted_first_append_can_restore_only_the_proven_owned_partial_tail(self):
         with tempfile.TemporaryDirectory() as temporary, contextlib.ExitStack() as stack:

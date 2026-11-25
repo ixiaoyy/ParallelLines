@@ -21,7 +21,7 @@ import urllib.request
 import health
 import tls
 from managed_config import ManagedConfigError, replace as replace_fragment, split, validate_fragment
-from release_contract import ContractError, SOURCE_REPOSITORY, safe_extract_bundle, validate_descriptors, validate_receipt
+from release_contract import ContractError, MAX_MEMBERS, SOURCE_REPOSITORY, safe_extract_bundle, validate_descriptors, validate_receipt
 
 
 APP = Path("/opt/parallellines-tools")
@@ -176,8 +176,8 @@ def download(url, output, limit, expected_sha, expected_bytes=None):
     return size
 
 
-def tools_metadata():
-    """按精确名称查询存在性，再只读身份/能力字段；不把 inspect 失败误当容器不存在。"""
+def tools_snapshot():
+    """按精确名称只读来源、镜像和运行边界；版本是否可信由调用场景再判断。"""
     ids = run("tools_lookup", ["docker", "ps", "--all", "--no-trunc", "--filter", "name=^/" + CONTAINER + "$", "--format", "{{.ID}}"] ).stdout.split()
     if not ids:
         return None
@@ -189,11 +189,23 @@ def tools_metadata():
                 '"revision":{{json (index .Config.Labels "org.opencontainers.image.revision")}},'
                 '"memory":{{json .HostConfig.Memory}},"cpu":{{json .HostConfig.NanoCpus}},'
                 '"pids":{{json .HostConfig.PidsLimit}},"read_only":{{json .HostConfig.ReadonlyRootfs}},'
-                '"privileged":{{json .HostConfig.Privileged}},"ports":{{json .HostConfig.PortBindings}}}')
+                '"privileged":{{json .HostConfig.Privileged}},"ports":{{json .HostConfig.PortBindings}},'
+                '"reference":{{json .Config.Image}},'
+                '"project":{{json (index .Config.Labels "com.docker.compose.project")}},'
+                '"service":{{json (index .Config.Labels "com.docker.compose.service")}},'
+                '"networks":"{{range $name,$net := .NetworkSettings.Networks}}{{$name}} {{end}}",'
+                '"mount_types":[{{range $i,$m := .Mounts}}{{if $i}},{{end}}{{json $m.Type}}{{end}}]}')
     record = json.loads(run("tools_metadata", ["docker", "inspect", "--format", template, ids[0]]).stdout)
     if record["source"] != SOURCE_REPOSITORY:
         raise DeployError("tools_name_owned_by_another_source")
-    revision(record.get("revision"))
+    return record
+
+
+def tools_metadata():
+    """普通部署与启动仍要求完整的镜像提交标签，不接纳历史短标签。"""
+    record = tools_snapshot()
+    if record is not None:
+        revision(record.get("revision"))
     return record
 
 
@@ -376,11 +388,118 @@ def cron_before(current):
     return data
 
 
-def perform_deploy(tag, receipt_sha, expected, report):
+def prepare_release_image(tag, receipt_sha, report):
+    """按正式回执校验并 COPY 封装；已有镜像必须与已记回执和实际 image ID 一致。"""
+    application = tag[5:]
+    release = directory(APP / "releases" / application)
+    attempt = directory(release / "attempts" / secrets.token_hex(8))
+    receipt_file = attempt / "deployment-receipt.json"
+    download(SOURCE_REPOSITORY + "/releases/download/" + tag + "/deployment-receipt.json", receipt_file, 256 * 1024, receipt_sha)
+    receipt = validate_receipt(json.loads(receipt_file.read_text(encoding="utf-8")), tag)
+    archive = attempt / "toolbox-dist.tar.gz"
+    item = receipt["bundle"]
+    download(item["url"], archive, item["bytes"], item["sha256"], item["bytes"])
+    with deadline(120):
+        safe_extract_bundle(archive, attempt / "payload")
+    payload = attempt / "payload"
+    validate_descriptors(payload)
+    report["release_integrity_verified"] = True
+    image_tag = "parallellines-tools:" + application
+    verified = release / "verified-image.json"
+    if run("immutable_tag_lookup", ["docker", "image", "ls", "--quiet", "--no-trunc", image_tag]).stdout.strip():
+        previous_image = read_json(verified)
+        if (previous_image is None or previous_image.get("receipt_sha256") != receipt_sha
+                or previous_image.get("bundle_sha256") != item["sha256"]
+                or previous_image.get("nginxImage") != receipt["nginxImage"]):
+            raise DeployError("immutable_revision_tag_exists_without_matching_receipt")
+        image = verify_image(image_tag, application)
+        if previous_image.get("image_id") != image:
+            raise DeployError("immutable_revision_tag_image_changed")
+        report["verified_image_reused"] = True
+    else:
+        run("pull_official_nginx", ["docker", "pull", receipt["nginxImage"]], timeout=120)
+        iid = attempt / "image.iid"
+        run("copy_only_build", ["docker", "build", "--network", "none", "--pull=false", "--build-arg", "NGINX_IMAGE=" + receipt["nginxImage"],
+            "--build-arg", "APP_REVISION=" + application, "--tag", image_tag, "--iidfile", str(iid),
+            "--file", "deploy/Dockerfile.prebuilt", "."], timeout=180, cwd=payload, env=compose_environment(image_tag))
+        image = verify_image(image_tag, application)
+        if iid.read_text().strip() != image:
+            raise DeployError("iidfile_image_identity_mismatch")
+        save_json(verified, {"receipt_sha256": receipt_sha, "bundle_sha256": item["sha256"],
+                             "nginxImage": receipt["nginxImage"], "image_id": image})
+    return attempt, image, image_tag
+
+
+def legacy_container(tag):
+    """只接纳指定历史发行的短镜像引用，且必须还是原来的无状态工具 Compose 服务。"""
+    observed = tools_snapshot()
+    if (observed is None or observed["reference"] != "parallellines-tools:" + tag[5:12]
+            or not re.fullmatch(r"[0-9a-f]{64}", observed["id"])
+            or not re.fullmatch(r"sha256:[0-9a-f]{64}", observed["image"])):
+        raise DeployError("legacy_tools_reference_mismatch")
+    if re.fullmatch(r"[0-9a-f]{40}", observed.get("revision") or ""):
+        raise DeployError("legacy_tools_recovery_not_needed")
+    if (observed["project"], observed["service"], observed["networks"].split()) != (
+            "parallellines-tools", "tools-static", [NETWORK]):
+        raise DeployError("legacy_tools_compose_scope_mismatch")
+    if (observed["running"] is not True or observed["health"] != "healthy"
+            or any(kind != "tmpfs" for kind in observed["mount_types"])
+            or (observed["memory"], observed["cpu"], observed["pids"], observed["read_only"],
+                observed["privileged"], observed["ports"] or {}) != (268435456, 500000000, 64, True, False, {})):
+        raise DeployError("legacy_tools_runtime_boundary_mismatch")
+    return observed
+
+
+def served_manifest(arguments):
+    """只比较工具容器的静态文件和 Nginx 站点配置；输出不进日志，不读取环境或私钥。"""
+    script = ("set -eu; cd /usr/share/nginx/html; "
+              'unexpected=$(find . ! -type d ! -type f -print); test -z "$unexpected"; '
+              "find . -type f -exec sha256sum {} +; sha256sum /etc/nginx/nginx.conf /etc/nginx/conf.d/default.conf")
+    lines = run("legacy_tools_static_manifest", arguments + ["-c", script], timeout=45).stdout.splitlines()
+    manifest = {}
+    for line in lines:
+        item = re.fullmatch(r"([0-9a-f]{64})  (\./[^\x00-\x1f]+|/etc/nginx/(?:nginx\.conf|conf\.d/default\.conf))", line)
+        if item is None or item[2] in manifest or len(manifest) >= MAX_MEMBERS + 2:
+            raise DeployError("legacy_tools_static_manifest_invalid")
+        manifest[item[2]] = item[1]
+    if not {"./index.html", "/etc/nginx/nginx.conf", "/etc/nginx/conf.d/default.conf"}.issubset(manifest):
+        raise DeployError("legacy_tools_static_manifest_incomplete")
+    return manifest
+
+
+def stage_legacy_recovery(previous, running, current, report):
+    """验证旧发布与现场逐文件相等，保留旧镜像，并准备带完整提交标识的独立回退镜像。"""
+    tag, receipt_sha = previous
+    attempt, canonical_id, canonical_tag = prepare_release_image(tag, receipt_sha, {})
+    expected = served_manifest(["docker", "run", "--rm", "--pull", "never", "--network", "none",
+                               "--read-only", "--memory", "128m", "--cpus", "0.5", "--pids-limit", "32",
+                               "--entrypoint", "/bin/sh", canonical_tag])
+    observed = served_manifest(["docker", "exec", running["id"], "/bin/sh"])
+    if observed != expected:
+        raise DeployError("legacy_tools_release_does_not_match_running_content")
+    if legacy_container(tag) != running or verify_image(canonical_tag, tag[5:]) != canonical_id:
+        raise DeployError("legacy_tools_image_changed_during_verification")
+    compose_path = attempt / "compose.json"
+    save_json(compose_path, compose_spec())
+    # 保留原记录以便对账；不提前改 current，构建新版本失败时维持原容器和原指针。
+    save_json(attempt / "legacy-before.json", {"running": running, "recorded_current": current})
+    report["legacy_recovery_verified"] = True
+    return {"schema": 1, "source": SOURCE_REPOSITORY, "applicationRevision": tag[5:],
+            "image_id": canonical_id, "image_tag": canonical_tag, "compose": str(compose_path),
+            "attempt": str(attempt), "cron_sha256": current.get("cron_sha256") if current else None,
+            "receipt_sha256": receipt_sha, "adopted_legacy_baseline": True}
+
+
+def perform_deploy(tag, receipt_sha, expected, report, previous=None):
     """验证发行物、完整备份和独立恢复路线后，只部署本工具并应用唯一 vhost 段。"""
     if not re.fullmatch(r"site-[0-9a-f]{40}", tag) or not re.fullmatch(r"[0-9a-f]{64}", receipt_sha):
         raise DeployError("invalid_release_inputs")
     application = tag[5:]
+    if previous is not None:
+        old_tag, old_digest = previous
+        if (not re.fullmatch(r"site-[0-9a-f]{40}", old_tag) or old_tag == tag
+                or not re.fullmatch(r"[0-9a-f]{64}", old_digest)):
+            raise DeployError("invalid_legacy_recovery_inputs")
     bundle = source_bundle()
     fragment = validate_fragment(bundle["vhost.conf"].encode("utf-8"))
     source, gateway = gateway_guard(expected, report)
@@ -394,46 +513,15 @@ def perform_deploy(tag, receipt_sha, expected, report):
         if PENDING.exists():
             raise DeployError("unfinished_deployment_requires_rollback")
         current = read_json(CURRENT)
-        before_container = tools_metadata()
-        if before_container is not None and (current is None or current.get("source") != SOURCE_REPOSITORY or current.get("image_id") != before_container["image"]):
+        before_container = legacy_container(previous[0]) if previous else tools_metadata()
+        if previous is None and before_container is not None and (current is None or current.get("source") != SOURCE_REPOSITORY or current.get("image_id") != before_container["image"]):
             raise DeployError("existing_tools_image_has_no_verified_restore_record")
         before_cron = cron_before(current)
-        release = directory(APP / "releases" / application)
-        attempt = directory(release / "attempts" / secrets.token_hex(8))
-        receipt_file = attempt / "deployment-receipt.json"
-        download(SOURCE_REPOSITORY + "/releases/download/" + tag + "/deployment-receipt.json", receipt_file, 256 * 1024, receipt_sha)
-        receipt = validate_receipt(json.loads(receipt_file.read_text(encoding="utf-8")), tag)
-        archive = attempt / "toolbox-dist.tar.gz"
-        item = receipt["bundle"]
-        download(item["url"], archive, item["bytes"], item["sha256"], item["bytes"])
-        with deadline(120):
-            safe_extract_bundle(archive, attempt / "payload")
-        payload = attempt / "payload"
-        validate_descriptors(payload)
-        report["release_integrity_verified"] = True
-        image_tag = "parallellines-tools:" + application
-        verified = release / "verified-image.json"
-        if run("immutable_tag_lookup", ["docker", "image", "ls", "--quiet", "--no-trunc", image_tag]).stdout.strip():
-            previous_image = read_json(verified)
-            if (previous_image is None or previous_image.get("receipt_sha256") != receipt_sha
-                    or previous_image.get("bundle_sha256") != item["sha256"]
-                    or previous_image.get("nginxImage") != receipt["nginxImage"]):
-                raise DeployError("immutable_revision_tag_exists_without_matching_receipt")
-            image = verify_image(image_tag, application)
-            if previous_image.get("image_id") != image:
-                raise DeployError("immutable_revision_tag_image_changed")
-            report["verified_image_reused"] = True
+        if previous is not None:
+            recovery = stage_legacy_recovery(previous, before_container, current, report)
         else:
-            run("pull_official_nginx", ["docker", "pull", receipt["nginxImage"]], timeout=120)
-            iid = attempt / "image.iid"
-            run("copy_only_build", ["docker", "build", "--network", "none", "--pull=false", "--build-arg", "NGINX_IMAGE=" + receipt["nginxImage"],
-                "--build-arg", "APP_REVISION=" + application, "--tag", image_tag, "--iidfile", str(iid),
-                "--file", "deploy/Dockerfile.prebuilt", "."], timeout=180, cwd=payload, env=compose_environment(image_tag))
-            image = verify_image(image_tag, application)
-            if iid.read_text().strip() != image:
-                raise DeployError("iidfile_image_identity_mismatch")
-            save_json(verified, {"receipt_sha256": receipt_sha, "bundle_sha256": item["sha256"],
-                                 "nginxImage": receipt["nginxImage"], "image_id": image})
+            recovery = current
+        attempt, image, image_tag = prepare_release_image(tag, receipt_sha, report)
         compose_file = attempt / "compose.json"
         save_json(compose_file, compose_spec())
         versioned = install_sources(bundle, attempt)
@@ -446,16 +534,20 @@ def perform_deploy(tag, receipt_sha, expected, report):
         state = {"schema": 1, "source": SOURCE_REPOSITORY, "applicationRevision": application,
                  "attempt": str(attempt), "image_id": image, "image_tag": image_tag,
                  "compose": str(compose_file), "receipt_sha256": receipt_sha,
-                 "before_current": current, "before_container": before_container,
+                 "before_current": recovery, "before_container": before_container,
                  "before_config": str(backup), "before_saved_fragment": old_saved.decode("utf-8") if old_saved is not None else None,
                  "before_cron_present": before_cron is not None, "gateway_id": gateway["id"],
                  "config_identity": gateway["config_identity"],
                  "new_fragment": fragment.decode("utf-8"), "status": "prepared"}
+        if previous is not None:
+            # 运行镜像和原 current 可能不匹配，只允许这两个确证前像和本次新镜像参与恢复。
+            state["legacy_recorded_current"] = current
         save_json(attempt / "transaction.json", state)
         save_json(PENDING, state)
         try:
             # 构建耗时后重核真实前像与实例，不能覆盖期间出现的主站或工具更新。
-            if gateway_guard(expected)[1] != gateway or tools_metadata() != before_container:
+            live = legacy_container(previous[0]) if previous else tools_metadata()
+            if gateway_guard(expected)[1] != gateway or live != before_container or read_json(CURRENT) != current:
                 raise DeployError("deployment_state_changed_before_service_switch")
             up_application(compose_file, image_tag)
             wait_application(image)
@@ -535,7 +627,8 @@ def assert_attempt_owner(state):
         if pending.get("attempt") != attempt or pending.get("applicationRevision") != state["applicationRevision"]:
             raise DeployError("recovery_attempt_replaced_realign_transaction")
         before = state.get("before_current")
-        if current is not None and current.get("attempt") not in (attempt, before.get("attempt") if before else None):
+        original_matches = "legacy_recorded_current" in state and current == state["legacy_recorded_current"]
+        if current is not None and current.get("attempt") not in (attempt, before.get("attempt") if before else None) and not original_matches:
             raise DeployError("recovery_current_attempt_replaced")
         return False
     transaction = read_json(owned_path(attempt) / "transaction.json")
@@ -577,20 +670,31 @@ def restore_state(state, report):
         if current_fragment not in (before_fragment, new_fragment) or not known_configuration(current_source, current_fragment):
             raise DeployError("rollback_gateway_changed_outside_owned_delta")
         restored = replace_fragment(current_source, current_fragment, before_fragment)
-    current = tools_metadata()
     before = state.get("before_container")
-    if current is not None and current["image"] not in ({state["image_id"]} | ({before["image"]} if before else set())):
-        raise DeployError("rollback_container_changed_outside_transaction")
     old_record = state.get("before_current")
+    legacy = "legacy_recorded_current" in state
+    allowed_images = {state["image_id"]} | ({before["image"]} if before else set())
+    if legacy:
+        if before is None or old_record is None or old_record.get("adopted_legacy_baseline") is not True:
+            raise DeployError("rollback_legacy_recovery_record_missing")
+        allowed_images.add(old_record["image_id"])
+        current = tools_snapshot()
+        if current is not None and current["image"] == before["image"] and current != before:
+            raise DeployError("rollback_legacy_container_changed")
+    else:
+        current = tools_metadata()
+    if current is not None and current["image"] not in allowed_images:
+        raise DeployError("rollback_container_changed_outside_transaction")
     if before is not None:
         if old_record is None:
             raise DeployError("rollback_previous_receipt_missing")
         old_revision = revision(old_record["applicationRevision"])
         old_tag = old_record["image_tag"]
-        if verify_image(old_tag, old_revision) != before["image"]:
+        restore_id = old_record["image_id"] if legacy else before["image"]
+        if verify_image(old_tag, old_revision) != restore_id:
             raise DeployError("rollback_previous_image_missing")
         up_application(owned_path(old_record["compose"]), old_tag)
-        wait_application(before["image"])
+        wait_application(restore_id)
     elif current is not None:
         run("remove_only_new_owned_tools_container", ["docker", "rm", "--force", CONTAINER], timeout=30)
     if restored != current_source:
@@ -648,13 +752,16 @@ def rollback_application(application, report):
 
 
 def main(arguments):
-    """仅接受 deploy tag/receipt摘要/配置前像；rollback 由独立入口选择已记录版本。"""
-    if len(arguments) != 4 or arguments[0] != "deploy":
+    """接受已验证发布和配置前像；只有显式给出旧发布和回执时才准备历史回退。"""
+    if len(arguments) not in (4, 6) or arguments[0] != "deploy":
         print(json.dumps({"operation": "rejected", "complete": False, "errors": ["invalid_deploy_arguments"]}))
         return 2
     report = {"operation": "deploy", "complete": False, "errors": []}
     try:
-        perform_deploy(arguments[1], arguments[2], arguments[3], report)
+        if len(arguments) == 6:
+            perform_deploy(arguments[1], arguments[2], arguments[3], report, previous=tuple(arguments[4:]))
+        else:
+            perform_deploy(arguments[1], arguments[2], arguments[3], report)
     except (DeployError, ContractError, ManagedConfigError, tls.OperationError) as error:
         report["errors"].append(str(error))
     except (OSError, ValueError, KeyError, TypeError) as error:
