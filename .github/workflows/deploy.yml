@@ -318,12 +318,20 @@ jobs:
 
             case "$DEPLOY_JOB" in
               deploy-full-stack)
-                $COMPOSE $COMPOSE_FILES build api worker nginx
+                if [ "$TRAFFIC_ENABLED" = true ]; then
+                  $COMPOSE $COMPOSE_FILES build api worker traffic-worker nginx
+                else
+                  $COMPOSE $COMPOSE_FILES build api worker nginx
+                fi
                 $COMPOSE $COMPOSE_FILES up -d --no-build
                 PHASE="compose full deploy"
                 ;;
               deploy-backend)
-                $COMPOSE $COMPOSE_FILES up -d --build api worker
+                if [ "$TRAFFIC_ENABLED" = true ]; then
+                  $COMPOSE $COMPOSE_FILES up -d --build api worker traffic-worker
+                else
+                  $COMPOSE $COMPOSE_FILES up -d --build api worker
+                fi
                 $COMPOSE $COMPOSE_FILES exec -T nginx nginx -s reload
                 PHASE="backend deploy"
                 ;;

@@ -115,6 +115,17 @@ select_parallellines_compose_files() {
         fi
         COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.gateway-sites.yml"
     fi
+
+    # 可选跨站统计 worker：仅当服务器显式放置常规标记文件 .deployment/traffic-enabled 时合入。
+    TRAFFIC_ENABLED=false
+    if test -e .deployment/traffic-enabled; then
+        test ! -L .deployment/traffic-enabled && test -f .deployment/traffic-enabled && test -s docker-compose.traffic.yml || {
+            echo "[deploy] traffic marker or recipe is invalid" >&2
+            return 1
+        }
+        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.traffic.yml --profile traffic"
+        TRAFFIC_ENABLED=true
+    fi
 }
 
 select_parallellines_compose_files
