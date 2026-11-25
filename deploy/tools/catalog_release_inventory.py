@@ -187,6 +187,28 @@ def trusted_helper(path, alias):
     return namespace
 
 
+def inspect_release_components(report):
+    """只输出有差异的组件和服务名，不回显回执和其他容器资料。"""
+    native = trusted_helper(".github/scripts/deploy_artifacts.py", "catalog_native_release")
+    entries = native["read_release_state"](REPO)
+    live = native["running_release_containers"]()
+    forum = (REPO / ".deployment/forum-enabled").exists()
+    report["component_drift"] = {}
+    for component, entry in entries.items():
+        names = native["services_for"](component, forum)
+        changes = [name for name in names if entry is None or entry["containers"].get(name) != live.get(name)]
+        if changes:
+            report["component_drift"][component] = changes
+
+
+def describe(report):
+    """同一次只读盘点连同发布门禁的组件范围一起报告。"""
+    inventory(report)
+    report["complete"] = False
+    inspect_release_components(report)
+    report["complete"] = True
+
+
 def repair(report):
     """持已有发布锁、备份并只更新已复核归属的后端回执。"""
     native = trusted_helper(".github/scripts/deploy_artifacts.py", "catalog_native_release")
@@ -240,7 +262,7 @@ def repair(report):
 
 def main(arguments):
     """入口只允许固定操作，错误不回显现场配置或命令输出。"""
-    operations = {"catalog-release-inventory": inventory, "catalog-record-backend": repair}
+    operations = {"catalog-release-inventory": describe, "catalog-record-backend": repair}
     operation = arguments[0] if len(arguments) == 1 else ""
     report = {"operation": operation, "read_only": operation != "catalog-record-backend", "complete": False}
     if operation in operations:
