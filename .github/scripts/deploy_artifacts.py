@@ -190,11 +190,16 @@ def running_release_containers() -> dict:
     ).splitlines()
     containers = {}
     for row in rows:
-        service, container = row.split()
+        parts = row.split()
+        if len(parts) != 2:
+            raise ValueError(f"deploy_release_container_identity:malformed:{len(parts)}")
+        service, container = parts
         if service not in RELEASE_HEALTHCHECKS and service not in {"worker", "certbot"}:
             continue
-        if not re.fullmatch(r"[0-9a-f]{64}", container) or service in containers:
-            raise ValueError("deploy_release_container_identity")
+        if not re.fullmatch(r"[0-9a-f]{64}", container):
+            raise ValueError(f"deploy_release_container_identity:bad_id:{service}:{len(container)}")
+        if service in containers:
+            raise ValueError(f"deploy_release_container_identity:duplicate:{service}")
         containers[service] = container
     return containers
 
