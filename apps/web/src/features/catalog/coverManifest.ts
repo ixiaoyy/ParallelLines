@@ -255,6 +255,10 @@ const CATALOG_COVER_PATHS: Readonly<Record<string, string>> = {
   "space-huggers": "/catalog/2026-11-24-v1/covers/space-huggers.webp",
   "a-dark-room": "/catalog/2026-11-24-v1/covers/a-dark-room.svg",
   "evolution-of-trust": "/catalog/2026-11-24-v1/covers/evolution-of-trust.webp",
+  // 0115 的正式封面与静态资源发布清单同批维护。
+  sandspiel: "/catalog/2026-11-26-v1/covers/sandspiel.webp",
+  "we-become-what-we-behold": "/catalog/2026-11-26-v1/covers/we-become-what-we-behold.webp",
+  "net-puzzle": "/catalog/2026-11-26-v1/covers/net-puzzle.webp",
 };
 
 export function getCatalogCoverPath(slug: string): string | null {

@@ -265,4 +265,8 @@ export const CATALOG_COVER_ASPECTS_BY_PATH: Readonly<Record<string, number>> = {
   "/catalog/2026-11-24-v1/covers/space-huggers.webp": 4 / 3,
   "/catalog/2026-11-24-v1/covers/a-dark-room.svg": 4 / 3,
   "/catalog/2026-11-24-v1/covers/evolution-of-trust.webp": 4 / 3,
+  // 同步 0115 三张正式图片的实际尺寸。
+  "/catalog/2026-11-26-v1/covers/sandspiel.webp": 4 / 3,
+  "/catalog/2026-11-26-v1/covers/we-become-what-we-behold.webp": 4 / 3,
+  "/catalog/2026-11-26-v1/covers/net-puzzle.webp": 4 / 3,
 };
