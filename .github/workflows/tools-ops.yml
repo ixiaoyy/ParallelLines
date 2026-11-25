@@ -13,7 +13,7 @@ on:
         type: choice
         required: true
         default: inventory
-        options: [inventory, health, main-web-inventory, prepare-tls, deploy, rollback, deploy-main-web, rollback-main-web]
+        options: [inventory, health, main-web-inventory, catalog-release-inventory, prepare-tls, deploy, rollback, deploy-main-web, rollback-main-web]
       release_tag:
         description: Required for deploy/rollback; site-<40 hex> or main-web-<40 hex> for main Web
         type: string
@@ -50,7 +50,7 @@ permissions:
 
 concurrency:
   # 只读健康入口不等待写阶段，以便部署执行通道出错时仍可独立检查。
-  group: ${{ github.event_name == 'push' && 'tools-read-inventory' || inputs.operation == 'health' && 'tools-read-health' || inputs.operation == 'main-web-inventory' && 'tools-read-main-web-inventory' || inputs.operation == 'inventory' && 'tools-read-inventory' || 'deploy-production' }}
+  group: ${{ github.event_name == 'push' && 'tools-read-inventory' || inputs.operation == 'health' && 'tools-read-health' || inputs.operation == 'main-web-inventory' && 'tools-read-main-web-inventory' || inputs.operation == 'catalog-release-inventory' && 'tools-read-catalog-release-inventory' || inputs.operation == 'inventory' && 'tools-read-inventory' || 'deploy-production' }}
   cancel-in-progress: false
 
 jobs:
@@ -62,7 +62,7 @@ jobs:
       github.ref == 'refs/heads/ops/tools-deploy-20261109' &&
       (github.event_name == 'push' ||
        (github.event_name == 'workflow_dispatch' &&
-        (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'main-web-inventory' || inputs.operation == 'prepare-tls' || inputs.operation == 'deploy' || inputs.operation == 'rollback' || inputs.operation == 'deploy-main-web' || inputs.operation == 'rollback-main-web')))
+        (inputs.operation == 'inventory' || inputs.operation == 'health' || inputs.operation == 'main-web-inventory' || inputs.operation == 'catalog-release-inventory' || inputs.operation == 'prepare-tls' || inputs.operation == 'deploy' || inputs.operation == 'rollback' || inputs.operation == 'deploy-main-web' || inputs.operation == 'rollback-main-web')))
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -91,7 +91,7 @@ jobs:
           import uuid
 
           operation = os.environ["OPERATION"]
-          scripts = {"inventory": "inventory.py", "health": "health.py", "main-web-inventory": "main_web.py", "prepare-tls": "tls.py", "deploy": "deploy.py", "rollback": "rollback.py", "deploy-main-web": "main_web.py", "rollback-main-web": "main_web.py"}
+          scripts = {"inventory": "inventory.py", "health": "health.py", "main-web-inventory": "main_web.py", "catalog-release-inventory": "catalog_release_inventory.py", "prepare-tls": "tls.py", "deploy": "deploy.py", "rollback": "rollback.py", "deploy-main-web": "main_web.py", "rollback-main-web": "main_web.py"}
           if operation not in scripts:
               raise SystemExit("Unsupported tools operation")
           arguments = operation
