@@ -1,13 +1,19 @@
 """Read-only production catalog release preflight for the existing ops runner."""
 
+import hashlib
+import io
 import json
 import re
 import stat
 import subprocess
 import sys
+import tarfile
 from pathlib import Path
 
+REPO = Path("/opt/parallellines")
 STATE = Path("/opt/parallellines/.deployment/ci-release-state.json")
+APP_PATHS = ("app", "alembic", "alembic.ini", "pyproject.toml", "uv.lock")
+EXPECTED_RELEASE = "25fb43e0c6a7015acdcc063e5fc5ec5f20ed7e35"
 SERVICES = {"api": "parallellines-api-1", "worker": "parallellines-worker-1"}
 ID = re.compile(r"[0-9a-f]{64}")
 REVISION = re.compile(r"[0-9a-f]{40}")
@@ -64,6 +70,71 @@ def backend_receipt():
     return revision, ids
 
 
+def canonical_source():
+    """只读取已批准 Git 版本中 Dockerfile 复制的公开应用文件，不读工作树。"""
+    result = subprocess.run(
+        ["git", "-c", f"safe.directory={REPO}", "-C", str(REPO),
+         "archive", "--format=tar", EXPECTED_RELEASE, *(f"apps/api/{name}" for name in APP_PATHS)],
+        capture_output=True, timeout=25,
+    )
+    if result.returncode != 0 or len(result.stdout) > 32 * 1024 * 1024:
+        raise ValueError("trusted_release_archive_failed")
+    files = {}
+    with tarfile.open(fileobj=io.BytesIO(result.stdout), mode="r:") as archive:
+        for obj in archive:
+            if obj.isdir():
+                continue
+            if not obj.isfile() or not obj.name.startswith("apps/api/") or obj.size > 8 * 1024 * 1024:
+                raise ValueError("trusted_release_archive_member_invalid")
+            stream = archive.extractfile(obj)
+            files[obj.name.removeprefix("apps/api/")] = hashlib.sha256(stream.read()).hexdigest()
+    if not files or len(files) > 800:
+        raise ValueError("trusted_release_archive_file_count")
+    return files
+
+
+# 比较范围对应当前 Dockerfile 的三个 COPY，排除运行时生成的字节码。
+# 不输出文件内容、配置、环境或依赖安装目录。
+COMPARE = """
+import hashlib,json,sys
+from pathlib import Path
+root=Path('/app')
+expected=json.load(sys.stdin)
+files=[]
+for name in ('app','alembic','alembic.ini','pyproject.toml','uv.lock'):
+    base=root/name
+    if base.is_symlink():
+        raise ValueError('invalid source root')
+    for item in (base.rglob('*') if base.is_dir() else (base,)):
+        if '__pycache__' in item.parts:
+            continue
+        if item.is_symlink() or (item.is_file() and item.stat().st_size > 8388608):
+            raise ValueError('invalid source file')
+        if item.is_file():
+            files.append(item)
+            if len(files) > 800:
+                raise ValueError('source count exceeded')
+actual={item.relative_to(root).as_posix():hashlib.sha256(item.read_bytes()).hexdigest() for item in files}
+missing=sorted(expected.keys()-actual.keys())
+extra=sorted(actual.keys()-expected.keys())
+changed=sorted(k for k in expected.keys() & actual.keys() if expected[k]!=actual[k])
+print(json.dumps({'matches':not(missing or extra or changed),'files':len(files),
+                  'missing_count':len(missing),'extra_count':len(extra),'changed_count':len(changed),
+                  'known_differences':(missing+changed)[:20]}))
+"""
+
+
+def runtime_source(container, expected):
+    """只在已定位的常驻容器内比较应用、迁移与依赖锁文件。"""
+    result = subprocess.run(
+        ["docker", "exec", "-i", container, "python", "-I", "-B", "-c", COMPARE],
+        input=json.dumps(expected), text=True, capture_output=True, timeout=25,
+    )
+    if result.returncode != 0 or len(result.stdout) > 8192:
+        raise ValueError("read_runtime_source_failed")
+    return json.loads(result.stdout)
+
+
 def inventory(report):
     """核对常驻后端与只读数据库版本，任何中途容器或回执变化均失败。"""
     live = running_backend()
@@ -90,9 +161,15 @@ def inventory(report):
     versions = re.findall(r"^([A-Za-z0-9_]{1,32})(?: \(head\))?\s*$", output, flags=re.MULTILINE)
     if len(versions) != 1:
         raise ValueError("database_revision_not_unique")
+    report["alembic_current"] = versions[0]
+    if revision != EXPECTED_RELEASE:
+        raise ValueError("backend_reference_revision_changed")
+    source = canonical_source()
+    report["source_verification"] = {
+        service: runtime_source(container, source) for service, container in live.items()
+    }
     if running_backend() != live or backend_receipt() != (revision, recorded):
         raise ValueError("backend_state_changed_during_inventory")
-    report["alembic_current"] = versions[0]
     report["complete"] = True
 
 
@@ -102,7 +179,7 @@ def main(arguments):
     if arguments == ["catalog-release-inventory"]:
         try:
             inventory(report)
-        except (KeyError, OSError, TypeError, ValueError, subprocess.TimeoutExpired) as error:
+        except (KeyError, OSError, TypeError, ValueError, tarfile.TarError, subprocess.TimeoutExpired) as error:
             code = str(error) if type(error) is ValueError else ""
             report["error"] = code if re.fullmatch(r"[a-z_]+", code) else type(error).__name__
     else:
