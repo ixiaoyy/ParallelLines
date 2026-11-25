@@ -1,29 +1,32 @@
-"""Read-only production catalog release preflight for the existing ops runner."""
+"""Catalog release diagnostics and a guarded backend-receipt repair."""
 
 import hashlib
 import io
 import json
+import os
 import re
 import stat
 import subprocess
 import sys
 import tarfile
+import tempfile
 from pathlib import Path
 
 REPO = Path("/opt/parallellines")
 STATE = Path("/opt/parallellines/.deployment/ci-release-state.json")
 APP_PATHS = ("app", "alembic", "alembic.ini", "pyproject.toml", "uv.lock")
 EXPECTED_RELEASE = "25fb43e0c6a7015acdcc063e5fc5ec5f20ed7e35"
+EXPECTED_API = "77be24efc3f9770820b49763020b5cfe3919749ab798d90bf6b8038673288d85"
 SERVICES = {"api": "parallellines-api-1", "worker": "parallellines-worker-1"}
 ID = re.compile(r"[0-9a-f]{64}")
 REVISION = re.compile(r"[0-9a-f]{40}")
 API_COMMAND = "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
 
-def query(label, args, timeout=10):
+def query(label, args, timeout=10, max_output=16384):
     """运行固定的只读命令；不回显容器命令的原始输出或错误。"""
-    result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
-    if result.returncode != 0 or len(result.stdout) > 16384:
+    result = subprocess.run(args, capture_output=True, encoding="utf-8", timeout=timeout)
+    if result.returncode != 0 or len(result.stdout) > max_output:
         raise ValueError(label + "_failed")
     return result.stdout
 
@@ -173,13 +176,77 @@ def inventory(report):
     report["complete"] = True
 
 
+def trusted_helper(path, alias):
+    """从固定提交加载现有发布锁和登记逻辑，不执行可变工作树中的版本。"""
+    source = query("trusted_release_helper", [
+        "git", "-c", f"safe.directory={REPO}", "-C", str(REPO),
+        "show", f"{EXPECTED_RELEASE}:{path}",
+    ], max_output=65536)
+    namespace = {"__name__": alias}
+    exec(compile(source, path, "exec"), namespace)
+    return namespace
+
+
+def repair(report):
+    """持已有发布锁、备份并只更新已复核归属的后端回执。"""
+    native = trusted_helper(".github/scripts/deploy_artifacts.py", "catalog_native_release")
+    tls = trusted_helper("deploy/nginx/run-deploy-with-tls-lock.py", "catalog_native_lock")
+    with tls["existing_tls_lock"](tls["LOCK_FILE"]):
+        observed = {}
+        inventory(observed)
+        if (observed["alembic_current"] != "0114_add_four_browser_games"
+                or observed["containers"]["api"]["live"] != EXPECTED_API
+                or not observed["containers"]["worker"]["matches"]
+                or not all(item["matches"] for item in observed["source_verification"].values())):
+            raise ValueError("backend_repair_preimage_changed")
+        entries = native["read_release_state"](REPO)
+        before = STATE.read_bytes()
+        live = native["running_release_containers"]()
+        forum = (REPO / ".deployment/forum-enabled").exists()
+        # 不掩盖其他组件的漂移或缺失回执。
+        for component, entry in entries.items():
+            if entry is None:
+                raise ValueError("release_component_receipt_missing")
+            if component != "backend":
+                expected = {name: live.get(name) for name in native["services_for"](component, forum)}
+                if entry["containers"] != expected:
+                    raise ValueError("another_release_component_drift")
+        if observed["containers"]["api"]["matches"]:
+            native["release_snapshot"](REPO)
+            report.update({"complete": True, "repaired": False})
+            return
+        expected_live = {name: observed["containers"][name]["live"] for name in SERVICES}
+        expected_recorded = {name: observed["containers"][name]["recorded"] for name in SERVICES}
+        if (running_backend() != expected_live
+                or backend_receipt() != (EXPECTED_RELEASE, expected_recorded)):
+            raise ValueError("backend_repair_preimage_changed")
+        # 使用新的 0600 备份，不覆盖原有恢复记录。
+        with tempfile.NamedTemporaryFile("wb", dir=STATE.parent, prefix="ci-release-state.catalog-before-",
+                                         suffix=".json", delete=False) as backup:
+            backup.write(before)
+            backup.flush()
+            os.fsync(backup.fileno())
+            report["receipt_backup"] = Path(backup.name).name
+        if STATE.read_bytes() != before or running_backend() != expected_live:
+            raise ValueError("backend_repair_preimage_changed")
+        native["record_release"](REPO, ["backend"], EXPECTED_RELEASE)
+        after = native["read_release_state"](REPO)
+        if (backend_receipt() != (EXPECTED_RELEASE, expected_live)
+                or any(after[key] != entries[key] for key in entries if key != "backend")):
+            raise ValueError("backend_repair_verification_failed")
+        native["release_snapshot"](REPO)
+        report.update({"complete": True, "repaired": True, "backend_revision": EXPECTED_RELEASE})
+
+
 def main(arguments):
-    """入口仅接受固定只读操作，错误不包含生产输出。"""
-    report = {"operation": "catalog-release-inventory", "read_only": True, "complete": False}
-    if arguments == ["catalog-release-inventory"]:
+    """入口只允许固定操作，错误不回显现场配置或命令输出。"""
+    operations = {"catalog-release-inventory": inventory, "catalog-record-backend": repair}
+    operation = arguments[0] if len(arguments) == 1 else ""
+    report = {"operation": operation, "read_only": operation != "catalog-record-backend", "complete": False}
+    if operation in operations:
         try:
-            inventory(report)
-        except (KeyError, OSError, TypeError, ValueError, tarfile.TarError, subprocess.TimeoutExpired) as error:
+            operations[operation](report)
+        except Exception as error:
             code = str(error) if type(error) is ValueError else ""
             report["error"] = code if re.fullmatch(r"[a-z_]+", code) else type(error).__name__
     else:
