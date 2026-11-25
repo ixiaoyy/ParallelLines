@@ -182,25 +182,30 @@ def read_release_state(repo: Path) -> dict:
 
 
 def running_release_containers() -> dict:
-    """只取主站 Compose 的在运行容器身份和健康状态，不读取其环境或日志。"""
+    """只取主站 Compose 的在运行常驻容器身份和健康状态，排除 one-off 临时容器，不读取其环境或日志。"""
     rows = subprocess.check_output(
-        ["docker", "ps", "--no-trunc", "--filter", "label=com.docker.compose.project=parallellines",
-         "--format", '{{.Label "com.docker.compose.service"}} {{.ID}}'],
+        ["docker", "ps", "--no-trunc",
+         "--filter", "label=com.docker.compose.project=parallellines",
+         "--filter", "label=com.docker.compose.oneoff=False",
+         "--format", '{{.Label "com.docker.compose.service"}} {{.ID}} {{.Names}}'],
         encoding="utf-8", timeout=10,
     ).splitlines()
     containers = {}
+    names = {}
     for row in rows:
         parts = row.split()
-        if len(parts) != 2:
+        if len(parts) < 2:
             raise ValueError(f"deploy_release_container_identity:malformed:{len(parts)}")
-        service, container = parts
+        service, container = parts[0], parts[1]
+        name = parts[2] if len(parts) > 2 else ""
         if service not in RELEASE_HEALTHCHECKS and service not in {"worker", "certbot"}:
             continue
         if not re.fullmatch(r"[0-9a-f]{64}", container):
             raise ValueError(f"deploy_release_container_identity:bad_id:{service}:{len(container)}")
         if service in containers:
-            raise ValueError(f"deploy_release_container_identity:duplicate:{service}")
+            raise ValueError(f"deploy_release_container_identity:duplicate:{service}:{names[service]},{name}")
         containers[service] = container
+        names[service] = name
     return containers
 
 
