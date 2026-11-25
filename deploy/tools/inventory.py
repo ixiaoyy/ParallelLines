@@ -15,6 +15,11 @@ import urllib.request
 
 REPOSITORY = Path("/opt/parallellines")
 MAIN_CONFIG = REPOSITORY / "deploy/nginx/default.conf"
+TOOLS_ROOT = Path("/opt/parallellines-tools")
+TOOLS_NAME = "/parallellines-tools-static"
+TOOLS_SOURCE = "https://github.com/ixiaoyy/parallel-lines-tools"
+TOOLS_CRON = Path("/etc/cron.d/parallellines-tools")
+RECOVERY_FILE_LIMIT = 256 * 1024
 DOMAINS = ("pingxingxian.space", "tools.pingxingxian.space")
 MAX_CONTAINERS = 64
 MAX_GATEWAY_CANDIDATES = 8
@@ -100,6 +105,73 @@ def container_inventory(reader):
     for record in records:
         record["networks"] = record["networks"].split()
     return records
+
+
+def recovery_file(path):
+    """只读固定的工具站恢复/续期文件，拒绝重定向和超限，不回传原文。"""
+    if path.resolve() != path or path.is_symlink():
+        raise InventoryError("recovery_file_path_redirected")
+    if not path.exists():
+        return None
+    if not path.is_file():
+        raise InventoryError("recovery_file_not_regular")
+    with path.open("rb") as handle:
+        body = handle.read(RECOVERY_FILE_LIMIT + 1)
+    if len(body) > RECOVERY_FILE_LIMIT:
+        raise InventoryError("recovery_file_size_limit")
+    return body
+
+
+def tools_recovery_inventory(reader, containers):
+    """核对独立工具容器与恢复记录；只汇报版本格式和匹配结果，不输出镜像 ID、文件内容或摘要。"""
+    found = [item for item in containers if item["name"] == TOOLS_NAME]
+    if not found:
+        return {"container_present": False}
+    if len(found) != 1 or not re.fullmatch(r"[0-9a-f]{64}", found[0]["id"]):
+        raise InventoryError("tools_container_not_unique")
+    container = found[0]
+    template = ('{"image_id":{{json .Image}},'
+                '"source":{{json (index .Config.Labels "org.opencontainers.image.source")}},'
+                '"revision":{{json (index .Config.Labels "org.opencontainers.image.revision")}},'
+                '"running":{{json .State.Running}},'
+                '"health":{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}},'
+                '"memory":{{json .HostConfig.Memory}},"cpu":{{json .HostConfig.NanoCpus}},'
+                '"pids":{{json .HostConfig.PidsLimit}},"read_only":{{json .HostConfig.ReadonlyRootfs}},'
+                '"privileged":{{json .HostConfig.Privileged}},"ports":{{json .HostConfig.PortBindings}},'
+                '"mount_types":[{{range $i,$m := .Mounts}}{{if $i}},{{end}}{{json $m.Type}}{{end}}]}')
+    detail = json.loads(reader.run("tools_recovery_metadata",
+                                   ["docker", "inspect", "--format", template, container["id"]]).stdout)
+    if not re.fullmatch(r"sha256:[0-9a-f]{64}", detail.get("image_id") or ""):
+        raise InventoryError("tools_image_identity_invalid")
+    # 现场可能是手动切换留下的短标签；这里只区分格式，不放宽部署或回退校验。
+    revision = detail.get("revision") or ""
+    valid_revision = revision if re.fullmatch(r"(?:[0-9a-f]{7}|[0-9a-f]{40})", revision) else None
+    state = recovery_file(TOOLS_ROOT / "ops/current.json")
+    current = json.loads(state) if state is not None else {}
+    if not isinstance(current, dict):
+        raise InventoryError("tools_current_record_invalid")
+    saved_revision = current.get("applicationRevision") or ""
+    cron = recovery_file(TOOLS_CRON)
+    return {
+        "container_present": True,
+        "source_matches": detail["source"] == TOOLS_SOURCE,
+        "revision_label": valid_revision,
+        "image_tag_matches_label": bool(valid_revision and container["image"] == "parallellines-tools:" + valid_revision),
+        "running": detail["running"],
+        "healthy": detail["health"] == "healthy",
+        "compose_scope_matches": (container["project"], container["service"], container["networks"])
+                                  == ("parallellines-tools", "tools-static", ["parallellines_default"]),
+        "runtime_limits_match": (detail["memory"], detail["cpu"], detail["pids"], detail["read_only"],
+                                 detail["privileged"], detail["ports"] or {})
+                                == (268435456, 500000000, 64, True, False, {}),
+        "data_mounts_absent": all(kind == "tmpfs" for kind in detail["mount_types"]),
+        "current_recorded": state is not None,
+        "recorded_revision": saved_revision if re.fullmatch(r"[0-9a-f]{40}", saved_revision) else None,
+        "recorded_image_matches": current.get("image_id") == detail["image_id"],
+        "pending_present": recovery_file(TOOLS_ROOT / "ops/pending.json") is not None,
+        "cron_present": cron is not None,
+        "cron_matches_record": cron is not None and hashlib.sha256(cron).hexdigest() == current.get("cron_sha256"),
+    }
 
 
 def gateway_inventory(reader, containers):
@@ -246,6 +318,7 @@ def main(arguments):
     collect_section(report, "main_source", lambda: git_inventory(reader))
     containers = collect_section(report, "containers", lambda: container_inventory(reader))
     if containers is not None:
+        collect_section(report, "tools_recovery", lambda: tools_recovery_inventory(reader, containers))
         gateway = collect_section(report, "gateway", lambda: gateway_inventory(reader, containers))
         if gateway is not None:
             collect_section(report, "tls", lambda: certificate_inventory(reader, gateway, containers))

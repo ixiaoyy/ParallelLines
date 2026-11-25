@@ -79,6 +79,53 @@ server {
         self.assertNotIn("json .Config.Labels", template)
         self.assertIn("com.docker.compose.service", template)
 
+    def test_recovery_inventory_compares_exact_image_without_exporting_state(self):
+        container = {"id": "c" * 64, "name": INVENTORY.TOOLS_NAME, "image": "parallellines-tools:123abcd",
+                     "project": "parallellines-tools", "service": "tools-static", "networks": ["parallellines_default"]}
+        image_id = "sha256:" + "a" * 64
+        detail = {"image_id": image_id, "source": INVENTORY.TOOLS_SOURCE, "revision": "123abcd",
+                  "running": True, "health": "healthy", "memory": 268435456, "cpu": 500000000, "pids": 64,
+                  "read_only": True, "privileged": False, "ports": {}, "mount_types": ["tmpfs"]}
+
+        class FakeReader:
+            def run(self, label, arguments):
+                return subprocess.CompletedProcess(arguments, 0, json.dumps(detail), "")
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / "ops").mkdir()
+            cron = root / "tools-cron"
+            cron.write_bytes(b"private cron bytes")
+            current_path = root / "ops/current.json"
+            current = {"image_id": "sha256:" + "b" * 64, "applicationRevision": "e" * 40,
+                       "cron_sha256": INVENTORY.hashlib.sha256(cron.read_bytes()).hexdigest(),
+                       "private_example": "PRIVATE_RECORD"}
+            current_path.write_text(json.dumps(current), encoding="utf-8")
+            with patch.multiple(INVENTORY, TOOLS_ROOT=root, TOOLS_CRON=cron):
+                observed = INVENTORY.tools_recovery_inventory(FakeReader(), [container])
+                self.assertEqual(observed["revision_label"], "123abcd")
+                self.assertTrue(observed["image_tag_matches_label"])
+                self.assertTrue(observed["cron_matches_record"])
+                self.assertTrue(observed["runtime_limits_match"])
+                self.assertFalse(observed["recorded_image_matches"])
+                self.assertFalse(observed["pending_present"])
+                self.assertNotIn(image_id, json.dumps(observed))
+                self.assertNotIn("PRIVATE_RECORD", json.dumps(observed))
+
+                (root / "ops/pending.json").write_bytes(b"{}")
+                current["image_id"] = image_id
+                current_path.write_text(json.dumps(current), encoding="utf-8")
+                cron.write_bytes(b"changed cron")
+                observed = INVENTORY.tools_recovery_inventory(FakeReader(), [container])
+                self.assertTrue(observed["recorded_image_matches"])
+                self.assertTrue(observed["pending_present"])
+                self.assertFalse(observed["cron_matches_record"])
+
+    def test_recovery_inventory_reports_no_tools_without_reading_files(self):
+        with patch.object(INVENTORY, "recovery_file") as recovery:
+            self.assertEqual(INVENTORY.tools_recovery_inventory(None, []), {"container_present": False})
+        recovery.assert_not_called()
+
     def test_transport_preserves_python_heredoc_without_line_injection(self):
         project = Path(__file__).resolve().parents[2]
         workflow = (project / ".github/workflows/tools-ops.yml").read_text(encoding="utf-8")
