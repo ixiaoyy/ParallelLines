@@ -169,6 +169,10 @@ CATALOG_ASSET_KEYS = (
     "catalog/2026-11-24-v1/covers/space-huggers.webp",
     "catalog/2026-11-24-v1/covers/a-dark-room.svg",
     "catalog/2026-11-24-v1/covers/evolution-of-trust.webp",
+    # 0115 三款外链的正式封面，发布时单独核对并上传本批。
+    "catalog/2026-11-26-v1/covers/sandspiel.webp",
+    "catalog/2026-11-26-v1/covers/we-become-what-we-behold.webp",
+    "catalog/2026-11-26-v1/covers/net-puzzle.webp",
 ) + CATALOG_ASTRA_COVER_KEYS + CATALOG_ASTRA_ILLUSTRATION_KEYS
 
 # 压缩后的目录装饰来自 Web public；仍用原版本目录，保留 PNG 和旧对象便于恢复。
