@@ -51,12 +51,55 @@ function forumEntryHtml(): Plugin {
   };
 }
 
+/** 游戏独立构建使用自己的首个 HTML 元信息，保留服务端注入标记与正式品牌资源。 */
+function gamesEntryHtml(): Plugin {
+  return {
+    name: "games-entry-html",
+    transformIndexHtml(html) {
+      const title = "平行线 ParallelLines · 游戏";
+      const description = "平行线游戏目录与站内小游戏：发现、游玩并收藏平行线站内与收录游戏。";
+      const origin = "https://games.pingxingxian.space/";
+      return html.replace(
+        /<!-- parallellines-seo-head-start -->[\s\S]*?<!-- parallellines-seo-head-end -->/,
+        `<!-- parallellines-seo-head-start -->
+    <meta name="description" content="${description}" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="${origin}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="${title}" />
+    <meta property="og:site_name" content="平行线 ParallelLines" />
+    <meta property="og:description" content="${description}" />
+    <meta property="og:url" content="${origin}" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="${title}" />
+    <meta name="twitter:description" content="${description}" />
+    <title>${title}</title>
+    <!-- parallellines-seo-head-end -->`,
+      );
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => ({
-  // 游戏与论坛可同时本地预览，不能互相覆盖依赖预构建状态。
-  cacheDir: mode === "forum" ? "node_modules/.vite-forum" : "node_modules/.vite",
-  plugins: [vue(), staticAssetPreconnect(), ...(mode === "forum" ? [forumEntryHtml()] : [])],
-  // 同一业务源码分别发布两个前端，运行时不会按任意 Host 猜测产品或共享浏览器令牌。
-  define: { "import.meta.env.VITE_SITE_MODE": JSON.stringify(mode === "forum" ? "forum" : "games") },
+  // 主站、游戏与论坛可同时本地预览，不能互相覆盖依赖预构建状态。
+  cacheDir:
+    mode === "forum"
+      ? "node_modules/.vite-forum"
+      : mode === "games"
+        ? "node_modules/.vite-games"
+        : "node_modules/.vite",
+  plugins: [
+    vue(),
+    staticAssetPreconnect(),
+    ...(mode === "forum" ? [forumEntryHtml()] : mode === "games" ? [gamesEntryHtml()] : []),
+  ],
+  // 同一业务源码分别发布独立前端，运行时不会按任意 Host 猜测产品或共享浏览器令牌。
+  define: {
+    "import.meta.env.VITE_SITE_MODE": JSON.stringify(
+      mode === "forum" ? "forum" : mode === "games" ? "games" : "main",
+    ),
+  },
   build: {
     rollupOptions: {
       output: {

@@ -137,14 +137,10 @@ async def logout_ticket(
     """已登录 Main/Circle 只为自己的 sid 出票；用户随后到主站完成统一退出。"""
 
     service = UnifiedAuthService(session, settings)
-    if request.headers.get("origin") not in {service.main_origin, service.circle_origin}:
+    origin = request.headers.get("origin")
+    if origin not in service.allowed_browser_origins():
         raise PermissionDeniedError("unified_origin_denied", "退出请求来源无效")
-    service.require_origin(
-        request,
-        service.main_origin
-        if request.headers.get("origin") == service.main_origin
-        else service.circle_origin,
-    )
+    service.require_origin(request, origin)
     if token is None:
         raise AuthenticationError("unified_login_required", "请先登录主站")
     login = await service.bearer_login(token, lock=True)

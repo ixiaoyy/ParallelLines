@@ -31,7 +31,7 @@ class UnifiedAccessResponse(UnifiedStateResponse):
 
 
 class UnifiedAuthorizeRequest(UnifiedRequest):
-    client_id: Literal["parallellines-circle"]
+    client_id: Literal["parallellines-circle", "parallellines-games"]
     redirect_uri: str = Field(max_length=512)
     state: str = Field(min_length=8, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
     code_challenge: str = Field(min_length=43, max_length=43, pattern=r"^[A-Za-z0-9_-]+$")
@@ -43,7 +43,7 @@ class UnifiedAuthorizeResponse(BaseModel):
 
 
 class UnifiedExchangeRequest(UnifiedRequest):
-    client_id: Literal["parallellines-circle"]
+    client_id: Literal["parallellines-circle", "parallellines-games"]
     redirect_uri: str = Field(max_length=512)
     code: str = Field(min_length=32, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
     code_verifier: str = Field(min_length=43, max_length=128, pattern=r"^[A-Za-z0-9._~-]+$")

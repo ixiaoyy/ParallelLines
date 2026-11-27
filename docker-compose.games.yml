@@ -1,0 +1,38 @@
+# 显式启用独立游戏站时与原部署文件合并；基础 Compose 不依赖游戏站证书或新服务。
+services:
+  api:
+    environment:
+      PUBLIC_GAMES_URL: https://games.pingxingxian.space
+      GAMES_WEB_APP_SHELL_URL: http://games-web/index.html
+
+  games-web:
+    image: parallellines-games-web:${GAMES_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.games
+      args:
+        VITE_API_BASE_URL: /api/v1
+        VITE_PUBLIC_GAMES_URL: https://games.pingxingxian.space/
+        VITE_UNIFIED_AUTH_ENABLED: ${VITE_UNIFIED_AUTH_ENABLED:-false}
+        VITE_TRAFFIC_ANALYTICS_ENABLED: ${VITE_TRAFFIC_ANALYTICS_ENABLED:-false}
+        SOURCE_REVISION: ${SOURCE_REVISION:-}
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+
+  nginx:
+    volumes:
+      # 两份只读挂载分别启用独立游戏域名与主域旧入口首期 302 跳转，不覆盖原有网关配置。
+      - ./deploy/nginx/games.conf:/etc/nginx/conf.d/games.conf:ro
+      - ./deploy/nginx/games-main-redirects.conf:/etc/nginx/games-main/redirects.conf:ro
+    depends_on:
+      games-web:
+        condition: service_healthy

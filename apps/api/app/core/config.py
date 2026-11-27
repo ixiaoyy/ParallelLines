@@ -15,9 +15,11 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     public_site_url: str | None = None
     web_app_shell_url: str | None = None
-    # 仅显式启用独立论坛时使用；缺省不改变主站与旧论坛行为。
+    # 仅显式启用独立论坛或独立游戏站时使用；缺省不改变主站与旧入口行为。
     public_forum_url: str | None = None
     forum_web_app_shell_url: str | None = None
+    public_games_url: str | None = None
+    games_web_app_shell_url: str | None = None
     baidu_site_verification: str | None = None
 
     database_url: str = "mysql+asyncmy://root:root@localhost:3306/parallellines?charset=utf8mb4"

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "dev:games": "vite --mode games",
+    "build:games": "vite build --mode games --outDir dist-games",
     "dev:forum": "vite --mode forum",
     "build:forum": "vite build --mode forum --outDir dist-forum",
     "build:birdland": "node scripts/build-birdland.mjs",

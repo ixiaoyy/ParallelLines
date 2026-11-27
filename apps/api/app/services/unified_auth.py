@@ -52,6 +52,44 @@ class BrowserLogin:
     expires_at: datetime
 
 
+async def _resolve_main_session(
+    session: AsyncSession,
+    settings: Settings,
+    user_id: str,
+    session_id: str,
+    *,
+    lock: bool,
+) -> BrowserLogin:
+    """复核账号归属、角色、撤销和最长会话寿命；仅需要串行化的写事务加锁。"""
+    if not ID_PATTERN.fullmatch(user_id) or not ID_PATTERN.fullmatch(session_id):
+        raise AuthenticationError("unified_login_required", "请先登录主站")
+    row = await session.get(UserSession, session_id, populate_existing=True, with_for_update=lock)
+    user = await session.get(User, user_id, populate_existing=True, with_for_update=lock)
+    if (
+        row is None
+        or user is None
+        or row.user_id != user.id
+        or row.revoked_at is not None
+        or user.status != "active"
+        or user.role not in MAIN_ROLES
+    ):
+        raise AuthenticationError("unified_login_required", "请先登录主站")
+    expiry = as_utc_datetime(row.created_at) + timedelta(days=settings.refresh_token_days)
+    if expiry <= utcnow():
+        raise AuthenticationError("unified_login_required", "请重新登录主站")
+    return BrowserLogin(user, row, expiry)
+
+
+async def resolve_main_bearer_session(
+    session: AsyncSession, settings: Settings, token: str, *, lock: bool = False
+) -> BrowserLogin:
+    """验证主站 access 与必需的 sid，返回当前会话；不依赖跨站登录开关。"""
+    data = decode_token(token, settings=settings)
+    if not isinstance(data.get("sid"), str) or not isinstance(data.get("sub"), str):
+        raise AuthenticationError("unified_login_required", "请重新登录主站")
+    return await _resolve_main_session(session, settings, data["sub"], data["sid"], lock=lock)
+
+
 @dataclass(frozen=True)
 class BrowserPointer:
     """浏览器句柄对应的串行指针；旧代际不能读取指针后来绑定的另一个身份。"""
@@ -77,10 +115,35 @@ class UnifiedAuthService:
         self.settings = settings
         self.main_origin = self.configured_origin(settings.public_site_url, settings)
         self.circle_origin = self.configured_origin(settings.public_forum_url, settings)
+        self.games_origin = (
+            self.configured_origin(settings.public_games_url, settings)
+            if settings.public_games_url
+            else None
+        )
         self.cookie_secure = urlsplit(self.main_origin).scheme == "https"
         self.cookie_name = COOKIE_NAME if self.cookie_secure else "pl-unified-local"
         if self.main_origin == self.circle_origin:
             raise PermissionDeniedError("unified_auth_unavailable", "统一登录来源配置无效")
+        if self.games_origin is not None and self.games_origin in {
+            self.main_origin,
+            self.circle_origin,
+        }:
+            raise PermissionDeniedError("unified_auth_unavailable", "游戏站统一登录来源配置无效")
+
+    def client_origin(self, client_id: str) -> str:
+        """按客户端标识严格返回固定子站来源，不混用圈子与游戏站回调。"""
+
+        if client_id == "parallellines-circle":
+            return self.circle_origin
+        if client_id == "parallellines-games" and self.games_origin is not None:
+            return self.games_origin
+        raise AppError("invalid_unified_client", "未登记的统一登录客户端")
+
+    def allowed_browser_origins(self) -> set[str]:
+        origins = {self.main_origin, self.circle_origin}
+        if self.games_origin is not None:
+            origins.add(self.games_origin)
+        return origins
 
     @staticmethod
     def configured_origin(value: str | None, settings: Settings) -> str:
@@ -144,38 +207,14 @@ class UnifiedAuthService:
         *,
         lock: bool = False,
     ) -> BrowserLogin:
-        """复核单个用户/sid/当前状态及最长寿命；写事务可锁定该 sid 防止并发复活。"""
-
-        if not ID_PATTERN.fullmatch(user_id) or not ID_PATTERN.fullmatch(session_id):
-            raise AuthenticationError("unified_login_required", "请先登录主站")
-        row = await self.session.get(
-            UserSession,
-            session_id,
-            populate_existing=True,
-            with_for_update=lock,
+        """沿用已知身份的严格会话校验，必要时锁定同一设备会话。"""
+        return await _resolve_main_session(
+            self.session, self.settings, user_id, session_id, lock=lock
         )
-        user = await self.session.get(User, user_id, populate_existing=True, with_for_update=lock)
-        if (
-            row is None
-            or user is None
-            or row.user_id != user.id
-            or row.revoked_at is not None
-            or user.status != "active"
-            or user.role not in MAIN_ROLES
-        ):
-            raise AuthenticationError("unified_login_required", "请先登录主站")
-        expiry = as_utc_datetime(row.created_at) + timedelta(days=self.settings.refresh_token_days)
-        if expiry <= utcnow():
-            raise AuthenticationError("unified_login_required", "请重新登录主站")
-        return BrowserLogin(user, row, expiry)
 
     async def bearer_login(self, token: str, *, lock: bool = False) -> BrowserLogin:
         """仅接受现有 Main access JWT 且必须带 sid；旧无 sid 会话须重新登录一次。"""
-
-        data = decode_token(token, settings=self.settings)
-        if not isinstance(data.get("sid"), str) or not isinstance(data.get("sub"), str):
-            raise AuthenticationError("unified_login_required", "请重新登录主站")
-        return await self._session_login(data["sub"], data["sid"], lock=lock)
+        return await resolve_main_bearer_session(self.session, self.settings, token, lock=lock)
 
     async def _browser_pointer(
         self, request: Request, *, lock: bool = False
@@ -397,10 +436,11 @@ class UnifiedAuthService:
         request: Request,
         payload: UnifiedAuthorizeRequest,
     ) -> UnifiedAuthorizeResponse:
-        """为唯一 Circle 公共客户端签发绑定回调及 S256 的单次码，不直接跨域传 token。"""
+        """为已登记子站公共客户端签发绑定回调及 S256 的单次码，不直接跨域传 token。"""
 
         self.require_main_write(request)
-        if payload.redirect_uri != self.circle_origin + "/auth/unified/callback":
+        target_origin = self.client_origin(payload.client_id)
+        if payload.redirect_uri != target_origin + "/auth/unified/callback":
             raise AppError("invalid_unified_redirect", "登录回调无效")
         login = await self.cookie_login(request, lock=True)
         if login is None:
@@ -485,9 +525,10 @@ class UnifiedAuthService:
         request: Request,
         payload: UnifiedExchangeRequest,
     ) -> UnifiedAccessResponse:
-        """Circle 只用 verifier 兑换同一 sid 的短 access；错回调、来源、重放和撤销都拒绝。"""
+        """子站本域用 verifier 原子兑换同一 sid 的短 access；错回调、来源、重放和撤销都拒绝。"""
 
-        self.require_origin(request, self.circle_origin)
+        target_origin = self.client_origin(payload.client_id)
+        self.require_origin(request, target_origin)
         error = "invalid_unified_code"
         row, data = await self._read_ticket(payload.code, CODE_PURPOSE, error)
         challenge = (
@@ -498,7 +539,7 @@ class UnifiedAuthService:
         if (
             data.get("client_id") != payload.client_id
             or data.get("redirect_uri") != payload.redirect_uri
-            or payload.redirect_uri != self.circle_origin + "/auth/unified/callback"
+            or payload.redirect_uri != target_origin + "/auth/unified/callback"
             or not isinstance(data.get("challenge"), str)
             or not hmac.compare_digest(data["challenge"], challenge)
         ):
@@ -512,7 +553,7 @@ class UnifiedAuthService:
         return result
 
     def _return_uri(self, value: str) -> str:
-        """退出仅回四个固定站点根页；FableSpace、任意路径、查询及片段不在本次范围。"""
+        """退出仅回固定站点根页；FableSpace、任意路径、查询及片段不在本次范围。"""
 
         allowed = {
             self.main_origin + "/",
@@ -520,6 +561,8 @@ class UnifiedAuthService:
             "https://chat.pingxingxian.space/",
             "https://api.pingxingxian.space/",
         }
+        if self.games_origin is not None:
+            allowed.add(self.games_origin + "/")
         if value not in allowed:
             raise AppError("invalid_unified_redirect", "退出返回地址无效")
         return value

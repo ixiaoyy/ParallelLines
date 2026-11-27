@@ -107,3 +107,70 @@ export function recordRecentProject(library: PersonalLibrary, projectId: string,
       .slice(0, RECENT_LIMIT),
   };
 }
+
+/** 导出旧域个人清单快照，便于游戏站切到 games.pingxingxian.space 后无损迁移。 */
+export function exportPersonalLibrarySnapshot(): string {
+  const { library } = readPersonalLibrary();
+  return JSON.stringify(
+    {
+      format: "parallellines.catalog-library.export.v1",
+      exportedAt: Date.now(),
+      origin: typeof window !== "undefined" ? window.location.origin : "",
+      library,
+    },
+    null,
+    2,
+  );
+}
+
+/** 校验并无损合并旧域导出的个人清单（想玩去重合并、最近打开按最新时间保留）。 */
+export function importPersonalLibrarySnapshot(rawJson: string): {
+  merged: PersonalLibrary;
+  addedWanted: number;
+  addedRecent: number;
+  persisted: boolean;
+} {
+  if (rawJson.length > 300_000) throw new RangeError("personal-library-import-size");
+  const parsed: unknown = JSON.parse(rawJson);
+  const candidate =
+    parsed && typeof parsed === "object" && "library" in parsed
+      ? (parsed as { library: unknown }).library
+      : parsed;
+  const incoming = decodeLibrary(JSON.stringify(candidate));
+  const { library: current } = readPersonalLibrary();
+
+  const wantedSet = new Set<string>(current.wantedIds);
+  let addedWanted = 0;
+  for (const id of incoming.wantedIds) {
+    if (!wantedSet.has(id) && wantedSet.size < WANTED_LIMIT) {
+      wantedSet.add(id);
+      addedWanted += 1;
+    }
+  }
+
+  const recentMap = new Map<string, number>();
+  for (const entry of current.recent) {
+    recentMap.set(entry.projectId, entry.lastOpenedAt);
+  }
+  let addedRecent = 0;
+  for (const entry of incoming.recent) {
+    const prev = recentMap.get(entry.projectId);
+    if (prev === undefined) {
+      addedRecent += 1;
+      recentMap.set(entry.projectId, entry.lastOpenedAt);
+    } else if (entry.lastOpenedAt > prev) {
+      recentMap.set(entry.projectId, entry.lastOpenedAt);
+    }
+  }
+
+  const merged: PersonalLibrary = {
+    version: 1,
+    wantedIds: [...wantedSet],
+    recent: [...recentMap]
+      .map(([projectId, lastOpenedAt]) => ({ projectId, lastOpenedAt }))
+      .sort((left, right) => right.lastOpenedAt - left.lastOpenedAt)
+      .slice(0, RECENT_LIMIT),
+  };
+  const persisted = savePersonalLibrary(merged);
+  return { merged, addedWanted, addedRecent, persisted };
+}

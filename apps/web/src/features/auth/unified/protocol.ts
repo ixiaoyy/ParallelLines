@@ -5,12 +5,13 @@ export const UNIFIED_MESSAGE_TYPE = "pl:unified-session";
 export const UNIFIED_REFRESH_TYPE = "pl:unified-session:refresh";
 export const UNIFIED_VERSION = 1;
 export const CIRCLE_CLIENT_ID = "parallellines-circle";
+export const GAMES_CLIENT_ID = "parallellines-games";
 export const CALLBACK_PATH = "/auth/unified/callback";
 export const STATUS_PATH = "/auth/unified/state";
 export const FLOW_STORAGE_KEY = "parallellines.unified-flow.v1";
 const FLOW_TTL_MS = 15 * 60_000;
 
-export type StatusClient = "circle" | "chat" | "newapi";
+export type StatusClient = "circle" | "games" | "chat" | "newapi";
 export interface UnifiedState {
   authenticated: boolean;
   subject: string | null;
@@ -40,12 +41,12 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** 读取固定主站来源；仅显式开发配置允许回环 HTTP，不接受任意外站作为登录权威。 */
 export function mainAuthOrigin(): string {
-  const raw = import.meta.env.VITE_UNIFIED_MAIN_ORIGIN || SITE_LINKS.games;
+  const raw = import.meta.env.VITE_UNIFIED_MAIN_ORIGIN || SITE_LINKS.main;
   let url: URL;
   try { url = new URL(raw); } catch { throw new UnifiedProtocolError("invalid_main_origin", "统一登录地址配置无效。"); }
   const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
   if (url.username || url.password || url.search || url.hash || url.pathname !== "/"
-    || (!local && url.origin !== new URL(SITE_LINKS.games).origin)
+    || (!local && url.origin !== new URL(SITE_LINKS.main).origin)
     || (url.protocol !== "https:" && !(local && url.protocol === "http:"))) {
     throw new UnifiedProtocolError("invalid_main_origin", "统一登录地址配置无效。");
   }
@@ -55,8 +56,11 @@ export function mainAuthOrigin(): string {
 /** 状态页只向登记站点回信；工具没有账号功能，不为游客额外创建账号会话。 */
 export function statusClientOrigin(client: StatusClient): string {
   const configured = client === "circle" ? import.meta.env.VITE_UNIFIED_CIRCLE_ORIGIN
+    : client === "games" ? import.meta.env.VITE_UNIFIED_GAMES_ORIGIN
     : client === "chat" ? import.meta.env.VITE_UNIFIED_CHAT_ORIGIN : import.meta.env.VITE_UNIFIED_NEWAPI_ORIGIN;
-  const fallback = client === "circle" ? SITE_LINKS.forum : client === "chat" ? SITE_LINKS.chat : "https://api.pingxingxian.space/";
+  const fallback = client === "circle" ? SITE_LINKS.forum
+    : client === "games" ? "https://games.pingxingxian.space/"
+    : client === "chat" ? SITE_LINKS.chat : "https://api.pingxingxian.space/";
   const url = new URL(configured || fallback);
   const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
   if (url.username || url.password || url.search || url.hash || url.pathname !== "/"
@@ -68,7 +72,7 @@ export function statusClientOrigin(client: StatusClient): string {
 }
 
 export function isStatusClient(value: unknown): value is StatusClient {
-  return value === "circle" || value === "chat" || value === "newapi";
+  return value === "circle" || value === "games" || value === "chat" || value === "newapi";
 }
 
 export function isUnifiedState(value: unknown): value is UnifiedState {
