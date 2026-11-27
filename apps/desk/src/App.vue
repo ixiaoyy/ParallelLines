@@ -74,9 +74,10 @@ const widgetGalleryVisible = ref(false)
 const showAddDialog = () => {
   widgetGalleryVisible.value = true
 }
-const openAdvancedAddDialog = () => {
+// 带着组件库的当前草稿进入原配置页，复用原表单而不要求用户重新填写。
+const openAdvancedAddDialog = (draft: ComponentOptions) => {
   widgetGalleryVisible.value = false
-  baseConfig.value.open()
+  baseConfig.value.open(undefined, draft)
 }
 const showEditDialog = (id: string) => {
   baseConfig.value.open(id)

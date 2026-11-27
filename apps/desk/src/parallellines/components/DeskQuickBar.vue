@@ -47,6 +47,7 @@
       type="button"
       class="quick-pill"
       title="添加工作台组件"
+      aria-label="添加组件"
       @click="$emit('add-component')"
     >
       <span>＋</span>

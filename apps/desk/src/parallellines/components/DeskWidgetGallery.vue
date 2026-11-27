@@ -6,11 +6,19 @@
         class="widget-studio-backdrop"
         @click.self="$emit('update:modelValue', false)"
       >
-        <div class="widget-studio-modal">
+        <div
+          ref="dialog"
+          class="widget-studio-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="widget-studio-title"
+          @keydown.esc.stop.prevent="emit('update:modelValue', false)"
+          @keydown.tab="keepFocusInside"
+        >
           <!-- 顶栏 -->
           <div class="studio-header">
             <div class="studio-header-left">
-              <h3 class="studio-title">添加组件</h3>
+              <h3 id="widget-studio-title" class="studio-title">添加组件</h3>
               <span class="studio-subtitle">选择一个组件，预览后添加到桌面</span>
             </div>
             <button
@@ -31,9 +39,11 @@
               <div class="sidebar-search">
                 <span class="search-icon">⌕</span>
                 <input
+                  ref="searchInput"
                   v-model="searchQuery"
                   type="text"
                   class="search-input"
+                  aria-label="搜索组件"
                   placeholder="搜索组件"
                 >
               </div>
@@ -44,6 +54,7 @@
                   type="button"
                   class="sidebar-item"
                   :class="{ active: selectedMaterial === item.material }"
+                  :aria-pressed="selectedMaterial === item.material"
                   @click="selectMaterial(item)"
                 >
                   <span class="sidebar-item-icon" :style="{ color: item.iconColor }">
@@ -52,6 +63,10 @@
                   <span class="sidebar-item-name">{{ item.name }}</span>
                   <span v-if="selectedMaterial === item.material" class="sidebar-check">✓</span>
                 </button>
+                <div v-if="!filteredCatalog.length" class="search-empty">
+                  <span role="status">没有匹配的组件</span>
+                  <button class="quiet-btn" type="button" @click="clearSearch">清空搜索</button>
+                </div>
               </div>
             </aside>
 
@@ -63,13 +78,22 @@
                   <span class="preview-label">实时预览</span>
                   <span class="preview-size-badge">{{ sizeBadgeText }}</span>
                 </div>
-                <div class="preview-stage" :style="{ background: desktopBackground }">
+                <div ref="previewStage" class="preview-stage" :style="{ background: desktopBackground }">
                   <div class="preview-card-shell" :style="previewShellStyle">
                     <div class="preview-card-bg" :style="previewBgStyle" />
-                    <div class="preview-card-inner">
+                    <div class="preview-card-inner" inert>
+                      <div v-if="selectedMaterial === 'WeatherCard'" class="preview-sample">
+                        <WeatherIcon kind="sun" />
+                        <strong>晴 · 24°C</strong>
+                        <span>天气示例</span>
+                      </div>
+                      <div v-else-if="selectedMaterial === 'AlarmTimer'" class="preview-sample">
+                        <strong>05:00</strong>
+                        <span>定时器示例 · 未启动</span>
+                      </div>
                       <component
                         :is="previewComponent"
-                        v-if="previewComponent"
+                        v-else-if="previewComponent"
                         :element="previewElement"
                         :component-setting="draft.componentSetting"
                       />
@@ -86,6 +110,7 @@
                         type="button"
                         class="seg-btn"
                         :class="{ active: draft.position === 1 }"
+                          :aria-pressed="draft.position === 1"
                         @click="switchPosition(1)"
                       >
                         栅格
@@ -94,6 +119,7 @@
                         type="button"
                         class="seg-btn"
                         :class="{ active: draft.position === 2 }"
+                          :aria-pressed="draft.position === 2"
                         @click="switchPosition(2)"
                       >
                         固定
@@ -108,8 +134,9 @@
                         v-model.number="draft.w"
                         type="number"
                         class="num-input"
-                        :min="draft.position === 1 ? 1 : 80"
-                        :max="draft.position === 1 ? 12 : 1600"
+                        aria-label="宽度"
+                        :min="sizeBounds.min"
+                        :max="sizeBounds.maxWidth"
                       >
                       <span class="unit-text">{{ draft.position === 1 ? 'FR' : 'PX' }}</span>
                     </div>
@@ -119,8 +146,9 @@
                         v-model.number="draft.h"
                         type="number"
                         class="num-input"
-                        :min="draft.position === 1 ? 1 : 60"
-                        :max="draft.position === 1 ? 24 : 1200"
+                        aria-label="高度"
+                        :min="sizeBounds.min"
+                        :max="sizeBounds.maxHeight"
                       >
                       <span class="unit-text">{{ draft.position === 1 ? 'FR' : 'PX' }}</span>
                     </div>
@@ -134,6 +162,7 @@
                         v-model="draft.componentSetting.customText"
                         type="text"
                         class="text-input"
+                        aria-label="自定义文本"
                         placeholder="输入展示文本，如：今日重点"
                       >
                     </div>
@@ -230,6 +259,7 @@
                   <button
                     type="button"
                     class="accordion-trigger"
+                    :aria-expanded="appearanceOpen"
                     @click="appearanceOpen = !appearanceOpen"
                   >
                     <span>外观</span>
@@ -272,8 +302,9 @@
                           v-model.number="draft.borderRadius"
                           type="number"
                           class="num-input"
+                          aria-label="圆角"
                           min="0"
-                          max="48"
+                          max="100"
                         >
                         <span class="unit-text">PX</span>
                       </div>
@@ -301,6 +332,7 @@
                   <button
                     type="button"
                     class="accordion-trigger"
+                    :aria-expanded="advancedOpen"
                     @click="advancedOpen = !advancedOpen"
                   >
                     <span>高级设置</span>
@@ -314,8 +346,9 @@
                           v-model.number="draft.zIndex"
                           type="number"
                           class="num-input"
-                          min="1"
-                          max="999"
+                          aria-label="层级"
+                          min="0"
+                          max="9999"
                         >
                         <span class="unit-text">Z</span>
                       </div>
@@ -331,26 +364,33 @@
                         <span class="unit-text">PX</span>
                       </div>
                     </div>
+                    <div v-if="draft.position === 2" class="prop-row">
+                      <span class="prop-label">固定锚点</span>
+                      <select v-model.number="draft.affixInfo.mode" aria-label="固定锚点" class="anchor-select">
+                        <option :value="1">左上</option>
+                        <option :value="2">右上</option>
+                        <option :value="3">左下</option>
+                        <option :value="4">右下</option>
+                      </select>
+                    </div>
                     <div v-if="draft.position === 2" class="prop-row prop-row-size">
-                      <span class="prop-label">左边距</span>
+                      <span class="prop-label">{{ horizontalOffset }}</span>
                       <div class="size-field">
                         <input
                           v-model.number="draft.affixInfo.x"
                           type="number"
                           class="num-input"
-                          min="0"
-                          max="2000"
+                          :aria-label="horizontalOffset"
                         >
                         <span class="unit-text">PX</span>
                       </div>
-                      <span class="prop-label prop-label-inline">顶边距</span>
+                      <span class="prop-label prop-label-inline">{{ verticalOffset }}</span>
                       <div class="size-field">
                         <input
                           v-model.number="draft.affixInfo.y"
                           type="number"
                           class="num-input"
-                          min="0"
-                          max="2000"
+                          :aria-label="verticalOffset"
                         >
                         <span class="unit-text">PX</span>
                       </div>
@@ -364,12 +404,16 @@
                         placeholder="可选，留空自动生成"
                       >
                     </div>
+                    <button type="button" class="quiet-btn" :disabled="!validDraft" @click="openFullSettings">
+                      打开完整配置
+                    </button>
                   </div>
                 </div>
               </div>
 
               <!-- 底部固定操作栏 -->
               <div class="studio-footer">
+                <span v-if="!validDraft" class="draft-warning" role="status">请检查尺寸、圆角、层级和边距</span>
                 <button
                   type="button"
                   class="footer-btn"
@@ -380,6 +424,7 @@
                 <button
                   type="button"
                   class="footer-btn primary"
+                  :disabled="!validDraft"
                   @click="handleAddToDesktop"
                 >
                   添加到桌面
@@ -394,11 +439,14 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, defineAsyncComponent, reactive, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, reactive, ref, watch } from 'vue'
 import { ElNotification } from 'element-plus'
 import { useStore } from '@/store'
 import { uid } from '@/utils'
 import SettingMap from '@/materials/setting'
+import { MATERIAL_LIST_MAP } from '@/constanst'
+import useScreenMode from '@/hooks/useScreenMode'
+import WeatherIcon from '@/parallellines/materials/WeatherCard/WeatherIcon.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -406,17 +454,25 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
-  (e: 'open-advanced'): void
+  (e: 'open-advanced', draft: ComponentOptions): void
 }>()
 
 const store = useStore()
+const { windowWidth, windowHeight } = useScreenMode()
+const dialog = ref<HTMLElement>()
+const searchInput = ref<HTMLInputElement>()
+const previewStage = ref<HTMLElement>()
+const stageSize = reactive({ width: 0, height: 0 })
+let opener: HTMLElement | null = null
+let handingOff = false
 
 const PREVIEW_COMPONENTS: Record<string, any> = {
   Clock: defineAsyncComponent(() => import('@/materials/Clock/index.vue')),
   SlackCountdown: defineAsyncComponent(() => import('@/parallellines/materials/SlackCountdown/index.vue')),
   EventCountdown: defineAsyncComponent(() => import('@/parallellines/materials/EventCountdown/index.vue')),
-  WeatherCard: defineAsyncComponent(() => import('@/parallellines/materials/WeatherCard/index.vue')),
-  AlarmTimer: defineAsyncComponent(() => import('@/parallellines/materials/AlarmTimer/index.vue')),
+  Search: defineAsyncComponent(() => import('@/materials/Search/index.vue')),
+  CountDown: defineAsyncComponent(() => import('@/materials/CountDown/index.vue')),
+  Collection: defineAsyncComponent(() => import('@/materials/Collection/index.vue')),
   TodoList: defineAsyncComponent(() => import('@/materials/TodoList/index.vue')),
   Editor: defineAsyncComponent(() => import('@/materials/Editor/index.vue')),
   AiSearch: defineAsyncComponent(() => import('@/parallellines/materials/AiSearch/index.vue')),
@@ -436,7 +492,7 @@ interface CatalogWidget {
   defaultOverride?: Record<string, any>
 }
 
-const catalog: CatalogWidget[] = [
+const featured: CatalogWidget[] = [
   { material: 'Clock', name: '时钟', icon: '◷', iconColor: '#6366f1', w: 6, h: 4, transparentBg: true },
   { material: 'EventCountdown', name: '事件倒计时', icon: '⧗', iconColor: '#0ea5e9', w: 5, h: 6 },
   { material: 'SlackCountdown', name: '下班倒计时', icon: '⌛', iconColor: '#f59e0b', w: 5, h: 7 },
@@ -456,6 +512,13 @@ const catalog: CatalogWidget[] = [
     h: 2,
     defaultOverride: { customText: '今日重点', textFontSize: 22, textColor: '#f8fafc', position: 5 },
   },
+]
+// 使用与旧配置页相同的注册表作为可添加范围，保留组件库已有的排序和推荐尺寸。
+const catalog: CatalogWidget[] = [
+  ...featured,
+  ...Object.entries(MATERIAL_LIST_MAP)
+    .filter(([material]) => !featured.some(item => item.material === material))
+    .map(([material, item]) => ({ material, name: item.text, icon: '▦', iconColor: '#64748b', w: 6, h: 2 })),
 ]
 
 const eventCountdownStyles = [
@@ -484,6 +547,23 @@ const draft = reactive({
   customId: '',
   affixInfo: { mode: 1, x: 24, y: 24 },
   componentSetting: {} as Record<string, any>,
+})
+
+const sizeBounds = computed(() => draft.position === 1
+  ? { min: 1, maxWidth: 12, maxHeight: 24 }
+  : { min: 40, maxWidth: 1920, maxHeight: 1920 })
+const horizontalOffset = computed(() => [1, 3].includes(draft.affixInfo.mode) ? '距左' : '距右')
+const verticalOffset = computed(() => [1, 2].includes(draft.affixInfo.mode) ? '距上' : '距下')
+
+function within(value: number, min: number, max: number) {
+  return Number.isInteger(value) && value >= min && value <= max
+}
+
+const validDraft = computed(() => {
+  const { min, maxWidth, maxHeight } = sizeBounds.value
+  return within(draft.w, min, maxWidth) && within(draft.h, min, maxHeight)
+    && within(draft.borderRadius, 0, 100) && within(draft.zIndex, 0, 9999)
+    && (draft.position === 1 || (Number.isFinite(draft.affixInfo.x) && Number.isFinite(draft.affixInfo.y)))
 })
 
 const filteredCatalog = computed(() => {
@@ -519,6 +599,7 @@ const selectMaterial = (item: CatalogWidget) => {
   draft.zIndex = 12
   draft.borderRadius = 16
   draft.customId = ''
+  draft.affixInfo = { mode: 1, x: 24, y: 24 }
   applyBgPreset(item.transparentBg ? 'transparent' : 'glass')
 
   const settingEntry = (SettingMap as Record<string, any>)[item.material]
@@ -549,15 +630,52 @@ const switchPosition = (pos: 1 | 2) => {
 
 watch(
   () => props.modelValue,
-  (open) => {
+  async (open) => {
     if (open) {
+      opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      handingOff = false
+      searchQuery.value = ''
       appearanceOpen.value = false
       advancedOpen.value = false
       const current = catalog.find((c) => c.material === selectedMaterial.value) || catalog[0]
       selectMaterial(current)
+      await nextTick()
+      if (props.modelValue) searchInput.value?.focus()
+    } else if (!handingOff) {
+      await nextTick()
+      if (!props.modelValue && opener?.isConnected) opener.focus()
     }
   }
 )
+
+function clearSearch() {
+  searchQuery.value = ''
+  searchInput.value?.focus()
+}
+
+/** Tab 和 Shift+Tab 只遍历弹窗中可见、可用的控件，跳过只读预览。 */
+function keepFocusInside(event: KeyboardEvent) {
+  const controls = Array.from(dialog.value?.querySelectorAll<HTMLElement>(
+    'button:not([disabled]), input:not([disabled]), select:not([disabled])'
+  ) ?? []).filter(el => !el.closest('[inert]') && el.getClientRects().length)
+  const first = controls[0]
+  const last = controls[controls.length - 1]
+  if (event.shiftKey ? document.activeElement === first : document.activeElement === last) {
+    event.preventDefault()
+    const next = event.shiftKey ? last : first
+    next?.focus()
+  }
+}
+
+watch(previewStage, (stage, _, onCleanup) => {
+  if (!stage) return
+  const observer = new ResizeObserver(([entry]) => {
+    stageSize.width = entry.contentRect.width
+    stageSize.height = entry.contentRect.height
+  })
+  observer.observe(stage)
+  onCleanup(() => observer.disconnect())
+})
 
 const desktopBackground = computed(
   () =>
@@ -584,9 +702,18 @@ const previewElement = computed(() => ({
 }))
 
 const previewShellStyle = computed(() => {
-  const widthPct = draft.position === 1 ? Math.min(96, Math.max(48, (draft.w / 10) * 92)) : 84
+  // 栅格尺寸沿用桌面 12 列、行高和间距的算法；固定尺寸直接按像素等比缩放。
+  const gutter = store.global.gutter ?? 10
+  const colWidth = Math.max(1, (windowWidth.value - gutter * 13) / 12)
+  const rowHeight = Math.min(40, Math.max(20, windowHeight.value / 27))
+  const w = Number(draft.w) > 0 ? Number(draft.w) : 1
+  const h = Number(draft.h) > 0 ? Number(draft.h) : 1
+  const width = draft.position === 1 ? w * colWidth + (w - 1) * gutter : w
+  const height = draft.position === 1 ? h * rowHeight + (h - 1) * gutter : h
+  const scale = Math.min(1, stageSize.width / width, stageSize.height / height)
   return {
-    width: `${widthPct}%`,
+    width: `${width * scale}px`,
+    height: `${height * scale}px`,
     borderRadius: `${draft.borderRadius}px`,
     boxShadow: draft.boxShadow,
   }
@@ -598,18 +725,17 @@ const previewBgStyle = computed(() => ({
   backdropFilter: draft.backdropFilter,
 }))
 
-const handleAddToDesktop = () => {
-  const current = catalog.find((c) => c.material === selectedMaterial.value)
-  const payload = {
-    i: `pl-${uid()}`,
+/** 两个添加入口使用同一份草稿；合法的 0 不得被替换成默认值。 */
+function draftPayload(): ComponentOptions {
+  return {
     material: selectedMaterial.value,
     position: draft.position,
     x: 1,
     y: 0,
-    w: Number(draft.w) || 5,
-    h: Number(draft.h) || 6,
-    zIndex: Number(draft.zIndex) || 12,
-    borderRadius: Number(draft.borderRadius) || 16,
+    w: draft.w,
+    h: draft.h,
+    zIndex: draft.zIndex,
+    borderRadius: draft.borderRadius,
     background: draft.background,
     backgroundFilter: draft.backgroundFilter,
     backdropFilter: draft.backdropFilter,
@@ -618,7 +744,25 @@ const handleAddToDesktop = () => {
     affixInfo: { ...draft.affixInfo },
     componentSetting: JSON.parse(JSON.stringify(draft.componentSetting)),
   }
-  store.addComponent(payload as any)
+}
+
+function openFullSettings() {
+  if (!validDraft.value) return
+  handingOff = true
+  emit('open-advanced', draftPayload())
+}
+
+const handleAddToDesktop = () => {
+  if (!validDraft.value) return
+  const current = catalog.find((c) => c.material === selectedMaterial.value)
+  const payload = { ...draftPayload(), i: `pl-${uid()}` }
+  store.addComponent(payload)
+  const destination = payload.position === 1 ? store.list : store.affix
+  if (!destination.some(item => item.i === payload.i)) {
+    ElNotification({ title: '未能添加组件', type: 'error' })
+    return
+  }
+  if (store.isLock) store.updateIsLock(false)
   emit('update:modelValue', false)
   ElNotification({
     title: '已添加到桌面',
@@ -772,6 +916,29 @@ const handleAddToDesktop = () => {
   gap: 4px;
 }
 
+.search-empty {
+  padding: 10px 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.quiet-btn {
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  color: #1d4ed8;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover { background: #e6f0ff; }
+  &:disabled { opacity: .5; cursor: not-allowed; }
+}
+
 .sidebar-item {
   display: flex;
   align-items: center;
@@ -832,12 +999,14 @@ const handleAddToDesktop = () => {
 .studio-inspector {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
 .inspector-scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 18px 24px 16px;
 }
@@ -867,8 +1036,7 @@ const handleAddToDesktop = () => {
 
 .preview-stage {
   position: relative;
-  min-height: 158px;
-  max-height: 210px;
+  height: clamp(158px, 24vh, 210px);
   border-radius: 14px;
   padding: 18px;
   box-sizing: border-box;
@@ -881,11 +1049,10 @@ const handleAddToDesktop = () => {
 
 .preview-card-shell {
   position: relative;
-  min-height: 92px;
-  max-height: 174px;
+  flex-shrink: 0;
   border: 1px solid rgba(255, 255, 255, 0.2);
   overflow: hidden;
-  transition: width 0.2s ease, border-radius 0.2s ease;
+  transition: width 0.2s ease, height 0.2s ease, border-radius 0.2s ease;
 }
 
 .preview-card-bg {
@@ -896,8 +1063,24 @@ const handleAddToDesktop = () => {
 
 .preview-card-inner {
   position: relative;
+  height: 100%;
   z-index: 1;
   pointer-events: none;
+}
+
+.preview-sample {
+  box-sizing: border-box;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  color: #f8fafc;
+  font-size: 12px;
+
+  strong { font-size: 22px; font-variant-numeric: tabular-nums; }
+  :deep(svg) { width: 22px; height: 22px; }
 }
 
 .inspector-core {
@@ -1019,6 +1202,15 @@ const handleAddToDesktop = () => {
   cursor: pointer;
 }
 
+.anchor-select {
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid #dbe4ef;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+}
+
 /* 折叠分组 */
 .accordion-section {
   border-top: 1px solid #eef2f6;
@@ -1071,6 +1263,12 @@ const handleAddToDesktop = () => {
   flex-shrink: 0;
 }
 
+.draft-warning {
+  margin-right: auto;
+  color: #9a3412;
+  font-size: 12px;
+}
+
 .footer-btn {
   height: 36px;
   padding: 0 18px;
@@ -1097,6 +1295,11 @@ const handleAddToDesktop = () => {
     &:hover {
       background: #1d4ed8;
     }
+  }
+
+  &:disabled {
+    opacity: .55;
+    cursor: not-allowed;
   }
 }
 
@@ -1130,5 +1333,23 @@ const handleAddToDesktop = () => {
     border-right: none;
     border-bottom: 1px solid #e8eef5;
   }
+
+  .studio-footer {
+    flex-wrap: wrap;
+    padding: 10px 14px;
+  }
+
+  .footer-btn { min-height: 44px; }
+}
+
+@media (max-width: 540px) {
+  // 窄屏让标签和对应输入同行，避免两组尺寸换行后错位。
+  .prop-row-size {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 8px 12px;
+  }
+
+  .prop-label-inline { margin-left: 0; }
 }
 </style>

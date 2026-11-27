@@ -24,6 +24,7 @@
               <el-radio-group
                 v-model="state.formData.position"
                 :disabled="!!editId"
+                @change="resetSizeForPosition"
                 style="margin-right: 8px"
               >
                 <el-radio :label="1">
@@ -221,7 +222,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineAsyncComponent, defineComponent, reactive, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, defineComponent, reactive, ref } from 'vue'
 import MaterialSelector from '@/components/FormControl/MaterialSelector.vue'
 import WarnLock from '@/components/FormControl/WarnLock.vue'
 import PositionSelector from '@/plugins/position-selector'
@@ -282,13 +283,18 @@ export default defineComponent({
     const { t } = useI18n()
 
     const dialogVisible = ref(false)
-    const open = (_editId: string) => {
+    /** 编辑既有组件，或打开组件库交接来的完整添加草稿；两种入口均保留原值。 */
+    const open = (_editId?: string, addDraft?: ComponentOptions) => {
       dialogVisible.value = true
       if (_editId) {
         const _getSetting = store.getComponentSetting(_editId)
         state.formData = { ..._getSetting }
         state.formData.componentSetting = { ...Setting[state.formData.material].formData, ...JSON.parse(JSON.stringify(_getSetting.componentSetting))}
         editId.value = _editId
+        updateComponentSetting(true)
+      } else if (addDraft) {
+        editId.value = ''
+        state.formData = clone(addDraft)
         updateComponentSetting(true)
       } else {
         editId.value = ''
@@ -344,19 +350,17 @@ export default defineComponent({
       }
     }
 
-    watch(
-      () => state.formData.position,
-      (val) => {
-        if (editId.value) return
-        if (val === 1) {
-          state.formData.w = 6
-          state.formData.h = 2
-        } else {
-          state.formData.w = 200
-          state.formData.h = 200
-        }
+    // 只在用户主动切换定位时采用原默认尺寸；载入固定组件或草稿不重置。
+    const resetSizeForPosition = () => {
+      if (editId.value) return
+      if (state.formData.position === 1) {
+        state.formData.w = 6
+        state.formData.h = 2
+      } else {
+        state.formData.w = 200
+        state.formData.h = 200
       }
-    )
+    }
 
     const affixX = computed(() =>
       [1, 3].includes(state.formData.affixInfo.mode) ? 'LEFT' : 'RIGHT'
@@ -387,6 +391,7 @@ export default defineComponent({
       affixX,
       affixY,
       handleResetAffix,
+      resetSizeForPosition,
       updateComponentSetting,
       updateDefaultSetting,
       dialogVisible
