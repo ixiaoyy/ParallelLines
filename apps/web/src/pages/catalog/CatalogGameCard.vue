@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { uiText } from "@/shared/i18n/locale";
-import { StarFilled, StarOutlined } from "@ant-design/icons-vue";
-import { onMounted, onUnmounted, ref } from "vue";
+import { PushpinOutlined, StarFilled, StarOutlined } from "@ant-design/icons-vue";
+import { SITE_LINKS } from "@/shared/site/links";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 const props = withDefaults(defineProps<{
   title: string;
@@ -94,6 +95,24 @@ function releaseKeyboardFocus(event: FocusEvent): void {
   });
 }
 
+const pinToDeskUrl = computed(() => {
+  const origin = typeof window !== "undefined" ? window.location.origin : SITE_LINKS.games;
+  let targetUrl = props.href;
+  try {
+    targetUrl = new URL(props.href, origin).href;
+  } catch {
+    targetUrl = props.href;
+  }
+  const deskBase = `${SITE_LINKS.main.replace(/\/$/, "")}/desk/`;
+  const params = new URLSearchParams({
+    pin_title: props.title.slice(0, 24),
+    pin_url: targetUrl,
+    pin_icon: props.title.slice(0, 1) || "游",
+    pin_color: "#2563eb",
+  });
+  return `${deskBase}?${params.toString()}`;
+});
+
 onMounted(() => document.addEventListener("pointerdown", closeTouchActions));
 onUnmounted(() => {
   cancelHold();
@@ -114,6 +133,7 @@ onUnmounted(() => {
     <div class="catalog-card__details">
       <h3>{{ title }}</h3>
     </div>
+    <a class="catalog-card__pin" :href="pinToDeskUrl" target="_blank" rel="noopener noreferrer" :aria-label="uiText('固定到工作台：{value0}', { value0: title })" :title="uiText('固定到平行线工作台')" @click.stop><PushpinOutlined aria-hidden="true" /></a>
     <button type="button" class="catalog-card__wanted" :class="{ 'is-active': wanted }" :aria-pressed="wanted" :aria-label="uiText('{value0}：{value1}', { value0: wanted ? uiText('移除想玩') : uiText('加入想玩'), value1: title })" :title="wanted ? uiText('移除想玩') : uiText('加入想玩')" @click.stop="emit('toggleWanted')"><StarFilled v-if="wanted" aria-hidden="true" /><StarOutlined v-else aria-hidden="true" /></button>
   </article>
 </template>

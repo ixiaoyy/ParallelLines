@@ -38,24 +38,34 @@
 }
 .catalog-card__details h3 { margin: 0; font: 700 clamp(8px, 4.8cqi, 22px) / 1.25 var(--catalog-font); overflow-wrap: break-word; }
 // 透明点击区内居中星星，避开封面圆角；窄竖封不向相邻卡片扩出点击区。
-.catalog-card__wanted { position: absolute; top: 0; right: 0; display: grid; width: min(44px, 100cqi); height: 44px; place-items: center; border: 0; border-radius: 50%; padding: 0; color: #fff; background: transparent; font-size: clamp(10px, 5.5cqi, 20px); line-height: 1; cursor: pointer; opacity: 0; pointer-events: none; filter: drop-shadow(0 1px 1px rgb(16 28 26 / 75%)); transition: opacity 150ms ease; }
-.catalog-card__wanted :deep(svg) { width: 1em; height: 1em; }
+.catalog-card__wanted,
+.catalog-card__pin { position: absolute; top: 0; display: grid; width: min(44px, 100cqi); height: 44px; place-items: center; border: 0; border-radius: 50%; padding: 0; color: #fff; background: transparent; font-size: clamp(10px, 5.5cqi, 20px); line-height: 1; cursor: pointer; opacity: 0; pointer-events: none; text-decoration: none; filter: drop-shadow(0 1px 1px rgb(16 28 26 / 75%)); transition: opacity 150ms ease; }
+.catalog-card__wanted { right: 0; }
+.catalog-card__pin { right: min(38px, 40cqi); font-size: clamp(10px, 4.8cqi, 17px); }
+.catalog-card__wanted :deep(svg),
+.catalog-card__pin :deep(svg) { width: 1em; height: 1em; }
 .catalog-card__wanted.is-active { color: #ffda7b; }
-.catalog-card__wanted:hover { background: transparent; color: #ffe7a3; }
+.catalog-card__wanted:hover,
+.catalog-card__pin:hover { background: transparent; color: #ffe7a3; }
 .catalog-card:focus-within { outline: 3px solid var(--catalog-focus, #3b7864); outline-offset: 3px; }
 .catalog-card:is(:focus-visible, :has(:focus-visible, button:focus, [aria-expanded="true"])) .catalog-card__details,
 .catalog-card--keyboard-actions .catalog-card__details,
 .catalog-card--touch-actions .catalog-card__details { opacity: 1; visibility: visible; }
 .catalog-card:is(:focus-visible, :has(:focus-visible, button:focus, [aria-expanded="true"])) .catalog-card__wanted,
+.catalog-card:is(:focus-visible, :has(:focus-visible, button:focus, [aria-expanded="true"])) .catalog-card__pin,
 .catalog-card--keyboard-actions .catalog-card__wanted,
-.catalog-card--touch-actions .catalog-card__wanted { opacity: 1; pointer-events: auto; }
+.catalog-card--keyboard-actions .catalog-card__pin,
+.catalog-card--touch-actions .catalog-card__wanted,
+.catalog-card--touch-actions .catalog-card__pin { opacity: 1; pointer-events: auto; }
 // 收藏焦点向内绘制，优先于目录页对通用控件的外扩焦点规则。
-.catalog-card > button.catalog-card__wanted:focus-visible { outline: 3px solid #fff; outline-offset: -5px; }
+.catalog-card > button.catalog-card__wanted:focus-visible,
+.catalog-card > a.catalog-card__pin:focus-visible { outline: 3px solid #fff; outline-offset: -5px; }
 
 @media (hover: hover) and (pointer: fine) {
   .catalog-card:hover { box-shadow: 0 7px 20px #183c3426; }
   .catalog-card:hover .catalog-card__details { opacity: 1; visibility: visible; }
-  .catalog-card:hover .catalog-card__wanted { opacity: 1; pointer-events: auto; }
+  .catalog-card:hover .catalog-card__wanted,
+  .catalog-card:hover .catalog-card__pin { opacity: 1; pointer-events: auto; }
 }
 
 @media (max-width: 760px) {

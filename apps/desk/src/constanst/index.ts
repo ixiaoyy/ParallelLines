@@ -14,6 +14,11 @@ export const MATERIAL_LIST_MAP: Record<string, MaterialConstanst> = {
     text: '下班倒计时',
     img: badgeSvg('下班倒计时', '#10b981')
   },
+  EventCountdown: {
+    label: 'EventCountdown',
+    text: '事件倒计时',
+    img: badgeSvg('事件倒计时', '#38bdf8')
+  },
   AiSearch: {
     label: 'AiSearch',
     text: 'AI 智能搜索',

@@ -14,6 +14,10 @@
       @show-auxiliary-config="showAuxiliaryConfig"
     />
     <Layout @edit="showEditDialog" />
+    <DeskWidgetGallery
+      v-model="widgetGalleryVisible"
+      @open-advanced="openAdvancedAddDialog"
+    />
     <BaseConfig ref="baseConfig" />
     <GlobalConfig v-model:visible="globalConfigVisible" />
     <AuxiliaryConfig v-model:visible="axuiliaryConfigVisible" />
@@ -44,6 +48,7 @@ import {
 import { sanitizeComponent, sanitizeComponentList, sanitizeGlobal } from '@/parallellines/security'
 import { handleIncomingPinShortcut } from '@/parallellines/pinShortcut'
 import DeskQuickBar from '@/parallellines/components/DeskQuickBar.vue'
+import DeskWidgetGallery from '@/parallellines/components/DeskWidgetGallery.vue'
 import { startCloudSync } from '@/parallellines/cloudSync'
 const store = useStore()
 const global = computed(() => store.global)
@@ -65,7 +70,12 @@ if (global.value.siteIcon) {
 const bg = ref()
 
 const baseConfig = ref()
+const widgetGalleryVisible = ref(false)
 const showAddDialog = () => {
+  widgetGalleryVisible.value = true
+}
+const openAdvancedAddDialog = () => {
+  widgetGalleryVisible.value = false
   baseConfig.value.open()
 }
 const showEditDialog = (id: string) => {

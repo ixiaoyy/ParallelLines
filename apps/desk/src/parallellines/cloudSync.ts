@@ -246,6 +246,15 @@ function sanitizeSyncComponentSetting(material: string, raw: any): Record<string
         paydayDay: safeNum(s.paydayDay, 15),
         advanceOnRest: safeBool(s.advanceOnRest, true),
       }
+    case 'EventCountdown':
+      return {
+        ...pickTextAppearance(s),
+        eventName: safeStr(s.eventName, '自定义事件'),
+        targetTime: safeStr(s.targetTime),
+        startTime: safeStr(s.startTime),
+        style: ['flip', 'minimal', 'progress', 'ring'].includes(s.style) ? s.style : 'flip',
+        accentColor: safeStyle(s.accentColor, '#60a5fa'),
+      }
     case 'WeatherCard':
       // 城市位置仅保留在本地
       return {}

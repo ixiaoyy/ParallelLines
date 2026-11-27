@@ -117,8 +117,134 @@ body {
   }
 }
 
-/* 弹窗更通透 */
-.easy-dialog-wrapper .easy-dialog {
-  border-radius: 16px !important;
-  backdrop-filter: blur(20px);
+/* 弹窗与组件编辑台：统一为现代苹果/Bonjourr 极简面板，去掉老式粗边和荧光黄底线 */
+.easy-dialog-wrapper {
+  background: rgba(15, 23, 42, 0.48) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.easy-dialog-main {
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.34), 0 4px 16px rgba(15, 23, 42, 0.12) !important;
+  overflow: hidden !important;
+
+  .easy-dialog-title {
+    padding: 16px 20px 14px !important;
+    border-bottom: 1px solid #eef2f6 !important;
+    background: transparent !important;
+
+    .easy-dialog-static-title {
+      font-size: 16px !important;
+      font-weight: 600 !important;
+      color: #0f172a !important;
+      padding-left: 0 !important;
+      border-left: none !important;
+      letter-spacing: -0.01em;
+
+      &::before {
+        display: none !important;
+      }
+    }
+  }
+
+  .easy-dialog-close {
+    top: 12px !important;
+    right: 14px !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 999px !important;
+    color: #64748b !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background 0.16s ease, color 0.16s ease;
+
+    &:hover {
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+    }
+  }
+
+  .easy-dialog-body {
+    padding: 14px 20px !important;
+  }
+
+  .easy-dialog-footer {
+    border-top: 1px solid #eef2f6 !important;
+    background: #f8fafc !important;
+    padding: 2px 8px !important;
+  }
+
+  /* 去掉老式荧光黄底线，改为干净现代的表单标题 */
+  .el-form-item__label {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #334155 !important;
+    margin-bottom: 6px !important;
+
+    &::after {
+      display: none !important;
+    }
+  }
+
+  .main-config {
+    gap: 16px;
+
+    .config-title {
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      color: #64748b !important;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 12px !important;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .base-config-wrapper {
+      border-right: 1px solid #e2e8f0 !important;
+      padding-right: 18px !important;
+    }
+
+    .component-config-wrapper {
+      padding-left: 4px !important;
+    }
+  }
+
+  /* 按钮与输入控件现代化 */
+  .btn {
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 7px 16px !important;
+    border: 1px solid #cbd5e1 !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+    transition: background 0.16s ease, border-color 0.16s ease, transform 0.12s ease;
+
+    &:hover {
+      background: #f8fafc !important;
+      border-color: #94a3b8 !important;
+    }
+  }
+
+  .btn.btn-primary {
+    background: #409eff !important;
+    border-color: #409eff !important;
+    color: #ffffff !important;
+
+    &:hover {
+      background: #66b1ff !important;
+      border-color: #66b1ff !important;
+    }
+  }
+
+  .el-input__wrapper,
+  .el-textarea__inner {
+    border-radius: 8px !important;
+    box-shadow: 0 0 0 1px #dce3ec inset !important;
+  }
 }

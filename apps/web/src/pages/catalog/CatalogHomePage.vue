@@ -12,7 +12,7 @@ import { categoryVisualFor } from "@/features/catalog/categoryVisuals";
 import { catalogCoverUrl as coverUrl, catalogCoverAspect } from "@/features/catalog/covers";
 import { CATALOG_PRIORITY_SLUGS } from "@/features/catalog/catalogOrder";
 import { useCatalog, useCatalogOverview, useRecordCatalogProjectView } from "@/features/catalog/queries";
-import { readPersonalLibrary, recordRecentProject, savePersonalLibrary, toggleWantedProject } from "@/features/catalog/personalLibrary";
+import { exportPersonalLibrarySnapshot, importPersonalLibrarySnapshot, readPersonalLibrary, recordRecentProject, savePersonalLibrary, toggleWantedProject } from "@/features/catalog/personalLibrary";
 import type { PersonalLibrary } from "@/features/catalog/personalLibrary";
 import { staticAssetUrl } from "@/shared/assets/staticAssets";
 import { buildSeoSiteDescription, buildSeoSiteName, SEO_SITE_TAGLINE } from "@/shared/seo/structuredData";
@@ -355,6 +355,51 @@ function recordGameOpen(project: CatalogProject, event: MouseEvent): void {
   recordGameOpenTraffic(project.slug);
 }
 
+const libraryTransferInput = ref<HTMLInputElement | null>(null);
+const libraryTransferNotice = ref("");
+
+function handleExportLibrary(): void {
+  try {
+    const data = exportPersonalLibrarySnapshot();
+    const blob = new Blob([data], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "parallellines-game-library.json";
+    link.click();
+    URL.revokeObjectURL(url);
+    libraryTransferNotice.value = uiText("已导出游戏清单，可在新域名导入合并。");
+  } catch {
+    libraryTransferNotice.value = uiText("导出游戏清单失败，请稍后重试。");
+  }
+}
+
+function triggerImportLibrary(): void {
+  if (!libraryTransferInput.value) return;
+  libraryTransferInput.value.value = "";
+  libraryTransferInput.value.click();
+}
+
+function handleImportLibraryFile(event: Event): void {
+  const input = event.currentTarget as HTMLInputElement | null;
+  const file = input?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const result = importPersonalLibrarySnapshot(String(reader.result || ""));
+      personalLibrary.value = result.merged;
+      libraryTransferNotice.value = uiText("已导入合并：新增 {wanted} 款想玩、{recent} 条最近记录。", {
+        wanted: result.addedWanted,
+        recent: result.addedRecent,
+      });
+    } catch {
+      libraryTransferNotice.value = uiText("导入失败，请确认选择的是有效的平行线游戏清单 JSON 文件。");
+    }
+  };
+  reader.readAsText(file, "UTF-8");
+}
+
 </script>
 
 <!--
@@ -407,6 +452,11 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
                 <button type="button" :class="{ 'is-active': selectedAuthorKey === 'original' }" :aria-pressed="selectedAuthorKey === 'original'" @click="showAuthorGames('original')"><CrownFilled aria-hidden="true" /><span>{{ uiText("站内") }}</span></button>
                 <button type="button" class="catalog-library-filter--wanted" :class="{ 'is-active': libraryScope === 'wanted' }" :aria-pressed="libraryScope === 'wanted'" @click="selectLibraryScope('wanted')"><HeartFilled aria-hidden="true" /><span>{{ uiText("想玩清单") }}</span></button>
                 <button type="button" :class="{ 'is-active': libraryScope === 'recent' }" :aria-pressed="libraryScope === 'recent'" @click="selectLibraryScope('recent')"><CatalogIcon name="recent" /><span>{{ uiText("最近打开") }}</span></button>
+                <template v-if="libraryScope === 'wanted' || libraryScope === 'recent'">
+                  <button type="button" :title="uiText('导出本地想玩与最近记录，便于跨域名迁移')" @click="handleExportLibrary"><span>{{ uiText("导出清单") }}</span></button>
+                  <button type="button" :title="uiText('导入并无损合并旧域导出的游戏清单')" @click="triggerImportLibrary"><span>{{ uiText("导入清单") }}</span></button>
+                  <input ref="libraryTransferInput" type="file" accept=".json,application/json" style="display: none" @change="handleImportLibraryFile" />
+                </template>
               </div>
               <span class="catalog-results" role="status">{{ uiText("{count} 个游戏", { count: visibleProjects.length }) }}</span>
               <div class="catalog-categories"><label for="catalog-category">{{ uiText("分类：") }}</label><select id="catalog-category" v-model="selectedCategory" :aria-label="uiText('游戏分类')"><option value="all">{{ uiText("全部") }}</option><option v-for="category in categories" :key="category.id" :value="category.slug">{{ category.name }}</option></select></div>
@@ -415,6 +465,7 @@ FORM: 用户选定 Library 玉青＋温灰参考；推荐和分类来自当前 A
               </div>
             </div>
 
+            <p v-if="libraryTransferNotice" class="catalog-library__notice" role="status">{{ libraryTransferNotice }}</p>
             <p v-if="!libraryCanPersist" class="catalog-library__notice" role="alert">{{ uiText("本地存储不可用，当前清单只在本次页面访问期间保留。") }}</p>
             <p v-if="wantedLimitReached" class="catalog-library__notice" role="alert">{{ uiText("想玩清单最多保存 500 款游戏，请先移出部分游戏。") }}</p>
             <div v-if="selectedAuthorKey && selectedAuthorKey !== 'original'" class="catalog-author-selection"><span>{{ uiText("正在查看{name}的作品", { name: selectedAuthorName || uiText("该作者") }) }}</span><button type="button" @click="clearAuthorGames">{{ uiText("清除作者筛选") }}</button></div>

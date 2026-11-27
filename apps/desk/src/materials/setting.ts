@@ -8,6 +8,7 @@ import Day from './Day/setting'
 import Editor from './Editor/setting'
 import Bookmark from './Bookmark/setting'
 import SlackCountdown from '@/parallellines/materials/SlackCountdown/setting'
+import EventCountdown from '@/parallellines/materials/EventCountdown/setting'
 import AiSearch from '@/parallellines/materials/AiSearch/setting'
 import WeatherCard from '@/parallellines/materials/WeatherCard/setting'
 import AlarmTimer from '@/parallellines/materials/AlarmTimer/setting'
@@ -16,6 +17,7 @@ const Setting: Record<string, ComponentSetting> = {
   Empty,
   Clock,
   SlackCountdown,
+  EventCountdown,
   AiSearch,
   WeatherCard,
   AlarmTimer,

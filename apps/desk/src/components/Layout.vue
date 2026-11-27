@@ -218,6 +218,7 @@ export default defineComponent({
     Empty: defineAsyncComponent(() => import('@/materials/Empty/index.vue')),
     Clock: defineAsyncComponent(() => import('@/materials/Clock/index.vue')),
     SlackCountdown: defineAsyncComponent(() => import('@/parallellines/materials/SlackCountdown/index.vue')),
+    EventCountdown: defineAsyncComponent(() => import('@/parallellines/materials/EventCountdown/index.vue')),
     AiSearch: defineAsyncComponent(() => import('@/parallellines/materials/AiSearch/index.vue')),
     WeatherCard: defineAsyncComponent(() => import('@/parallellines/materials/WeatherCard/index.vue')),
     AlarmTimer: defineAsyncComponent(() => import('@/parallellines/materials/AlarmTimer/index.vue')),

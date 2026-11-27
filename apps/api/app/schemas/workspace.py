@@ -279,6 +279,14 @@ _MATERIAL_FIELDS: dict[str, dict[str, _Check]] = {
         "paydayDay": _number,
         "advanceOnRest": _flag,
     },
+    "EventCountdown": {
+        **_TEXT_APPEARANCE,
+        "eventName": _text,
+        "targetTime": _text,
+        "startTime": _text,
+        "style": lambda value: value in ("flip", "minimal", "progress", "ring"),
+        "accentColor": _style,
+    },
     "WeatherCard": {},
     "AlarmTimer": {"fontFamily": _font, "textColor": _style},
 }

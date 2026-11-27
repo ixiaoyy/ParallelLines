@@ -14,6 +14,7 @@ export const ALLOWED_MATERIALS = new Set<string>([
   'TodoList',
   'Editor',
   'CountDown',
+  'EventCountdown',
   'SlackCountdown',
   'WeatherCard',
   'AlarmTimer',
