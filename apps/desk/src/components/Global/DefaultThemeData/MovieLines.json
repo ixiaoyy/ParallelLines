@@ -1,0 +1,220 @@
+{
+  "list": [
+    {
+      "position": 1,
+      "affixInfo": {
+        "mode": 1,
+        "x": 10,
+        "y": 10
+      },
+      "w": 12,
+      "h": 7,
+      "background": "transparent",
+      "backgroundFilter": "brightness(0.9)",
+      "material": "Clock",
+      "borderRadius": 4,
+      "boxShadow": "",
+      "i": "u78487thj",
+      "componentSetting": {
+        "duration": 5000,
+        "position": 5,
+        "textFontSize": 112,
+        "textColor": "#FFFFFF",
+        "textShadow": "",
+        "fontFamily": "",
+        "padding": 5,
+        "textHollow": true,
+        "textHollowBorder": 2,
+        "textHollowBg": "rgba(0, 0, 0, 0.1)"
+      },
+      "x": 0,
+      "y": 0,
+      "moved": false,
+      "zIndex": 10
+    },
+    {
+      "position": 1,
+      "affixInfo": {
+        "mode": 1,
+        "x": 10,
+        "y": 10
+      },
+      "w": 12,
+      "h": 6,
+      "background": "transparent",
+      "backgroundFilter": "brightness(0.8)",
+      "material": "Search",
+      "borderRadius": 4,
+      "boxShadow": "",
+      "zIndex": 99,
+      "customId": "",
+      "componentSetting": {
+        "engineList": [
+          {
+            "name": "Bing-CN",
+            "link": "https://cn.bing.com/search?q=",
+            "iconType": "local",
+            "iconPath": "https://cdn.kongfandong.cn/img/search-icons/bing.svg"
+          },
+          {
+            "name": "Google",
+            "link": "https://www.google.com/search?q=",
+            "iconType": "local",
+            "iconPath": "https://cdn.kongfandong.cn/img/search-icons/google.svg"
+          },
+          {
+            "name": "百度",
+            "link": "https://www.baidu.com/s?wd=",
+            "iconType": "local",
+            "iconPath": "https://cdn.kongfandong.cn/img/search-icons/baidu.svg"
+          },
+          {
+            "name": "有道词典",
+            "link": "http://dict.youdao.com/w/",
+            "iconType": "local",
+            "iconPath": "https://cdn.kongfandong.cn/img/search-icons/youdao.svg"
+          }
+        ],
+        "backupEngineList": [
+          {
+            "name": "Bing-EN",
+            "link": "https://cn.bing.com/search?ensearch=1&q=",
+            "iconType": "local",
+            "iconPath": "https://cdn.kongfandong.cn/img/search-icons/bing-en.svg"
+          },
+          {
+            "name": "搜狗",
+            "link": "https://www.sogou.com/tx?query=",
+            "iconType": "local",
+            "iconPath": "https://cdn.kongfandong.cn/img/search-icons/sougou.svg"
+          },
+          {
+            "name": "Bilibili",
+            "link": "https://search.bilibili.com/all?keyword=",
+            "iconType": "local",
+            "iconPath": "https://cdn.kongfandong.cn/img/search-icons/bilibili.svg"
+          },
+          {
+            "name": "淘宝",
+            "link": "https://s.taobao.com/search?q=",
+            "iconType": "local",
+            "iconPath": "https://cdn.kongfandong.cn/img/search-icons/taobao.svg"
+          }
+        ],
+        "showTabTips": false,
+        "jumpType": 1,
+        "keywordLink": true,
+        "rememberHistory": false,
+        "rememberHistoryList": [],
+        "position": 2,
+        "boxShadow": "",
+        "boxBackground": "rgba(255, 255, 255, 0.04)",
+        "backdropBlur": false,
+        "textColor": "#FFFFFF",
+        "boxRadius": 4,
+        "maxWidth": 600,
+        "focusBgAnimation": false,
+        "padding": 10
+      },
+      "i": "4f00ad7daf662",
+      "x": 0,
+      "y": 7,
+      "moved": false
+    },
+    {
+      "position": 1,
+      "affixInfo": {
+        "mode": 1,
+        "x": 10,
+        "y": 10
+      },
+      "w": 12,
+      "h": 6,
+      "background": "transparent",
+      "backgroundFilter": "brightness(0.8)",
+      "material": "MovieLines",
+      "borderRadius": 4,
+      "boxShadow": "",
+      "zIndex": 10,
+      "customId": "",
+      "componentSetting": {
+        "showPoster": true,
+        "posterType": 2,
+        "posterFilter": "brightness(0.38)",
+        "asBackground": true,
+        "showCite": true,
+        "duration": 5,
+        "position": 5,
+        "clickActionType": 1,
+        "textFontSize": 18,
+        "textColor": "#ffffff",
+        "textShadow": "0 1px 3px #363636",
+        "fontFamily": "",
+        "padding": 10,
+        "showDecoration": true,
+        "themeColor": "#69c0eb",
+        "maxWidth": 560,
+        "useSpotlight": false
+      },
+      "i": "1440a95464092",
+      "x": 0,
+      "y": 13,
+      "moved": false
+    }
+  ],
+  "affix": [
+    {
+      "position": 2,
+      "affixInfo": {
+        "mode": 2,
+        "x": 15.5999755859375,
+        "y": 9
+      },
+      "w": 197,
+      "h": 95,
+      "background": "transparent",
+      "backgroundFilter": "brightness(0.9)",
+      "material": "Weather",
+      "borderRadius": 4,
+      "boxShadow": "",
+      "i": "kqtqm8in658",
+      "componentSetting": {
+        "weatherMode": 1,
+        "cityName": "",
+        "duration": 120,
+        "position": 5,
+        "baseFontSize": 16,
+        "textColor": "#FFFFFF",
+        "textShadow": "0 0 1px #464646",
+        "iconShadow": "0 0 1px #464646",
+        "fontFamily": "",
+        "padding": 10
+      },
+      "zIndex": 10
+    }
+  ],
+  "global": {
+    "background": "#242428",
+    "backgroundFilter": "brightness(0.38)",
+    "lang": "zh-cn",
+    "gutter": 10,
+    "css": "",
+    "js": "",
+    "globalFontFamily": "HarmonyOS_Regular",
+    "loadHarmonyOSFont": true,
+    "siteTitle": "",
+    "disabledDialogAnimation": false,
+    "showMenuBtn": true
+  },
+  "showBackgroundEffect": false,
+  "showRefreshBtn": true,
+  "tabList": [
+    {
+      "id": "65f5470920764",
+      "selected": true
+    }
+  ],
+  "showTabSwitchBtn": true,
+  "enableKeydownSwitchTab": true,
+  "backgroundEffectActive": 0
+}

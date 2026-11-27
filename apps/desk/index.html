@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/favicon.png">
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=0"
+    />
+    <meta name="referrer" content="never" />
+    <meta
+      name="keywords"
+      content="平行线,ParallelLines,工作台,浏览器起始页,摸鱼倒计时,待办,便签,效率桌面"
+    />
+    <meta
+      name="description"
+      content="平行线工作台：可自由编辑的极简浏览器桌面，集成时钟、摸鱼倒计时、今日待办、随手便签与平行线全站快捷入口。"
+    />
+    <meta property="og:title" content="平行线工作台 · ParallelLines" />
+    <meta
+      property="og:description"
+      content="平行线工作台：可自由编辑的极简浏览器桌面，集成时钟、摸鱼倒计时、今日待办、随手便签与平行线全站快捷入口。"
+    />
+    <meta property="og:type" content="website" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>平行线工作台</title>
+    <style>
+      #globalLoading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #globalLoading .loader,
+      .custom-loading .loader {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: inline-block;
+        border-top: 4px solid #ff3d00;
+        border-right: 4px solid transparent;
+        animation: rotation 1s linear infinite;
+      }
+      #globalLoading .loader:after,
+      .custom-loading .loader:after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border-left: 4px solid #55afca;
+        border-bottom: 4px solid transparent;
+        animation: rotation 0.5s linear infinite reverse;
+      }
+      @keyframes rotation {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="globalLoading">
+      <span class="loader"></span>
+    </div>
+    <div id="app" style="width: 100%; height: 100%"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

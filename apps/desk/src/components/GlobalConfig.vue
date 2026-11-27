@@ -1,0 +1,312 @@
+<template>
+  <easy-dialog
+    v-model="dialogVisible"
+    :title="$t('全局设置')"
+    width="min(480px, 98vw)"
+    height="min(520px, 90vh)"
+    custom-class="global-config-dialog"
+    @close="close"
+  >
+    <WarnLock />
+    <el-form ref="form" label-position="top">
+      <el-form-item :label="$t('壁纸')">
+        <BackgroundSelector
+          v-model:background="state.formData.background"
+          is-full-screen
+          recommend-video
+        />
+        <BackgroundFilterSelector
+          v-if="state.formData.background.includes('url')"
+          v-model:filter="state.formData.backgroundFilter"
+          is-full-screen
+        />
+      </el-form-item>
+      <el-form-item :label="$t('杂项')">
+        <div class="form-row-control">
+          <div class="label">
+            {{ $t('语言') }}
+          </div>
+          <div class="content">
+            <el-select v-model="state.formData.lang">
+              <el-option
+                v-for="lang in langList"
+                :key="lang.value"
+                :label="lang.label"
+                :value="lang.value"
+              />
+            </el-select>
+          </div>
+        </div>
+        <div class="form-row-control">
+          <div class="label">
+            {{ $t('组件间隔') }}
+          </div>
+          <div class="content flex-center-y">
+            <el-input-number
+              v-model="state.formData.gutter"
+              controls-position="right"
+              :min="0"
+              :max="50"
+              style="width: 100px"
+            />
+            <span class="font-control">px</span>
+          </div>
+        </div>
+        <div class="form-row-control">
+          <div class="label">
+            {{ $t('全局字体') }}
+          </div>
+          <div class="content">
+            <div>
+              <div class="flex-center-y">
+                <FontSelector
+                  v-model="state.formData.globalFontFamily"
+                  show-refresh
+                  :show-harmony-font="state.formData.loadHarmonyOSFont"
+                  style="width: 100%"
+                />
+              </div>
+              <div class="flex-center-y" style="width: 242px;justify-content: space-between;margin: 4px 0 8px">
+                <el-checkbox v-model="state.formData.loadHarmonyOSFont">
+                  加载鸿蒙字体(外部)
+                </el-checkbox>
+                <Tips :content="$t('勾选此项会在页面进入后加载鸿蒙字体,然后可以在字体选择器中选择或输入HarmonyOS_Regular,初次设置需刷新页面')" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-row-control">
+          <div class="label">
+            {{ $t('网站标题') }}
+          </div>
+          <div class="content flex-center-y">
+            <el-input
+              v-model="state.formData.siteTitle"
+              :placeholder="$t('自定义网站的标题')"
+              clearable
+              style="width: 214px"
+            />
+            <Tips :content="$t('siteTitleTips')" />
+          </div>
+        </div>
+        <div class="form-row-control">
+          <div class="label">
+            {{ $t('网站Icon') }}
+          </div>
+          <div class="content flex-center-y">
+            <div class="icon-wrapper">
+              <img v-if="state.formData.siteIcon" :src="state.formData.siteIcon" />
+              <img v-else src="/favicon.ico">
+              <div v-if="state.formData.siteIcon" class="reset-text" @click="state.formData.siteIcon = ''">Clean</div>
+            </div>
+            <button type="button" class="btn btn-small btn-primary" style="height: 26px;padding: 0 8px;margin-right: 0;" @click="showIconPicker">
+              {{ $t('图标库') }}
+            </button>
+            <Tips :content="$t('siteIconTips')" />
+          </div>
+        </div>
+        <div class="form-row-control">
+          <div class="label ellipsis" :title="$t('禁用动画')">
+            {{ $t('禁用动画') }}
+          </div>
+          <div class="content flex-center-y">
+            <el-switch v-model="state.formData.disabledDialogAnimation" style="width: 214px" />
+            <Tips :content="$t('disabledDialogAnimationTips')" />
+          </div>
+        </div>
+        <div class="form-row-control">
+          <div class="label ellipsis" :title="$t('菜单按钮')">
+            {{ $t('菜单按钮') }}
+          </div>
+          <div class="content flex-center-y">
+            <el-switch v-model="state.formData.showMenuBtn" style="width: 214px" />
+            <Tips :content="$t('showMenuBtnTips')" />
+          </div>
+        </div>
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <div class="footer" style="text-align: right; padding: 12px">
+        <button type="button" class="btn" @click="close">
+          {{ $t('取消') }}
+        </button>
+        <button type="button" class="btn btn-primary" @click="submit">
+          {{ $t('确认') }}
+        </button>
+      </div>
+    </template>
+  </easy-dialog>
+  <IconifyPicker ref="IconifyPickerEl" />
+</template>
+
+<script lang="ts">
+import { defineComponent, ref, watch, reactive, defineAsyncComponent } from 'vue'
+import WarnLock from '@/components/FormControl/WarnLock.vue'
+import Tips from '@/components/Tools/Tips.vue'
+import TextLoading from '@/components/Tools/TextLoading.vue'
+import IconifyPicker from '@/components/Tools/IconifyPicker.vue'
+import { useStore } from '@/store'
+import { langList } from '@/lang'
+import { useI18n } from 'vue-i18n'
+export default defineComponent({
+  name: 'GlobalConfig',
+  components: {
+    BackgroundSelector: defineAsyncComponent({
+      loader: () => import('@/components/FormControl/BackgroundSelector.vue'),
+      loadingComponent: TextLoading
+    }),
+    BackgroundFilterSelector: defineAsyncComponent({
+      loader: () => import('@/components/FormControl/BackgroundFilterSelector.vue'),
+      // loadingComponent: TextLoading
+    }),
+    WarnLock,
+    Tips,
+    IconifyPicker,
+    FontSelector: defineAsyncComponent(() => import('@/components/FormControl/FontSelector.vue'))
+  },
+  props: {
+    visible: {
+      type: Boolean,
+      default: false
+    }
+  },
+  setup(props, { emit }) {
+    const store = useStore()
+
+    const { t, locale } = useI18n()
+
+    const state = reactive({
+      formData: {
+        ...store.global
+      }
+    })
+
+    const dialogVisible = ref(false)
+
+    const IconifyPickerEl = ref()
+    const showIconPicker = async () => {
+      try {
+        const data = await IconifyPickerEl.value.show()
+        if (data.length < 128 * 1024) {
+          state.formData.siteIcon = data
+        } else {
+          alert(t('图标大小不能超过128k'))
+        }
+      } catch {
+        //
+      }
+    }
+
+    watch(
+      () => props.visible,
+      (val) => {
+        if (val) {
+          dialogVisible.value = true
+          state.formData = {
+            ...store.global
+          }
+        } else {
+          dialogVisible.value = false
+        }
+      }
+    )
+    const close = () => {
+      dialogVisible.value = false
+      emit('update:visible', false)
+    }
+
+    const submit = () => {
+      store.updateGlobal(state.formData)
+      document.title = state.formData.siteTitle || '平行线工作台'
+      if (state.formData.siteIcon) {
+        const iconDom = document.querySelector("link[rel='icon']") as HTMLLinkElement
+        if (iconDom) {
+          iconDom.href = state.formData.siteIcon
+        }
+      }
+      close()
+    }
+
+    watch(
+      () => store.global.lang,
+      (val) => {
+        if (val) locale.value = val
+      },
+      {
+        immediate: true
+      }
+    )
+
+    watch(
+      () => store.global.globalFontFamily,
+      () => {
+        const defaultFontList = ['Helvetica Neue, Microsoft YaHei, Arial, sans-serif']
+        if (store.global.globalFontFamily) {
+          defaultFontList.unshift(store.global.globalFontFamily)
+        }
+        document.body.style.fontFamily = defaultFontList.join(',')
+      },
+      {
+        immediate: true
+      }
+    )
+
+    return {
+      close,
+      submit,
+      state,
+      langList,
+      dialogVisible,
+      IconifyPickerEl,
+      showIconPicker
+    }
+  }
+})
+</script>
+<style lang="scss" scoped>
+:deep(.el-form-item__label) {
+  display: inline-flex !important;
+  color: rgb(43, 43, 43);
+  font-weight: bold;
+  line-height: 1 !important;
+  font-size: 16px;
+  position: relative;
+  &:after {
+    position: absolute;
+    content: '';
+    left: 0;
+    width: 100%;
+    bottom: 0;
+    height: 8px;
+    background: rgba($color-warning, 0.2);
+  }
+}
+.font-control {
+  margin-left: 8px;
+  font-weight: bold;
+}
+
+.icon-wrapper {
+  display: flex;
+  align-items: center;
+  width: 151px;
+  justify-content: space-between;
+  img {
+    width: 24px;
+    height: 24px;
+    padding: 3px;
+  }
+  .reset-text {
+    font-size: 12px;
+    color: #942;
+    margin-right: 4px;
+    cursor: pointer;
+  }
+}
+</style>
+
+<style lang="scss">
+.global-config-dialog .easy-dialog-body {
+  padding: 5px 20px !important;
+}
+</style>

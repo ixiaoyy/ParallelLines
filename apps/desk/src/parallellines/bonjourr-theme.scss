@@ -1,0 +1,124 @@
+/**
+ * 平行线工作台默认 Bonjourr 极简通透氛围微调层（100% 原创 CSS）。
+ * 注意：不要给 .grid-wrapper 强加 max-width，避免与 vue-grid-layout 的动态 windowWidth 冲突导致右侧裁切。
+ */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.grid-wrapper {
+  box-sizing: border-box;
+  padding-top: 18px;
+  padding-bottom: 48px;
+}
+
+.grid-wrapper .item-content,
+.compact-flow-wrapper .item-content {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.compact-flow-wrapper {
+  .grid-item-Clock .material-clock {
+    font-size: clamp(44px, 14vw, 72px) !important;
+  }
+
+  .grid-item-TodoList .item-content {
+    min-height: 240px;
+  }
+}
+
+.grid-item-Clock .item-content,
+.grid-item-Search .item-content,
+.grid-item-AiSearch .item-content,
+.grid-item-Bookmark .item-content,
+.grid-item-Empty .item-content {
+  border-color: transparent;
+  overflow: visible;
+}
+
+.grid-item-Clock .material-clock,
+.grid-item-Clock {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* 书签磁贴做成 Bonjourr 风格的清爽圆角图标，hover 轻微浮起 */
+.grid-item-Bookmark .material-bookmark .tile-icon {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+}
+
+.grid-item-Bookmark .material-bookmark .item:hover .tile-icon {
+  transform: translateY(-3px);
+}
+
+.grid-item-Bookmark .material-bookmark .item {
+  position: relative;
+
+  .quick-icon-ops {
+    position: absolute;
+    top: -4px;
+    right: 2px;
+    display: flex;
+    gap: 3px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 5;
+  }
+
+  &:hover .quick-icon-ops {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .quick-op-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(15, 23, 42, 0.88);
+    color: #f8fafc;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &.danger:hover {
+      background: #ef4444;
+    }
+  }
+}
+
+/* 统一待办卡片为深色通透毛玻璃质感，去掉突兀白底和复古手写体 */
+.grid-item-TodoList .material-todo-list {
+  color: #f1f5f9 !important;
+
+  .week,
+  .date,
+  .todo-title {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif !important;
+    color: #f8fafc !important;
+  }
+
+  .date {
+    opacity: 0.72;
+  }
+
+  .todo-item,
+  .todo-item-text {
+    color: #f1f5f9 !important;
+  }
+}
+
+/* 弹窗更通透 */
+.easy-dialog-wrapper .easy-dialog {
+  border-radius: 16px !important;
+  backdrop-filter: blur(20px);
+}

@@ -1,0 +1,16 @@
+{
+  "upstream": {
+    "repository": "https://github.com/leon-kfd/Dashboard",
+    "license": "MIT",
+    "commit": "d54e3ec7f4655447bd88d4b0c52a53a33c9d5893",
+    "version": "1.9.1-prerelease",
+    "lockedAt": "2026-11-26"
+  },
+  "customizations": [
+    "Removed upstream CDN build base and third-party proxy endpoints",
+    "Removed GlobalConfig CSS/JS injection, remote preview-mode loader, and production Service Worker registration",
+    "Added strict material and payload allowlist sanitization on load, import, paste, and render",
+    "Added SlackCountdown material (off-work progress, payday, and Chinese public holiday schedule)",
+    "Added ParallelLines Bonjourr-inspired default theme preset and lightweight visual polish"
+  ]
+}

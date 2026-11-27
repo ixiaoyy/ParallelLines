@@ -1,0 +1,100 @@
+{
+  "name": "@parallellines/desk",
+  "version": "1.9.1",
+  "description": "ParallelLines Desk workspace based on Howdz Dashboard (MIT)",
+  "author": {
+    "name": "leon-kfd",
+    "email": "kfd_personal@163.com"
+  },
+  "keywords": [
+    "javascript",
+    "vue",
+    "vite",
+    "typescript",
+    "dashboard",
+    "drag",
+    "custom"
+  ],
+  "type": "module",
+  "licence": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview",
+    "lint": "oxlint src"
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  },
+  "husky": {
+    "hooks": {
+      "commit-msg": "npx --no-install commitlint --edit '$1'",
+      "pre-commit": "npm run lint"
+    }
+  },
+  "dependencies": {
+    "@emotion/css": "^11.7.1",
+    "@howdyjs/mouse-menu": "^2.1.1",
+    "@howdyjs/to-control": "^2.1.1",
+    "@milkdown/core": "5.3.1",
+    "@milkdown/plugin-clipboard": "5.3.1",
+    "@milkdown/plugin-collaborative": "5.3.1",
+    "@milkdown/plugin-history": "5.3.1",
+    "@milkdown/plugin-listener": "5.3.1",
+    "@milkdown/plugin-math": "5.3.1",
+    "@milkdown/plugin-slash": "5.3.1",
+    "@milkdown/plugin-tooltip": "5.3.1",
+    "@milkdown/preset-commonmark": "5.3.1",
+    "@milkdown/preset-gfm": "5.3.1",
+    "@milkdown/theme-nord": "5.3.1",
+    "@vueuse/core": "^14.1.0",
+    "dayjs": "^1.10.4",
+    "element-plus": "2.4.1",
+    "file-saver": "^2.0.5",
+    "js-md5": "^0.7.3",
+    "localforage": "^1.10.0",
+    "pako": "1.0.11",
+    "pinia": "^2.0.11",
+    "pinia-plugin-persistedstate": "^1.5.0",
+    "vue": "^3.2.4",
+    "vue-grid-layout": "3.0.0-beta1",
+    "vue-i18n": "9",
+    "vuedraggable": "^4.0.1"
+  },
+  "devDependencies": {
+    "@commitlint/config-conventional": "^16.2.4",
+    "@intlify/unplugin-vue-i18n": "^1.4.0",
+    "@types/chrome": "^0.1.35",
+    "@types/file-saver": "^2.0.2",
+    "@types/js-md5": "^0.4.2",
+    "@types/pako": "^1.0.6",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vitejs/plugin-vue": "^4.4.0",
+    "@vitejs/plugin-vue-jsx": "^3.0.2",
+    "adm-zip": "^0.5.5",
+    "commitizen": "^4.2.4",
+    "commitlint": "^16.2.4",
+    "cross-env": "^7.0.3",
+    "cz-conventional-changelog": "^3.3.0",
+    "dotenv": "^16.3.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-oxlint": "^0.2.7",
+    "eslint-plugin-vue": "^9.24.0",
+    "husky": "^7.0.4",
+    "oxlint": "^0.2.16",
+    "qiniu": "^7.9.0",
+    "rimraf": "^3.0.2",
+    "sass": "^1.68.0",
+    "typescript": "5.2.2",
+    "vite": "^5.2.8",
+    "vite-plugin-markdown": "^2.2.0",
+    "vue-eslint-parser": "^9.4.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leon-kfd/dashboard"
+  }
+}

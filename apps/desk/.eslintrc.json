@@ -1,0 +1,33 @@
+{
+  "root": true,
+  "extends": [
+      "eslint:recommended",
+      "plugin:oxlint/recommended",
+      "plugin:vue/vue3-recommended",
+      "plugin:@typescript-eslint/recommended"
+  ],
+  "parser": "vue-eslint-parser",
+  "parserOptions": { 
+    "parser": "@typescript-eslint/parser",
+    "sourceType": "module"
+  },
+  "overrides": [
+    {
+      "extends": ["plugin:@typescript-eslint/disable-type-checked"],
+      "files": ["./**/*.js"]
+    }
+  ],
+  "rules": {
+      "@typescript-eslint/no-explicit-any": "off",
+      "vue/multi-word-component-names": "off",
+      "vue/max-attributes-per-line": ["warn", { "singleline": 4 }],
+      "vue/require-default-prop": "off",
+      "vue/no-reserved-component-names": "off",
+      "vue/html-self-closing": [
+        "warn", 
+        { 
+          "svg": "nerver" 
+        }
+      ]
+  }
+}
