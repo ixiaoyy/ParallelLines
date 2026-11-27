@@ -73,6 +73,7 @@ from app.models.user import (
     UserSecurityToken,
     UserSession,
 )
+from app.models.workspace import UserWorkspaceConfig
 
 apply_schema_comments(Base.metadata)
 
@@ -157,5 +158,6 @@ __all__ = [
     "UserRecoveryCode",
     "UserSecurityToken",
     "UserSession",
+    "UserWorkspaceConfig",
     "topic_tags",
 ]

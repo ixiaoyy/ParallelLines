@@ -714,6 +714,9 @@ export interface components {
     ApiResponse_WebhookEndpointResponse_: {
       [key: string]: unknown;
     };
+    ApiResponse_WorkspaceConfigSnapshot_: {
+      [key: string]: unknown;
+    };
     AuditLogResponse: {
       action: string;
       actor_id?: string | null;
@@ -2848,6 +2851,14 @@ export interface components {
       updated_at: string;
       url: string;
     };
+    WorkspaceConfigSnapshot: {
+      config: {
+      [key: string]: unknown;
+    } | null;
+      revision: string;
+      schema_version: number;
+      updated_at: string | null;
+    };
   };
 }
 
@@ -3552,6 +3563,10 @@ export interface paths {
     };
     "/api/v1/users/privacy/retention": {
       get: { response: components["schemas"]["ApiResponse_RetentionPolicyResponse_"]; operationId: "privacy_retention_policy_api_v1_users_privacy_retention_get" };
+    };
+    "/api/v1/workspace/config": {
+      get: { response: components["schemas"]["ApiResponse_WorkspaceConfigSnapshot_"]; operationId: "get_workspace_config_api_v1_workspace_config_get" };
+      put: { response: components["schemas"]["ApiResponse_WorkspaceConfigSnapshot_"]; operationId: "put_workspace_config_api_v1_workspace_config_put" };
     };
     "/healthz": {
       get: { response: {

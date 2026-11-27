@@ -33,6 +33,7 @@ from app.api.v1 import (
     traffic,
     uploads,
     users,
+    workspace,
 )
 
 api_router = APIRouter()
@@ -68,5 +69,6 @@ api_router.include_router(site.router)
 api_router.include_router(traffic.router)
 api_router.include_router(traffic.admin_router)
 api_router.include_router(space.router)
+api_router.include_router(workspace.router)
 api_router.include_router(drafts.router)
 api_router.include_router(api_seo_router)

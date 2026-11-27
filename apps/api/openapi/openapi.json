@@ -1990,6 +1990,10 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "ApiResponse_WorkspaceConfigSnapshot_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ApiResponse_bool_": {
         "additionalProperties": true,
         "type": "object"
@@ -15759,6 +15763,51 @@
         ],
         "title": "WebhookEndpointResponse",
         "type": "object"
+      },
+      "WorkspaceConfigSnapshot": {
+        "description": "读写共用的快照结构；没有云配置时版本为 0，配置和时间为 null。",
+        "properties": {
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "string"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "revision",
+          "schema_version",
+          "config",
+          "updated_at"
+        ],
+        "title": "WorkspaceConfigSnapshot",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -28729,6 +28778,195 @@
         "summary": "List User Topics",
         "tags": [
           "users"
+        ]
+      }
+    },
+    "/api/v1/workspace/config": {
+      "get": {
+        "description": "读取当前主站账号的云配置。首次使用时返回版本 0 和空配置。",
+        "operationId": "get_workspace_config_api_v1_workspace_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_WorkspaceConfigSnapshot_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Workspace Config",
+        "tags": [
+          "workspace"
+        ]
+      },
+      "put": {
+        "description": "原子保存当前账号的快照；客户端持有的基准版本过期时返回 409。",
+        "operationId": "put_workspace_config_api_v1_workspace_config_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "description": "完整的云配置快照。基准版本 0 仅用于首次创建。",
+                "properties": {
+                  "config": {
+                    "additionalProperties": true,
+                    "title": "Config",
+                    "type": "object"
+                  },
+                  "expected_revision": {
+                    "pattern": "^(0|[1-9][0-9]{0,18})$",
+                    "title": "Expected Revision",
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "maximum": 1.0,
+                    "minimum": 1.0,
+                    "title": "Schema Version",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "expected_revision",
+                  "schema_version",
+                  "config"
+                ],
+                "title": "WorkspaceConfigUpdate",
+                "type": "object"
+              }
+            }
+          },
+          "description": "仅包含支持同步的布局与偏好，不是本地完整导出。",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_WorkspaceConfigSnapshot_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_WorkspaceConfigSnapshot_"
+                }
+              }
+            },
+            "description": "首次创建云配置"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "408": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request Timeout"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unsupported Media Type"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Put Workspace Config",
+        "tags": [
+          "workspace"
         ]
       }
     },
