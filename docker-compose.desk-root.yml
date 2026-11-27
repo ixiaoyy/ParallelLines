@@ -1,0 +1,6 @@
+# Phase 4 根首页切换覆盖：必须配合 docker-compose.desk.yml 使用。
+# 仅挂载精确根路径 / 到 desk-web/index.html；撤掉 .deployment/desk-root-enabled 即可秒级回退原首页。
+services:
+  nginx:
+    volumes:
+      - ./deploy/nginx/desk-root-switch.conf:/etc/nginx/desk-main/root-switch.conf:ro

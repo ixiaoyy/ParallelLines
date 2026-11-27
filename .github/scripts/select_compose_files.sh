@@ -126,6 +126,97 @@ select_parallellines_compose_files() {
         COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.traffic.yml --profile traffic"
         TRAFFIC_ENABLED=true
     fi
+
+    # 可选工作台灰度入口（/desk/）：仅当 .deployment/desk-enabled 存在且镜像已加载时合入。
+    DESK_ENABLED=false
+    if test -e .deployment/desk-enabled; then
+        test ! -L .deployment/desk-enabled && test -f .deployment/desk-enabled || {
+            echo "[deploy] desk-enabled must be a regular image-tag file" >&2
+            return 1
+        }
+        DESK_IMAGE_TAG=$(cat .deployment/desk-enabled)
+        case "$DESK_IMAGE_TAG" in
+            ""|*[!A-Za-z0-9_.-]*|[.-]*)
+                echo "[deploy] desk-enabled contains an invalid image tag" >&2
+                return 1
+                ;;
+        esac
+        if test "${#DESK_IMAGE_TAG}" -gt 128; then
+            echo "[deploy] desk image tag exceeds 128 characters" >&2
+            return 1
+        fi
+        for recipe in docker-compose.desk.yml deploy/nginx/desk-main.conf; do
+            test -s "$recipe" || {
+                echo "[deploy] enabled desk is missing recipe: $recipe" >&2
+                return 1
+            }
+        done
+        sudo docker image inspect "parallellines-desk-web:$DESK_IMAGE_TAG" >/dev/null || {
+            echo "[deploy] enabled desk image is not loaded" >&2
+            return 1
+        }
+        export DESK_IMAGE_TAG
+        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.desk.yml"
+        DESK_ENABLED=true
+    fi
+
+    # 可选 Phase 4 根首页切换：必须先启用 desk-enabled，撤掉标记即恢复原首页。
+    if test -e .deployment/desk-root-enabled; then
+        test ! -L .deployment/desk-root-enabled && test -f .deployment/desk-root-enabled || {
+            echo "[deploy] desk-root-enabled must be a regular marker file" >&2
+            return 1
+        }
+        if test "$DESK_ENABLED" != true; then
+            echo "[deploy] desk-root-enabled requires an active desk-enabled deployment" >&2
+            return 1
+        fi
+        for recipe in docker-compose.desk-root.yml deploy/nginx/desk-root-switch.conf; do
+            test -s "$recipe" || {
+                echo "[deploy] enabled desk root switch is missing recipe: $recipe" >&2
+                return 1
+            }
+        done
+        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.desk-root.yml"
+    fi
+
+    # 可选独立游戏站（games.pingxingxian.space）：需已备证书与镜像，缺任一前置即停止。
+    GAMES_ENABLED=false
+    if test -e .deployment/games-enabled; then
+        test ! -L .deployment/games-enabled && test -f .deployment/games-enabled || {
+            echo "[deploy] games-enabled must be a regular image-tag file" >&2
+            return 1
+        }
+        GAMES_IMAGE_TAG=$(cat .deployment/games-enabled)
+        case "$GAMES_IMAGE_TAG" in
+            ""|*[!A-Za-z0-9_.-]*|[.-]*)
+                echo "[deploy] games-enabled contains an invalid image tag" >&2
+                return 1
+                ;;
+        esac
+        if test "${#GAMES_IMAGE_TAG}" -gt 128; then
+            echo "[deploy] games image tag exceeds 128 characters" >&2
+            return 1
+        fi
+        for recipe in docker-compose.games.yml deploy/nginx/games.conf deploy/nginx/games-main-redirects.conf; do
+            test -s "$recipe" || {
+                echo "[deploy] enabled games site is missing recipe: $recipe" >&2
+                return 1
+            }
+        done
+        for certificate in fullchain.pem privkey.pem; do
+            sudo test -s "/opt/parallellines/var/letsencrypt/live/games.pingxingxian.space/$certificate" || {
+                echo "[deploy] enabled games certificate is missing: $certificate" >&2
+                return 1
+            }
+        done
+        sudo docker image inspect "parallellines-games-web:$GAMES_IMAGE_TAG" >/dev/null || {
+            echo "[deploy] enabled games image is not loaded" >&2
+            return 1
+        }
+        export GAMES_IMAGE_TAG
+        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.games.yml"
+        GAMES_ENABLED=true
+    fi
 }
 
 select_parallellines_compose_files
