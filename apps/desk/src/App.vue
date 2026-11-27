@@ -21,7 +21,7 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { ref, computed, h, onMounted } from 'vue'
+import { ref, computed, h, onMounted, onUnmounted } from 'vue'
 import Layout from '@/components/Layout.vue'
 import BaseConfig from '@/components/BaseConfig.vue'
 import GooeyMenu from '@/components/GooeyMenu.vue'
@@ -44,7 +44,7 @@ import {
 import { sanitizeComponent, sanitizeComponentList, sanitizeGlobal } from '@/parallellines/security'
 import { handleIncomingPinShortcut } from '@/parallellines/pinShortcut'
 import DeskQuickBar from '@/parallellines/components/DeskQuickBar.vue'
-import { initCloudSync, scheduleCloudSync } from '@/parallellines/cloudSync'
+import { startCloudSync } from '@/parallellines/cloudSync'
 const store = useStore()
 const global = computed(() => store.global)
 const isLock = computed(() => store.isLock)
@@ -210,12 +210,11 @@ if (shouldApplyDefaultPreset) {
   store.updateGlobal(sanitizeGlobal(store.global))
 }
 
+let stopCloudSync: (() => void) | undefined
+onUnmounted(() => stopCloudSync?.())
 onMounted(async () => {
   handleIncomingPinShortcut(store)
-  initCloudSync(store)
-  store.$subscribe(() => {
-    scheduleCloudSync(store)
-  })
+  stopCloudSync = startCloudSync(store)
   // IOS Safari icon不支持svg特殊处理成png
   if (isIOSSafari() && global.value.siteIcon) {
     const appleTouchIconDom = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement

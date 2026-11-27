@@ -14099,7 +14099,10 @@
         "additionalProperties": false,
         "properties": {
           "client_id": {
-            "const": "parallellines-circle",
+            "enum": [
+              "parallellines-circle",
+              "parallellines-games"
+            ],
             "title": "Client Id",
             "type": "string"
           },
@@ -14196,7 +14199,10 @@
         "additionalProperties": false,
         "properties": {
           "client_id": {
-            "const": "parallellines-circle",
+            "enum": [
+              "parallellines-circle",
+              "parallellines-games"
+            ],
             "title": "Client Id",
             "type": "string"
           },

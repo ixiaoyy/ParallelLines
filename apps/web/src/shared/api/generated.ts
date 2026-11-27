@@ -2595,7 +2595,7 @@ export interface components {
       user: components["schemas"]["UserPublic"];
     };
     UnifiedAuthorizeRequest: {
-      client_id: "parallellines-circle";
+      client_id: "parallellines-circle" | "parallellines-games";
       code_challenge: string;
       code_challenge_method: "S256";
       redirect_uri: string;
@@ -2613,7 +2613,7 @@ export interface components {
       return_uri: string;
     };
     UnifiedExchangeRequest: {
-      client_id: "parallellines-circle";
+      client_id: "parallellines-circle" | "parallellines-games";
       code: string;
       code_verifier: string;
       redirect_uri: string;

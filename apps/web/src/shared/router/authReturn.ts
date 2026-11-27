@@ -47,10 +47,11 @@ export function isUnifiedSsoContinuation(value: unknown, origin: string): boolea
   return new URL(target, origin).pathname === "/auth/unified";
 }
 
-/** Chat is an independent application; the connect route also needs a fresh page lifecycle. */
+/** 工作台和聊天由网关接入，登录后整页回跳，不交给主站 SPA 路由。 */
 export function needsFullAuthNavigation(value: string, origin: string): boolean {
   const pathname = decodedPath(value, origin);
-  return pathname === "/chat" || pathname.startsWith("/chat/") || pathname === "/auth/chat";
+  return pathname === "/desk/" || pathname === "/desk"
+    || pathname === "/chat" || pathname.startsWith("/chat/") || pathname === "/auth/chat";
 }
 
 /** A validated OP interaction is the only login continuation that hides the forum shell. */

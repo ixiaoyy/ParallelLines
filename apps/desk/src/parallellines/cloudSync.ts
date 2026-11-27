@@ -6,6 +6,7 @@ export const MAX_SYNC_CONFIG_BYTES = 128 * 1024
 
 export type CloudSyncStatus =
   | 'guest'
+  | 'account_changed'
   | 'checking'
   | 'needs_first_upload'
   | 'synced'
@@ -383,246 +384,341 @@ export function applyCloudConfigToStore(store: any, cloudConfig: Record<string, 
   }
 }
 
+const SESSION_KEYS = ['parallellines.access_token', 'access_token']
+const LAYOUT_OWNER_KEY = 'pl_desk_cloud_layout_owner'
+const DRAFT_REVISION_KEY = 'pl_desk_cloud_draft_revision'
+
 function getMainAccessToken(): string | null {
   try {
-    return (
-      window.localStorage.getItem('parallellines.access_token') ||
-      window.localStorage.getItem('access_token')
-    )
+    return window.localStorage.getItem(SESSION_KEYS[0]) || window.localStorage.getItem(SESSION_KEYS[1])
   } catch {
     return null
   }
 }
 
 function getApiBase(): string {
-  const envBase = (import.meta as any).env?.VITE_API_BASE_URL
-  if (typeof envBase === 'string' && envBase.trim()) {
-    return envBase.replace(/\/$/, '')
-  }
-  return '/api/v1'
+  return (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
 }
 
 export const cloudSyncState = reactive({
   status: 'guest' as CloudSyncStatus,
   userId: null as string | null,
-  username: '' as string,
-  revision: '0' as string,
-  conflictRevision: '' as string,
+  username: '',
+  revision: '0',
+  conflictRevision: '',
   updatedAt: null as string | null,
-  message: '' as string,
-  applyingRemote: false,
+  message: '',
 })
 
 let activeController: AbortController | null = null
 let debounceTimer: number | undefined
+let verifiedToken: string | null = null
+// Pinia 布局在同一浏览器资料内共享。已绑定的布局不因退出、刷新或换号而改归属。
+let layoutOwner: string | null = null
+let heldState: { status: CloudSyncStatus; message: string; autoSave: boolean } | null = null
+let syncedLayout: string | undefined
 
-function abortActive() {
-  if (activeController) {
-    activeController.abort()
-    activeController = null
+function setStatus(status: CloudSyncStatus, message: string) {
+  cloudSyncState.status = status
+  cloudSyncState.message = message
+}
+
+function cancelPending() {
+  window.clearTimeout(debounceTimer)
+  debounceTimer = undefined
+  activeController?.abort()
+  activeController = null
+}
+
+function suspendSession() {
+  if (verifiedToken) {
+    const { status, message } = cloudSyncState
+    heldState = { status, message, autoSave: debounceTimer !== undefined }
+    if (status === 'saving') {
+      heldState = { status: 'dirty', message: '上次保存结果待确认，本地布局已保留', autoSave: false }
+    } else if (status === 'checking') {
+      heldState = { status: 'offline', message: '读取已中断，本地布局已保留', autoSave: false }
+    }
+  }
+  cancelPending()
+  verifiedToken = null
+  cloudSyncState.userId = null
+  cloudSyncState.username = ''
+}
+
+function layoutBelongsTo(userId: string): boolean {
+  const persistedOwner = window.localStorage.getItem(LAYOUT_OWNER_KEY)
+  return (!layoutOwner || layoutOwner === userId) && (!persistedOwner || persistedOwner === userId)
+}
+
+function showAccountChanged() {
+  setStatus('account_changed', '此浏览器的布局已绑定另一账号。请换回原账号，或用独立浏览器资料同步当前账号。')
+}
+
+/** 整次操作只使用已捕获的 token；换号或卸载后不发送后续请求，也不消费旧响应。 */
+async function runCloudRequest(
+  store: any,
+  token: string,
+  action: (request: (path: string, init?: RequestInit) => Promise<Response>, current: () => boolean) => Promise<boolean>,
+): Promise<boolean> {
+  const controller = new AbortController()
+  activeController = controller
+  const timer = window.setTimeout(() => controller.abort(), 10_000)
+  const sameSession = () => activeController === controller && getMainAccessToken() === token
+  const current = () => sameSession() && !controller.signal.aborted
+  try {
+    return await action((path, init) => {
+      if (!current()) throw new DOMException('Cloud session changed', 'AbortError')
+      return fetch(getApiBase() + path, {
+        ...init,
+        headers: { ...init?.headers, Authorization: 'Bearer ' + token },
+        cache: 'no-store',
+        signal: controller.signal,
+      })
+    }, current)
+  } catch {
+    if (sameSession()) setStatus('offline', '云同步暂时不可用，当前布局已保留')
+    return false
+  } finally {
+    window.clearTimeout(timer)
+    if (activeController === controller) {
+      activeController = null
+      if (getMainAccessToken() !== token) void initCloudSync(store)
+    }
   }
 }
 
-async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const token = getMainAccessToken()
-  if (!token) throw new Error('NO_TOKEN')
-  abortActive()
-  activeController = new AbortController()
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
-    ...(init.headers as Record<string, string> | undefined),
+function requestRejected(response: Response): boolean {
+  if (response.ok) return false
+  if (response.status === 401) {
+    suspendSession()
+    setStatus('guest', '登录已过期，当前布局已保留')
+  } else {
+    setStatus('error', '云端请求失败，当前布局已保留')
   }
-  return fetch(`${getApiBase()}${path}`, {
-    ...init,
-    headers,
-    cache: 'no-store',
-    signal: activeController.signal,
+  return true
+}
+
+function applySnapshot(store: any, snapshot: WorkspaceSnapshot) {
+  // 保持 checking 状态直到布局写完，避免把服务器下发的修改当成本地编辑上传。
+  setStatus('checking', '正在载入云端配置…')
+  if (snapshot.config) applyCloudConfigToStore(store, snapshot.config)
+  syncedLayout = snapshot.config ? JSON.stringify(buildCloudSyncConfig(store)) : undefined
+  window.localStorage.removeItem(DRAFT_REVISION_KEY)
+  cloudSyncState.revision = snapshot.revision
+  cloudSyncState.updatedAt = snapshot.updated_at
+  cloudSyncState.conflictRevision = ''
+  if (snapshot.revision === '0' || !snapshot.config) {
+    setStatus('needs_first_upload', '该账号尚无云端工作台配置，可确认后首次上传')
+  } else {
+    setStatus('synced', '已与云端同步（v' + snapshot.revision + '）')
+  }
+}
+
+function restoreSnapshot(store: any, snapshot: WorkspaceSnapshot) {
+  // 草稿本体仍由 Pinia 保存，只记录它基于哪个云端版本；换号期间刷新也不能覆盖草稿。
+  const draftRevision = window.localStorage.getItem(DRAFT_REVISION_KEY)
+  if (!snapshot.config || !draftRevision) {
+    applySnapshot(store, snapshot)
+    return
+  }
+  cloudSyncState.revision = draftRevision
+  cloudSyncState.updatedAt = snapshot.updated_at
+  if (draftRevision === snapshot.revision) {
+    setStatus('dirty', '本地草稿已保留，可继续同步')
+  } else {
+    cloudSyncState.conflictRevision = snapshot.revision
+    setStatus('conflict', '云端版本已更新，当前本地草稿已保留')
+  }
+}
+
+/** 核实当前主站账号后才恢复同步；同账号续发凭据时保留本地草稿与原版本。 */
+export async function initCloudSync(store: any): Promise<void> {
+  suspendSession()
+  const token = getMainAccessToken()
+  if (!token) {
+    setStatus('guest', '未登录主站，当前仅保存在本地浏览器')
+    return
+  }
+  setStatus('checking', '正在检查主站云配置…')
+  await runCloudRequest(store, token, async (request, current) => {
+    const me = await request('/auth/me')
+    if (!current() || requestRejected(me)) return false
+    const { data: user } = await me.json()
+    if (!current()) return false
+    if (!user || typeof user.id !== 'string' || !user.id) {
+      setStatus('error', '无法确认当前账号，已暂停云同步')
+      return false
+    }
+    if (!layoutBelongsTo(user.id)) {
+      showAccountChanged()
+      return false
+    }
+    // 先建立本地归属，再允许加载或提交布局；不修改已有本地布局与私密物料。
+    window.localStorage.setItem(LAYOUT_OWNER_KEY, user.id)
+    layoutOwner = user.id
+    const resume = heldState
+    if (resume) {
+      setStatus(resume.status, resume.message)
+      heldState = null
+    } else {
+      const response = await request('/workspace/config')
+      if (!current() || requestRejected(response)) return false
+      const { data } = await response.json()
+      if (!current()) return false
+      if (!layoutBelongsTo(user.id)) {
+        showAccountChanged()
+        return false
+      }
+      restoreSnapshot(store, data)
+    }
+    verifiedToken = token
+    cloudSyncState.userId = user.id
+    cloudSyncState.username = user.nickname || user.username
+    if (resume?.autoSave) scheduleCloudSync(store)
+    return true
   })
 }
 
-export async function initCloudSync(store: any): Promise<void> {
-  const token = getMainAccessToken()
-  if (!token) {
-    cloudSyncState.status = 'guest'
-    cloudSyncState.userId = null
-    cloudSyncState.username = ''
-    cloudSyncState.revision = '0'
-    cloudSyncState.message = '未登录主站，当前仅保存在本地浏览器'
-    return
+function checkedToken(store: any): string | null {
+  if (activeController || !verifiedToken || !cloudSyncState.userId) return null
+  if (getMainAccessToken() !== verifiedToken) {
+    void initCloudSync(store)
+    return null
   }
-
-  cloudSyncState.status = 'checking'
-  cloudSyncState.message = '正在检查主站云配置...'
-
   try {
-    const meRes = await apiFetch('/auth/me')
-    if (meRes.status === 401) {
-      cloudSyncState.status = 'guest'
-      cloudSyncState.userId = null
-      cloudSyncState.message = '登录已过期，当前使用本地模式'
-      return
-    }
-    if (!meRes.ok) {
-      cloudSyncState.status = 'offline'
-      cloudSyncState.message = '暂时无法连接主站，已保留本地配置'
-      return
-    }
-    const meJson = await meRes.json()
-    const user = meJson?.data || meJson
-    cloudSyncState.userId = String(user?.id || '')
-    cloudSyncState.username = String(user?.nickname || user?.username || '')
-
-    const cfgRes = await apiFetch('/workspace/config')
-    if (cfgRes.status === 401) {
-      cloudSyncState.status = 'guest'
-      cloudSyncState.message = '会话未验证，当前使用本地模式'
-      return
-    }
-    if (!cfgRes.ok) {
-      cloudSyncState.status = 'offline'
-      cloudSyncState.message = '暂时无法读取云配置，已保留本地配置'
-      return
-    }
-    const cfgJson = await cfgRes.json()
-    const snapshot: WorkspaceSnapshot = cfgJson?.data
-
-    cloudSyncState.revision = snapshot?.revision || '0'
-    cloudSyncState.updatedAt = snapshot?.updated_at || null
-
-    if (cloudSyncState.revision === '0' || !snapshot?.config) {
-      cloudSyncState.status = 'needs_first_upload'
-      cloudSyncState.message = '该账号尚无云端工作台配置，可确认后首次上传'
-      return
-    }
-
-    cloudSyncState.applyingRemote = true
-    try {
-      applyCloudConfigToStore(store, snapshot.config)
-    } finally {
-      cloudSyncState.applyingRemote = false
-    }
-    cloudSyncState.status = 'synced'
-    cloudSyncState.message = `已与云端同步（v${cloudSyncState.revision}）`
-  } catch (err: any) {
-    if (err?.name === 'AbortError') return
-    cloudSyncState.status = 'offline'
-    cloudSyncState.message = '无法连接主站服务，当前修改保留在本地'
+    if (layoutBelongsTo(cloudSyncState.userId)) return verifiedToken
+    suspendSession()
+    showAccountChanged()
+  } catch {
+    setStatus('error', '无法确认本地布局归属，已暂停云同步')
   }
+  return null
 }
 
+/** 只提交已核实账号的快照；首次写入和冲突后覆盖仍由用户显式确认。 */
 export async function pushCloudConfig(store: any, overrideExpectedRevision?: string): Promise<boolean> {
-  if (!getMainAccessToken()) {
-    cloudSyncState.status = 'guest'
-    cloudSyncState.message = '未登录主站，当前仅保存在本地浏览器'
-    return false
-  }
-
+  const token = checkedToken(store)
+  if (!token) return false
+  const expectedRevision = overrideExpectedRevision ?? cloudSyncState.revision
+  if (cloudSyncState.status === 'needs_first_upload' && overrideExpectedRevision !== '0') return false
+  if (cloudSyncState.status === 'conflict' && overrideExpectedRevision !== cloudSyncState.conflictRevision) return false
+  window.clearTimeout(debounceTimer)
+  debounceTimer = undefined
   const config = buildCloudSyncConfig(store)
   const serialized = JSON.stringify(config)
   const bytes = new TextEncoder().encode(serialized).length
   if (bytes > MAX_SYNC_CONFIG_BYTES) {
-    cloudSyncState.status = 'too_large'
-    cloudSyncState.message = `当前配置 ${(bytes / 1024).toFixed(1)} KiB，超过 128 KiB 云同步上限，已保留在本地`
+    setStatus('too_large', '当前配置超过 128 KiB 云同步上限，已保留在本地')
     return false
   }
-
-  const expectedRevision = overrideExpectedRevision ?? cloudSyncState.revision
-  cloudSyncState.status = 'saving'
-  cloudSyncState.message = '正在同步到云端...'
-
-  try {
-    const res = await apiFetch('/workspace/config', {
+  setStatus('saving', '正在同步到云端…')
+  return runCloudRequest(store, token, async (request, current) => {
+    window.localStorage.setItem(DRAFT_REVISION_KEY, cloudSyncState.revision)
+    const response = await request('/workspace/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        expected_revision: expectedRevision,
-        schema_version: WORKSPACE_SCHEMA_VERSION,
-        config,
-      }),
+      body: JSON.stringify({ expected_revision: expectedRevision, schema_version: WORKSPACE_SCHEMA_VERSION, config }),
     })
-
-    if (res.status === 200 || res.status === 201) {
-      const json = await res.json()
-      const snapshot: WorkspaceSnapshot = json?.data
-      cloudSyncState.revision = snapshot?.revision || expectedRevision
-      cloudSyncState.updatedAt = snapshot?.updated_at || null
+    if (!current()) return false
+    if (response.status === 401) {
+      requestRejected(response)
+      return false
+    }
+    const json = await response.json()
+    if (!current()) return false
+    if (response.ok) {
+      syncedLayout = serialized
+      cloudSyncState.revision = json.data.revision
+      cloudSyncState.updatedAt = json.data.updated_at
       cloudSyncState.conflictRevision = ''
-      cloudSyncState.status = 'synced'
-      cloudSyncState.message = `已云同步（v${cloudSyncState.revision}）`
+      setStatus('synced', '已云同步（v' + cloudSyncState.revision + '）')
+      // 保存期间仍可编辑；只为后来产生的新布局安排下一次保存。
+      if (serialized !== JSON.stringify(buildCloudSyncConfig(store))) {
+        scheduleCloudSync(store)
+      } else {
+        window.localStorage.removeItem(DRAFT_REVISION_KEY)
+      }
       return true
     }
-
-    if (res.status === 409) {
-      const errJson = await res.json().catch(() => ({}))
-      cloudSyncState.conflictRevision = String(errJson?.error?.details?.current_revision || '')
-      cloudSyncState.status = 'conflict'
-      cloudSyncState.message = '云端配置已在其他设备更新，当前本地修改已保留'
-      return false
-    }
-
-    if (res.status === 413) {
-      cloudSyncState.status = 'too_large'
-      cloudSyncState.message = '云配置超过 128 KiB 上限，原配置已保留在本地'
-      return false
-    }
-
-    if (res.status === 401) {
-      cloudSyncState.status = 'guest'
-      cloudSyncState.message = '登录已过期，当前修改已保留在本地'
-      return false
-    }
-
-    const errJson = await res.json().catch(() => ({}))
-    cloudSyncState.status = 'error'
-    cloudSyncState.message = errJson?.error?.message || '同步失败，本地草稿已保留'
-    return false
-  } catch (err: any) {
-    if (err?.name === 'AbortError') return false
-    cloudSyncState.status = 'offline'
-    cloudSyncState.message = '网络不可用，本地修改未丢失'
-    return false
-  }
-}
-
-export async function pullLatestCloudConfig(store: any): Promise<boolean> {
-  try {
-    const res = await apiFetch('/workspace/config')
-    if (!res.ok) return false
-    const json = await res.json()
-    const snapshot: WorkspaceSnapshot = json?.data
-    if (!snapshot) return false
-    cloudSyncState.revision = snapshot.revision || '0'
-    cloudSyncState.updatedAt = snapshot.updated_at || null
-    cloudSyncState.conflictRevision = ''
-    if (snapshot.config) {
-      cloudSyncState.applyingRemote = true
-      try {
-        applyCloudConfigToStore(store, snapshot.config)
-      } finally {
-        cloudSyncState.applyingRemote = false
-      }
-      cloudSyncState.status = 'synced'
-      cloudSyncState.message = `已采用云端最新版本（v${cloudSyncState.revision}）`
+    if (response.status === 409) {
+      cloudSyncState.conflictRevision = String(json?.error?.details?.current_revision || '')
+      setStatus('conflict', '云端配置已在其他设备更新，当前本地修改已保留')
+    } else if (response.status === 413) {
+      setStatus('too_large', '云配置超过 128 KiB 上限，原配置已保留在本地')
     } else {
-      cloudSyncState.status = 'needs_first_upload'
+      setStatus('error', json?.error?.message || '同步失败，本地草稿已保留')
     }
-    return true
-  } catch {
-    cloudSyncState.status = 'offline'
-    cloudSyncState.message = '拉取云端配置失败，请稍后重试'
     return false
-  }
+  })
 }
 
-export function scheduleCloudSync(store: any) {
-  if (cloudSyncState.applyingRemote) return
+/** 用户主动采用云端版本；本地防抖保存必须先取消，不能覆盖选中的版本。 */
+export async function pullLatestCloudConfig(store: any): Promise<boolean> {
+  const token = checkedToken(store)
+  if (!token) return false
+  cancelPending()
+  setStatus('checking', '正在读取云端配置…')
+  return runCloudRequest(store, token, async (request, current) => {
+    const response = await request('/workspace/config')
+    if (!current() || requestRejected(response)) return false
+    const { data } = await response.json()
+    if (!current()) return false
+    if (!cloudSyncState.userId || !layoutBelongsTo(cloudSyncState.userId)) {
+      suspendSession()
+      showAccountChanged()
+      return false
+    }
+    applySnapshot(store, data)
+    return true
+  })
+}
+
+function scheduleCloudSync(store: any) {
   if (cloudSyncState.status !== 'synced' && cloudSyncState.status !== 'dirty') return
   if (cloudSyncState.revision === '0') return
+  // 组件挂载、开关对话框等只影响本地状态，不应消耗一个云端版本。
+  if (cloudSyncState.status === 'synced' && syncedLayout === JSON.stringify(buildCloudSyncConfig(store))) return
 
-  cloudSyncState.status = 'dirty'
-  cloudSyncState.message = '本地已修改，待同步...'
-  if (debounceTimer) window.clearTimeout(debounceTimer)
+  try {
+    if (window.localStorage.getItem(DRAFT_REVISION_KEY) !== cloudSyncState.revision) {
+      window.localStorage.setItem(DRAFT_REVISION_KEY, cloudSyncState.revision)
+    }
+  } catch {
+    setStatus('error', '无法记录本地草稿版本，已暂停自动同步')
+    return
+  }
+  setStatus('dirty', '本地已修改，待同步…')
+  window.clearTimeout(debounceTimer)
   debounceTimer = window.setTimeout(() => {
-    pushCloudConfig(store)
+    debounceTimer = undefined
+    // 初始化时可能连续调整再恢复同一个值，以真正发送时的投影为准。
+    if (syncedLayout === JSON.stringify(buildCloudSyncConfig(store))) {
+      if (checkedToken(store)) {
+        window.localStorage.removeItem(DRAFT_REVISION_KEY)
+        setStatus('synced', '已与云端同步（v' + cloudSyncState.revision + '）')
+      }
+      return
+    }
+    void pushCloudConfig(store)
   }, 1800)
+}
+
+/** 在工作台挂载期间跟随主站登录态，销毁时取消计时和请求。 */
+export function startCloudSync(store: any): () => void {
+  const onStorage = (event: StorageEvent) => {
+    if (event.storageArea === window.localStorage
+      && (event.key === null || SESSION_KEYS.includes(event.key) || event.key === LAYOUT_OWNER_KEY)
+      && (getMainAccessToken() !== verifiedToken || event.key === LAYOUT_OWNER_KEY)) {
+      void initCloudSync(store)
+    }
+  }
+  window.addEventListener('storage', onStorage)
+  const unsubscribe = store.$subscribe(() => scheduleCloudSync(store), { flush: 'sync' })
+  void initCloudSync(store)
+  return () => {
+    window.removeEventListener('storage', onStorage)
+    unsubscribe()
+    suspendSession()
+  }
 }

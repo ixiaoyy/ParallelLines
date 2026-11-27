@@ -129,7 +129,7 @@
           <div class="sync-status-title">{{ syncLabel }}</div>
           <div class="sync-status-desc">{{ cloudSyncState.message }}</div>
           <div v-if="cloudSyncState.username" class="sync-meta">
-            当前账号：{{ cloudSyncState.username }} · 云端版本 v{{ cloudSyncState.revision }}
+            当前账号：{{ cloudSyncState.username }} · {{ cloudSyncState.status === 'conflict' ? '本地基准版本' : '云端版本' }} v{{ cloudSyncState.revision }}
           </div>
         </div>
 
@@ -138,10 +138,20 @@
         </p>
 
         <div class="sync-actions">
-          <template v-if="cloudSyncState.status === 'guest'">
-            <a href="/login" class="sync-btn primary">前往主站登录开启云同步</a>
+          <template v-if="cloudSyncState.status === 'guest' || cloudSyncState.status === 'account_changed'">
+            <a href="/auth?redirect=/desk/" class="sync-btn primary">前往主站登录</a>
             <button type="button" class="sync-btn" @click="handleRecheckSync">重新检测登录态</button>
           </template>
+
+          <button
+            v-else-if="!cloudSyncState.userId || cloudSyncState.status === 'checking'"
+            type="button"
+            class="sync-btn"
+            :disabled="cloudSyncState.status === 'checking'"
+            @click="handleRecheckSync"
+          >
+            重新检测登录态
+          </button>
 
           <template v-else-if="cloudSyncState.status === 'needs_first_upload'">
             <button type="button" class="sync-btn primary" @click="handleFirstUpload">
@@ -222,6 +232,7 @@ const syncIcon = computed(() => {
 const syncLabel = computed(() => {
   switch (cloudSyncState.status) {
     case 'guest':
+    case 'account_changed':
       return '本地模式'
     case 'checking':
       return '检查中'
