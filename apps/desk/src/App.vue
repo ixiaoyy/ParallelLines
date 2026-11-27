@@ -13,7 +13,9 @@
       @show-global-config="showGlobalConfig"
       @show-auxiliary-config="showAuxiliaryConfig"
     />
-    <Layout @edit="showEditDialog" />
+    <div class="desk-widget-layer">
+      <Layout @edit="showEditDialog" />
+    </div>
     <DeskWidgetGallery
       v-model="widgetGalleryVisible"
       @open-advanced="openAdvancedAddDialog"
@@ -240,5 +242,10 @@ onMounted(async () => {
   width: 100%;
   min-height: 100%;
   position: relative;
+}
+
+// 组件的自定义层级只在桌面内生效；右上角工具栏和挂到 body 的弹窗各保留原层级。
+.desk-widget-layer {
+  isolation: isolate;
 }
 </style>

@@ -82,6 +82,14 @@ export default defineComponent({
 
     const keyDownEvent = async (e: KeyboardEvent) => {
       if (!isLock.value && (e.key === 'Enter' || e.key === 'Escape')) {
+        // 输入、按钮和对话框优先处理键盘事件；只在桌面背景按键才结束布局编辑。
+        const control = e.target instanceof Element && e.target.closest(
+          'input, textarea, select, button, a[href], [contenteditable]:not([contenteditable="false"])'
+        )
+        if (
+          e.defaultPrevented || control ||
+          document.querySelector('dialog[open], .easy-dialog-main, [role="dialog"][aria-modal="true"]')
+        ) return
         e.preventDefault()
         store.updateIsLock(true)
       }

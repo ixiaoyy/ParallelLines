@@ -78,7 +78,14 @@
                   <span class="preview-label">实时预览</span>
                   <span class="preview-size-badge">{{ sizeBadgeText }}</span>
                 </div>
-                <div ref="previewStage" class="preview-stage" :style="{ background: desktopBackground }">
+                <div
+                  ref="previewStage"
+                  class="preview-stage"
+                  role="region"
+                  aria-label="组件尺寸预览，可滚动查看"
+                  tabindex="0"
+                  :style="{ background: desktopBackground }"
+                >
                   <div class="preview-card-shell" :style="previewShellStyle">
                     <div class="preview-card-bg" :style="previewBgStyle" />
                     <div class="preview-card-inner" inert>
@@ -615,12 +622,18 @@ const selectMaterial = (item: CatalogWidget) => {
   }
 }
 
+/** 沿用栅格转固定定位的默认尺寸规则，倍数与旧添加流程保持一致。 */
+function fixedSize(w: number, h: number) {
+  return { w: Math.min(640, Math.max(240, w * 64)), h: Math.min(480, Math.max(120, h * 42)) }
+}
+
 const switchPosition = (pos: 1 | 2) => {
   if (draft.position === pos) return
   draft.position = pos
   if (pos === 2) {
-    draft.w = Math.min(640, Math.max(240, draft.w * 64))
-    draft.h = Math.min(480, Math.max(120, draft.h * 42))
+    const size = fixedSize(draft.w, draft.h)
+    draft.w = size.w
+    draft.h = size.h
   } else {
     const matched = catalog.find((c) => c.material === selectedMaterial.value)
     draft.w = matched?.w ?? 5
@@ -656,7 +669,7 @@ function clearSearch() {
 /** Tab 和 Shift+Tab 只遍历弹窗中可见、可用的控件，跳过只读预览。 */
 function keepFocusInside(event: KeyboardEvent) {
   const controls = Array.from(dialog.value?.querySelectorAll<HTMLElement>(
-    'button:not([disabled]), input:not([disabled]), select:not([disabled])'
+    'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]'
   ) ?? []).filter(el => !el.closest('[inert]') && el.getClientRects().length)
   const first = controls[0]
   const last = controls[controls.length - 1]
@@ -669,11 +682,13 @@ function keepFocusInside(event: KeyboardEvent) {
 
 watch(previewStage, (stage, _, onCleanup) => {
   if (!stage) return
-  const observer = new ResizeObserver(([entry]) => {
-    stageSize.width = entry.contentRect.width
-    stageSize.height = entry.contentRect.height
+  // 仅外框变化时更新比例。内容溢出导致滚动条出现，不重新缩放当前卡片。
+  const observer = new ResizeObserver(() => {
+    const style = getComputedStyle(stage)
+    stageSize.width = Math.max(0, stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight))
+    stageSize.height = Math.max(0, stage.offsetHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom))
   })
-  observer.observe(stage)
+  observer.observe(stage, { box: 'border-box' })
   onCleanup(() => observer.disconnect())
 })
 
@@ -708,9 +723,14 @@ const previewShellStyle = computed(() => {
   const rowHeight = Math.min(40, Math.max(20, windowHeight.value / 27))
   const w = Number(draft.w) > 0 ? Number(draft.w) : 1
   const h = Number(draft.h) > 0 ? Number(draft.h) : 1
-  const width = draft.position === 1 ? w * colWidth + (w - 1) * gutter : w
-  const height = draft.position === 1 ? h * rowHeight + (h - 1) * gutter : h
-  const scale = Math.min(1, stageSize.width / width, stageSize.height / height)
+  const toWidth = (units: number) => draft.position === 1 ? units * colWidth + (units - 1) * gutter : units
+  const toHeight = (units: number) => draft.position === 1 ? units * rowHeight + (units - 1) * gutter : units
+  const defaults = catalog.find(item => item.material === selectedMaterial.value) ?? catalog[0]
+  const reference = draft.position === 1 ? defaults : fixedSize(defaults.w, defaults.h)
+  // 以物料的推荐尺寸定比例，再用同一比例画实际宽、高。超出区域时滚动，不挤窄另一边。
+  const scale = Math.min(1, stageSize.width / toWidth(reference.w), stageSize.height / toHeight(reference.h))
+  const width = toWidth(w)
+  const height = toHeight(h)
   return {
     width: `${width * scale}px`,
     height: `${height * scale}px`,
@@ -1041,15 +1061,16 @@ const handleAddToDesktop = () => {
   padding: 18px;
   box-sizing: border-box;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  overflow: auto;
+  scrollbar-gutter: stable both-edges;
   margin-bottom: 18px;
 }
 
 .preview-card-shell {
   position: relative;
   flex-shrink: 0;
+  margin: auto;
+  box-sizing: border-box;
   border: 1px solid rgba(255, 255, 255, 0.2);
   overflow: hidden;
   transition: width 0.2s ease, height 0.2s ease, border-radius 0.2s ease;

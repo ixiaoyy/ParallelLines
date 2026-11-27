@@ -10,28 +10,20 @@
     @contextmenu="contextmenu"
   >
     <div class="head">
-      <div class="title" @click.stop="showDatePicker = !showDatePicker">
-        {{ weekDay }}
-      </div>
-      <div class="subtitle" @click.stop="showDatePicker = !showDatePicker">
-        {{ formatterDate }}
-      </div>
-      <div
-        class="picker"
-        :style="
-          showDatePicker
-            ? `border-bottom: 1px solid var(--themeLightColor); height: ${pickerHeight}px`
-            : ''
-        "
+      <button
+        ref="dateTrigger"
+        type="button"
+        class="date-trigger"
+        :aria-label="$t('选择待办日期')"
+        aria-haspopup="dialog"
+        @click.stop="openCalendar"
+        @pointerdown.stop
+        @mousedown.stop
+        @touchstart.stop
       >
-        <DatePicker
-          ref="dateTimePickerDom"
-          :date="date"
-          :todo="componentSetting.todo"
-          :is-dark="isDark"
-          @select-date="updateDate"
-        />
-      </div>
+        <span>{{ formatterDate }} · {{ weekDay }}</span>
+        <span aria-hidden="true">⌄</span>
+      </button>
     </div>
     <ul class="list">
       <li v-for="(item, index) in todoList" :key="item.content + index" class="list-item">
@@ -77,32 +69,51 @@
         </div>
       </li>
     </ul>
-    <div class="add" @click="handleAdd">
+    <button
+      type="button"
+      class="add"
+      :aria-label="$t('新增待办')"
+      @click.stop="handleAdd"
+      @pointerdown.stop
+      @mousedown.stop
+      @touchstart.stop
+    >
       <svg viewBox="0 0 1024 1024" width="20" height="20">
         <path
           :fill="isDark ? '#fff' : '#464646'"
           d="M510.8096 420.3008l335.296-335.296 90.5088 90.5088-335.296 335.296 335.296 335.296-90.5088 90.5088-335.296-335.296-335.296 335.296-90.5088-90.5088 335.296-335.296-335.296-335.296 90.5088-90.5088z"
         />
       </svg>
-    </div>
+    </button>
+    <Teleport to="body">
+      <dialog
+        ref="calendarDialog"
+        class="todo-calendar"
+        :aria-label="$t('选择待办日期')"
+        @close="closeCalendar"
+      >
+        <div class="calendar-toolbar">
+          <strong>{{ $t('选择待办日期') }}</strong>
+          <button type="button" class="calendar-close" :aria-label="$t('关闭')" @click="calendarDialog?.close()">×</button>
+        </div>
+        <DatePicker
+          v-if="calendarOpen"
+          :date="date"
+          :todo="componentSetting.todo"
+          @select-date="updateDate"
+        />
+      </dialog>
+    </Teleport>
   </div>
 </template>
 
 <script lang="ts">
-import { ref, computed, onMounted, defineComponent, ComputedRef } from 'vue'
+import { ref, computed, defineComponent, ComputedRef } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useStore } from '@/store'
 import DatePicker from './DatePicker.vue'
 import dayjs from 'dayjs'
 import { lightenDarkenColor, getColorBrightness } from '@/utils/color'
-const weekArr: string[] = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday'
-]
 export default defineComponent({
   name: 'TodoList',
   components: {
@@ -129,6 +140,7 @@ export default defineComponent({
   },
   setup(props) {
     const store = useStore()
+    const { locale } = useI18n()
     const isDark = computed(
       () => getColorBrightness(props.componentSetting.themeColor || '#643a7a') < 150
     )
@@ -136,24 +148,19 @@ export default defineComponent({
       lightenDarkenColor(props.componentSetting.themeColor || '#643a7a', isDark.value ? 50 : -50)
     )
 
-    const date = ref()
-    const dateTimePickerDom = ref()
-    const pickerHeight = ref(270)
-    onMounted(() => {
-      date.value = dayjs().format('YYYY-MM-DD')
-      if (dateTimePickerDom.value?.$el?.offsetHeight) {
-        pickerHeight.value = dateTimePickerDom.value.$el.offsetHeight + 30
-      }
-    })
+    const date = ref(dayjs().format('YYYY-MM-DD'))
+    const dateTrigger = ref<HTMLButtonElement>()
+    const calendarDialog = ref<HTMLDialogElement>()
+    const calendarOpen = ref(false)
     const editingValue = ref('')
-    const showDatePicker = ref(false)
     const todoList: ComputedRef<any[]> = computed(
       () => props.componentSetting.todo[date.value] || []
     )
-    const weekDay = computed(() => weekArr[dayjs(date.value).day()])
-    const formatterDate = computed(() => {
-      return dayjs(date.value).format('MMM DD, YYYY')
-    })
+    const weekDay = computed(() => new Intl.DateTimeFormat(locale.value, { weekday: 'short' })
+      .format(dayjs(date.value).toDate()))
+    const formatterDate = computed(() => new Intl.DateTimeFormat(locale.value, {
+      year: 'numeric', month: 'short', day: 'numeric'
+    }).format(dayjs(date.value).toDate()))
     const handleChecked = (index: number) => {
       const isChecked = !todoList.value[index].isChecked
       const element = JSON.parse(JSON.stringify(props.element))
@@ -217,8 +224,22 @@ export default defineComponent({
       }
     }
 
-    const updateDate = (_date: any) => {
-      date.value = _date.value
+    /** 日期选择与新增待办分开布局；每次打开按已选日期定位月份。 */
+    const openCalendar = () => {
+      if (!calendarDialog.value || calendarDialog.value.open) return
+      calendarOpen.value = true
+      calendarDialog.value.showModal()
+    }
+
+    const closeCalendar = () => {
+      calendarOpen.value = false
+      dateTrigger.value?.focus()
+    }
+
+    /** 只切换当前待办的日期键，不修改任何一天已保存的内容。 */
+    const updateDate = (value: string) => {
+      date.value = value
+      calendarDialog.value?.close()
     }
 
     const contextmenu = (e: MouseEvent) => {
@@ -236,69 +257,59 @@ export default defineComponent({
       handleAdd,
       handleEditSubmit,
       editingValue,
-      showDatePicker,
+      dateTrigger,
+      calendarDialog,
+      calendarOpen,
+      openCalendar,
+      closeCalendar,
       date,
       updateDate,
       themeLightColor,
       isDark,
-      dateTimePickerDom,
-      pickerHeight,
       contextmenu
     }
   }
 })
 </script>
 <style scoped lang="scss">
-@import url('https://fonts.googleapis.com/css?family=Fredericka+the+Great|Zilla+Slab:300,400');
 .todo-list-card {
   position: relative;
+  box-sizing: border-box;
   display: flex;
   flex-wrap: nowrap;
   flex-direction: column;
   width: 100%;
   height: 100%;
+  min-height: inherit;
   --themeColor: #643a7a;
   --themeLightColor: #966cac;
   .head {
-    padding: 10px 0 0;
-    margin: 0 10px;
-    user-select: none;
-    font-weight: bold;
-    .title {
-      font-family: 'fredericka the great', cursive;
-      text-align: center;
-      font-size: 2.5em;
-      color: var(--themeLightColor);
-      height: 1.3em;
-      line-height: 1.3em;
-      cursor: pointer;
-      font-weight: 400;
-    }
-    .subtitle {
-      font-family: 'zilla slab', serif;
-      height: 1.1em;
-      line-height: 1.1em;
-      font-size: 0.9em;
-      text-align: center;
-      letter-spacing: 0.5px;
-      cursor: pointer;
-      color: #999;
-    }
-    .picker {
-      margin-top: 20px;
-      padding-top: 15px;
-      border-top: 1px solid var(--themeLightColor);
-      height: 0;
-      overflow: hidden;
-      transition: all 0.4s cubic-bezier(0.03, 0.43, 0.65, 1.19);
-    }
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    padding-bottom: 8px;
+  }
+  .date-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    max-width: 100%;
+    padding: 4px 10px;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    background: rgba(148, 163, 184, 0.12);
+    cursor: pointer;
   }
   .list {
     list-style: none;
     padding: 4px 0 10px;
-    margin-bottom: 50px;
+    margin: 0;
     overflow-y: auto;
-    height: 100%;
+    min-height: 0;
     flex: 1;
     .list-item {
       position: relative;
@@ -390,22 +401,20 @@ export default defineComponent({
     }
   }
   .add {
-    position: absolute;
-    width: 50px;
-    height: 50px;
+    flex: 0 0 44px;
+    align-self: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    margin-top: 6px;
     border-radius: 50%;
     box-shadow: 0 0 10px var(--themeColor);
-    left: 50%;
-    bottom: 0;
-    transform: translate(-50%, 50%);
     background: var(--themeColor);
     transition: box-shadow 0.4s ease-in-out;
-    z-index: 88;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: space-around;
-    transform: translate(-50%, -10px);
     svg {
       transform: rotate(45deg);
     }
@@ -414,6 +423,34 @@ export default defineComponent({
       transition: box-shadow 0.4s ease-in-out;
     }
   }
+}
+.todo-calendar {
+  box-sizing: border-box;
+  width: min(380px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+  background: #fff;
+  color: #0f172a;
+  &::backdrop { background: rgba(15, 23, 42, 0.48); }
+}
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.calendar-close {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #475569;
+  font-size: 22px;
+  cursor: pointer;
 }
 @keyframes dash {
   0% {

@@ -3,7 +3,7 @@
     class="slack-countdown-wrapper"
     :style="{
       color: componentSetting.textColor || '#f8fafc',
-      padding: (componentSetting.padding ?? 18) + 'px',
+      '--slack-padding': (componentSetting.padding ?? 18) + 'px',
       fontFamily: componentSetting.fontFamily || 'inherit'
     }"
   >
@@ -11,15 +11,19 @@
       <div class="slack-header">
         <span class="slack-title">下班倒计时</span>
         <div class="slack-header-right">
-          <label class="time-pill" title="点击自定义下班时间">
-            <span class="time-pill-label">下班 {{ currentWorkEnd }}</span>
-            <input
-              type="time"
-              class="time-pill-input"
-              :value="currentWorkEnd"
-              @change="handleWorkEndChange"
-            >
-          </label>
+          <button
+            ref="timePill"
+            type="button"
+            class="time-pill"
+            aria-haspopup="dialog"
+            title="修改下班时间"
+            @click.stop="openWorkEndEditor"
+            @pointerdown.stop
+            @mousedown.stop
+            @touchstart.stop
+          >
+            <span>下班</span>&nbsp;<span>{{ currentWorkEnd }}</span>
+          </button>
           <span class="slack-badge">{{ offWork.badge }}</span>
         </div>
       </div>
@@ -40,12 +44,12 @@
     <div class="slack-metrics">
       <div class="metric-card">
         <div class="metric-label">
-          发薪日
+          {{ payday.isToday ? '发薪日' : '距发薪日' }}
           <span v-if="payday.adjustedNote" class="metric-tag">{{ payday.adjustedNote }}</span>
         </div>
         <div class="metric-value">
           <template v-if="payday.isToday">
-            就是今天
+            今天发薪
           </template>
           <template v-else>
             {{ payday.daysLeft }}<span class="metric-unit">天</span>
@@ -76,6 +80,21 @@
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <dialog ref="workEndEditor" class="work-end-editor" aria-label="编辑下班时间" @close="timePill?.focus()">
+        <form class="work-end-form" @submit.prevent="saveWorkEnd">
+          <label>
+            <span>下班时间</span>
+            <input v-model="draftWorkEnd" type="time" step="60" required autofocus>
+          </label>
+          <div class="work-end-actions">
+            <button type="button" class="btn" @click="workEndEditor?.close()">取消</button>
+            <button type="submit" class="btn btn-primary">保存</button>
+          </div>
+        </form>
+      </dialog>
+    </Teleport>
   </div>
 </template>
 
@@ -117,18 +136,28 @@ export default defineComponent({
     })
 
     const currentWorkEnd = computed(() => props.componentSetting.workEnd || '18:00')
+    const timePill = ref<HTMLButtonElement>()
+    const workEndEditor = ref<HTMLDialogElement>()
+    const draftWorkEnd = ref('')
 
-    const handleWorkEndChange = (e: Event) => {
-      const value = (e.target as HTMLInputElement)?.value
-      if (!value || !/^\d{2}:\d{2}$/.test(value)) return
-      if (props.element && props.element.i) {
-        const nextElement = JSON.parse(JSON.stringify(props.element))
-        nextElement.componentSetting = {
-          ...(nextElement.componentSetting || {}),
-          workEnd: value
-        }
-        store.editComponent(nextElement)
+    /** 整颗标签打开同一个编辑框；每次打开以已保存的值作为草稿。 */
+    const openWorkEndEditor = () => {
+      if (!props.element?.i || !workEndEditor.value || workEndEditor.value.open) return
+      draftWorkEnd.value = currentWorkEnd.value
+      workEndEditor.value.showModal()
+    }
+
+    /** 只保存有效的 24 小时时间，取消或按 Esc 不写入配置。 */
+    const saveWorkEnd = () => {
+      const value = draftWorkEnd.value
+      if (!props.element?.i || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) return
+      const nextElement = JSON.parse(JSON.stringify(props.element))
+      nextElement.componentSetting = {
+        ...(nextElement.componentSetting || {}),
+        workEnd: value
       }
+      store.editComponent(nextElement)
+      workEndEditor.value?.close()
     }
 
     const restMode = computed<RestMode>(() =>
@@ -157,7 +186,11 @@ export default defineComponent({
 
     return {
       currentWorkEnd,
-      handleWorkEndChange,
+      timePill,
+      workEndEditor,
+      draftWorkEnd,
+      openWorkEndEditor,
+      saveWorkEnd,
       offWork,
       payday,
       holiday
@@ -171,12 +204,18 @@ export default defineComponent({
   position: relative;
   width: 100%;
   height: 100%;
+  padding: var(--slack-padding, 18px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 12px;
   overflow: hidden;
+}
+
+// 解锁时网格和固定组件会出现右上角的编辑按钮，给时间按钮留出独立点击区域。
+:global(.card-edit-overlay + .slack-countdown-wrapper) {
+  padding-top: max(var(--slack-padding, 18px), 42px);
 }
 
 .slack-header {
@@ -204,9 +243,12 @@ export default defineComponent({
 }
 
 .time-pill {
-  position: relative;
   display: inline-flex;
   align-items: center;
+  appearance: none;
+  color: inherit;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
   font-size: 11px;
   padding: 2px 9px;
   border-radius: 999px;
@@ -220,21 +262,53 @@ export default defineComponent({
   &:hover {
     background: rgba(255, 255, 255, 0.25);
   }
+
+  &:focus-visible {
+    outline: 2px solid #409eff;
+    outline-offset: 2px;
+  }
 }
 
-.time-pill-label {
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
-  white-space: nowrap;
+.work-end-editor {
+  box-sizing: border-box;
+  width: min(320px, calc(100vw - 32px));
+  padding: 20px;
+  color: #0f172a;
+  background: #fff;
+  border: 1px solid #dbe4ef;
+  border-radius: 14px;
+
+  &::backdrop { background: rgba(15, 23, 42, 0.48); }
 }
 
-.time-pill-input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
+.work-end-form label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+
+  input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #0f172a;
+    font: inherit;
+    font-size: 16px;
+  }
+}
+
+.work-end-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+
+  .btn { min-height: 44px; }
 }
 
 .slack-badge {
