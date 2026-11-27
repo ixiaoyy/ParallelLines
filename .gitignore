@@ -9,6 +9,8 @@ apps/api/.venv/
 *.log
 apps/web/dist/
 apps/web/dist-forum/
+apps/web/dist-games/
+apps/desk/dist-desk/
 .pytest_cache/
 .ruff_cache/
 *.tsbuildinfo
