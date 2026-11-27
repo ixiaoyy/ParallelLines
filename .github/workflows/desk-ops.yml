@@ -1,0 +1,228 @@
+name: Desk operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Fixed operation for /desk/ grayscale rollout, health check, or rollback
+        type: choice
+        required: true
+        default: health
+        options: [health, deploy-desk, rollback-desk]
+      source_revision:
+        description: Optional 40-char commit SHA on main (leave empty to use current main HEAD)
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  # 只读健康检查不阻塞写通道；灰度上线与回滚复用生产部署互斥组。
+  group: ${{ inputs.operation == 'health' && 'desk-read-health' || 'deploy-production' }}
+  cancel-in-progress: false
+
+jobs:
+  desk:
+    if: >-
+      github.repository == 'ixiaoyy/ParallelLines' && github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      OPERATION: ${{ inputs.operation }}
+      INPUT_REVISION: ${{ inputs.source_revision }}
+    steps:
+      - name: Resolve target revision
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_SHA="${INPUT_REVISION:-$GITHUB_SHA}"
+          if [[ ! "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::source_revision must be a 40-character lowercase hex commit SHA."
+            exit 1
+          fi
+          echo "sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: inputs.operation == 'deploy-desk'
+        with:
+          ref: ${{ steps.resolve.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@v3
+        if: inputs.operation == 'deploy-desk'
+
+      - name: Build Desk Web image (/desk/ grayscale base)
+        if: inputs.operation == 'deploy-desk'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/desk/Dockerfile
+          build-args: |
+            VITE_DESK_BASE=/desk/
+            VITE_API_BASE_URL=/api/v1
+            SOURCE_REVISION=${{ steps.resolve.outputs.sha }}
+          tags: |
+            parallellines-desk-web:${{ steps.resolve.outputs.sha }}
+            parallellines-desk-web:local
+          load: true
+          cache-from: type=gha,scope=desk-web
+          cache-to: type=gha,mode=max,scope=desk-web
+
+      - name: Export and upload Desk Web image archive
+        if: inputs.operation == 'deploy-desk'
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          TARGET_SHA: ${{ steps.resolve.outputs.sha }}
+        run: |
+          set -euo pipefail
+          ARCHIVE_NAME="parallellines-desk-web-${TARGET_SHA}.tar.gz"
+          ARCHIVE_PATH="${RUNNER_TEMP}/${ARCHIVE_NAME}"
+          docker save "parallellines-desk-web:${TARGET_SHA}" | gzip -1 > "${ARCHIVE_PATH}"
+          (cd "${RUNNER_TEMP}" && sha256sum "${ARCHIVE_NAME}" > "${ARCHIVE_NAME}.sha256")
+          ls -lh "${ARCHIVE_PATH}"
+
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${DEPLOY_SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          PORT="${DEPLOY_PORT:-22}"
+          ssh-keyscan -T 10 -t ed25519 -p "${PORT}" "${DEPLOY_HOST}" > /tmp/deploy-host-key 2>/dev/null
+          test "$(ssh-keygen -lf /tmp/deploy-host-key | awk '{print $2}')" = "SHA256:kM9wqwNPMslsgV/Cu1NgOf09iUkjCAm+oUVJmxBG9HA"
+          cat /tmp/deploy-host-key >> ~/.ssh/known_hosts
+          timeout 900 scp -P "${PORT}" -i ~/.ssh/deploy_key \
+            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 \
+            "${ARCHIVE_PATH}" "${ARCHIVE_PATH}.sha256" "${DEPLOY_USER}@${DEPLOY_HOST}:/tmp/"
+
+      - name: Deploy /desk/ grayscale on production server
+        if: inputs.operation == 'deploy-desk'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
+          timeout: 30s
+          command_timeout: 15m
+          script: |
+            set -eu
+            TARGET_SHA="${{ steps.resolve.outputs.sha }}"
+            cd /opt/parallellines
+            test -s deploy/nginx/run-deploy-with-tls-lock.py
+            test -s docker-compose.desk.yml
+            test -s deploy/nginx/desk-main.conf
+            TLS_DEPLOY_RUNNER="$(cat deploy/nginx/run-deploy-with-tls-lock.py)"
+            sudo -n python3 -B -c "$TLS_DEPLOY_RUNNER" "$TARGET_SHA" <<'DESK_DEPLOY_LOCKED'
+            set -eu
+            TARGET_SHA="$1"
+            ARCHIVE="/tmp/parallellines-desk-web-${TARGET_SHA}.tar.gz"
+            test -f "$ARCHIVE" && test -f "${ARCHIVE}.sha256"
+            (cd /tmp && sha256sum -c "${ARCHIVE}.sha256")
+            sudo docker load -i "$ARCHIVE"
+            sudo docker tag "parallellines-desk-web:${TARGET_SHA}" "parallellines-desk-web:local"
+            rm -f "$ARCHIVE" "${ARCHIVE}.sha256"
+
+            mkdir -p -- .deployment
+            printf '%s\n' "$TARGET_SHA" > .deployment/desk-enabled
+
+            if sudo docker compose version >/dev/null 2>&1; then
+              COMPOSE="sudo docker compose"
+            else
+              COMPOSE="sudo docker-compose"
+            fi
+            . .github/scripts/select_compose_files.sh
+            test "$DESK_ENABLED" = true
+
+            $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build --force-recreate desk-web
+            i=0
+            while [ "$i" -lt 30 ]; do
+              STATUS="$(sudo docker inspect --format='{{.State.Health.Status}}' "$($COMPOSE $COMPOSE_FILES ps -q desk-web)" 2>/dev/null || echo starting)"
+              if [ "$STATUS" = healthy ]; then
+                break
+              fi
+              i=$((i + 1))
+              sleep 2
+            done
+            test "$STATUS" = healthy
+
+            $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build nginx
+            $COMPOSE $COMPOSE_FILES exec -T nginx nginx -t
+            $COMPOSE $COMPOSE_FILES exec -T nginx nginx -s reload
+
+            DESK_CODE="$(curl -sk -o /dev/null -w '%{http_code}' -H 'Host: pingxingxian.space' --resolve pingxingxian.space:443:127.0.0.1 https://pingxingxian.space/desk/)"
+            ROOT_CODE="$(curl -sk -o /dev/null -w '%{http_code}' -H 'Host: pingxingxian.space' --resolve pingxingxian.space:443:127.0.0.1 https://pingxingxian.space/)"
+            echo "[desk-ops] deployed revision=$TARGET_SHA /desk/=$DESK_CODE /=$ROOT_CODE"
+            test "$DESK_CODE" = 200
+            test "$ROOT_CODE" = 200
+            DESK_DEPLOY_LOCKED
+
+      - name: Rollback /desk/ grayscale on production server
+        if: inputs.operation == 'rollback-desk'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
+          timeout: 30s
+          command_timeout: 10m
+          script: |
+            set -eu
+            cd /opt/parallellines
+            test -s deploy/nginx/run-deploy-with-tls-lock.py
+            TLS_DEPLOY_RUNNER="$(cat deploy/nginx/run-deploy-with-tls-lock.py)"
+            sudo -n python3 -B -c "$TLS_DEPLOY_RUNNER" "rollback-desk" <<'DESK_ROLLBACK_LOCKED'
+            set -eu
+            rm -f .deployment/desk-root-enabled .deployment/desk-enabled
+            if sudo docker compose version >/dev/null 2>&1; then
+              COMPOSE="sudo docker compose"
+            else
+              COMPOSE="sudo docker-compose"
+            fi
+            . .github/scripts/select_compose_files.sh
+            $COMPOSE $COMPOSE_FILES up -d --no-deps --no-build nginx
+            $COMPOSE $COMPOSE_FILES exec -T nginx nginx -t
+            $COMPOSE $COMPOSE_FILES exec -T nginx nginx -s reload
+            $COMPOSE -f docker-compose.yml -f deploy/docker-compose.migration.yml -f docker-compose.desk.yml rm -sf desk-web || true
+            ROOT_CODE="$(curl -sk -o /dev/null -w '%{http_code}' -H 'Host: pingxingxian.space' --resolve pingxingxian.space:443:127.0.0.1 https://pingxingxian.space/)"
+            echo "[desk-ops] rolled back /desk/; /=$ROOT_CODE (user_workspace_configs table preserved)"
+            test "$ROOT_CODE" = 200
+            DESK_ROLLBACK_LOCKED
+
+      - name: Check /desk/ health (read-only)
+        if: inputs.operation == 'health'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          fingerprint: SHA256:3XgT+rjG+BpWEyVWUwI2p2SVojjzHpSxrbUFhLj15Ws
+          timeout: 30s
+          command_timeout: 3m
+          script: |
+            set -eu
+            cd /opt/parallellines
+            if [ -f .deployment/desk-enabled ]; then
+              echo "[desk-ops] marker desk-enabled=$(cat .deployment/desk-enabled)"
+            else
+              echo "[desk-ops] marker desk-enabled=absent"
+            fi
+            if [ -f .deployment/desk-root-enabled ]; then
+              echo "[desk-ops] marker desk-root-enabled=present"
+            else
+              echo "[desk-ops] marker desk-root-enabled=absent"
+            fi
+            sudo docker ps -a --filter name=desk-web --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
+            DESK_CODE="$(curl -sk -o /dev/null -w '%{http_code}' -H 'Host: pingxingxian.space' --resolve pingxingxian.space:443:127.0.0.1 https://pingxingxian.space/desk/ || echo 000)"
+            ROOT_CODE="$(curl -sk -o /dev/null -w '%{http_code}' -H 'Host: pingxingxian.space' --resolve pingxingxian.space:443:127.0.0.1 https://pingxingxian.space/ || echo 000)"
+            echo "[desk-ops] probe /desk/=$DESK_CODE /=$ROOT_CODE"

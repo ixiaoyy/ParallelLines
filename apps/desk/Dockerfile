@@ -2,7 +2,7 @@
 FROM node:22-alpine AS build
 
 WORKDIR /desk
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@11.1.1 --activate
 
 COPY apps/desk/package.json apps/desk/pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=parallellines-desk-pnpm-11,target=/pnpm/store \

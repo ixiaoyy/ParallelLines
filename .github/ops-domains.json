@@ -8,7 +8,8 @@
         "ci.yml",
         "deploy.yml",
         "build-ai-rollback.yml",
-        "community-ops.yml"
+        "community-ops.yml",
+        "desk-ops.yml"
       ],
       "scripts": [
         "community_ops.py",
