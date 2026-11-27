@@ -19,7 +19,7 @@ const TEXT = {
   missing: ["当前标签页没有有效邀请。请重新打开邀请链接。", "No valid invitation is available in this tab. Open the invitation link again."],
   storage: ["浏览器未能保存邀请。请允许标签页临时存储后重新打开链接。", "Your browser could not save the invitation. Allow session storage and open the link again."],
   unavailable: ["暂时无法确认主站登录，请重试。", "We could not confirm your sign-in. Please try again."],
-  handoff: ["未能打开酒馆。请重试，或重新打开邀请链接。", "Tavern did not open. Try again or reopen your invitation link."],
+  handoff: ["未能打开多人聊天。请重试，或重新打开邀请链接。", "Group chat did not open. Try again or reopen your invitation link."],
 } as const;
 
 const router = useRouter();

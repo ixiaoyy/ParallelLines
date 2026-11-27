@@ -531,7 +531,7 @@ export const router = createRouter({
         forumShell: false,
         seo: {
           title: "加入聊天房间 · {siteTitle}",
-          description: "用平行线主站账号进入酒馆。",
+          description: "用平行线主站账号进入多人聊天。",
           robots: NOINDEX_ROBOTS,
         },
       },
