@@ -18,6 +18,7 @@ export const ALLOWED_MATERIALS = new Set<string>([
   'SlackCountdown',
   'WeatherCard',
   'AlarmTimer',
+  'HotBoard',
 ])
 
 export function isAllowedMaterial(material: unknown): material is string {

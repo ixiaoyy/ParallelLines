@@ -7,7 +7,7 @@
     custom-class="auxiliary-config-dialog"
     @close="close"
   >
-    <el-tabs v-model="activeName" tab-position="left" class="auxiliary-tab" style="height: 100%">
+    <el-tabs v-model="activeName" :tab-position="tabPosition" class="auxiliary-tab" style="height: 100%">
       <el-tab-pane
         v-for="item in tabList"
         :key="item.label"
@@ -23,7 +23,8 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, watch, ref, defineAsyncComponent } from 'vue'
+import { defineComponent, watch, ref, computed, defineAsyncComponent } from 'vue'
+import useScreenMode from '@/hooks/useScreenMode'
 import Loading from '@/components/Tools/Loading.vue'
 export default defineComponent({
   name: 'AuxiliaryConfig',
@@ -73,6 +74,8 @@ export default defineComponent({
     const isPreviewMode = location.href.includes('preview=')
 
     const activeName = ref('TabControl')
+    const { windowWidth } = useScreenMode()
+    const tabPosition = computed(() => (windowWidth.value < 640 ? 'top' : 'left'))
     const tabList = ref([
       {
         label: '多页设置',
@@ -107,7 +110,8 @@ export default defineComponent({
       dialogVisible,
       close,
       tabList,
-      activeName
+      activeName,
+      tabPosition
     }
   }
 })

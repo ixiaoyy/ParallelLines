@@ -1750,6 +1750,10 @@
         "additionalProperties": true,
         "type": "object"
       },
+      "ApiResponse_HotListSnapshot_": {
+        "additionalProperties": true,
+        "type": "object"
+      },
       "ApiResponse_InboundEmailResponse_": {
         "additionalProperties": true,
         "type": "object"
@@ -7961,6 +7965,83 @@
           }
         },
         "title": "HideContentRequest",
+        "type": "object"
+      },
+      "HotListItem": {
+        "description": "实时热榜单条记录，所有字段均为纯文本或经校验的 HTTP(S) 链接。",
+        "properties": {
+          "hot_value": {
+            "default": "",
+            "title": "Hot Value",
+            "type": "string"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "tag": {
+            "default": "",
+            "title": "Tag",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rank",
+          "title",
+          "url"
+        ],
+        "title": "HotListItem",
+        "type": "object"
+      },
+      "HotListSnapshot": {
+        "description": "聚合缓存后的实时热榜快照。",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HotListItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "site_url": {
+            "title": "Site Url",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "stale": {
+            "default": false,
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "label",
+          "site_url",
+          "updated_at",
+          "items"
+        ],
+        "title": "HotListSnapshot",
         "type": "object"
       },
       "ImmersiveTopicFeedItemResponse": {
@@ -28971,6 +29052,71 @@
           }
         ],
         "summary": "Put Workspace Config",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/api/v1/workspace/hot-lists": {
+      "get": {
+        "description": "返回经服务端聚合与缓存的实时热榜（匿名与登录用户均可访问）。",
+        "operationId": "get_workspace_hot_lists_api_v1_workspace_hot_lists_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "default": "weibo",
+              "pattern": "^(weibo|baidu|bilibili|hackernews)$",
+              "title": "Source",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "refresh",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Refresh",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_HotListSnapshot_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Workspace Hot Lists",
         "tags": [
           "workspace"
         ]

@@ -12,6 +12,7 @@ import EventCountdown from '@/parallellines/materials/EventCountdown/setting'
 import AiSearch from '@/parallellines/materials/AiSearch/setting'
 import WeatherCard from '@/parallellines/materials/WeatherCard/setting'
 import AlarmTimer from '@/parallellines/materials/AlarmTimer/setting'
+import HotBoard from '@/parallellines/materials/HotBoard/setting'
 
 const Setting: Record<string, ComponentSetting> = {
   Empty,
@@ -21,6 +22,7 @@ const Setting: Record<string, ComponentSetting> = {
   AiSearch,
   WeatherCard,
   AlarmTimer,
+  HotBoard,
   Search,
   Collection,
   TodoList,

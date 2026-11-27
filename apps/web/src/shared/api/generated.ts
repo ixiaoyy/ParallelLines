@@ -414,6 +414,9 @@ export interface components {
     ApiResponse_GitHubIssuePreviewResponse_: {
       [key: string]: unknown;
     };
+    ApiResponse_HotListSnapshot_: {
+      [key: string]: unknown;
+    };
     ApiResponse_InboundEmailResponse_: {
       [key: string]: unknown;
     };
@@ -1588,6 +1591,21 @@ export interface components {
     };
     HideContentRequest: {
       note?: string | null;
+    };
+    HotListItem: {
+      hot_value?: string;
+      rank: number;
+      tag?: string;
+      title: string;
+      url: string;
+    };
+    HotListSnapshot: {
+      items: Array<components["schemas"]["HotListItem"]>;
+      label: string;
+      site_url: string;
+      source: string;
+      stale?: boolean;
+      updated_at: string;
     };
     HTTPValidationError: {
       detail?: Array<components["schemas"]["ValidationError"]>;
@@ -3567,6 +3585,9 @@ export interface paths {
     "/api/v1/workspace/config": {
       get: { response: components["schemas"]["ApiResponse_WorkspaceConfigSnapshot_"]; operationId: "get_workspace_config_api_v1_workspace_config_get" };
       put: { response: components["schemas"]["ApiResponse_WorkspaceConfigSnapshot_"]; operationId: "put_workspace_config_api_v1_workspace_config_put" };
+    };
+    "/api/v1/workspace/hot-lists": {
+      get: { response: components["schemas"]["ApiResponse_HotListSnapshot_"]; operationId: "get_workspace_hot_lists_api_v1_workspace_hot_lists_get" };
     };
     "/healthz": {
       get: { response: {

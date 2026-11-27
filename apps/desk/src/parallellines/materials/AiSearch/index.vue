@@ -36,7 +36,7 @@
           class="search-input"
           :placeholder="
             activeMode === 'ai'
-              ? '问问 AI，例如：帮我整理一下最近3小时的微博热搜...'
+              ? '问问 AI，例如：帮我把这段零碎记录整理成结构清晰的周报...'
               : `在 ${currentEngine.label} 中搜索...（按 Tab 切换引擎）`
           "
           @keydown.enter.stop="handleSubmit()"
@@ -1060,6 +1060,10 @@ export default defineComponent({
     padding: 4px 6px;
   }
 
+  .engine-badge-left {
+    display: none;
+  }
+
   .engine-tab-label {
     display: none;
   }
@@ -1069,6 +1073,7 @@ export default defineComponent({
   }
 
   .search-input {
+    min-width: 0;
     font-size: 14px;
   }
 
@@ -1076,6 +1081,13 @@ export default defineComponent({
     height: 34px;
     padding: 0 12px;
     font-size: 12px;
+  }
+}
+
+@media (hover: none), (max-width: 640px) {
+  .shortcut-ops {
+    opacity: 0.9;
+    pointer-events: auto;
   }
 }
 

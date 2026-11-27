@@ -98,6 +98,17 @@
                         <strong>05:00</strong>
                         <span>定时器示例 · 未启动</span>
                       </div>
+                      <div v-else-if="selectedMaterial === 'HotBoard'" class="preview-sample preview-hot-sample">
+                        <div class="preview-hot-tabs">
+                          <span class="active">微博</span>
+                          <span>百度</span>
+                          <span>B站</span>
+                          <span>HN</span>
+                        </div>
+                        <div class="preview-hot-row"><i class="r1">1</i><span>实时热榜条目预览（接入后自动拉取）</span></div>
+                        <div class="preview-hot-row"><i class="r2">2</i><span>点击即可直达原话题讨论</span></div>
+                        <div class="preview-hot-row"><i class="r3">3</i><span>支持每 5 分钟自动刷新与手动更新</span></div>
+                      </div>
                       <component
                         :is="previewComponent"
                         v-else-if="previewComponent"
@@ -228,6 +239,37 @@
                           max="31"
                         >
                         <span class="unit-text">号</span>
+                      </div>
+                    </div>
+                  </template>
+
+                  <template v-else-if="selectedMaterial === 'HotBoard'">
+                    <div class="prop-row">
+                      <span class="prop-label">默认榜单</span>
+                      <div class="segmented-control">
+                        <button
+                          v-for="src in hotBoardSources"
+                          :key="src.value"
+                          type="button"
+                          class="seg-btn"
+                          :class="{ active: draft.componentSetting.defaultSource === src.value }"
+                          @click="draft.componentSetting.defaultSource = src.value"
+                        >
+                          {{ src.label }}
+                        </button>
+                      </div>
+                    </div>
+                    <div class="prop-row">
+                      <span class="prop-label">展示条数</span>
+                      <div class="size-field">
+                        <input
+                          v-model.number="draft.componentSetting.maxItems"
+                          type="number"
+                          class="num-input"
+                          min="3"
+                          max="20"
+                        >
+                        <span class="unit-text">条</span>
                       </div>
                     </div>
                   </template>
@@ -501,6 +543,7 @@ interface CatalogWidget {
 
 const featured: CatalogWidget[] = [
   { material: 'Clock', name: '时钟', icon: '◷', iconColor: '#6366f1', w: 6, h: 4, transparentBg: true },
+  { material: 'HotBoard', name: '实时热榜', icon: '🔥', iconColor: '#ef4444', w: 5, h: 7 },
   { material: 'EventCountdown', name: '事件倒计时', icon: '⧗', iconColor: '#0ea5e9', w: 5, h: 6 },
   { material: 'SlackCountdown', name: '下班倒计时', icon: '⌛', iconColor: '#f59e0b', w: 5, h: 7 },
   { material: 'TodoList', name: '备忘清单', icon: '☑', iconColor: '#10b981', w: 5, h: 7 },
@@ -533,6 +576,13 @@ const eventCountdownStyles = [
   { value: 'minimal', label: '极简' },
   { value: 'progress', label: '进度条' },
   { value: 'ring', label: '圆环' },
+]
+
+const hotBoardSources = [
+  { value: 'weibo', label: '微博' },
+  { value: 'baidu', label: '百度' },
+  { value: 'bilibili', label: 'B站' },
+  { value: 'hackernews', label: 'HN' },
 ]
 
 const searchQuery = ref('')
@@ -1102,6 +1152,57 @@ const handleAddToDesktop = () => {
 
   strong { font-size: 22px; font-variant-numeric: tabular-nums; }
   :deep(svg) { width: 22px; height: 22px; }
+}
+
+.preview-hot-sample {
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 12px 14px;
+  gap: 6px;
+}
+
+.preview-hot-tabs {
+  display: flex;
+  gap: 4px;
+  span {
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    background: rgba(255, 255, 255, 0.09);
+    opacity: 0.72;
+    &.active {
+      background: rgba(255, 255, 255, 0.22);
+      opacity: 1;
+      font-weight: 600;
+    }
+  }
+}
+
+.preview-hot-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  opacity: 0.92;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  i {
+    font-style: normal;
+    width: 15px;
+    height: 15px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #fff;
+    &.r1 { background: #ef4444; }
+    &.r2 { background: #f97316; }
+    &.r3 { background: #f59e0b; }
+  }
 }
 
 .inspector-core {

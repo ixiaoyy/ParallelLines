@@ -29,6 +29,10 @@ body {
   .grid-item-TodoList .item-content {
     min-height: 240px;
   }
+
+  .grid-item-HotBoard .item-content {
+    height: 360px;
+  }
 }
 
 .grid-item-Clock .item-content,
@@ -93,6 +97,18 @@ body {
     &.danger:hover {
       background: #ef4444;
     }
+  }
+}
+
+.show-outline-1 .material-bookmark .item .quick-icon-ops {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (hover: none) {
+  .grid-item-Bookmark .material-bookmark .item .quick-icon-ops {
+    opacity: 0.92;
+    pointer-events: auto;
   }
 }
 
@@ -211,6 +227,24 @@ body {
 
     .component-config-wrapper {
       padding-left: 4px !important;
+    }
+  }
+
+  @media screen and (max-width: 900px) {
+    .main-config {
+      flex-direction: column !important;
+      height: auto !important;
+
+      .base-config-wrapper {
+        border-right: none !important;
+        padding-right: 0 !important;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 16px;
+      }
+
+      .component-config-wrapper {
+        padding-left: 0 !important;
+      }
     }
   }
 

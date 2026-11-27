@@ -264,6 +264,15 @@ function sanitizeSyncComponentSetting(material: string, raw: any): Record<string
         fontFamily: safeFont(s.fontFamily),
         textColor: safeStyle(s.textColor, '#f8fafc'),
       }
+    case 'HotBoard':
+      return {
+        ...pickTextAppearance(s),
+        defaultSource: ['weibo', 'baidu', 'bilibili', 'hackernews'].includes(s.defaultSource)
+          ? s.defaultSource
+          : 'weibo',
+        maxItems: Math.min(20, Math.max(3, Math.round(safeNum(s.maxItems, 10)))),
+        showRankBadge: safeBool(s.showRankBadge, true),
+      }
     default:
       return {}
   }

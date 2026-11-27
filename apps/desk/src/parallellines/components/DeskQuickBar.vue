@@ -509,7 +509,7 @@ onUnmounted(() => window.removeEventListener('click', handleOutsideClick))
   position: fixed;
   top: 14px;
   right: 16px;
-  z-index: 95;
+  z-index: 120;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -644,13 +644,15 @@ onUnmounted(() => window.removeEventListener('click', handleOutsideClick))
 }
 
 .theme-popover {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
+  position: fixed;
+  top: 56px;
+  right: 14px;
   width: 248px;
+  max-width: calc(100vw - 28px);
+  z-index: 130;
   padding: 12px;
   border-radius: 16px;
-  background: rgba(15, 23, 42, 0.88);
+  background: rgba(15, 23, 42, 0.92);
   backdrop-filter: blur(22px);
   border: 1px solid rgba(255, 255, 255, 0.16);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.38);
@@ -801,13 +803,31 @@ onUnmounted(() => window.removeEventListener('click', handleOutsideClick))
   transform: translateY(-6px);
 }
 
-@media (max-width: 540px) {
-  .pill-text {
-    display: none;
+@media (max-width: 640px) {
+  .desk-quick-bar {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    justify-content: flex-end;
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   .quick-pill {
-    padding: 0 9px;
+    height: 34px;
+    padding: 0 10px;
+    font-size: 11px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 340px) {
+  .pill-text {
+    display: none;
   }
 }
 </style>

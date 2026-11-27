@@ -2,7 +2,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 
 import structlog
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from sqlalchemy.exc import SQLAlchemyError
@@ -11,12 +11,14 @@ from app.api.v1.dependencies import SessionDep, SettingsDep, TokenDep
 from app.core.exceptions import AppError
 from app.schemas.common import ApiResponse, ErrorPayload, ErrorResponse
 from app.schemas.workspace import (
+    HotListSnapshot,
     WorkspaceConfigSnapshot,
     WorkspaceConfigUpdate,
     parse_workspace_update,
 )
 from app.services.unified_auth import resolve_main_bearer_session
 from app.services.workspace import WorkspaceConfigService
+from app.services.workspace_hot_lists import get_hot_list_snapshot
 
 MAX_WORKSPACE_REQUEST_BYTES = 256 * 1024
 WORKSPACE_BODY_TIMEOUT_SECONDS = 10
@@ -57,7 +59,7 @@ class _PrivateWorkspaceRoute(APIRoute):
                         )
                     ).model_dump(),
                 )
-            result.headers["Cache-Control"] = "private, no-store"
+            result.headers.setdefault("Cache-Control", "private, no-store")
             if result.status_code == status.HTTP_401_UNAUTHORIZED:
                 result.headers.setdefault("WWW-Authenticate", "Bearer")
             return result
@@ -136,4 +138,21 @@ async def put_workspace_config(
     snapshot = await WorkspaceConfigService(session).save(login.user.id, payload)
     if payload.expected_revision == "0":
         response.status_code = status.HTTP_201_CREATED
+    return ApiResponse(data=snapshot)
+
+
+@router.get(
+    "/hot-lists",
+    response_model=ApiResponse[HotListSnapshot],
+    responses={422: {"model": ErrorResponse}, 503: {"model": ErrorResponse}},
+)
+async def get_workspace_hot_lists(
+    response: Response,
+    settings: SettingsDep,
+    source: str = Query(default="weibo", pattern=r"^(weibo|baidu|bilibili|hackernews)$"),
+    refresh: bool = Query(default=False),
+) -> ApiResponse[HotListSnapshot]:
+    """返回经服务端聚合与缓存的实时热榜（匿名与登录用户均可访问）。"""
+    snapshot = await get_hot_list_snapshot(settings, source, force_refresh=refresh)
+    response.headers["Cache-Control"] = "public, max-age=60"
     return ApiResponse(data=snapshot)

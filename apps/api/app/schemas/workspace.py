@@ -42,6 +42,27 @@ class WorkspaceConfigSnapshot(BaseModel):
     updated_at: datetime | None
 
 
+class HotListItem(BaseModel):
+    """实时热榜单条记录，所有字段均为纯文本或经校验的 HTTP(S) 链接。"""
+
+    rank: int
+    title: str
+    url: str
+    hot_value: str = ""
+    tag: str = ""
+
+
+class HotListSnapshot(BaseModel):
+    """聚合缓存后的实时热榜快照。"""
+
+    source: str
+    label: str
+    site_url: str
+    updated_at: datetime
+    stale: bool = False
+    items: list[HotListItem]
+
+
 def _style(value: object) -> bool:
     """仅允许颜色、渐变、阴影、滤镜等值，不允许 URL、转义或声明分隔符。"""
     return (
@@ -289,6 +310,12 @@ _MATERIAL_FIELDS: dict[str, dict[str, _Check]] = {
     },
     "WeatherCard": {},
     "AlarmTimer": {"fontFamily": _font, "textColor": _style},
+    "HotBoard": {
+        **_TEXT_APPEARANCE,
+        "defaultSource": lambda value: value in ("weibo", "baidu", "bilibili", "hackernews"),
+        "maxItems": lambda value: type(value) is int and 3 <= value <= 20,
+        "showRankBadge": _flag,
+    },
 }
 _ELEMENT_FIELDS: dict[str, _Check] = {
     **dict.fromkeys(("position", "w", "h", "x", "y", "zIndex", "borderRadius"), _number),

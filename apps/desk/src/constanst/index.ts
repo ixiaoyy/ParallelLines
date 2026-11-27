@@ -34,6 +34,11 @@ export const MATERIAL_LIST_MAP: Record<string, MaterialConstanst> = {
     text: '闹钟与定时',
     img: badgeSvg('闹钟与定时', '#a78bfa')
   },
+  HotBoard: {
+    label: 'HotBoard',
+    text: '实时热榜',
+    img: badgeSvg('实时热榜', '#ef4444')
+  },
   Search: {
     label: 'Search',
     text: '基础搜索栏',

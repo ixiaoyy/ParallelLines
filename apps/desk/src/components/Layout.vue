@@ -48,6 +48,31 @@
               backdropFilter: !item.background.includes('url') && item.backdropFilter
             }"
           />
+          <div
+            v-if="!isLock"
+            class="card-edit-overlay"
+            @mousedown.stop
+            @pointerdown.stop
+            @click.stop
+          >
+            <button
+              type="button"
+              class="card-edit-pill"
+              title="编辑该组件"
+              @click="editCompactItem(item)"
+            >
+              ✎ 编辑
+            </button>
+            <button
+              type="button"
+              class="card-edit-pill danger"
+              title="删除该组件"
+              aria-label="删除组件"
+              @click="deleteCompactItem(item)"
+            >
+              ✕
+            </button>
+          </div>
           <component
             :is="item.material"
             :element="item"
@@ -61,12 +86,49 @@
   <!-- 中窄屏 / 分屏 / 移动端自动切为流式自适应排版，彻底杜绝重叠与截断 -->
   <div v-else-if="windowWidth > 0" class="compact-flow-wrapper">
     <div
-      v-for="item in sortedList"
+      v-for="(item, idx) in sortedList"
       :id="item.customId || undefined"
       :key="item.i"
       class="compact-flow-item"
       :class="[`grid-item-${item.material}`]"
     >
+      <div v-if="!isLock" class="compact-edit-bar" @click.stop>
+        <span class="compact-edit-name">{{ getMaterialLabel(item.material) }}</span>
+        <div class="compact-edit-actions">
+          <button
+            type="button"
+            class="compact-edit-btn"
+            :disabled="idx === 0"
+            title="上移"
+            @click="moveCompactItem(item, -1)"
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            class="compact-edit-btn"
+            :disabled="idx === sortedList.length - 1"
+            title="下移"
+            @click="moveCompactItem(item, 1)"
+          >
+            ↓
+          </button>
+          <button
+            type="button"
+            class="compact-edit-btn primary"
+            @click="editCompactItem(item)"
+          >
+            ✎ 编辑
+          </button>
+          <button
+            type="button"
+            class="compact-edit-btn danger"
+            @click="deleteCompactItem(item)"
+          >
+            ✕ 删除
+          </button>
+        </div>
+      </div>
       <div
         v-if="!item.refresh"
         v-mouse-menu="{ disabled: () => isLock, params: item, menuList, iconType: 'vnode-icon' }"
@@ -147,6 +209,31 @@
             backdropFilter: !element.background.includes('url') ? element.backdropFilter : ''
           }"
         />
+        <div
+          v-if="!isLock"
+          class="card-edit-overlay"
+          @mousedown.stop
+          @pointerdown.stop
+          @click.stop
+        >
+          <button
+            type="button"
+            class="card-edit-pill"
+            title="编辑该组件"
+            @click="editCompactItem(element)"
+          >
+            ✎ 编辑
+          </button>
+          <button
+            type="button"
+            class="card-edit-pill danger"
+            title="删除该组件"
+            aria-label="删除组件"
+            @click="deleteCompactItem(element)"
+          >
+            ✕
+          </button>
+        </div>
         <component
           :is="element.material"
           :element="element"
@@ -208,6 +295,7 @@ import Icon from '@/components/Tools/Icon.vue'
 import { useI18n } from 'vue-i18n'
 import { ElNotification } from 'element-plus'
 import { uid } from '@/utils'
+import { MATERIAL_LIST_MAP } from '@/constanst'
 import { isAllowedMaterial, sanitizeComponent } from '@/parallellines/security'
 export default defineComponent({
   name: 'Layout',
@@ -222,6 +310,7 @@ export default defineComponent({
     AiSearch: defineAsyncComponent(() => import('@/parallellines/materials/AiSearch/index.vue')),
     WeatherCard: defineAsyncComponent(() => import('@/parallellines/materials/WeatherCard/index.vue')),
     AlarmTimer: defineAsyncComponent(() => import('@/parallellines/materials/AlarmTimer/index.vue')),
+    HotBoard: defineAsyncComponent(() => import('@/parallellines/materials/HotBoard/index.vue')),
     Search: defineAsyncComponent(() => import('@/materials/Search/index.vue')),
     Collection: defineAsyncComponent(() => import('@/materials/Collection/index.vue')),
     CountDown: defineAsyncComponent(() => import('@/materials/CountDown/index.vue')),
@@ -265,6 +354,38 @@ export default defineComponent({
     const sortedList = computed(() =>
       [...list.value].sort((a, b) => (a.y - b.y) || (a.x - b.x))
     )
+
+    const getMaterialLabel = (material: string) =>
+      MATERIAL_LIST_MAP[material]?.text || material
+
+    const editCompactItem = (item: ComponentOptions) => {
+      emit('edit', item.i)
+    }
+
+    const deleteCompactItem = async (item: ComponentOptions) => {
+      try {
+        await confirmRef.value.confirm(`❗ ${t('确定删除吗')}?`, { height: 150 })
+        store.deleteComponent(item)
+      } catch {
+        // 用户取消
+      }
+    }
+
+    const moveCompactItem = (item: ComponentOptions, delta: -1 | 1) => {
+      const ordered = [...sortedList.value]
+      const index = ordered.findIndex((entry) => entry.i === item.i)
+      const targetIndex = index + delta
+      if (index < 0 || targetIndex < 0 || targetIndex >= ordered.length) return
+      const [moved] = ordered.splice(index, 1)
+      ordered.splice(targetIndex, 0, moved)
+      let cursorY = 0
+      const updated = ordered.map((entry) => {
+        const next = { ...entry, y: cursorY }
+        cursorY += Math.max(1, Number(entry.h) || 4)
+        return next
+      })
+      store.updateList(updated)
+    }
 
     const actionElement = computed(() => store.actionElement)
     const actionSetting = computed(() => actionElement.value?.actionSetting)
@@ -441,6 +562,10 @@ export default defineComponent({
       list,
       isCompactViewport,
       sortedList,
+      getMaterialLabel,
+      editCompactItem,
+      deleteCompactItem,
+      moveCompactItem,
       isLock,
       global,
       menuList,
@@ -479,15 +604,23 @@ export default defineComponent({
       height: 100%;
       left: 0;
       top: 0;
+      z-index: 0;
       background-size: cover;
+      pointer-events: none;
+    }
+    > :not(.bg) {
+      position: relative;
+      z-index: 1;
     }
   }
 }
 .compact-flow-wrapper {
+  position: relative;
+  z-index: 2;
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
-  padding: 20px 14px 72px;
+  padding: 66px 14px 96px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -495,6 +628,60 @@ export default defineComponent({
 
   .compact-flow-item {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .compact-edit-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #f8fafc;
+  }
+
+  .compact-edit-name {
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.92;
+  }
+
+  .compact-edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .compact-edit-btn {
+    height: 28px;
+    padding: 0 9px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.1);
+    color: #f8fafc;
+    font-size: 12px;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    &.primary {
+      background: rgba(59, 130, 246, 0.35);
+      border-color: rgba(96, 165, 250, 0.55);
+    }
+
+    &.danger {
+      background: rgba(239, 68, 68, 0.32);
+      border-color: rgba(248, 113, 113, 0.55);
+    }
   }
 
   .item-content {
@@ -505,8 +692,14 @@ export default defineComponent({
     .bg {
       position: absolute;
       inset: 0;
+      z-index: 0;
       background-size: cover;
       pointer-events: none;
+    }
+
+    > :not(.bg) {
+      position: relative;
+      z-index: 1;
     }
   }
 }
@@ -528,7 +721,13 @@ export default defineComponent({
         height: 100%;
         left: 0;
         top: 0;
+        z-index: 0;
         background-size: cover;
+        pointer-events: none;
+      }
+      > :not(.bg) {
+        position: relative;
+        z-index: 1;
       }
     }
     &.finished-init {
@@ -558,6 +757,48 @@ export default defineComponent({
   outline: 2px dashed $color-warning;
   user-select: none;
   cursor: move;
+}
+.card-edit-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  pointer-events: auto;
+}
+.card-edit-pill {
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(12px);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.28);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+
+  &:hover {
+    background: rgba(37, 99, 235, 0.92);
+    border-color: rgba(147, 197, 253, 0.7);
+  }
+
+  &.danger {
+    width: 26px;
+    padding: 0;
+    &:hover {
+      background: rgba(239, 68, 68, 0.92);
+      border-color: rgba(252, 165, 165, 0.75);
+    }
+  }
 }
 </style>
 <style>

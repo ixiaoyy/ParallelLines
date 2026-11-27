@@ -9,12 +9,12 @@ export default {
     padding: 8,
     shortcuts: [
       {
-        id: 'sc-weibo',
-        name: '微博热搜',
-        icon: '微',
-        color: '#e6162d',
-        prompt: '帮我整理一下最近3小时的微博热搜，按事件热度与核心摘要分点列出',
-        autoSend: true
+        id: 'sc-polish',
+        name: '润色文案',
+        icon: '润',
+        color: '#e11d48',
+        prompt: '请帮我把下面这段文字润色得更清晰自然、表达更有重点，保留原意：',
+        autoSend: false
       },
       {
         id: 'sc-weekly',

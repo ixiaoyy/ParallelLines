@@ -73,6 +73,14 @@ const mounted = (el: HTMLElement, binding: any) => {
     // longpress
     if ('ontouchstart' in window) {
       longPressEvent = (e: PointerEvent) => {
+        const target = e.target as HTMLElement | null
+        if (
+          target?.closest(
+            'input, textarea, select, button, a, label, [contenteditable="true"], .desk-quick-bar, .widget-studio-modal, .easy-dialog-main, .compact-edit-bar'
+          )
+        ) {
+          return
+        }
         e.preventDefault()
         if (typeof options.disabled === 'function' && options.disabled(options.params, e.target, el)) {
           return
@@ -94,20 +102,15 @@ const mounted = (el: HTMLElement, binding: any) => {
           menuWrapperCss,
           menuItemCss,
         });
-        // const { touches } = e;
-        // const { clientX, clientY } = touches[0]
         const { clientX, clientY } = e
         MouseMenuCtx.show(clientX, clientY);
-        document.onmousedown = null
-        el.onmousedown = null
+        const closeMenu = () => {
+          MouseMenuCtx.close()
+          document.removeEventListener('pointerdown', closeMenu, true)
+        }
         setTimeout(() => {
-          document.onmousedown = () => {
-            MouseMenuCtx.close();
-          }
-          el.onmousedown = () => {
-            MouseMenuCtx.close()
-          }
-        }, 500)
+          document.addEventListener('pointerdown', closeMenu, true)
+        }, 300)
       }
       onLongPress(el, longPressEvent)
     }

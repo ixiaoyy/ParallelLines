@@ -1,7 +1,7 @@
 /**
  * 平行线工作台默认开机预设（Bonjourr 极简居中构图：大时钟 + AI 搜索栏 + 横向书签 + 双栏下班倒计时与待办）。
  */
-export const DEFAULT_PRESET_VERSION = 'pl-desk-v3'
+export const DEFAULT_PRESET_VERSION = 'pl-desk-v4'
 
 export function createParallelLinesDefaultPreset() {
   return {
@@ -72,12 +72,12 @@ export function createParallelLinesDefaultPreset() {
           padding: 4,
           shortcuts: [
             {
-              id: 'sc-weibo',
-              name: '微博热搜',
-              icon: '微',
-              color: '#e6162d',
-              prompt: '帮我整理一下最近3小时的微博热搜，按事件热度与核心摘要分点列出',
-              autoSend: true,
+              id: 'sc-polish',
+              name: '润色文案',
+              icon: '润',
+              color: '#e11d48',
+              prompt: '请帮我把下面这段文字润色得更清晰自然、表达更有重点，保留原意：',
+              autoSend: false,
             },
             {
               id: 'sc-weekly',
@@ -218,6 +218,30 @@ export function createParallelLinesDefaultPreset() {
         h: 7,
         x: 6,
         y: 12,
+        zIndex: 10,
+        background: 'rgba(255, 255, 255, 0.1)',
+        backgroundFilter: 'brightness(1)',
+        backdropFilter: 'blur(18px)',
+        material: 'HotBoard',
+        borderRadius: 20,
+        boxShadow: '0 12px 32px rgba(15, 23, 42, 0.24)',
+        i: 'pl-hot-board',
+        componentSetting: {
+          defaultSource: 'weibo',
+          maxItems: 10,
+          showRankBadge: true,
+          textColor: '#f8fafc',
+          fontFamily: '',
+          padding: 16,
+        },
+      },
+      {
+        position: 1,
+        affixInfo: { mode: 1, x: 10, y: 10 },
+        w: 10,
+        h: 6,
+        x: 1,
+        y: 19,
         zIndex: 10,
         background: 'rgba(255, 255, 255, 0.1)',
         backgroundFilter: 'brightness(1)',
