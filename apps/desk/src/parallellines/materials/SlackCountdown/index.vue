@@ -339,18 +339,19 @@ export default defineComponent({
 }
 
 .slack-progress-track {
-  margin-top: 10px;
+  margin-top: 12px;
   width: 100%;
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.12);
   overflow: hidden;
 }
 
 .slack-progress-bar {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #60a5fa 0%, #34d399 100%);
+  background: linear-gradient(90deg, #3b82f6 0%, #38bdf8 52%, #34d399 100%);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.45);
   transition: width 0.6s ease;
 }
 
@@ -361,11 +362,17 @@ export default defineComponent({
 }
 
 .metric-card {
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.09);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 11px 13px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.26);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   min-width: 0;
+  transition: background 0.16s ease, border-color 0.16s ease;
+
+  &:hover {
+    background: rgba(15, 23, 42, 0.36);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
 }
 
 .metric-label {

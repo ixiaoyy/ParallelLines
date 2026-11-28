@@ -412,26 +412,30 @@ export default defineComponent({
 
 .hot-row {
   min-width: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
 .hot-link {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
+  gap: 9px;
+  padding: 7px 8px;
   border-radius: 10px;
   color: inherit;
   text-decoration: none;
   transition: background 0.15s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.11);
+    background: rgba(255, 255, 255, 0.09);
   }
 }
 
 .hot-rank {
-  width: 19px;
-  height: 19px;
+  width: 20px;
+  height: 20px;
   border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
@@ -441,19 +445,20 @@ export default defineComponent({
   flex-shrink: 0;
 
   &.rank-1 {
-    background: #ef4444;
+    background: linear-gradient(135deg, #ef4444, #f97316);
     color: #fff;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
   }
   &.rank-2 {
-    background: #f97316;
+    background: linear-gradient(135deg, #f97316, #fb923c);
     color: #fff;
   }
   &.rank-3 {
-    background: #f59e0b;
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
     color: #fff;
   }
   &.rank-other {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     opacity: 0.72;
   }
 }

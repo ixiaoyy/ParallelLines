@@ -512,28 +512,37 @@ onUnmounted(() => window.removeEventListener('click', handleOutsideClick))
   z-index: 120;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 12px 32px rgba(2, 6, 23, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .quick-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 32px;
+  height: 30px;
   padding: 0 11px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(15, 23, 42, 0.42);
-  backdrop-filter: blur(16px);
+  border: 1px solid transparent;
+  background: transparent;
   color: rgba(248, 250, 252, 0.88);
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  transition: background 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease, color 0.18s ease;
 
   &:hover,
   &.active {
-    background: rgba(255, 255, 255, 0.22);
-    border-color: rgba(255, 255, 255, 0.36);
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.22);
     color: #fff;
   }
 

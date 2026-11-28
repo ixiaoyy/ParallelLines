@@ -784,10 +784,17 @@ onUnmounted(() => {
 
 .alarm-form,
 .alarm-row {
-  padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.065);
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.alarm-row:hover {
+  background: rgba(15, 23, 42, 0.38);
+  border-color: rgba(255, 255, 255, 0.17);
 }
 
 .alarm-description {
@@ -836,9 +843,11 @@ onUnmounted(() => {
 }
 
 .alarm-digits {
-  font-size: clamp(26px, 5vw, 38px);
-  line-height: 1.1;
+  font-size: clamp(28px, 5vw, 40px);
+  line-height: 1.08;
   font-weight: 700;
+  letter-spacing: -0.02em;
+  text-shadow: 0 4px 18px rgba(15, 23, 42, 0.38);
 }
 
 .alarm-digits,

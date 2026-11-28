@@ -36,10 +36,10 @@
           class="search-input"
           :placeholder="
             activeMode === 'ai'
-              ? '问问 AI，例如：帮我把这段零碎记录整理成结构清晰的周报...'
+              ? (followUp ? '继续追问' : '问问 AI')
               : `在 ${currentEngine.label} 中搜索...（按 Tab 切换引擎）`
           "
-          @keydown.enter.stop="handleSubmit()"
+          @keydown.enter.stop="onSearchEnter"
           @keydown.tab.prevent.stop="cycleEngine"
           @keydown.stop
         >
@@ -68,6 +68,7 @@
           type="button"
           class="submit-btn"
           :class="{ 'is-ai': activeMode === 'ai' }"
+          :disabled="activeMode === 'ai' && aiPending"
           @click="handleSubmit()"
         >
           {{ activeMode === 'ai' ? '问 AI' : `${currentEngine.label}搜` }}
@@ -89,31 +90,30 @@
           <div class="ai-result-header">
             <div class="ai-result-title">
               <span class="ai-spark">✦</span>
-              <span>AI 助手回答</span>
-              <span class="ai-mode-tag">本地原型预览</span>
+              <span>AI 回答</span>
             </div>
             <div class="ai-result-actions">
-              <button type="button" class="mini-btn" @click="copyAiResult">复制</button>
+              <button v-if="aiPending" type="button" class="mini-btn" @click="stopAi">停止</button>
+              <button v-if="aiAnswer && !aiPending" type="button" class="mini-btn" @click="copyAiResult">复制</button>
+              <button v-if="aiComplete" type="button" class="mini-btn" @click="startFollowUp">追问</button>
               <a
                 class="mini-btn primary"
                 :href="chatDeepLink"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                去平行线 AI 继续对话 ↗
+                打开 Chat ↗
               </a>
-              <button type="button" class="mini-btn" @click="aiResponseVisible = false">收起</button>
+              <button v-if="!aiPending" type="button" class="mini-btn" @click="aiResponseVisible = false">收起</button>
             </div>
           </div>
-          <div class="ai-result-prompt">指令：{{ lastAiPrompt }}</div>
-          <div class="ai-result-body">
-            <p v-for="(line, idx) in aiResponseLines" :key="idx">{{ line }}</p>
-          </div>
+          <div v-if="aiAnswer" class="ai-result-body" tabindex="0">{{ aiAnswer }}</div>
+          <div v-if="aiStatus" class="ai-result-prompt" role="status">{{ aiStatus }}</div>
         </div>
       </transition>
 
       <!-- 下方可拖拽、可删除、可设置的快捷图标栏 -->
-      <div class="shortcut-bar">
+      <div v-show="!aiResponseVisible" class="shortcut-bar">
         <draggable
           v-model="shortcuts"
           item-key="id"
@@ -166,6 +166,17 @@
         </button>
       </div>
     </div>
+
+    <Teleport to="body">
+      <dialog ref="aiLoginDialog" class="ai-auth-dialog" aria-label="登录后使用 AI" @close="aiLoginVisible = false">
+        <h2>登录后使用 AI</h2>
+        <form method="dialog" class="ai-auth-actions">
+          <button class="mini-btn">取消</button>
+          <button type="button" class="mini-btn" @click="goToAuth(true)">注册</button>
+          <button type="button" class="mini-btn primary" autofocus @click="goToAuth(false)">登录</button>
+        </form>
+      </dialog>
+    </Teleport>
 
     <!-- 快捷图标新增/编辑弹窗 -->
     <easy-dialog
@@ -244,11 +255,13 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, defineComponent, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { ElNotification } from 'element-plus'
 import { useStore } from '@/store'
 import { uid } from '@/utils'
+import { getMainAccessToken } from '../../cloudSync'
+import { AiSearchError, streamAiAnswer, type AiExchange } from './stream'
 
 export interface AiShortcutItem {
   id: string
@@ -352,8 +365,21 @@ export default defineComponent({
     )
 
     const aiResponseVisible = ref(false)
-    const lastAiPrompt = ref('')
-    const aiResponseLines = ref<string[]>([])
+    const aiAnswer = ref('')
+    const aiStatus = ref('')
+    const aiPending = ref(false)
+    const aiComplete = ref(false)
+    const aiLoginVisible = ref(false)
+    const aiLoginDialog = ref<HTMLDialogElement>()
+    watch(aiLoginVisible, visible => {
+      if (visible && !aiLoginDialog.value?.open) aiLoginDialog.value?.showModal()
+      if (!visible && aiLoginDialog.value?.open) aiLoginDialog.value.close()
+    })
+    const followUp = ref(false)
+    const draftKey = 'pl_desk_ai_auth_draft:' + (props.element?.i || '')
+    let lastExchange: AiExchange | null = null
+    let controller: AbortController | null = null
+    let aiToken: string | null = null
 
     const chatDeepLink = computed(() => 'https://chat.pingxingxian.space/')
 
@@ -404,30 +430,113 @@ export default defineComponent({
       activeMode.value = next.id
     }
 
-    const runAiPreview = (prompt: string) => {
-      lastAiPrompt.value = prompt
+    /** 只在用户点登录或注册时暂存当前问题；不保存答案，也不自动重发。 */
+    const goToAuth = (register: boolean) => {
+      try {
+        sessionStorage.setItem(draftKey, queryText.value)
+      } catch {
+        ElNotification({ title: '无法保留问题', message: '请先复制问题，再前往登录或注册。', type: 'warning' })
+        return
+      }
+      const params = new URLSearchParams({ redirect: '/desk/' })
+      if (register) params.set('mode', 'register')
+      window.location.assign('/auth?' + params.toString())
+    }
+
+    /** 追问只带最近一次完整回答；关闭页面或变更登录态即丢弃上下文。 */
+    const startFollowUp = async () => {
+      followUp.value = true
+      activeMode.value = 'ai'
+      queryText.value = ''
+      await nextTick()
+      inputRef.value?.focus()
+    }
+
+    const stopAi = () => {
+      controller?.abort()
+      aiStatus.value = '已停止'
+    }
+
+    const resetAiSession = () => {
+      if (!aiToken || getMainAccessToken() === aiToken) return
+      controller?.abort()
+      controller = null
+      aiToken = null
+      lastExchange = null
+      aiPending.value = aiComplete.value = followUp.value = aiResponseVisible.value = false
+      aiLoginVisible.value = false
+      aiAnswer.value = aiStatus.value = queryText.value = ''
+    }
+
+    /** 通过主站发起一次付费流，状态提示只针对本次提交，并保留失败草稿。 */
+    const runAi = async (prompt: string) => {
+      if (controller) return
+      resetAiSession()
+      queryText.value = prompt
+      const token = getMainAccessToken()
+      if (!token) {
+        aiLoginVisible.value = true
+        return
+      }
+      aiToken = token
+      const request = new AbortController()
+      controller = request
+      const timer = window.setTimeout(() => request.abort(), 115_000)
+      const previous = followUp.value ? lastExchange : null
+      aiAnswer.value = ''
+      aiStatus.value = '正在回答…'
+      aiPending.value = true
+      aiComplete.value = false
       aiResponseVisible.value = true
-      if (prompt.includes('微博') || prompt.includes('热搜')) {
-        aiResponseLines.value = [
-          '当前为 Phase 1 纯本地原型模式，尚未连接主站登录态与 New API 实时联网通道。',
-          '接入 Phase 2 账号与模型网关后，此处会直接流式输出「最近 3 小时微博热搜整理」的真实 AI 摘要结果。',
-          '你现在可以点击右上角「去平行线 AI 继续对话 ↗」直接带着这条指令打开 chat.pingxingxian.space。'
-        ]
-      } else {
-        aiResponseLines.value = [
-          `已收到你的指令，当前为本地原型模式（暂未接入真实模型接口）。`,
-          '后续接入平行线主站账号与 New API 后，回答将直接在这里流式展示，无需跳出工作台。',
-          '现在可点击右上角按钮直接携带该指令跳转到平行线 AI 对话。'
-        ]
+      try {
+        await streamAiAnswer(token, prompt, previous, request.signal, text => {
+          aiAnswer.value += text
+          aiStatus.value = ''
+        })
+        if (!aiAnswer.value.trim()) throw new AiSearchError('workspace_ai_invalid_reply')
+        lastExchange = { prompt, answer: aiAnswer.value }
+        aiComplete.value = true
+        aiStatus.value = ''
+        followUp.value = false
+      } catch (error) {
+        if (controller !== request) return
+        if (getMainAccessToken() !== token) {
+          resetAiSession()
+          return
+        }
+        const code = error instanceof AiSearchError ? error.code : 'workspace_ai_interrupted'
+        if (code === 'workspace_ai_session_invalid') {
+          aiResponseVisible.value = false
+          aiLoginVisible.value = true
+          return
+        }
+        if (aiStatus.value === '已停止') return
+        aiStatus.value = ({
+          workspace_ai_insufficient_quota: '请联系管理员开通 AI 额度',
+          workspace_ai_account_unbound: '请先绑定 New API 钱包',
+          workspace_ai_account_denied: '当前账号无法使用 AI，请联系管理员',
+          workspace_ai_model_denied: '当前账号无权使用此模型',
+          workspace_ai_rate_limited: '请求过多，请稍后重试',
+          workspace_ai_invalid_prompt: '问题或追问上下文不符合要求',
+          ai_content_blocked: '内容未通过审核',
+          workspace_ai_invalid_reply: '未收到完整回答',
+          workspace_ai_unavailable: 'AI 暂不可用',
+        } as Record<string, string>)[code] || '回答中断，未自动重试'
+      } finally {
+        window.clearTimeout(timer)
+        if (controller === request) {
+          controller = null
+          aiPending.value = false
+        }
       }
     }
 
     const handleSubmit = (overridePrompt?: string) => {
       const text = (overridePrompt ?? queryText.value).trim()
-      if (!text) return
+      if (!text || (activeMode.value === 'ai' && aiPending.value)) return
 
       // 仅当用户主动在设置中开启时才自动沉淀为快捷入口（默认关闭）
-      if (autoSaveSearchToShortcut.value && activeMode.value === 'ai') {
+      if (autoSaveSearchToShortcut.value && activeMode.value === 'ai' && !followUp.value && getMainAccessToken()) {
         const exists = shortcuts.value.some((s) => s.prompt === text)
         if (!exists) {
           shortcuts.value.push({
@@ -443,7 +552,7 @@ export default defineComponent({
       }
 
       if (activeMode.value === 'ai') {
-        runAiPreview(text)
+        void runAi(text)
         return
       }
 
@@ -453,7 +562,16 @@ export default defineComponent({
       }
     }
 
+    const onSearchEnter = (event: KeyboardEvent) => {
+      if (event.isComposing) return
+      // 打开登录弹窗时焦点会移到按钮，拦截同一次回车的默认点击。
+      event.preventDefault()
+      handleSubmit()
+    }
+
     const triggerShortcut = (item: AiShortcutItem) => {
+      if (aiPending.value) return
+      followUp.value = false
       activeMode.value = 'ai'
       queryText.value = item.prompt
       if (item.autoSend) {
@@ -544,7 +662,7 @@ export default defineComponent({
 
     const copyAiResult = async () => {
       try {
-        await navigator.clipboard.writeText(aiResponseLines.value.join('\n'))
+        await navigator.clipboard.writeText(aiAnswer.value)
         ElNotification({ title: '已复制', type: 'success', message: 'AI 内容已复制到剪贴板' })
       } catch {
         ElNotification({ title: '复制失败', type: 'error', message: '请检查浏览器剪贴板权限' })
@@ -554,8 +672,28 @@ export default defineComponent({
     const closeDropdown = () => {
       showEngineMenu.value = false
     }
-    onMounted(() => window.addEventListener('click', closeDropdown))
-    onUnmounted(() => window.removeEventListener('click', closeDropdown))
+    onMounted(() => {
+      window.addEventListener('click', closeDropdown)
+      window.addEventListener('storage', resetAiSession)
+      try {
+        const draft = sessionStorage.getItem(draftKey)
+        if (draft !== null) {
+          sessionStorage.removeItem(draftKey)
+          queryText.value = draft
+          activeMode.value = 'ai'
+          void nextTick(() => inputRef.value?.focus())
+        }
+      } catch {
+        // 禁用会话存储时没有可恢复草稿。
+      }
+    })
+    onUnmounted(() => {
+      const request = controller
+      controller = null
+      request?.abort()
+      window.removeEventListener('click', closeDropdown)
+      window.removeEventListener('storage', resetAiSession)
+    })
 
     return {
       engines: ENGINES,
@@ -569,8 +707,16 @@ export default defineComponent({
       autoSaveSearchToShortcut,
       shortcuts,
       aiResponseVisible,
-      lastAiPrompt,
-      aiResponseLines,
+      aiAnswer,
+      aiStatus,
+      aiPending,
+      aiComplete,
+      aiLoginVisible,
+      aiLoginDialog,
+      followUp,
+      goToAuth,
+      stopAi,
+      startFollowUp,
       chatDeepLink,
       shortcutDialogVisible,
       editingShortcutId,
@@ -579,6 +725,7 @@ export default defineComponent({
       handleEngineTabClick,
       cycleEngine,
       handleSubmit,
+      onSearchEnter,
       triggerShortcut,
       persistShortcuts,
       persistSettings,
@@ -625,21 +772,24 @@ export default defineComponent({
   height: 30px;
   padding: 0 11px 0 5px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(15, 23, 42, 0.32);
+  backdrop-filter: blur(14px);
   color: rgba(248, 250, 252, 0.8);
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.14s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.15);
     color: #fff;
+    transform: translateY(-1px);
   }
 
   &.active {
-    background: rgba(255, 255, 255, 0.24);
-    border-color: rgba(255, 255, 255, 0.42);
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.38);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
     color: #fff;
     font-weight: 600;
   }
@@ -668,16 +818,16 @@ export default defineComponent({
   height: 52px;
   padding: 6px 8px 6px 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.24);
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(22px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 12px 32px rgba(15, 23, 42, 0.28);
   transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 
   &:focus-within {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.42);
-    box-shadow: 0 14px 36px rgba(15, 23, 42, 0.3);
+    background: rgba(15, 23, 42, 0.56);
+    border-color: rgba(96, 165, 250, 0.62);
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18), 0 16px 38px rgba(15, 23, 42, 0.36);
   }
 }
 
@@ -813,11 +963,12 @@ export default defineComponent({
 }
 
 .ai-result-card {
+  position: relative;
+  z-index: 1;
   margin-top: 10px;
   padding: 14px 16px;
   border-radius: 16px;
-  background: rgba(15, 23, 42, 0.68);
-  backdrop-filter: blur(22px);
+  background: #172237;
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.3);
   text-align: left;
@@ -827,6 +978,8 @@ export default defineComponent({
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -843,19 +996,11 @@ export default defineComponent({
   color: #818cf8;
 }
 
-.ai-mode-tag {
-  font-size: 11px;
-  font-weight: 500;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: rgba(99, 102, 241, 0.25);
-  color: #c7d2fe;
-}
-
 .ai-result-actions {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .mini-btn {
@@ -889,9 +1034,40 @@ export default defineComponent({
   font-size: 13px;
   line-height: 1.65;
   color: rgba(248, 250, 252, 0.92);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: min(40vh, 360px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
 
-  p {
-    margin: 4px 0;
+.ai-auth-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+
+  .mini-btn {
+    min-height: 36px;
+    padding-inline: 14px;
+  }
+}
+
+.ai-auth-dialog {
+  width: min(380px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: #172237;
+  color: #f8fafc;
+
+  &::backdrop {
+    background: rgba(2, 6, 23, 0.58);
+  }
+
+  h2 {
+    margin: 0 0 18px;
+    font-size: 17px;
   }
 }
 
