@@ -406,7 +406,8 @@ const SESSION_KEYS = ['parallellines.access_token', 'access_token']
 const LAYOUT_OWNER_KEY = 'pl_desk_cloud_layout_owner'
 const DRAFT_REVISION_KEY = 'pl_desk_cloud_draft_revision'
 
-function getMainAccessToken(): string | null {
+/** 读取主站共享登录令牌；权限仍由实际请求的服务端复核。 */
+export function getMainAccessToken(): string | null {
   try {
     return window.localStorage.getItem(SESSION_KEYS[0]) || window.localStorage.getItem(SESSION_KEYS[1])
   } catch {
@@ -414,7 +415,8 @@ function getMainAccessToken(): string | null {
   }
 }
 
-function getApiBase(): string {
+/** 返回工作台当前环境的主站 API 基址。 */
+export function getApiBase(): string {
   return (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
 }
 
